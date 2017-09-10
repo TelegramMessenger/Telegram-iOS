@@ -114,33 +114,32 @@ public struct SecretApi46 {
         return nil
     }
     
-    public static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) -> Swift.Bool {
+    public static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {
         switch object {
             case let _1 as SecretApi46.DecryptedMessageAction:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as SecretApi46.PhotoSize:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as SecretApi46.FileLocation:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as SecretApi46.DecryptedMessageLayer:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as SecretApi46.DecryptedMessage:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as SecretApi46.DocumentAttribute:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as SecretApi46.InputStickerSet:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as SecretApi46.MessageEntity:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as SecretApi46.DecryptedMessageMedia:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             default:
                 break
         }
-        return false
     }
 
-    public enum DecryptedMessageAction: CustomStringConvertible {
+    public enum DecryptedMessageAction {
         case decryptedMessageActionSetMessageTTL(ttlSeconds: Int32)
         case decryptedMessageActionReadMessages(randomIds: [Int64])
         case decryptedMessageActionDeleteMessages(randomIds: [Int64])
@@ -154,7 +153,7 @@ public struct SecretApi46 {
         case decryptedMessageActionCommitKey(exchangeId: Int64, keyFingerprint: Int64)
         case decryptedMessageActionNoop
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .decryptedMessageActionSetMessageTTL(let ttlSeconds):
                     if boxed {
@@ -246,7 +245,6 @@ public struct SecretApi46 {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_decryptedMessageActionSetMessageTTL(_ reader: BufferReader) -> DecryptedMessageAction? {
@@ -387,44 +385,14 @@ public struct SecretApi46 {
             return SecretApi46.DecryptedMessageAction.decryptedMessageActionNoop
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .decryptedMessageActionSetMessageTTL(let ttlSeconds):
-                        return "(decryptedMessageActionSetMessageTTL ttlSeconds: \(ttlSeconds))"
-                    case .decryptedMessageActionReadMessages(let randomIds):
-                        return "(decryptedMessageActionReadMessages randomIds: \(randomIds))"
-                    case .decryptedMessageActionDeleteMessages(let randomIds):
-                        return "(decryptedMessageActionDeleteMessages randomIds: \(randomIds))"
-                    case .decryptedMessageActionScreenshotMessages(let randomIds):
-                        return "(decryptedMessageActionScreenshotMessages randomIds: \(randomIds))"
-                    case .decryptedMessageActionFlushHistory:
-                        return "(decryptedMessageActionFlushHistory)"
-                    case .decryptedMessageActionNotifyLayer(let layer):
-                        return "(decryptedMessageActionNotifyLayer layer: \(layer))"
-                    case .decryptedMessageActionResend(let startSeqNo, let endSeqNo):
-                        return "(decryptedMessageActionResend startSeqNo: \(startSeqNo), endSeqNo: \(endSeqNo))"
-                    case .decryptedMessageActionRequestKey(let exchangeId, let gA):
-                        return "(decryptedMessageActionRequestKey exchangeId: \(exchangeId), gA: \(gA))"
-                    case .decryptedMessageActionAcceptKey(let exchangeId, let gB, let keyFingerprint):
-                        return "(decryptedMessageActionAcceptKey exchangeId: \(exchangeId), gB: \(gB), keyFingerprint: \(keyFingerprint))"
-                    case .decryptedMessageActionAbortKey(let exchangeId):
-                        return "(decryptedMessageActionAbortKey exchangeId: \(exchangeId))"
-                    case .decryptedMessageActionCommitKey(let exchangeId, let keyFingerprint):
-                        return "(decryptedMessageActionCommitKey exchangeId: \(exchangeId), keyFingerprint: \(keyFingerprint))"
-                    case .decryptedMessageActionNoop:
-                        return "(decryptedMessageActionNoop)"
-                }
-            }
-        }
     }
 
-    public enum PhotoSize: CustomStringConvertible {
+    public enum PhotoSize {
         case photoSizeEmpty(type: String)
         case photoSize(type: String, location: SecretApi46.FileLocation, w: Int32, h: Int32, size: Int32)
         case photoCachedSize(type: String, location: SecretApi46.FileLocation, w: Int32, h: Int32, bytes: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .photoSizeEmpty(let type):
                     if boxed {
@@ -453,7 +421,6 @@ public struct SecretApi46 {
                     serializeBytes(bytes, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_photoSizeEmpty(_ reader: BufferReader) -> PhotoSize? {
@@ -518,25 +485,13 @@ public struct SecretApi46 {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .photoSizeEmpty(let type):
-                        return "(photoSizeEmpty type: \(type))"
-                    case .photoSize(let type, let location, let w, let h, let size):
-                        return "(photoSize type: \(type), location: \(location), w: \(w), h: \(h), size: \(size))"
-                    case .photoCachedSize(let type, let location, let w, let h, let bytes):
-                        return "(photoCachedSize type: \(type), location: \(location), w: \(w), h: \(h), bytes: \(bytes))"
-                }
-            }
-        }
     }
 
-    public enum FileLocation: CustomStringConvertible {
+    public enum FileLocation {
         case fileLocationUnavailable(volumeId: Int64, localId: Int32, secret: Int64)
         case fileLocation(dcId: Int32, volumeId: Int64, localId: Int32, secret: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .fileLocationUnavailable(let volumeId, let localId, let secret):
                     if boxed {
@@ -556,7 +511,6 @@ public struct SecretApi46 {
                     serializeInt64(secret, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_fileLocationUnavailable(_ reader: BufferReader) -> FileLocation? {
@@ -597,22 +551,12 @@ public struct SecretApi46 {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .fileLocationUnavailable(let volumeId, let localId, let secret):
-                        return "(fileLocationUnavailable volumeId: \(volumeId), localId: \(localId), secret: \(secret))"
-                    case .fileLocation(let dcId, let volumeId, let localId, let secret):
-                        return "(fileLocation dcId: \(dcId), volumeId: \(volumeId), localId: \(localId), secret: \(secret))"
-                }
-            }
-        }
     }
 
-    public enum DecryptedMessageLayer: CustomStringConvertible {
+    public enum DecryptedMessageLayer {
         case decryptedMessageLayer(randomBytes: Buffer, layer: Int32, inSeqNo: Int32, outSeqNo: Int32, message: SecretApi46.DecryptedMessage)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .decryptedMessageLayer(let randomBytes, let layer, let inSeqNo, let outSeqNo, let message):
                     if boxed {
@@ -625,7 +569,6 @@ public struct SecretApi46 {
                     message.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_decryptedMessageLayer(_ reader: BufferReader) -> DecryptedMessageLayer? {
@@ -654,21 +597,13 @@ public struct SecretApi46 {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .decryptedMessageLayer(let randomBytes, let layer, let inSeqNo, let outSeqNo, let message):
-                        return "(decryptedMessageLayer randomBytes: \(randomBytes), layer: \(layer), inSeqNo: \(inSeqNo), outSeqNo: \(outSeqNo), message: \(message))"
-                }
-            }
-        }
     }
 
-    public enum DecryptedMessage: CustomStringConvertible {
+    public enum DecryptedMessage {
         case decryptedMessageService(randomId: Int64, action: SecretApi46.DecryptedMessageAction)
         case decryptedMessage(flags: Int32, randomId: Int64, ttl: Int32, message: String, media: SecretApi46.DecryptedMessageMedia?, entities: [SecretApi46.MessageEntity]?, viaBotName: String?, replyToRandomId: Int64?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .decryptedMessageService(let randomId, let action):
                     if boxed {
@@ -695,7 +630,6 @@ public struct SecretApi46 {
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt64(replyToRandomId!, buffer: buffer, boxed: false)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_decryptedMessageService(_ reader: BufferReader) -> DecryptedMessage? {
@@ -751,19 +685,9 @@ public struct SecretApi46 {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .decryptedMessageService(let randomId, let action):
-                        return "(decryptedMessageService randomId: \(randomId), action: \(action))"
-                    case .decryptedMessage(let flags, let randomId, let ttl, let message, let media, let entities, let viaBotName, let replyToRandomId):
-                        return "(decryptedMessage flags: \(flags), randomId: \(randomId), ttl: \(ttl), message: \(message), media: \(media), entities: \(entities), viaBotName: \(viaBotName), replyToRandomId: \(replyToRandomId))"
-                }
-            }
-        }
     }
 
-    public enum DocumentAttribute: CustomStringConvertible {
+    public enum DocumentAttribute {
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeAnimated
         case documentAttributeVideo(duration: Int32, w: Int32, h: Int32)
@@ -771,7 +695,7 @@ public struct SecretApi46 {
         case documentAttributeSticker(alt: String, stickerset: SecretApi46.InputStickerSet)
         case documentAttributeAudio(flags: Int32, duration: Int32, title: String?, performer: String?, waveform: Buffer?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .documentAttributeImageSize(let w, let h):
                     if boxed {
@@ -818,7 +742,6 @@ public struct SecretApi46 {
                     if Int(flags) & Int(1 << 2) != 0 {serializeBytes(waveform!, buffer: buffer, boxed: false)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_documentAttributeImageSize(_ reader: BufferReader) -> DocumentAttribute? {
@@ -906,31 +829,13 @@ public struct SecretApi46 {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .documentAttributeImageSize(let w, let h):
-                        return "(documentAttributeImageSize w: \(w), h: \(h))"
-                    case .documentAttributeAnimated:
-                        return "(documentAttributeAnimated)"
-                    case .documentAttributeVideo(let duration, let w, let h):
-                        return "(documentAttributeVideo duration: \(duration), w: \(w), h: \(h))"
-                    case .documentAttributeFilename(let fileName):
-                        return "(documentAttributeFilename fileName: \(fileName))"
-                    case .documentAttributeSticker(let alt, let stickerset):
-                        return "(documentAttributeSticker alt: \(alt), stickerset: \(stickerset))"
-                    case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
-                        return "(documentAttributeAudio flags: \(flags), duration: \(duration), title: \(title), performer: \(performer), waveform: \(waveform))"
-                }
-            }
-        }
     }
 
-    public enum InputStickerSet: CustomStringConvertible {
+    public enum InputStickerSet {
         case inputStickerSetShortName(shortName: String)
         case inputStickerSetEmpty
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputStickerSetShortName(let shortName):
                     if boxed {
@@ -945,7 +850,6 @@ public struct SecretApi46 {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
@@ -963,19 +867,9 @@ public struct SecretApi46 {
             return SecretApi46.InputStickerSet.inputStickerSetEmpty
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputStickerSetShortName(let shortName):
-                        return "(inputStickerSetShortName shortName: \(shortName))"
-                    case .inputStickerSetEmpty:
-                        return "(inputStickerSetEmpty)"
-                }
-            }
-        }
     }
 
-    public enum MessageEntity: CustomStringConvertible {
+    public enum MessageEntity {
         case messageEntityUnknown(offset: Int32, length: Int32)
         case messageEntityMention(offset: Int32, length: Int32)
         case messageEntityHashtag(offset: Int32, length: Int32)
@@ -988,7 +882,7 @@ public struct SecretApi46 {
         case messageEntityPre(offset: Int32, length: Int32, language: String)
         case messageEntityTextUrl(offset: Int32, length: Int32, url: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageEntityUnknown(let offset, let length):
                     if boxed {
@@ -1070,7 +964,6 @@ public struct SecretApi46 {
                     serializeString(url, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_messageEntityUnknown(_ reader: BufferReader) -> MessageEntity? {
@@ -1234,37 +1127,9 @@ public struct SecretApi46 {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .messageEntityUnknown(let offset, let length):
-                        return "(messageEntityUnknown offset: \(offset), length: \(length))"
-                    case .messageEntityMention(let offset, let length):
-                        return "(messageEntityMention offset: \(offset), length: \(length))"
-                    case .messageEntityHashtag(let offset, let length):
-                        return "(messageEntityHashtag offset: \(offset), length: \(length))"
-                    case .messageEntityBotCommand(let offset, let length):
-                        return "(messageEntityBotCommand offset: \(offset), length: \(length))"
-                    case .messageEntityUrl(let offset, let length):
-                        return "(messageEntityUrl offset: \(offset), length: \(length))"
-                    case .messageEntityEmail(let offset, let length):
-                        return "(messageEntityEmail offset: \(offset), length: \(length))"
-                    case .messageEntityBold(let offset, let length):
-                        return "(messageEntityBold offset: \(offset), length: \(length))"
-                    case .messageEntityItalic(let offset, let length):
-                        return "(messageEntityItalic offset: \(offset), length: \(length))"
-                    case .messageEntityCode(let offset, let length):
-                        return "(messageEntityCode offset: \(offset), length: \(length))"
-                    case .messageEntityPre(let offset, let length, let language):
-                        return "(messageEntityPre offset: \(offset), length: \(length), language: \(language))"
-                    case .messageEntityTextUrl(let offset, let length, let url):
-                        return "(messageEntityTextUrl offset: \(offset), length: \(length), url: \(url))"
-                }
-            }
-        }
     }
 
-    public enum DecryptedMessageMedia: CustomStringConvertible {
+    public enum DecryptedMessageMedia {
         case decryptedMessageMediaEmpty
         case decryptedMessageMediaGeoPoint(lat: Double, long: Double)
         case decryptedMessageMediaContact(phoneNumber: String, firstName: String, lastName: String, userId: Int32)
@@ -1276,7 +1141,7 @@ public struct SecretApi46 {
         case decryptedMessageMediaVenue(lat: Double, long: Double, title: String, address: String, provider: String, venueId: String)
         case decryptedMessageMediaWebPage(url: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .decryptedMessageMediaEmpty:
                     if boxed {
@@ -1393,7 +1258,6 @@ public struct SecretApi46 {
                     serializeString(url, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_decryptedMessageMediaEmpty(_ reader: BufferReader) -> DecryptedMessageMedia? {
@@ -1643,32 +1507,6 @@ public struct SecretApi46 {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .decryptedMessageMediaEmpty:
-                        return "(decryptedMessageMediaEmpty)"
-                    case .decryptedMessageMediaGeoPoint(let lat, let long):
-                        return "(decryptedMessageMediaGeoPoint lat: \(lat), long: \(long))"
-                    case .decryptedMessageMediaContact(let phoneNumber, let firstName, let lastName, let userId):
-                        return "(decryptedMessageMediaContact phoneNumber: \(phoneNumber), firstName: \(firstName), lastName: \(lastName), userId: \(userId))"
-                    case .decryptedMessageMediaAudio(let duration, let mimeType, let size, let key, let iv):
-                        return "(decryptedMessageMediaAudio duration: \(duration), mimeType: \(mimeType), size: \(size), key: \(key), iv: \(iv))"
-                    case .decryptedMessageMediaExternalDocument(let id, let accessHash, let date, let mimeType, let size, let thumb, let dcId, let attributes):
-                        return "(decryptedMessageMediaExternalDocument id: \(id), accessHash: \(accessHash), date: \(date), mimeType: \(mimeType), size: \(size), thumb: \(thumb), dcId: \(dcId), attributes: \(attributes))"
-                    case .decryptedMessageMediaPhoto(let thumb, let thumbW, let thumbH, let w, let h, let size, let key, let iv, let caption):
-                        return "(decryptedMessageMediaPhoto thumb: \(thumb), thumbW: \(thumbW), thumbH: \(thumbH), w: \(w), h: \(h), size: \(size), key: \(key), iv: \(iv), caption: \(caption))"
-                    case .decryptedMessageMediaDocument(let thumb, let thumbW, let thumbH, let mimeType, let size, let key, let iv, let attributes, let caption):
-                        return "(decryptedMessageMediaDocument thumb: \(thumb), thumbW: \(thumbW), thumbH: \(thumbH), mimeType: \(mimeType), size: \(size), key: \(key), iv: \(iv), attributes: \(attributes), caption: \(caption))"
-                    case .decryptedMessageMediaVideo(let thumb, let thumbW, let thumbH, let duration, let mimeType, let w, let h, let size, let key, let iv, let caption):
-                        return "(decryptedMessageMediaVideo thumb: \(thumb), thumbW: \(thumbW), thumbH: \(thumbH), duration: \(duration), mimeType: \(mimeType), w: \(w), h: \(h), size: \(size), key: \(key), iv: \(iv), caption: \(caption))"
-                    case .decryptedMessageMediaVenue(let lat, let long, let title, let address, let provider, let venueId):
-                        return "(decryptedMessageMediaVenue lat: \(lat), long: \(long), title: \(title), address: \(address), provider: \(provider), venueId: \(venueId))"
-                    case .decryptedMessageMediaWebPage(let url):
-                        return "(decryptedMessageMediaWebPage url: \(url))"
-                }
-            }
-        }
     }
 
     public struct functions {

@@ -201,10 +201,10 @@ public final class Logger {
                 if let currentFile = currentFile {
                     if let data = content.data(using: .utf8) {
                         data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                            currentFile.write(bytes, count: data.count)
+                            let _ = currentFile.write(bytes, count: data.count)
                         }
                         var newline: UInt8 = 0x0a
-                        currentFile.write(&newline, count: 1)
+                        let _ = currentFile.write(&newline, count: 1)
                         if let file = self.file {
                             self.file = (file.0, file.1 + data.count + 1)
                         } else {

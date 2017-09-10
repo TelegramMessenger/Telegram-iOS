@@ -648,421 +648,420 @@ public struct Api {
         return nil
     }
     
-    public static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) -> Swift.Bool {
+    public static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {
         switch object {
             case let _1 as Api.messages.StickerSet:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputGeoPoint:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.payments.ValidatedRequestedInfo:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChatFull:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChatParticipant:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.updates.Difference:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.CdnConfig:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PageBlock:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.account.TmpPassword:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Photo:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Chat:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChatInvite:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.StickerSetCovered:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.channels.ChannelParticipants:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.RichText:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.UserFull:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPeerNotifyEvents:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputChannel:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.DcOption:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.account.PasswordSettings:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.LangPackLanguage:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.help.AppUpdate:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.LangPackDifference:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.channels.ChannelParticipant:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.storage.FileType:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.ArchivedStickers:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputEncryptedFile:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.SentEncryptedMessage:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedMessageLink:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.auth.Authorization:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputFile:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Peer:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentRequestedInfo:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.UserStatus:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Dialog:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.SendMessageAction:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PrivacyKey:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Update:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PopularContact:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelParticipant:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Blocked:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Error:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.KeyboardButton:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ContactStatus:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PhotoSize:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Stickers:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InlineBotSwitchPM:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FoundGifs:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.FileLocation:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputNotifyPeer:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.EncryptedMessage:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelParticipantsFilter:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.WebPage:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputBotInlineMessage:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.KeyboardButtonRow:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.StickerSet:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.photos.Photo:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputContact:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.TopPeerCategory:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Contacts:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelMessagesFilter:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.auth.PasswordRecovery:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.BotResults:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputDocument:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.ResolvedPeer:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputMedia:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPeer:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.upload.WebFile:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Contact:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.BotInlineResult:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.BotCallbackAnswer:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.payments.PaymentResult:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Chats:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPrivacyRule:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.DhConfig:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelAdminLogEventAction:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.auth.ExportedAuthorization:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AffectedHistory:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.account.PasswordInputSettings:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.MessageEditData:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.LabeledPrice:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.ChatFull:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.help.TermsOfService:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ReportReason:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputEncryptedChat:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.DraftMessage:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelAdminRights:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.DisabledFeature:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.EncryptedFile:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelBannedRights:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.NotifyPeer:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPrivacyKey:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ReplyMarkup:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.HighScore:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.TopPeer:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.CdnFileHash:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Link:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ContactBlocked:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.auth.CheckedPhone:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputUser:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Page:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.upload.File:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageRange:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.StickerSetInstallResult:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Config:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.TopPeerCategoryPeers:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Game:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.BotCommand:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AffectedMessages:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.SavedGifs:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.CdnPublicKey:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputGame:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCallProtocol:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.WallPaper:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Messages:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Invoice:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PeerSettings:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.auth.SentCode:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputChatPhoto:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentCharge:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Updates:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageMedia:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentSavedCredentials:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Null:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.auth.CodeType:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.DocumentAttribute:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.account.Authorizations:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChatPhoto:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.payments.PaymentForm:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.payments.PaymentReceipt:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.PeerDialogs:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputStickerSet:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.BotInfo:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.updates.State:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.FoundGif:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.User:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Message:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.RecentStickers:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputFileLocation:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.GeoPoint:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPhoneCall:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ReceivedNotifyMessage:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChatParticipants:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPaymentCredentials:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ShippingOption:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PostAddress:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.DataJSON:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputStickeredMedia:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FeaturedStickers:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCallDiscardReason:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.NearestDc:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.photos.Photos:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.ImportedContacts:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputWebDocument:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.phone.PhoneCall:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelAdminLogEvent:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Bool:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.LangPackString:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputWebFileLocation:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageFwdHeader:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.help.Support:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessagesFilter:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Dialogs:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.upload.CdnFile:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.help.InviteText:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.BotInlineMessage:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPeerNotifySettings:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FavedStickers:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedChatInvite:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Authorization:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MaskCoords:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AllStickers:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneConnection:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.AccountDaysTTL:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.account.Password:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputBotInlineResult:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.account.PrivacyRules:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PrivacyRule:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageAction:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCall:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PeerNotifyEvents:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ContactLink:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.WebDocument:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Found:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelAdminLogEventsFilter:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PeerNotifySettings:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputBotInlineMessageID:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.StickerPack:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.UserProfilePhoto:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.payments.SavedInfo:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.updates.ChannelDifference:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.channels.AdminLogResults:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputAppEvent:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageEntity:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPhoto:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.TopPeers:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.auth.SentCodeType:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.EncryptedChat:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Document:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.HighScores:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ImportedContact:
-                return _1.serialize(buffer, boxed)
+                _1.serialize(buffer, boxed)
             default:
                 break
         }
-        return false
     }
 
     public struct messages {
-        public enum StickerSet: CustomStringConvertible {
+        public enum StickerSet {
             case stickerSet(set: Api.StickerSet, packs: [Api.StickerPack], documents: [Api.Document])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .stickerSet(let set, let packs, let documents):
                         if boxed {
@@ -1081,7 +1080,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_stickerSet(_ reader: BufferReader) -> StickerSet? {
@@ -1108,20 +1106,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .stickerSet(let set, let packs, let documents):
-                            return "(messages.stickerSet set: \(set), packs: \(packs), documents: \(documents))"
-                    }
-                }
-            }
         }
     
-        public enum ArchivedStickers: CustomStringConvertible {
+        public enum ArchivedStickers {
             case archivedStickers(count: Int32, sets: [Api.StickerSetCovered])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .archivedStickers(let count, let sets):
                         if boxed {
@@ -1135,7 +1125,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_archivedStickers(_ reader: BufferReader) -> ArchivedStickers? {
@@ -1155,21 +1144,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .archivedStickers(let count, let sets):
-                            return "(messages.archivedStickers count: \(count), sets: \(sets))"
-                    }
-                }
-            }
         }
     
-        public enum SentEncryptedMessage: CustomStringConvertible {
+        public enum SentEncryptedMessage {
             case sentEncryptedMessage(date: Int32)
             case sentEncryptedFile(date: Int32, file: Api.EncryptedFile)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .sentEncryptedMessage(let date):
                         if boxed {
@@ -1185,7 +1166,6 @@ public struct Api {
                         file.serialize(buffer, true)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_sentEncryptedMessage(_ reader: BufferReader) -> SentEncryptedMessage? {
@@ -1216,23 +1196,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .sentEncryptedMessage(let date):
-                            return "(messages.sentEncryptedMessage date: \(date))"
-                        case .sentEncryptedFile(let date, let file):
-                            return "(messages.sentEncryptedFile date: \(date), file: \(file))"
-                    }
-                }
-            }
         }
     
-        public enum Stickers: CustomStringConvertible {
+        public enum Stickers {
             case stickersNotModified
             case stickers(hash: String, stickers: [Api.Document])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .stickersNotModified:
                         if boxed {
@@ -1252,7 +1222,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_stickersNotModified(_ reader: BufferReader) -> Stickers? {
@@ -1275,22 +1244,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .stickersNotModified:
-                            return "(messages.stickersNotModified)"
-                        case .stickers(let hash, let stickers):
-                            return "(messages.stickers hash: \(hash), stickers: \(stickers))"
-                    }
-                }
-            }
         }
     
-        public enum FoundGifs: CustomStringConvertible {
+        public enum FoundGifs {
             case foundGifs(nextOffset: Int32, results: [Api.FoundGif])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .foundGifs(let nextOffset, let results):
                         if boxed {
@@ -1304,7 +1263,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_foundGifs(_ reader: BufferReader) -> FoundGifs? {
@@ -1324,20 +1282,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .foundGifs(let nextOffset, let results):
-                            return "(messages.foundGifs nextOffset: \(nextOffset), results: \(results))"
-                    }
-                }
-            }
         }
     
-        public enum BotResults: CustomStringConvertible {
+        public enum BotResults {
             case botResults(flags: Int32, queryId: Int64, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, results: [Api.BotInlineResult], cacheTime: Int32)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .botResults(let flags, let queryId, let nextOffset, let switchPm, let results, let cacheTime):
                         if boxed {
@@ -1355,7 +1305,6 @@ public struct Api {
                         serializeInt32(cacheTime, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_botResults(_ reader: BufferReader) -> BotResults? {
@@ -1389,20 +1338,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .botResults(let flags, let queryId, let nextOffset, let switchPm, let results, let cacheTime):
-                            return "(messages.botResults flags: \(flags), queryId: \(queryId), nextOffset: \(nextOffset), switchPm: \(switchPm), results: \(results), cacheTime: \(cacheTime))"
-                    }
-                }
-            }
         }
     
-        public enum BotCallbackAnswer: CustomStringConvertible {
+        public enum BotCallbackAnswer {
             case botCallbackAnswer(flags: Int32, message: String?, url: String?, cacheTime: Int32)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .botCallbackAnswer(let flags, let message, let url, let cacheTime):
                         if boxed {
@@ -1414,7 +1355,6 @@ public struct Api {
                         serializeInt32(cacheTime, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_botCallbackAnswer(_ reader: BufferReader) -> BotCallbackAnswer? {
@@ -1438,21 +1378,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .botCallbackAnswer(let flags, let message, let url, let cacheTime):
-                            return "(messages.botCallbackAnswer flags: \(flags), message: \(message), url: \(url), cacheTime: \(cacheTime))"
-                    }
-                }
-            }
         }
     
-        public enum Chats: CustomStringConvertible {
+        public enum Chats {
             case chats(chats: [Api.Chat])
             case chatsSlice(count: Int32, chats: [Api.Chat])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .chats(let chats):
                         if boxed {
@@ -1476,7 +1408,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_chats(_ reader: BufferReader) -> Chats? {
@@ -1509,23 +1440,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .chats(let chats):
-                            return "(messages.chats chats: \(chats))"
-                        case .chatsSlice(let count, let chats):
-                            return "(messages.chatsSlice count: \(count), chats: \(chats))"
-                    }
-                }
-            }
         }
     
-        public enum DhConfig: CustomStringConvertible {
+        public enum DhConfig {
             case dhConfigNotModified(random: Buffer)
             case dhConfig(g: Int32, p: Buffer, version: Int32, random: Buffer)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .dhConfigNotModified(let random):
                         if boxed {
@@ -1543,7 +1464,6 @@ public struct Api {
                         serializeBytes(random, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_dhConfigNotModified(_ reader: BufferReader) -> DhConfig? {
@@ -1578,22 +1498,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .dhConfigNotModified(let random):
-                            return "(messages.dhConfigNotModified random: \(random))"
-                        case .dhConfig(let g, let p, let version, let random):
-                            return "(messages.dhConfig g: \(g), p: \(p), version: \(version), random: \(random))"
-                    }
-                }
-            }
         }
     
-        public enum AffectedHistory: CustomStringConvertible {
+        public enum AffectedHistory {
             case affectedHistory(pts: Int32, ptsCount: Int32, offset: Int32)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .affectedHistory(let pts, let ptsCount, let offset):
                         if boxed {
@@ -1604,7 +1514,6 @@ public struct Api {
                         serializeInt32(offset, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_affectedHistory(_ reader: BufferReader) -> AffectedHistory? {
@@ -1625,20 +1534,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .affectedHistory(let pts, let ptsCount, let offset):
-                            return "(messages.affectedHistory pts: \(pts), ptsCount: \(ptsCount), offset: \(offset))"
-                    }
-                }
-            }
         }
     
-        public enum MessageEditData: CustomStringConvertible {
+        public enum MessageEditData {
             case messageEditData(flags: Int32)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .messageEditData(let flags):
                         if boxed {
@@ -1647,7 +1548,6 @@ public struct Api {
                         serializeInt32(flags, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_messageEditData(_ reader: BufferReader) -> MessageEditData? {
@@ -1662,20 +1562,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .messageEditData(let flags):
-                            return "(messages.messageEditData flags: \(flags))"
-                    }
-                }
-            }
         }
     
-        public enum ChatFull: CustomStringConvertible {
+        public enum ChatFull {
             case chatFull(fullChat: Api.ChatFull, chats: [Api.Chat], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .chatFull(let fullChat, let chats, let users):
                         if boxed {
@@ -1694,7 +1586,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_chatFull(_ reader: BufferReader) -> ChatFull? {
@@ -1721,21 +1612,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .chatFull(let fullChat, let chats, let users):
-                            return "(messages.chatFull fullChat: \(fullChat), chats: \(chats), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum StickerSetInstallResult: CustomStringConvertible {
+        public enum StickerSetInstallResult {
             case stickerSetInstallResultSuccess
             case stickerSetInstallResultArchive(sets: [Api.StickerSetCovered])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .stickerSetInstallResultSuccess:
                         if boxed {
@@ -1754,7 +1637,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_stickerSetInstallResultSuccess(_ reader: BufferReader) -> StickerSetInstallResult? {
@@ -1774,22 +1656,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .stickerSetInstallResultSuccess:
-                            return "(messages.stickerSetInstallResultSuccess)"
-                        case .stickerSetInstallResultArchive(let sets):
-                            return "(messages.stickerSetInstallResultArchive sets: \(sets))"
-                    }
-                }
-            }
         }
     
-        public enum AffectedMessages: CustomStringConvertible {
+        public enum AffectedMessages {
             case affectedMessages(pts: Int32, ptsCount: Int32)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .affectedMessages(let pts, let ptsCount):
                         if boxed {
@@ -1799,7 +1671,6 @@ public struct Api {
                         serializeInt32(ptsCount, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_affectedMessages(_ reader: BufferReader) -> AffectedMessages? {
@@ -1817,21 +1688,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .affectedMessages(let pts, let ptsCount):
-                            return "(messages.affectedMessages pts: \(pts), ptsCount: \(ptsCount))"
-                    }
-                }
-            }
         }
     
-        public enum SavedGifs: CustomStringConvertible {
+        public enum SavedGifs {
             case savedGifsNotModified
             case savedGifs(hash: Int32, gifs: [Api.Document])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .savedGifsNotModified:
                         if boxed {
@@ -1851,7 +1714,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_savedGifsNotModified(_ reader: BufferReader) -> SavedGifs? {
@@ -1874,24 +1736,14 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .savedGifsNotModified:
-                            return "(messages.savedGifsNotModified)"
-                        case .savedGifs(let hash, let gifs):
-                            return "(messages.savedGifs hash: \(hash), gifs: \(gifs))"
-                    }
-                }
-            }
         }
     
-        public enum Messages: CustomStringConvertible {
+        public enum Messages {
             case messages(messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
             case messagesSlice(count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
             case channelMessages(flags: Int32, pts: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .messages(let messages, let chats, let users):
                         if boxed {
@@ -1958,7 +1810,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_messages(_ reader: BufferReader) -> Messages? {
@@ -2043,24 +1894,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .messages(let messages, let chats, let users):
-                            return "(messages.messages messages: \(messages), chats: \(chats), users: \(users))"
-                        case .messagesSlice(let count, let messages, let chats, let users):
-                            return "(messages.messagesSlice count: \(count), messages: \(messages), chats: \(chats), users: \(users))"
-                        case .channelMessages(let flags, let pts, let count, let messages, let chats, let users):
-                            return "(messages.channelMessages flags: \(flags), pts: \(pts), count: \(count), messages: \(messages), chats: \(chats), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum PeerDialogs: CustomStringConvertible {
+        public enum PeerDialogs {
             case peerDialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .peerDialogs(let dialogs, let messages, let chats, let users, let state):
                         if boxed {
@@ -2089,7 +1928,6 @@ public struct Api {
                         state.serialize(buffer, true)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_peerDialogs(_ reader: BufferReader) -> PeerDialogs? {
@@ -2126,21 +1964,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .peerDialogs(let dialogs, let messages, let chats, let users, let state):
-                            return "(messages.peerDialogs dialogs: \(dialogs), messages: \(messages), chats: \(chats), users: \(users), state: \(state))"
-                    }
-                }
-            }
         }
     
-        public enum RecentStickers: CustomStringConvertible {
+        public enum RecentStickers {
             case recentStickersNotModified
             case recentStickers(hash: Int32, stickers: [Api.Document])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .recentStickersNotModified:
                         if boxed {
@@ -2160,7 +1990,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_recentStickersNotModified(_ reader: BufferReader) -> RecentStickers? {
@@ -2183,23 +2012,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .recentStickersNotModified:
-                            return "(messages.recentStickersNotModified)"
-                        case .recentStickers(let hash, let stickers):
-                            return "(messages.recentStickers hash: \(hash), stickers: \(stickers))"
-                    }
-                }
-            }
         }
     
-        public enum FeaturedStickers: CustomStringConvertible {
+        public enum FeaturedStickers {
             case featuredStickersNotModified
             case featuredStickers(hash: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .featuredStickersNotModified:
                         if boxed {
@@ -2224,7 +2043,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_featuredStickersNotModified(_ reader: BufferReader) -> FeaturedStickers? {
@@ -2252,23 +2070,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .featuredStickersNotModified:
-                            return "(messages.featuredStickersNotModified)"
-                        case .featuredStickers(let hash, let sets, let unread):
-                            return "(messages.featuredStickers hash: \(hash), sets: \(sets), unread: \(unread))"
-                    }
-                }
-            }
         }
     
-        public enum Dialogs: CustomStringConvertible {
+        public enum Dialogs {
             case dialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
             case dialogsSlice(count: Int32, dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .dialogs(let dialogs, let messages, let chats, let users):
                         if boxed {
@@ -2322,7 +2130,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_dialogs(_ reader: BufferReader) -> Dialogs? {
@@ -2385,23 +2192,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .dialogs(let dialogs, let messages, let chats, let users):
-                            return "(messages.dialogs dialogs: \(dialogs), messages: \(messages), chats: \(chats), users: \(users))"
-                        case .dialogsSlice(let count, let dialogs, let messages, let chats, let users):
-                            return "(messages.dialogsSlice count: \(count), dialogs: \(dialogs), messages: \(messages), chats: \(chats), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum FavedStickers: CustomStringConvertible {
+        public enum FavedStickers {
             case favedStickersNotModified
             case favedStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .favedStickersNotModified:
                         if boxed {
@@ -2426,7 +2223,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_favedStickersNotModified(_ reader: BufferReader) -> FavedStickers? {
@@ -2454,23 +2250,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .favedStickersNotModified:
-                            return "(messages.favedStickersNotModified)"
-                        case .favedStickers(let hash, let packs, let stickers):
-                            return "(messages.favedStickers hash: \(hash), packs: \(packs), stickers: \(stickers))"
-                    }
-                }
-            }
         }
     
-        public enum AllStickers: CustomStringConvertible {
+        public enum AllStickers {
             case allStickersNotModified
             case allStickers(hash: Int32, sets: [Api.StickerSet])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .allStickersNotModified:
                         if boxed {
@@ -2490,7 +2276,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_allStickersNotModified(_ reader: BufferReader) -> AllStickers? {
@@ -2513,22 +2298,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .allStickersNotModified:
-                            return "(messages.allStickersNotModified)"
-                        case .allStickers(let hash, let sets):
-                            return "(messages.allStickers hash: \(hash), sets: \(sets))"
-                    }
-                }
-            }
         }
     
-        public enum HighScores: CustomStringConvertible {
+        public enum HighScores {
             case highScores(scores: [Api.HighScore], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .highScores(let scores, let users):
                         if boxed {
@@ -2546,7 +2321,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_highScores(_ reader: BufferReader) -> HighScores? {
@@ -2568,22 +2342,14 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .highScores(let scores, let users):
-                            return "(messages.highScores scores: \(scores), users: \(users))"
-                    }
-                }
-            }
         }
     }
 
-    public enum InputGeoPoint: CustomStringConvertible {
+    public enum InputGeoPoint {
         case inputGeoPointEmpty
         case inputGeoPoint(lat: Double, long: Double)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputGeoPointEmpty:
                     if boxed {
@@ -2599,7 +2365,6 @@ public struct Api {
                     serializeDouble(long, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputGeoPointEmpty(_ reader: BufferReader) -> InputGeoPoint? {
@@ -2620,23 +2385,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputGeoPointEmpty:
-                        return "(inputGeoPointEmpty)"
-                    case .inputGeoPoint(let lat, let long):
-                        return "(inputGeoPoint lat: \(lat), long: \(long))"
-                }
-            }
-        }
     }
 
-    public enum ChatFull: CustomStringConvertible {
+    public enum ChatFull {
         case chatFull(id: Int32, participants: Api.ChatParticipants, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo])
         case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatFull(let id, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo):
                     if boxed {
@@ -2681,7 +2436,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 8) != 0 {stickerset!.serialize(buffer, true)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_chatFull(_ reader: BufferReader) -> ChatFull? {
@@ -2793,24 +2547,14 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .chatFull(let id, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo):
-                        return "(chatFull id: \(id), participants: \(participants), chatPhoto: \(chatPhoto), notifySettings: \(notifySettings), exportedInvite: \(exportedInvite), botInfo: \(botInfo))"
-                    case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset):
-                        return "(channelFull flags: \(flags), id: \(id), about: \(about), participantsCount: \(participantsCount), adminsCount: \(adminsCount), kickedCount: \(kickedCount), bannedCount: \(bannedCount), readInboxMaxId: \(readInboxMaxId), readOutboxMaxId: \(readOutboxMaxId), unreadCount: \(unreadCount), chatPhoto: \(chatPhoto), notifySettings: \(notifySettings), exportedInvite: \(exportedInvite), botInfo: \(botInfo), migratedFromChatId: \(migratedFromChatId), migratedFromMaxId: \(migratedFromMaxId), pinnedMsgId: \(pinnedMsgId), stickerset: \(stickerset))"
-                }
-            }
-        }
     }
 
-    public enum ChatParticipant: CustomStringConvertible {
+    public enum ChatParticipant {
         case chatParticipant(userId: Int32, inviterId: Int32, date: Int32)
         case chatParticipantCreator(userId: Int32)
         case chatParticipantAdmin(userId: Int32, inviterId: Int32, date: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatParticipant(let userId, let inviterId, let date):
                     if boxed {
@@ -2835,7 +2579,6 @@ public struct Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_chatParticipant(_ reader: BufferReader) -> ChatParticipant? {
@@ -2884,24 +2627,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .chatParticipant(let userId, let inviterId, let date):
-                        return "(chatParticipant userId: \(userId), inviterId: \(inviterId), date: \(date))"
-                    case .chatParticipantCreator(let userId):
-                        return "(chatParticipantCreator userId: \(userId))"
-                    case .chatParticipantAdmin(let userId, let inviterId, let date):
-                        return "(chatParticipantAdmin userId: \(userId), inviterId: \(inviterId), date: \(date))"
-                }
-            }
-        }
     }
 
-    public enum CdnConfig: CustomStringConvertible {
+    public enum CdnConfig {
         case cdnConfig(publicKeys: [Api.CdnPublicKey])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .cdnConfig(let publicKeys):
                     if boxed {
@@ -2914,7 +2645,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_cdnConfig(_ reader: BufferReader) -> CdnConfig? {
@@ -2931,17 +2661,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .cdnConfig(let publicKeys):
-                        return "(cdnConfig publicKeys: \(publicKeys))"
-                }
-            }
-        }
     }
 
-    public indirect enum PageBlock: CustomStringConvertible {
+    public indirect enum PageBlock {
         case pageBlockUnsupported
         case pageBlockTitle(text: Api.RichText)
         case pageBlockSubtitle(text: Api.RichText)
@@ -2966,7 +2688,7 @@ public struct Api {
         case pageBlockChannel(channel: Api.Chat)
         case pageBlockAudio(audioId: Int64, caption: Api.RichText)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .pageBlockUnsupported:
                     if boxed {
@@ -3146,7 +2868,6 @@ public struct Api {
                     caption.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_pageBlockUnsupported(_ reader: BufferReader) -> PageBlock? {
@@ -3508,65 +3229,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .pageBlockUnsupported:
-                        return "(pageBlockUnsupported)"
-                    case .pageBlockTitle(let text):
-                        return "(pageBlockTitle text: \(text))"
-                    case .pageBlockSubtitle(let text):
-                        return "(pageBlockSubtitle text: \(text))"
-                    case .pageBlockAuthorDate(let author, let publishedDate):
-                        return "(pageBlockAuthorDate author: \(author), publishedDate: \(publishedDate))"
-                    case .pageBlockHeader(let text):
-                        return "(pageBlockHeader text: \(text))"
-                    case .pageBlockSubheader(let text):
-                        return "(pageBlockSubheader text: \(text))"
-                    case .pageBlockParagraph(let text):
-                        return "(pageBlockParagraph text: \(text))"
-                    case .pageBlockPreformatted(let text, let language):
-                        return "(pageBlockPreformatted text: \(text), language: \(language))"
-                    case .pageBlockFooter(let text):
-                        return "(pageBlockFooter text: \(text))"
-                    case .pageBlockDivider:
-                        return "(pageBlockDivider)"
-                    case .pageBlockAnchor(let name):
-                        return "(pageBlockAnchor name: \(name))"
-                    case .pageBlockList(let ordered, let items):
-                        return "(pageBlockList ordered: \(ordered), items: \(items))"
-                    case .pageBlockBlockquote(let text, let caption):
-                        return "(pageBlockBlockquote text: \(text), caption: \(caption))"
-                    case .pageBlockPullquote(let text, let caption):
-                        return "(pageBlockPullquote text: \(text), caption: \(caption))"
-                    case .pageBlockPhoto(let photoId, let caption):
-                        return "(pageBlockPhoto photoId: \(photoId), caption: \(caption))"
-                    case .pageBlockVideo(let flags, let videoId, let caption):
-                        return "(pageBlockVideo flags: \(flags), videoId: \(videoId), caption: \(caption))"
-                    case .pageBlockCover(let cover):
-                        return "(pageBlockCover cover: \(cover))"
-                    case .pageBlockEmbed(let flags, let url, let html, let posterPhotoId, let w, let h, let caption):
-                        return "(pageBlockEmbed flags: \(flags), url: \(url), html: \(html), posterPhotoId: \(posterPhotoId), w: \(w), h: \(h), caption: \(caption))"
-                    case .pageBlockEmbedPost(let url, let webpageId, let authorPhotoId, let author, let date, let blocks, let caption):
-                        return "(pageBlockEmbedPost url: \(url), webpageId: \(webpageId), authorPhotoId: \(authorPhotoId), author: \(author), date: \(date), blocks: \(blocks), caption: \(caption))"
-                    case .pageBlockCollage(let items, let caption):
-                        return "(pageBlockCollage items: \(items), caption: \(caption))"
-                    case .pageBlockSlideshow(let items, let caption):
-                        return "(pageBlockSlideshow items: \(items), caption: \(caption))"
-                    case .pageBlockChannel(let channel):
-                        return "(pageBlockChannel channel: \(channel))"
-                    case .pageBlockAudio(let audioId, let caption):
-                        return "(pageBlockAudio audioId: \(audioId), caption: \(caption))"
-                }
-            }
-        }
     }
 
-    public enum Photo: CustomStringConvertible {
+    public enum Photo {
         case photoEmpty(id: Int64)
         case photo(flags: Int32, id: Int64, accessHash: Int64, date: Int32, sizes: [Api.PhotoSize])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .photoEmpty(let id):
                     if boxed {
@@ -3589,7 +3258,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_photoEmpty(_ reader: BufferReader) -> Photo? {
@@ -3629,26 +3297,16 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .photoEmpty(let id):
-                        return "(photoEmpty id: \(id))"
-                    case .photo(let flags, let id, let accessHash, let date, let sizes):
-                        return "(photo flags: \(flags), id: \(id), accessHash: \(accessHash), date: \(date), sizes: \(sizes))"
-                }
-            }
-        }
     }
 
-    public enum Chat: CustomStringConvertible {
+    public enum Chat {
         case chatEmpty(id: Int32)
         case chat(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?)
         case chatForbidden(id: Int32, title: String)
         case channel(flags: Int32, id: Int32, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, version: Int32, restrictionReason: String?, adminRights: Api.ChannelAdminRights?, bannedRights: Api.ChannelBannedRights?)
         case channelForbidden(flags: Int32, id: Int32, accessHash: Int64, title: String, untilDate: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatEmpty(let id):
                     if boxed {
@@ -3703,7 +3361,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 16) != 0 {serializeInt32(untilDate!, buffer: buffer, boxed: false)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_chatEmpty(_ reader: BufferReader) -> Chat? {
@@ -3838,29 +3495,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .chatEmpty(let id):
-                        return "(chatEmpty id: \(id))"
-                    case .chat(let flags, let id, let title, let photo, let participantsCount, let date, let version, let migratedTo):
-                        return "(chat flags: \(flags), id: \(id), title: \(title), photo: \(photo), participantsCount: \(participantsCount), date: \(date), version: \(version), migratedTo: \(migratedTo))"
-                    case .chatForbidden(let id, let title):
-                        return "(chatForbidden id: \(id), title: \(title))"
-                    case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights):
-                        return "(channel flags: \(flags), id: \(id), accessHash: \(accessHash), title: \(title), username: \(username), photo: \(photo), date: \(date), version: \(version), restrictionReason: \(restrictionReason), adminRights: \(adminRights), bannedRights: \(bannedRights))"
-                    case .channelForbidden(let flags, let id, let accessHash, let title, let untilDate):
-                        return "(channelForbidden flags: \(flags), id: \(id), accessHash: \(accessHash), title: \(title), untilDate: \(untilDate))"
-                }
-            }
-        }
     }
 
-    public enum ChatInvite: CustomStringConvertible {
+    public enum ChatInvite {
         case chatInviteAlready(chat: Api.Chat)
         case chatInvite(flags: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, participants: [Api.User]?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatInviteAlready(let chat):
                     if boxed {
@@ -3883,7 +3524,6 @@ public struct Api {
                     }}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_chatInviteAlready(_ reader: BufferReader) -> ChatInvite? {
@@ -3927,23 +3567,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .chatInviteAlready(let chat):
-                        return "(chatInviteAlready chat: \(chat))"
-                    case .chatInvite(let flags, let title, let photo, let participantsCount, let participants):
-                        return "(chatInvite flags: \(flags), title: \(title), photo: \(photo), participantsCount: \(participantsCount), participants: \(participants))"
-                }
-            }
-        }
     }
 
-    public enum StickerSetCovered: CustomStringConvertible {
+    public enum StickerSetCovered {
         case stickerSetCovered(set: Api.StickerSet, cover: Api.Document)
         case stickerSetMultiCovered(set: Api.StickerSet, covers: [Api.Document])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .stickerSetCovered(let set, let cover):
                     if boxed {
@@ -3964,7 +3594,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_stickerSetCovered(_ reader: BufferReader) -> StickerSetCovered? {
@@ -4004,19 +3633,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .stickerSetCovered(let set, let cover):
-                        return "(stickerSetCovered set: \(set), cover: \(cover))"
-                    case .stickerSetMultiCovered(let set, let covers):
-                        return "(stickerSetMultiCovered set: \(set), covers: \(covers))"
-                }
-            }
-        }
     }
 
-    public indirect enum RichText: CustomStringConvertible {
+    public indirect enum RichText {
         case textEmpty
         case textPlain(text: String)
         case textBold(text: Api.RichText)
@@ -4028,7 +3647,7 @@ public struct Api {
         case textEmail(text: Api.RichText, email: String)
         case textConcat(texts: [Api.RichText])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .textEmpty:
                     if boxed {
@@ -4098,7 +3717,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_textEmpty(_ reader: BufferReader) -> RichText? {
@@ -4229,38 +3847,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .textEmpty:
-                        return "(textEmpty)"
-                    case .textPlain(let text):
-                        return "(textPlain text: \(text))"
-                    case .textBold(let text):
-                        return "(textBold text: \(text))"
-                    case .textItalic(let text):
-                        return "(textItalic text: \(text))"
-                    case .textUnderline(let text):
-                        return "(textUnderline text: \(text))"
-                    case .textStrike(let text):
-                        return "(textStrike text: \(text))"
-                    case .textFixed(let text):
-                        return "(textFixed text: \(text))"
-                    case .textUrl(let text, let url, let webpageId):
-                        return "(textUrl text: \(text), url: \(url), webpageId: \(webpageId))"
-                    case .textEmail(let text, let email):
-                        return "(textEmail text: \(text), email: \(email))"
-                    case .textConcat(let texts):
-                        return "(textConcat texts: \(texts))"
-                }
-            }
-        }
     }
 
-    public enum UserFull: CustomStringConvertible {
+    public enum UserFull {
         case userFull(flags: Int32, user: Api.User, about: String?, link: Api.contacts.Link, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, commonChatsCount: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .userFull(let flags, let user, let about, let link, let profilePhoto, let notifySettings, let botInfo, let commonChatsCount):
                     if boxed {
@@ -4276,7 +3868,6 @@ public struct Api {
                     serializeInt32(commonChatsCount, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_userFull(_ reader: BufferReader) -> UserFull? {
@@ -4322,21 +3913,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .userFull(let flags, let user, let about, let link, let profilePhoto, let notifySettings, let botInfo, let commonChatsCount):
-                        return "(userFull flags: \(flags), user: \(user), about: \(about), link: \(link), profilePhoto: \(profilePhoto), notifySettings: \(notifySettings), botInfo: \(botInfo), commonChatsCount: \(commonChatsCount))"
-                }
-            }
-        }
     }
 
-    public enum InputPeerNotifyEvents: CustomStringConvertible {
+    public enum InputPeerNotifyEvents {
         case inputPeerNotifyEventsEmpty
         case inputPeerNotifyEventsAll
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPeerNotifyEventsEmpty:
                     if boxed {
@@ -4351,7 +3934,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputPeerNotifyEventsEmpty(_ reader: BufferReader) -> InputPeerNotifyEvents? {
@@ -4361,23 +3943,13 @@ public struct Api {
             return Api.InputPeerNotifyEvents.inputPeerNotifyEventsAll
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputPeerNotifyEventsEmpty:
-                        return "(inputPeerNotifyEventsEmpty)"
-                    case .inputPeerNotifyEventsAll:
-                        return "(inputPeerNotifyEventsAll)"
-                }
-            }
-        }
     }
 
-    public enum InputChannel: CustomStringConvertible {
+    public enum InputChannel {
         case inputChannelEmpty
         case inputChannel(channelId: Int32, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputChannelEmpty:
                     if boxed {
@@ -4393,7 +3965,6 @@ public struct Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputChannelEmpty(_ reader: BufferReader) -> InputChannel? {
@@ -4414,22 +3985,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputChannelEmpty:
-                        return "(inputChannelEmpty)"
-                    case .inputChannel(let channelId, let accessHash):
-                        return "(inputChannel channelId: \(channelId), accessHash: \(accessHash))"
-                }
-            }
-        }
     }
 
-    public enum DcOption: CustomStringConvertible {
+    public enum DcOption {
         case dcOption(flags: Int32, id: Int32, ipAddress: String, port: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dcOption(let flags, let id, let ipAddress, let port):
                     if boxed {
@@ -4441,7 +4002,6 @@ public struct Api {
                     serializeInt32(port, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_dcOption(_ reader: BufferReader) -> DcOption? {
@@ -4465,20 +4025,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .dcOption(let flags, let id, let ipAddress, let port):
-                        return "(dcOption flags: \(flags), id: \(id), ipAddress: \(ipAddress), port: \(port))"
-                }
-            }
-        }
     }
 
-    public enum LangPackLanguage: CustomStringConvertible {
+    public enum LangPackLanguage {
         case langPackLanguage(name: String, nativeName: String, langCode: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .langPackLanguage(let name, let nativeName, let langCode):
                     if boxed {
@@ -4489,7 +4041,6 @@ public struct Api {
                     serializeString(langCode, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_langPackLanguage(_ reader: BufferReader) -> LangPackLanguage? {
@@ -4510,20 +4061,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .langPackLanguage(let name, let nativeName, let langCode):
-                        return "(langPackLanguage name: \(name), nativeName: \(nativeName), langCode: \(langCode))"
-                }
-            }
-        }
     }
 
-    public enum LangPackDifference: CustomStringConvertible {
+    public enum LangPackDifference {
         case langPackDifference(langCode: String, fromVersion: Int32, version: Int32, strings: [Api.LangPackString])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .langPackDifference(let langCode, let fromVersion, let version, let strings):
                     if boxed {
@@ -4539,7 +4082,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_langPackDifference(_ reader: BufferReader) -> LangPackDifference? {
@@ -4565,23 +4107,15 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .langPackDifference(let langCode, let fromVersion, let version, let strings):
-                        return "(langPackDifference langCode: \(langCode), fromVersion: \(fromVersion), version: \(version), strings: \(strings))"
-                }
-            }
-        }
     }
 
-    public enum InputEncryptedFile: CustomStringConvertible {
+    public enum InputEncryptedFile {
         case inputEncryptedFileEmpty
         case inputEncryptedFileUploaded(id: Int64, parts: Int32, md5Checksum: String, keyFingerprint: Int32)
         case inputEncryptedFile(id: Int64, accessHash: Int64)
         case inputEncryptedFileBigUploaded(id: Int64, parts: Int32, keyFingerprint: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputEncryptedFileEmpty:
                     if boxed {
@@ -4614,7 +4148,6 @@ public struct Api {
                     serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputEncryptedFileEmpty(_ reader: BufferReader) -> InputEncryptedFile? {
@@ -4672,26 +4205,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputEncryptedFileEmpty:
-                        return "(inputEncryptedFileEmpty)"
-                    case .inputEncryptedFileUploaded(let id, let parts, let md5Checksum, let keyFingerprint):
-                        return "(inputEncryptedFileUploaded id: \(id), parts: \(parts), md5Checksum: \(md5Checksum), keyFingerprint: \(keyFingerprint))"
-                    case .inputEncryptedFile(let id, let accessHash):
-                        return "(inputEncryptedFile id: \(id), accessHash: \(accessHash))"
-                    case .inputEncryptedFileBigUploaded(let id, let parts, let keyFingerprint):
-                        return "(inputEncryptedFileBigUploaded id: \(id), parts: \(parts), keyFingerprint: \(keyFingerprint))"
-                }
-            }
-        }
     }
 
-    public enum ExportedMessageLink: CustomStringConvertible {
+    public enum ExportedMessageLink {
         case exportedMessageLink(link: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .exportedMessageLink(let link):
                     if boxed {
@@ -4700,7 +4219,6 @@ public struct Api {
                     serializeString(link, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_exportedMessageLink(_ reader: BufferReader) -> ExportedMessageLink? {
@@ -4715,21 +4233,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .exportedMessageLink(let link):
-                        return "(exportedMessageLink link: \(link))"
-                }
-            }
-        }
     }
 
-    public enum InputFile: CustomStringConvertible {
+    public enum InputFile {
         case inputFile(id: Int64, parts: Int32, name: String, md5Checksum: String)
         case inputFileBig(id: Int64, parts: Int32, name: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputFile(let id, let parts, let name, let md5Checksum):
                     if boxed {
@@ -4749,7 +4259,6 @@ public struct Api {
                     serializeString(name, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputFile(_ reader: BufferReader) -> InputFile? {
@@ -4790,24 +4299,14 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputFile(let id, let parts, let name, let md5Checksum):
-                        return "(inputFile id: \(id), parts: \(parts), name: \(name), md5Checksum: \(md5Checksum))"
-                    case .inputFileBig(let id, let parts, let name):
-                        return "(inputFileBig id: \(id), parts: \(parts), name: \(name))"
-                }
-            }
-        }
     }
 
-    public enum Peer: CustomStringConvertible {
+    public enum Peer {
         case peerUser(userId: Int32)
         case peerChat(chatId: Int32)
         case peerChannel(channelId: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .peerUser(let userId):
                     if boxed {
@@ -4828,7 +4327,6 @@ public struct Api {
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_peerUser(_ reader: BufferReader) -> Peer? {
@@ -4865,24 +4363,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .peerUser(let userId):
-                        return "(peerUser userId: \(userId))"
-                    case .peerChat(let chatId):
-                        return "(peerChat chatId: \(chatId))"
-                    case .peerChannel(let channelId):
-                        return "(peerChannel channelId: \(channelId))"
-                }
-            }
-        }
     }
 
-    public enum PaymentRequestedInfo: CustomStringConvertible {
+    public enum PaymentRequestedInfo {
         case paymentRequestedInfo(flags: Int32, name: String?, phone: String?, email: String?, shippingAddress: Api.PostAddress?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress):
                     if boxed {
@@ -4895,7 +4381,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 3) != 0 {shippingAddress!.serialize(buffer, true)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_paymentRequestedInfo(_ reader: BufferReader) -> PaymentRequestedInfo? {
@@ -4924,17 +4409,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress):
-                        return "(paymentRequestedInfo flags: \(flags), name: \(name), phone: \(phone), email: \(email), shippingAddress: \(shippingAddress))"
-                }
-            }
-        }
     }
 
-    public enum UserStatus: CustomStringConvertible {
+    public enum UserStatus {
         case userStatusEmpty
         case userStatusOnline(expires: Int32)
         case userStatusOffline(wasOnline: Int32)
@@ -4942,7 +4419,7 @@ public struct Api {
         case userStatusLastWeek
         case userStatusLastMonth
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .userStatusEmpty:
                     if boxed {
@@ -4981,7 +4458,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_userStatusEmpty(_ reader: BufferReader) -> UserStatus? {
@@ -5019,30 +4495,12 @@ public struct Api {
             return Api.UserStatus.userStatusLastMonth
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .userStatusEmpty:
-                        return "(userStatusEmpty)"
-                    case .userStatusOnline(let expires):
-                        return "(userStatusOnline expires: \(expires))"
-                    case .userStatusOffline(let wasOnline):
-                        return "(userStatusOffline wasOnline: \(wasOnline))"
-                    case .userStatusRecently:
-                        return "(userStatusRecently)"
-                    case .userStatusLastWeek:
-                        return "(userStatusLastWeek)"
-                    case .userStatusLastMonth:
-                        return "(userStatusLastMonth)"
-                }
-            }
-        }
     }
 
-    public enum Dialog: CustomStringConvertible {
+    public enum Dialog {
         case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft):
                     if boxed {
@@ -5060,7 +4518,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 1) != 0 {draft!.serialize(buffer, true)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_dialog(_ reader: BufferReader) -> Dialog? {
@@ -5108,17 +4565,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft):
-                        return "(dialog flags: \(flags), peer: \(peer), topMessage: \(topMessage), readInboxMaxId: \(readInboxMaxId), readOutboxMaxId: \(readOutboxMaxId), unreadCount: \(unreadCount), unreadMentionsCount: \(unreadMentionsCount), notifySettings: \(notifySettings), pts: \(pts), draft: \(draft))"
-                }
-            }
-        }
     }
 
-    public enum SendMessageAction: CustomStringConvertible {
+    public enum SendMessageAction {
         case sendMessageTypingAction
         case sendMessageCancelAction
         case sendMessageRecordVideoAction
@@ -5133,7 +4582,7 @@ public struct Api {
         case sendMessageRecordRoundAction
         case sendMessageUploadRoundAction
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .sendMessageTypingAction:
                     if boxed {
@@ -5214,7 +4663,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_sendMessageTypingAction(_ reader: BufferReader) -> SendMessageAction? {
@@ -5289,46 +4737,14 @@ public struct Api {
             return Api.SendMessageAction.sendMessageUploadRoundAction
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .sendMessageTypingAction:
-                        return "(sendMessageTypingAction)"
-                    case .sendMessageCancelAction:
-                        return "(sendMessageCancelAction)"
-                    case .sendMessageRecordVideoAction:
-                        return "(sendMessageRecordVideoAction)"
-                    case .sendMessageUploadVideoAction(let progress):
-                        return "(sendMessageUploadVideoAction progress: \(progress))"
-                    case .sendMessageRecordAudioAction:
-                        return "(sendMessageRecordAudioAction)"
-                    case .sendMessageUploadAudioAction(let progress):
-                        return "(sendMessageUploadAudioAction progress: \(progress))"
-                    case .sendMessageUploadPhotoAction(let progress):
-                        return "(sendMessageUploadPhotoAction progress: \(progress))"
-                    case .sendMessageUploadDocumentAction(let progress):
-                        return "(sendMessageUploadDocumentAction progress: \(progress))"
-                    case .sendMessageGeoLocationAction:
-                        return "(sendMessageGeoLocationAction)"
-                    case .sendMessageChooseContactAction:
-                        return "(sendMessageChooseContactAction)"
-                    case .sendMessageGamePlayAction:
-                        return "(sendMessageGamePlayAction)"
-                    case .sendMessageRecordRoundAction:
-                        return "(sendMessageRecordRoundAction)"
-                    case .sendMessageUploadRoundAction:
-                        return "(sendMessageUploadRoundAction)"
-                }
-            }
-        }
     }
 
-    public enum PrivacyKey: CustomStringConvertible {
+    public enum PrivacyKey {
         case privacyKeyStatusTimestamp
         case privacyKeyChatInvite
         case privacyKeyPhoneCall
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .privacyKeyStatusTimestamp:
                     if boxed {
@@ -5349,7 +4765,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_privacyKeyStatusTimestamp(_ reader: BufferReader) -> PrivacyKey? {
@@ -5362,21 +4777,9 @@ public struct Api {
             return Api.PrivacyKey.privacyKeyPhoneCall
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .privacyKeyStatusTimestamp:
-                        return "(privacyKeyStatusTimestamp)"
-                    case .privacyKeyChatInvite:
-                        return "(privacyKeyChatInvite)"
-                    case .privacyKeyPhoneCall:
-                        return "(privacyKeyPhoneCall)"
-                }
-            }
-        }
     }
 
-    public enum Update: CustomStringConvertible {
+    public enum Update {
         case updateNewMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
         case updateMessageID(id: Int32, randomId: Int64)
         case updateDeleteMessages(messages: [Int32], pts: Int32, ptsCount: Int32)
@@ -5443,7 +4846,7 @@ public struct Api {
         case updateChannelReadMessagesContents(channelId: Int32, messages: [Int32])
         case updateContactsReset
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .updateNewMessage(let message, let pts, let ptsCount):
                     if boxed {
@@ -5983,7 +5386,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_updateNewMessage(_ reader: BufferReader) -> Update? {
@@ -7061,148 +6463,12 @@ public struct Api {
             return Api.Update.updateContactsReset
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .updateNewMessage(let message, let pts, let ptsCount):
-                        return "(updateNewMessage message: \(message), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateMessageID(let id, let randomId):
-                        return "(updateMessageID id: \(id), randomId: \(randomId))"
-                    case .updateDeleteMessages(let messages, let pts, let ptsCount):
-                        return "(updateDeleteMessages messages: \(messages), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateUserTyping(let userId, let action):
-                        return "(updateUserTyping userId: \(userId), action: \(action))"
-                    case .updateChatUserTyping(let chatId, let userId, let action):
-                        return "(updateChatUserTyping chatId: \(chatId), userId: \(userId), action: \(action))"
-                    case .updateChatParticipants(let participants):
-                        return "(updateChatParticipants participants: \(participants))"
-                    case .updateUserStatus(let userId, let status):
-                        return "(updateUserStatus userId: \(userId), status: \(status))"
-                    case .updateUserName(let userId, let firstName, let lastName, let username):
-                        return "(updateUserName userId: \(userId), firstName: \(firstName), lastName: \(lastName), username: \(username))"
-                    case .updateUserPhoto(let userId, let date, let photo, let previous):
-                        return "(updateUserPhoto userId: \(userId), date: \(date), photo: \(photo), previous: \(previous))"
-                    case .updateContactRegistered(let userId, let date):
-                        return "(updateContactRegistered userId: \(userId), date: \(date))"
-                    case .updateContactLink(let userId, let myLink, let foreignLink):
-                        return "(updateContactLink userId: \(userId), myLink: \(myLink), foreignLink: \(foreignLink))"
-                    case .updateNewEncryptedMessage(let message, let qts):
-                        return "(updateNewEncryptedMessage message: \(message), qts: \(qts))"
-                    case .updateEncryptedChatTyping(let chatId):
-                        return "(updateEncryptedChatTyping chatId: \(chatId))"
-                    case .updateEncryption(let chat, let date):
-                        return "(updateEncryption chat: \(chat), date: \(date))"
-                    case .updateEncryptedMessagesRead(let chatId, let maxDate, let date):
-                        return "(updateEncryptedMessagesRead chatId: \(chatId), maxDate: \(maxDate), date: \(date))"
-                    case .updateChatParticipantAdd(let chatId, let userId, let inviterId, let date, let version):
-                        return "(updateChatParticipantAdd chatId: \(chatId), userId: \(userId), inviterId: \(inviterId), date: \(date), version: \(version))"
-                    case .updateChatParticipantDelete(let chatId, let userId, let version):
-                        return "(updateChatParticipantDelete chatId: \(chatId), userId: \(userId), version: \(version))"
-                    case .updateDcOptions(let dcOptions):
-                        return "(updateDcOptions dcOptions: \(dcOptions))"
-                    case .updateUserBlocked(let userId, let blocked):
-                        return "(updateUserBlocked userId: \(userId), blocked: \(blocked))"
-                    case .updateNotifySettings(let peer, let notifySettings):
-                        return "(updateNotifySettings peer: \(peer), notifySettings: \(notifySettings))"
-                    case .updateServiceNotification(let flags, let inboxDate, let type, let message, let media, let entities):
-                        return "(updateServiceNotification flags: \(flags), inboxDate: \(inboxDate), type: \(type), message: \(message), media: \(media), entities: \(entities))"
-                    case .updatePrivacy(let key, let rules):
-                        return "(updatePrivacy key: \(key), rules: \(rules))"
-                    case .updateUserPhone(let userId, let phone):
-                        return "(updateUserPhone userId: \(userId), phone: \(phone))"
-                    case .updateReadHistoryInbox(let peer, let maxId, let pts, let ptsCount):
-                        return "(updateReadHistoryInbox peer: \(peer), maxId: \(maxId), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateReadHistoryOutbox(let peer, let maxId, let pts, let ptsCount):
-                        return "(updateReadHistoryOutbox peer: \(peer), maxId: \(maxId), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateWebPage(let webpage, let pts, let ptsCount):
-                        return "(updateWebPage webpage: \(webpage), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateReadMessagesContents(let messages, let pts, let ptsCount):
-                        return "(updateReadMessagesContents messages: \(messages), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateChannelTooLong(let flags, let channelId, let pts):
-                        return "(updateChannelTooLong flags: \(flags), channelId: \(channelId), pts: \(pts))"
-                    case .updateChannel(let channelId):
-                        return "(updateChannel channelId: \(channelId))"
-                    case .updateNewChannelMessage(let message, let pts, let ptsCount):
-                        return "(updateNewChannelMessage message: \(message), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateReadChannelInbox(let channelId, let maxId):
-                        return "(updateReadChannelInbox channelId: \(channelId), maxId: \(maxId))"
-                    case .updateDeleteChannelMessages(let channelId, let messages, let pts, let ptsCount):
-                        return "(updateDeleteChannelMessages channelId: \(channelId), messages: \(messages), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateChannelMessageViews(let channelId, let id, let views):
-                        return "(updateChannelMessageViews channelId: \(channelId), id: \(id), views: \(views))"
-                    case .updateChatAdmins(let chatId, let enabled, let version):
-                        return "(updateChatAdmins chatId: \(chatId), enabled: \(enabled), version: \(version))"
-                    case .updateChatParticipantAdmin(let chatId, let userId, let isAdmin, let version):
-                        return "(updateChatParticipantAdmin chatId: \(chatId), userId: \(userId), isAdmin: \(isAdmin), version: \(version))"
-                    case .updateNewStickerSet(let stickerset):
-                        return "(updateNewStickerSet stickerset: \(stickerset))"
-                    case .updateStickerSetsOrder(let flags, let order):
-                        return "(updateStickerSetsOrder flags: \(flags), order: \(order))"
-                    case .updateStickerSets:
-                        return "(updateStickerSets)"
-                    case .updateSavedGifs:
-                        return "(updateSavedGifs)"
-                    case .updateBotInlineQuery(let flags, let queryId, let userId, let query, let geo, let offset):
-                        return "(updateBotInlineQuery flags: \(flags), queryId: \(queryId), userId: \(userId), query: \(query), geo: \(geo), offset: \(offset))"
-                    case .updateBotInlineSend(let flags, let userId, let query, let geo, let id, let msgId):
-                        return "(updateBotInlineSend flags: \(flags), userId: \(userId), query: \(query), geo: \(geo), id: \(id), msgId: \(msgId))"
-                    case .updateEditChannelMessage(let message, let pts, let ptsCount):
-                        return "(updateEditChannelMessage message: \(message), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateChannelPinnedMessage(let channelId, let id):
-                        return "(updateChannelPinnedMessage channelId: \(channelId), id: \(id))"
-                    case .updateBotCallbackQuery(let flags, let queryId, let userId, let peer, let msgId, let chatInstance, let data, let gameShortName):
-                        return "(updateBotCallbackQuery flags: \(flags), queryId: \(queryId), userId: \(userId), peer: \(peer), msgId: \(msgId), chatInstance: \(chatInstance), data: \(data), gameShortName: \(gameShortName))"
-                    case .updateEditMessage(let message, let pts, let ptsCount):
-                        return "(updateEditMessage message: \(message), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateInlineBotCallbackQuery(let flags, let queryId, let userId, let msgId, let chatInstance, let data, let gameShortName):
-                        return "(updateInlineBotCallbackQuery flags: \(flags), queryId: \(queryId), userId: \(userId), msgId: \(msgId), chatInstance: \(chatInstance), data: \(data), gameShortName: \(gameShortName))"
-                    case .updateReadChannelOutbox(let channelId, let maxId):
-                        return "(updateReadChannelOutbox channelId: \(channelId), maxId: \(maxId))"
-                    case .updateDraftMessage(let peer, let draft):
-                        return "(updateDraftMessage peer: \(peer), draft: \(draft))"
-                    case .updateReadFeaturedStickers:
-                        return "(updateReadFeaturedStickers)"
-                    case .updateRecentStickers:
-                        return "(updateRecentStickers)"
-                    case .updateConfig:
-                        return "(updateConfig)"
-                    case .updatePtsChanged:
-                        return "(updatePtsChanged)"
-                    case .updateChannelWebPage(let channelId, let webpage, let pts, let ptsCount):
-                        return "(updateChannelWebPage channelId: \(channelId), webpage: \(webpage), pts: \(pts), ptsCount: \(ptsCount))"
-                    case .updateDialogPinned(let flags, let peer):
-                        return "(updateDialogPinned flags: \(flags), peer: \(peer))"
-                    case .updatePinnedDialogs(let flags, let order):
-                        return "(updatePinnedDialogs flags: \(flags), order: \(order))"
-                    case .updateBotWebhookJSON(let data):
-                        return "(updateBotWebhookJSON data: \(data))"
-                    case .updateBotWebhookJSONQuery(let queryId, let data, let timeout):
-                        return "(updateBotWebhookJSONQuery queryId: \(queryId), data: \(data), timeout: \(timeout))"
-                    case .updateBotShippingQuery(let queryId, let userId, let payload, let shippingAddress):
-                        return "(updateBotShippingQuery queryId: \(queryId), userId: \(userId), payload: \(payload), shippingAddress: \(shippingAddress))"
-                    case .updateBotPrecheckoutQuery(let flags, let queryId, let userId, let payload, let info, let shippingOptionId, let currency, let totalAmount):
-                        return "(updateBotPrecheckoutQuery flags: \(flags), queryId: \(queryId), userId: \(userId), payload: \(payload), info: \(info), shippingOptionId: \(shippingOptionId), currency: \(currency), totalAmount: \(totalAmount))"
-                    case .updatePhoneCall(let phoneCall):
-                        return "(updatePhoneCall phoneCall: \(phoneCall))"
-                    case .updateLangPackTooLong:
-                        return "(updateLangPackTooLong)"
-                    case .updateLangPack(let difference):
-                        return "(updateLangPack difference: \(difference))"
-                    case .updateFavedStickers:
-                        return "(updateFavedStickers)"
-                    case .updateChannelReadMessagesContents(let channelId, let messages):
-                        return "(updateChannelReadMessagesContents channelId: \(channelId), messages: \(messages))"
-                    case .updateContactsReset:
-                        return "(updateContactsReset)"
-                }
-            }
-        }
     }
 
-    public enum PopularContact: CustomStringConvertible {
+    public enum PopularContact {
         case popularContact(clientId: Int64, importers: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .popularContact(let clientId, let importers):
                     if boxed {
@@ -7212,7 +6478,6 @@ public struct Api {
                     serializeInt32(importers, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_popularContact(_ reader: BufferReader) -> PopularContact? {
@@ -7230,24 +6495,16 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .popularContact(let clientId, let importers):
-                        return "(popularContact clientId: \(clientId), importers: \(importers))"
-                }
-            }
-        }
     }
 
-    public enum ChannelParticipant: CustomStringConvertible {
+    public enum ChannelParticipant {
         case channelParticipant(userId: Int32, date: Int32)
         case channelParticipantSelf(userId: Int32, inviterId: Int32, date: Int32)
         case channelParticipantCreator(userId: Int32)
         case channelParticipantAdmin(flags: Int32, userId: Int32, inviterId: Int32, promotedBy: Int32, date: Int32, adminRights: Api.ChannelAdminRights)
         case channelParticipantBanned(flags: Int32, userId: Int32, kickedBy: Int32, date: Int32, bannedRights: Api.ChannelBannedRights)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelParticipant(let userId, let date):
                     if boxed {
@@ -7292,7 +6549,6 @@ public struct Api {
                     bannedRights.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_channelParticipant(_ reader: BufferReader) -> ChannelParticipant? {
@@ -7391,28 +6647,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .channelParticipant(let userId, let date):
-                        return "(channelParticipant userId: \(userId), date: \(date))"
-                    case .channelParticipantSelf(let userId, let inviterId, let date):
-                        return "(channelParticipantSelf userId: \(userId), inviterId: \(inviterId), date: \(date))"
-                    case .channelParticipantCreator(let userId):
-                        return "(channelParticipantCreator userId: \(userId))"
-                    case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights):
-                        return "(channelParticipantAdmin flags: \(flags), userId: \(userId), inviterId: \(inviterId), promotedBy: \(promotedBy), date: \(date), adminRights: \(adminRights))"
-                    case .channelParticipantBanned(let flags, let userId, let kickedBy, let date, let bannedRights):
-                        return "(channelParticipantBanned flags: \(flags), userId: \(userId), kickedBy: \(kickedBy), date: \(date), bannedRights: \(bannedRights))"
-                }
-            }
-        }
     }
 
-    public enum Error: CustomStringConvertible {
+    public enum Error {
         case error(code: Int32, text: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .error(let code, let text):
                     if boxed {
@@ -7422,7 +6662,6 @@ public struct Api {
                     serializeString(text, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_error(_ reader: BufferReader) -> Error? {
@@ -7440,17 +6679,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .error(let code, let text):
-                        return "(error code: \(code), text: \(text))"
-                }
-            }
-        }
     }
 
-    public enum KeyboardButton: CustomStringConvertible {
+    public enum KeyboardButton {
         case keyboardButton(text: String)
         case keyboardButtonUrl(text: String, url: String)
         case keyboardButtonCallback(text: String, data: Buffer)
@@ -7460,7 +6691,7 @@ public struct Api {
         case keyboardButtonGame(text: String)
         case keyboardButtonBuy(text: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .keyboardButton(let text):
                     if boxed {
@@ -7515,7 +6746,6 @@ public struct Api {
                     serializeString(text, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_keyboardButton(_ reader: BufferReader) -> KeyboardButton? {
@@ -7619,34 +6849,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .keyboardButton(let text):
-                        return "(keyboardButton text: \(text))"
-                    case .keyboardButtonUrl(let text, let url):
-                        return "(keyboardButtonUrl text: \(text), url: \(url))"
-                    case .keyboardButtonCallback(let text, let data):
-                        return "(keyboardButtonCallback text: \(text), data: \(data))"
-                    case .keyboardButtonRequestPhone(let text):
-                        return "(keyboardButtonRequestPhone text: \(text))"
-                    case .keyboardButtonRequestGeoLocation(let text):
-                        return "(keyboardButtonRequestGeoLocation text: \(text))"
-                    case .keyboardButtonSwitchInline(let flags, let text, let query):
-                        return "(keyboardButtonSwitchInline flags: \(flags), text: \(text), query: \(query))"
-                    case .keyboardButtonGame(let text):
-                        return "(keyboardButtonGame text: \(text))"
-                    case .keyboardButtonBuy(let text):
-                        return "(keyboardButtonBuy text: \(text))"
-                }
-            }
-        }
     }
 
-    public enum ContactStatus: CustomStringConvertible {
+    public enum ContactStatus {
         case contactStatus(userId: Int32, status: Api.UserStatus)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .contactStatus(let userId, let status):
                     if boxed {
@@ -7656,7 +6864,6 @@ public struct Api {
                     status.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_contactStatus(_ reader: BufferReader) -> ContactStatus? {
@@ -7676,22 +6883,14 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .contactStatus(let userId, let status):
-                        return "(contactStatus userId: \(userId), status: \(status))"
-                }
-            }
-        }
     }
 
-    public enum PhotoSize: CustomStringConvertible {
+    public enum PhotoSize {
         case photoSizeEmpty(type: String)
         case photoSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, size: Int32)
         case photoCachedSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, bytes: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .photoSizeEmpty(let type):
                     if boxed {
@@ -7720,7 +6919,6 @@ public struct Api {
                     serializeBytes(bytes, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_photoSizeEmpty(_ reader: BufferReader) -> PhotoSize? {
@@ -7785,24 +6983,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .photoSizeEmpty(let type):
-                        return "(photoSizeEmpty type: \(type))"
-                    case .photoSize(let type, let location, let w, let h, let size):
-                        return "(photoSize type: \(type), location: \(location), w: \(w), h: \(h), size: \(size))"
-                    case .photoCachedSize(let type, let location, let w, let h, let bytes):
-                        return "(photoCachedSize type: \(type), location: \(location), w: \(w), h: \(h), bytes: \(bytes))"
-                }
-            }
-        }
     }
 
-    public enum InlineBotSwitchPM: CustomStringConvertible {
+    public enum InlineBotSwitchPM {
         case inlineBotSwitchPM(text: String, startParam: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inlineBotSwitchPM(let text, let startParam):
                     if boxed {
@@ -7812,7 +6998,6 @@ public struct Api {
                     serializeString(startParam, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inlineBotSwitchPM(_ reader: BufferReader) -> InlineBotSwitchPM? {
@@ -7830,21 +7015,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inlineBotSwitchPM(let text, let startParam):
-                        return "(inlineBotSwitchPM text: \(text), startParam: \(startParam))"
-                }
-            }
-        }
     }
 
-    public enum FileLocation: CustomStringConvertible {
+    public enum FileLocation {
         case fileLocationUnavailable(volumeId: Int64, localId: Int32, secret: Int64)
         case fileLocation(dcId: Int32, volumeId: Int64, localId: Int32, secret: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .fileLocationUnavailable(let volumeId, let localId, let secret):
                     if boxed {
@@ -7864,7 +7041,6 @@ public struct Api {
                     serializeInt64(secret, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_fileLocationUnavailable(_ reader: BufferReader) -> FileLocation? {
@@ -7905,25 +7081,15 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .fileLocationUnavailable(let volumeId, let localId, let secret):
-                        return "(fileLocationUnavailable volumeId: \(volumeId), localId: \(localId), secret: \(secret))"
-                    case .fileLocation(let dcId, let volumeId, let localId, let secret):
-                        return "(fileLocation dcId: \(dcId), volumeId: \(volumeId), localId: \(localId), secret: \(secret))"
-                }
-            }
-        }
     }
 
-    public enum InputNotifyPeer: CustomStringConvertible {
+    public enum InputNotifyPeer {
         case inputNotifyPeer(peer: Api.InputPeer)
         case inputNotifyUsers
         case inputNotifyChats
         case inputNotifyAll
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputNotifyPeer(let peer):
                     if boxed {
@@ -7950,7 +7116,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputNotifyPeer(_ reader: BufferReader) -> InputNotifyPeer? {
@@ -7976,27 +7141,13 @@ public struct Api {
             return Api.InputNotifyPeer.inputNotifyAll
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputNotifyPeer(let peer):
-                        return "(inputNotifyPeer peer: \(peer))"
-                    case .inputNotifyUsers:
-                        return "(inputNotifyUsers)"
-                    case .inputNotifyChats:
-                        return "(inputNotifyChats)"
-                    case .inputNotifyAll:
-                        return "(inputNotifyAll)"
-                }
-            }
-        }
     }
 
-    public enum EncryptedMessage: CustomStringConvertible {
+    public enum EncryptedMessage {
         case encryptedMessage(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer, file: Api.EncryptedFile)
         case encryptedMessageService(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .encryptedMessage(let randomId, let chatId, let date, let bytes, let file):
                     if boxed {
@@ -8018,7 +7169,6 @@ public struct Api {
                     serializeBytes(bytes, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_encryptedMessage(_ reader: BufferReader) -> EncryptedMessage? {
@@ -8067,19 +7217,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .encryptedMessage(let randomId, let chatId, let date, let bytes, let file):
-                        return "(encryptedMessage randomId: \(randomId), chatId: \(chatId), date: \(date), bytes: \(bytes), file: \(file))"
-                    case .encryptedMessageService(let randomId, let chatId, let date, let bytes):
-                        return "(encryptedMessageService randomId: \(randomId), chatId: \(chatId), date: \(date), bytes: \(bytes))"
-                }
-            }
-        }
     }
 
-    public enum ChannelParticipantsFilter: CustomStringConvertible {
+    public enum ChannelParticipantsFilter {
         case channelParticipantsRecent
         case channelParticipantsAdmins
         case channelParticipantsBots
@@ -8087,7 +7227,7 @@ public struct Api {
         case channelParticipantsSearch(q: String)
         case channelParticipantsKicked(q: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelParticipantsRecent:
                     if boxed {
@@ -8126,7 +7266,6 @@ public struct Api {
                     serializeString(q, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_channelParticipantsRecent(_ reader: BufferReader) -> ChannelParticipantsFilter? {
@@ -8172,33 +7311,15 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .channelParticipantsRecent:
-                        return "(channelParticipantsRecent)"
-                    case .channelParticipantsAdmins:
-                        return "(channelParticipantsAdmins)"
-                    case .channelParticipantsBots:
-                        return "(channelParticipantsBots)"
-                    case .channelParticipantsBanned(let q):
-                        return "(channelParticipantsBanned q: \(q))"
-                    case .channelParticipantsSearch(let q):
-                        return "(channelParticipantsSearch q: \(q))"
-                    case .channelParticipantsKicked(let q):
-                        return "(channelParticipantsKicked q: \(q))"
-                }
-            }
-        }
     }
 
-    public enum WebPage: CustomStringConvertible {
+    public enum WebPage {
         case webPageEmpty(id: Int64)
         case webPagePending(id: Int64, date: Int32)
         case webPage(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: Api.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: Api.Document?, cachedPage: Api.Page?)
         case webPageNotModified
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .webPageEmpty(let id):
                     if boxed {
@@ -8243,7 +7364,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_webPageEmpty(_ reader: BufferReader) -> WebPage? {
@@ -8343,23 +7463,9 @@ public struct Api {
             return Api.WebPage.webPageNotModified
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .webPageEmpty(let id):
-                        return "(webPageEmpty id: \(id))"
-                    case .webPagePending(let id, let date):
-                        return "(webPagePending id: \(id), date: \(date))"
-                    case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage):
-                        return "(webPage flags: \(flags), id: \(id), url: \(url), displayUrl: \(displayUrl), hash: \(hash), type: \(type), siteName: \(siteName), title: \(title), description: \(description), photo: \(photo), embedUrl: \(embedUrl), embedType: \(embedType), embedWidth: \(embedWidth), embedHeight: \(embedHeight), duration: \(duration), author: \(author), document: \(document), cachedPage: \(cachedPage))"
-                    case .webPageNotModified:
-                        return "(webPageNotModified)"
-                }
-            }
-        }
     }
 
-    public enum InputBotInlineMessage: CustomStringConvertible {
+    public enum InputBotInlineMessage {
         case inputBotInlineMessageMediaAuto(flags: Int32, caption: String, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaGeo(flags: Int32, geoPoint: Api.InputGeoPoint, replyMarkup: Api.ReplyMarkup?)
@@ -8367,7 +7473,7 @@ public struct Api {
         case inputBotInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageGame(flags: Int32, replyMarkup: Api.ReplyMarkup?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputBotInlineMessageMediaAuto(let flags, let caption, let replyMarkup):
                     if boxed {
@@ -8428,7 +7534,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputBotInlineMessageMediaAuto(_ reader: BufferReader) -> InputBotInlineMessage? {
@@ -8570,30 +7675,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputBotInlineMessageMediaAuto(let flags, let caption, let replyMarkup):
-                        return "(inputBotInlineMessageMediaAuto flags: \(flags), caption: \(caption), replyMarkup: \(replyMarkup))"
-                    case .inputBotInlineMessageText(let flags, let message, let entities, let replyMarkup):
-                        return "(inputBotInlineMessageText flags: \(flags), message: \(message), entities: \(entities), replyMarkup: \(replyMarkup))"
-                    case .inputBotInlineMessageMediaGeo(let flags, let geoPoint, let replyMarkup):
-                        return "(inputBotInlineMessageMediaGeo flags: \(flags), geoPoint: \(geoPoint), replyMarkup: \(replyMarkup))"
-                    case .inputBotInlineMessageMediaVenue(let flags, let geoPoint, let title, let address, let provider, let venueId, let replyMarkup):
-                        return "(inputBotInlineMessageMediaVenue flags: \(flags), geoPoint: \(geoPoint), title: \(title), address: \(address), provider: \(provider), venueId: \(venueId), replyMarkup: \(replyMarkup))"
-                    case .inputBotInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
-                        return "(inputBotInlineMessageMediaContact flags: \(flags), phoneNumber: \(phoneNumber), firstName: \(firstName), lastName: \(lastName), replyMarkup: \(replyMarkup))"
-                    case .inputBotInlineMessageGame(let flags, let replyMarkup):
-                        return "(inputBotInlineMessageGame flags: \(flags), replyMarkup: \(replyMarkup))"
-                }
-            }
-        }
     }
 
-    public enum KeyboardButtonRow: CustomStringConvertible {
+    public enum KeyboardButtonRow {
         case keyboardButtonRow(buttons: [Api.KeyboardButton])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .keyboardButtonRow(let buttons):
                     if boxed {
@@ -8606,7 +7693,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_keyboardButtonRow(_ reader: BufferReader) -> KeyboardButtonRow? {
@@ -8623,20 +7709,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .keyboardButtonRow(let buttons):
-                        return "(keyboardButtonRow buttons: \(buttons))"
-                }
-            }
-        }
     }
 
-    public enum StickerSet: CustomStringConvertible {
+    public enum StickerSet {
         case stickerSet(flags: Int32, id: Int64, accessHash: Int64, title: String, shortName: String, count: Int32, hash: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .stickerSet(let flags, let id, let accessHash, let title, let shortName, let count, let hash):
                     if boxed {
@@ -8651,7 +7729,6 @@ public struct Api {
                     serializeInt32(hash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_stickerSet(_ reader: BufferReader) -> StickerSet? {
@@ -8684,20 +7761,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .stickerSet(let flags, let id, let accessHash, let title, let shortName, let count, let hash):
-                        return "(stickerSet flags: \(flags), id: \(id), accessHash: \(accessHash), title: \(title), shortName: \(shortName), count: \(count), hash: \(hash))"
-                }
-            }
-        }
     }
 
-    public enum InputContact: CustomStringConvertible {
+    public enum InputContact {
         case inputPhoneContact(clientId: Int64, phone: String, firstName: String, lastName: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPhoneContact(let clientId, let phone, let firstName, let lastName):
                     if boxed {
@@ -8709,7 +7778,6 @@ public struct Api {
                     serializeString(lastName, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputPhoneContact(_ reader: BufferReader) -> InputContact? {
@@ -8733,17 +7801,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputPhoneContact(let clientId, let phone, let firstName, let lastName):
-                        return "(inputPhoneContact clientId: \(clientId), phone: \(phone), firstName: \(firstName), lastName: \(lastName))"
-                }
-            }
-        }
     }
 
-    public enum TopPeerCategory: CustomStringConvertible {
+    public enum TopPeerCategory {
         case topPeerCategoryBotsPM
         case topPeerCategoryBotsInline
         case topPeerCategoryCorrespondents
@@ -8751,7 +7811,7 @@ public struct Api {
         case topPeerCategoryChannels
         case topPeerCategoryPhoneCalls
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .topPeerCategoryBotsPM:
                     if boxed {
@@ -8790,7 +7850,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_topPeerCategoryBotsPM(_ reader: BufferReader) -> TopPeerCategory? {
@@ -8812,31 +7871,13 @@ public struct Api {
             return Api.TopPeerCategory.topPeerCategoryPhoneCalls
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .topPeerCategoryBotsPM:
-                        return "(topPeerCategoryBotsPM)"
-                    case .topPeerCategoryBotsInline:
-                        return "(topPeerCategoryBotsInline)"
-                    case .topPeerCategoryCorrespondents:
-                        return "(topPeerCategoryCorrespondents)"
-                    case .topPeerCategoryGroups:
-                        return "(topPeerCategoryGroups)"
-                    case .topPeerCategoryChannels:
-                        return "(topPeerCategoryChannels)"
-                    case .topPeerCategoryPhoneCalls:
-                        return "(topPeerCategoryPhoneCalls)"
-                }
-            }
-        }
     }
 
-    public enum ChannelMessagesFilter: CustomStringConvertible {
+    public enum ChannelMessagesFilter {
         case channelMessagesFilterEmpty
         case channelMessagesFilter(flags: Int32, ranges: [Api.MessageRange])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelMessagesFilterEmpty:
                     if boxed {
@@ -8856,7 +7897,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_channelMessagesFilterEmpty(_ reader: BufferReader) -> ChannelMessagesFilter? {
@@ -8879,23 +7919,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .channelMessagesFilterEmpty:
-                        return "(channelMessagesFilterEmpty)"
-                    case .channelMessagesFilter(let flags, let ranges):
-                        return "(channelMessagesFilter flags: \(flags), ranges: \(ranges))"
-                }
-            }
-        }
     }
 
-    public enum InputDocument: CustomStringConvertible {
+    public enum InputDocument {
         case inputDocumentEmpty
         case inputDocument(id: Int64, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputDocumentEmpty:
                     if boxed {
@@ -8911,7 +7941,6 @@ public struct Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputDocumentEmpty(_ reader: BufferReader) -> InputDocument? {
@@ -8932,19 +7961,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputDocumentEmpty:
-                        return "(inputDocumentEmpty)"
-                    case .inputDocument(let id, let accessHash):
-                        return "(inputDocument id: \(id), accessHash: \(accessHash))"
-                }
-            }
-        }
     }
 
-    public enum InputMedia: CustomStringConvertible {
+    public enum InputMedia {
         case inputMediaEmpty
         case inputMediaPhoto(id: Api.InputPhoto, caption: String)
         case inputMediaGeoPoint(geoPoint: Api.InputGeoPoint)
@@ -8959,7 +7978,7 @@ public struct Api {
         case inputMediaUploadedPhoto(flags: Int32, file: Api.InputFile, caption: String, stickers: [Api.InputDocument]?, ttlSeconds: Int32?)
         case inputMediaUploadedDocument(flags: Int32, file: Api.InputFile, thumb: Api.InputFile?, mimeType: String, attributes: [Api.DocumentAttribute], caption: String, stickers: [Api.InputDocument]?, ttlSeconds: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputMediaEmpty:
                     if boxed {
@@ -9081,7 +8100,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputMediaEmpty(_ reader: BufferReader) -> InputMedia? {
@@ -9333,48 +8351,16 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputMediaEmpty:
-                        return "(inputMediaEmpty)"
-                    case .inputMediaPhoto(let id, let caption):
-                        return "(inputMediaPhoto id: \(id), caption: \(caption))"
-                    case .inputMediaGeoPoint(let geoPoint):
-                        return "(inputMediaGeoPoint geoPoint: \(geoPoint))"
-                    case .inputMediaContact(let phoneNumber, let firstName, let lastName):
-                        return "(inputMediaContact phoneNumber: \(phoneNumber), firstName: \(firstName), lastName: \(lastName))"
-                    case .inputMediaDocument(let id, let caption):
-                        return "(inputMediaDocument id: \(id), caption: \(caption))"
-                    case .inputMediaVenue(let geoPoint, let title, let address, let provider, let venueId):
-                        return "(inputMediaVenue geoPoint: \(geoPoint), title: \(title), address: \(address), provider: \(provider), venueId: \(venueId))"
-                    case .inputMediaGifExternal(let url, let q):
-                        return "(inputMediaGifExternal url: \(url), q: \(q))"
-                    case .inputMediaPhotoExternal(let url, let caption):
-                        return "(inputMediaPhotoExternal url: \(url), caption: \(caption))"
-                    case .inputMediaDocumentExternal(let url, let caption):
-                        return "(inputMediaDocumentExternal url: \(url), caption: \(caption))"
-                    case .inputMediaGame(let id):
-                        return "(inputMediaGame id: \(id))"
-                    case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let startParam):
-                        return "(inputMediaInvoice flags: \(flags), title: \(title), description: \(description), photo: \(photo), invoice: \(invoice), payload: \(payload), provider: \(provider), startParam: \(startParam))"
-                    case .inputMediaUploadedPhoto(let flags, let file, let caption, let stickers, let ttlSeconds):
-                        return "(inputMediaUploadedPhoto flags: \(flags), file: \(file), caption: \(caption), stickers: \(stickers), ttlSeconds: \(ttlSeconds))"
-                    case .inputMediaUploadedDocument(let flags, let file, let thumb, let mimeType, let attributes, let caption, let stickers, let ttlSeconds):
-                        return "(inputMediaUploadedDocument flags: \(flags), file: \(file), thumb: \(thumb), mimeType: \(mimeType), attributes: \(attributes), caption: \(caption), stickers: \(stickers), ttlSeconds: \(ttlSeconds))"
-                }
-            }
-        }
     }
 
-    public enum InputPeer: CustomStringConvertible {
+    public enum InputPeer {
         case inputPeerEmpty
         case inputPeerSelf
         case inputPeerChat(chatId: Int32)
         case inputPeerUser(userId: Int32, accessHash: Int64)
         case inputPeerChannel(channelId: Int32, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPeerEmpty:
                     if boxed {
@@ -9409,7 +8395,6 @@ public struct Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputPeerEmpty(_ reader: BufferReader) -> InputPeer? {
@@ -9458,28 +8443,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputPeerEmpty:
-                        return "(inputPeerEmpty)"
-                    case .inputPeerSelf:
-                        return "(inputPeerSelf)"
-                    case .inputPeerChat(let chatId):
-                        return "(inputPeerChat chatId: \(chatId))"
-                    case .inputPeerUser(let userId, let accessHash):
-                        return "(inputPeerUser userId: \(userId), accessHash: \(accessHash))"
-                    case .inputPeerChannel(let channelId, let accessHash):
-                        return "(inputPeerChannel channelId: \(channelId), accessHash: \(accessHash))"
-                }
-            }
-        }
     }
 
-    public enum Contact: CustomStringConvertible {
+    public enum Contact {
         case contact(userId: Int32, mutual: Api.Bool)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .contact(let userId, let mutual):
                     if boxed {
@@ -9489,7 +8458,6 @@ public struct Api {
                     mutual.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_contact(_ reader: BufferReader) -> Contact? {
@@ -9509,21 +8477,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .contact(let userId, let mutual):
-                        return "(contact userId: \(userId), mutual: \(mutual))"
-                }
-            }
-        }
     }
 
-    public enum BotInlineResult: CustomStringConvertible {
+    public enum BotInlineResult {
         case botInlineResult(flags: Int32, id: String, type: String, title: String?, description: String?, url: String?, thumbUrl: String?, contentUrl: String?, contentType: String?, w: Int32?, h: Int32?, duration: Int32?, sendMessage: Api.BotInlineMessage)
         case botInlineMediaResult(flags: Int32, id: String, type: String, photo: Api.Photo?, document: Api.Document?, title: String?, description: String?, sendMessage: Api.BotInlineMessage)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botInlineResult(let flags, let id, let type, let title, let description, let url, let thumbUrl, let contentUrl, let contentType, let w, let h, let duration, let sendMessage):
                     if boxed {
@@ -9557,7 +8517,6 @@ public struct Api {
                     sendMessage.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_botInlineResult(_ reader: BufferReader) -> BotInlineResult? {
@@ -9648,19 +8607,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .botInlineResult(let flags, let id, let type, let title, let description, let url, let thumbUrl, let contentUrl, let contentType, let w, let h, let duration, let sendMessage):
-                        return "(botInlineResult flags: \(flags), id: \(id), type: \(type), title: \(title), description: \(description), url: \(url), thumbUrl: \(thumbUrl), contentUrl: \(contentUrl), contentType: \(contentType), w: \(w), h: \(h), duration: \(duration), sendMessage: \(sendMessage))"
-                    case .botInlineMediaResult(let flags, let id, let type, let photo, let document, let title, let description, let sendMessage):
-                        return "(botInlineMediaResult flags: \(flags), id: \(id), type: \(type), photo: \(photo), document: \(document), title: \(title), description: \(description), sendMessage: \(sendMessage))"
-                }
-            }
-        }
     }
 
-    public enum InputPrivacyRule: CustomStringConvertible {
+    public enum InputPrivacyRule {
         case inputPrivacyValueAllowContacts
         case inputPrivacyValueAllowAll
         case inputPrivacyValueAllowUsers(users: [Api.InputUser])
@@ -9668,7 +8617,7 @@ public struct Api {
         case inputPrivacyValueDisallowAll
         case inputPrivacyValueDisallowUsers(users: [Api.InputUser])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPrivacyValueAllowContacts:
                     if boxed {
@@ -9715,7 +8664,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputPrivacyValueAllowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
@@ -9757,27 +8705,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputPrivacyValueAllowContacts:
-                        return "(inputPrivacyValueAllowContacts)"
-                    case .inputPrivacyValueAllowAll:
-                        return "(inputPrivacyValueAllowAll)"
-                    case .inputPrivacyValueAllowUsers(let users):
-                        return "(inputPrivacyValueAllowUsers users: \(users))"
-                    case .inputPrivacyValueDisallowContacts:
-                        return "(inputPrivacyValueDisallowContacts)"
-                    case .inputPrivacyValueDisallowAll:
-                        return "(inputPrivacyValueDisallowAll)"
-                    case .inputPrivacyValueDisallowUsers(let users):
-                        return "(inputPrivacyValueDisallowUsers users: \(users))"
-                }
-            }
-        }
     }
 
-    public enum ChannelAdminLogEventAction: CustomStringConvertible {
+    public enum ChannelAdminLogEventAction {
         case channelAdminLogEventActionChangeTitle(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeUsername(prevValue: String, newValue: String)
@@ -9794,7 +8724,7 @@ public struct Api {
         case channelAdminLogEventActionParticipantToggleAdmin(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant)
         case channelAdminLogEventActionChangeStickerSet(prevStickerset: Api.InputStickerSet, newStickerset: Api.InputStickerSet)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelAdminLogEventActionChangeTitle(let prevValue, let newValue):
                     if boxed {
@@ -9895,7 +8825,6 @@ public struct Api {
                     newStickerset.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_channelAdminLogEventActionChangeTitle(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
@@ -10102,48 +9031,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .channelAdminLogEventActionChangeTitle(let prevValue, let newValue):
-                        return "(channelAdminLogEventActionChangeTitle prevValue: \(prevValue), newValue: \(newValue))"
-                    case .channelAdminLogEventActionChangeAbout(let prevValue, let newValue):
-                        return "(channelAdminLogEventActionChangeAbout prevValue: \(prevValue), newValue: \(newValue))"
-                    case .channelAdminLogEventActionChangeUsername(let prevValue, let newValue):
-                        return "(channelAdminLogEventActionChangeUsername prevValue: \(prevValue), newValue: \(newValue))"
-                    case .channelAdminLogEventActionChangePhoto(let prevPhoto, let newPhoto):
-                        return "(channelAdminLogEventActionChangePhoto prevPhoto: \(prevPhoto), newPhoto: \(newPhoto))"
-                    case .channelAdminLogEventActionToggleInvites(let newValue):
-                        return "(channelAdminLogEventActionToggleInvites newValue: \(newValue))"
-                    case .channelAdminLogEventActionToggleSignatures(let newValue):
-                        return "(channelAdminLogEventActionToggleSignatures newValue: \(newValue))"
-                    case .channelAdminLogEventActionUpdatePinned(let message):
-                        return "(channelAdminLogEventActionUpdatePinned message: \(message))"
-                    case .channelAdminLogEventActionEditMessage(let prevMessage, let newMessage):
-                        return "(channelAdminLogEventActionEditMessage prevMessage: \(prevMessage), newMessage: \(newMessage))"
-                    case .channelAdminLogEventActionDeleteMessage(let message):
-                        return "(channelAdminLogEventActionDeleteMessage message: \(message))"
-                    case .channelAdminLogEventActionParticipantJoin:
-                        return "(channelAdminLogEventActionParticipantJoin)"
-                    case .channelAdminLogEventActionParticipantLeave:
-                        return "(channelAdminLogEventActionParticipantLeave)"
-                    case .channelAdminLogEventActionParticipantInvite(let participant):
-                        return "(channelAdminLogEventActionParticipantInvite participant: \(participant))"
-                    case .channelAdminLogEventActionParticipantToggleBan(let prevParticipant, let newParticipant):
-                        return "(channelAdminLogEventActionParticipantToggleBan prevParticipant: \(prevParticipant), newParticipant: \(newParticipant))"
-                    case .channelAdminLogEventActionParticipantToggleAdmin(let prevParticipant, let newParticipant):
-                        return "(channelAdminLogEventActionParticipantToggleAdmin prevParticipant: \(prevParticipant), newParticipant: \(newParticipant))"
-                    case .channelAdminLogEventActionChangeStickerSet(let prevStickerset, let newStickerset):
-                        return "(channelAdminLogEventActionChangeStickerSet prevStickerset: \(prevStickerset), newStickerset: \(newStickerset))"
-                }
-            }
-        }
     }
 
-    public enum LabeledPrice: CustomStringConvertible {
+    public enum LabeledPrice {
         case labeledPrice(label: String, amount: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .labeledPrice(let label, let amount):
                     if boxed {
@@ -10153,7 +9046,6 @@ public struct Api {
                     serializeInt64(amount, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_labeledPrice(_ reader: BufferReader) -> LabeledPrice? {
@@ -10171,23 +9063,15 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .labeledPrice(let label, let amount):
-                        return "(labeledPrice label: \(label), amount: \(amount))"
-                }
-            }
-        }
     }
 
-    public enum ReportReason: CustomStringConvertible {
+    public enum ReportReason {
         case inputReportReasonSpam
         case inputReportReasonViolence
         case inputReportReasonPornography
         case inputReportReasonOther(text: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputReportReasonSpam:
                     if boxed {
@@ -10214,7 +9098,6 @@ public struct Api {
                     serializeString(text, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputReportReasonSpam(_ reader: BufferReader) -> ReportReason? {
@@ -10238,26 +9121,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputReportReasonSpam:
-                        return "(inputReportReasonSpam)"
-                    case .inputReportReasonViolence:
-                        return "(inputReportReasonViolence)"
-                    case .inputReportReasonPornography:
-                        return "(inputReportReasonPornography)"
-                    case .inputReportReasonOther(let text):
-                        return "(inputReportReasonOther text: \(text))"
-                }
-            }
-        }
     }
 
-    public enum InputEncryptedChat: CustomStringConvertible {
+    public enum InputEncryptedChat {
         case inputEncryptedChat(chatId: Int32, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputEncryptedChat(let chatId, let accessHash):
                     if boxed {
@@ -10267,7 +9136,6 @@ public struct Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputEncryptedChat(_ reader: BufferReader) -> InputEncryptedChat? {
@@ -10285,21 +9153,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputEncryptedChat(let chatId, let accessHash):
-                        return "(inputEncryptedChat chatId: \(chatId), accessHash: \(accessHash))"
-                }
-            }
-        }
     }
 
-    public enum DraftMessage: CustomStringConvertible {
+    public enum DraftMessage {
         case draftMessageEmpty
         case draftMessage(flags: Int32, replyToMsgId: Int32?, message: String, entities: [Api.MessageEntity]?, date: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .draftMessageEmpty:
                     if boxed {
@@ -10322,7 +9182,6 @@ public struct Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_draftMessageEmpty(_ reader: BufferReader) -> DraftMessage? {
@@ -10354,22 +9213,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .draftMessageEmpty:
-                        return "(draftMessageEmpty)"
-                    case .draftMessage(let flags, let replyToMsgId, let message, let entities, let date):
-                        return "(draftMessage flags: \(flags), replyToMsgId: \(replyToMsgId), message: \(message), entities: \(entities), date: \(date))"
-                }
-            }
-        }
     }
 
-    public enum ChannelAdminRights: CustomStringConvertible {
+    public enum ChannelAdminRights {
         case channelAdminRights(flags: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelAdminRights(let flags):
                     if boxed {
@@ -10378,7 +9227,6 @@ public struct Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_channelAdminRights(_ reader: BufferReader) -> ChannelAdminRights? {
@@ -10393,20 +9241,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .channelAdminRights(let flags):
-                        return "(channelAdminRights flags: \(flags))"
-                }
-            }
-        }
     }
 
-    public enum DisabledFeature: CustomStringConvertible {
+    public enum DisabledFeature {
         case disabledFeature(feature: String, description: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .disabledFeature(let feature, let description):
                     if boxed {
@@ -10416,7 +9256,6 @@ public struct Api {
                     serializeString(description, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_disabledFeature(_ reader: BufferReader) -> DisabledFeature? {
@@ -10434,21 +9273,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .disabledFeature(let feature, let description):
-                        return "(disabledFeature feature: \(feature), description: \(description))"
-                }
-            }
-        }
     }
 
-    public enum EncryptedFile: CustomStringConvertible {
+    public enum EncryptedFile {
         case encryptedFileEmpty
         case encryptedFile(id: Int64, accessHash: Int64, size: Int32, dcId: Int32, keyFingerprint: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .encryptedFileEmpty:
                     if boxed {
@@ -10467,7 +9298,6 @@ public struct Api {
                     serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_encryptedFileEmpty(_ reader: BufferReader) -> EncryptedFile? {
@@ -10497,22 +9327,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .encryptedFileEmpty:
-                        return "(encryptedFileEmpty)"
-                    case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
-                        return "(encryptedFile id: \(id), accessHash: \(accessHash), size: \(size), dcId: \(dcId), keyFingerprint: \(keyFingerprint))"
-                }
-            }
-        }
     }
 
-    public enum ChannelBannedRights: CustomStringConvertible {
+    public enum ChannelBannedRights {
         case channelBannedRights(flags: Int32, untilDate: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelBannedRights(let flags, let untilDate):
                     if boxed {
@@ -10522,7 +9342,6 @@ public struct Api {
                     serializeInt32(untilDate, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_channelBannedRights(_ reader: BufferReader) -> ChannelBannedRights? {
@@ -10540,23 +9359,15 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .channelBannedRights(let flags, let untilDate):
-                        return "(channelBannedRights flags: \(flags), untilDate: \(untilDate))"
-                }
-            }
-        }
     }
 
-    public enum NotifyPeer: CustomStringConvertible {
+    public enum NotifyPeer {
         case notifyPeer(peer: Api.Peer)
         case notifyUsers
         case notifyChats
         case notifyAll
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .notifyPeer(let peer):
                     if boxed {
@@ -10583,7 +9394,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_notifyPeer(_ reader: BufferReader) -> NotifyPeer? {
@@ -10609,28 +9419,14 @@ public struct Api {
             return Api.NotifyPeer.notifyAll
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .notifyPeer(let peer):
-                        return "(notifyPeer peer: \(peer))"
-                    case .notifyUsers:
-                        return "(notifyUsers)"
-                    case .notifyChats:
-                        return "(notifyChats)"
-                    case .notifyAll:
-                        return "(notifyAll)"
-                }
-            }
-        }
     }
 
-    public enum InputPrivacyKey: CustomStringConvertible {
+    public enum InputPrivacyKey {
         case inputPrivacyKeyStatusTimestamp
         case inputPrivacyKeyChatInvite
         case inputPrivacyKeyPhoneCall
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPrivacyKeyStatusTimestamp:
                     if boxed {
@@ -10651,7 +9447,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputPrivacyKeyStatusTimestamp(_ reader: BufferReader) -> InputPrivacyKey? {
@@ -10664,27 +9459,15 @@ public struct Api {
             return Api.InputPrivacyKey.inputPrivacyKeyPhoneCall
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputPrivacyKeyStatusTimestamp:
-                        return "(inputPrivacyKeyStatusTimestamp)"
-                    case .inputPrivacyKeyChatInvite:
-                        return "(inputPrivacyKeyChatInvite)"
-                    case .inputPrivacyKeyPhoneCall:
-                        return "(inputPrivacyKeyPhoneCall)"
-                }
-            }
-        }
     }
 
-    public enum ReplyMarkup: CustomStringConvertible {
+    public enum ReplyMarkup {
         case replyKeyboardHide(flags: Int32)
         case replyKeyboardForceReply(flags: Int32)
         case replyKeyboardMarkup(flags: Int32, rows: [Api.KeyboardButtonRow])
         case replyInlineMarkup(rows: [Api.KeyboardButtonRow])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .replyKeyboardHide(let flags):
                     if boxed {
@@ -10720,7 +9503,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_replyKeyboardHide(_ reader: BufferReader) -> ReplyMarkup? {
@@ -10775,26 +9557,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .replyKeyboardHide(let flags):
-                        return "(replyKeyboardHide flags: \(flags))"
-                    case .replyKeyboardForceReply(let flags):
-                        return "(replyKeyboardForceReply flags: \(flags))"
-                    case .replyKeyboardMarkup(let flags, let rows):
-                        return "(replyKeyboardMarkup flags: \(flags), rows: \(rows))"
-                    case .replyInlineMarkup(let rows):
-                        return "(replyInlineMarkup rows: \(rows))"
-                }
-            }
-        }
     }
 
-    public enum HighScore: CustomStringConvertible {
+    public enum HighScore {
         case highScore(pos: Int32, userId: Int32, score: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .highScore(let pos, let userId, let score):
                     if boxed {
@@ -10805,7 +9573,6 @@ public struct Api {
                     serializeInt32(score, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_highScore(_ reader: BufferReader) -> HighScore? {
@@ -10826,20 +9593,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .highScore(let pos, let userId, let score):
-                        return "(highScore pos: \(pos), userId: \(userId), score: \(score))"
-                }
-            }
-        }
     }
 
-    public enum TopPeer: CustomStringConvertible {
+    public enum TopPeer {
         case topPeer(peer: Api.Peer, rating: Double)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .topPeer(let peer, let rating):
                     if boxed {
@@ -10849,7 +9608,6 @@ public struct Api {
                     serializeDouble(rating, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_topPeer(_ reader: BufferReader) -> TopPeer? {
@@ -10869,20 +9627,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .topPeer(let peer, let rating):
-                        return "(topPeer peer: \(peer), rating: \(rating))"
-                }
-            }
-        }
     }
 
-    public enum CdnFileHash: CustomStringConvertible {
+    public enum CdnFileHash {
         case cdnFileHash(offset: Int32, limit: Int32, hash: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .cdnFileHash(let offset, let limit, let hash):
                     if boxed {
@@ -10893,7 +9643,6 @@ public struct Api {
                     serializeBytes(hash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_cdnFileHash(_ reader: BufferReader) -> CdnFileHash? {
@@ -10914,20 +9663,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .cdnFileHash(let offset, let limit, let hash):
-                        return "(cdnFileHash offset: \(offset), limit: \(limit), hash: \(hash))"
-                }
-            }
-        }
     }
 
-    public enum ContactBlocked: CustomStringConvertible {
+    public enum ContactBlocked {
         case contactBlocked(userId: Int32, date: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .contactBlocked(let userId, let date):
                     if boxed {
@@ -10937,7 +9678,6 @@ public struct Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_contactBlocked(_ reader: BufferReader) -> ContactBlocked? {
@@ -10955,22 +9695,14 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .contactBlocked(let userId, let date):
-                        return "(contactBlocked userId: \(userId), date: \(date))"
-                }
-            }
-        }
     }
 
-    public enum InputUser: CustomStringConvertible {
+    public enum InputUser {
         case inputUserEmpty
         case inputUserSelf
         case inputUser(userId: Int32, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputUserEmpty:
                     if boxed {
@@ -10992,7 +9724,6 @@ public struct Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputUserEmpty(_ reader: BufferReader) -> InputUser? {
@@ -11016,25 +9747,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputUserEmpty:
-                        return "(inputUserEmpty)"
-                    case .inputUserSelf:
-                        return "(inputUserSelf)"
-                    case .inputUser(let userId, let accessHash):
-                        return "(inputUser userId: \(userId), accessHash: \(accessHash))"
-                }
-            }
-        }
     }
 
-    public enum Page: CustomStringConvertible {
+    public enum Page {
         case pagePart(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
         case pageFull(blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .pagePart(let blocks, let photos, let documents):
                     if boxed {
@@ -11077,7 +9796,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_pagePart(_ reader: BufferReader) -> Page? {
@@ -11127,22 +9845,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .pagePart(let blocks, let photos, let documents):
-                        return "(pagePart blocks: \(blocks), photos: \(photos), documents: \(documents))"
-                    case .pageFull(let blocks, let photos, let documents):
-                        return "(pageFull blocks: \(blocks), photos: \(photos), documents: \(documents))"
-                }
-            }
-        }
     }
 
-    public enum MessageRange: CustomStringConvertible {
+    public enum MessageRange {
         case messageRange(minId: Int32, maxId: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageRange(let minId, let maxId):
                     if boxed {
@@ -11152,7 +9860,6 @@ public struct Api {
                     serializeInt32(maxId, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_messageRange(_ reader: BufferReader) -> MessageRange? {
@@ -11170,20 +9877,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .messageRange(let minId, let maxId):
-                        return "(messageRange minId: \(minId), maxId: \(maxId))"
-                }
-            }
-        }
     }
 
-    public enum Config: CustomStringConvertible {
+    public enum Config {
         case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, chatBigSize: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, stickersFavedLimit: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, suggestedLangCode: String?, langPackVersion: Int32?, disabledFeatures: [Api.DisabledFeature])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let suggestedLangCode, let langPackVersion, let disabledFeatures):
                     if boxed {
@@ -11232,7 +9931,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_config(_ reader: BufferReader) -> Config? {
@@ -11349,20 +10047,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let suggestedLangCode, let langPackVersion, let disabledFeatures):
-                        return "(config flags: \(flags), date: \(date), expires: \(expires), testMode: \(testMode), thisDc: \(thisDc), dcOptions: \(dcOptions), chatSizeMax: \(chatSizeMax), megagroupSizeMax: \(megagroupSizeMax), forwardedCountMax: \(forwardedCountMax), onlineUpdatePeriodMs: \(onlineUpdatePeriodMs), offlineBlurTimeoutMs: \(offlineBlurTimeoutMs), offlineIdleTimeoutMs: \(offlineIdleTimeoutMs), onlineCloudTimeoutMs: \(onlineCloudTimeoutMs), notifyCloudDelayMs: \(notifyCloudDelayMs), notifyDefaultDelayMs: \(notifyDefaultDelayMs), chatBigSize: \(chatBigSize), pushChatPeriodMs: \(pushChatPeriodMs), pushChatLimit: \(pushChatLimit), savedGifsLimit: \(savedGifsLimit), editTimeLimit: \(editTimeLimit), ratingEDecay: \(ratingEDecay), stickersRecentLimit: \(stickersRecentLimit), stickersFavedLimit: \(stickersFavedLimit), tmpSessions: \(tmpSessions), pinnedDialogsCountMax: \(pinnedDialogsCountMax), callReceiveTimeoutMs: \(callReceiveTimeoutMs), callRingTimeoutMs: \(callRingTimeoutMs), callConnectTimeoutMs: \(callConnectTimeoutMs), callPacketTimeoutMs: \(callPacketTimeoutMs), meUrlPrefix: \(meUrlPrefix), suggestedLangCode: \(suggestedLangCode), langPackVersion: \(langPackVersion), disabledFeatures: \(disabledFeatures))"
-                }
-            }
-        }
     }
 
-    public enum TopPeerCategoryPeers: CustomStringConvertible {
+    public enum TopPeerCategoryPeers {
         case topPeerCategoryPeers(category: Api.TopPeerCategory, count: Int32, peers: [Api.TopPeer])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .topPeerCategoryPeers(let category, let count, let peers):
                     if boxed {
@@ -11377,7 +10067,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_topPeerCategoryPeers(_ reader: BufferReader) -> TopPeerCategoryPeers? {
@@ -11402,20 +10091,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .topPeerCategoryPeers(let category, let count, let peers):
-                        return "(topPeerCategoryPeers category: \(category), count: \(count), peers: \(peers))"
-                }
-            }
-        }
     }
 
-    public enum Game: CustomStringConvertible {
+    public enum Game {
         case game(flags: Int32, id: Int64, accessHash: Int64, shortName: String, title: String, description: String, photo: Api.Photo, document: Api.Document?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .game(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document):
                     if boxed {
@@ -11431,7 +10112,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_game(_ reader: BufferReader) -> Game? {
@@ -11471,20 +10151,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .game(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document):
-                        return "(game flags: \(flags), id: \(id), accessHash: \(accessHash), shortName: \(shortName), title: \(title), description: \(description), photo: \(photo), document: \(document))"
-                }
-            }
-        }
     }
 
-    public enum BotCommand: CustomStringConvertible {
+    public enum BotCommand {
         case botCommand(command: String, description: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botCommand(let command, let description):
                     if boxed {
@@ -11494,7 +10166,6 @@ public struct Api {
                     serializeString(description, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_botCommand(_ reader: BufferReader) -> BotCommand? {
@@ -11512,20 +10183,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .botCommand(let command, let description):
-                        return "(botCommand command: \(command), description: \(description))"
-                }
-            }
-        }
     }
 
-    public enum CdnPublicKey: CustomStringConvertible {
+    public enum CdnPublicKey {
         case cdnPublicKey(dcId: Int32, publicKey: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .cdnPublicKey(let dcId, let publicKey):
                     if boxed {
@@ -11535,7 +10198,6 @@ public struct Api {
                     serializeString(publicKey, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_cdnPublicKey(_ reader: BufferReader) -> CdnPublicKey? {
@@ -11553,21 +10215,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .cdnPublicKey(let dcId, let publicKey):
-                        return "(cdnPublicKey dcId: \(dcId), publicKey: \(publicKey))"
-                }
-            }
-        }
     }
 
-    public enum InputGame: CustomStringConvertible {
+    public enum InputGame {
         case inputGameID(id: Int64, accessHash: Int64)
         case inputGameShortName(botId: Api.InputUser, shortName: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputGameID(let id, let accessHash):
                     if boxed {
@@ -11584,7 +10238,6 @@ public struct Api {
                     serializeString(shortName, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputGameID(_ reader: BufferReader) -> InputGame? {
@@ -11618,22 +10271,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputGameID(let id, let accessHash):
-                        return "(inputGameID id: \(id), accessHash: \(accessHash))"
-                    case .inputGameShortName(let botId, let shortName):
-                        return "(inputGameShortName botId: \(botId), shortName: \(shortName))"
-                }
-            }
-        }
     }
 
-    public enum PhoneCallProtocol: CustomStringConvertible {
+    public enum PhoneCallProtocol {
         case phoneCallProtocol(flags: Int32, minLayer: Int32, maxLayer: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .phoneCallProtocol(let flags, let minLayer, let maxLayer):
                     if boxed {
@@ -11644,7 +10287,6 @@ public struct Api {
                     serializeInt32(maxLayer, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_phoneCallProtocol(_ reader: BufferReader) -> PhoneCallProtocol? {
@@ -11665,21 +10307,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .phoneCallProtocol(let flags, let minLayer, let maxLayer):
-                        return "(phoneCallProtocol flags: \(flags), minLayer: \(minLayer), maxLayer: \(maxLayer))"
-                }
-            }
-        }
     }
 
-    public enum WallPaper: CustomStringConvertible {
+    public enum WallPaper {
         case wallPaper(id: Int32, title: String, sizes: [Api.PhotoSize], color: Int32)
         case wallPaperSolid(id: Int32, title: String, bgColor: Int32, color: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .wallPaper(let id, let title, let sizes, let color):
                     if boxed {
@@ -11704,7 +10338,6 @@ public struct Api {
                     serializeInt32(color, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_wallPaper(_ reader: BufferReader) -> WallPaper? {
@@ -11750,22 +10383,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .wallPaper(let id, let title, let sizes, let color):
-                        return "(wallPaper id: \(id), title: \(title), sizes: \(sizes), color: \(color))"
-                    case .wallPaperSolid(let id, let title, let bgColor, let color):
-                        return "(wallPaperSolid id: \(id), title: \(title), bgColor: \(bgColor), color: \(color))"
-                }
-            }
-        }
     }
 
-    public enum Invoice: CustomStringConvertible {
+    public enum Invoice {
         case invoice(flags: Int32, currency: String, prices: [Api.LabeledPrice])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .invoice(let flags, let currency, let prices):
                     if boxed {
@@ -11780,7 +10403,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_invoice(_ reader: BufferReader) -> Invoice? {
@@ -11803,20 +10425,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .invoice(let flags, let currency, let prices):
-                        return "(invoice flags: \(flags), currency: \(currency), prices: \(prices))"
-                }
-            }
-        }
     }
 
-    public enum PeerSettings: CustomStringConvertible {
+    public enum PeerSettings {
         case peerSettings(flags: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .peerSettings(let flags):
                     if boxed {
@@ -11825,7 +10439,6 @@ public struct Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_peerSettings(_ reader: BufferReader) -> PeerSettings? {
@@ -11840,22 +10453,14 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .peerSettings(let flags):
-                        return "(peerSettings flags: \(flags))"
-                }
-            }
-        }
     }
 
-    public enum InputChatPhoto: CustomStringConvertible {
+    public enum InputChatPhoto {
         case inputChatPhotoEmpty
         case inputChatUploadedPhoto(file: Api.InputFile)
         case inputChatPhoto(id: Api.InputPhoto)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputChatPhotoEmpty:
                     if boxed {
@@ -11876,7 +10481,6 @@ public struct Api {
                     id.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputChatPhotoEmpty(_ reader: BufferReader) -> InputChatPhoto? {
@@ -11909,24 +10513,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputChatPhotoEmpty:
-                        return "(inputChatPhotoEmpty)"
-                    case .inputChatUploadedPhoto(let file):
-                        return "(inputChatUploadedPhoto file: \(file))"
-                    case .inputChatPhoto(let id):
-                        return "(inputChatPhoto id: \(id))"
-                }
-            }
-        }
     }
 
-    public enum PaymentCharge: CustomStringConvertible {
+    public enum PaymentCharge {
         case paymentCharge(id: String, providerChargeId: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentCharge(let id, let providerChargeId):
                     if boxed {
@@ -11936,7 +10528,6 @@ public struct Api {
                     serializeString(providerChargeId, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_paymentCharge(_ reader: BufferReader) -> PaymentCharge? {
@@ -11954,17 +10545,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .paymentCharge(let id, let providerChargeId):
-                        return "(paymentCharge id: \(id), providerChargeId: \(providerChargeId))"
-                }
-            }
-        }
     }
 
-    public enum Updates: CustomStringConvertible {
+    public enum Updates {
         case updatesTooLong
         case updateShortMessage(flags: Int32, id: Int32, userId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, entities: [Api.MessageEntity]?)
         case updateShortChatMessage(flags: Int32, id: Int32, fromId: Int32, chatId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, entities: [Api.MessageEntity]?)
@@ -11973,7 +10556,7 @@ public struct Api {
         case updates(updates: [Api.Update], users: [Api.User], chats: [Api.Chat], date: Int32, seq: Int32)
         case updateShortSentMessage(flags: Int32, id: Int32, pts: Int32, ptsCount: Int32, date: Int32, media: Api.MessageMedia?, entities: [Api.MessageEntity]?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .updatesTooLong:
                     if boxed {
@@ -12091,7 +10674,6 @@ public struct Api {
                     }}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_updatesTooLong(_ reader: BufferReader) -> Updates? {
@@ -12301,29 +10883,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .updatesTooLong:
-                        return "(updatesTooLong)"
-                    case .updateShortMessage(let flags, let id, let userId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyToMsgId, let entities):
-                        return "(updateShortMessage flags: \(flags), id: \(id), userId: \(userId), message: \(message), pts: \(pts), ptsCount: \(ptsCount), date: \(date), fwdFrom: \(fwdFrom), viaBotId: \(viaBotId), replyToMsgId: \(replyToMsgId), entities: \(entities))"
-                    case .updateShortChatMessage(let flags, let id, let fromId, let chatId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyToMsgId, let entities):
-                        return "(updateShortChatMessage flags: \(flags), id: \(id), fromId: \(fromId), chatId: \(chatId), message: \(message), pts: \(pts), ptsCount: \(ptsCount), date: \(date), fwdFrom: \(fwdFrom), viaBotId: \(viaBotId), replyToMsgId: \(replyToMsgId), entities: \(entities))"
-                    case .updateShort(let update, let date):
-                        return "(updateShort update: \(update), date: \(date))"
-                    case .updatesCombined(let updates, let users, let chats, let date, let seqStart, let seq):
-                        return "(updatesCombined updates: \(updates), users: \(users), chats: \(chats), date: \(date), seqStart: \(seqStart), seq: \(seq))"
-                    case .updates(let updates, let users, let chats, let date, let seq):
-                        return "(updates updates: \(updates), users: \(users), chats: \(chats), date: \(date), seq: \(seq))"
-                    case .updateShortSentMessage(let flags, let id, let pts, let ptsCount, let date, let media, let entities):
-                        return "(updateShortSentMessage flags: \(flags), id: \(id), pts: \(pts), ptsCount: \(ptsCount), date: \(date), media: \(media), entities: \(entities))"
-                }
-            }
-        }
     }
 
-    public enum MessageMedia: CustomStringConvertible {
+    public enum MessageMedia {
         case messageMediaEmpty
         case messageMediaGeo(geo: Api.GeoPoint)
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, userId: Int32)
@@ -12335,7 +10897,7 @@ public struct Api {
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, caption: String?, ttlSeconds: Int32?)
         case messageMediaDocument(flags: Int32, document: Api.Document?, caption: String?, ttlSeconds: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageMediaEmpty:
                     if boxed {
@@ -12418,7 +10980,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_messageMediaEmpty(_ reader: BufferReader) -> MessageMedia? {
@@ -12590,38 +11151,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .messageMediaEmpty:
-                        return "(messageMediaEmpty)"
-                    case .messageMediaGeo(let geo):
-                        return "(messageMediaGeo geo: \(geo))"
-                    case .messageMediaContact(let phoneNumber, let firstName, let lastName, let userId):
-                        return "(messageMediaContact phoneNumber: \(phoneNumber), firstName: \(firstName), lastName: \(lastName), userId: \(userId))"
-                    case .messageMediaUnsupported:
-                        return "(messageMediaUnsupported)"
-                    case .messageMediaWebPage(let webpage):
-                        return "(messageMediaWebPage webpage: \(webpage))"
-                    case .messageMediaVenue(let geo, let title, let address, let provider, let venueId):
-                        return "(messageMediaVenue geo: \(geo), title: \(title), address: \(address), provider: \(provider), venueId: \(venueId))"
-                    case .messageMediaGame(let game):
-                        return "(messageMediaGame game: \(game))"
-                    case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam):
-                        return "(messageMediaInvoice flags: \(flags), title: \(title), description: \(description), photo: \(photo), receiptMsgId: \(receiptMsgId), currency: \(currency), totalAmount: \(totalAmount), startParam: \(startParam))"
-                    case .messageMediaPhoto(let flags, let photo, let caption, let ttlSeconds):
-                        return "(messageMediaPhoto flags: \(flags), photo: \(photo), caption: \(caption), ttlSeconds: \(ttlSeconds))"
-                    case .messageMediaDocument(let flags, let document, let caption, let ttlSeconds):
-                        return "(messageMediaDocument flags: \(flags), document: \(document), caption: \(caption), ttlSeconds: \(ttlSeconds))"
-                }
-            }
-        }
     }
 
-    public enum PaymentSavedCredentials: CustomStringConvertible {
+    public enum PaymentSavedCredentials {
         case paymentSavedCredentialsCard(id: String, title: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentSavedCredentialsCard(let id, let title):
                     if boxed {
@@ -12631,7 +11166,6 @@ public struct Api {
                     serializeString(title, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_paymentSavedCredentialsCard(_ reader: BufferReader) -> PaymentSavedCredentials? {
@@ -12649,20 +11183,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .paymentSavedCredentialsCard(let id, let title):
-                        return "(paymentSavedCredentialsCard id: \(id), title: \(title))"
-                }
-            }
-        }
     }
 
-    public enum Null: CustomStringConvertible {
+    public enum Null {
         case null
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .null:
                     if boxed {
@@ -12671,24 +11197,15 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_null(_ reader: BufferReader) -> Null? {
             return Api.Null.null
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .null:
-                        return "(null)"
-                }
-            }
-        }
     }
 
-    public enum DocumentAttribute: CustomStringConvertible {
+    public enum DocumentAttribute {
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeAnimated
         case documentAttributeSticker(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?)
@@ -12697,7 +11214,7 @@ public struct Api {
         case documentAttributeFilename(fileName: String)
         case documentAttributeHasStickers
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .documentAttributeImageSize(let w, let h):
                     if boxed {
@@ -12753,7 +11270,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_documentAttributeImageSize(_ reader: BufferReader) -> DocumentAttribute? {
@@ -12855,33 +11371,13 @@ public struct Api {
             return Api.DocumentAttribute.documentAttributeHasStickers
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .documentAttributeImageSize(let w, let h):
-                        return "(documentAttributeImageSize w: \(w), h: \(h))"
-                    case .documentAttributeAnimated:
-                        return "(documentAttributeAnimated)"
-                    case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
-                        return "(documentAttributeSticker flags: \(flags), alt: \(alt), stickerset: \(stickerset), maskCoords: \(maskCoords))"
-                    case .documentAttributeVideo(let flags, let duration, let w, let h):
-                        return "(documentAttributeVideo flags: \(flags), duration: \(duration), w: \(w), h: \(h))"
-                    case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
-                        return "(documentAttributeAudio flags: \(flags), duration: \(duration), title: \(title), performer: \(performer), waveform: \(waveform))"
-                    case .documentAttributeFilename(let fileName):
-                        return "(documentAttributeFilename fileName: \(fileName))"
-                    case .documentAttributeHasStickers:
-                        return "(documentAttributeHasStickers)"
-                }
-            }
-        }
     }
 
-    public enum ChatPhoto: CustomStringConvertible {
+    public enum ChatPhoto {
         case chatPhotoEmpty
         case chatPhoto(photoSmall: Api.FileLocation, photoBig: Api.FileLocation)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatPhotoEmpty:
                     if boxed {
@@ -12897,7 +11393,6 @@ public struct Api {
                     photoBig.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_chatPhotoEmpty(_ reader: BufferReader) -> ChatPhoto? {
@@ -12922,24 +11417,14 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .chatPhotoEmpty:
-                        return "(chatPhotoEmpty)"
-                    case .chatPhoto(let photoSmall, let photoBig):
-                        return "(chatPhoto photoSmall: \(photoSmall), photoBig: \(photoBig))"
-                }
-            }
-        }
     }
 
-    public enum InputStickerSet: CustomStringConvertible {
+    public enum InputStickerSet {
         case inputStickerSetEmpty
         case inputStickerSetID(id: Int64, accessHash: Int64)
         case inputStickerSetShortName(shortName: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputStickerSetEmpty:
                     if boxed {
@@ -12961,7 +11446,6 @@ public struct Api {
                     serializeString(shortName, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
@@ -12993,24 +11477,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputStickerSetEmpty:
-                        return "(inputStickerSetEmpty)"
-                    case .inputStickerSetID(let id, let accessHash):
-                        return "(inputStickerSetID id: \(id), accessHash: \(accessHash))"
-                    case .inputStickerSetShortName(let shortName):
-                        return "(inputStickerSetShortName shortName: \(shortName))"
-                }
-            }
-        }
     }
 
-    public enum BotInfo: CustomStringConvertible {
+    public enum BotInfo {
         case botInfo(userId: Int32, description: String, commands: [Api.BotCommand])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botInfo(let userId, let description, let commands):
                     if boxed {
@@ -13025,7 +11497,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_botInfo(_ reader: BufferReader) -> BotInfo? {
@@ -13048,21 +11519,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .botInfo(let userId, let description, let commands):
-                        return "(botInfo userId: \(userId), description: \(description), commands: \(commands))"
-                }
-            }
-        }
     }
 
-    public enum FoundGif: CustomStringConvertible {
+    public enum FoundGif {
         case foundGif(url: String, thumbUrl: String, contentUrl: String, contentType: String, w: Int32, h: Int32)
         case foundGifCached(url: String, photo: Api.Photo, document: Api.Document)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .foundGif(let url, let thumbUrl, let contentUrl, let contentType, let w, let h):
                     if boxed {
@@ -13084,7 +11547,6 @@ public struct Api {
                     document.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_foundGif(_ reader: BufferReader) -> FoundGif? {
@@ -13135,23 +11597,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .foundGif(let url, let thumbUrl, let contentUrl, let contentType, let w, let h):
-                        return "(foundGif url: \(url), thumbUrl: \(thumbUrl), contentUrl: \(contentUrl), contentType: \(contentType), w: \(w), h: \(h))"
-                    case .foundGifCached(let url, let photo, let document):
-                        return "(foundGifCached url: \(url), photo: \(photo), document: \(document))"
-                }
-            }
-        }
     }
 
-    public enum User: CustomStringConvertible {
+    public enum User {
         case userEmpty(id: Int32)
         case user(flags: Int32, id: Int32, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: String?, botInlinePlaceholder: String?, langCode: String?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .userEmpty(let id):
                     if boxed {
@@ -13178,7 +11630,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 22) != 0 {serializeString(langCode!, buffer: buffer, boxed: false)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_userEmpty(_ reader: BufferReader) -> User? {
@@ -13244,24 +11695,14 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .userEmpty(let id):
-                        return "(userEmpty id: \(id))"
-                    case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode):
-                        return "(user flags: \(flags), id: \(id), accessHash: \(accessHash), firstName: \(firstName), lastName: \(lastName), username: \(username), phone: \(phone), photo: \(photo), status: \(status), botInfoVersion: \(botInfoVersion), restrictionReason: \(restrictionReason), botInlinePlaceholder: \(botInlinePlaceholder), langCode: \(langCode))"
-                }
-            }
-        }
     }
 
-    public enum Message: CustomStringConvertible {
+    public enum Message {
         case messageEmpty(id: Int32)
         case messageService(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, replyToMsgId: Int32?, date: Int32, action: Api.MessageAction)
         case message(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, editDate: Int32?, postAuthor: String?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageEmpty(let id):
                     if boxed {
@@ -13306,7 +11747,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 16) != 0 {serializeString(postAuthor!, buffer: buffer, boxed: false)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_messageEmpty(_ reader: BufferReader) -> Message? {
@@ -13417,26 +11857,14 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .messageEmpty(let id):
-                        return "(messageEmpty id: \(id))"
-                    case .messageService(let flags, let id, let fromId, let toId, let replyToMsgId, let date, let action):
-                        return "(messageService flags: \(flags), id: \(id), fromId: \(fromId), toId: \(toId), replyToMsgId: \(replyToMsgId), date: \(date), action: \(action))"
-                    case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let date, let message, let media, let replyMarkup, let entities, let views, let editDate, let postAuthor):
-                        return "(message flags: \(flags), id: \(id), fromId: \(fromId), toId: \(toId), fwdFrom: \(fwdFrom), viaBotId: \(viaBotId), replyToMsgId: \(replyToMsgId), date: \(date), message: \(message), media: \(media), replyMarkup: \(replyMarkup), entities: \(entities), views: \(views), editDate: \(editDate), postAuthor: \(postAuthor))"
-                }
-            }
-        }
     }
 
-    public enum InputFileLocation: CustomStringConvertible {
+    public enum InputFileLocation {
         case inputFileLocation(volumeId: Int64, localId: Int32, secret: Int64)
         case inputEncryptedFileLocation(id: Int64, accessHash: Int64)
         case inputDocumentFileLocation(id: Int64, accessHash: Int64, version: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputFileLocation(let volumeId, let localId, let secret):
                     if boxed {
@@ -13462,7 +11890,6 @@ public struct Api {
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputFileLocation(_ reader: BufferReader) -> InputFileLocation? {
@@ -13514,25 +11941,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputFileLocation(let volumeId, let localId, let secret):
-                        return "(inputFileLocation volumeId: \(volumeId), localId: \(localId), secret: \(secret))"
-                    case .inputEncryptedFileLocation(let id, let accessHash):
-                        return "(inputEncryptedFileLocation id: \(id), accessHash: \(accessHash))"
-                    case .inputDocumentFileLocation(let id, let accessHash, let version):
-                        return "(inputDocumentFileLocation id: \(id), accessHash: \(accessHash), version: \(version))"
-                }
-            }
-        }
     }
 
-    public enum GeoPoint: CustomStringConvertible {
+    public enum GeoPoint {
         case geoPointEmpty
         case geoPoint(long: Double, lat: Double)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .geoPointEmpty:
                     if boxed {
@@ -13548,7 +11963,6 @@ public struct Api {
                     serializeDouble(lat, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_geoPointEmpty(_ reader: BufferReader) -> GeoPoint? {
@@ -13569,22 +11983,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .geoPointEmpty:
-                        return "(geoPointEmpty)"
-                    case .geoPoint(let long, let lat):
-                        return "(geoPoint long: \(long), lat: \(lat))"
-                }
-            }
-        }
     }
 
-    public enum InputPhoneCall: CustomStringConvertible {
+    public enum InputPhoneCall {
         case inputPhoneCall(id: Int64, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPhoneCall(let id, let accessHash):
                     if boxed {
@@ -13594,7 +11998,6 @@ public struct Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputPhoneCall(_ reader: BufferReader) -> InputPhoneCall? {
@@ -13612,20 +12015,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputPhoneCall(let id, let accessHash):
-                        return "(inputPhoneCall id: \(id), accessHash: \(accessHash))"
-                }
-            }
-        }
     }
 
-    public enum ReceivedNotifyMessage: CustomStringConvertible {
+    public enum ReceivedNotifyMessage {
         case receivedNotifyMessage(id: Int32, flags: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .receivedNotifyMessage(let id, let flags):
                     if boxed {
@@ -13635,7 +12030,6 @@ public struct Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_receivedNotifyMessage(_ reader: BufferReader) -> ReceivedNotifyMessage? {
@@ -13653,21 +12047,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .receivedNotifyMessage(let id, let flags):
-                        return "(receivedNotifyMessage id: \(id), flags: \(flags))"
-                }
-            }
-        }
     }
 
-    public enum ChatParticipants: CustomStringConvertible {
+    public enum ChatParticipants {
         case chatParticipantsForbidden(flags: Int32, chatId: Int32, selfParticipant: Api.ChatParticipant?)
         case chatParticipants(chatId: Int32, participants: [Api.ChatParticipant], version: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatParticipantsForbidden(let flags, let chatId, let selfParticipant):
                     if boxed {
@@ -13690,7 +12076,6 @@ public struct Api {
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_chatParticipantsForbidden(_ reader: BufferReader) -> ChatParticipants? {
@@ -13732,23 +12117,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .chatParticipantsForbidden(let flags, let chatId, let selfParticipant):
-                        return "(chatParticipantsForbidden flags: \(flags), chatId: \(chatId), selfParticipant: \(selfParticipant))"
-                    case .chatParticipants(let chatId, let participants, let version):
-                        return "(chatParticipants chatId: \(chatId), participants: \(participants), version: \(version))"
-                }
-            }
-        }
     }
 
-    public enum InputPaymentCredentials: CustomStringConvertible {
+    public enum InputPaymentCredentials {
         case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
         case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPaymentCredentialsSaved(let id, let tmpPassword):
                     if boxed {
@@ -13765,7 +12140,6 @@ public struct Api {
                     data.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputPaymentCredentialsSaved(_ reader: BufferReader) -> InputPaymentCredentials? {
@@ -13799,22 +12173,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputPaymentCredentialsSaved(let id, let tmpPassword):
-                        return "(inputPaymentCredentialsSaved id: \(id), tmpPassword: \(tmpPassword))"
-                    case .inputPaymentCredentials(let flags, let data):
-                        return "(inputPaymentCredentials flags: \(flags), data: \(data))"
-                }
-            }
-        }
     }
 
-    public enum ShippingOption: CustomStringConvertible {
+    public enum ShippingOption {
         case shippingOption(id: String, title: String, prices: [Api.LabeledPrice])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .shippingOption(let id, let title, let prices):
                     if boxed {
@@ -13829,7 +12193,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_shippingOption(_ reader: BufferReader) -> ShippingOption? {
@@ -13852,20 +12215,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .shippingOption(let id, let title, let prices):
-                        return "(shippingOption id: \(id), title: \(title), prices: \(prices))"
-                }
-            }
-        }
     }
 
-    public enum PostAddress: CustomStringConvertible {
+    public enum PostAddress {
         case postAddress(streetLine1: String, streetLine2: String, city: String, state: String, countryIso2: String, postCode: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .postAddress(let streetLine1, let streetLine2, let city, let state, let countryIso2, let postCode):
                     if boxed {
@@ -13879,7 +12234,6 @@ public struct Api {
                     serializeString(postCode, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_postAddress(_ reader: BufferReader) -> PostAddress? {
@@ -13909,20 +12263,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .postAddress(let streetLine1, let streetLine2, let city, let state, let countryIso2, let postCode):
-                        return "(postAddress streetLine1: \(streetLine1), streetLine2: \(streetLine2), city: \(city), state: \(state), countryIso2: \(countryIso2), postCode: \(postCode))"
-                }
-            }
-        }
     }
 
-    public enum DataJSON: CustomStringConvertible {
+    public enum DataJSON {
         case dataJSON(data: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dataJSON(let data):
                     if boxed {
@@ -13931,7 +12277,6 @@ public struct Api {
                     serializeString(data, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_dataJSON(_ reader: BufferReader) -> DataJSON? {
@@ -13946,21 +12291,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .dataJSON(let data):
-                        return "(dataJSON data: \(data))"
-                }
-            }
-        }
     }
 
-    public enum InputStickeredMedia: CustomStringConvertible {
+    public enum InputStickeredMedia {
         case inputStickeredMediaPhoto(id: Api.InputPhoto)
         case inputStickeredMediaDocument(id: Api.InputDocument)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputStickeredMediaPhoto(let id):
                     if boxed {
@@ -13975,7 +12312,6 @@ public struct Api {
                     id.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputStickeredMediaPhoto(_ reader: BufferReader) -> InputStickeredMedia? {
@@ -14005,25 +12341,15 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputStickeredMediaPhoto(let id):
-                        return "(inputStickeredMediaPhoto id: \(id))"
-                    case .inputStickeredMediaDocument(let id):
-                        return "(inputStickeredMediaDocument id: \(id))"
-                }
-            }
-        }
     }
 
-    public enum PhoneCallDiscardReason: CustomStringConvertible {
+    public enum PhoneCallDiscardReason {
         case phoneCallDiscardReasonMissed
         case phoneCallDiscardReasonDisconnect
         case phoneCallDiscardReasonHangup
         case phoneCallDiscardReasonBusy
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .phoneCallDiscardReasonMissed:
                     if boxed {
@@ -14050,7 +12376,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_phoneCallDiscardReasonMissed(_ reader: BufferReader) -> PhoneCallDiscardReason? {
@@ -14066,26 +12391,12 @@ public struct Api {
             return Api.PhoneCallDiscardReason.phoneCallDiscardReasonBusy
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .phoneCallDiscardReasonMissed:
-                        return "(phoneCallDiscardReasonMissed)"
-                    case .phoneCallDiscardReasonDisconnect:
-                        return "(phoneCallDiscardReasonDisconnect)"
-                    case .phoneCallDiscardReasonHangup:
-                        return "(phoneCallDiscardReasonHangup)"
-                    case .phoneCallDiscardReasonBusy:
-                        return "(phoneCallDiscardReasonBusy)"
-                }
-            }
-        }
     }
 
-    public enum NearestDc: CustomStringConvertible {
+    public enum NearestDc {
         case nearestDc(country: String, thisDc: Int32, nearestDc: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .nearestDc(let country, let thisDc, let nearestDc):
                     if boxed {
@@ -14096,7 +12407,6 @@ public struct Api {
                     serializeInt32(nearestDc, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_nearestDc(_ reader: BufferReader) -> NearestDc? {
@@ -14117,20 +12427,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .nearestDc(let country, let thisDc, let nearestDc):
-                        return "(nearestDc country: \(country), thisDc: \(thisDc), nearestDc: \(nearestDc))"
-                }
-            }
-        }
     }
 
-    public enum InputWebDocument: CustomStringConvertible {
+    public enum InputWebDocument {
         case inputWebDocument(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputWebDocument(let url, let size, let mimeType, let attributes):
                     if boxed {
@@ -14146,7 +12448,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputWebDocument(_ reader: BufferReader) -> InputWebDocument? {
@@ -14172,20 +12473,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputWebDocument(let url, let size, let mimeType, let attributes):
-                        return "(inputWebDocument url: \(url), size: \(size), mimeType: \(mimeType), attributes: \(attributes))"
-                }
-            }
-        }
     }
 
-    public enum ChannelAdminLogEvent: CustomStringConvertible {
+    public enum ChannelAdminLogEvent {
         case channelAdminLogEvent(id: Int64, date: Int32, userId: Int32, action: Api.ChannelAdminLogEventAction)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelAdminLogEvent(let id, let date, let userId, let action):
                     if boxed {
@@ -14197,7 +12490,6 @@ public struct Api {
                     action.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_channelAdminLogEvent(_ reader: BufferReader) -> ChannelAdminLogEvent? {
@@ -14223,21 +12515,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .channelAdminLogEvent(let id, let date, let userId, let action):
-                        return "(channelAdminLogEvent id: \(id), date: \(date), userId: \(userId), action: \(action))"
-                }
-            }
-        }
     }
 
-    public enum Bool: CustomStringConvertible {
+    public enum Bool {
         case boolFalse
         case boolTrue
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .boolFalse:
                     if boxed {
@@ -14252,7 +12536,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_boolFalse(_ reader: BufferReader) -> Bool? {
@@ -14262,24 +12545,14 @@ public struct Api {
             return Api.Bool.boolTrue
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .boolFalse:
-                        return "(boolFalse)"
-                    case .boolTrue:
-                        return "(boolTrue)"
-                }
-            }
-        }
     }
 
-    public enum LangPackString: CustomStringConvertible {
+    public enum LangPackString {
         case langPackString(key: String, value: String)
         case langPackStringPluralized(flags: Int32, key: String, zeroValue: String?, oneValue: String?, twoValue: String?, fewValue: String?, manyValue: String?, otherValue: String)
         case langPackStringDeleted(key: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .langPackString(let key, let value):
                     if boxed {
@@ -14308,7 +12581,6 @@ public struct Api {
                     serializeString(key, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_langPackString(_ reader: BufferReader) -> LangPackString? {
@@ -14369,24 +12641,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .langPackString(let key, let value):
-                        return "(langPackString key: \(key), value: \(value))"
-                    case .langPackStringPluralized(let flags, let key, let zeroValue, let oneValue, let twoValue, let fewValue, let manyValue, let otherValue):
-                        return "(langPackStringPluralized flags: \(flags), key: \(key), zeroValue: \(zeroValue), oneValue: \(oneValue), twoValue: \(twoValue), fewValue: \(fewValue), manyValue: \(manyValue), otherValue: \(otherValue))"
-                    case .langPackStringDeleted(let key):
-                        return "(langPackStringDeleted key: \(key))"
-                }
-            }
-        }
     }
 
-    public enum InputWebFileLocation: CustomStringConvertible {
+    public enum InputWebFileLocation {
         case inputWebFileLocation(url: String, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputWebFileLocation(let url, let accessHash):
                     if boxed {
@@ -14396,7 +12656,6 @@ public struct Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputWebFileLocation(_ reader: BufferReader) -> InputWebFileLocation? {
@@ -14414,20 +12673,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputWebFileLocation(let url, let accessHash):
-                        return "(inputWebFileLocation url: \(url), accessHash: \(accessHash))"
-                }
-            }
-        }
     }
 
-    public enum MessageFwdHeader: CustomStringConvertible {
+    public enum MessageFwdHeader {
         case messageFwdHeader(flags: Int32, fromId: Int32?, date: Int32, channelId: Int32?, channelPost: Int32?, postAuthor: String?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageFwdHeader(let flags, let fromId, let date, let channelId, let channelPost, let postAuthor):
                     if boxed {
@@ -14441,7 +12692,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 3) != 0 {serializeString(postAuthor!, buffer: buffer, boxed: false)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_messageFwdHeader(_ reader: BufferReader) -> MessageFwdHeader? {
@@ -14471,17 +12721,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .messageFwdHeader(let flags, let fromId, let date, let channelId, let channelPost, let postAuthor):
-                        return "(messageFwdHeader flags: \(flags), fromId: \(fromId), date: \(date), channelId: \(channelId), channelPost: \(channelPost), postAuthor: \(postAuthor))"
-                }
-            }
-        }
     }
 
-    public enum MessagesFilter: CustomStringConvertible {
+    public enum MessagesFilter {
         case inputMessagesFilterEmpty
         case inputMessagesFilterPhotos
         case inputMessagesFilterVideo
@@ -14499,7 +12741,7 @@ public struct Api {
         case inputMessagesFilterMyMentions
         case inputMessagesFilterMyMentionsUnread
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputMessagesFilterEmpty:
                     if boxed {
@@ -14598,7 +12840,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputMessagesFilterEmpty(_ reader: BufferReader) -> MessagesFilter? {
@@ -14658,54 +12899,16 @@ public struct Api {
             return Api.MessagesFilter.inputMessagesFilterMyMentionsUnread
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputMessagesFilterEmpty:
-                        return "(inputMessagesFilterEmpty)"
-                    case .inputMessagesFilterPhotos:
-                        return "(inputMessagesFilterPhotos)"
-                    case .inputMessagesFilterVideo:
-                        return "(inputMessagesFilterVideo)"
-                    case .inputMessagesFilterPhotoVideo:
-                        return "(inputMessagesFilterPhotoVideo)"
-                    case .inputMessagesFilterPhotoVideoDocuments:
-                        return "(inputMessagesFilterPhotoVideoDocuments)"
-                    case .inputMessagesFilterDocument:
-                        return "(inputMessagesFilterDocument)"
-                    case .inputMessagesFilterUrl:
-                        return "(inputMessagesFilterUrl)"
-                    case .inputMessagesFilterGif:
-                        return "(inputMessagesFilterGif)"
-                    case .inputMessagesFilterVoice:
-                        return "(inputMessagesFilterVoice)"
-                    case .inputMessagesFilterMusic:
-                        return "(inputMessagesFilterMusic)"
-                    case .inputMessagesFilterChatPhotos:
-                        return "(inputMessagesFilterChatPhotos)"
-                    case .inputMessagesFilterPhoneCalls(let flags):
-                        return "(inputMessagesFilterPhoneCalls flags: \(flags))"
-                    case .inputMessagesFilterRoundVoice:
-                        return "(inputMessagesFilterRoundVoice)"
-                    case .inputMessagesFilterRoundVideo:
-                        return "(inputMessagesFilterRoundVideo)"
-                    case .inputMessagesFilterMyMentions:
-                        return "(inputMessagesFilterMyMentions)"
-                    case .inputMessagesFilterMyMentionsUnread:
-                        return "(inputMessagesFilterMyMentionsUnread)"
-                }
-            }
-        }
     }
 
-    public enum BotInlineMessage: CustomStringConvertible {
+    public enum BotInlineMessage {
         case botInlineMessageMediaAuto(flags: Int32, caption: String, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaGeo(flags: Int32, geo: Api.GeoPoint, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaVenue(flags: Int32, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .botInlineMessageMediaAuto(let flags, let caption, let replyMarkup):
                     if boxed {
@@ -14759,7 +12962,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_botInlineMessageMediaAuto(_ reader: BufferReader) -> BotInlineMessage? {
@@ -14885,28 +13087,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .botInlineMessageMediaAuto(let flags, let caption, let replyMarkup):
-                        return "(botInlineMessageMediaAuto flags: \(flags), caption: \(caption), replyMarkup: \(replyMarkup))"
-                    case .botInlineMessageText(let flags, let message, let entities, let replyMarkup):
-                        return "(botInlineMessageText flags: \(flags), message: \(message), entities: \(entities), replyMarkup: \(replyMarkup))"
-                    case .botInlineMessageMediaGeo(let flags, let geo, let replyMarkup):
-                        return "(botInlineMessageMediaGeo flags: \(flags), geo: \(geo), replyMarkup: \(replyMarkup))"
-                    case .botInlineMessageMediaVenue(let flags, let geo, let title, let address, let provider, let venueId, let replyMarkup):
-                        return "(botInlineMessageMediaVenue flags: \(flags), geo: \(geo), title: \(title), address: \(address), provider: \(provider), venueId: \(venueId), replyMarkup: \(replyMarkup))"
-                    case .botInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
-                        return "(botInlineMessageMediaContact flags: \(flags), phoneNumber: \(phoneNumber), firstName: \(firstName), lastName: \(lastName), replyMarkup: \(replyMarkup))"
-                }
-            }
-        }
     }
 
-    public enum InputPeerNotifySettings: CustomStringConvertible {
+    public enum InputPeerNotifySettings {
         case inputPeerNotifySettings(flags: Int32, muteUntil: Int32, sound: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPeerNotifySettings(let flags, let muteUntil, let sound):
                     if boxed {
@@ -14917,7 +13103,6 @@ public struct Api {
                     serializeString(sound, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputPeerNotifySettings(_ reader: BufferReader) -> InputPeerNotifySettings? {
@@ -14938,21 +13123,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputPeerNotifySettings(let flags, let muteUntil, let sound):
-                        return "(inputPeerNotifySettings flags: \(flags), muteUntil: \(muteUntil), sound: \(sound))"
-                }
-            }
-        }
     }
 
-    public enum ExportedChatInvite: CustomStringConvertible {
+    public enum ExportedChatInvite {
         case chatInviteEmpty
         case chatInviteExported(link: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatInviteEmpty:
                     if boxed {
@@ -14967,7 +13144,6 @@ public struct Api {
                     serializeString(link, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_chatInviteEmpty(_ reader: BufferReader) -> ExportedChatInvite? {
@@ -14985,22 +13161,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .chatInviteEmpty:
-                        return "(chatInviteEmpty)"
-                    case .chatInviteExported(let link):
-                        return "(chatInviteExported link: \(link))"
-                }
-            }
-        }
     }
 
-    public enum Authorization: CustomStringConvertible {
+    public enum Authorization {
         case authorization(hash: Int64, flags: Int32, deviceModel: String, platform: String, systemVersion: String, apiId: Int32, appName: String, appVersion: String, dateCreated: Int32, dateActive: Int32, ip: String, country: String, region: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .authorization(let hash, let flags, let deviceModel, let platform, let systemVersion, let apiId, let appName, let appVersion, let dateCreated, let dateActive, let ip, let country, let region):
                     if boxed {
@@ -15021,7 +13187,6 @@ public struct Api {
                     serializeString(region, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_authorization(_ reader: BufferReader) -> Authorization? {
@@ -15072,20 +13237,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .authorization(let hash, let flags, let deviceModel, let platform, let systemVersion, let apiId, let appName, let appVersion, let dateCreated, let dateActive, let ip, let country, let region):
-                        return "(authorization hash: \(hash), flags: \(flags), deviceModel: \(deviceModel), platform: \(platform), systemVersion: \(systemVersion), apiId: \(apiId), appName: \(appName), appVersion: \(appVersion), dateCreated: \(dateCreated), dateActive: \(dateActive), ip: \(ip), country: \(country), region: \(region))"
-                }
-            }
-        }
     }
 
-    public enum MaskCoords: CustomStringConvertible {
+    public enum MaskCoords {
         case maskCoords(n: Int32, x: Double, y: Double, zoom: Double)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .maskCoords(let n, let x, let y, let zoom):
                     if boxed {
@@ -15097,7 +13254,6 @@ public struct Api {
                     serializeDouble(zoom, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_maskCoords(_ reader: BufferReader) -> MaskCoords? {
@@ -15121,20 +13277,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .maskCoords(let n, let x, let y, let zoom):
-                        return "(maskCoords n: \(n), x: \(x), y: \(y), zoom: \(zoom))"
-                }
-            }
-        }
     }
 
-    public enum PhoneConnection: CustomStringConvertible {
+    public enum PhoneConnection {
         case phoneConnection(id: Int64, ip: String, ipv6: String, port: Int32, peerTag: Buffer)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .phoneConnection(let id, let ip, let ipv6, let port, let peerTag):
                     if boxed {
@@ -15147,7 +13295,6 @@ public struct Api {
                     serializeBytes(peerTag, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_phoneConnection(_ reader: BufferReader) -> PhoneConnection? {
@@ -15174,20 +13321,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .phoneConnection(let id, let ip, let ipv6, let port, let peerTag):
-                        return "(phoneConnection id: \(id), ip: \(ip), ipv6: \(ipv6), port: \(port), peerTag: \(peerTag))"
-                }
-            }
-        }
     }
 
-    public enum AccountDaysTTL: CustomStringConvertible {
+    public enum AccountDaysTTL {
         case accountDaysTTL(days: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .accountDaysTTL(let days):
                     if boxed {
@@ -15196,7 +13335,6 @@ public struct Api {
                     serializeInt32(days, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_accountDaysTTL(_ reader: BufferReader) -> AccountDaysTTL? {
@@ -15211,23 +13349,15 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .accountDaysTTL(let days):
-                        return "(accountDaysTTL days: \(days))"
-                }
-            }
-        }
     }
 
-    public enum InputBotInlineResult: CustomStringConvertible {
+    public enum InputBotInlineResult {
         case inputBotInlineResult(flags: Int32, id: String, type: String, title: String?, description: String?, url: String?, thumbUrl: String?, contentUrl: String?, contentType: String?, w: Int32?, h: Int32?, duration: Int32?, sendMessage: Api.InputBotInlineMessage)
         case inputBotInlineResultPhoto(id: String, type: String, photo: Api.InputPhoto, sendMessage: Api.InputBotInlineMessage)
         case inputBotInlineResultDocument(flags: Int32, id: String, type: String, title: String?, description: String?, document: Api.InputDocument, sendMessage: Api.InputBotInlineMessage)
         case inputBotInlineResultGame(id: String, shortName: String, sendMessage: Api.InputBotInlineMessage)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputBotInlineResult(let flags, let id, let type, let title, let description, let url, let thumbUrl, let contentUrl, let contentType, let w, let h, let duration, let sendMessage):
                     if boxed {
@@ -15277,7 +13407,6 @@ public struct Api {
                     sendMessage.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputBotInlineResult(_ reader: BufferReader) -> InputBotInlineResult? {
@@ -15406,23 +13535,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputBotInlineResult(let flags, let id, let type, let title, let description, let url, let thumbUrl, let contentUrl, let contentType, let w, let h, let duration, let sendMessage):
-                        return "(inputBotInlineResult flags: \(flags), id: \(id), type: \(type), title: \(title), description: \(description), url: \(url), thumbUrl: \(thumbUrl), contentUrl: \(contentUrl), contentType: \(contentType), w: \(w), h: \(h), duration: \(duration), sendMessage: \(sendMessage))"
-                    case .inputBotInlineResultPhoto(let id, let type, let photo, let sendMessage):
-                        return "(inputBotInlineResultPhoto id: \(id), type: \(type), photo: \(photo), sendMessage: \(sendMessage))"
-                    case .inputBotInlineResultDocument(let flags, let id, let type, let title, let description, let document, let sendMessage):
-                        return "(inputBotInlineResultDocument flags: \(flags), id: \(id), type: \(type), title: \(title), description: \(description), document: \(document), sendMessage: \(sendMessage))"
-                    case .inputBotInlineResultGame(let id, let shortName, let sendMessage):
-                        return "(inputBotInlineResultGame id: \(id), shortName: \(shortName), sendMessage: \(sendMessage))"
-                }
-            }
-        }
     }
 
-    public enum PrivacyRule: CustomStringConvertible {
+    public enum PrivacyRule {
         case privacyValueAllowContacts
         case privacyValueAllowAll
         case privacyValueAllowUsers(users: [Int32])
@@ -15430,7 +13545,7 @@ public struct Api {
         case privacyValueDisallowAll
         case privacyValueDisallowUsers(users: [Int32])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .privacyValueAllowContacts:
                     if boxed {
@@ -15477,7 +13592,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_privacyValueAllowContacts(_ reader: BufferReader) -> PrivacyRule? {
@@ -15519,27 +13633,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .privacyValueAllowContacts:
-                        return "(privacyValueAllowContacts)"
-                    case .privacyValueAllowAll:
-                        return "(privacyValueAllowAll)"
-                    case .privacyValueAllowUsers(let users):
-                        return "(privacyValueAllowUsers users: \(users))"
-                    case .privacyValueDisallowContacts:
-                        return "(privacyValueDisallowContacts)"
-                    case .privacyValueDisallowAll:
-                        return "(privacyValueDisallowAll)"
-                    case .privacyValueDisallowUsers(let users):
-                        return "(privacyValueDisallowUsers users: \(users))"
-                }
-            }
-        }
     }
 
-    public enum MessageAction: CustomStringConvertible {
+    public enum MessageAction {
         case messageActionEmpty
         case messageActionChatCreate(title: String, users: [Int32])
         case messageActionChatEditTitle(title: String)
@@ -15559,7 +13655,7 @@ public struct Api {
         case messageActionPhoneCall(flags: Int32, callId: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
         case messageActionScreenshotTaken
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageActionEmpty:
                     if boxed {
@@ -15691,7 +13787,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_messageActionEmpty(_ reader: BufferReader) -> MessageAction? {
@@ -15904,59 +13999,17 @@ public struct Api {
             return Api.MessageAction.messageActionScreenshotTaken
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .messageActionEmpty:
-                        return "(messageActionEmpty)"
-                    case .messageActionChatCreate(let title, let users):
-                        return "(messageActionChatCreate title: \(title), users: \(users))"
-                    case .messageActionChatEditTitle(let title):
-                        return "(messageActionChatEditTitle title: \(title))"
-                    case .messageActionChatEditPhoto(let photo):
-                        return "(messageActionChatEditPhoto photo: \(photo))"
-                    case .messageActionChatDeletePhoto:
-                        return "(messageActionChatDeletePhoto)"
-                    case .messageActionChatAddUser(let users):
-                        return "(messageActionChatAddUser users: \(users))"
-                    case .messageActionChatDeleteUser(let userId):
-                        return "(messageActionChatDeleteUser userId: \(userId))"
-                    case .messageActionChatJoinedByLink(let inviterId):
-                        return "(messageActionChatJoinedByLink inviterId: \(inviterId))"
-                    case .messageActionChannelCreate(let title):
-                        return "(messageActionChannelCreate title: \(title))"
-                    case .messageActionChatMigrateTo(let channelId):
-                        return "(messageActionChatMigrateTo channelId: \(channelId))"
-                    case .messageActionChannelMigrateFrom(let title, let chatId):
-                        return "(messageActionChannelMigrateFrom title: \(title), chatId: \(chatId))"
-                    case .messageActionPinMessage:
-                        return "(messageActionPinMessage)"
-                    case .messageActionHistoryClear:
-                        return "(messageActionHistoryClear)"
-                    case .messageActionGameScore(let gameId, let score):
-                        return "(messageActionGameScore gameId: \(gameId), score: \(score))"
-                    case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
-                        return "(messageActionPaymentSentMe flags: \(flags), currency: \(currency), totalAmount: \(totalAmount), payload: \(payload), info: \(info), shippingOptionId: \(shippingOptionId), charge: \(charge))"
-                    case .messageActionPaymentSent(let currency, let totalAmount):
-                        return "(messageActionPaymentSent currency: \(currency), totalAmount: \(totalAmount))"
-                    case .messageActionPhoneCall(let flags, let callId, let reason, let duration):
-                        return "(messageActionPhoneCall flags: \(flags), callId: \(callId), reason: \(reason), duration: \(duration))"
-                    case .messageActionScreenshotTaken:
-                        return "(messageActionScreenshotTaken)"
-                }
-            }
-        }
     }
 
-    public enum PhoneCall: CustomStringConvertible {
+    public enum PhoneCall {
         case phoneCallEmpty(id: Int64)
-        case phoneCallWaiting(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, `protocol`: Api.PhoneCallProtocol, receiveDate: Int32?)
-        case phoneCallRequested(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAHash: Buffer, `protocol`: Api.PhoneCallProtocol)
-        case phoneCallAccepted(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gB: Buffer, `protocol`: Api.PhoneCallProtocol)
-        case phoneCall(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAOrB: Buffer, keyFingerprint: Int64, `protocol`: Api.PhoneCallProtocol, connection: Api.PhoneConnection, alternativeConnections: [Api.PhoneConnection], startDate: Int32)
+        case phoneCallWaiting(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, protocol: Api.PhoneCallProtocol, receiveDate: Int32?)
+        case phoneCallRequested(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAHash: Buffer, protocol: Api.PhoneCallProtocol)
+        case phoneCallAccepted(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gB: Buffer, protocol: Api.PhoneCallProtocol)
+        case phoneCall(id: Int64, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAOrB: Buffer, keyFingerprint: Int64, protocol: Api.PhoneCallProtocol, connection: Api.PhoneConnection, alternativeConnections: [Api.PhoneConnection], startDate: Int32)
         case phoneCallDiscarded(flags: Int32, id: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .phoneCallEmpty(let id):
                     if boxed {
@@ -16031,7 +14084,6 @@ public struct Api {
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
                     break
     }
-    return true
     }
     
         fileprivate static func parse_phoneCallEmpty(_ reader: BufferReader) -> PhoneCall? {
@@ -16073,7 +14125,7 @@ public struct Api {
             let _c7 = _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.PhoneCall.phoneCallWaiting(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, `protocol`: _7!, receiveDate: _8)
+                return Api.PhoneCall.phoneCallWaiting(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, protocol: _7!, receiveDate: _8)
             }
             else {
                 return nil
@@ -16104,7 +14156,7 @@ public struct Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.PhoneCall.phoneCallRequested(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gAHash: _6!, `protocol`: _7!)
+                return Api.PhoneCall.phoneCallRequested(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gAHash: _6!, protocol: _7!)
             }
             else {
                 return nil
@@ -16135,7 +14187,7 @@ public struct Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.PhoneCall.phoneCallAccepted(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gB: _6!, `protocol`: _7!)
+                return Api.PhoneCall.phoneCallAccepted(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gB: _6!, protocol: _7!)
             }
             else {
                 return nil
@@ -16182,7 +14234,7 @@ public struct Api {
             let _c10 = _10 != nil
             let _c11 = _11 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.PhoneCall.phoneCall(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gAOrB: _6!, keyFingerprint: _7!, `protocol`: _8!, connection: _9!, alternativeConnections: _10!, startDate: _11!)
+                return Api.PhoneCall.phoneCall(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gAOrB: _6!, keyFingerprint: _7!, protocol: _8!, connection: _9!, alternativeConnections: _10!, startDate: _11!)
             }
             else {
                 return nil
@@ -16211,31 +14263,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .phoneCallEmpty(let id):
-                        return "(phoneCallEmpty id: \(id))"
-                    case .phoneCallWaiting(let flags, let id, let accessHash, let date, let adminId, let participantId, let `protocol`, let receiveDate):
-                        return "(phoneCallWaiting flags: \(flags), id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), `protocol`: \(`protocol`), receiveDate: \(receiveDate))"
-                    case .phoneCallRequested(let id, let accessHash, let date, let adminId, let participantId, let gAHash, let `protocol`):
-                        return "(phoneCallRequested id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gAHash: \(gAHash), `protocol`: \(`protocol`))"
-                    case .phoneCallAccepted(let id, let accessHash, let date, let adminId, let participantId, let gB, let `protocol`):
-                        return "(phoneCallAccepted id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gB: \(gB), `protocol`: \(`protocol`))"
-                    case .phoneCall(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint, let `protocol`, let connection, let alternativeConnections, let startDate):
-                        return "(phoneCall id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gAOrB: \(gAOrB), keyFingerprint: \(keyFingerprint), `protocol`: \(`protocol`), connection: \(connection), alternativeConnections: \(alternativeConnections), startDate: \(startDate))"
-                    case .phoneCallDiscarded(let flags, let id, let reason, let duration):
-                        return "(phoneCallDiscarded flags: \(flags), id: \(id), reason: \(reason), duration: \(duration))"
-                }
-            }
-        }
     }
 
-    public enum PeerNotifyEvents: CustomStringConvertible {
+    public enum PeerNotifyEvents {
         case peerNotifyEventsEmpty
         case peerNotifyEventsAll
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .peerNotifyEventsEmpty:
                     if boxed {
@@ -16250,7 +14284,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_peerNotifyEventsEmpty(_ reader: BufferReader) -> PeerNotifyEvents? {
@@ -16260,25 +14293,15 @@ public struct Api {
             return Api.PeerNotifyEvents.peerNotifyEventsAll
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .peerNotifyEventsEmpty:
-                        return "(peerNotifyEventsEmpty)"
-                    case .peerNotifyEventsAll:
-                        return "(peerNotifyEventsAll)"
-                }
-            }
-        }
     }
 
-    public enum ContactLink: CustomStringConvertible {
+    public enum ContactLink {
         case contactLinkUnknown
         case contactLinkNone
         case contactLinkHasPhone
         case contactLinkContact
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .contactLinkUnknown:
                     if boxed {
@@ -16305,7 +14328,6 @@ public struct Api {
                     
                     break
     }
-    return true
     }
     
         fileprivate static func parse_contactLinkUnknown(_ reader: BufferReader) -> ContactLink? {
@@ -16321,26 +14343,12 @@ public struct Api {
             return Api.ContactLink.contactLinkContact
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .contactLinkUnknown:
-                        return "(contactLinkUnknown)"
-                    case .contactLinkNone:
-                        return "(contactLinkNone)"
-                    case .contactLinkHasPhone:
-                        return "(contactLinkHasPhone)"
-                    case .contactLinkContact:
-                        return "(contactLinkContact)"
-                }
-            }
-        }
     }
 
-    public enum WebDocument: CustomStringConvertible {
+    public enum WebDocument {
         case webDocument(url: String, accessHash: Int64, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute], dcId: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .webDocument(let url, let accessHash, let size, let mimeType, let attributes, let dcId):
                     if boxed {
@@ -16358,7 +14366,6 @@ public struct Api {
                     serializeInt32(dcId, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_webDocument(_ reader: BufferReader) -> WebDocument? {
@@ -16390,20 +14397,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .webDocument(let url, let accessHash, let size, let mimeType, let attributes, let dcId):
-                        return "(webDocument url: \(url), accessHash: \(accessHash), size: \(size), mimeType: \(mimeType), attributes: \(attributes), dcId: \(dcId))"
-                }
-            }
-        }
     }
 
-    public enum ChannelAdminLogEventsFilter: CustomStringConvertible {
+    public enum ChannelAdminLogEventsFilter {
         case channelAdminLogEventsFilter(flags: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelAdminLogEventsFilter(let flags):
                     if boxed {
@@ -16412,7 +14411,6 @@ public struct Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_channelAdminLogEventsFilter(_ reader: BufferReader) -> ChannelAdminLogEventsFilter? {
@@ -16427,21 +14425,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .channelAdminLogEventsFilter(let flags):
-                        return "(channelAdminLogEventsFilter flags: \(flags))"
-                }
-            }
-        }
     }
 
-    public enum PeerNotifySettings: CustomStringConvertible {
+    public enum PeerNotifySettings {
         case peerNotifySettingsEmpty
         case peerNotifySettings(flags: Int32, muteUntil: Int32, sound: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .peerNotifySettingsEmpty:
                     if boxed {
@@ -16458,7 +14448,6 @@ public struct Api {
                     serializeString(sound, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_peerNotifySettingsEmpty(_ reader: BufferReader) -> PeerNotifySettings? {
@@ -16482,22 +14471,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .peerNotifySettingsEmpty:
-                        return "(peerNotifySettingsEmpty)"
-                    case .peerNotifySettings(let flags, let muteUntil, let sound):
-                        return "(peerNotifySettings flags: \(flags), muteUntil: \(muteUntil), sound: \(sound))"
-                }
-            }
-        }
     }
 
-    public enum InputBotInlineMessageID: CustomStringConvertible {
+    public enum InputBotInlineMessageID {
         case inputBotInlineMessageID(dcId: Int32, id: Int64, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputBotInlineMessageID(let dcId, let id, let accessHash):
                     if boxed {
@@ -16508,7 +14487,6 @@ public struct Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputBotInlineMessageID(_ reader: BufferReader) -> InputBotInlineMessageID? {
@@ -16529,20 +14507,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputBotInlineMessageID(let dcId, let id, let accessHash):
-                        return "(inputBotInlineMessageID dcId: \(dcId), id: \(id), accessHash: \(accessHash))"
-                }
-            }
-        }
     }
 
-    public enum StickerPack: CustomStringConvertible {
+    public enum StickerPack {
         case stickerPack(emoticon: String, documents: [Int64])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .stickerPack(let emoticon, let documents):
                     if boxed {
@@ -16556,7 +14526,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_stickerPack(_ reader: BufferReader) -> StickerPack? {
@@ -16576,21 +14545,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .stickerPack(let emoticon, let documents):
-                        return "(stickerPack emoticon: \(emoticon), documents: \(documents))"
-                }
-            }
-        }
     }
 
-    public enum UserProfilePhoto: CustomStringConvertible {
+    public enum UserProfilePhoto {
         case userProfilePhotoEmpty
         case userProfilePhoto(photoId: Int64, photoSmall: Api.FileLocation, photoBig: Api.FileLocation)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .userProfilePhotoEmpty:
                     if boxed {
@@ -16607,7 +14568,6 @@ public struct Api {
                     photoBig.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_userProfilePhotoEmpty(_ reader: BufferReader) -> UserProfilePhoto? {
@@ -16635,22 +14595,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .userProfilePhotoEmpty:
-                        return "(userProfilePhotoEmpty)"
-                    case .userProfilePhoto(let photoId, let photoSmall, let photoBig):
-                        return "(userProfilePhoto photoId: \(photoId), photoSmall: \(photoSmall), photoBig: \(photoBig))"
-                }
-            }
-        }
     }
 
-    public enum InputAppEvent: CustomStringConvertible {
+    public enum InputAppEvent {
         case inputAppEvent(time: Double, type: String, peer: Int64, data: String)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputAppEvent(let time, let type, let peer, let data):
                     if boxed {
@@ -16662,7 +14612,6 @@ public struct Api {
                     serializeString(data, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputAppEvent(_ reader: BufferReader) -> InputAppEvent? {
@@ -16686,17 +14635,9 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputAppEvent(let time, let type, let peer, let data):
-                        return "(inputAppEvent time: \(time), type: \(type), peer: \(peer), data: \(data))"
-                }
-            }
-        }
     }
 
-    public enum MessageEntity: CustomStringConvertible {
+    public enum MessageEntity {
         case messageEntityUnknown(offset: Int32, length: Int32)
         case messageEntityMention(offset: Int32, length: Int32)
         case messageEntityHashtag(offset: Int32, length: Int32)
@@ -16711,7 +14652,7 @@ public struct Api {
         case messageEntityMentionName(offset: Int32, length: Int32, userId: Int32)
         case inputMessageEntityMentionName(offset: Int32, length: Int32, userId: Api.InputUser)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageEntityUnknown(let offset, let length):
                     if boxed {
@@ -16809,7 +14750,6 @@ public struct Api {
                     userId.serialize(buffer, true)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_messageEntityUnknown(_ reader: BufferReader) -> MessageEntity? {
@@ -17009,45 +14949,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .messageEntityUnknown(let offset, let length):
-                        return "(messageEntityUnknown offset: \(offset), length: \(length))"
-                    case .messageEntityMention(let offset, let length):
-                        return "(messageEntityMention offset: \(offset), length: \(length))"
-                    case .messageEntityHashtag(let offset, let length):
-                        return "(messageEntityHashtag offset: \(offset), length: \(length))"
-                    case .messageEntityBotCommand(let offset, let length):
-                        return "(messageEntityBotCommand offset: \(offset), length: \(length))"
-                    case .messageEntityUrl(let offset, let length):
-                        return "(messageEntityUrl offset: \(offset), length: \(length))"
-                    case .messageEntityEmail(let offset, let length):
-                        return "(messageEntityEmail offset: \(offset), length: \(length))"
-                    case .messageEntityBold(let offset, let length):
-                        return "(messageEntityBold offset: \(offset), length: \(length))"
-                    case .messageEntityItalic(let offset, let length):
-                        return "(messageEntityItalic offset: \(offset), length: \(length))"
-                    case .messageEntityCode(let offset, let length):
-                        return "(messageEntityCode offset: \(offset), length: \(length))"
-                    case .messageEntityPre(let offset, let length, let language):
-                        return "(messageEntityPre offset: \(offset), length: \(length), language: \(language))"
-                    case .messageEntityTextUrl(let offset, let length, let url):
-                        return "(messageEntityTextUrl offset: \(offset), length: \(length), url: \(url))"
-                    case .messageEntityMentionName(let offset, let length, let userId):
-                        return "(messageEntityMentionName offset: \(offset), length: \(length), userId: \(userId))"
-                    case .inputMessageEntityMentionName(let offset, let length, let userId):
-                        return "(inputMessageEntityMentionName offset: \(offset), length: \(length), userId: \(userId))"
-                }
-            }
-        }
     }
 
-    public enum InputPhoto: CustomStringConvertible {
+    public enum InputPhoto {
         case inputPhotoEmpty
         case inputPhoto(id: Int64, accessHash: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPhotoEmpty:
                     if boxed {
@@ -17063,7 +14971,6 @@ public struct Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_inputPhotoEmpty(_ reader: BufferReader) -> InputPhoto? {
@@ -17084,26 +14991,16 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .inputPhotoEmpty:
-                        return "(inputPhotoEmpty)"
-                    case .inputPhoto(let id, let accessHash):
-                        return "(inputPhoto id: \(id), accessHash: \(accessHash))"
-                }
-            }
-        }
     }
 
-    public enum EncryptedChat: CustomStringConvertible {
+    public enum EncryptedChat {
         case encryptedChatEmpty(id: Int32)
         case encryptedChatWaiting(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32)
         case encryptedChatRequested(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gA: Buffer)
         case encryptedChat(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAOrB: Buffer, keyFingerprint: Int64)
         case encryptedChatDiscarded(id: Int32)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .encryptedChatEmpty(let id):
                     if boxed {
@@ -17151,7 +15048,6 @@ public struct Api {
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_encryptedChatEmpty(_ reader: BufferReader) -> EncryptedChat? {
@@ -17255,29 +15151,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .encryptedChatEmpty(let id):
-                        return "(encryptedChatEmpty id: \(id))"
-                    case .encryptedChatWaiting(let id, let accessHash, let date, let adminId, let participantId):
-                        return "(encryptedChatWaiting id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId))"
-                    case .encryptedChatRequested(let id, let accessHash, let date, let adminId, let participantId, let gA):
-                        return "(encryptedChatRequested id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gA: \(gA))"
-                    case .encryptedChat(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint):
-                        return "(encryptedChat id: \(id), accessHash: \(accessHash), date: \(date), adminId: \(adminId), participantId: \(participantId), gAOrB: \(gAOrB), keyFingerprint: \(keyFingerprint))"
-                    case .encryptedChatDiscarded(let id):
-                        return "(encryptedChatDiscarded id: \(id))"
-                }
-            }
-        }
     }
 
-    public enum Document: CustomStringConvertible {
+    public enum Document {
         case documentEmpty(id: Int64)
         case document(id: Int64, accessHash: Int64, date: Int32, mimeType: String, size: Int32, thumb: Api.PhotoSize, dcId: Int32, version: Int32, attributes: [Api.DocumentAttribute])
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .documentEmpty(let id):
                     if boxed {
@@ -17304,7 +15184,6 @@ public struct Api {
                     }
                     break
     }
-    return true
     }
     
         fileprivate static func parse_documentEmpty(_ reader: BufferReader) -> Document? {
@@ -17358,22 +15237,12 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .documentEmpty(let id):
-                        return "(documentEmpty id: \(id))"
-                    case .document(let id, let accessHash, let date, let mimeType, let size, let thumb, let dcId, let version, let attributes):
-                        return "(document id: \(id), accessHash: \(accessHash), date: \(date), mimeType: \(mimeType), size: \(size), thumb: \(thumb), dcId: \(dcId), version: \(version), attributes: \(attributes))"
-                }
-            }
-        }
     }
 
-    public enum ImportedContact: CustomStringConvertible {
+    public enum ImportedContact {
         case importedContact(userId: Int32, clientId: Int64)
     
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .importedContact(let userId, let clientId):
                     if boxed {
@@ -17383,7 +15252,6 @@ public struct Api {
                     serializeInt64(clientId, buffer: buffer, boxed: false)
                     break
     }
-    return true
     }
     
         fileprivate static func parse_importedContact(_ reader: BufferReader) -> ImportedContact? {
@@ -17401,21 +15269,13 @@ public struct Api {
             }
         }
     
-        public var description: String {
-            get {
-                switch self {
-                    case .importedContact(let userId, let clientId):
-                        return "(importedContact userId: \(userId), clientId: \(clientId))"
-                }
-            }
-        }
     }
 
     public struct channels {
-        public enum ChannelParticipants: CustomStringConvertible {
+        public enum ChannelParticipants {
             case channelParticipants(count: Int32, participants: [Api.ChannelParticipant], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .channelParticipants(let count, let participants, let users):
                         if boxed {
@@ -17434,7 +15294,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_channelParticipants(_ reader: BufferReader) -> ChannelParticipants? {
@@ -17459,20 +15318,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .channelParticipants(let count, let participants, let users):
-                            return "(channels.channelParticipants count: \(count), participants: \(participants), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum ChannelParticipant: CustomStringConvertible {
+        public enum ChannelParticipant {
             case channelParticipant(participant: Api.ChannelParticipant, users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .channelParticipant(let participant, let users):
                         if boxed {
@@ -17486,7 +15337,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_channelParticipant(_ reader: BufferReader) -> ChannelParticipant? {
@@ -17508,20 +15358,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .channelParticipant(let participant, let users):
-                            return "(channels.channelParticipant participant: \(participant), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum AdminLogResults: CustomStringConvertible {
+        public enum AdminLogResults {
             case adminLogResults(events: [Api.ChannelAdminLogEvent], chats: [Api.Chat], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .adminLogResults(let events, let chats, let users):
                         if boxed {
@@ -17544,7 +15386,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_adminLogResults(_ reader: BufferReader) -> AdminLogResults? {
@@ -17571,22 +15412,14 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .adminLogResults(let events, let chats, let users):
-                            return "(channels.adminLogResults events: \(events), chats: \(chats), users: \(users))"
-                    }
-                }
-            }
         }
     }
 
     public struct payments {
-        public enum ValidatedRequestedInfo: CustomStringConvertible {
+        public enum ValidatedRequestedInfo {
             case validatedRequestedInfo(flags: Int32, id: String?, shippingOptions: [Api.ShippingOption]?)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .validatedRequestedInfo(let flags, let id, let shippingOptions):
                         if boxed {
@@ -17601,7 +15434,6 @@ public struct Api {
                         }}
                         break
         }
-        return true
         }
         
             fileprivate static func parse_validatedRequestedInfo(_ reader: BufferReader) -> ValidatedRequestedInfo? {
@@ -17624,21 +15456,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .validatedRequestedInfo(let flags, let id, let shippingOptions):
-                            return "(payments.validatedRequestedInfo flags: \(flags), id: \(id), shippingOptions: \(shippingOptions))"
-                    }
-                }
-            }
         }
     
-        public enum PaymentResult: CustomStringConvertible {
+        public enum PaymentResult {
             case paymentResult(updates: Api.Updates)
             case paymentVerficationNeeded(url: String)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .paymentResult(let updates):
                         if boxed {
@@ -17653,7 +15477,6 @@ public struct Api {
                         serializeString(url, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_paymentResult(_ reader: BufferReader) -> PaymentResult? {
@@ -17681,22 +15504,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .paymentResult(let updates):
-                            return "(payments.paymentResult updates: \(updates))"
-                        case .paymentVerficationNeeded(let url):
-                            return "(payments.paymentVerficationNeeded url: \(url))"
-                    }
-                }
-            }
         }
     
-        public enum PaymentForm: CustomStringConvertible {
+        public enum PaymentForm {
             case paymentForm(flags: Int32, botId: Int32, invoice: Api.Invoice, providerId: Int32, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: Api.PaymentSavedCredentials?, users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .paymentForm(let flags, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
                         if boxed {
@@ -17718,7 +15531,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_paymentForm(_ reader: BufferReader) -> PaymentForm? {
@@ -17770,20 +15582,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .paymentForm(let flags, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
-                            return "(payments.paymentForm flags: \(flags), botId: \(botId), invoice: \(invoice), providerId: \(providerId), url: \(url), nativeProvider: \(nativeProvider), nativeParams: \(nativeParams), savedInfo: \(savedInfo), savedCredentials: \(savedCredentials), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum PaymentReceipt: CustomStringConvertible {
+        public enum PaymentReceipt {
             case paymentReceipt(flags: Int32, date: Int32, botId: Int32, invoice: Api.Invoice, providerId: Int32, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .paymentReceipt(let flags, let date, let botId, let invoice, let providerId, let info, let shipping, let currency, let totalAmount, let credentialsTitle, let users):
                         if boxed {
@@ -17806,7 +15610,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_paymentReceipt(_ reader: BufferReader) -> PaymentReceipt? {
@@ -17859,20 +15662,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .paymentReceipt(let flags, let date, let botId, let invoice, let providerId, let info, let shipping, let currency, let totalAmount, let credentialsTitle, let users):
-                            return "(payments.paymentReceipt flags: \(flags), date: \(date), botId: \(botId), invoice: \(invoice), providerId: \(providerId), info: \(info), shipping: \(shipping), currency: \(currency), totalAmount: \(totalAmount), credentialsTitle: \(credentialsTitle), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum SavedInfo: CustomStringConvertible {
+        public enum SavedInfo {
             case savedInfo(flags: Int32, savedInfo: Api.PaymentRequestedInfo?)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .savedInfo(let flags, let savedInfo):
                         if boxed {
@@ -17882,7 +15677,6 @@ public struct Api {
                         if Int(flags) & Int(1 << 0) != 0 {savedInfo!.serialize(buffer, true)}
                         break
         }
-        return true
         }
         
             fileprivate static func parse_savedInfo(_ reader: BufferReader) -> SavedInfo? {
@@ -17902,22 +15696,14 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .savedInfo(let flags, let savedInfo):
-                            return "(payments.savedInfo flags: \(flags), savedInfo: \(savedInfo))"
-                    }
-                }
-            }
         }
     }
 
     public struct auth {
-        public enum Authorization: CustomStringConvertible {
+        public enum Authorization {
             case authorization(flags: Int32, tmpSessions: Int32?, user: Api.User)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .authorization(let flags, let tmpSessions, let user):
                         if boxed {
@@ -17928,7 +15714,6 @@ public struct Api {
                         user.serialize(buffer, true)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_authorization(_ reader: BufferReader) -> Authorization? {
@@ -17951,20 +15736,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .authorization(let flags, let tmpSessions, let user):
-                            return "(auth.authorization flags: \(flags), tmpSessions: \(tmpSessions), user: \(user))"
-                    }
-                }
-            }
         }
     
-        public enum PasswordRecovery: CustomStringConvertible {
+        public enum PasswordRecovery {
             case passwordRecovery(emailPattern: String)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .passwordRecovery(let emailPattern):
                         if boxed {
@@ -17973,7 +15750,6 @@ public struct Api {
                         serializeString(emailPattern, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_passwordRecovery(_ reader: BufferReader) -> PasswordRecovery? {
@@ -17988,20 +15764,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .passwordRecovery(let emailPattern):
-                            return "(auth.passwordRecovery emailPattern: \(emailPattern))"
-                    }
-                }
-            }
         }
     
-        public enum ExportedAuthorization: CustomStringConvertible {
+        public enum ExportedAuthorization {
             case exportedAuthorization(id: Int32, bytes: Buffer)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .exportedAuthorization(let id, let bytes):
                         if boxed {
@@ -18011,7 +15779,6 @@ public struct Api {
                         serializeBytes(bytes, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_exportedAuthorization(_ reader: BufferReader) -> ExportedAuthorization? {
@@ -18029,20 +15796,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .exportedAuthorization(let id, let bytes):
-                            return "(auth.exportedAuthorization id: \(id), bytes: \(bytes))"
-                    }
-                }
-            }
         }
     
-        public enum CheckedPhone: CustomStringConvertible {
+        public enum CheckedPhone {
             case checkedPhone(phoneRegistered: Api.Bool)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .checkedPhone(let phoneRegistered):
                         if boxed {
@@ -18051,7 +15810,6 @@ public struct Api {
                         phoneRegistered.serialize(buffer, true)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_checkedPhone(_ reader: BufferReader) -> CheckedPhone? {
@@ -18068,20 +15826,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .checkedPhone(let phoneRegistered):
-                            return "(auth.checkedPhone phoneRegistered: \(phoneRegistered))"
-                    }
-                }
-            }
         }
     
-        public enum SentCode: CustomStringConvertible {
+        public enum SentCode {
             case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout):
                         if boxed {
@@ -18094,7 +15844,6 @@ public struct Api {
                         if Int(flags) & Int(1 << 2) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
                         break
         }
-        return true
         }
         
             fileprivate static func parse_sentCode(_ reader: BufferReader) -> SentCode? {
@@ -18125,22 +15874,14 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout):
-                            return "(auth.sentCode flags: \(flags), type: \(type), phoneCodeHash: \(phoneCodeHash), nextType: \(nextType), timeout: \(timeout))"
-                    }
-                }
-            }
         }
     
-        public enum CodeType: CustomStringConvertible {
+        public enum CodeType {
             case codeTypeSms
             case codeTypeCall
             case codeTypeFlashCall
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .codeTypeSms:
                         if boxed {
@@ -18161,7 +15902,6 @@ public struct Api {
                         
                         break
         }
-        return true
         }
         
             fileprivate static func parse_codeTypeSms(_ reader: BufferReader) -> CodeType? {
@@ -18174,27 +15914,15 @@ public struct Api {
                 return Api.auth.CodeType.codeTypeFlashCall
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .codeTypeSms:
-                            return "(auth.codeTypeSms)"
-                        case .codeTypeCall:
-                            return "(auth.codeTypeCall)"
-                        case .codeTypeFlashCall:
-                            return "(auth.codeTypeFlashCall)"
-                    }
-                }
-            }
         }
     
-        public enum SentCodeType: CustomStringConvertible {
+        public enum SentCodeType {
             case sentCodeTypeApp(length: Int32)
             case sentCodeTypeSms(length: Int32)
             case sentCodeTypeCall(length: Int32)
             case sentCodeTypeFlashCall(pattern: String)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .sentCodeTypeApp(let length):
                         if boxed {
@@ -18221,7 +15949,6 @@ public struct Api {
                         serializeString(pattern, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_sentCodeTypeApp(_ reader: BufferReader) -> SentCodeType? {
@@ -18269,29 +15996,15 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .sentCodeTypeApp(let length):
-                            return "(auth.sentCodeTypeApp length: \(length))"
-                        case .sentCodeTypeSms(let length):
-                            return "(auth.sentCodeTypeSms length: \(length))"
-                        case .sentCodeTypeCall(let length):
-                            return "(auth.sentCodeTypeCall length: \(length))"
-                        case .sentCodeTypeFlashCall(let pattern):
-                            return "(auth.sentCodeTypeFlashCall pattern: \(pattern))"
-                    }
-                }
-            }
         }
     }
 
     public struct contacts {
-        public enum Blocked: CustomStringConvertible {
+        public enum Blocked {
             case blocked(blocked: [Api.ContactBlocked], users: [Api.User])
             case blockedSlice(count: Int32, blocked: [Api.ContactBlocked], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .blocked(let blocked, let users):
                         if boxed {
@@ -18325,7 +16038,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_blocked(_ reader: BufferReader) -> Blocked? {
@@ -18368,23 +16080,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .blocked(let blocked, let users):
-                            return "(contacts.blocked blocked: \(blocked), users: \(users))"
-                        case .blockedSlice(let count, let blocked, let users):
-                            return "(contacts.blockedSlice count: \(count), blocked: \(blocked), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum Contacts: CustomStringConvertible {
+        public enum Contacts {
             case contactsNotModified
             case contacts(contacts: [Api.Contact], savedCount: Int32, users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .contactsNotModified:
                         if boxed {
@@ -18409,7 +16111,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_contactsNotModified(_ reader: BufferReader) -> Contacts? {
@@ -18437,22 +16138,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .contactsNotModified:
-                            return "(contacts.contactsNotModified)"
-                        case .contacts(let contacts, let savedCount, let users):
-                            return "(contacts.contacts contacts: \(contacts), savedCount: \(savedCount), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum ResolvedPeer: CustomStringConvertible {
+        public enum ResolvedPeer {
             case resolvedPeer(peer: Api.Peer, chats: [Api.Chat], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .resolvedPeer(let peer, let chats, let users):
                         if boxed {
@@ -18471,7 +16162,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_resolvedPeer(_ reader: BufferReader) -> ResolvedPeer? {
@@ -18498,20 +16188,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .resolvedPeer(let peer, let chats, let users):
-                            return "(contacts.resolvedPeer peer: \(peer), chats: \(chats), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum Link: CustomStringConvertible {
+        public enum Link {
             case link(myLink: Api.ContactLink, foreignLink: Api.ContactLink, user: Api.User)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .link(let myLink, let foreignLink, let user):
                         if boxed {
@@ -18522,7 +16204,6 @@ public struct Api {
                         user.serialize(buffer, true)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_link(_ reader: BufferReader) -> Link? {
@@ -18549,20 +16230,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .link(let myLink, let foreignLink, let user):
-                            return "(contacts.link myLink: \(myLink), foreignLink: \(foreignLink), user: \(user))"
-                    }
-                }
-            }
         }
     
-        public enum ImportedContacts: CustomStringConvertible {
+        public enum ImportedContacts {
             case importedContacts(imported: [Api.ImportedContact], popularInvites: [Api.PopularContact], retryContacts: [Int64], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .importedContacts(let imported, let popularInvites, let retryContacts, let users):
                         if boxed {
@@ -18590,7 +16263,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_importedContacts(_ reader: BufferReader) -> ImportedContacts? {
@@ -18622,20 +16294,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .importedContacts(let imported, let popularInvites, let retryContacts, let users):
-                            return "(contacts.importedContacts imported: \(imported), popularInvites: \(popularInvites), retryContacts: \(retryContacts), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum Found: CustomStringConvertible {
+        public enum Found {
             case found(results: [Api.Peer], chats: [Api.Chat], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .found(let results, let chats, let users):
                         if boxed {
@@ -18658,7 +16322,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_found(_ reader: BufferReader) -> Found? {
@@ -18685,21 +16348,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .found(let results, let chats, let users):
-                            return "(contacts.found results: \(results), chats: \(chats), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum TopPeers: CustomStringConvertible {
+        public enum TopPeers {
             case topPeersNotModified
             case topPeers(categories: [Api.TopPeerCategoryPeers], chats: [Api.Chat], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .topPeersNotModified:
                         if boxed {
@@ -18728,7 +16383,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_topPeersNotModified(_ reader: BufferReader) -> TopPeers? {
@@ -18758,25 +16412,15 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .topPeersNotModified:
-                            return "(contacts.topPeersNotModified)"
-                        case .topPeers(let categories, let chats, let users):
-                            return "(contacts.topPeers categories: \(categories), chats: \(chats), users: \(users))"
-                    }
-                }
-            }
         }
     }
 
     public struct help {
-        public enum AppUpdate: CustomStringConvertible {
+        public enum AppUpdate {
             case appUpdate(id: Int32, critical: Api.Bool, url: String, text: String)
             case noAppUpdate
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .appUpdate(let id, let critical, let url, let text):
                         if boxed {
@@ -18794,7 +16438,6 @@ public struct Api {
                         
                         break
         }
-        return true
         }
         
             fileprivate static func parse_appUpdate(_ reader: BufferReader) -> AppUpdate? {
@@ -18823,22 +16466,12 @@ public struct Api {
                 return Api.help.AppUpdate.noAppUpdate
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .appUpdate(let id, let critical, let url, let text):
-                            return "(help.appUpdate id: \(id), critical: \(critical), url: \(url), text: \(text))"
-                        case .noAppUpdate:
-                            return "(help.noAppUpdate)"
-                    }
-                }
-            }
         }
     
-        public enum TermsOfService: CustomStringConvertible {
+        public enum TermsOfService {
             case termsOfService(text: String)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .termsOfService(let text):
                         if boxed {
@@ -18847,7 +16480,6 @@ public struct Api {
                         serializeString(text, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_termsOfService(_ reader: BufferReader) -> TermsOfService? {
@@ -18862,20 +16494,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .termsOfService(let text):
-                            return "(help.termsOfService text: \(text))"
-                    }
-                }
-            }
         }
     
-        public enum Support: CustomStringConvertible {
+        public enum Support {
             case support(phoneNumber: String, user: Api.User)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .support(let phoneNumber, let user):
                         if boxed {
@@ -18885,7 +16509,6 @@ public struct Api {
                         user.serialize(buffer, true)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_support(_ reader: BufferReader) -> Support? {
@@ -18905,20 +16528,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .support(let phoneNumber, let user):
-                            return "(help.support phoneNumber: \(phoneNumber), user: \(user))"
-                    }
-                }
-            }
         }
     
-        public enum InviteText: CustomStringConvertible {
+        public enum InviteText {
             case inviteText(message: String)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .inviteText(let message):
                         if boxed {
@@ -18927,7 +16542,6 @@ public struct Api {
                         serializeString(message, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_inviteText(_ reader: BufferReader) -> InviteText? {
@@ -18942,25 +16556,17 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .inviteText(let message):
-                            return "(help.inviteText message: \(message))"
-                    }
-                }
-            }
         }
     }
 
     public struct updates {
-        public enum Difference: CustomStringConvertible {
+        public enum Difference {
             case differenceEmpty(date: Int32, seq: Int32)
             case difference(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
             case differenceSlice(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], intermediateState: Api.updates.State)
             case differenceTooLong(pts: Int32)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .differenceEmpty(let date, let seq):
                         if boxed {
@@ -19038,7 +16644,6 @@ public struct Api {
                         serializeInt32(pts, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_differenceEmpty(_ reader: BufferReader) -> Difference? {
@@ -19143,26 +16748,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .differenceEmpty(let date, let seq):
-                            return "(updates.differenceEmpty date: \(date), seq: \(seq))"
-                        case .difference(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let state):
-                            return "(updates.difference newMessages: \(newMessages), newEncryptedMessages: \(newEncryptedMessages), otherUpdates: \(otherUpdates), chats: \(chats), users: \(users), state: \(state))"
-                        case .differenceSlice(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let intermediateState):
-                            return "(updates.differenceSlice newMessages: \(newMessages), newEncryptedMessages: \(newEncryptedMessages), otherUpdates: \(otherUpdates), chats: \(chats), users: \(users), intermediateState: \(intermediateState))"
-                        case .differenceTooLong(let pts):
-                            return "(updates.differenceTooLong pts: \(pts))"
-                    }
-                }
-            }
         }
     
-        public enum State: CustomStringConvertible {
+        public enum State {
             case state(pts: Int32, qts: Int32, date: Int32, seq: Int32, unreadCount: Int32)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .state(let pts, let qts, let date, let seq, let unreadCount):
                         if boxed {
@@ -19175,7 +16766,6 @@ public struct Api {
                         serializeInt32(unreadCount, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_state(_ reader: BufferReader) -> State? {
@@ -19202,22 +16792,14 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .state(let pts, let qts, let date, let seq, let unreadCount):
-                            return "(updates.state pts: \(pts), qts: \(qts), date: \(date), seq: \(seq), unreadCount: \(unreadCount))"
-                    }
-                }
-            }
         }
     
-        public enum ChannelDifference: CustomStringConvertible {
+        public enum ChannelDifference {
             case channelDifferenceEmpty(flags: Int32, pts: Int32, timeout: Int32?)
             case channelDifferenceTooLong(flags: Int32, pts: Int32, timeout: Int32?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
             case channelDifference(flags: Int32, pts: Int32, timeout: Int32?, newMessages: [Api.Message], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .channelDifferenceEmpty(let flags, let pts, let timeout):
                         if boxed {
@@ -19284,7 +16866,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_channelDifferenceEmpty(_ reader: BufferReader) -> ChannelDifference? {
@@ -19389,26 +16970,14 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .channelDifferenceEmpty(let flags, let pts, let timeout):
-                            return "(updates.channelDifferenceEmpty flags: \(flags), pts: \(pts), timeout: \(timeout))"
-                        case .channelDifferenceTooLong(let flags, let pts, let timeout, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let messages, let chats, let users):
-                            return "(updates.channelDifferenceTooLong flags: \(flags), pts: \(pts), timeout: \(timeout), topMessage: \(topMessage), readInboxMaxId: \(readInboxMaxId), readOutboxMaxId: \(readOutboxMaxId), unreadCount: \(unreadCount), unreadMentionsCount: \(unreadMentionsCount), messages: \(messages), chats: \(chats), users: \(users))"
-                        case .channelDifference(let flags, let pts, let timeout, let newMessages, let otherUpdates, let chats, let users):
-                            return "(updates.channelDifference flags: \(flags), pts: \(pts), timeout: \(timeout), newMessages: \(newMessages), otherUpdates: \(otherUpdates), chats: \(chats), users: \(users))"
-                    }
-                }
-            }
         }
     }
 
     public struct upload {
-        public enum WebFile: CustomStringConvertible {
+        public enum WebFile {
             case webFile(size: Int32, mimeType: String, fileType: Api.storage.FileType, mtime: Int32, bytes: Buffer)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .webFile(let size, let mimeType, let fileType, let mtime, let bytes):
                         if boxed {
@@ -19421,7 +16990,6 @@ public struct Api {
                         serializeBytes(bytes, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_webFile(_ reader: BufferReader) -> WebFile? {
@@ -19450,21 +17018,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .webFile(let size, let mimeType, let fileType, let mtime, let bytes):
-                            return "(upload.webFile size: \(size), mimeType: \(mimeType), fileType: \(fileType), mtime: \(mtime), bytes: \(bytes))"
-                    }
-                }
-            }
         }
     
-        public enum File: CustomStringConvertible {
+        public enum File {
             case file(type: Api.storage.FileType, mtime: Int32, bytes: Buffer)
             case fileCdnRedirect(dcId: Int32, fileToken: Buffer, encryptionKey: Buffer, encryptionIv: Buffer, cdnFileHashes: [Api.CdnFileHash])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .file(let type, let mtime, let bytes):
                         if boxed {
@@ -19489,7 +17049,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_file(_ reader: BufferReader) -> File? {
@@ -19537,23 +17096,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .file(let type, let mtime, let bytes):
-                            return "(upload.file type: \(type), mtime: \(mtime), bytes: \(bytes))"
-                        case .fileCdnRedirect(let dcId, let fileToken, let encryptionKey, let encryptionIv, let cdnFileHashes):
-                            return "(upload.fileCdnRedirect dcId: \(dcId), fileToken: \(fileToken), encryptionKey: \(encryptionKey), encryptionIv: \(encryptionIv), cdnFileHashes: \(cdnFileHashes))"
-                    }
-                }
-            }
         }
     
-        public enum CdnFile: CustomStringConvertible {
+        public enum CdnFile {
             case cdnFileReuploadNeeded(requestToken: Buffer)
             case cdnFile(bytes: Buffer)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .cdnFileReuploadNeeded(let requestToken):
                         if boxed {
@@ -19568,7 +17117,6 @@ public struct Api {
                         serializeBytes(bytes, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_cdnFileReuploadNeeded(_ reader: BufferReader) -> CdnFile? {
@@ -19594,21 +17142,11 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .cdnFileReuploadNeeded(let requestToken):
-                            return "(upload.cdnFileReuploadNeeded requestToken: \(requestToken))"
-                        case .cdnFile(let bytes):
-                            return "(upload.cdnFile bytes: \(bytes))"
-                    }
-                }
-            }
         }
     }
 
     public struct storage {
-        public enum FileType: CustomStringConvertible {
+        public enum FileType {
             case fileUnknown
             case filePartial
             case fileJpeg
@@ -19620,7 +17158,7 @@ public struct Api {
             case fileMp4
             case fileWebp
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .fileUnknown:
                         if boxed {
@@ -19683,7 +17221,6 @@ public struct Api {
                         
                         break
         }
-        return true
         }
         
             fileprivate static func parse_fileUnknown(_ reader: BufferReader) -> FileType? {
@@ -19717,40 +17254,14 @@ public struct Api {
                 return Api.storage.FileType.fileWebp
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .fileUnknown:
-                            return "(storage.fileUnknown)"
-                        case .filePartial:
-                            return "(storage.filePartial)"
-                        case .fileJpeg:
-                            return "(storage.fileJpeg)"
-                        case .fileGif:
-                            return "(storage.fileGif)"
-                        case .filePng:
-                            return "(storage.filePng)"
-                        case .filePdf:
-                            return "(storage.filePdf)"
-                        case .fileMp3:
-                            return "(storage.fileMp3)"
-                        case .fileMov:
-                            return "(storage.fileMov)"
-                        case .fileMp4:
-                            return "(storage.fileMp4)"
-                        case .fileWebp:
-                            return "(storage.fileWebp)"
-                    }
-                }
-            }
         }
     }
 
     public struct account {
-        public enum TmpPassword: CustomStringConvertible {
+        public enum TmpPassword {
             case tmpPassword(tmpPassword: Buffer, validUntil: Int32)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .tmpPassword(let tmpPassword, let validUntil):
                         if boxed {
@@ -19760,7 +17271,6 @@ public struct Api {
                         serializeInt32(validUntil, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_tmpPassword(_ reader: BufferReader) -> TmpPassword? {
@@ -19778,20 +17288,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .tmpPassword(let tmpPassword, let validUntil):
-                            return "(account.tmpPassword tmpPassword: \(tmpPassword), validUntil: \(validUntil))"
-                    }
-                }
-            }
         }
     
-        public enum PasswordSettings: CustomStringConvertible {
+        public enum PasswordSettings {
             case passwordSettings(email: String)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .passwordSettings(let email):
                         if boxed {
@@ -19800,7 +17302,6 @@ public struct Api {
                         serializeString(email, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_passwordSettings(_ reader: BufferReader) -> PasswordSettings? {
@@ -19815,20 +17316,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .passwordSettings(let email):
-                            return "(account.passwordSettings email: \(email))"
-                    }
-                }
-            }
         }
     
-        public enum PasswordInputSettings: CustomStringConvertible {
+        public enum PasswordInputSettings {
             case passwordInputSettings(flags: Int32, newSalt: Buffer?, newPasswordHash: Buffer?, hint: String?, email: String?)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .passwordInputSettings(let flags, let newSalt, let newPasswordHash, let hint, let email):
                         if boxed {
@@ -19841,7 +17334,6 @@ public struct Api {
                         if Int(flags) & Int(1 << 1) != 0 {serializeString(email!, buffer: buffer, boxed: false)}
                         break
         }
-        return true
         }
         
             fileprivate static func parse_passwordInputSettings(_ reader: BufferReader) -> PasswordInputSettings? {
@@ -19868,20 +17360,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .passwordInputSettings(let flags, let newSalt, let newPasswordHash, let hint, let email):
-                            return "(account.passwordInputSettings flags: \(flags), newSalt: \(newSalt), newPasswordHash: \(newPasswordHash), hint: \(hint), email: \(email))"
-                    }
-                }
-            }
         }
     
-        public enum Authorizations: CustomStringConvertible {
+        public enum Authorizations {
             case authorizations(authorizations: [Api.Authorization])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .authorizations(let authorizations):
                         if boxed {
@@ -19894,7 +17378,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_authorizations(_ reader: BufferReader) -> Authorizations? {
@@ -19911,21 +17394,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .authorizations(let authorizations):
-                            return "(account.authorizations authorizations: \(authorizations))"
-                    }
-                }
-            }
         }
     
-        public enum Password: CustomStringConvertible {
+        public enum Password {
             case noPassword(newSalt: Buffer, emailUnconfirmedPattern: String)
             case password(currentSalt: Buffer, newSalt: Buffer, hint: String, hasRecovery: Api.Bool, emailUnconfirmedPattern: String)
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .noPassword(let newSalt, let emailUnconfirmedPattern):
                         if boxed {
@@ -19945,7 +17420,6 @@ public struct Api {
                         serializeString(emailUnconfirmedPattern, buffer: buffer, boxed: false)
                         break
         }
-        return true
         }
         
             fileprivate static func parse_noPassword(_ reader: BufferReader) -> Password? {
@@ -19988,22 +17462,12 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .noPassword(let newSalt, let emailUnconfirmedPattern):
-                            return "(account.noPassword newSalt: \(newSalt), emailUnconfirmedPattern: \(emailUnconfirmedPattern))"
-                        case .password(let currentSalt, let newSalt, let hint, let hasRecovery, let emailUnconfirmedPattern):
-                            return "(account.password currentSalt: \(currentSalt), newSalt: \(newSalt), hint: \(hint), hasRecovery: \(hasRecovery), emailUnconfirmedPattern: \(emailUnconfirmedPattern))"
-                    }
-                }
-            }
         }
     
-        public enum PrivacyRules: CustomStringConvertible {
+        public enum PrivacyRules {
             case privacyRules(rules: [Api.PrivacyRule], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .privacyRules(let rules, let users):
                         if boxed {
@@ -20021,7 +17485,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_privacyRules(_ reader: BufferReader) -> PrivacyRules? {
@@ -20043,22 +17506,14 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .privacyRules(let rules, let users):
-                            return "(account.privacyRules rules: \(rules), users: \(users))"
-                    }
-                }
-            }
         }
     }
 
     public struct photos {
-        public enum Photo: CustomStringConvertible {
+        public enum Photo {
             case photo(photo: Api.Photo, users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .photo(let photo, let users):
                         if boxed {
@@ -20072,7 +17527,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_photo(_ reader: BufferReader) -> Photo? {
@@ -20094,21 +17548,13 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .photo(let photo, let users):
-                            return "(photos.photo photo: \(photo), users: \(users))"
-                    }
-                }
-            }
         }
     
-        public enum Photos: CustomStringConvertible {
+        public enum Photos {
             case photos(photos: [Api.Photo], users: [Api.User])
             case photosSlice(count: Int32, photos: [Api.Photo], users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .photos(let photos, let users):
                         if boxed {
@@ -20142,7 +17588,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_photos(_ reader: BufferReader) -> Photos? {
@@ -20185,24 +17630,14 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .photos(let photos, let users):
-                            return "(photos.photos photos: \(photos), users: \(users))"
-                        case .photosSlice(let count, let photos, let users):
-                            return "(photos.photosSlice count: \(count), photos: \(photos), users: \(users))"
-                    }
-                }
-            }
         }
     }
 
     public struct phone {
-        public enum PhoneCall: CustomStringConvertible {
+        public enum PhoneCall {
             case phoneCall(phoneCall: Api.PhoneCall, users: [Api.User])
         
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
                     case .phoneCall(let phoneCall, let users):
                         if boxed {
@@ -20216,7 +17651,6 @@ public struct Api {
                         }
                         break
         }
-        return true
         }
         
             fileprivate static func parse_phoneCall(_ reader: BufferReader) -> PhoneCall? {
@@ -20238,14 +17672,6 @@ public struct Api {
                 }
             }
         
-            public var description: String {
-                get {
-                    switch self {
-                        case .phoneCall(let phoneCall, let users):
-                            return "(phone.phoneCall phoneCall: \(phoneCall), users: \(users))"
-                    }
-                }
-            }
         }
     }
 
@@ -20400,7 +17826,7 @@ public struct Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
-                    return (FunctionDescription({return "(messages.sendMessage flags: \(flags), peer: \(peer), replyToMsgId: \(replyToMsgId), message: \(message), randomId: \(randomId), replyMarkup: \(replyMarkup), entities: \(entities))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription({return "(messages.sendMessage flags: \(flags), peer: \(peer), replyToMsgId: \(String(describing: replyToMsgId)), message: \(message), randomId: \(randomId), replyMarkup: \(String(describing: replyMarkup)), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -20419,7 +17845,7 @@ public struct Api {
                     media.serialize(buffer, true)
                     serializeInt64(randomId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
-                    return (FunctionDescription({return "(messages.sendMedia flags: \(flags), peer: \(peer), replyToMsgId: \(replyToMsgId), media: \(media), randomId: \(randomId), replyMarkup: \(replyMarkup))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription({return "(messages.sendMedia flags: \(flags), peer: \(peer), replyToMsgId: \(String(describing: replyToMsgId)), media: \(media), randomId: \(randomId), replyMarkup: \(String(describing: replyMarkup)))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -21112,7 +18538,7 @@ public struct Api {
                     if Int(flags) & Int(1 << 0) != 0 {geoPoint!.serialize(buffer, true)}
                     serializeString(query, buffer: buffer, boxed: false)
                     serializeString(offset, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.getInlineBotResults flags: \(flags), bot: \(bot), peer: \(peer), geoPoint: \(geoPoint), query: \(query), offset: \(offset))"}), buffer, { (buffer: Buffer) -> Api.messages.BotResults? in
+                    return (FunctionDescription({return "(messages.getInlineBotResults flags: \(flags), bot: \(bot), peer: \(peer), geoPoint: \(String(describing: geoPoint)), query: \(query), offset: \(offset))"}), buffer, { (buffer: Buffer) -> Api.messages.BotResults? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.BotResults?
                         if let signature = reader.readInt32() {
@@ -21135,7 +18561,7 @@ public struct Api {
                     serializeInt32(cacheTime, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {switchPm!.serialize(buffer, true)}
-                    return (FunctionDescription({return "(messages.setInlineBotResults flags: \(flags), queryId: \(queryId), results: \(results), cacheTime: \(cacheTime), nextOffset: \(nextOffset), switchPm: \(switchPm))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription({return "(messages.setInlineBotResults flags: \(flags), queryId: \(queryId), results: \(results), cacheTime: \(cacheTime), nextOffset: \(String(describing: nextOffset)), switchPm: \(String(describing: switchPm)))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -21154,7 +18580,7 @@ public struct Api {
                     serializeInt64(randomId, buffer: buffer, boxed: false)
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     serializeString(id, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.sendInlineBotResult flags: \(flags), peer: \(peer), replyToMsgId: \(replyToMsgId), randomId: \(randomId), queryId: \(queryId), id: \(id))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription({return "(messages.sendInlineBotResult flags: \(flags), peer: \(peer), replyToMsgId: \(String(describing: replyToMsgId)), randomId: \(randomId), queryId: \(queryId), id: \(id))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -21192,7 +18618,7 @@ public struct Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
-                    return (FunctionDescription({return "(messages.editMessage flags: \(flags), peer: \(peer), id: \(id), message: \(message), replyMarkup: \(replyMarkup), entities: \(entities))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription({return "(messages.editMessage flags: \(flags), peer: \(peer), id: \(id), message: \(String(describing: message)), replyMarkup: \(String(describing: replyMarkup)), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -21214,7 +18640,7 @@ public struct Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
-                    return (FunctionDescription({return "(messages.editInlineBotMessage flags: \(flags), id: \(id), message: \(message), replyMarkup: \(replyMarkup), entities: \(entities))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription({return "(messages.editInlineBotMessage flags: \(flags), id: \(id), message: \(String(describing: message)), replyMarkup: \(String(describing: replyMarkup)), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -21231,7 +18657,7 @@ public struct Api {
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeBytes(data!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription({return "(messages.getBotCallbackAnswer flags: \(flags), peer: \(peer), msgId: \(msgId), data: \(data))"}), buffer, { (buffer: Buffer) -> Api.messages.BotCallbackAnswer? in
+                    return (FunctionDescription({return "(messages.getBotCallbackAnswer flags: \(flags), peer: \(peer), msgId: \(msgId), data: \(String(describing: data)))"}), buffer, { (buffer: Buffer) -> Api.messages.BotCallbackAnswer? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.BotCallbackAnswer?
                         if let signature = reader.readInt32() {
@@ -21249,7 +18675,7 @@ public struct Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(message!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
                     serializeInt32(cacheTime, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.setBotCallbackAnswer flags: \(flags), queryId: \(queryId), message: \(message), url: \(url), cacheTime: \(cacheTime))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription({return "(messages.setBotCallbackAnswer flags: \(flags), queryId: \(queryId), message: \(String(describing: message)), url: \(String(describing: url)), cacheTime: \(cacheTime))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -21289,7 +18715,7 @@ public struct Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
-                    return (FunctionDescription({return "(messages.saveDraft flags: \(flags), replyToMsgId: \(replyToMsgId), peer: \(peer), message: \(message), entities: \(entities))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription({return "(messages.saveDraft flags: \(flags), replyToMsgId: \(String(describing: replyToMsgId)), peer: \(peer), message: \(message), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -21608,7 +19034,7 @@ public struct Api {
                     for item in shippingOptions! {
                         item.serialize(buffer, true)
                     }}
-                    return (FunctionDescription({return "(messages.setBotShippingResults flags: \(flags), queryId: \(queryId), error: \(error), shippingOptions: \(shippingOptions))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription({return "(messages.setBotShippingResults flags: \(flags), queryId: \(queryId), error: \(String(describing: error)), shippingOptions: \(String(describing: shippingOptions)))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -21624,7 +19050,7 @@ public struct Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(error!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription({return "(messages.setBotPrecheckoutResults flags: \(flags), queryId: \(queryId), error: \(error))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription({return "(messages.setBotPrecheckoutResults flags: \(flags), queryId: \(queryId), error: \(String(describing: error)))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -21694,7 +19120,7 @@ public struct Api {
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     serializeInt32(maxId, buffer: buffer, boxed: false)
                     serializeInt32(minId, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.search flags: \(flags), peer: \(peer), q: \(q), fromId: \(fromId), filter: \(filter), minDate: \(minDate), maxDate: \(maxDate), offsetId: \(offsetId), addOffset: \(addOffset), limit: \(limit), maxId: \(maxId), minId: \(minId))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
+                    return (FunctionDescription({return "(messages.search flags: \(flags), peer: \(peer), q: \(q), fromId: \(String(describing: fromId)), filter: \(filter), minDate: \(minDate), maxDate: \(maxDate), offsetId: \(offsetId), addOffset: \(addOffset), limit: \(limit), maxId: \(maxId), minId: \(minId))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.Messages?
                         if let signature = reader.readInt32() {
@@ -22180,7 +19606,7 @@ public struct Api {
                     serializeInt64(maxId, buffer: buffer, boxed: false)
                     serializeInt64(minId, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(channels.getAdminLog flags: \(flags), channel: \(channel), q: \(q), eventsFilter: \(eventsFilter), admins: \(admins), maxId: \(maxId), minId: \(minId), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.channels.AdminLogResults? in
+                    return (FunctionDescription({return "(channels.getAdminLog flags: \(flags), channel: \(channel), q: \(q), eventsFilter: \(String(describing: eventsFilter)), admins: \(String(describing: admins)), maxId: \(maxId), minId: \(minId), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.channels.AdminLogResults? in
                         let reader = BufferReader(buffer)
                         var result: Api.channels.AdminLogResults?
                         if let signature = reader.readInt32() {
@@ -22277,7 +19703,7 @@ public struct Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(requestedInfoId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(shippingOptionId!, buffer: buffer, boxed: false)}
                     credentials.serialize(buffer, true)
-                    return (FunctionDescription({return "(payments.sendPaymentForm flags: \(flags), msgId: \(msgId), requestedInfoId: \(requestedInfoId), shippingOptionId: \(shippingOptionId), credentials: \(credentials))"}), buffer, { (buffer: Buffer) -> Api.payments.PaymentResult? in
+                    return (FunctionDescription({return "(payments.sendPaymentForm flags: \(flags), msgId: \(msgId), requestedInfoId: \(String(describing: requestedInfoId)), shippingOptionId: \(String(describing: shippingOptionId)), credentials: \(credentials))"}), buffer, { (buffer: Buffer) -> Api.payments.PaymentResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.payments.PaymentResult?
                         if let signature = reader.readInt32() {
@@ -22338,7 +19764,7 @@ public struct Api {
                     if Int(flags) & Int(1 << 0) != 0 {currentNumber!.serialize(buffer, true)}
                     serializeInt32(apiId, buffer: buffer, boxed: false)
                     serializeString(apiHash, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(auth.sendCode flags: \(flags), phoneNumber: \(phoneNumber), currentNumber: \(currentNumber), apiId: \(apiId), apiHash: \(apiHash))"}), buffer, { (buffer: Buffer) -> Api.auth.SentCode? in
+                    return (FunctionDescription({return "(auth.sendCode flags: \(flags), phoneNumber: \(phoneNumber), currentNumber: \(String(describing: currentNumber)), apiId: \(apiId), apiHash: \(apiHash))"}), buffer, { (buffer: Buffer) -> Api.auth.SentCode? in
                         let reader = BufferReader(buffer)
                         var result: Api.auth.SentCode?
                         if let signature = reader.readInt32() {
@@ -23058,7 +20484,7 @@ public struct Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ptsTotalLimit!, buffer: buffer, boxed: false)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeInt32(qts, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(updates.getDifference flags: \(flags), pts: \(pts), ptsTotalLimit: \(ptsTotalLimit), date: \(date), qts: \(qts))"}), buffer, { (buffer: Buffer) -> Api.updates.Difference? in
+                    return (FunctionDescription({return "(updates.getDifference flags: \(flags), pts: \(pts), ptsTotalLimit: \(String(describing: ptsTotalLimit)), date: \(date), qts: \(qts))"}), buffer, { (buffer: Buffer) -> Api.updates.Difference? in
                         let reader = BufferReader(buffer)
                         var result: Api.updates.Difference?
                         if let signature = reader.readInt32() {
@@ -23283,7 +20709,7 @@ public struct Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(firstName!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(lastName!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(about!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription({return "(account.updateProfile flags: \(flags), firstName: \(firstName), lastName: \(lastName), about: \(about))"}), buffer, { (buffer: Buffer) -> Api.User? in
+                    return (FunctionDescription({return "(account.updateProfile flags: \(flags), firstName: \(String(describing: firstName)), lastName: \(String(describing: lastName)), about: \(String(describing: about)))"}), buffer, { (buffer: Buffer) -> Api.User? in
                         let reader = BufferReader(buffer)
                         var result: Api.User?
                         if let signature = reader.readInt32() {
@@ -23445,7 +20871,7 @@ public struct Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(phoneNumber, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {currentNumber!.serialize(buffer, true)}
-                    return (FunctionDescription({return "(account.sendChangePhoneCode flags: \(flags), phoneNumber: \(phoneNumber), currentNumber: \(currentNumber))"}), buffer, { (buffer: Buffer) -> Api.auth.SentCode? in
+                    return (FunctionDescription({return "(account.sendChangePhoneCode flags: \(flags), phoneNumber: \(phoneNumber), currentNumber: \(String(describing: currentNumber)))"}), buffer, { (buffer: Buffer) -> Api.auth.SentCode? in
                         let reader = BufferReader(buffer)
                         var result: Api.auth.SentCode?
                         if let signature = reader.readInt32() {
@@ -23562,7 +20988,7 @@ public struct Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(hash, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {currentNumber!.serialize(buffer, true)}
-                    return (FunctionDescription({return "(account.sendConfirmPhoneCode flags: \(flags), hash: \(hash), currentNumber: \(currentNumber))"}), buffer, { (buffer: Buffer) -> Api.auth.SentCode? in
+                    return (FunctionDescription({return "(account.sendConfirmPhoneCode flags: \(flags), hash: \(hash), currentNumber: \(String(describing: currentNumber)))"}), buffer, { (buffer: Buffer) -> Api.auth.SentCode? in
                         let reader = BufferReader(buffer)
                         var result: Api.auth.SentCode?
                         if let signature = reader.readInt32() {

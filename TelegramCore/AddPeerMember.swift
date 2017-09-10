@@ -111,7 +111,7 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
                     return fetchAndUpdateCachedParticipants(peerId: peerId, network:account.network, postbox: account.postbox)
             }
         } else {
-            return .fail()
+            return .fail(Void())
         }
         
     } |> switchToLatest
