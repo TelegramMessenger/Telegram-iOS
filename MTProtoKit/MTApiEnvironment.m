@@ -373,6 +373,27 @@ typedef enum {
     return result;
 }
 
+- (instancetype)copyWithZone:(NSZone *)__unused zone {
+    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    
+    result.apiId = self.apiId;
+    result.appVersion = self.appVersion;
+    result.layer = self.layer;
+    
+    result.langPack = self.langPack;
+    
+    result->_langPackCode = self.langPackCode;
+    result->_socksProxySettings = self.socksProxySettings;
+    
+    result.disableUpdates = self.disableUpdates;
+    result.tcpPayloadPrefix = self.tcpPayloadPrefix;
+    result.datacenterAddressOverrides = self.datacenterAddressOverrides;
+    
+    [result _updateApiInitializationHash];
+    
+    return result;
+}
+
 - (MTApiEnvironment *)withUpdatedSocksProxySettings:(MTSocksProxySettings *)socksProxySettings {
     MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
     
