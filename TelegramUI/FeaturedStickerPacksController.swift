@@ -105,12 +105,12 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     func item(_ arguments: FeaturedStickerPacksControllerArguments) -> ListViewItem {
         switch self {
             case let .pack(_, theme, info, unread, topItem, count, installed):
-                return ItemListStickerPackItem(theme: theme, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false), enabled: true, sectionId: self.section, action: { _ in
+                return ItemListStickerPackItem(theme: theme, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false), enabled: true, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
-                }, setPackIdWithRevealedOptions: { _ in
+                }, setPackIdWithRevealedOptions: { _, _ in
                 }, addPack: {
                     arguments.addPack(info)
-                }, removePack: { _ in
+                }, removePack: {
                 })
         }
     }

@@ -15,7 +15,7 @@ func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType) -> NSAttr
             string.append(NSAttributedString(string: " app on your other device.", font: Font.regular(16.0), textColor: UIColor.black))
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.alignment = .center
-            string.addAttribute(NSParagraphStyleAttributeName, value: paragraphStyle, range: NSMakeRange(0, string.length))
+            string.addAttribute(NSAttributedStringKey.paragraphStyle, value: paragraphStyle, range: NSMakeRange(0, string.length))
             return string
         case .call, .flashCall:
             return NSAttributedString(string: "Telegram dialed your number", font: Font.regular(16.0), textColor: UIColor.black, paragraphAlignment: .center)

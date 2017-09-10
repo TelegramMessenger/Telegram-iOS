@@ -195,16 +195,16 @@ public class PeerMediaCollectionController: ViewController {
             }, sendMessage: { _ in
             },sendSticker: { _ in
             }, sendGif: { _ in
-            }, requestMessageActionCallback: { _ in
+            }, requestMessageActionCallback: { _, _, _ in
             }, openUrl: { _ in
             }, shareCurrentLocation: {
             }, shareAccountContact: {
             }, sendBotCommand: { _, _ in
             }, openInstantPage: { _ in
-            }, openHashtag: {_ in
+            }, openHashtag: { _, _ in
             }, updateInputState: { _ in
             }, openMessageShareMenu: { _ in
-            }, presentController: { _ in
+            }, presentController: { _, _ in
             }, callPeer: { _ in
             }, longTap: { _ in
             }, openCheckoutOrReceipt: { _ in
@@ -313,10 +313,10 @@ public class PeerMediaCollectionController: ViewController {
         }, navigateToMessage: { _ in
         }, openPeerInfo: {
         }, togglePeerNotifications: {
-        }, sendContextResult: { _ in
-        }, sendBotCommand: { _ in
+        }, sendContextResult: { _, _ in
+        }, sendBotCommand: { _, _ in
         }, sendBotStart: { _ in
-        }, botSwitchChatWithPayload: { _ in
+        }, botSwitchChatWithPayload: { _, _ in
         }, beginMediaRecording: { _ in
         }, finishMediaRecording: { _ in 
         }, stopMediaRecording: {

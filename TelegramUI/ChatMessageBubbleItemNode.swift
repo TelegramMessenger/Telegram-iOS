@@ -49,7 +49,7 @@ private func contentNodeClassesForItem(_ item: ChatMessageItem) -> [AnyClass] {
 
 private let nameFont: UIFont = {
     if #available(iOS 8.2, *) {
-        return UIFont.systemFont(ofSize: 14.0, weight: UIFontWeightMedium)
+        return UIFont.systemFont(ofSize: 14.0, weight: UIFont.Weight.medium)
     } else {
         return CTFontCreateWithName("HelveticaNeue-Medium" as CFString, 14.0, nil)
     }
@@ -383,9 +383,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     let attributedString: NSAttributedString
                     if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
                         let botPrefixString: NSString = " via "
-                        let mutableString = NSMutableAttributedString(string: "\(authorNameString)\(botPrefixString)@\(inlineBotNameString)", attributes: [NSFontAttributeName: inlineBotNameFont, NSForegroundColorAttributeName: inlineBotNameColor])
-                        mutableString.addAttributes([NSFontAttributeName: nameFont, NSForegroundColorAttributeName: authorNameColor], range: NSMakeRange(0, (authorNameString as NSString).length))
-                        mutableString.addAttributes([NSFontAttributeName: inlineBotPrefixFont, NSForegroundColorAttributeName: inlineBotNameColor], range: NSMakeRange((authorNameString as NSString).length, botPrefixString.length))
+                        let mutableString = NSMutableAttributedString(string: "\(authorNameString)\(botPrefixString)@\(inlineBotNameString)", attributes: [NSAttributedStringKey.font: inlineBotNameFont, NSAttributedStringKey.foregroundColor: inlineBotNameColor])
+                        mutableString.addAttributes([NSAttributedStringKey.font: nameFont, NSAttributedStringKey.foregroundColor: authorNameColor], range: NSMakeRange(0, (authorNameString as NSString).length))
+                        mutableString.addAttributes([NSAttributedStringKey.font: inlineBotPrefixFont, NSAttributedStringKey.foregroundColor: inlineBotNameColor], range: NSMakeRange((authorNameString as NSString).length, botPrefixString.length))
                         attributedString = mutableString
                     } else if let authorNameString = authorNameString, let authorNameColor = authorNameColor {
                         attributedString = NSAttributedString(string: authorNameString, font: nameFont, textColor: authorNameColor)

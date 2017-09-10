@@ -26,13 +26,53 @@ private final class ChatTextInputMediaRecordingButtonPresenterContainer: UIView 
 }
 
 private final class ChatTextInputMediaRecordingButtonPresenterController: ViewController {
+    private var controllerNode: ChatTextInputMediaRecordingButtonPresenterControllerNode {
+        return self.displayNode as! ChatTextInputMediaRecordingButtonPresenterControllerNode
+    }
+    
+    var containerView: UIView? {
+        didSet {
+            if self.isNodeLoaded {
+                self.controllerNode.containerView = self.containerView
+            }
+        }
+    }
+    
     override func loadDisplayNode() {
         self.displayNode = ChatTextInputMediaRecordingButtonPresenterControllerNode()
+        if let containerView = self.containerView {
+            self.controllerNode.containerView = containerView
+        }
     }
 }
 
 private final class ChatTextInputMediaRecordingButtonPresenterControllerNode: ViewControllerTracingNode {
+    var containerView: UIView? {
+        didSet {
+            if self.containerView !== oldValue {
+                if self.isNodeLoaded, let containerView = oldValue, containerView.superview === self.view {
+                    containerView.removeFromSuperview()
+                }
+                if self.isNodeLoaded, let containerView = self.containerView {
+                    self.view.addSubview(containerView)
+                }
+            }
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        if let containerView = self.containerView {
+            self.view.addSubview(containerView)
+        }
+    }
+    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let containerView = self.containerView {
+            if let result = containerView.hitTest(point, with: event), result !== containerView {
+                return result
+            }
+        }
         return nil
     }
 }
@@ -41,7 +81,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     private let account: Account?
     private let presentController: (ViewController) -> Void
     private let container: ChatTextInputMediaRecordingButtonPresenterContainer
-    private var presentationController: ViewController?
+    private var presentationController: ChatTextInputMediaRecordingButtonPresenterController?
     
     init(account: Account, presentController: @escaping (ViewController) -> Void) {
         self.account = account
@@ -77,7 +117,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
                 presentNow = true
             }
             
-            self.presentationController?.displayNode.view.addSubview(self.container)
+            self.presentationController?.containerView = self.container
             if let presentationController = self.presentationController, presentNow {
                 self.presentController(presentationController)
             }
@@ -101,7 +141,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     let presentController: (ViewController) -> Void
     var beginRecording: () -> Void = { }
     var endRecording: (Bool) -> Void = { _ in }
-    var stopRecording: () -> Void = { _ in }
+    var stopRecording: () -> Void = { }
     var offsetRecordingControls: () -> Void = { }
     var switchMode: () -> Void = { }
     var updateLocked: (Bool) -> Void = { _ in }

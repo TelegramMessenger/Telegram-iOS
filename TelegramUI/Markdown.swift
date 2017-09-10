@@ -59,10 +59,10 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
     let result = NSMutableAttributedString()
     var remainingRange = NSMakeRange(0, nsString.length)
     
-    var bodyAttributes: [String: Any] = [NSFontAttributeName: attributes.body.font, NSForegroundColorAttributeName: attributes.body.textColor, NSParagraphStyleAttributeName: paragraphStyleWithAlignment(textAlignment)]
+    var bodyAttributes: [NSAttributedStringKey: Any] = [NSAttributedStringKey.font: attributes.body.font, NSAttributedStringKey.foregroundColor: attributes.body.textColor, NSAttributedStringKey.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
     if !attributes.body.additionalAttributes.isEmpty {
         for (key, value) in attributes.body.additionalAttributes {
-            bodyAttributes[key] = value
+            bodyAttributes[NSAttributedStringKey(rawValue: key)] = value
         }
     }
     
@@ -78,14 +78,14 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
             if character == UInt16(("[" as UnicodeScalar).value) {
                 remainingRange = NSMakeRange(range.location + range.length, remainingRange.location + remainingRange.length - (range.location + range.length))
                 if let (parsedLinkText, parsedLinkContents) = parseLink(string: nsString, remainingRange: &remainingRange) {
-                    var linkAttributes: [String: Any] = [NSFontAttributeName: attributes.link.font, NSForegroundColorAttributeName: attributes.link.textColor, NSParagraphStyleAttributeName: paragraphStyleWithAlignment(textAlignment)]
+                    var linkAttributes: [NSAttributedStringKey: Any] = [NSAttributedStringKey.font: attributes.link.font, NSAttributedStringKey.foregroundColor: attributes.link.textColor, NSAttributedStringKey.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
                     if !attributes.body.additionalAttributes.isEmpty {
                         for (key, value) in attributes.link.additionalAttributes {
-                            linkAttributes[key] = value
+                            linkAttributes[NSAttributedStringKey(rawValue: key)] = value
                         }
                     }
                     if let (attributeName, attributeValue) = attributes.linkAttribute(parsedLinkContents) {
-                        linkAttributes[attributeName] = attributeValue
+                        linkAttributes[NSAttributedStringKey(rawValue: attributeName)] = attributeValue
                     }
                     result.append(NSAttributedString(string: parsedLinkText, attributes: linkAttributes))
                 }
@@ -96,10 +96,10 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
                         remainingRange = NSMakeRange(range.location + range.length + 1, remainingRange.location + remainingRange.length - (range.location + range.length + 1))
                         
                         if let bold = parseBold(string: nsString, remainingRange: &remainingRange) {
-                            var boldAttributes: [String: Any] = [NSFontAttributeName: attributes.bold.font, NSForegroundColorAttributeName: attributes.bold.textColor, NSParagraphStyleAttributeName: paragraphStyleWithAlignment(textAlignment)]
+                            var boldAttributes: [NSAttributedStringKey: Any] = [NSAttributedStringKey.font: attributes.bold.font, NSAttributedStringKey.foregroundColor: attributes.bold.textColor, NSAttributedStringKey.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
                             if !attributes.body.additionalAttributes.isEmpty {
                                 for (key, value) in attributes.bold.additionalAttributes {
-                                    boldAttributes[key] = value
+                                    boldAttributes[NSAttributedStringKey(rawValue: key)] = value
                                 }
                             }
                             result.append(NSAttributedString(string: bold, attributes: boldAttributes))

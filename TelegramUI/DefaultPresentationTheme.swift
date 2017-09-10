@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 private let accentColor: UIColor = UIColor(rgb: 0x007ee5)
 private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)

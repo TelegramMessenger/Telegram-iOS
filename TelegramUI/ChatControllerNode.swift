@@ -46,7 +46,7 @@ class ChatControllerNode: ASDisplayNode {
     var chatPresentationInterfaceState: ChatPresentationInterfaceState
     var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
     
-    var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _ in }
+    var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _ in }
     var displayAttachmentMenu: () -> Void = { }
     var updateTypingActivity: () -> Void = { }
     var dismissUrlPreview: () -> Void = { }

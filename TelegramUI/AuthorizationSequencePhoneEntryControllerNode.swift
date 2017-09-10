@@ -338,7 +338,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         termsString.append(NSAttributedString(string: ".", font: Font.regular(16.0), textColor: UIColor.black))
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
-        termsString.addAttribute(NSParagraphStyleAttributeName, value: paragraphStyle, range: NSMakeRange(0, termsString.length))
+        termsString.addAttribute(NSAttributedStringKey.paragraphStyle, value: paragraphStyle, range: NSMakeRange(0, termsString.length))
         self.termsOfServiceNode.attributedText = termsString
         
         self.countryButton = ASButtonNode()

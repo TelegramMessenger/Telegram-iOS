@@ -107,7 +107,7 @@ final class InstantPageTextItem: InstantPageItem {
         context.restoreGState()
     }
     
-    private func attributesAtPoint(_ point: CGPoint) -> (Int, [String: Any])? {
+    private func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedStringKey: Any])? {
         let transformedPoint = CGPoint(x: point.x, y: point.y)
         for line in self.lines {
             let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
@@ -150,7 +150,7 @@ final class InstantPageTextItem: InstantPageItem {
         return nil
     }
     
-    private func attributeRects(name: String, at index: Int) -> [CGRect]? {
+    private func attributeRects(name: NSAttributedStringKey, at index: Int) -> [CGRect]? {
         var range = NSRange()
         let _ = self.attributedString.attribute(name, at: index, effectiveRange: &range)
         if range.length != 0 {
@@ -190,8 +190,8 @@ final class InstantPageTextItem: InstantPageItem {
     
     func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         if let (index, dict) = self.attributesAtPoint(point) {
-            if let _ = dict[TextNode.UrlAttribute] {
-                if let rects = self.attributeRects(name: TextNode.UrlAttribute, at: index) {
+            if let _ = dict[NSAttributedStringKey(rawValue: TextNode.UrlAttribute)] {
+                if let rects = self.attributeRects(name: NSAttributedStringKey(rawValue: TextNode.UrlAttribute), at: index) {
                     return rects
                 }
             }
@@ -202,7 +202,7 @@ final class InstantPageTextItem: InstantPageItem {
     
     func urlAttribute(at point: CGPoint) -> InstantPageUrlItem? {
         if let (_, dict) = self.attributesAtPoint(point) {
-            if let url = dict[TextNode.UrlAttribute] as? InstantPageUrlItem {
+            if let url = dict[NSAttributedStringKey(rawValue: TextNode.UrlAttribute)] as? InstantPageUrlItem {
                 return url
             }
         }
@@ -264,7 +264,7 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
         case let .plain(string):
             var attributes = styleStack.textAttributes()
             if let url = url {
-                attributes[TextNode.UrlAttribute] = url
+                attributes[NSAttributedStringKey(rawValue: TextNode.UrlAttribute)] = url
             }
             return NSAttributedString(string: string, attributes: attributes)
         case let .bold(text):
@@ -320,12 +320,12 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     }
     
     var lines: [InstantPageTextLine] = []
-    guard let font = string.attribute(NSFontAttributeName, at: 0, effectiveRange: nil) as? UIFont else {
+    guard let font = string.attribute(NSAttributedStringKey.font, at: 0, effectiveRange: nil) as? UIFont else {
         return InstantPageTextItem(frame: CGRect(), attributedString: string, lines: [])
     }
     
     var lineSpacingFactor: CGFloat = 1.12
-    if let lineSpacingFactorAttribute = string.attribute(InstantPageLineSpacingFactorAttribute, at: 0, effectiveRange: nil) {
+    if let lineSpacingFactorAttribute = string.attribute(NSAttributedStringKey(rawValue: InstantPageLineSpacingFactorAttribute), at: 0, effectiveRange: nil) {
         lineSpacingFactor = CGFloat((lineSpacingFactorAttribute as! NSNumber).floatValue)
     }
     
@@ -355,7 +355,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                 
                 let lineRange = NSMakeRange(lastIndex, lineCharacterCount)
                 
-                string.enumerateAttribute(NSStrikethroughStyleAttributeName, in: lineRange, options: [], using: { item, range, _ in
+                string.enumerateAttribute(NSAttributedStringKey.strikethroughStyle, in: lineRange, options: [], using: { item, range, _ in
                     if let item = item {
                         let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
                         let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))

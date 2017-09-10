@@ -11,7 +11,7 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
     private let labelNode: TextNode
     private let cancelButton: HighlightableButtonNode
     
-    private var isDisplayingCancel = false
+    private(set) var isDisplayingCancel = false
     
     init(theme: PresentationTheme, strings: PresentationStrings, cancel: @escaping () -> Void) {
         self.cancel = cancel
@@ -64,6 +64,15 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
                 self.cancelButton.alpha = 1.0
                 
                 if animated {
+                    //CGAffineTransform transform = CGAffineTransformMakeTranslation(0.0f, -22.0f);
+                    //transform = CGAffineTransformScale(transform, 0.25f, 0.25f);
+                    
+                    self.labelNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -22.0), duration: 0.2, removeOnCompletion: false, additive: true)
+                    self.labelNode.layer.animateScale(from: 1.0, to: 0.25, duration: 0.25, removeOnCompletion: false)
+                    
+                    self.cancelButton.layer.animatePosition(from: CGPoint(x: 0.0, y: 22.0), to: CGPoint(), duration: 0.2, additive: true)
+                    self.cancelButton.layer.animateScale(from: 0.25, to: 1.0, duration: 0.25)
+                    
                     self.arrowNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
                     self.labelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
                     self.cancelButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -91,5 +100,13 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
     
     @objc func cancelPressed() {
         self.cancel()
+    }
+    
+    func animateIn() {
+        
+    }
+    
+    func animateOut() {
+        
     }
 }

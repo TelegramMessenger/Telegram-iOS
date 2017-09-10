@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 extension UnicodeScalar {
     var isEmoji: Bool {

@@ -1,3 +1,4 @@
+import UIKit
 
 func chatMessageBubbleImageContentCorners(relativeContentPosition position: ChatMessageBubbleContentPosition, normalRadius: CGFloat, mergedRadius: CGFloat, mergedWithAnotherContentRadius: CGFloat) -> ImageCorners {
     let topLeftCorner: ImageCorner

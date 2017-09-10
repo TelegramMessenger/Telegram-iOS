@@ -5,7 +5,7 @@ import TelegramCore
 
 typealias ItemListSectionId = Int32
 
-protocol ItemListNodeEntry: Equatable, Comparable, Identifiable {
+protocol ItemListNodeEntry: Comparable, Identifiable {
     associatedtype ItemGenerationArguments
     
     var section: ItemListSectionId { get }

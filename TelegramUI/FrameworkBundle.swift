@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 private class FrameworkBundleClass: NSObject {
 }

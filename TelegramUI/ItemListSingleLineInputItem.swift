@@ -105,7 +105,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     override func didLoad() {
         super.didLoad()
         
-        self.textNode.textField.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
+        self.textNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0)]
         self.textNode.textField.font = Font.regular(17.0)
         if let item = self.item {
             self.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
@@ -132,8 +132,8 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
             let leftInset: CGFloat = 16.0
             
             let titleString = NSMutableAttributedString(attributedString: item.title)
-            titleString.removeAttribute(NSFontAttributeName, range: NSMakeRange(0, titleString.length))
-            titleString.addAttributes([NSFontAttributeName: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
+            titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
+            titleString.addAttributes([NSAttributedStringKey.font: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
             
             let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 0, .end, CGSize(width: width - 32 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             

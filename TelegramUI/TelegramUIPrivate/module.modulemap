@@ -19,4 +19,7 @@ module TelegramUIPrivateModule {
     header "../STPPaymentConfiguration.h"
     header "../STPCard.h"
     header "../STPToken.h"
+    header "../OngoingCallThreadLocalContext.h"
+    header "../SecretChatKeyVisualization.h"
+    header "../NumberPluralizationForm.h"
 }

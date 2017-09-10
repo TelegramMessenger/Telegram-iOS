@@ -149,7 +149,7 @@ class ItemListTextItemNode: ListViewItemNode {
                             let titleFrame = self.titleNode.frame
                             if let item = self.item, titleFrame.contains(location) {
                                 if let (_, attributes) = self.titleNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
-                                    if let url = attributes[TextNode.UrlAttribute] as? String {
+                                    if let url = attributes[NSAttributedStringKey(rawValue: TextNode.UrlAttribute)] as? String {
                                         item.linkAction?(.tap(url))
                                     }
                                 }

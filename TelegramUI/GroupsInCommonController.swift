@@ -96,7 +96,7 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
         case let .peerItem(_, theme, strings, peer):
             return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
                 arguments.openPeer(peer.id)
-            }, setPeerIdWithRevealedOptions: { _ in
+            }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
             })
         }

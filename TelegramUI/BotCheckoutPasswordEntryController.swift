@@ -148,7 +148,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.textFieldNode = TextFieldNode()
         self.textFieldNode.textField.textColor = .black
         self.textFieldNode.textField.font = Font.regular(12.0)
-        self.textFieldNode.textField.typingAttributes = [NSFontAttributeName: Font.regular(12.0)]
+        self.textFieldNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(12.0)]
         self.textFieldNode.textField.isSecureTextEntry = true
         
         super.init()

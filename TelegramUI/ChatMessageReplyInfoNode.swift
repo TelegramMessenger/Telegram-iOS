@@ -7,9 +7,9 @@ import SwiftSignalKit
 
 private let titleFont: UIFont = {
     if #available(iOS 8.2, *) {
-        return UIFont.systemFont(ofSize: 14.0, weight: UIFontWeightMedium)
+        return UIFont.systemFont(ofSize: 14.0, weight: UIFont.Weight.medium)
     } else {
-        return CTFontCreateWithName("HelveticaNeue-Medium" as CFString?, 14.0, nil)
+        return CTFontCreateWithName("HelveticaNeue-Medium" as CFString, 14.0, nil)
     }
 }()
 private let textFont = Font.regular(14.0)

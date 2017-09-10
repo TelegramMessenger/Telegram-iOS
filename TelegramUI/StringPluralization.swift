@@ -1,5 +1,7 @@
 import Foundation
 
+import TelegramUIPrivateModule
+
 enum PluralizationForm {
     case zero
     case one

@@ -372,7 +372,7 @@ final class LanguageSelectionController: ViewController {
             context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
         })
         self.innerNavigationController.navigationBar.isTranslucent = false
-        self.innerNavigationController.navigationBar.titleTextAttributes = [NSFontAttributeName: Font.semibold(17.0), NSForegroundColorAttributeName: self.presentationData.theme.rootController.navigationBar.primaryTextColor]
+        self.innerNavigationController.navigationBar.titleTextAttributes = [NSAttributedStringKey.font: Font.semibold(17.0), NSAttributedStringKey.foregroundColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor]
         
         self.innerController.dismiss = { [weak self] in
             self?.cancelPressed()

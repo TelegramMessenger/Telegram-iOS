@@ -1,12 +1,13 @@
 import Foundation
+import UIKit
 
 func addAttributesToStringWithRanges(_ stringWithRanges: (String, [(Int, NSRange)]), body: MarkdownAttributeSet, argumentAttributes: [Int: MarkdownAttributeSet], textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
     let result = NSMutableAttributedString()
     
-    var bodyAttributes: [String: Any] = [NSFontAttributeName: body.font, NSForegroundColorAttributeName: body.textColor, NSParagraphStyleAttributeName: paragraphStyleWithAlignment(textAlignment)]
+    var bodyAttributes: [NSAttributedStringKey: Any] = [NSAttributedStringKey.font: body.font, NSAttributedStringKey.foregroundColor: body.textColor, NSAttributedStringKey.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
     if !body.additionalAttributes.isEmpty {
         for (key, value) in body.additionalAttributes {
-            bodyAttributes[key] = value
+            bodyAttributes[NSAttributedStringKey(rawValue: key)] = value
         }
     }
     
@@ -14,10 +15,10 @@ func addAttributesToStringWithRanges(_ stringWithRanges: (String, [(Int, NSRange
     
     for (index, range) in stringWithRanges.1 {
         if let attributes = argumentAttributes[index] {
-            var argumentAttributes: [String: Any] = [NSFontAttributeName: attributes.font, NSForegroundColorAttributeName: attributes.textColor, NSParagraphStyleAttributeName: paragraphStyleWithAlignment(textAlignment)]
+            var argumentAttributes: [NSAttributedStringKey: Any] = [NSAttributedStringKey.font: attributes.font, NSAttributedStringKey.foregroundColor: attributes.textColor, NSAttributedStringKey.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
             if !attributes.additionalAttributes.isEmpty {
                 for (key, value) in attributes.additionalAttributes {
-                    argumentAttributes[key] = value
+                    argumentAttributes[NSAttributedStringKey(rawValue: key)] = value
                 }
             }
             result.addAttributes(argumentAttributes, range: range)

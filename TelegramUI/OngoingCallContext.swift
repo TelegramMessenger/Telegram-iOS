@@ -3,6 +3,8 @@ import SwiftSignalKit
 import TelegramCore
 import Postbox
 
+import TelegramUIPrivateModule
+
 private func callConnectionDescription(_ connection: CallSessionConnection) -> OngoingCallConnectionDescription {
     return OngoingCallConnectionDescription(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
 }

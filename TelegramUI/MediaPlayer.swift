@@ -59,7 +59,9 @@ private final class MediaPlayerContext {
     
     fileprivate var actionAtEnd: MediaPlayerActionAtEnd = .stop
     
-    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, enableSound: Bool) {
+    private var stoppedAtEnd = false
+    
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
@@ -80,7 +82,7 @@ private final class MediaPlayerContext {
             if let strongSelf = self, !strongSelf.enableSound {
                 switch strongSelf.state {
                     case .empty:
-                        if value {
+                        if value && playAutomatically {
                             strongSelf.play()
                         }
                     case .paused:
@@ -322,9 +324,13 @@ private final class MediaPlayerContext {
                 self.state = .seeking(frameSource: frameSource, timestamp: timestamp, disposable: disposable, action: .play)
                 self.lastStatusUpdateTimestamp = nil
             case let .paused(loadedState):
-                self.state = .playing(loadedState)
                 self.lastStatusUpdateTimestamp = nil
-                self.tick()
+                if self.stoppedAtEnd {
+                    self.seek(timestamp: 0.0, action: .play)
+                } else {
+                    self.state = .playing(loadedState)
+                    self.tick()
+                }
             case .playing:
                 break
         }
@@ -387,7 +393,7 @@ private final class MediaPlayerContext {
         
         switch self.state {
             case .empty:
-                break
+                self.play()
             case let .seeking(_, _, _, action):
                 switch action {
                     case .play:
@@ -572,17 +578,23 @@ private final class MediaPlayerContext {
         if performActionAtEndNow {
             switch self.actionAtEnd {
                 case .loop:
+                    self.stoppedAtEnd = false
                     self.seek(timestamp: 0.0, action: .play)
                 case .stop:
+                    self.stoppedAtEnd = true
                     self.pause()
                 case let .action(f):
+                    self.stoppedAtEnd = true
                     self.pause()
                     f()
                 case let .loopDisablingSound(f):
+                    self.stoppedAtEnd = false
                     self.enableSound = false
                     self.seek(timestamp: 0.0, action: .play)
                     f()
             }
+        } else {
+            self.stoppedAtEnd = false
         }
     }
 }
@@ -660,9 +672,9 @@ final class MediaPlayer {
         }
     }
     
-    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, enableSound: Bool) {
+    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool) {
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: enableSound)
+            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

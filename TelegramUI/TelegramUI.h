@@ -16,6 +16,3 @@ FOUNDATION_EXPORT const unsigned char TelegramUIVersionString[];
 
 // In this header, you should import all the public headers of your framework using statements like #import <TelegramUI/PublicHeader.h>
 
-#import <TelegramUI/OngoingCallThreadLocalContext.h>
-#import <TelegramUI/SecretChatKeyVisualization.h>
-#import <TelegramUI/NumberPluralizationForm.h>

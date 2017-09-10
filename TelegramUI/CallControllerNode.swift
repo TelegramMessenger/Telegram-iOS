@@ -5,6 +5,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+import TelegramUIPrivateModule
+
 private func generateBackArrowImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 13.0, height: 22.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -178,7 +180,7 @@ final class CallControllerNode: ASDisplayNode {
                     let text = stringForEmojiHashOfData(keyVisualHash, 4)!
                     self.keyTextData = (keyVisualHash, text)
                     
-                    self.keyButtonNode.setAttributedTitle(NSAttributedString(string: text, attributes: [NSFontAttributeName: Font.regular(22.0), NSKernAttributeName: 2.5 as NSNumber]), for: [])
+                    self.keyButtonNode.setAttributedTitle(NSAttributedString(string: text, attributes: [NSAttributedStringKey.font: Font.regular(22.0), NSAttributedStringKey.kern: 2.5 as NSNumber]), for: [])
                     
                     let keyTextSize = self.keyButtonNode.measure(CGSize(width: 200.0, height: 200.0))
                     self.keyButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)

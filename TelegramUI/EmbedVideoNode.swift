@@ -106,11 +106,11 @@ private final class SharedEmbedVideoContext: SharedVideoContext {
             self.thumbnailDisposable = (rawMessagePhoto(account: account, photo: image) |> deliverOnMainQueue).start(next: { [weak self] image in
                 if let strongSelf = self {
                     strongSelf.thumbnail.set(.single(image))
-                    strongSelf._ready.set(.single())
+                    strongSelf._ready.set(.single(Void()))
                 }
             })
         } else {
-            self._ready.set(.single())
+            self._ready.set(.single(Void()))
         }
         
         /*self.playerView.requestAudioSession = { [weak self] in

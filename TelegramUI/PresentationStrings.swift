@@ -61,10 +61,10 @@ private func extractArgumentRanges(_ value: String) -> [(Int, NSRange)] {
     var index = 0
     for match in matches {
         var currentIndex = index
-        if match.rangeAt(3).location != NSNotFound {
-            currentIndex = Int(string.substring(with: match.rangeAt(3)))! - 1
+        if match.range(at: 3).location != NSNotFound {
+            currentIndex = Int(string.substring(with: match.range(at: 3)))! - 1
         }
-        result.append((currentIndex, match.rangeAt(0)))
+        result.append((currentIndex, match.range(at: 0)))
         index += 1
     }
     result.sort(by: { $0.1.location < $1.1.location })

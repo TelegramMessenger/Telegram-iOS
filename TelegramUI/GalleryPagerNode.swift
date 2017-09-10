@@ -45,6 +45,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollView.delegate = self
         self.scrollView.clipsToBounds = false
         self.scrollView.scrollsToTop = false
+        self.scrollView.delaysContentTouches = false
         self.view.addSubview(self.scrollView)
     }
     

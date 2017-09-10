@@ -126,4 +126,8 @@ final class PictureInPictureVideoControlsNode: ASDisplayNode {
     @objc func closePressed() {
         self.close()
     }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        return super.hitTest(point, with: event)
+    }
 }

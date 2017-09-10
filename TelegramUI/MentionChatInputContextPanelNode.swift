@@ -4,7 +4,7 @@ import Postbox
 import TelegramCore
 import Display
 
-private struct MentionChatInputContextPanelEntry: Equatable, Comparable, Identifiable {
+private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let peer: Peer
     
@@ -88,7 +88,10 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                             let replacementText = addressName + " "
                             inputText.replaceSubrange(range, with: replacementText)
                             
-                            let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: range.lowerBound.samePosition(in: inputText.utf16))
+                            guard let lowerBound = range.lowerBound.samePosition(in: inputText.utf16) else {
+                                return textInputState
+                            }
+                            let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: lowerBound)
                             
                             let replacementLength = replacementText.utf16.distance(from: replacementText.utf16.startIndex, to: replacementText.utf16.endIndex)
                             

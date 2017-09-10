@@ -188,7 +188,7 @@ public final class AvatarNode: ASDisplayNode {
         if let parameters = parameters as? AvatarNodeParameters {
             let letters = parameters.letters
             let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
-            let attributedString = NSAttributedString(string: string, attributes: [NSFontAttributeName: parameters.font, NSForegroundColorAttributeName: UIColor.white])
+            let attributedString = NSAttributedString(string: string, attributes: [NSAttributedStringKey.font: parameters.font, NSAttributedStringKey.foregroundColor: UIColor.white])
             
             let line = CTLineCreateWithAttributedString(attributedString)
             let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)

@@ -206,7 +206,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 }
             } else {
                 let layerHolder = takeSampleBufferLayer()
-                layerHolder.layer.videoGravity = AVLayerVideoGravityResizeAspectFill
+                layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 layerHolder.layer.frame = item.frame
                 self.layer.addSublayer(layerHolder.layer)
                 let manager = SoftwareVideoLayerFrameManager(account: self.account, resource: item.file.resource, layerHolder: layerHolder)

@@ -43,7 +43,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var requestLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
-    var requestUpdateMediaCollectionInterfaceState: (Bool, (PeerMediaCollectionInterfaceState) -> PeerMediaCollectionInterfaceState) -> Void = { _ in }
+    var requestUpdateMediaCollectionInterfaceState: (Bool, (PeerMediaCollectionInterfaceState) -> PeerMediaCollectionInterfaceState) -> Void = { _, _ in }
     
     private var mediaCollectionInterfaceState: PeerMediaCollectionInterfaceState
     

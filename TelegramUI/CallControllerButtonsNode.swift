@@ -118,8 +118,8 @@ final class CallControllerButtonsNode: ASDisplayNode {
         let twoButtonSpacing: CGFloat = 105.0
         let buttonSize = CGSize(width: 75.0, height: 75.0)
     
-        let threeButtonsWidth = 3.0 * buttonSize.width + max(0.0, 3.0 - 1.0) * threeButtonSpacing
-        let twoButtonsWidth = 2.0 * buttonSize.width + max(0.0, 2.0 - 1.0) * twoButtonSpacing
+        let threeButtonsWidth = 3.0 * buttonSize.width + 2.0 * threeButtonSpacing
+        let twoButtonsWidth = 2.0 * buttonSize.width + 1.0 * twoButtonSpacing
         
         var origin = CGPoint(x: floor((width - threeButtonsWidth) / 2.0), y: 0.0)
         for button in [self.muteButton, self.endButton, self.speakerButton] {

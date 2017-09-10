@@ -70,7 +70,7 @@ final class TextNodeLayout: NSObject {
         }
     }
     
-    func attributesAtPoint(_ point: CGPoint) -> (Int, [String: Any])? {
+    func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedStringKey: Any])? {
         if let attributedString = self.attributedString {
             let transformedPoint = CGPoint(x: point.x - self.insets.left, y: point.y - self.insets.top)
             for line in self.lines {
@@ -126,7 +126,7 @@ final class TextNodeLayout: NSObject {
     func attributeRects(name: String, at index: Int) -> [CGRect]? {
         if let attributedString = self.attributedString {
             var range = NSRange()
-            let _ = attributedString.attribute(name, at: index, effectiveRange: &range)
+            let _ = attributedString.attribute(NSAttributedStringKey(rawValue: name), at: index, effectiveRange: &range)
             if range.length != 0 {
                 var rects: [CGRect] = []
                 for line in self.lines {
@@ -190,7 +190,7 @@ final class TextNode: ASDisplayNode {
         self.clipsToBounds = false
     }
     
-    func attributesAtPoint(_ point: CGPoint) -> (Int, [String: Any])? {
+    func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedStringKey: Any])? {
         if let cachedLayout = self.cachedLayout {
             return cachedLayout.attributesAtPoint(point)
         } else {
@@ -212,7 +212,7 @@ final class TextNode: ASDisplayNode {
             
             let font: CTFont
             if stringLength != 0 {
-                if let stringFont = attributedString.attribute(kCTFontAttributeName as String, at: 0, effectiveRange: nil) {
+                if let stringFont = attributedString.attribute(NSAttributedStringKey.font, at: 0, effectiveRange: nil) {
                     font = stringFont as! CTFont
                 } else {
                     font = defaultFont
@@ -303,9 +303,9 @@ final class TextNode: ASDisplayNode {
                     if CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(constrainedSize.width) {
                         coreTextLine = originalLine
                     } else {
-                        var truncationTokenAttributes: [String : AnyObject] = [:]
-                        truncationTokenAttributes[kCTFontAttributeName as String] = font
-                        truncationTokenAttributes[kCTForegroundColorFromContextAttributeName as String] = true as NSNumber
+                        var truncationTokenAttributes: [NSAttributedStringKey : AnyObject] = [:]
+                        truncationTokenAttributes[NSAttributedStringKey.font] = font
+                        truncationTokenAttributes[NSAttributedStringKey(rawValue:  kCTForegroundColorFromContextAttributeName as String)] = true as NSNumber
                         let tokenString = "\u{2026}"
                         let truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
                         let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)

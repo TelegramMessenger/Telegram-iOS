@@ -38,7 +38,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         self.displayNode = AuthorizationSequenceSignUpControllerNode()
         self.displayNodeDidLoad()
         
-        self.controllerNode.signUpWithName = { [weak self] _ in
+        self.controllerNode.signUpWithName = { [weak self] _, _ in
             self?.nextPressed()
         }
     }

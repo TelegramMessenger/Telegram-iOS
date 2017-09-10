@@ -64,8 +64,8 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                                     }
                                 }
                             }
-                            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _ in }, navigateToMessage: { _ in }, clickThroughMessage: { }, toggleMessageSelection: { _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _ in }, updateInputState: { _ in }, openMessageShareMenu: { _ in
-                        }, presentController: { _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, automaticMediaDownloadSettings: .none)
+                            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessageSelection: { _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, openMessageShareMenu: { _ in
+                        }, presentController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, automaticMediaDownloadSettings: .none)
                         
                         let listNode = ChatHistoryListNode(account: account, peerId: updatedPlaylistPeerId, tagMask: .music, messageId: nil, controllerInteraction: controllerInteraction, mode: .list)
                         listNode.preloadPages = true

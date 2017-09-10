@@ -63,7 +63,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
                 animation.toValue = CGFloat(progress) as NSNumber
                 animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
                 animation.duration = 0.2
-                animation.completionBlock = { [weak self] _ in
+                animation.completionBlock = { [weak self] _, _ in
                     self?.progressAnimationCompleted?()
                 }
                 self.pop_removeAnimation(forKey: "progress")

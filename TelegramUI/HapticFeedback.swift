@@ -23,7 +23,7 @@ private final class HapticFeedbackImpl {
         self.notificationGenerator.notificationOccurred(.error)
     }
     
-    dynamic func f() {
+    @objc dynamic func f() {
     }
 }
 

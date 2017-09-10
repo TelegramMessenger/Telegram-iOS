@@ -35,6 +35,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor.black
         self.scrollView = UIScrollView()
+        self.scrollView.delaysContentTouches = false
 
         if #available(iOSApplicationExtension 11.0, *) {
             self.scrollView.contentInsetAdjustmentBehavior = .never

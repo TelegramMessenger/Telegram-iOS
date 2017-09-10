@@ -647,11 +647,12 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                             
                             request.paymentSummaryItems = items
                             
-                            let controller = PKPaymentAuthorizationViewController(paymentRequest: request)
-                            controller.delegate = strongSelf
-                            if let window = strongSelf.view.window {
-                                strongSelf.applePayController = controller
-                                window.rootViewController?.present(controller, animated: true)
+                            if let controller = PKPaymentAuthorizationViewController(paymentRequest: request) {
+                                controller.delegate = strongSelf
+                                if let window = strongSelf.view.window {
+                                    strongSelf.applePayController = controller
+                                    window.rootViewController?.present(controller, animated: true)
+                                }
                             }
                         }
                     })

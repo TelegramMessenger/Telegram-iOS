@@ -79,7 +79,8 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
                     return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo || file.mimeType.hasPrefix("video/") {
-                        return ChatVideoGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
+                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(file: file), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, caption: message.text)
+                        //return ChatVideoGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                     } else {
                         if file.mimeType.hasPrefix("image/") {
                             return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
@@ -421,6 +422,7 @@ class GalleryController: ViewController {
                 
                 if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                     nodeAnimatesItself = true
+                    centralItemNode.activateAsInitial()
                     centralItemNode.animateIn(from: transitionArguments.transitionNode)
                     
                     self._hiddenMedia.set(.single((message.id, media)))

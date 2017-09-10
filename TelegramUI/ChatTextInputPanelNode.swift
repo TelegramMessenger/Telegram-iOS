@@ -22,57 +22,11 @@ enum ChatTextInputAccessoryItem: Equatable {
     case stickers
     case inputButtons
     case messageAutoremoveTimeout(Int32?)
-    
-    static func ==(lhs: ChatTextInputAccessoryItem, rhs: ChatTextInputAccessoryItem) -> Bool {
-        switch lhs {
-            case .keyboard:
-                if case .keyboard = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .stickers:
-                if case .stickers = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .inputButtons:
-                if case .inputButtons = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .messageAutoremoveTimeout(lhsTimeout):
-                if case let .messageAutoremoveTimeout(rhsTimeout) = rhs, lhsTimeout == rhsTimeout {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 enum ChatVideoRecordingStatus: Equatable {
     case recording(InstantVideoControllerRecordingStatus)
     case editing
-    
-    static func ==(lhs: ChatVideoRecordingStatus, rhs: ChatVideoRecordingStatus) -> Bool {
-        switch lhs {
-            case let .recording(lhsStatus):
-                if case let .recording(rhsStatus) = rhs, lhsStatus === rhsStatus {
-                    return true
-                } else {
-                    return false
-                }
-            case .editing:
-                if case .editing = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 enum ChatTextInputPanelMediaRecordingState: Equatable {
@@ -96,23 +50,6 @@ enum ChatTextInputPanelMediaRecordingState: Equatable {
                 return .video(status: status, isLocked: isLocked)
         }
     }
-    
-    static func ==(lhs: ChatTextInputPanelMediaRecordingState, rhs: ChatTextInputPanelMediaRecordingState) -> Bool {
-        switch lhs {
-            case let .audio(lhsRecorder, lhsIsLocked):
-                if case let .audio(rhsRecorder, rhsIsLocked) = rhs, lhsRecorder === rhsRecorder, lhsIsLocked == rhsIsLocked {
-                    return true
-                } else {
-                    return false
-                }
-            case let .video(status, isLocked):
-                if case .video(status, isLocked) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 struct ChatTextInputPanelState: Equatable {
@@ -130,21 +67,6 @@ struct ChatTextInputPanelState: Equatable {
         self.accessoryItems = []
         self.contextPlaceholder = nil
         self.mediaRecordingState = nil
-    }
-    
-    static func ==(lhs: ChatTextInputPanelState, rhs: ChatTextInputPanelState) -> Bool {
-        if lhs.accessoryItems != rhs.accessoryItems {
-            return false
-        }
-        if let lhsContextPlaceholder = lhs.contextPlaceholder, let rhsContextPlaceholder = rhs.contextPlaceholder {
-            return lhsContextPlaceholder.isEqual(to: rhsContextPlaceholder)
-        } else if (lhs.contextPlaceholder != nil) != (rhs.contextPlaceholder != nil) {
-            return false
-        }
-        if lhs.mediaRecordingState != rhs.mediaRecordingState {
-            return false
-        }
-        return true
     }
     
     func withUpdatedMediaRecordingState(_ mediaRecordingState: ChatTextInputPanelMediaRecordingState?) -> ChatTextInputPanelState {
@@ -413,7 +335,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     keyboardAppearance = .dark
             }
         }
-        textInputNode.typingAttributes = [NSFontAttributeName: Font.regular(17.0), NSForegroundColorAttributeName: textColor]
+        textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
         textInputNode.clipsToBounds = true
         textInputNode.delegate = self
         textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
@@ -480,7 +402,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             textInputNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: textColor)
                             textInputNode.selectedRange = range
                         }
-                        textInputNode.typingAttributes = [NSFontAttributeName: Font.regular(17.0), NSForegroundColorAttributeName: textColor]
+                        textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
                     }
                 }
                 
@@ -735,10 +657,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if let audioRecordingCancelIndicator = self.audioRecordingCancelIndicator {
                 self.audioRecordingCancelIndicator = nil
                 if transition.isAnimated {
-                    let position = audioRecordingCancelIndicator.layer.position
-                    audioRecordingCancelIndicator.layer.animatePosition(from: position, to: CGPoint(x: 0.0 - audioRecordingCancelIndicator.bounds.size.width, y: position.y), duration: 0.3, removeOnCompletion: false, completion: { [weak audioRecordingCancelIndicator] _ in
-                        audioRecordingCancelIndicator?.removeFromSupernode()
-                    })
+                    if audioRecordingCancelIndicator.isDisplayingCancel {
+                        audioRecordingCancelIndicator.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                        audioRecordingCancelIndicator.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -22.0), duration: 0.25, removeOnCompletion: false, additive: true, completion: { [weak audioRecordingCancelIndicator] _ in
+                            audioRecordingCancelIndicator?.removeFromSupernode()
+                        })
+                    } else {
+                        let position = audioRecordingCancelIndicator.layer.position
+                        audioRecordingCancelIndicator.layer.animatePosition(from: position, to: CGPoint(x: 0.0 - audioRecordingCancelIndicator.bounds.size.width, y: position.y), duration: 0.3, removeOnCompletion: false, completion: { [weak audioRecordingCancelIndicator] _ in
+                            audioRecordingCancelIndicator?.removeFromSupernode()
+                        })
+                    }
                 } else {
                     audioRecordingCancelIndicator.removeFromSupernode()
                 }
@@ -1046,5 +975,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         return super.hitTest(point, with: event)
+    }
+    
+    func f2() {
+        
     }
 }

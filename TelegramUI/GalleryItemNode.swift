@@ -62,6 +62,9 @@ open class GalleryItemNode: ASDisplayNode {
     open func centralityUpdated(isCentral: Bool) {
     }
     
+    open func activateAsInitial() {
+    }
+    
     open func visibilityUpdated(isVisible: Bool) {
     }
     

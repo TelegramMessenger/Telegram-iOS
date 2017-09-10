@@ -101,8 +101,8 @@ class ItemListActivityTextItemNode: ListViewItemNode {
             }
             
             let titleString = NSMutableAttributedString(attributedString: item.text)
-            titleString.removeAttribute(NSFontAttributeName, range: NSMakeRange(0, titleString.length))
-            titleString.addAttributes([NSFontAttributeName: titleFont], range: NSMakeRange(0, titleString.length))
+            titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
+            titleString.addAttributes([NSAttributedStringKey.font: titleFont], range: NSMakeRange(0, titleString.length))
             
             let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 0, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, TextNodeCutout(position: .TopLeft, size: CGSize(width: activityWidth, height: 4.0)), UIEdgeInsets())
             

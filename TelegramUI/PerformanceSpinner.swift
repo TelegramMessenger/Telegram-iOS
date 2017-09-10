@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import SwiftSignalKit
 
 private final class SpinnerThread: NSObject {

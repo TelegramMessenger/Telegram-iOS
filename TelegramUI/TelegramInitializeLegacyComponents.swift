@@ -236,7 +236,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
         }
     }
     
-    public func makeHTTPRequestOperation(with request: URLRequest!) -> Operation! {
+    public func makeHTTPRequestOperation(with request: URLRequest!) -> (Operation & LegacyHTTPRequestOperation)! {
         return nil
     }
     

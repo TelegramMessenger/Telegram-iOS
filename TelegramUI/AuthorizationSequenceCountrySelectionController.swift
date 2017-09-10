@@ -302,7 +302,8 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
         self.displayNode.view.addSubview(self.innerNavigationController.view)
         self.innerNavigationController.didMove(toParentViewController: self)
         
-        self.innerController.itemSelected = { [weak self] _, countryId, code in
+        self.innerController.itemSelected = { [weak self] args in
+            let (_, countryId, code) = args
             self?.completeWithCountryCode?(code, countryId)
             self?.controllerNode.animateOut()
         }

@@ -9,9 +9,33 @@ import Photos
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionAction"), color: .white)
 
+private let pauseImage = generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    
+    let color = UIColor.white
+    let diameter: CGFloat = 16.0
+    
+    context.setFillColor(color.cgColor)
+    
+    context.translateBy(x: (diameter - size.width) / 2.0, y: (diameter - size.height) / 2.0)
+    let _ = try? drawSvgPath(context, path: "M0,1.00087166 C0,0.448105505 0.443716645,0 0.999807492,0 L4.00019251,0 C4.55237094,0 5,0.444630861 5,1.00087166 L5,14.9991283 C5,15.5518945 4.55628335,16 4.00019251,16 L0.999807492,16 C0.447629061,16 0,15.5553691 0,14.9991283 L0,1.00087166 Z M10,1.00087166 C10,0.448105505 10.4437166,0 10.9998075,0 L14.0001925,0 C14.5523709,0 15,0.444630861 15,1.00087166 L15,14.9991283 C15,15.5518945 14.5562834,16 14.0001925,16 L10.9998075,16 C10.4476291,16 10,15.5553691 10,14.9991283 L10,1.00087166 ")
+    context.fillPath()
+    if (diameter < 40.0) {
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: 1.0 / 0.8, y: 1.0 / 0.8)
+        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    }
+    context.translateBy(x: -(diameter - size.width) / 2.0, y: -(diameter - size.height) / 2.0)
+})
+
 private let textFont = Font.regular(16.0)
 private let titleFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
+
+enum ChatItemGalleryFooterContent {
+    case info
+    case playbackPause
+}
 
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private let account: Account
@@ -23,6 +47,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private let textNode: ASTextNode
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
+    private let playbackControlButton: HighlightableButtonNode
     
     private var currentMessageText: String?
     private var currentAuthorNameText: String?
@@ -31,6 +56,25 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private var currentMessage: Message?
     
     private let messageContextDisposable = MetaDisposable()
+    
+    var playbackControl: (() -> Void)?
+    
+    var content: ChatItemGalleryFooterContent = .info {
+        didSet {
+            if self.content != oldValue {
+                switch self.content {
+                    case .info:
+                        self.authorNameNode.isHidden = false
+                        self.dateNode.isHidden = false
+                        self.playbackControlButton.isHidden = true
+                    case .playbackPause:
+                        self.authorNameNode.isHidden = true
+                        self.dateNode.isHidden = true
+                        self.playbackControlButton.isHidden = false
+                }
+            }
+        }
+    }
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
@@ -49,6 +93,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.dateNode = ASTextNode()
         self.dateNode.maximumNumberOfLines = 1
         
+        self.playbackControlButton = HighlightableButtonNode()
+        self.playbackControlButton.setImage(pauseImage, for: [])
+        self.playbackControlButton.isHidden = true
+        
         super.init()
         
         self.view.addSubview(self.deleteButton)
@@ -57,12 +105,48 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.addSubnode(self.authorNameNode)
         self.addSubnode(self.dateNode)
         
+        self.addSubnode(self.playbackControlButton)
+        
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
+        
+        self.playbackControlButton.addTarget(self, action: #selector(self.playbackControlPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
         self.messageContextDisposable.dispose()
+    }
+    
+    func setup(origin: GalleryItemOriginData?, caption: String) {
+        let titleText = origin?.title
+        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, timestamp: $0) }
+        
+        if self.currentMessageText != caption || self.currentAuthorNameText != titleText || self.currentDateText != dateText {
+            self.currentMessageText = caption
+            
+            if caption.isEmpty {
+                self.textNode.isHidden = true
+                self.textNode.attributedText = nil
+            } else {
+                self.textNode.isHidden = false
+                self.textNode.attributedText = NSAttributedString(string: caption, font: textFont, textColor: .white)
+            }
+            
+            if let titleText = titleText {
+                self.authorNameNode.attributedText = NSAttributedString(string: titleText, font: titleFont, textColor: .white)
+            } else {
+                self.authorNameNode.attributedText = nil
+            }
+            if let dateText = dateText {
+                self.dateNode.attributedText = NSAttributedString(string: dateText, font: dateFont, textColor: .white)
+            } else {
+                self.dateNode.attributedText = nil
+            }
+            
+            //self.deleteButton.isHidden = !canDelete
+            
+            self.requestLayout?(.immediate)
+        }
     }
     
     func setMessage(_ message: Message) {
@@ -135,6 +219,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.actionButton.frame = CGRect(origin: CGPoint(x: 0.0, y: panelHeight - 44.0), size: CGSize(width: 44.0, height: 44.0))
         self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0, y: panelHeight - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
+        self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        
         let authorNameSize = self.authorNameNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
         let dateSize = self.dateNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
         
@@ -166,11 +252,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     if options.contains(.globally) {
                         let globalTitle: String
                         if isChannel {
-                            globalTitle = "Delete"
+                            globalTitle = strongSelf.strings.Common_Delete
                         } else if let personalPeerName = personalPeerName {
-                            globalTitle = "Delete for me and \(personalPeerName)"
+                            globalTitle = strongSelf.strings.Conversation_DeleteMessagesFor(personalPeerName).0
                         } else {
-                            globalTitle = "Delete for everyone"
+                            globalTitle = strongSelf.strings.Conversation_DeleteMessagesForEveryone
                         }
                         items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -181,7 +267,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         }))
                     }
                     if options.contains(.locally) {
-                        items.append(ActionSheetButtonItem(title: "Delete for me", color: .destructive, action: { [weak actionSheet] in
+                        items.append(ActionSheetButtonItem(title: strongSelf.strings.Conversation_DeleteMessagesForMe, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: [currentMessage.id], type: .forLocalPeer).start()
@@ -190,7 +276,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         }))
                     }
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+                        ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])])
@@ -377,5 +463,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             ])])
             controllerInteraction.presentController(actionSheet, nil)
         }
+    }
+    
+    @objc func playbackControlPressed() {
+        self.playbackControl?()
     }
 }

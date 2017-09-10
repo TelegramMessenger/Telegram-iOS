@@ -255,12 +255,12 @@ struct PresentationResourcesChat {
                 context.setTextDrawingMode(.stroke)
                 context.setLineWidth(0.65)
                 
-                ("GIF" as NSString).draw(in: CGRect(origin: CGPoint(x: 6.0, y: 8.0), size: size), withAttributes: [NSFontAttributeName: Font.regular(8.0), NSForegroundColorAttributeName: theme.chat.inputMediaPanel.panelIconColor])
+                ("GIF" as NSString).draw(in: CGRect(origin: CGPoint(x: 6.0, y: 8.0), size: size), withAttributes: [NSAttributedStringKey.font: Font.regular(8.0), NSAttributedStringKey.foregroundColor: theme.chat.inputMediaPanel.panelIconColor])
                 
                 context.setTextDrawingMode(.fill)
                 context.setLineWidth(0.8)
                 
-                ("GIF" as NSString).draw(in: CGRect(origin: CGPoint(x: 6.0, y: 8.0), size: size), withAttributes: [NSFontAttributeName: Font.regular(8.0), NSForegroundColorAttributeName: theme.chat.inputMediaPanel.panelIconColor])
+                ("GIF" as NSString).draw(in: CGRect(origin: CGPoint(x: 6.0, y: 8.0), size: size), withAttributes: [NSAttributedStringKey.font: Font.regular(8.0), NSAttributedStringKey.foregroundColor: theme.chat.inputMediaPanel.panelIconColor])
                 UIGraphicsPopContext()
             })
         })

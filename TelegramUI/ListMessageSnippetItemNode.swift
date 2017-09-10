@@ -144,7 +144,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         
                         let style = NSMutableParagraphStyle()
                         style.lineSpacing = 4.0
-                        mutableDescriptionText.addAttribute(NSParagraphStyleAttributeName, value: style, range: NSMakeRange(0, mutableDescriptionText.length))
+                        mutableDescriptionText.addAttribute(NSAttributedStringKey.paragraphStyle, value: style, range: NSMakeRange(0, mutableDescriptionText.length))
                         
                         descriptionText = mutableDescriptionText
                     }

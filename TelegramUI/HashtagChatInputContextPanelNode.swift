@@ -4,7 +4,7 @@ import Postbox
 import TelegramCore
 import Display
 
-private struct HashtagChatInputContextPanelEntry: Equatable, Comparable, Identifiable {
+private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let text: String
     
@@ -87,7 +87,10 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                         let replacementText = text + " "
                         inputText.replaceSubrange(range, with: replacementText)
                         
-                        let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: range.lowerBound.samePosition(in: inputText.utf16))
+                        guard let lowerBound = range.lowerBound.samePosition(in: inputText.utf16) else {
+                            return textInputState
+                        }
+                        let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: lowerBound)
                         
                         let replacementLength = replacementText.utf16.distance(from: replacementText.utf16.startIndex, to: replacementText.utf16.endIndex)
                         

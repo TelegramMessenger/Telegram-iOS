@@ -182,6 +182,8 @@ public final class MediaManager: NSObject {
     
     private var managedVideoContexts: [WrappedManagedMediaId: ActiveManagedVideoContext] = [:]
     
+    let universalVideoManager = UniversalVideoContentManager()
+    
     override init() {
         self.audioSession = ManagedAudioSession()
         

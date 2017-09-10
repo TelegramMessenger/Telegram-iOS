@@ -99,7 +99,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         if let item = self.item {
             textColor = item.theme.list.itemPrimaryTextColor
         }
-        self.textNode.typingAttributes = [NSFontAttributeName: Font.regular(17.0), NSForegroundColorAttributeName: textColor]
+        self.textNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
         self.textNode.clipsToBounds = true
         self.textNode.delegate = self
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
@@ -155,7 +155,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                         strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
                         
                         if strongSelf.isNodeLoaded {
-                            strongSelf.textNode.typingAttributes = [NSFontAttributeName: Font.regular(17.0), NSForegroundColorAttributeName: item.theme.list.itemPrimaryTextColor]
+                            strongSelf.textNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: item.theme.list.itemPrimaryTextColor]
                         }
                     }
                     

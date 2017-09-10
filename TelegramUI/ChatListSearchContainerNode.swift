@@ -394,9 +394,9 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 openMessage(peer, message.id)
             }
             self?.listNode.clearHighlightAnimated(true)
-        }, setPeerIdWithRevealedOptions: { _ in
-        }, setPeerPinned: { _ in
-        }, setPeerMuted: { _ in
+        }, setPeerIdWithRevealedOptions: { _, _ in
+        }, setPeerPinned: { _, _ in
+        }, setPeerMuted: { _, _ in
         }, deletePeer: { _ in
         })
         

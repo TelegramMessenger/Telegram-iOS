@@ -29,7 +29,7 @@ final class InstantPageTextStyleStack {
         }
     }
     
-    func textAttributes() -> [String: Any] {
+    func textAttributes() -> [NSAttributedStringKey: Any] {
         var fontSize: CGFloat?
         var fontSerif: Bool?
         var fontFixed: Bool?
@@ -81,7 +81,7 @@ final class InstantPageTextStyleStack {
             }
         }
         
-        var attributes: [String: Any] = [:]
+        var attributes: [NSAttributedStringKey: Any] = [:]
         
         var parsedFontSize: CGFloat
         if let fontSize = fontSize {
@@ -92,54 +92,54 @@ final class InstantPageTextStyleStack {
         
         if (bold != nil && bold!) && (italic != nil && italic!) {
             if fontSerif != nil && fontSerif! {
-                attributes[NSFontAttributeName] = UIFont(name: "Georgia-BoldItalic", size: parsedFontSize)
+                attributes[NSAttributedStringKey.font] = UIFont(name: "Georgia-BoldItalic", size: parsedFontSize)
             } else if fontFixed != nil && fontFixed! {
-                attributes[NSFontAttributeName] = UIFont(name: "Menlo-BoldItalic", size: parsedFontSize)
+                attributes[NSAttributedStringKey.font] = UIFont(name: "Menlo-BoldItalic", size: parsedFontSize)
             } else {
-                attributes[NSFontAttributeName] = Font.bold(parsedFontSize)
+                attributes[NSAttributedStringKey.font] = Font.bold(parsedFontSize)
             }
         } else if bold != nil && bold! {
             if fontSerif != nil && fontSerif! {
-                attributes[NSFontAttributeName] = UIFont(name: "Georgia-Bold", size: parsedFontSize)
+                attributes[NSAttributedStringKey.font] = UIFont(name: "Georgia-Bold", size: parsedFontSize)
             } else if fontFixed != nil && fontFixed! {
-                attributes[NSFontAttributeName] = UIFont(name: "Menlo-Bold", size: parsedFontSize)
+                attributes[NSAttributedStringKey.font] = UIFont(name: "Menlo-Bold", size: parsedFontSize)
             } else {
-                attributes[NSFontAttributeName] = Font.bold(parsedFontSize)
+                attributes[NSAttributedStringKey.font] = Font.bold(parsedFontSize)
             }
         } else if italic != nil && italic! {
             if fontSerif != nil && fontSerif! {
-                attributes[NSFontAttributeName] = UIFont(name: "Georgia-Italic", size: parsedFontSize)
+                attributes[NSAttributedStringKey.font] = UIFont(name: "Georgia-Italic", size: parsedFontSize)
             } else if fontFixed != nil && fontFixed! {
-                attributes[NSFontAttributeName] = UIFont(name: "Menlo-Italic", size: parsedFontSize)
+                attributes[NSAttributedStringKey.font] = UIFont(name: "Menlo-Italic", size: parsedFontSize)
             } else {
-                attributes[NSFontAttributeName] = Font.italic(parsedFontSize)
+                attributes[NSAttributedStringKey.font] = Font.italic(parsedFontSize)
             }
         } else {
             if fontSerif != nil && fontSerif! {
-                attributes[NSFontAttributeName] = UIFont(name: "Georgia", size: parsedFontSize)
+                attributes[NSAttributedStringKey.font] = UIFont(name: "Georgia", size: parsedFontSize)
             } else if fontFixed != nil && fontFixed! {
-                attributes[NSFontAttributeName] = UIFont(name: "Menlo", size: parsedFontSize)
+                attributes[NSAttributedStringKey.font] = UIFont(name: "Menlo", size: parsedFontSize)
             } else {
-                attributes[NSFontAttributeName] = Font.regular(parsedFontSize)
+                attributes[NSAttributedStringKey.font] = Font.regular(parsedFontSize)
             }
         }
         
         if strikethrough != nil && strikethrough! {
-            attributes[NSStrikethroughStyleAttributeName] = (NSUnderlineStyle.styleSingle.rawValue | NSUnderlineStyle.patternSolid.rawValue) as NSNumber
+            attributes[NSAttributedStringKey.strikethroughStyle] = (NSUnderlineStyle.styleSingle.rawValue | NSUnderlineStyle.patternSolid.rawValue) as NSNumber
         }
         
         if underline != nil && underline! {
-            attributes[NSUnderlineStyleAttributeName] = NSUnderlineStyle.styleSingle.rawValue as NSNumber
+            attributes[NSAttributedStringKey.underlineStyle] = NSUnderlineStyle.styleSingle.rawValue as NSNumber
         }
         
         if let color = color {
-            attributes[NSForegroundColorAttributeName] = color
+            attributes[NSAttributedStringKey.foregroundColor] = color
         } else {
-            attributes[NSForegroundColorAttributeName] = UIColor.black
+            attributes[NSAttributedStringKey.foregroundColor] = UIColor.black
         }
         
         if let lineSpacingFactor = lineSpacingFactor {
-            attributes[InstantPageLineSpacingFactorAttribute] = lineSpacingFactor as NSNumber
+            attributes[NSAttributedStringKey(rawValue: InstantPageLineSpacingFactorAttribute)] = lineSpacingFactor as NSNumber
         }
         
         return attributes

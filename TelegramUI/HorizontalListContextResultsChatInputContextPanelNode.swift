@@ -16,7 +16,7 @@ private struct ChatContextResultStableId: Hashable {
     }
 }
 
-private struct HorizontalListContextResultsChatInputContextPanelEntry: Equatable, Comparable, Identifiable {
+private struct HorizontalListContextResultsChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let result: ChatContextResult
     

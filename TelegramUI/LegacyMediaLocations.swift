@@ -18,10 +18,10 @@ func resourceFromLegacyImageUri(_ uri: String) -> MediaResource? {
     let matches = legacyImageUriExpr.matches(in: uri, options: [], range: NSRange(location: 0, length: uri.characters.count))
     if let match = matches.first {
         let nsString = uri as NSString
-        let datacenterId = nsString.substring(with: match.rangeAt(1))
-        let volumeId = nsString.substring(with: match.rangeAt(2))
-        let localId = nsString.substring(with: match.rangeAt(3))
-        let secret = nsString.substring(with: match.rangeAt(4))
+        let datacenterId = nsString.substring(with: match.range(at: 1))
+        let volumeId = nsString.substring(with: match.range(at: 2))
+        let localId = nsString.substring(with: match.range(at: 3))
+        let secret = nsString.substring(with: match.range(at: 4))
         
         guard let nDatacenterId = Int(datacenterId) else {
             return nil

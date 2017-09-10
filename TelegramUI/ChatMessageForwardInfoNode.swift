@@ -26,8 +26,8 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             }
             let completeString: NSString = "\(prefix)\(peerString)" as NSString
             let color = incoming ? theme.chat.bubble.incomingAccentColor : theme.chat.bubble.outgoingAccentColor
-            let string = NSMutableAttributedString(string: completeString as String, attributes: [NSForegroundColorAttributeName: color, NSFontAttributeName: prefixFont])
-            string.addAttributes([NSFontAttributeName: peerFont], range: NSMakeRange(prefix.length, completeString.length - prefix.length))
+            let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedStringKey.foregroundColor: color, NSAttributedStringKey.font: prefixFont])
+            string.addAttributes([NSAttributedStringKey.font: peerFont], range: NSMakeRange(prefix.length, completeString.length - prefix.length))
             let (textLayout, textApply) = textNodeLayout(string, nil, 2, .end, constrainedSize, .natural, nil, UIEdgeInsets())
             
             return (textLayout.size, {
