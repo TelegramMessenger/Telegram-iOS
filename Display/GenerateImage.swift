@@ -274,10 +274,16 @@ public class DrawingContext {
         }
     }
     
-    public init(size: CGSize, scale: CGFloat = deviceScale, clear: Bool = false) {
+    public init(size: CGSize, scale: CGFloat = 0.0, clear: Bool = false) {
+        let actualScale: CGFloat
+        if scale.isZero {
+            actualScale = deviceScale
+        } else {
+            actualScale = scale
+        }
         self.size = size
-        self.scale = scale
-        self.scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
+        self.scale = actualScale
+        self.scaledSize = CGSize(width: size.width * actualScale, height: size.height * actualScale)
         
         self.bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
         self.length = bytesPerRow * Int(scaledSize.height)
@@ -448,6 +454,15 @@ public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: 
             
             //CGContextClosePath(context)
             context.fillPath()
+            //CGContextBeginPath(context)
+            //print("Close")
+        } else if c == 83 { // S
+            if index != end && index.pointee != 32 {
+                throw ParsingError.Generic
+            }
+            
+            //CGContextClosePath(context)
+            context.strokePath()
             //CGContextBeginPath(context)
             //print("Close")
         } else if c == 32 { // space

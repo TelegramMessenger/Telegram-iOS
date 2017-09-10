@@ -2,7 +2,7 @@ import Foundation
 
 public class DisplayLinkDispatcher: NSObject {
     private var displayLink: CADisplayLink!
-    private var blocksToDispatch: [(Void) -> Void] = []
+    private var blocksToDispatch: [() -> Void] = []
     private let limit: Int
     
     public init(limit: Int = 0) {
@@ -19,7 +19,7 @@ public class DisplayLinkDispatcher: NSObject {
         }
     }
     
-    public func dispatch(f: @escaping (Void) -> Void) {
+    public func dispatch(f: @escaping () -> Void) {
         if self.displayLink == nil {
             if Thread.isMainThread {
                 f()

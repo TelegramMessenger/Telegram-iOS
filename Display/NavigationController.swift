@@ -102,6 +102,9 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.view = NavigationControllerView()
         self.view.clipsToBounds = true
         
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.navigationBar.prefersLargeTitles = false
+        }
         self.navigationBar.removeFromSuperview()
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))

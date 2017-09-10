@@ -1,17 +1,18 @@
 import UIKit
 import AsyncDisplayKit
 
-private func generateBackArrowImage(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 13.0, height: 22.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(color.cgColor)
-        let _ = try? drawSvgPath(context, path: "M10.6569398,0.0 L0.0,11 L10.6569398,22 L13,19.1782395 L5.07681762,11 L13,2.82176047 Z ")
-    })
-}
-
 private var backArrowImageCache: [Int32: UIImage] = [:]
 
 public final class NavigationBarTheme {
+    public static func generateBackArrowImage(color: UIColor) -> UIImage? {
+        return generateImage(CGSize(width: 13.0, height: 22.0), contextGenerator: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(color.cgColor)
+            
+            let _ = try? drawSvgPath(context, path: "M10.3824541,0.421094342 L1.53851,8.52547877 L1.53851,8.52547877 C0.724154418,9.27173527 0.668949198,10.5368613 1.41520569,11.3512169 C1.45449493,11.3940915 1.49563546,11.435232 1.53851,11.4745212 L10.3824541,19.5789057 L10.3824541,19.5789057 C10.9981509,20.1431158 11.9429737,20.1431158 12.5586704,19.5789057 L12.5586704,19.5789057 L12.5586704,19.5789057 C13.1093629,19.0742639 13.1466944,18.2187464 12.6420526,17.6680539 C12.615484,17.6390608 12.5876635,17.6112403 12.5586704,17.5846717 L4.28186505,10 L12.5586704,2.41532829 L12.5586704,2.41532829 C13.1093629,1.91068651 13.1466944,1.05516904 12.6420526,0.50447654 C12.615484,0.475483443 12.5876635,0.447662941 12.5586704,0.421094342 L12.5586704,0.421094342 L12.5586704,0.421094342 C11.9429737,-0.143115824 10.9981509,-0.143115824 10.3824541,0.421094342 Z ")
+        })
+    }
+    
     public let buttonColor: UIColor
     public let primaryTextColor: UIColor
     public let backgroundColor: UIColor
@@ -40,7 +41,7 @@ private func backArrowImage(color: UIColor) -> UIImage? {
     if let image = backArrowImageCache[key] {
         return image
     } else {
-        if let image = generateBackArrowImage(color: color) {
+        if let image = NavigationBarTheme.generateBackArrowImage(color: color) {
             backArrowImageCache[key] = image
             return image
         } else {
@@ -74,6 +75,8 @@ open class NavigationBar: ASDisplayNode {
     private var itemRightButtonListenerKey: Int?
     private var itemRightButtonSetEnabledListenerKey: Int?
     
+    private var itemBadgeListenerKey: Int?
+    
     private var _item: UINavigationItem?
     public var item: UINavigationItem? {
         get {
@@ -103,6 +106,11 @@ open class NavigationBar: ASDisplayNode {
                 if let itemRightButtonSetEnabledListenerKey = self.itemRightButtonSetEnabledListenerKey {
                     previousValue.rightBarButtonItem?.removeSetEnabledListener(itemRightButtonSetEnabledListenerKey)
                     self.itemRightButtonSetEnabledListenerKey = nil
+                }
+                
+                if let itemBadgeListenerKey = self.itemBadgeListenerKey {
+                    previousValue.removeSetBadgeListener(itemBadgeListenerKey)
+                    self.itemBadgeListenerKey = nil
                 }
             }
             self._item = value
@@ -159,6 +167,13 @@ open class NavigationBar: ASDisplayNode {
                     }
                 }
                 
+                self.itemBadgeListenerKey = item.addSetBadgeListener { [weak self] text in
+                    if let strongSelf = self {
+                        strongSelf.updateBadgeText(text: text)
+                    }
+                }
+                self.updateBadgeText(text: item.badge)
+                
                 self.updateLeftButton()
                 self.updateRightButton()
             } else {
@@ -169,6 +184,7 @@ open class NavigationBar: ASDisplayNode {
             self.invalidateCalculatedLayout()
         }
     }
+    
     private var title: String? {
         didSet {
             if let title = self.title {
@@ -251,11 +267,23 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    private func updateBadgeText(text: String?) {
+        let actualText = text ?? ""
+        if self.badgeNode.text != actualText {
+            self.badgeNode.text = actualText
+            self.badgeNode.isHidden = actualText.isEmpty
+            
+            self.invalidateCalculatedLayout()
+            self.setNeedsLayout()
+        }
+    }
+    
     private func updateLeftButton() {
         if let item = self.item {
             if let leftBarButtonItem = item.leftBarButtonItem {
                 self.backButtonNode.removeFromSupernode()
                 self.backButtonArrow.removeFromSupernode()
+                self.badgeNode.removeFromSupernode()
                 
                 self.leftButtonNode.text = leftBarButtonItem.title ?? ""
                 self.leftButtonNode.bold = leftBarButtonItem.style == .done
@@ -276,6 +304,7 @@ open class NavigationBar: ASDisplayNode {
                     if self.backButtonNode.supernode == nil {
                         self.clippingNode.addSubnode(self.backButtonNode)
                         self.clippingNode.addSubnode(self.backButtonArrow)
+                        self.clippingNode.addSubnode(self.badgeNode)
                     }
                 } else {
                     self.backButtonNode.removeFromSupernode()
@@ -286,6 +315,7 @@ open class NavigationBar: ASDisplayNode {
             self.leftButtonNode.removeFromSupernode()
             self.backButtonNode.removeFromSupernode()
             self.backButtonArrow.removeFromSupernode()
+            self.badgeNode.removeFromSupernode()
         }
     }
     
@@ -309,6 +339,7 @@ open class NavigationBar: ASDisplayNode {
     }
     
     private let backButtonNode: NavigationButtonNode
+    private let badgeNode: NavigationBarBadgeNode
     private let backButtonArrow: ASImageNode
     private let leftButtonNode: NavigationButtonNode
     private let rightButtonNode: NavigationButtonNode
@@ -337,6 +368,11 @@ open class NavigationBar: ASDisplayNode {
                     transitionBackArrowNode.removeFromSupernode()
                     self.transitionBackArrowNode = nil
                 }
+                
+                if let transitionBadgeNode = self.transitionBadgeNode {
+                    transitionBadgeNode.removeFromSupernode()
+                    self.transitionBadgeNode = nil
+                }
 
                 if let value = value {
                     switch value.role {
@@ -360,6 +396,10 @@ open class NavigationBar: ASDisplayNode {
                                 self.transitionBackArrowNode = transitionBackArrowNode
                                 self.clippingNode.addSubnode(transitionBackArrowNode)
                             }
+                            if let transitionBadgeNode = value.navigationBar?.makeTransitionBadgeNode() {
+                                self.transitionBadgeNode = transitionBadgeNode
+                                self.clippingNode.addSubnode(transitionBadgeNode)
+                            }
                     }
                 }
             }
@@ -371,6 +411,7 @@ open class NavigationBar: ASDisplayNode {
     private var transitionTitleNode: ASDisplayNode?
     private var transitionBackButtonNode: NavigationButtonNode?
     private var transitionBackArrowNode: ASDisplayNode?
+    private var transitionBadgeNode: ASDisplayNode?
     
     public init(theme: NavigationBarTheme) {
         self.theme = theme
@@ -378,6 +419,9 @@ open class NavigationBar: ASDisplayNode {
         
         self.titleNode = ASTextNode()
         self.backButtonNode = NavigationButtonNode()
+        self.badgeNode = NavigationBarBadgeNode(fillColor: .red, textColor: .white)
+        self.badgeNode.isUserInteractionEnabled = false
+        self.badgeNode.isHidden = true
         self.backButtonArrow = ASImageNode()
         self.backButtonArrow.displayWithoutProcessing = true
         self.backButtonArrow.displaysAsynchronously = false
@@ -496,17 +540,20 @@ open class NavigationBar: ASDisplayNode {
                     
                         self.backButtonArrow.frame = CGRect(origin: CGPoint(x: 8.0 - progress * size.width, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
                         self.backButtonArrow.alpha = max(0.0, 1.0 - progress * 1.3)
+                        self.badgeNode.alpha = max(0.0, 1.0 - progress * 1.3)
                     case .bottom:
                         self.backButtonNode.alpha = 1.0
                         self.backButtonNode.frame = CGRect(origin: CGPoint(x: backButtonInset, y: contentVerticalOrigin + floor((nominalHeight - backButtonSize.height) / 2.0)), size: backButtonSize)
                         self.backButtonArrow.alpha = 1.0
                         self.backButtonArrow.frame = CGRect(origin: CGPoint(x: 8.0, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
+                        self.badgeNode.alpha = 1.0
                 }
             } else {
                 self.backButtonNode.alpha = 1.0
                 self.backButtonNode.frame = CGRect(origin: CGPoint(x: backButtonInset, y: contentVerticalOrigin + floor((nominalHeight - backButtonSize.height) / 2.0)), size: backButtonSize)
                 self.backButtonArrow.alpha = 1.0
                 self.backButtonArrow.frame = CGRect(origin: CGPoint(x: 8.0, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
+                self.badgeNode.alpha = 1.0
             }
         } else if self.leftButtonNode.supernode != nil {
             let leftButtonSize = self.leftButtonNode.measure(CGSize(width: size.width, height: nominalHeight))
@@ -515,6 +562,10 @@ open class NavigationBar: ASDisplayNode {
             self.leftButtonNode.alpha = 1.0
             self.leftButtonNode.frame = CGRect(origin: CGPoint(x: leftButtonInset, y: contentVerticalOrigin + floor((nominalHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize)
         }
+        
+        let badgeSize = self.badgeNode.measure(CGSize(width: 200.0, height: 100.0))
+        let backButtonArrowFrame = self.backButtonArrow.frame
+        self.badgeNode.frame = CGRect(origin: backButtonArrowFrame.origin.offsetBy(dx: 7.0, dy: -9.0), size: badgeSize)
         
         if self.rightButtonNode.supernode != nil {
             let rightButtonSize = self.rightButtonNode.measure(CGSize(width: size.width, height: nominalHeight))
@@ -545,6 +596,11 @@ open class NavigationBar: ASDisplayNode {
                         
                         transitionBackArrowNode.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
                         transitionBackArrowNode.alpha = max(0.0, 1.0 - progress * 1.3)
+                        
+                        if let transitionBadgeNode = self.transitionBadgeNode {
+                            transitionBadgeNode.frame = CGRect(origin: transitionBackArrowNode.frame.origin.offsetBy(dx: 7.0, dy: -9.0), size: transitionBadgeNode.bounds.size)
+                            transitionBadgeNode.alpha = transitionBackArrowNode.alpha
+                        }
                     }
                 }
         }
@@ -650,6 +706,18 @@ open class NavigationBar: ASDisplayNode {
             node.frame = self.backButtonArrow.frame
             node.displayWithoutProcessing = true
             node.displaysAsynchronously = false
+            return node
+        } else {
+            return nil
+        }
+    }
+    
+    private func makeTransitionBadgeNode() -> ASDisplayNode? {
+        if self.badgeNode.supernode != nil && !self.badgeNode.isHidden {
+            let node = NavigationBarBadgeNode(fillColor: .red, textColor: .white)
+            node.text = self.badgeNode.text
+            let nodeSize = node.measure(CGSize(width: 200.0, height: 100.0))
+            node.frame = CGRect(origin: CGPoint(), size: nodeSize)
             return node
         } else {
             return nil

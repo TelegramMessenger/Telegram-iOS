@@ -14,6 +14,7 @@ static const void *setLeftBarButtonItemListenerBagKey = &setLeftBarButtonItemLis
 static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemListenerBagKey;
 static const void *setBackBarButtonItemListenerBagKey = &setBackBarButtonItemListenerBagKey;
 static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
+static const void *badgeKey = &badgeKey;
 
 @implementation UINavigationItem (Proxy)
 
@@ -216,6 +217,32 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 
 - (void)removeSetBackBarButtonItemListener:(NSInteger)key {
     [(NSBag *)[self associatedObjectForKey:setBackBarButtonItemListenerBagKey] removeItem:key];
+}
+
+- (NSInteger)addSetBadgeListener:(UITabBarItemSetBadgeListener)listener {
+    NSBag *bag = [self associatedObjectForKey:setBadgeListenerBagKey];
+    if (bag == nil)
+    {
+        bag = [[NSBag alloc] init];
+        [self setAssociatedObject:bag forKey:setBadgeListenerBagKey];
+    }
+    return [bag addItem:[listener copy]];
+}
+
+- (void)removeSetBadgeListener:(NSInteger)key {
+    [(NSBag *)[self associatedObjectForKey:setBadgeListenerBagKey] removeItem:key];
+}
+
+- (void)setBadge:(NSString *)badge {
+    [self setAssociatedObject:badge forKey:badgeKey];
+    
+    [(NSBag *)[self associatedObjectForKey:setBadgeListenerBagKey] enumerateItems:^(UITabBarItemSetBadgeListener listener) {
+        listener(badge);
+    }];
+}
+
+- (NSString *)badge {
+    return [self associatedObjectForKey:badgeKey];
 }
 
 @end

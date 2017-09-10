@@ -6,10 +6,10 @@ public class NavigationButtonNode: ASTextNode {
         return self.bold ? UIFont.boldSystemFont(ofSize: 17.0) : UIFont.systemFont(ofSize: 17.0)
     }
     
-    private func attributesForCurrentState() -> [String : AnyObject] {
+    private func attributesForCurrentState() -> [NSAttributedStringKey : AnyObject] {
         return [
-            NSFontAttributeName: self.fontForCurrentState(),
-            NSForegroundColorAttributeName: self.isEnabled ? self.color : UIColor.gray
+            NSAttributedStringKey.font: self.fontForCurrentState(),
+            NSAttributedStringKey.foregroundColor: self.isEnabled ? self.color : UIColor.gray
         ]
     }
     
@@ -92,7 +92,7 @@ public class NavigationButtonNode: ASTextNode {
     public var pressed: () -> () = { }
     public var highlightChanged: (Bool) -> () = { _ in }
     
-    public override init() {
+    override public init() {
         super.init()
         
         self.isUserInteractionEnabled = true
@@ -103,6 +103,7 @@ public class NavigationButtonNode: ASTextNode {
     
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let superSize = super.calculateSizeThatFits(constrainedSize)
+        
         if let node = self.node {
             let nodeSize = node.measure(constrainedSize)
             return CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
@@ -192,7 +193,7 @@ public class NavigationButtonNode: ASTextNode {
             if self.isEnabled != value {
                 super.isEnabled = value
 
-                self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+                self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
     }

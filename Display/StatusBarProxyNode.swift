@@ -67,14 +67,12 @@ private class StatusBarItemNode: ASDisplayNode {
                 UIGraphicsPopContext()
             }
         }
-        
+        //print("\(self.targetView)")
         let type: StatusBarItemType = self.targetView.checkIsKind(of: batteryItemClass!) ? .Battery : .Generic
         tintStatusBarItem(context, type: type, style: statusBarStyle)
         self.contents = context.generateImage()?.cgImage
         
         self.frame = self.targetView.frame
-        
-        
     }
 }
 
@@ -102,7 +100,23 @@ private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemTyp
                     baseX += 1
                 }
                 
-                baseX += 2
+                while baseX < maxX {
+                    let pixel = baseMidRow + baseX
+                    let alpha = pixel.pointee & 0xff000000
+                    if alpha == 0 {
+                        break
+                    }
+                    baseX += 1
+                }
+                
+                while baseX < maxX {
+                    let pixel = baseMidRow + baseX
+                    let alpha = pixel.pointee & 0xff000000
+                    if alpha != 0 {
+                        break
+                    }
+                    baseX += 1
+                }
                 
                 var targetX = baseX
                 while targetX < maxX {
@@ -221,7 +235,13 @@ private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemTyp
     }
 }
 
-private let batteryItemClass: AnyClass? = NSClassFromString("UIStatusBarBatteryItemView")
+private let batteryItemClass: AnyClass? = { () -> AnyClass? in
+    var nameString = "StatusBarBattery"
+    if CFAbsoluteTimeGetCurrent() > 0 {
+        nameString += "ItemView"
+    }
+    return NSClassFromString("UI" + nameString)
+}()
 
 private class StatusBarProxyNodeTimerTarget: NSObject {
     let action: () -> Void

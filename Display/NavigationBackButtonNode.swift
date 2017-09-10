@@ -6,10 +6,10 @@ public class NavigationBackButtonNode: ASControlNode {
         return UIFont.systemFont(ofSize: 17.0)
     }
     
-    private func attributesForCurrentState() -> [String : AnyObject] {
+    private func attributesForCurrentState() -> [NSAttributedStringKey : AnyObject] {
         return [
-            NSFontAttributeName: self.fontForCurrentState(),
-            NSForegroundColorAttributeName: self.isEnabled ? self.color : UIColor.gray
+            NSAttributedStringKey.font: self.fontForCurrentState(),
+            NSAttributedStringKey.foregroundColor: self.isEnabled ? self.color : UIColor.gray
         ]
     }
     

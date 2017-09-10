@@ -10,6 +10,18 @@ private class GridNodeScrollerView: UIScrollView {
         return GridNodeScrollerLayer.self
     }
     
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.contentInsetAdjustmentBehavior = .never
+        }
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override func touchesShouldCancel(in view: UIView) -> Bool {
         return true
     }
@@ -28,7 +40,7 @@ open class GridNodeScroller: ASDisplayNode, UIGestureRecognizerDelegate {
         super.init()
         
         self.setViewBlock({
-            return GridNodeScrollerView()
+            return GridNodeScrollerView(frame: CGRect())
         })
         
         self.scrollView.scrollsToTop = false

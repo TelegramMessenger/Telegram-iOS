@@ -44,6 +44,9 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
         
         self.scrollView = ActionSheetItemGroupNodeScrollView()
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+        }
         self.scrollView.delaysContentTouches = false
         self.scrollView.canCancelContentTouches = true
         self.scrollView.showsVerticalScrollIndicator = false

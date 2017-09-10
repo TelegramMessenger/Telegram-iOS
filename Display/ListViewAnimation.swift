@@ -27,7 +27,11 @@ private func floorToPixels(_ value: UIEdgeInsets) -> UIEdgeInsets {
 extension CGFloat: Interpolatable {
     public static func interpolator() -> (Interpolatable, Interpolatable, CGFloat) -> Interpolatable {
         return { from, to, t -> Interpolatable in
-            return floorToPixels((to as! CGFloat) * t + (from as! CGFloat) * (1.0 - t))
+            let fromValue: CGFloat = from as! CGFloat
+            let toValue: CGFloat = to as! CGFloat
+            let invT: CGFloat = 1.0 - t
+            let term: CGFloat = toValue * t + fromValue * invT
+            return floorToPixels(term)
         }
     }
 }

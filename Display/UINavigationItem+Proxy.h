@@ -20,6 +20,10 @@ typedef void (^UITabBarItemSetBadgeListener)(NSString *);
 - (void)removeSetRightBarButtonItemListener:(NSInteger)key;
 - (NSInteger)addSetBackBarButtonItemListener:(UINavigationItemSetBarButtonItemListener)listener;
 - (void)removeSetBackBarButtonItemListener:(NSInteger)key;
+- (NSInteger)addSetBadgeListener:(UITabBarItemSetBadgeListener)listener;
+- (void)removeSetBadgeListener:(NSInteger)key;
+
+@property (nonatomic, strong) NSString *badge;
 
 @end
 

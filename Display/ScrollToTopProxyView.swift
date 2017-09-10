@@ -8,6 +8,9 @@ class ScrollToTopView: UIScrollView, UIScrollViewDelegate {
         
         self.delegate = self
         self.scrollsToTop = true
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.contentInsetAdjustmentBehavior = .never
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {

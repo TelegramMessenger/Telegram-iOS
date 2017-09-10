@@ -445,7 +445,7 @@ public class Window1 {
         }
     }
     
-    var postUpdateToInterfaceOrientationBlocks: [(Void) -> Void] = []
+    var postUpdateToInterfaceOrientationBlocks: [() -> Void] = []
     
     private func updateToInterfaceOrientation() {
         let blocks = self.postUpdateToInterfaceOrientationBlocks
@@ -455,7 +455,7 @@ public class Window1 {
         }
     }
     
-    public func addPostUpdateToInterfaceOrientationBlock(f: @escaping (Void) -> Void) {
+    public func addPostUpdateToInterfaceOrientationBlock(f: @escaping () -> Void) {
         postUpdateToInterfaceOrientationBlocks.append(f)
     }
     

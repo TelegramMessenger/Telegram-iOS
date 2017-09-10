@@ -202,7 +202,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         super.init()
         
-        self.setViewBlock({ Void -> UIView in
+        self.setViewBlock({ () -> UIView in
             return ListViewBackingView()
         })
         
@@ -381,10 +381,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         if self.snapToBottomInsetUntilFirstInteraction {
             self.snapToBottomInsetUntilFirstInteraction = false
         }
-        
-        /*if usePerformanceTracker {
-            self.performanceTracker.start()
-        }*/
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -682,7 +678,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         return (snappedTopInset, offset)
     }
     
-    private func updateVisibleContentOffset() {
+    public func visibleContentOffset() -> ListViewVisibleContentOffset {
         var offset: ListViewVisibleContentOffset = .unknown
         var topItemIndexAndFrame: (Int, CGRect) = (-1, CGRect())
         for itemNode in self.itemNodes {
@@ -696,8 +692,11 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         } else if topItemIndexAndFrame.0 == -1 {
             offset = .none
         }
-        
-        self.visibleContentOffsetChanged(offset)
+        return offset
+    }
+    
+    private func updateVisibleContentOffset() {
+        self.visibleContentOffsetChanged(self.visibleContentOffset())
     }
     
     private func stopScrolling() {
@@ -710,7 +709,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private func updateBottomItemOverscrollBackground() {
         if self.keepBottomItemOverscrollBackground {
             var bottomItemFound = false
-            if self.itemNodes[itemNodes.count - 1].index == self.items.count - 1 {
+            let lastItemNodeIndex: Int? = self.itemNodes[itemNodes.count - 1].index
+            if lastItemNodeIndex == self.items.count - 1 {
                 bottomItemFound = true
             }
             
@@ -746,8 +746,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             return
         }
         
-        var topItemFound = false
-        var bottomItemFound = false
+        var topItemFound: Bool = false
+        var bottomItemFound: Bool = false
         var topItemEdge: CGFloat = 0.0
         var bottomItemEdge: CGFloat = 0.0
         
@@ -769,7 +769,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         var completeHeight = effectiveInsets.top + effectiveInsets.bottom
         
-        if itemNodes[itemNodes.count - 1].index == self.items.count - 1 {
+        if let index = itemNodes[itemNodes.count - 1].index, index == self.items.count - 1 {
             bottomItemFound = true
             bottomItemEdge = itemNodes[itemNodes.count - 1].apparentFrame.maxY
         }
@@ -906,7 +906,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         })
     }
 
-    private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, updateOpaqueState: Any?, completion: @escaping (Void) -> Void) {
+    private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, updateOpaqueState: Any?, completion: @escaping () -> Void) {
         if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil {
             if let updateSizeAndInsets = updateSizeAndInsets , (self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets)) {
                 self.visibleSize = updateSizeAndInsets.size
@@ -1799,19 +1799,19 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 if let index = itemNode.index, index == scrollToItem.index {
                     let offset: CGFloat
                     switch scrollToItem.position {
-                        case .Bottom:
-                            offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom
-                        case .Top:
-                            offset = self.insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top
-                        case let .Center(overflow):
+                        case let .bottom(additionalOffset):
+                            offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom + additionalOffset
+                        case let .top(additionalOffset):
+                            offset = self.insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top + additionalOffset
+                        case let .center(overflow):
                             let contentAreaHeight = self.visibleSize.height - self.insets.bottom - self.insets.top
                             if itemNode.apparentFrame.size.height <= contentAreaHeight + CGFloat.ulpOfOne {
                                 offset = self.insets.top + floor(((self.visibleSize.height - self.insets.bottom - self.insets.top) - itemNode.frame.size.height) / 2.0) - itemNode.apparentFrame.minY
                             } else {
                                 switch overflow {
-                                    case .Top:
+                                    case .top:
                                         offset = self.insets.top - itemNode.apparentFrame.minY
-                                    case .Bottom:
+                                    case .bottom:
                                         offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY
                                 }
                             }
@@ -2495,7 +2495,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
-    private func updateVisibleItemsTransaction(completion: @escaping (Void) -> Void) {
+    private func updateVisibleItemsTransaction(completion: @escaping () -> Void) {
         if self.items.count == 0 && self.itemNodes.count == 0 {
             completion()
             return
@@ -2770,11 +2770,18 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     public func ensureItemNodeVisible(_ node: ListViewItemNode) {
         if let index = node.index {
             if node.frame.minY < self.insets.top {
-                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.Top, animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(0.0), animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
-                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.Bottom, animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.bottom(0.0), animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             }
         }
+    }
+    
+    public func itemNodeRelativeOffset(_ node: ListViewItemNode) -> CGFloat? {
+        if let _ = node.index {
+            return node.frame.minY - self.insets.top
+        }
+        return nil
     }
     
     override open func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {

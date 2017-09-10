@@ -8,8 +8,11 @@ private func hasHorizontalGestures(_ view: UIView) -> Bool {
     
     if let view = view as? ListViewBackingView {
         let transform = view.transform
-        let angle = Double(atan2f(Float(transform.b), Float(transform.a)))
-        if abs(angle - M_PI / 2.0) < 0.001 || abs(angle + M_PI / 2.0) < 0.001 || abs(angle - M_PI * 3.0 / 2.0) < 0.001 {
+        let angle: Double = Double(atan2f(Float(transform.b), Float(transform.a)))
+        let term1: Double = abs(angle - Double.pi / 2.0)
+        let term2: Double = abs(angle + Double.pi / 2.0)
+        let term3: Double = abs(angle - Double.pi * 3.0 / 2.0)
+        if term1 < 0.001 || term2 < 0.001 || term3 < 0.001 {
             return true
         }
     }
@@ -54,14 +57,17 @@ class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         let location = touches.first!.location(in: self.view)
         let translation = CGPoint(x: location.x - firstLocation.x, y: location.y - firstLocation.y)
         
+        let absTranslationX: CGFloat = abs(translation.x)
+        let absTranslationY: CGFloat = abs(translation.y)
+        
         if !validatedGesture {
             if self.firstLocation.x < 16.0 {
                 validatedGesture = true
             } else if translation.x < 0.0 {
                 self.state = .failed
-            } else if abs(translation.y) > 2.0 && abs(translation.y) > abs(translation.x) * 2.0 {
+            } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
                 self.state = .failed
-            } else if abs(translation.x) > 2.0 && abs(translation.y) * 2.0 < abs(translation.x) {
+            } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
                 validatedGesture = true
             }
         }

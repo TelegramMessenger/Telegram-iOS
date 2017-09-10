@@ -2,38 +2,35 @@ import Foundation
 import SwiftSignalKit
 
 public enum ListViewCenterScrollPositionOverflow {
-    case Top
-    case Bottom
+    case top
+    case bottom
 }
 
 public enum ListViewScrollPosition: Equatable {
-    case Top
-    case Bottom
-    case Center(ListViewCenterScrollPositionOverflow)
-}
+    case top(CGFloat)
+    case bottom(CGFloat)
+    case center(ListViewCenterScrollPositionOverflow)
 
-public func ==(lhs: ListViewScrollPosition, rhs: ListViewScrollPosition) -> Bool {
-    switch lhs {
-    case .Top:
-        switch rhs {
-        case .Top:
-            return true
-        default:
-            return false
-        }
-    case .Bottom:
-        switch rhs {
-        case .Bottom:
-            return true
-        default:
-            return false
-        }
-    case let .Center(lhsOverflow):
-        switch rhs {
-        case let .Center(rhsOverflow) where lhsOverflow == rhsOverflow:
-            return true
-        default:
-            return false
+    public static func ==(lhs: ListViewScrollPosition, rhs: ListViewScrollPosition) -> Bool {
+        switch lhs {
+            case let .top(offset):
+                if case .top(offset) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .bottom(offset):
+                if case .bottom(offset) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .center(overflow):
+                if case .center(overflow) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -306,22 +303,22 @@ struct ListViewState {
                 if let index = node.index , index == fixedIndex {
                     let offset: CGFloat
                     switch fixedPosition {
-                    case .Bottom:
-                        offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
-                    case .Top:
-                        offset = self.insets.top - node.frame.minY
-                    case let .Center(overflow):
-                        let contentAreaHeight = self.visibleSize.height - self.insets.bottom - self.insets.top
-                        if node.frame.size.height <= contentAreaHeight + CGFloat.ulpOfOne {
-                            offset = self.insets.top + floor((contentAreaHeight - node.frame.size.height) / 2.0) - node.frame.minY
-                        } else {
-                            switch overflow {
-                            case .Top:
-                                offset = self.insets.top - node.frame.minY
-                            case .Bottom:
-                                offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
+                        case let .bottom(additionalOffset):
+                            offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY + additionalOffset
+                        case let .top(additionalOffset):
+                            offset = self.insets.top - node.frame.minY + additionalOffset
+                        case let .center(overflow):
+                            let contentAreaHeight = self.visibleSize.height - self.insets.bottom - self.insets.top
+                            if node.frame.size.height <= contentAreaHeight + CGFloat.ulpOfOne {
+                                offset = self.insets.top + floor((contentAreaHeight - node.frame.size.height) / 2.0) - node.frame.minY
+                            } else {
+                                switch overflow {
+                                    case .top:
+                                        offset = self.insets.top - node.frame.minY
+                                    case .bottom:
+                                        offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
+                                }
                             }
-                        }
                     }
                     
                     var minY: CGFloat = CGFloat.greatestFiniteMagnitude

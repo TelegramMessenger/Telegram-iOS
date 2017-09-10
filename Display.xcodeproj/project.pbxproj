@@ -36,6 +36,7 @@
 		D03E7DF91C96C5F200C07816 /* NSWeakReference.m in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DF71C96C5F200C07816 /* NSWeakReference.m */; };
 		D03E7DFF1C96F7B400C07816 /* StatusBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DFE1C96F7B400C07816 /* StatusBarManager.swift */; };
 		D03E7E011C974AB300C07816 /* DisplayLinkDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E7E001C974AB300C07816 /* DisplayLinkDispatcher.swift */; };
+		D04C468E1F4C97BE00D30FE1 /* PageControlNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04C468D1F4C97BE00D30FE1 /* PageControlNode.swift */; };
 		D05174B31EAA833200A1BF36 /* CASeeThroughTracingLayer.h in Headers */ = {isa = PBXBuildFile; fileRef = D05174B11EAA833200A1BF36 /* CASeeThroughTracingLayer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D05174B41EAA833200A1BF36 /* CASeeThroughTracingLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */; };
 		D053CB601D22B4F200DD41DF /* CATracingLayer.h in Headers */ = {isa = PBXBuildFile; fileRef = D053CB5E1D22B4F200DD41DF /* CATracingLayer.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -79,6 +80,7 @@
 		D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */; };
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
+		D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D077B8E81F4637040046D27A /* NavigationBarBadge.swift */; };
 		D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */; };
 		D08CAA7B1ED73C990000FDA8 /* ViewControllerTracingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7A1ED73C990000FDA8 /* ViewControllerTracingNode.swift */; };
 		D08E903A1D24159200533158 /* ActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E90391D24159200533158 /* ActionSheetItem.swift */; };
@@ -169,6 +171,7 @@
 		D03E7DF71C96C5F200C07816 /* NSWeakReference.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSWeakReference.m; sourceTree = "<group>"; };
 		D03E7DFE1C96F7B400C07816 /* StatusBarManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarManager.swift; sourceTree = "<group>"; };
 		D03E7E001C974AB300C07816 /* DisplayLinkDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DisplayLinkDispatcher.swift; sourceTree = "<group>"; };
+		D04C468D1F4C97BE00D30FE1 /* PageControlNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageControlNode.swift; sourceTree = "<group>"; };
 		D05174B11EAA833200A1BF36 /* CASeeThroughTracingLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CASeeThroughTracingLayer.h; sourceTree = "<group>"; };
 		D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CASeeThroughTracingLayer.m; sourceTree = "<group>"; };
 		D053CB5E1D22B4F200DD41DF /* CATracingLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CATracingLayer.h; sourceTree = "<group>"; };
@@ -215,6 +218,7 @@
 		D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
+		D077B8E81F4637040046D27A /* NavigationBarBadge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarBadge.swift; sourceTree = "<group>"; };
 		D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainerViewLayout.swift; sourceTree = "<group>"; };
 		D08CAA7A1ED73C990000FDA8 /* ViewControllerTracingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewControllerTracingNode.swift; sourceTree = "<group>"; };
 		D08E90391D24159200533158 /* ActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItem.swift; sourceTree = "<group>"; };
@@ -364,6 +368,7 @@
 				D0E35A021DE473B900BC6096 /* HighlightableButton.swift */,
 				D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */,
 				D0A749941E3A9E7B00AD786E /* SwitchNode.swift */,
+				D04C468D1F4C97BE00D30FE1 /* PageControlNode.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -523,6 +528,7 @@
 				D05CC3101B695A9600E235A3 /* BarButtonItemWrapper.swift */,
 				D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */,
 				D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */,
+				D077B8E81F4637040046D27A /* NavigationBarBadge.swift */,
 			);
 			name = Navigation;
 			sourceTree = "<group>";
@@ -848,6 +854,7 @@
 				D05CC31A1B695A9600E235A3 /* NavigationButtonNode.swift in Sources */,
 				D05CC2E71B69555800E235A3 /* CAAnimationUtils.swift in Sources */,
 				D05CC31B1B695A9600E235A3 /* NavigationTitleNode.swift in Sources */,
+				D04C468E1F4C97BE00D30FE1 /* PageControlNode.swift in Sources */,
 				D05CC31C1B695A9600E235A3 /* BarButtonItemWrapper.swift in Sources */,
 				D0C2DFCF1CC4431D0044FF83 /* ListViewScroller.swift in Sources */,
 				D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */,
@@ -878,6 +885,7 @@
 				D05CC2FC1B6955D000E235A3 /* UIKitUtils.m in Sources */,
 				D0C2DFC61CC4431D0044FF83 /* ASTransformLayerNode.swift in Sources */,
 				D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */,
+				D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */,
 				D05BE4AE1D217F6B002BD72C /* MergedLayoutEvents.swift in Sources */,
 				D0C0D2901C997110001D2851 /* FBAnimationPerformanceTracker.mm in Sources */,
 				D015F7521D1AE08D00E269B5 /* ContainableController.swift in Sources */,
@@ -980,7 +988,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 4.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -1046,7 +1054,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 4.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -1104,7 +1112,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 4.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -1162,7 +1170,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 4.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -1273,13 +1281,14 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				OTHER_SWIFT_FLAGS = "-Xfrontend -debug-time-function-bodies";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 4.0;
 			};
 			name = "Debug Hockeyapp";
 		};
@@ -1299,13 +1308,14 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				OTHER_SWIFT_FLAGS = "-Xfrontend -debug-time-function-bodies";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 4.0;
 			};
 			name = "Release Hockeyapp";
 		};
@@ -1396,13 +1406,14 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				OTHER_SWIFT_FLAGS = "-Xfrontend -debug-time-function-bodies";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 4.0;
 			};
 			name = "Debug AppStore";
 		};
@@ -1474,13 +1485,14 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				OTHER_SWIFT_FLAGS = "-Xfrontend -debug-time-function-bodies";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 4.0;
 			};
 			name = "Release AppStore";
 		};
@@ -1507,6 +1519,7 @@
 				D01159BF1F40E96C0039383E /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = "Release Hockeyapp";
 		};
 		D05CC25D1B69316F00E235A3 /* Build configuration list for PBXProject "Display" */ = {
 			isa = XCConfigurationList;
