@@ -53,6 +53,9 @@
         _collectionLayout = [[UICollectionViewFlowLayout alloc] init];
         _collectionLayout.scrollDirection = UICollectionViewScrollDirectionHorizontal;
         _collectionView = [[UICollectionView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, frame.size.width, frame.size.height) collectionViewLayout:_collectionLayout];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+        _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+#endif
         _collectionView.delegate = self;
         _collectionView.dataSource = self;
         _collectionView.backgroundColor = nil;

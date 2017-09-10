@@ -55,6 +55,9 @@
     [self.view addSubview:_wrapperView];
 
     _collectionView = [[[self _collectionViewClass] alloc] initWithFrame:_wrapperView.bounds collectionViewLayout:[self _collectionLayout]];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+    _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+#endif
     _collectionView.alwaysBounceVertical = true;
     _collectionView.backgroundColor = [UIColor whiteColor];
     _collectionView.delaysContentTouches = true;
