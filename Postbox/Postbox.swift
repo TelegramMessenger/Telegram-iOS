@@ -1635,7 +1635,7 @@ public final class Postbox {
     fileprivate func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {
         var infos: [(ItemCollectionId, ItemCollectionInfo)] = []
         for (id, info, items) in itemCollections {
-            infos.append(id, info)
+            infos.append((id, info))
             self.itemCollectionItemTable.replaceItems(collectionId: id, items: items)
             if self.currentItemCollectionItemsOperations[id] == nil {
                 self.currentItemCollectionItemsOperations[id] = []

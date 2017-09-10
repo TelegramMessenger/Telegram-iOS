@@ -22,6 +22,10 @@ public struct WrappedMediaResourceId: Hashable {
     }
 }
 
+public func anyHashableFromMediaResourceId(_ id: MediaResourceId) -> AnyHashable {
+    return AnyHashable(WrappedMediaResourceId(id))
+}
+
 public protocol MediaResource {
     var id: MediaResourceId { get }
     var size: Int? { get }

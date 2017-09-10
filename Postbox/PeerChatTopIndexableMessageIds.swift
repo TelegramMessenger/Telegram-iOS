@@ -69,8 +69,7 @@ final class PeerChatTopTaggedMessageIdsTable: Table {
     }
     
     func replay(historyOperationsByPeerId: [PeerId : [MessageHistoryOperation]]) {
-        var updatedRecords = Set<PeerChatTopTaggedUpdateRecord>()
-        for (peerId, operations) in historyOperationsByPeerId {
+        for (_, operations) in historyOperationsByPeerId {
             for operation in operations {
                 switch operation {
                     case let .InsertMessage(message):

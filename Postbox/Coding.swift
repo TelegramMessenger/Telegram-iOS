@@ -327,8 +327,8 @@ public final class PostboxEncoder {
     
     public func encodeObject(_ value: PostboxCoding, forKey key: StaticString) {
         self.encodeKey(key)
-        var type: Int8 = ValueType.Object.rawValue
-        self.buffer.write(&type, offset: 0, length: 1)
+        var t: Int8 = ValueType.Object.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
         
         let string = "\(type(of: value))"
         var typeHash: Int32 = murMurHashString32(string)
@@ -344,8 +344,8 @@ public final class PostboxEncoder {
     
     public func encodeObjectWithEncoder<T>(_ value: T, encoder: (PostboxEncoder) -> Void, forKey key: String) {
         self.encodeKey(key)
-        var type: Int8 = ValueType.Object.rawValue
-        self.buffer.write(&type, offset: 0, length: 1)
+        var t: Int8 = ValueType.Object.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
         
         let string = "\(type(of: value))"
         var typeHash: Int32 = murMurHashString32(string)
@@ -385,8 +385,8 @@ public final class PostboxEncoder {
     
     public func encodeObjectArray<T: PostboxCoding>(_ value: [T], forKey key: StaticString) {
         self.encodeKey(key)
-        var type: Int8 = ValueType.ObjectArray.rawValue
-        self.buffer.write(&type, offset: 0, length: 1)
+        var t: Int8 = ValueType.ObjectArray.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
         var length: Int32 = Int32(value.count)
         self.buffer.write(&length, offset: 0, length: 4)
         let innerEncoder = PostboxEncoder()
@@ -405,8 +405,8 @@ public final class PostboxEncoder {
     
     public func encodeGenericObjectArray(_ value: [PostboxCoding], forKey key: StaticString) {
         self.encodeKey(key)
-        var type: Int8 = ValueType.ObjectArray.rawValue
-        self.buffer.write(&type, offset: 0, length: 1)
+        var t: Int8 = ValueType.ObjectArray.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
         var length: Int32 = Int32(value.count)
         self.buffer.write(&length, offset: 0, length: 4)
         let innerEncoder = PostboxEncoder()
@@ -454,8 +454,8 @@ public final class PostboxEncoder {
     
     public func encodeObjectDictionary<K, V: PostboxCoding>(_ value: [K : V], forKey key: StaticString) where K: PostboxCoding {
         self.encodeKey(key)
-        var type: Int8 = ValueType.ObjectDictionary.rawValue
-        self.buffer.write(&type, offset: 0, length: 1)
+        var t: Int8 = ValueType.ObjectDictionary.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
         var length: Int32 = Int32(value.count)
         self.buffer.write(&length, offset: 0, length: 4)
         
@@ -1160,7 +1160,7 @@ public final class PostboxDecoder {
         }
     }
     
-    public func decodeObjectDictionaryForKey<K, V: PostboxCoding>(_ key: StaticString, keyDecoder: (PostboxDecoder) -> K) -> [K : V] where K: Hashable, K: Hashable {
+    public func decodeObjectDictionaryForKey<K, V: PostboxCoding>(_ key: StaticString, keyDecoder: (PostboxDecoder) -> K) -> [K : V] where K: Hashable {
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectDictionary) {
             var length: Int32 = 0
             memcpy(&length, self.buffer.memory + self.offset, 4)

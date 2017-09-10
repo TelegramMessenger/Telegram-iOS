@@ -152,7 +152,6 @@ final class MessageMediaTable: Table {
             if type == MediaEntryType.Direct.rawValue {
                 var dataLength: Int32 = 0
                 value.read(&dataLength, offset: 0, length: 4)
-                let mediaOffset = value.offset
                 value.skip(Int(dataLength))
                 
                 sharedWriteBuffer.reset()
