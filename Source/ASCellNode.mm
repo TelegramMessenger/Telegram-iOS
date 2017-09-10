@@ -172,9 +172,9 @@
   }
 }
 
-- (BOOL)canUpdateToViewModel:(id)viewModel
+- (BOOL)canUpdateToNodeModel:(id)nodeModel
 {
-  return [self.viewModel class] == [viewModel class];
+  return [self.nodeModel class] == [nodeModel class];
 }
 
 - (NSIndexPath *)indexPath

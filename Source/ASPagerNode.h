@@ -77,6 +77,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+/**
+ * A horizontal, paging collection node.
+ */
 @interface ASPagerNode : ASCollectionNode
 
 /**
@@ -86,6 +89,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  * Initializer with custom-configured flow layout properties.
+ *
+ * NOTE: The flow layout must have a horizontal scroll direction.
  */
 - (instancetype)initWithCollectionViewLayout:(ASPagerFlowLayout *)flowLayout;
 

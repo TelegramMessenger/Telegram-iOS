@@ -78,8 +78,9 @@
   ASSizeRange sizeRange = ASSizeRangeForCollectionLayoutThatFitsViewportSize(context.viewportSize, context.scrollableDirections);
   ASLayout *layout = [stackSpec layoutThatFits:sizeRange];
 
-  return [[ASCollectionLayoutState alloc] initWithContext:context layout:layout getElementBlock:^ASCollectionElement * _Nonnull(ASLayout * _Nonnull sublayout) {
-    return ((ASCellNode *)sublayout.layoutElement).collectionElement;
+  return [[ASCollectionLayoutState alloc] initWithContext:context layout:layout getElementBlock:^ASCollectionElement * _Nullable(ASLayout * _Nonnull sublayout) {
+    ASCellNode *node = ASDynamicCast(sublayout.layoutElement, ASCellNode);
+    return node ? node.collectionElement : nil;
   }];
 }
 

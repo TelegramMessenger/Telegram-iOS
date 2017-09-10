@@ -429,9 +429,11 @@
 		E54E81FC1EB357BD00FFE8E1 /* ASPageTable.h in Headers */ = {isa = PBXBuildFile; fileRef = E54E81FA1EB357BD00FFE8E1 /* ASPageTable.h */; };
 		E54E81FD1EB357BD00FFE8E1 /* ASPageTable.m in Sources */ = {isa = PBXBuildFile; fileRef = E54E81FB1EB357BD00FFE8E1 /* ASPageTable.m */; };
 		E55D86331CA8A14000A0C26F /* ASLayoutElement.mm in Sources */ = {isa = PBXBuildFile; fileRef = E55D86311CA8A14000A0C26F /* ASLayoutElement.mm */; };
+		E5667E8C1F33871300FA6FC0 /* _ASCollectionGalleryLayoutInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = E5667E8B1F33871300FA6FC0 /* _ASCollectionGalleryLayoutInfo.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		E5667E8E1F33872700FA6FC0 /* _ASCollectionGalleryLayoutInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E5667E8D1F33872700FA6FC0 /* _ASCollectionGalleryLayoutInfo.m */; };
 		E5711A2C1C840C81009619D4 /* ASCollectionElement.h in Headers */ = {isa = PBXBuildFile; fileRef = E5711A2A1C840C81009619D4 /* ASCollectionElement.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E5711A301C840C96009619D4 /* ASCollectionElement.mm in Sources */ = {isa = PBXBuildFile; fileRef = E5711A2D1C840C96009619D4 /* ASCollectionElement.mm */; };
-		E5775AFC1F13CE9F00CAC9BC /* _ASCollectionGalleryLayoutItem.h in Headers */ = {isa = PBXBuildFile; fileRef = E5775AFB1F13CE9F00CAC9BC /* _ASCollectionGalleryLayoutItem.h */; };
+		E5775AFC1F13CE9F00CAC9BC /* _ASCollectionGalleryLayoutItem.h in Headers */ = {isa = PBXBuildFile; fileRef = E5775AFB1F13CE9F00CAC9BC /* _ASCollectionGalleryLayoutItem.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E5775AFE1F13CF7400CAC9BC /* _ASCollectionGalleryLayoutItem.mm in Sources */ = {isa = PBXBuildFile; fileRef = E5775AFD1F13CF7400CAC9BC /* _ASCollectionGalleryLayoutItem.mm */; };
 		E5775B001F13D25400CAC9BC /* ASCollectionLayoutState+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = E5775AFF1F13D25400CAC9BC /* ASCollectionLayoutState+Private.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E5775B021F16759300CAC9BC /* ASCollectionLayoutCache.h in Headers */ = {isa = PBXBuildFile; fileRef = E5775B011F16759300CAC9BC /* ASCollectionLayoutCache.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -458,7 +460,7 @@
 		E5E281741E71C833006B67C2 /* ASCollectionLayoutState.h in Headers */ = {isa = PBXBuildFile; fileRef = E5E281731E71C833006B67C2 /* ASCollectionLayoutState.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E5E281761E71C845006B67C2 /* ASCollectionLayoutState.mm in Sources */ = {isa = PBXBuildFile; fileRef = E5E281751E71C845006B67C2 /* ASCollectionLayoutState.mm */; };
 		E5E2D72E1EA780C4005C24C6 /* ASCollectionGalleryLayoutDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = E5E2D72D1EA780C4005C24C6 /* ASCollectionGalleryLayoutDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		E5E2D7301EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = E5E2D72F1EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.m */; };
+		E5E2D7301EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = E5E2D72F1EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.mm */; };
 		F711994E1D20C21100568860 /* ASDisplayNodeExtrasTests.m in Sources */ = {isa = PBXBuildFile; fileRef = F711994D1D20C21100568860 /* ASDisplayNodeExtrasTests.m */; };
 /* End PBXBuildFile section */
 
@@ -917,6 +919,8 @@
 		E54E81FA1EB357BD00FFE8E1 /* ASPageTable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASPageTable.h; sourceTree = "<group>"; };
 		E54E81FB1EB357BD00FFE8E1 /* ASPageTable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ASPageTable.m; sourceTree = "<group>"; };
 		E55D86311CA8A14000A0C26F /* ASLayoutElement.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ASLayoutElement.mm; sourceTree = "<group>"; };
+		E5667E8B1F33871300FA6FC0 /* _ASCollectionGalleryLayoutInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _ASCollectionGalleryLayoutInfo.h; sourceTree = "<group>"; };
+		E5667E8D1F33872700FA6FC0 /* _ASCollectionGalleryLayoutInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = _ASCollectionGalleryLayoutInfo.m; sourceTree = "<group>"; };
 		E5711A2A1C840C81009619D4 /* ASCollectionElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASCollectionElement.h; sourceTree = "<group>"; };
 		E5711A2D1C840C96009619D4 /* ASCollectionElement.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ASCollectionElement.mm; sourceTree = "<group>"; };
 		E5775AFB1F13CE9F00CAC9BC /* _ASCollectionGalleryLayoutItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _ASCollectionGalleryLayoutItem.h; sourceTree = "<group>"; };
@@ -946,7 +950,7 @@
 		E5E281731E71C833006B67C2 /* ASCollectionLayoutState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASCollectionLayoutState.h; sourceTree = "<group>"; };
 		E5E281751E71C845006B67C2 /* ASCollectionLayoutState.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ASCollectionLayoutState.mm; sourceTree = "<group>"; };
 		E5E2D72D1EA780C4005C24C6 /* ASCollectionGalleryLayoutDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASCollectionGalleryLayoutDelegate.h; sourceTree = "<group>"; };
-		E5E2D72F1EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = ASCollectionGalleryLayoutDelegate.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		E5E2D72F1EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = ASCollectionGalleryLayoutDelegate.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		EFA731F0396842FF8AB635EE /* libPods-AsyncDisplayKitTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-AsyncDisplayKitTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F711994D1D20C21100568860 /* ASDisplayNodeExtrasTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ASDisplayNodeExtrasTests.m; sourceTree = "<group>"; };
 		FB07EABBCF28656C6297BC2D /* Pods-AsyncDisplayKitTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AsyncDisplayKitTests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-AsyncDisplayKitTests/Pods-AsyncDisplayKitTests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -1670,6 +1674,8 @@
 				E5855DEE1EBB4D83003639AE /* ASCollectionLayoutDefines.h */,
 				E5855DED1EBB4D83003639AE /* ASCollectionLayoutDefines.m */,
 				E5775AFF1F13D25400CAC9BC /* ASCollectionLayoutState+Private.h */,
+				E5667E8B1F33871300FA6FC0 /* _ASCollectionGalleryLayoutInfo.h */,
+				E5667E8D1F33872700FA6FC0 /* _ASCollectionGalleryLayoutInfo.m */,
 				E5775AFB1F13CE9F00CAC9BC /* _ASCollectionGalleryLayoutItem.h */,
 				E5775AFD1F13CF7400CAC9BC /* _ASCollectionGalleryLayoutItem.mm */,
 			);
@@ -1687,7 +1693,7 @@
 				E58E9E3D1E941D74004CFC59 /* ASCollectionFlowLayoutDelegate.h */,
 				E58E9E3E1E941D74004CFC59 /* ASCollectionFlowLayoutDelegate.m */,
 				E5E2D72D1EA780C4005C24C6 /* ASCollectionGalleryLayoutDelegate.h */,
-				E5E2D72F1EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.m */,
+				E5E2D72F1EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.mm */,
 				E54E81FA1EB357BD00FFE8E1 /* ASPageTable.h */,
 				E54E81FB1EB357BD00FFE8E1 /* ASPageTable.m */,
 			);
@@ -1824,6 +1830,8 @@
 				CC87BB951DA8193C0090E380 /* ASCellNode+Internal.h in Headers */,
 				E5775B021F16759300CAC9BC /* ASCollectionLayoutCache.h in Headers */,
 				E5775B001F13D25400CAC9BC /* ASCollectionLayoutState+Private.h in Headers */,
+				E5667E8C1F33871300FA6FC0 /* _ASCollectionGalleryLayoutInfo.h in Headers */,
+				E5775AFC1F13CE9F00CAC9BC /* _ASCollectionGalleryLayoutItem.h in Headers */,
 				E5855DF01EBB4D83003639AE /* ASCollectionLayoutDefines.h in Headers */,
 				E5B5B9D11E9BAD9800A6B726 /* ASCollectionLayoutContext+Private.h in Headers */,
 				9C8898BD1C738BB800D6B02E /* ASTextKitFontSizeAdjuster.h in Headers */,
@@ -1896,7 +1904,6 @@
 				254C6B751BF94DF4003EC431 /* ASTextKitComponents.h in Headers */,
 				B35062081B010EFD0018CF92 /* ASScrollNode.h in Headers */,
 				CCA282CC1E9EB73E0037E8B7 /* ASTipNode.h in Headers */,
-				E5775AFC1F13CE9F00CAC9BC /* _ASCollectionGalleryLayoutItem.h in Headers */,
 				25E327571C16819500A2170C /* ASPagerNode.h in Headers */,
 				CCCCCCDB1EC3EF060087FE10 /* ASTextLine.h in Headers */,
 				9C70F20E1CDBE9E5007D6C76 /* NSArray+Diffing.h in Headers */,
@@ -2254,6 +2261,7 @@
 				CCCCCCD61EC3EF060087FE10 /* ASTextDebugOption.m in Sources */,
 				34EFC75C1B701BD200AD841F /* ASDimension.mm in Sources */,
 				B350624E1B010EFD0018CF92 /* ASDisplayNode+AsyncDisplay.mm in Sources */,
+				E5667E8E1F33872700FA6FC0 /* _ASCollectionGalleryLayoutInfo.m in Sources */,
 				25E327591C16819500A2170C /* ASPagerNode.m in Sources */,
 				636EA1A41C7FF4EC00EE152F /* NSArray+Diffing.m in Sources */,
 				B35062501B010EFD0018CF92 /* ASDisplayNode+DebugTiming.mm in Sources */,
@@ -2289,7 +2297,7 @@
 				CCCCCCE01EC3EF060087FE10 /* ASTextRunDelegate.m in Sources */,
 				CCCCCCDA1EC3EF060087FE10 /* ASTextLayout.m in Sources */,
 				254C6B841BF94F8A003EC431 /* ASTextNodeWordKerner.m in Sources */,
-				E5E2D7301EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.m in Sources */,
+				E5E2D7301EA780DF005C24C6 /* ASCollectionGalleryLayoutDelegate.mm in Sources */,
 				34EFC76B1B701CEB00AD841F /* ASLayoutSpec.mm in Sources */,
 				CC3B20861C3F76D600798563 /* ASPendingStateController.mm in Sources */,
 				254C6B8C1BF94F8A003EC431 /* ASTextKitTailTruncater.mm in Sources */,

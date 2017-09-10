@@ -17,7 +17,7 @@ When it comes to corner rounding, many developers stick with CALayer's `.cornerR
 
 ## CALayer's .cornerRadius is Expensive
 
-Why is `.cornerRadius` so expensive?  Use of CALayer's `.cornerRadius` property triggers off-screen rendering to perform the clipping operation on every frame - 60 FPS during scrolling - even if the content in that area isn't changing!  This means that the GPU has to switch contexts on every frame, between compositing the overall frame + additional passes for each use of `.cornerRadius`.  
+Why is `.cornerRadius` so expensive?  Use of CALayer's `.cornerRadius` property triggers offscreen rendering to perform the clipping operation on every frame - 60 FPS during scrolling - even if the content in that area isn't changing!  This means that the GPU has to switch contexts on every frame, between compositing the overall frame + additional passes for each use of `.cornerRadius`.  
 
 Importantly, these costs don't show up in the Time Profiler, because they affect work done by the CoreAnimation Render Server on your app's behalf.  This intensive thrash annihilates performance for a lot of devices.  On the iPhone 4, 4S, and 5 / 5C (along with comparable iPads / iPods), expect to see notably degraded performance.  On the iPhone 5S and newer, even if you can't see the impact directly, it will reduce headroom so that it takes less to cause a frame drop. 
 
@@ -53,11 +53,11 @@ The final consideration is to determine if all four corners cover the same node 
 
 ### Precomposited Corners
 
-Precomposited corners refer to corners drawn using bezier paths to clip the content in a CGContext / UIGraphicsContext.  In this scenario, the corners become part of the image itself — and are "baked in" to the single CALayer.  There are two types of precomposited corners. 
+Precomposited corners refer to corners drawn using bezier paths to clip the content in a CGContext / UIGraphicsContext (`[path clip]`).  In this scenario, the corners become part of the image itself — and are "baked in" to the single CALayer.  There are two types of precomposited corners. 
 
 The absolute best method is to use **precomposited opaque corners**.  This is the most efficient method available, resulting in zero alpha blending (although this is much less critical than avoiding offscreen rendering).  Unfortunately, this method is also the least flexible; the background behind the corners will need to be a solid color if the rounded image needs to move around on top of it.  It's possible, but tricky to make precomposited corners with a textured or photo background - usually it's best to use precomposited alpha corners instead'.'
 
-The second method involves using bezier paths with **precomposited alpha corners** (`[path clip]`).  This method is pretty flexible and should be one of the most frequently used.  It does incur the cost of alpha blending across the full size of the content, and including an alpha channel increases memory impact by 25% over opaque precompositing - but these costs are tiny on modern devices, and a different order of magnitude than `.cornerRadius` offscreen rendering.
+The second method involves using bezier paths with **precomposited alpha corners**.  This method is pretty flexible and should be one of the most frequently used.  It does incur the cost of alpha blending across the full size of the content, and including an alpha channel increases memory impact by 25% over opaque precompositing - but these costs are tiny on modern devices, and a different order of magnitude than `.cornerRadius` offscreen rendering.
 
 A key limitation of precomposited corners is that the corners must only touch one node and not intersect with any subnodes.  If either of these conditions exist, clip corners must be used.
 

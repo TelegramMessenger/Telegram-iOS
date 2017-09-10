@@ -38,7 +38,12 @@ ASDISPLAYNODE_EXTERN_C_BEGIN
 @interface ASDisplayNode (ASResizableContents) <ASResizableContents>
 @end
 
-// This function can operate on either an ASDisplayNode (including un-loaded) or CALayer directly.
+/**
+ This function can operate on either an ASDisplayNode (including un-loaded) or CALayer directly. More info about resizing mode: https://github.com/TextureGroup/Texture/issues/439
+
+ @param obj ASDisplayNode, CALayer or object that conforms to `ASResizableContents` protocol
+ @param image Image you would like to resize
+ */
 extern void ASDisplayNodeSetResizableContents(id<ASResizableContents> obj, UIImage *image);
 
 /**

@@ -22,8 +22,11 @@
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASElementMap.h>
 #import <AsyncDisplayKit/ASLayout.h>
+#import <AsyncDisplayKit/ASLayoutSpecUtilities.h>
 #import <AsyncDisplayKit/ASPageTable.h>
 #import <AsyncDisplayKit/ASThread.h>
+
+#import <queue>
 
 @implementation NSMapTable (ASCollectionLayoutConvenience)
 
@@ -50,30 +53,49 @@ elementToLayoutAttributesTable:[NSMapTable elementToLayoutAttributesTable]];
 
 - (instancetype)initWithContext:(ASCollectionLayoutContext *)context
                          layout:(ASLayout *)layout
-                getElementBlock:(ASCollectionElement *(^)(ASLayout *))getElementBlock
+                getElementBlock:(ASCollectionLayoutStateGetElementBlock)getElementBlock
 {
   ASElementMap *elements = context.elements;
   NSMapTable *table = [NSMapTable elementToLayoutAttributesTable];
-  
-  for (ASLayout *sublayout in layout.sublayouts) {
-    ASCollectionElement *element = getElementBlock(sublayout);
-    if (element == nil) {
-      ASDisplayNodeFailAssert(@"Element not found!");
-      continue;
+
+  // Traverse the given layout tree in breadth first fashion. Generate layout attributes for all included elements along the way. 
+  struct Context {
+    ASLayout *layout;
+    CGPoint absolutePosition;
+  };
+
+  std::queue<Context> queue;
+  queue.push({layout, CGPointZero});
+
+  while (!queue.empty()) {
+    Context context = queue.front();
+    queue.pop();
+
+    ASLayout *layout = context.layout;
+    const CGPoint absolutePosition = context.absolutePosition;
+
+    ASCollectionElement *element = getElementBlock(layout);
+    if (element != nil) {
+      NSIndexPath *indexPath = [elements indexPathForElement:element];
+      NSString *supplementaryElementKind = element.supplementaryElementKind;
+
+      UICollectionViewLayoutAttributes *attrs;
+      if (supplementaryElementKind == nil) {
+        attrs = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:indexPath];
+      } else {
+        attrs = [UICollectionViewLayoutAttributes layoutAttributesForSupplementaryViewOfKind:supplementaryElementKind withIndexPath:indexPath];
+      }
+
+      CGRect frame = layout.frame;
+      frame.origin = absolutePosition;
+      attrs.frame = frame;
+      [table setObject:attrs forKey:element];
     }
-    
-    NSIndexPath *indexPath = [elements indexPathForElement:element];
-    NSString *supplementaryElementKind = element.supplementaryElementKind;
-    
-    UICollectionViewLayoutAttributes *attrs;
-    if (supplementaryElementKind == nil) {
-      attrs = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:indexPath];
-    } else {
-      attrs = [UICollectionViewLayoutAttributes layoutAttributesForSupplementaryViewOfKind:supplementaryElementKind withIndexPath:indexPath];
+
+    // Add all sublayouts to process in next step
+    for (ASLayout *sublayout in layout.sublayouts) {
+      queue.push({sublayout, absolutePosition + sublayout.position});
     }
-    
-    attrs.frame = sublayout.frame;
-    [table setObject:attrs forKey:element];
   }
 
   return [self initWithContext:context contentSize:layout.size elementToLayoutAttributesTable:table];
@@ -150,9 +172,10 @@ elementToLayoutAttributesTable:[NSMapTable elementToLayoutAttributesTable]];
 }
 
 - (ASPageToLayoutAttributesTable *)getAndRemoveUnmeasuredLayoutAttributesPageTableInRect:(CGRect)rect
-                                                                             contentSize:(CGSize)contentSize
-                                                                                pageSize:(CGSize)pageSize
 {
+  CGSize pageSize = _context.viewportSize;
+  CGSize contentSize = _contentSize;
+
   ASDN::MutexLocker l(__instanceLock__);
   if (_unmeasuredPageToLayoutAttributesTable.count == 0 || CGRectIsNull(rect) || CGRectIsEmpty(rect) || CGSizeEqualToSize(CGSizeZero, contentSize) || CGSizeEqualToSize(CGSizeZero, pageSize)) {
     return nil;

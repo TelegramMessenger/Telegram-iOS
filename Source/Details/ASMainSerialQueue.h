@@ -21,6 +21,7 @@
 AS_SUBCLASSING_RESTRICTED
 @interface ASMainSerialQueue : NSObject
 
+@property (nonatomic, readonly) NSUInteger numberOfScheduledBlocks;
 - (void)performBlockOnMainThread:(dispatch_block_t)block;
 
 @end

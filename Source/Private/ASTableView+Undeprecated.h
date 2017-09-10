@@ -33,6 +33,19 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, weak) id<ASTableDelegate>   asyncDelegate;
 @property (nonatomic, weak) id<ASTableDataSource> asyncDataSource;
+@property (nonatomic, assign) CGPoint contentOffset;
+@property (nonatomic, assign) BOOL automaticallyAdjustsContentOffset;
+@property (nonatomic, assign) BOOL inverted;
+@property (nonatomic, readonly, nullable) NSArray<NSIndexPath *> *indexPathsForVisibleRows;
+@property (nonatomic, readonly, nullable) NSArray<NSIndexPath *> *indexPathsForSelectedRows;
+@property (nonatomic, readonly, nullable) NSIndexPath *indexPathForSelectedRow;
+
+/**
+ * The number of screens left to scroll before the delegate -tableView:beginBatchFetchingWithContext: is called.
+ *
+ * Defaults to two screenfuls.
+ */
+@property (nonatomic, assign) CGFloat leadingScreensForBatching;
 
 /**
  * Initializer.
@@ -43,10 +56,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @param style A constant that specifies the style of the table view. See UITableViewStyle for descriptions of valid constants.
  */
 - (instancetype)initWithFrame:(CGRect)frame style:(UITableViewStyle)style;
-
-@property (nonatomic, assign) BOOL automaticallyAdjustsContentOffset;
-
-@property (nonatomic, assign) BOOL inverted;
 
 /**
  * Tuning parameters for a range type in full mode.
@@ -109,12 +118,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)selectRowAtIndexPath:(NSIndexPath *)indexPath animated:(BOOL)animated scrollPosition:(UITableViewScrollPosition)scrollPosition;
 
-@property (nonatomic, readonly, nullable) NSArray<NSIndexPath *> *indexPathsForVisibleRows;
-
-@property (nonatomic, readonly, nullable) NSArray<NSIndexPath *> *indexPathsForSelectedRows;
-
-@property (nonatomic, readonly, nullable) NSIndexPath *indexPathForSelectedRow;
-
 - (nullable NSIndexPath *)indexPathForRowAtPoint:(CGPoint)point;
 
 - (nullable NSArray<NSIndexPath *> *)indexPathsForRowsInRect:(CGRect)rect;
@@ -134,13 +137,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @return an indexPath for this cellNode
  */
 - (nullable NSIndexPath *)indexPathForNode:(ASCellNode *)cellNode AS_WARN_UNUSED_RESULT;
-
-/**
- * The number of screens left to scroll before the delegate -tableView:beginBatchFetchingWithContext: is called.
- *
- * Defaults to two screenfuls.
- */
-@property (nonatomic, assign) CGFloat leadingScreensForBatching;
 
 /**
  * Reload everything from scratch, destroying the working range and all cached nodes.
@@ -310,6 +306,8 @@ NS_ASSUME_NONNULL_BEGIN
  * before this method is called.
  */
 - (void)moveRowAtIndexPath:(NSIndexPath *)indexPath toIndexPath:(NSIndexPath *)newIndexPath;
+
+- (void)setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated;
 
 @end
 NS_ASSUME_NONNULL_END

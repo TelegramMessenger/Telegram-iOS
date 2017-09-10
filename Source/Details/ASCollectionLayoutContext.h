@@ -29,6 +29,7 @@ AS_SUBCLASSING_RESTRICTED
 @interface ASCollectionLayoutContext : NSObject
 
 @property (nonatomic, assign, readonly) CGSize viewportSize;
+@property (nonatomic, assign, readonly) CGPoint initialContentOffset;
 @property (nonatomic, assign, readonly) ASScrollDirection scrollableDirections;
 @property (nonatomic, weak, readonly) ASElementMap *elements;
 @property (nonatomic, strong, readonly, nullable) id additionalInfo;

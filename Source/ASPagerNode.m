@@ -30,7 +30,7 @@
 #import <AsyncDisplayKit/ASCollectionView+Undeprecated.h>
 #import <AsyncDisplayKit/UIResponder+AsyncDisplayKit.h>
 
-@interface ASPagerNode () <ASCollectionDataSource, ASCollectionDelegate, ASCollectionDelegateFlowLayout, ASDelegateProxyInterceptor, ASCollectionGalleryLayoutSizeProviding>
+@interface ASPagerNode () <ASCollectionDataSource, ASCollectionDelegate, ASCollectionDelegateFlowLayout, ASDelegateProxyInterceptor, ASCollectionGalleryLayoutPropertiesProviding>
 {
   __weak id <ASPagerDataSource> _pagerDataSource;
   ASPagerNodeProxy *_proxyDataSource;
@@ -67,6 +67,7 @@
 - (instancetype)initWithCollectionViewLayout:(ASPagerFlowLayout *)flowLayout;
 {
   ASDisplayNodeAssert([flowLayout isKindOfClass:[ASPagerFlowLayout class]], @"ASPagerNode requires a flow layout.");
+  ASDisplayNodeAssertTrue(flowLayout.scrollDirection == UICollectionViewScrollDirectionHorizontal);
   self = [super initWithCollectionViewLayout:flowLayout];
   return self;
 }
@@ -76,7 +77,7 @@
   ASCollectionGalleryLayoutDelegate *layoutDelegate = [[ASCollectionGalleryLayoutDelegate alloc] initWithScrollableDirections:ASScrollDirectionHorizontalDirections];
   self = [super initWithLayoutDelegate:layoutDelegate layoutFacilitator:nil];
   if (self) {
-    layoutDelegate.sizeProvider = self;
+    layoutDelegate.propertiesProvider = self;
   }
   return self;
 }
@@ -113,7 +114,15 @@
 
 - (NSInteger)currentPageIndex
 {
-  return (self.view.contentOffset.x / CGRectGetWidth(self.view.bounds));
+  return (self.view.contentOffset.x / [self pageSize].width);
+}
+
+- (CGSize)pageSize
+{
+  UIEdgeInsets contentInset = self.view.contentInset;
+  CGSize pageSize = self.bounds.size;
+  pageSize.height -= (contentInset.top + contentInset.bottom);
+  return pageSize;
 }
 
 #pragma mark - Helpers
@@ -138,12 +147,12 @@
   return indexPath.row;
 }
 
-#pragma mark - ASCollectionGalleryLayoutSizeProviding
+#pragma mark - ASCollectionGalleryLayoutPropertiesProviding
 
 - (CGSize)sizeForElements:(ASElementMap *)elements
 {
   ASDisplayNodeAssertMainThread();
-  return self.bounds.size;
+  return [self pageSize];
 }
 
 #pragma mark - ASCollectionDataSource
@@ -180,7 +189,7 @@
   }
 #pragma clang diagnostic pop
 
-  return ASSizeRangeMake(self.bounds.size);
+  return ASSizeRangeMake([self pageSize]);
 }
 
 #pragma mark - Data Source Proxy

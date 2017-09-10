@@ -26,19 +26,15 @@ extern void ASDisplayNodeSetupLayerContentsWithResizableImage(CALayer *layer, UI
 
 extern void ASDisplayNodeSetResizableContents(id<ASResizableContents> obj, UIImage *image)
 {
-  // FIXME: This method does not currently handle UIImageResizingModeTile, which is the default on iOS 6.
-  // I'm not sure of a way to use CALayer directly to perform such tiling on the GPU, though the stretch is handled by the GPU,
-  // and CALayer.h documents the fact that contentsCenter is used to stretch the pixels.
-
   if (image) {
+    ASDisplayNodeCAssert(image.resizingMode == UIImageResizingModeStretch || UIEdgeInsetsEqualToEdgeInsets(image.capInsets, UIEdgeInsetsZero),
+                         @"Image insets must be all-zero or resizingMode has to be UIImageResizingModeStretch. XCode assets default value is UIImageResizingModeTile which is not supported by Texture because of GPU-accelerated CALayer features.");
+    
     // Image may not actually be stretchable in one or both dimensions; this is handled
     obj.contents = (id)[image CGImage];
     obj.contentsScale = [image scale];
     obj.rasterizationScale = [image scale];
     CGSize imageSize = [image size];
-
-    ASDisplayNodeCAssert(image.resizingMode == UIImageResizingModeStretch || UIEdgeInsetsEqualToEdgeInsets(image.capInsets, UIEdgeInsetsZero),
-             @"the resizing mode of image should be stretch; if not, then its insets must be all-zero");
 
     UIEdgeInsets insets = [image capInsets];
 

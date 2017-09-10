@@ -485,7 +485,8 @@ static CGFloat computeItemsStackDimensionSum(const std::vector<ASStackLayoutSpec
                                                   });
 
   // Sum up the childrens' dimensions (including spacing) in the stack direction.
-  const CGFloat childStackDimensionSum = std::accumulate(items.begin(), items.end(), childSpacingSum,
+  const CGFloat childStackDimensionSum = std::accumulate(items.begin(), items.end(),
+                                                         childSpacingSum,
                                                          [&](CGFloat x, const ASStackLayoutSpecItem &l) {
                                                            return x + stackDimension(style.direction, l.layout.size);
                                                          });
@@ -647,22 +648,25 @@ static std::vector<ASStackUnpositionedLine> collectChildrenIntoLines(const std::
   std::vector<ASStackUnpositionedLine> lines;
   std::vector<ASStackLayoutSpecItem> lineItems;
   CGFloat lineStackDimensionSum = 0;
+  CGFloat interitemSpacing = 0;
 
   for(auto it = items.begin(); it != items.end(); ++it) {
     const auto &item = *it;
     const CGFloat itemStackDimension = stackDimension(style.direction, item.layout.size);
-    const CGFloat itemAndSpacingStackDimension = (lineItems.empty() ? 0.0 : style.spacing) + item.child.style.spacingBefore + itemStackDimension + item.child.style.spacingAfter;
-    const BOOL negativeViolationIfAddItem = (ASStackUnpositionedLayout::computeStackViolation(lineStackDimensionSum + itemAndSpacingStackDimension, style, sizeRange) < 0);
+    const CGFloat itemAndSpacingStackDimension = item.child.style.spacingBefore + itemStackDimension + item.child.style.spacingAfter;
+    const BOOL negativeViolationIfAddItem = (ASStackUnpositionedLayout::computeStackViolation(lineStackDimensionSum + interitemSpacing + itemAndSpacingStackDimension, style, sizeRange) < 0);
     const BOOL breakCurrentLine = negativeViolationIfAddItem && !lineItems.empty();
     
     if (breakCurrentLine) {
       lines.push_back({.items = std::vector<ASStackLayoutSpecItem> (lineItems)});
       lineItems.clear();
       lineStackDimensionSum = 0;
+      interitemSpacing = 0;
     }
     
     lineItems.push_back(std::move(item));
-    lineStackDimensionSum += itemAndSpacingStackDimension;
+    lineStackDimensionSum += interitemSpacing + itemAndSpacingStackDimension;
+    interitemSpacing = style.spacing;
   }
   
   // Handle last line

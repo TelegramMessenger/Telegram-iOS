@@ -1,24 +1,34 @@
 ## master
 
 * Add your own contributions to the next release on the line below this with your name.
-- [ASStackLayoutSpec] Add lineSpacing property working with flex wrap. [Flo Vouin](https://github.com/flovouin)
-- [ASStackLayoutSpec] Fix flex wrap overflow in some cases using item spacing. [Flo Vouin](https://github.com/flovouin)
-- [ASNodeController] Add -nodeDidLayout callback. Allow switching retain behavior at runtime. [Scott Goodson](https://github.com/appleguy)
-- [ASCollectionView] Add delegate bridging and index space translation for missing UICollectionViewLayout properties. [Scott Goodson](https://github.com/appleguy)
-- [ASTextNode2] Add initial implementation for link handling. [Scott Goodson](https://github.com/appleguy) [#396](https://github.com/TextureGroup/Texture/pull/396)
-- [ASTextNode2] Provide compile flag to globally enable new implementation of ASTextNode: ASTEXTNODE_EXPERIMENT_GLOBAL_ENABLE. [Scott Goodson](https://github.com/appleguy) [#396](https://github.com/TextureGroup/Texture/pull/410)
-- Add ASCollectionGalleryLayoutDelegate - an async collection layout that makes same-size collections (e.g photo galleries, pagers, etc) fast and lightweight! [Huy Nguyen](https://github.com/nguyenhuy/) [#76](https://github.com/TextureGroup/Texture/pull/76) [#451](https://github.com/TextureGroup/Texture/pull/451)
-- Fix an issue that causes infinite layout loop in ASDisplayNode after [#428](https://github.com/TextureGroup/Texture/pull/428) [Huy Nguyen](https://github.com/nguyenhuy) [#455](https://github.com/TextureGroup/Texture/pull/455) 
+- [ASCollectionNode] Add -isProcessingUpdates and -onDidFinishProcessingUpdates: APIs. [#522](https://github.com/TextureGroup/Texture/pull/522) [Scott Goodson](https://github.com/appleguy)
+- [Accessibility] Add .isAccessibilityContainer property, allowing automatic aggregation of children's a11y labels. [#468][Scott Goodson](https://github.com/appleguy)
+- [ASImageNode] Enabled .clipsToBounds by default, fixing the use of .cornerRadius and clipping of GIFs. [Scott Goodson](https://github.com/appleguy) [#466](https://github.com/TextureGroup/Texture/pull/466)
 - Fix an issue in layout transition that causes it to unexpectedly use the old layout [Huy Nguyen](https://github.com/nguyenhuy) [#464](https://github.com/TextureGroup/Texture/pull/464)
 - Add -[ASDisplayNode detailedLayoutDescription] property to aid debugging. [Adlai Holler](https://github.com/Adlai-Holler) [#476](https://github.com/TextureGroup/Texture/pull/476)
+- Fix an issue that causes calculatedLayoutDidChange being called needlessly. [Huy Nguyen](https://github.com/nguyenhuy) [#490](https://github.com/TextureGroup/Texture/pull/490)
+- Negate iOS 11 automatic estimated table row heights. [Christian Selig](https://github.com/christianselig) [#485](https://github.com/TextureGroup/Texture/pull/485)
+- [Breaking] Add content offset bridging property to ASTableNode and ASCollectionNode. Deprecate related methods in ASTableView and ASCollectionView [Huy Nguyen](https://github.com/nguyenhuy) [#460](https://github.com/TextureGroup/Texture/pull/460)
+- Remove re-entrant access to self.view when applying initial pending state. [Adlai Holler](https://github.com/Adlai-Holler) [#510](https://github.com/TextureGroup/Texture/pull/510)
+- Small improvements in ASCollectionLayout [Huy Nguyen](https://github.com/nguyenhuy) [#509](https://github.com/TextureGroup/Texture/pull/509) [#513](https://github.com/TextureGroup/Texture/pull/513)
+- Fix retain cycle between ASImageNode and PINAnimatedImage [Phil Larson](https://github.com/plarson) [#520](https://github.com/TextureGroup/Texture/pull/520)
+- Change the API for disabling logging from a compiler flag to a runtime C function ASDisableLogging().  [Adlai Holler](https://github.com/Adlai-Holler) [#528](https://github.com/TextureGroup/Texture/pull/528)
+- Table and collection views to consider content inset when calculating (default) element size range [Huy Nguyen](https://github.com/nguyenhuy) [#525](https://github.com/TextureGroup/Texture/pull/525)
+- [ASEditableTextNode] added -editableTextNodeShouldBeginEditing to ASEditableTextNodeDelegate to mirror the corresponding method from UITextViewDelegate. [Yan S.](https://github.com/yans) [#535](https://github.com/TextureGroup/Texture/pull/535)
 
-##2.3.5
+##2.4
 - Fix an issue where inserting/deleting sections could lead to inconsistent supplementary element behavior. [Adlai Holler](https://github.com/Adlai-Holler)
 - Overhaul logging and add activity tracing support. [Adlai Holler](https://github.com/Adlai-Holler)
 - Fix a crash where scrolling a table view after entering editing mode could lead to bad internal states in the table. [Huy Nguyen](https://github.com/nguyenhuy) [#416](https://github.com/TextureGroup/Texture/pull/416/)
 - Fix a crash in collection view that occurs if batch updates are performed while scrolling [Huy Nguyen](https://github.com/nguyenhuy) [#378](https://github.com/TextureGroup/Texture/issues/378)
 - Some improvements in ASCollectionView [Huy Nguyen](https://github.com/nguyenhuy) [#407](https://github.com/TextureGroup/Texture/pull/407)
 - Small refactors in ASDataController [Huy Nguyen](https://github.com/TextureGroup/Texture/pull/443) [#443](https://github.com/TextureGroup/Texture/pull/443)
+- [ASCollectionView] Add delegate bridging and index space translation for missing UICollectionViewLayout properties. [Scott Goodson](https://github.com/appleguy)
+- [ASTextNode2] Add initial implementation for link handling. [Scott Goodson](https://github.com/appleguy) [#396](https://github.com/TextureGroup/Texture/pull/396)
+- [ASTextNode2] Provide compile flag to globally enable new implementation of ASTextNode: ASTEXTNODE_EXPERIMENT_GLOBAL_ENABLE. [Scott Goodson](https://github.com/appleguy) [#396](https://github.com/TextureGroup/Texture/pull/410)
+- Add ASCollectionGalleryLayoutDelegate - an async collection layout that makes same-size collections (e.g photo galleries, pagers, etc) fast and lightweight! [Huy Nguyen](https://github.com/nguyenhuy/) [#76](https://github.com/TextureGroup/Texture/pull/76) [#451](https://github.com/TextureGroup/Texture/pull/451)
+- Fix an issue that causes infinite layout loop in ASDisplayNode after [#428](https://github.com/TextureGroup/Texture/pull/428) [Huy Nguyen](https://github.com/nguyenhuy) [#455](https://github.com/TextureGroup/Texture/pull/455)
+- Rename ASCellNode.viewModel to ASCellNode.nodeModel to reduce collisions with subclass properties implemented by clients. [Adlai Holler](https://github.com/Adlai-Holler) [#504](https://github.com/TextureGroup/Texture/pull/504)
 
 ##2.3.4
 - [Yoga] Rewrite YOGA_TREE_CONTIGUOUS mode with improved behavior and cleaner integration [Scott Goodson](https://github.com/appleguy)

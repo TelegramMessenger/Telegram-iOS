@@ -195,6 +195,7 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   NSArray *_accessibilityHeaderElements;
   CGPoint _accessibilityActivationPoint;
   UIBezierPath *_accessibilityPath;
+  BOOL _isAccessibilityContainer;
 
   // performance measurement
   ASDisplayNodePerformanceMeasurementOptions _measurementOptions;

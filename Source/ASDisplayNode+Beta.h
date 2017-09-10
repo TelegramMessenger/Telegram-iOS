@@ -113,6 +113,19 @@ typedef struct {
 #endif
 
 /**
+ * @abstract Whether this node acts as an accessibility container. If set to YES, then this node's accessibility label will represent
+ * an aggregation of all child nodes' accessibility labels. Nodes in this node's subtree that are also accessibility containers will
+ * not be included in this aggregation, and will be exposed as separate accessibility elements to UIKit.
+ */
+@property (nonatomic, assign) BOOL isAccessibilityContainer;
+
+/**
+ * @abstract Invoked when a user performs a custom action on an accessible node. Nodes that are children of accessibility containers, have
+ * an accessibity label and have an interactive UIAccessibilityTrait will automatically receive custom-action handling.
+ */
+- (void)performAccessibilityCustomAction:(UIAccessibilityCustomAction *)action;
+
+/**
  * @abstract Currently used by ASNetworkImageNode and ASMultiplexImageNode to allow their placeholders to stay if they are loading an image from the network.
  * Otherwise, a display pass is scheduled and completes, but does not actually draw anything - and ASDisplayNode considers the element finished.
  */

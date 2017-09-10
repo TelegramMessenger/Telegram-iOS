@@ -125,6 +125,8 @@ permalink: /showcase.html
 		<a href="https://itunes.apple.com/us/app/classdojo/id552602056"><img class="roundrect" src="http://is4.mzstatic.com/image/thumb/Purple122/v4/83/b1/ef/83b1efa6-bda8-3c80-fd66-4a461f638e07/source/350x350bb.jpg" style="width:100px;height:100px;"></a>
 		<br /> 
 		<b>ClassDojo</b>
+        <br>
+        <a href="https://engineering.classdojo.com/blog/2017/07/12/asyncdisplaykit">Powering Class Story With Texture</a>
 		</td>
     
 		</tr>

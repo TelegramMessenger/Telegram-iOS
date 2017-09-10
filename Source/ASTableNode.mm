@@ -44,6 +44,8 @@
 @property (nonatomic, assign) BOOL allowsMultipleSelectionDuringEditing;
 @property (nonatomic, assign) BOOL inverted;
 @property (nonatomic, assign) CGFloat leadingScreensForBatching;
+@property (nonatomic, assign) CGPoint contentOffset;
+@property (nonatomic, assign) BOOL animatesContentOffset;
 @property (nonatomic, assign) BOOL automaticallyAdjustsContentOffset;
 @end
 
@@ -59,6 +61,8 @@
     _allowsMultipleSelectionDuringEditing = NO;
     _inverted = NO;
     _leadingScreensForBatching = 2;
+    _contentOffset = CGPointZero;
+    _animatesContentOffset = NO;
     _automaticallyAdjustsContentOffset = NO;
   }
   return self;
@@ -121,6 +125,7 @@
     if (pendingState.rangeMode != ASLayoutRangeModeUnspecified) {
       [view.rangeController updateCurrentRangeWithMode:pendingState.rangeMode];
     }
+    [view setContentOffset:pendingState.contentOffset animated:pendingState.animatesContentOffset];
   }
 }
 
@@ -230,6 +235,33 @@
     return pendingState.leadingScreensForBatching;
   } else {
     return self.view.leadingScreensForBatching;
+  }
+}
+
+- (void)setContentOffset:(CGPoint)contentOffset
+{
+  [self setContentOffset:contentOffset animated:NO];
+}
+
+- (void)setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated
+{
+  _ASTablePendingState *pendingState = self.pendingState;
+  if (pendingState) {
+    pendingState.contentOffset = contentOffset;
+    pendingState.animatesContentOffset = animated;
+  } else {
+    ASDisplayNodeAssert(self.nodeLoaded, @"ASTableNode should be loaded if pendingState doesn't exist");
+    [self.view setContentOffset:contentOffset animated:animated];
+  }
+}
+
+- (CGPoint)contentOffset
+{
+  _ASTablePendingState *pendingState = self.pendingState;
+  if (pendingState) {
+    return pendingState.contentOffset;
+  } else {
+    return self.view.contentOffset;
   }
 }
 
@@ -702,12 +734,31 @@ ASLayoutElementCollectionTableSetTraitCollection(_environmentStateLock)
   }
 }
 
-- (void)waitUntilAllUpdatesAreCommitted
+- (BOOL)isProcessingUpdates
+{
+  return (self.nodeLoaded ? [self.view isProcessingUpdates] : NO);
+}
+
+- (void)onDidFinishProcessingUpdates:(nullable void (^)())completion
+{
+  if (!self.nodeLoaded) {
+    completion();
+  } else {
+    [self.view onDidFinishProcessingUpdates:completion];
+  }
+}
+
+- (void)waitUntilAllUpdatesAreProcessed
 {
   ASDisplayNodeAssertMainThread();
   if (self.nodeLoaded) {
     [self.view waitUntilAllUpdatesAreCommitted];
   }
+}
+
+- (void)waitUntilAllUpdatesAreCommitted
+{
+  [self waitUntilAllUpdatesAreProcessed];
 }
 
 #pragma mark - Debugging (Private)

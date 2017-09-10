@@ -159,6 +159,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @optional
 /**
+ @abstract Asks the delegate if editing should begin for the text node.
+ @param editableTextNode An editable text node.
+ @discussion YES if editing should begin; NO if editing should not begin -- the default returns YES.
+ */
+- (BOOL)editableTextNodeShouldBeginEditing:(ASEditableTextNode *)editableTextNode;
+
+/**
   @abstract Indicates to the delegate that the text node began editing.
   @param editableTextNode An editable text node.
   @discussion The invocation of this method coincides with the keyboard animating to become visible.

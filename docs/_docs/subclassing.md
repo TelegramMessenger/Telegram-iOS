@@ -19,7 +19,7 @@ The most important thing to remember is that your init method must be capable of
 
 ### `-didLoad`
 
-This method is conceptually similar to UIViewController's `-viewDidLoad` method; it’s called once and is the point where the backing view has been loaded.  It is guaranteed to be called on the **main thread** and is the appropriate place to do any UIKit things (such as adding gesture recognizers, touching the view / layer, initializing UIKIt objects). 
+This method is conceptually similar to UIViewController's `-viewDidLoad` method; it’s called once and is the point where the backing view has been loaded.  It is guaranteed to be called on the **main thread** and is the appropriate place to do any UIKit things (such as adding gesture recognizers, touching the view / layer, initializing UIKit objects). 
 
 ### `-layoutSpecThatFits:`
 

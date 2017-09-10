@@ -27,8 +27,13 @@
   #define kCFCoreFoundationVersionNumber_iOS_10_0 1348.00
 #endif
 
+#ifndef kCFCoreFoundationVersionNumber_iOS_11_0
+  #define kCFCoreFoundationVersionNumber_iOS_11_0 1438.10
+#endif
+
 #define AS_AT_LEAST_IOS9   (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_9_0)
 #define AS_AT_LEAST_IOS10  (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_10_0)
+#define AS_AT_LEAST_IOS11  (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_11_0)
 
 // If Yoga is available, make it available anywhere we use ASAvailability.
 // This reduces Yoga-specific code in other files.

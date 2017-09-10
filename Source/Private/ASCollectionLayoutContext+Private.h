@@ -30,6 +30,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, weak, readonly) ASCollectionLayoutCache *layoutCache;
 
 - (instancetype)initWithViewportSize:(CGSize)viewportSize
+                initialContentOffset:(CGPoint)initialContentOffset
                 scrollableDirections:(ASScrollDirection)scrollableDirections
                             elements:(ASElementMap *)elements
                  layoutDelegateClass:(Class<ASCollectionLayoutDelegate>)layoutDelegateClass

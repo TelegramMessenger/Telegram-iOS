@@ -19,6 +19,7 @@
 
 #if YOGA /* YOGA */
 
+#import <AsyncDisplayKit/_ASDisplayViewAccessiblity.h>
 #import <AsyncDisplayKit/ASYogaLayoutSpec.h>
 #import <AsyncDisplayKit/ASYogaUtilities.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
@@ -234,6 +235,11 @@
                         yogaFloatForCGFloat(rootConstrainedSize.max.width),
                         yogaFloatForCGFloat(rootConstrainedSize.max.height),
                         YGDirectionInherit);
+
+  // Reset accessible elements, since layout may have changed.
+  ASPerformBlockOnMainThread(^{
+    [(_ASDisplayView *)self.view setAccessibleElements:nil];
+  });
 
   ASDisplayNodePerformBlockOnEveryYogaChild(self, ^(ASDisplayNode * _Nonnull node) {
     [node setupYogaCalculatedLayout];

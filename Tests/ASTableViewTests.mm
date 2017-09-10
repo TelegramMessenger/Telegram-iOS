@@ -610,7 +610,7 @@
 
   [UITableView as_recordEditingCallsIntoArray:selectors];
   XCTAssertGreaterThan(node.numberOfSections, 0);
-  [node waitUntilAllUpdatesAreCommitted];
+  [node waitUntilAllUpdatesAreProcessed];
   XCTAssertGreaterThan(node.view.numberOfSections, 0);
 
   // The first reloadData call helps prevent UITableView from calling it multiple times while ASDataController is working.
@@ -635,13 +635,13 @@
 
   // Load initial data.
   XCTAssertGreaterThan(node.numberOfSections, 0);
-  [node waitUntilAllUpdatesAreCommitted];
+  [node waitUntilAllUpdatesAreProcessed];
   XCTAssertGreaterThan(node.view.numberOfSections, 0);
 
   // Reload data.
   [UITableView as_recordEditingCallsIntoArray:selectors];
   [node reloadData];
-  [node waitUntilAllUpdatesAreCommitted];
+  [node waitUntilAllUpdatesAreProcessed];
 
   // Assert that the beginning of the call pattern is correct.
   // There is currently noise that comes after that we will allow for this test.
@@ -668,7 +668,7 @@
 
   // Trigger data load BEFORE first layout pass, to ensure constrained size is correct.
   XCTAssertGreaterThan(node.numberOfSections, 0);
-  [node waitUntilAllUpdatesAreCommitted];
+  [node waitUntilAllUpdatesAreProcessed];
 
   ASSizeRange expectedSizeRange = ASSizeRangeMake(CGSizeMake(cellWidth, 0));
   expectedSizeRange.max.height = CGFLOAT_MAX;
@@ -703,7 +703,7 @@
   // So we need to force a new layout pass so that the table will pick up a new constrained size and apply to its node.
   [node setNeedsLayout];
   [node.view layoutIfNeeded];
-  [node waitUntilAllUpdatesAreCommitted];
+  [node waitUntilAllUpdatesAreProcessed];
 
   UITableViewCell *cell = [node.view cellForRowAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:0]];
   XCTAssertNotNil(cell);
@@ -758,7 +758,7 @@
   [window makeKeyAndVisible];
 
   [window layoutIfNeeded];
-  [node waitUntilAllUpdatesAreCommitted];
+  [node waitUntilAllUpdatesAreProcessed];
   XCTAssertEqual(node.view.numberOfSections, NumberOfSections);
   ASXCTAssertEqualRects(CGRectMake(0, 32, 375, 44), [node rectForRowAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:0]], @"This text requires very specific geometry. The rect for the first row should match up.");
 
@@ -812,10 +812,10 @@
   node.dataSource = ds;
   
   [node.view layoutIfNeeded];
-  [node waitUntilAllUpdatesAreCommitted];
+  [node waitUntilAllUpdatesAreProcessed];
   CGFloat rowHeight = [node.view rectForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]].size.height;
   // Scroll to row (0,1) + 10pt
-  node.view.contentOffset = CGPointMake(0, rowHeight + 10);
+  node.contentOffset = CGPointMake(0, rowHeight + 10);
   
   [node performBatchAnimated:NO updates:^{
     // Delete row 0 from all sections.
@@ -825,11 +825,11 @@
       [node deleteRowsAtIndexPaths:@[ [NSIndexPath indexPathForItem:0 inSection:i]] withRowAnimation:UITableViewRowAnimationAutomatic];
     }
   } completion:nil];
-  [node waitUntilAllUpdatesAreCommitted];
+  [node waitUntilAllUpdatesAreProcessed];
   
   // Now that row (0,0) is deleted, we should have slid up to be at just 10
   // i.e. we should have subtracted the deleted row height from our content offset.
-  XCTAssertEqual(node.view.contentOffset.y, 10);
+  XCTAssertEqual(node.contentOffset.y, 10);
 }
 
 @end
