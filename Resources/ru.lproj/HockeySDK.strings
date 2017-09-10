@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "Ошибка авторизации. Свяжитесь с разработчиком приложения.";
 "HockeyAuthenticationWrongEmailPassword" = "Вы ввели неверный email или пароль. Проверьте его правильность и попробуйте еще раз.";
 "HockeyAuthenticationAuthSecretMissing" = "HockeySDK authorization secret не настроен. Свяжитесь с разработчиком приложения.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Обязательное поле";

@@ -1,36 +1,13 @@
-/*
- * Author: Benjamin Reimold <bereimol@microsoft.com>
- *
- * Copyright (c) 2012-2015 HockeyApp, Bit Stadium GmbH.
- * All rights reserved.
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- */
+#import "HockeySDKFeatureConfig.h"
 
-#import "HockeySDK.h"
+#if HOCKEYSDK_FEATURE_METRICS
+
 #import "BITPersistence.h"
 
-@interface BITPersistence ()
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
 
+@interface BITPersistence ()
 
 /**
  * The BITPersistenceType determines if we have a bundle of meta data or telemetry that we want to safe.
@@ -40,14 +17,11 @@ typedef NS_ENUM(NSInteger, BITPersistenceType) {
     BITPersistenceTypeMetaData = 1
 };
 
-#if HOCKEYSDK_FEATURE_METRICS
-
 /**
  * Notification that will be send on the main thread to notifiy observers of a successfully saved bundle.
  * This is typically used to trigger sending to the server.
  */
 FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
-
 
 ///-----------------------------------------------------------------------------
 /// @name Save/delete bundle of data
@@ -63,6 +37,8 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
  */
 @property (nonatomic, assign) NSUInteger maxFileCount;
 
+@property (nonatomic, copy) NSString *appHockeySDKDirectoryPath;
+
 /**
  *  An array with all file paths, that have been requested by the sender. If the sender
  *  triggers a delete, the appropriate path should also be removed here. We keep to
@@ -75,7 +51,6 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
  *  Saves the bundle to disk.
  *
  *  @param bundle            the bundle, which should be saved to disk
- *  @param completionBlock   a block which is executed after the bundle has been stored
  */
 - (void)persistBundle:(NSData *)bundle;
 
@@ -105,17 +80,6 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
 ///-----------------------------------------------------------------------------
 
 /**
- * Get a bundle of previously saved data from disk and deletes it using dispatch_sync.
- *
- * @warning Make sure nextBundle is not called from the main thread.
- *
- * It will return a bundle of Telemtry in arbitrary order.
- * Returns 'nil' if no bundle is available
- *
- * @return a bundle of data that's ready to be sent to the server
- */
-
-/**
  *  Returns the path for the next item to send. The requested path is reserved as long
  *  as leaveUpRequestedPath: gets called.
  *
@@ -123,23 +87,23 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
  *
  *  @return the path of the item, which should be sent next
  */
-- (NSString *)requestNextFilePath;
+- (nullable NSString *)requestNextFilePath;
 
 /**
  *  Release a requested path. This method should be called after sending a file failed.
  *
- *  @param path the path that should be available for sending again.
+ *  @param filePath The path that should be available for sending again.
  */
 - (void)giveBackRequestedFilePath:(NSString *)filePath;
 
 /**
  *  Return the json data for a given path
  *
- *  @param path the path of the file
+ *  @param filePath The path of the file
  *
  *  @return a data object which contains telemetry data in json representation
  */
-- (NSData *)dataAtFilePath:(NSString *)filePath;
+- (nullable NSData *)dataAtFilePath:(NSString *)filePath;
 
 /**
  *  Returns the content of the session Ids file.
@@ -154,7 +118,7 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
 
 /**
  *  Returns a folder path for items of a given type.
- *  @param the type
+ *  @param type The type
  *  @return a folder path for items of a given type
  */
 - (NSString *)folderPathForType:(BITPersistenceType)type;
@@ -167,11 +131,14 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
  * Creates the path for a file
  * The filename includes the timestamp.
  *
- * @param the type that you want the fileURL for
+ * @param type The type that you want the fileURL for
 */
-- (NSString *)fileURLForType:(BITPersistenceType)type;
+- (nullable NSString *)fileURLForType:(BITPersistenceType)type;
 
+- (void)createDirectoryStructureIfNeeded;
 
 #endif /* HOCKEYSDK_FEATURE_METRICS */
 
 @end
+
+NS_ASSUME_NONNULL_END

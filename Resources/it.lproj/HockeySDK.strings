@@ -11,7 +11,7 @@
 "HockeyYes" = "Sì";
 
 /* For dialogs no buttons */
-"HockeyNo" = "Non inviare";
+"HockeyNo" = "No";
 
 /* For dialogs ok buttons */
 "HockeyOK" = "OK";
@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "Errore di autorizzazione. Contatta lo sviluppatore di questa app.";
 "HockeyAuthenticationWrongEmailPassword" = "L'indirizzo e-mail o la password non sono corretti. Controlla i dati inseriti e riprova.";
 "HockeyAuthenticationAuthSecretMissing" = "Non è stato impostato l'\"authorization secret\" HockeySDK. Contatta lo sviluppatore di questa app.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Richiesto";

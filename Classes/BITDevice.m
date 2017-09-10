@@ -1,15 +1,14 @@
 #import "BITDevice.h"
-#import "BITOrderedDictionary.h"
 
 /// Data contract class for type Device.
 @implementation BITDevice
 
 ///
 /// Adds all members of this class to a dictionary
-/// @param dictionary to which the members of this class will be added.
+/// @returns dictionary to which the members of this class will be added.
 ///
-- (BITOrderedDictionary *)serializeToDictionary {
-    BITOrderedDictionary *dict = [super serializeToDictionary];
+- (NSDictionary *)serializeToDictionary {
+    NSMutableDictionary *dict = [super serializeToDictionary].mutableCopy;
     if (self.deviceId != nil) {
         [dict setObject:self.deviceId forKey:@"ai.device.id"];
     }

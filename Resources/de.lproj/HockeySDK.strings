@@ -274,3 +274,6 @@
 "HockeyAuthenticationContactDeveloper" = "Autorisierungsfehler. Bitte wenden Sie sich an den Entwickler dieser App.";
 "HockeyAuthenticationWrongEmailPassword" = "E-Mail-Adresse oder Kennwort sind nicht korrekt. Bitte Eingaben prüfen und erneut versuchen.";
 "HockeyAuthenticationAuthSecretMissing" = "Das HockeyApp „Authorization Secret“ wurde nicht hinterlegt. Bitte wenden Sie sich an den Entwickler dieser App.";
+
+/* Accessibility strings */
+"HockeyAccessibilityHintRequired" = "Erforderlich";

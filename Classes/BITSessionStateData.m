@@ -1,5 +1,4 @@
 #import "BITSessionStateData.h"
-#import "BITOrderedDictionary.h"
 
 /// Data contract class for type SessionStateData.
 @implementation BITSessionStateData
@@ -9,7 +8,7 @@
 
 /// Initializes a new instance of the class.
 - (instancetype)init {
-  if(self = [super init]) {
+  if((self = [super init])) {
     _envelopeTypeName = @"Microsoft.ApplicationInsights.SessionState";
     _dataTypeName = @"SessionStateData";
     _version = @2;
@@ -20,10 +19,10 @@
 
 ///
 /// Adds all members of this class to a dictionary
-/// @param dictionary to which the members of this class will be added.
+/// @returns dictionary to which the members of this class will be added.
 ///
-- (BITOrderedDictionary *)serializeToDictionary {
-  BITOrderedDictionary *dict = [super serializeToDictionary];
+- (NSDictionary *)serializeToDictionary {
+  NSMutableDictionary *dict = [super serializeToDictionary].mutableCopy;
   [dict setObject:[NSNumber numberWithInt:(int)self.state] forKey:@"state"];
   return dict;
 }

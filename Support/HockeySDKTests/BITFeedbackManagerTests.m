@@ -8,13 +8,13 @@
 
 #import <XCTest/XCTest.h>
 
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "HockeySDKPrivate.h"
 #import "BITFeedbackManager.h"
 #import "BITFeedbackManagerPrivate.h"
@@ -58,6 +58,20 @@
 
 #pragma mark - Setup Tests
 
+- (void)testSetup {
+  XCTAssertNotNil(self.sut);
+  XCTAssertTrue([self.sut feedbackObservationMode] == BITFeedbackObservationNone);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertFalse([self.sut isFeedbackManagerDisabled]);
+  XCTAssertFalse([self.sut observationModeOnScreenshotEnabled]);
+  XCTAssertFalse([self.sut observationModeThreeFingerTapEnabled]);
+  XCTAssertNil([self.sut userEmail]);
+  XCTAssertNil([self.sut userID]);
+  XCTAssertNil([self.sut userName]);
+  XCTAssertNil([self.sut lastMessageID]);
+  XCTAssertNil([self.sut lastCheck]);
+  XCTAssertFalse([self.sut didAskUserData]);
+}
 
 #pragma mark - User Metadata
 
@@ -229,35 +243,118 @@
     [verifyCount(classMock, times(1)) allowAutomaticFetchingForNewFeedbackForManager:self.sut];
 }
 
+- (void)testFeedbackObservationModeDefault {
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationNone);
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertFalse(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNil(self.sut.tapRecognizer);
+}
+
+- (void)testSetFeedbackObservationMode {
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeOnScreenshot];
+  XCTAssertTrue(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertFalse(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeOnScreenshot);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationNone];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertFalse(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationNone);
+  
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeThreeFingerTap];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeThreeFingerTap);
+  
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationNone];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertFalse(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationNone);
+  
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeThreeFingerTap];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeThreeFingerTap);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeOnScreenshot];
+  XCTAssertTrue(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertFalse(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeOnScreenshot);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeThreeFingerTap];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeThreeFingerTap);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationNone];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertFalse(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationNone);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeAll];
+  XCTAssertTrue(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeAll);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeThreeFingerTap];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeThreeFingerTap);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeAll];
+  XCTAssertTrue(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeAll);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeOnScreenshot];
+  XCTAssertTrue(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertFalse(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeOnScreenshot);
+
+  [self.sut setFeedbackObservationMode:BITFeedbackObservationModeThreeFingerTap];
+  XCTAssertFalse(self.sut.observationModeOnScreenshotEnabled);
+  XCTAssertTrue(self.sut.observationModeThreeFingerTapEnabled);
+  XCTAssertNotNil(self.sut.tapRecognizer);
+  XCTAssertTrue(self.sut.feedbackObservationMode == BITFeedbackObservationModeThreeFingerTap);
+
+
+}
+
 #pragma mark - FeedbackManagerDelegate Tests
 
 - (void)testFeedbackComposeViewController {
   UIImage *sampleImage1 = [UIImage new];
-  UIImage *sampleImage2 = [UIImage new];
   NSData *sampleData1 = [NSData data];
-  NSData *sampleData2 = [NSData data];
   
   self.sut.feedbackComposeHideImageAttachmentButton = YES;
   XCTAssertTrue(self.sut.feedbackComposeHideImageAttachmentButton);
-  
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated"
-  self.sut.feedbackComposerPreparedItems = @[sampleImage1, sampleData1];
-#pragma clang diagnostic pop
 
   id<BITFeedbackManagerDelegate> mockDelegate = mockProtocol(@protocol(BITFeedbackManagerDelegate));
-  [given([mockDelegate preparedItemsForFeedbackManager:self.sut]) willReturn:@[sampleImage2, sampleData2]];
+  [given([mockDelegate preparedItemsForFeedbackManager:self.sut]) willReturn:@[sampleImage1, sampleData1]];
   self.sut.delegate = mockDelegate;
   
   BITFeedbackComposeViewController *composeViewController = [self.sut feedbackComposeViewController];
-  
   NSArray *attachments = [composeViewController performSelector:@selector(attachments)];
-  
-  XCTAssertEqual(attachments.count, 4);
+  XCTAssertEqual(attachments.count, (NSUInteger)2);
   
   XCTAssertTrue(composeViewController.hideImageAttachmentButton);
-  
-  XCTAssertEqual(composeViewController.delegate, mockDelegate);
+  id stronDelegate = composeViewController.delegate;
+  XCTAssertEqual(stronDelegate, mockDelegate);
 }
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */
+

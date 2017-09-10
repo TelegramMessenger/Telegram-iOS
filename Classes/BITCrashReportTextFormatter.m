@@ -68,7 +68,6 @@
 # define CPU_SUBTYPE_ARM_V8 13
 #endif
 
-
 /**
  * Sort PLCrashReportBinaryImageInfo instances by their starting address.
  */
@@ -196,13 +195,14 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
  */
 @implementation BITCrashReportTextFormatter
 
+static NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
 
 /**
  * Formats the provided @a report as human-readable text in the given @a textFormat, and return
  * the formatted result as a string.
  *
  * @param report The report to format.
- * @param textFormat The text format to use.
+ * @param crashReporterKey The crash reporter key.
  *
  * @return Returns the formatted result on success, or nil if an error occurs.
  */
@@ -277,7 +277,8 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
       if (codeType != nil)
         break;
     }
-    
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     /* If we were unable to determine the code type, fall back on the legacy architecture value. */
     if (codeType == nil) {
       switch (report.systemInfo.architecture) {
@@ -303,7 +304,8 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
           lp64 = true;
           break;
       }
-    }    
+    }
+#pragma GCC diagnostic pop
   }
   
   {
@@ -350,7 +352,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
         
         /* Remove username from the path */
 #if TARGET_OS_SIMULATOR
-        processPath = [self anonymizedProcessPathFromProcessPath:processPath];
+        processPath = [self anonymizedPathFromPath:processPath];
 #endif
       }
       
@@ -377,6 +379,9 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   
   [text appendString: @"\n"];
   
+  NSString *xamarinTrace;
+  NSString *exceptionReason;
+  
   /* System info */
   {
     NSString *osBuild = @"???";
@@ -396,7 +401,21 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
       }
     }
     [text appendFormat: @"OS Version:      %@ %@ (%@)\n", osName, report.systemInfo.operatingSystemVersion, osBuild];
-    [text appendFormat: @"Report Version:  104\n"];
+    
+    // Check if exception data contains xamarin stacktrace in order to determine report version
+    if (report.hasExceptionInfo) {
+      exceptionReason = report.exceptionInfo.exceptionReason;
+      NSInteger xamarinTracePosition = [exceptionReason rangeOfString:BITXamarinStackTraceDelimiter].location;
+      if (xamarinTracePosition != NSNotFound) {
+        xamarinTrace = [exceptionReason substringFromIndex:xamarinTracePosition];
+        xamarinTrace = [xamarinTrace stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        xamarinTrace = [xamarinTrace stringByReplacingOccurrencesOfString:@"<---\n\n--->" withString:@"<---\n--->"];
+        exceptionReason = [exceptionReason substringToIndex:xamarinTracePosition];
+        exceptionReason = [exceptionReason stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+      }
+    }
+    NSString *reportVersion = (xamarinTrace) ? @"104-Xamarin" : @"104";
+    [text appendFormat: @"Report Version:  %@\n", reportVersion];
   }
   
   [text appendString: @"\n"];
@@ -426,9 +445,15 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   if (report.hasExceptionInfo) {
     [text appendFormat: @"Application Specific Information:\n"];
     [text appendFormat: @"*** Terminating app due to uncaught exception '%@', reason: '%@'\n",
-     report.exceptionInfo.exceptionName, report.exceptionInfo.exceptionReason];
-    
+    report.exceptionInfo.exceptionName, exceptionReason];
     [text appendString: @"\n"];
+    
+    /* Xamarin Exception */
+    if (xamarinTrace) {
+      [text appendFormat:@"%@\n", xamarinTrace];
+      [text appendString: @"\n"];
+    }
+    
   } else if (crashed_thread != nil) {
     // try to find the selector in case this was a crash in obj_msgSend
     // we search this whether the crash happened in obj_msgSend or not since we don't have the symbol!
@@ -582,8 +607,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
 #endif
     }
 #if TARGET_OS_SIMULATOR
-    if ([imageName length] > 0 && [[imageName substringToIndex:1] isEqualToString:@"~"])
-      imageName = [NSString stringWithFormat:@"/Users/USER%@", [imageName substringFromIndex:1]];
+    imageName = [self anonymizedPathFromPath:imageName];
 #endif
     [text appendFormat: fmt,
      imageInfo.imageBaseAddress,
@@ -604,7 +628,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
  *
  *  @param regName The name of the register to use for getting the address
  *  @param thread  The crashed thread
- *  @param images  NSArray of binary images
+ *  @param report  The crash report.
  *
  *  @return The selector as a C string or NULL if no selector was found
  */
@@ -850,7 +874,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
           break;
           
         default:
-          NSLog(@"Symbol prefix rules are unknown for this OS!");
+          BITHockeyLogDebug(@"Symbol prefix rules are unknown for this OS!");
           break;
       }
     }
@@ -877,21 +901,24 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
  *  This is only necessary when sending crashes from the simulator as the path
  *  then contains the username of the Mac the simulator is running on.
  *
- *  @param processPath A string containing the username
+ *  @param path A string containing the username.
  *
  *  @return An anonymized string where the real username is replaced by "USER"
  */
-+ (NSString *)anonymizedProcessPathFromProcessPath:(NSString *)processPath {
++ (NSString *)anonymizedPathFromPath:(NSString *)path {
   
   NSString *anonymizedProcessPath = [NSString string];
   
-  if (([processPath length] > 0) && [processPath hasPrefix:@"/Users/"]) {
+  if (([path length] > 0) && [path hasPrefix:@"/Users/"]) {
     NSError *error = nil;
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"(/Users/[^/]+/)" options:0 error:&error];
-    anonymizedProcessPath = [regex stringByReplacingMatchesInString:processPath options:0 range:NSMakeRange(0, [processPath length]) withTemplate:@"/Users/USER/"];
+    anonymizedProcessPath = [regex stringByReplacingMatchesInString:path options:0 range:NSMakeRange(0, [path length]) withTemplate:@"/Users/USER/"];
     if (error) {
-      BITHockeyLog("ERROR: String replacing failed - %@", error.localizedDescription);
+      BITHockeyLogError(@"ERROR: String replacing failed - %@", error.localizedDescription);
     }
+  }
+  else if(([path length] > 0) && (![path containsString:@"Users"])) {
+    return path;
   }
   return anonymizedProcessPath;
 }

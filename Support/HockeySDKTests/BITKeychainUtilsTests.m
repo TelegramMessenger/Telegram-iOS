@@ -1,17 +1,14 @@
 //
-//  BITKeychainHelperTests.m
+//  BITKeychainUtilsTests.m
 //  HockeySDK
 //
 //  Created by Stephan Diederich on 23.09.13.
-//  Copyright (c) 2013 __MyCompanyName__. All rights reserved.
+//
 //
 
 #import <XCTest/XCTest.h>
 
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import "HockeySDK.h"

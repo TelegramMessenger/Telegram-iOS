@@ -1,5 +1,5 @@
 //
-//  HockeySDKPrivateTests.m
+//  BITHockeyHelperTests.m
 //  HockeySDK
 //
 //  Created by Andreas Linde on 25.09.13.
@@ -8,10 +8,7 @@
 
 #import <XCTest/XCTest.h>
 
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import "HockeySDK.h"
@@ -34,6 +31,7 @@
 - (void)tearDown {
   // Tear-down code here.
   [super tearDown];
+   [[NSUserDefaults standardUserDefaults] removeObjectForKey:kBITExcludeApplicationSupportFromBackup];
 }
 
 - (void)testURLEncodedString {
@@ -75,16 +73,10 @@
   assertThatBool([resultString isEqualToString:@"Placeholder"], isTrue());
 }
 
-- (void)testUUIDPreiOS6 {
-  NSString *resultString = bit_UUIDPreiOS6();
-  assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], equalToInteger(36));
-}
-
 - (void)testUUID {
   NSString *resultString = bit_UUID();
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], equalToInteger(36));
+  assertThatInteger((NSInteger)[resultString length], equalToInteger(36));
 }
 
 - (void)testAppAnonID {
@@ -96,15 +88,30 @@
   
   NSString *resultString = bit_appAnonID(NO);
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], equalToInteger(36));
+  assertThatInteger((NSInteger)[resultString length], equalToInteger(36));
 }
 
 - (void)testValidAppIconFilename {
   NSString *resultString = nil;
   NSBundle *mockBundle = mock([NSBundle class]);
   NSBundle *resourceBundle = [NSBundle bundleForClass:self.class];
+  
+  // CFBundleIcons contains exotic dictionary filenames
+  NSString *exoticValidIconPath = @"AppIcon.exotic";
+  NSString *exoticValidIconPath2x = @"AppIcon.exotic@2x";
+  [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:@[@"invalidFilename.png"]];
+  [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIcons"]) willReturn:@{@"CFBundlePrimaryIcon":@{@"CFBundleIconFiles":@[exoticValidIconPath, exoticValidIconPath2x]}}];
+  [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIcons~ipad"]) willReturn:nil];
+  [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:nil];
+  
+  //resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
+  //assertThat(resultString, equalTo(exoticValidIconPath2x));
+  
+  // Regular icon names
   NSString *validIconPath = @"AppIcon";
   NSString *validIconPath2x = @"AppIcon@2x";
+  NSString *expected = ([UIScreen mainScreen].scale >= 2.0) ? validIconPath2x : validIconPath;
+
   
   // No valid icons defined at all
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:nil];
@@ -113,7 +120,7 @@
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:@"invalidFilename.png"];
   
   resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
-  assertThat(resultString, nilValue());
+  assertThat(resultString, equalTo(@"Icon"));
   
   // CFBundleIconFiles contains valid filenames
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:@[validIconPath, validIconPath2x]];
@@ -122,14 +129,15 @@
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:nil];
 
   resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
-  assertThat(resultString, notNilValue());
+  
+  assertThat(resultString, equalTo(expected));
   
   // CFBundleIcons contains valid dictionary filenames
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:@[@"invalidFilename.png"]];
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIcons"]) willReturn:@{@"CFBundlePrimaryIcon":@{@"CFBundleIconFiles":@[validIconPath, validIconPath2x]}}];
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIcons~ipad"]) willReturn:nil];
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:nil];
-
+  
   // CFBundleIcons contains valid ipad dictionary and valid default dictionary filenames
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:@[@"invalidFilename.png"]];
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIcons"]) willReturn:@{@"CFBundlePrimaryIcon":@{@"CFBundleIconFiles":@[validIconPath, validIconPath2x]}}];
@@ -137,7 +145,7 @@
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:nil];
 
   resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
-  assertThat(resultString, notNilValue());
+  assertThat(resultString, equalTo(expected));
 
   // CFBundleIcons contains valid filenames
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:@[@"invalidFilename.png"]];
@@ -146,7 +154,7 @@
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:nil];
 
   resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
-  assertThat(resultString, notNilValue());
+  assertThat(resultString, equalTo(expected));
 
   // CFBundleIcon contains valid filename
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:@[@"invalidFilename.png"]];
@@ -155,8 +163,28 @@
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:validIconPath];
   
   resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
-  assertThat(resultString, notNilValue());
+  assertThat(resultString, equalTo(expected));
 }
+
+#ifndef CI
+- (void)testValidAppIconFilenamePerformance {
+  NSBundle *mockBundle = mock([NSBundle class]);
+  NSBundle *resourceBundle = [NSBundle bundleForClass:self.class];
+  
+  NSString *validIconPath2x = @"AppIcon@2x";
+  
+  [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:nil];
+  [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIcons"]) willReturn:nil];
+  [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIcons~ipad"]) willReturn:nil];
+  [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:validIconPath2x];
+  
+  [self measureBlock:^{
+    for (int i = 0; i < 1000; i++) {
+      __unused NSString *resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
+    }
+  }];
+}
+#endif
 
 - (void)testDevicePlattform {
   NSString *resultString = bit_devicePlatform();
@@ -177,7 +205,7 @@
 - (void)testOsName {
   NSString *resultString = bit_osName();
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], greaterThan(@(0)));
+  assertThatInteger((NSInteger)[resultString length], greaterThan(@(0)));
 }
 
 - (void)testDeviceType {
@@ -190,7 +218,7 @@
 - (void)testSdkVersion {
   NSString *resultString = bit_sdkVersion();
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], greaterThan(@(0)));
+  assertThatInteger((NSInteger)[resultString length], greaterThan(@(0)));
 }
 
 - (void)testUtcDateString{
@@ -230,6 +258,69 @@
 	
 	// Verify
   assertThat(result, nilValue());
+}
+
+- (void)testBackupFixRemovesExcludeAttribute {
+  
+  // Setup: Attribute is set and NSUSerDefaults DON'T contain kBITExcludeApplicationSupportFromBackup == YES
+  NSURL *testAppSupportURL = [self createBackupExcludedTestDirectoryForURL];
+  XCTAssertNotNil(testAppSupportURL);
+  XCTAssertTrue([self excludeAttributeIsSetForURL:testAppSupportURL]);
+  
+  // Test
+  bit_fixBackupAttributeForURL(testAppSupportURL);
+  
+  // Verify
+  XCTAssertFalse([self excludeAttributeIsSetForURL:testAppSupportURL]);
+}
+
+- (void)testBackupFixIgnoresRemovalOfExcludeAttributeUserDefaultsContainKey {
+  
+  // Setup: Attribute is set and NSUSerDefaults DO contain kBITExcludeApplicationSupportFromBackup == YES
+  [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITExcludeApplicationSupportFromBackup];
+  NSURL *testAppSupportURL = [self createBackupExcludedTestDirectoryForURL];
+  XCTAssertNotNil(testAppSupportURL);
+  XCTAssertTrue([self excludeAttributeIsSetForURL:testAppSupportURL]);
+  
+  // Test
+  bit_fixBackupAttributeForURL(testAppSupportURL);
+  
+  // Verify
+  XCTAssertTrue([self excludeAttributeIsSetForURL:testAppSupportURL]);
+}
+
+#pragma mark - Test Helper
+
+- (NSURL *)createBackupExcludedTestDirectoryForURL{
+  NSString *testDirectory = @"HockeyTest";
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  
+  NSURL *testAppSupportURL = [[[fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] lastObject] URLByAppendingPathComponent:testDirectory];
+  if ([fileManager createDirectoryAtURL:testAppSupportURL withIntermediateDirectories:YES attributes:nil error:nil]) {
+    if ([testAppSupportURL setResourceValue:@YES
+                           forKey:NSURLIsExcludedFromBackupKey
+                            error:nil]) {
+      return testAppSupportURL;
+    }
+  }
+  return nil;
+}
+
+- (BOOL)excludeAttributeIsSetForURL:(NSURL *)directoryURL {
+  __block BOOL result = NO;
+  XCTestExpectation *expectation = [self expectationWithDescription:@"wait"];
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    NSError *getResourceError = nil;
+    NSNumber *appSupportDirExcludedValue;
+    if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
+      if ([appSupportDirExcludedValue isEqualToValue:@YES]) {
+        result = YES;
+      }
+    }
+    [expectation fulfill];
+  });
+  [self waitForExpectationsWithTimeout:5 handler:nil];
+  return result;
 }
 
 @end

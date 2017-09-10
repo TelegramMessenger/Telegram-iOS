@@ -38,6 +38,7 @@
 #import "HockeySDKFeatureConfig.h"
 #import "HockeySDKEnums.h"
 #import "HockeySDKNullability.h"
+#import "BITAlertAction.h"
 
 #import "BITHockeyManager.h"
 #import "BITHockeyManagerDelegate.h"
@@ -88,9 +89,9 @@
 // By default the SDK retries sending pending data only when the app becomes active.
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"
 
-extern NSString *const __attribute__((unused)) kBITCrashErrorDomain;
-extern NSString *const __attribute__((unused)) kBITUpdateErrorDomain;
-extern NSString *const __attribute__((unused)) kBITFeedbackErrorDomain;
-extern NSString *const __attribute__((unused)) kBITAuthenticatorErrorDomain;
+extern NSString *const kBITCrashErrorDomain;
+extern NSString *const kBITUpdateErrorDomain;
+extern NSString *const kBITFeedbackErrorDomain;
+extern NSString *const kBITAuthenticatorErrorDomain;
 extern NSString *const __attribute__((unused)) kBITHockeyErrorDomain;
 

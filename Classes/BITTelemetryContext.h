@@ -1,9 +1,8 @@
-#import <Foundation/Foundation.h>
-#import "HockeySDK.h"
+#import "HockeySDKFeatureConfig.h"
 
 #if HOCKEYSDK_FEATURE_METRICS
 
-#import "HockeySDKPrivate.h"
+#import <Foundation/Foundation.h>
 #import "BITApplication.h"
 #import "BITDevice.h"
 #import "BITInternal.h"
@@ -12,9 +11,8 @@
 
 @class BITPersistence;
 
+#import "HockeySDKNullability.h"
 NS_ASSUME_NONNULL_BEGIN
-
-FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 
 /**
  *  Context object which contains information about the device, user, session etc.
@@ -82,84 +80,27 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 /**
  *  A dictionary which holds static tag fields for the purpose of caching
  */
-@property (nonatomic, strong)BITOrderedDictionary *tags;
+@property (nonatomic, strong) NSDictionary *tags;
 
 /**
  *  Returns context objects as dictionary.
  *
  *  @return a dictionary containing all context fields
  */
-- (BITOrderedDictionary *)contextDictionary;
+- (NSDictionary *)contextDictionary;
 
 ///-----------------------------------------------------------------------------
 /// @name Getter/Setter
 ///-----------------------------------------------------------------------------
 
-- (NSString *)screenResolution;
-
-- (void)setScreenResolution:(NSString *)screenResolution;
-
-- (NSString *)appVersion;
-
-- (void)setAppVersion:(NSString *)appVersion;
-
-- (NSString *)anonymousUserId;
-
-- (void)setAnonymousUserId:(NSString *)anonymous;
-
-- (NSString *)anonymousUserAquisitionDate;
-
-- (void)setAnonymousUserAquisitionDate:(NSString *)anonymousUserAquisitionDate;
-
-- (NSString *)sdkVersion;
-
-- (void)setSdkVersion:(NSString *)sdkVersion;
-
-- (NSString *)sessionId;
-
 - (void)setSessionId:(NSString *)sessionId;
-
-- (NSString *)isFirstSession;
 
 - (void)setIsFirstSession:(NSString *)isFirstSession;
 
-- (NSString *)isNewSession;
-
 - (void)setIsNewSession:(NSString *)isNewSession;
 
-- (NSString *)osVersion;
-
-- (void)setOsVersion:(NSString *)osVersion;
-
-- (NSString *)osName;
-
-- (void)setOsName:(NSString *)osName;
-
-- (NSString *)deviceModel;
-
-- (void)setDeviceModel:(NSString *)deviceModel;
-
-- (NSString *)deviceOemName;
-
-- (void)setDeviceOemName:(NSString *)oemName;
-
-- (NSString *)osLocale;
-
-- (void)setOsLocale:(NSString *)osLocale;
-
-- (NSString *)osLanguage;
-
-- (void)setOsLanguage:(NSString *)osLanguage;
-
-- (NSString *)deviceId;
-
-- (void)setDeviceId:(NSString *)deviceId;
-
-- (NSString *)deviceType;
-
-- (void)setDeviceType:(NSString *)deviceType;
-
 @end
+
 NS_ASSUME_NONNULL_END
 
 #endif /* HOCKEYSDK_FEATURE_METRICS */

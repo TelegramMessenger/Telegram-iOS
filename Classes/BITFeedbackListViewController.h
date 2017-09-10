@@ -55,7 +55,7 @@
  This ensures that the presentation on iOS 6 and iOS 7 will use the current design on each OS Version.
  */
 
-@interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource, UIActionSheetDelegate, UIAlertViewDelegate, QLPreviewControllerDataSource> {
+@interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource, UIActionSheetDelegate, QLPreviewControllerDataSource> {
 }
 
 @end

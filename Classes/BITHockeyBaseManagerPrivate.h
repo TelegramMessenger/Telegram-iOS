@@ -35,16 +35,13 @@
 
 @interface BITHockeyBaseManager()
 
-@property (nonatomic, strong) NSString *appIdentifier;
+@property (nonatomic, copy) NSString *appIdentifier;
 
 @property (nonatomic, assign, readonly) BITEnvironment appEnvironment;
 
 - (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment;
 
 - (void)startManager;
-
-/** Check if the device is running an iOS version previous to iOS 7 */
-- (BOOL)isPreiOS7Environment;
 
 /** 
  * by default, just logs the message
@@ -80,10 +77,9 @@
  *
  *  @param alertController The UIAlertController to be presented.
  */
-/* We won't use this for now until we have a more robust solution for displaying UIAlertController
 - (void)showAlertController:(UIViewController *)alertController;
-*/
- - (void)showView:(UIViewController *)viewController;
+
+- (void)showView:(UIViewController *)viewController;
 #endif
 
 // Date helpers

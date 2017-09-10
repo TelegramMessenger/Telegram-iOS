@@ -28,10 +28,9 @@
 
 #import <UIKit/UIKit.h>
 
-@interface BITImageAnnotation : UIView {
-  BOOL _selected;
-}
+@interface BITImageAnnotation : UIView
 
+@property (nonatomic) BOOL selected;
 @property (nonatomic) CGSize movedDelta;
 @property (nonatomic, weak) UIImage *sourceImage;
 @property (nonatomic) CGRect imageFrame;

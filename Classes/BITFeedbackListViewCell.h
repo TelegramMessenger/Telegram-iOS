@@ -39,21 +39,6 @@
 
 @end
 
-
-/**
- * Cell style depending on the iOS version
- */
-typedef NS_ENUM(NSUInteger, BITFeedbackListViewCellPresentationStyle) {
-  /**
-   * Default is iOS 6 style
-   */
-  BITFeedbackListViewCellPresentationStyleDefault = 0,
-  /**
-   * Draw cells in the iOS 7 style
-   */
-  BITFeedbackListViewCellPresentationStyleOS7 = 1
-};
-
 /**
  * Cell background style
  */
@@ -72,8 +57,6 @@ typedef NS_ENUM(NSUInteger, BITFeedbackListViewCellBackgroundStyle) {
 @interface BITFeedbackListViewCell : UITableViewCell
 
 @property (nonatomic, strong) BITFeedbackMessage *message;
-
-@property (nonatomic) BITFeedbackListViewCellPresentationStyle style;
 
 @property (nonatomic) BITFeedbackListViewCellBackgroundStyle backgroundStyle;
 

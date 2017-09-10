@@ -1,15 +1,12 @@
 #import <XCTest/XCTest.h>
 
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import <OCMock/OCMock.h>
 
 #import "BITPersistencePrivate.h"
-#import "BITChannel.h"
+#import "BITChannelPrivate.h"
 #import "BITTelemetryContext.h"
 #import "BITPersistence.h"
 #import "BITEnvelope.h"
@@ -17,68 +14,67 @@
 
 @interface BITChannelTests : XCTestCase
 
+@property(nonatomic, strong) BITChannel *sut;
+@property(nonatomic, strong) BITPersistence *mockPersistence;
+
 @end
 
-
-@implementation BITChannelTests {
-  BITChannel *_sut;
-  BITPersistence *_mockPersistence;
-}
+@implementation BITChannelTests
 
 - (void)setUp {
   [super setUp];
-  _mockPersistence = mock(BITPersistence.class);
+  self.mockPersistence = OCMPartialMock([[BITPersistence alloc] init]);
   BITTelemetryContext *mockContext = mock(BITTelemetryContext.class);
   
-  _sut = [[BITChannel alloc]initWithTelemetryContext:mockContext persistence:_mockPersistence];
-  BITSafeJsonEventsString = NULL;
+  self.sut = [[BITChannel alloc]initWithTelemetryContext:mockContext persistence:self.mockPersistence];
+  bit_resetSafeJsonStream(&BITSafeJsonEventsString);
 }
 
 #pragma mark - Setup Tests
 
 - (void)testNewInstanceWasInitialisedCorrectly {
   XCTAssertNotNil([BITChannel new]);
-  XCTAssertNotNil(_sut.dataItemsOperations);
+  XCTAssertNotNil(self.sut.dataItemsOperations);
 }
 
 #pragma mark - Queue management
 
 - (void)testEnqueueEnvelopeWithOneEnvelopeAndJSONStream {
-  _sut = OCMPartialMock(_sut);
-  _sut.maxBatchCount = 3;
+  self.sut = OCMPartialMock(self.sut);
+  self.sut.maxBatchSize = 3;
   BITTelemetryData *testData = [BITTelemetryData new];
   
-  [_sut enqueueTelemetryItem:testData];
+  [self.sut enqueueTelemetryItem:testData];
   
-  dispatch_sync(_sut.dataItemsOperations, ^{
-    assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(1));
+  dispatch_sync(self.sut.dataItemsOperations, ^{
+    assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(1));
     XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
   });
 }
 
 - (void)testEnqueueEnvelopeWithMultipleEnvelopesAndJSONStream {
-  _sut = OCMPartialMock(_sut);
-  _sut.maxBatchCount = 3;
+  self.sut = OCMPartialMock(self.sut);
+  self.sut.maxBatchSize = 3;
   
   BITTelemetryData *testData = [BITTelemetryData new];
   
-  assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(0));
+  assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(0));
   
-  [_sut enqueueTelemetryItem:testData];
-  dispatch_sync(_sut.dataItemsOperations, ^{
-    assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(1));
+  [self.sut enqueueTelemetryItem:testData];
+  dispatch_sync(self.sut.dataItemsOperations, ^{
+    assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(1));
     XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
   });
   
-  [_sut enqueueTelemetryItem:testData];
-  dispatch_sync(_sut.dataItemsOperations, ^{
-    assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(2));
+  [self.sut enqueueTelemetryItem:testData];
+  dispatch_sync(self.sut.dataItemsOperations, ^{
+    assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(2));
     XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
   });
   
-  [_sut enqueueTelemetryItem:testData];
-  dispatch_sync(_sut.dataItemsOperations, ^{
-    assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(0));
+  [self.sut enqueueTelemetryItem:testData];
+  dispatch_sync(self.sut.dataItemsOperations, ^{
+    assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(0));
     XCTAssertTrue(strcmp(BITSafeJsonEventsString, "") == 0);
   });
 }
@@ -90,14 +86,16 @@
 #pragma clang diagnostic ignored "-Wnonnull"
   bit_appendStringToSafeJsonStream(nil, 0);
 #pragma clang diagnostic pop
-  XCTAssertTrue(BITSafeJsonEventsString == NULL);
+  XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
   
-  BITSafeJsonEventsString = NULL;
+//  BITSafeJsonEventsString = NULL;
+  bit_resetSafeJsonStream(&BITSafeJsonEventsString);
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonnull"
   bit_appendStringToSafeJsonStream(nil, &BITSafeJsonEventsString);
 #pragma clang diagnostic pop
-  XCTAssertTrue(BITSafeJsonEventsString == NULL);
+  XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
   
   bit_appendStringToSafeJsonStream(@"", &BITSafeJsonEventsString);
   XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
@@ -110,12 +108,14 @@
   bit_resetSafeJsonStream(&BITSafeJsonEventsString);
   XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
   
-  BITSafeJsonEventsString = NULL;
+//  BITSafeJsonEventsString = NULL;
+  bit_resetSafeJsonStream(&BITSafeJsonEventsString);
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonnull"
   bit_resetSafeJsonStream(nil);
 #pragma clang diagnostic pop
-  XCTAssertEqual(BITSafeJsonEventsString, NULL);
+  XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
   
   BITSafeJsonEventsString = strdup("test string");
   bit_resetSafeJsonStream(&BITSafeJsonEventsString);

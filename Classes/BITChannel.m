@@ -1,13 +1,13 @@
-#import "BITChannel.h"
+#import "HockeySDKFeatureConfig.h"
 
 #if HOCKEYSDK_FEATURE_METRICS
 
+#import "HockeySDKPrivate.h"
+#import "BITChannelPrivate.h"
 #import "BITHockeyHelper.h"
-#import "HockeySDK.h"
 #import "BITTelemetryContext.h"
 #import "BITTelemetryData.h"
 #import "HockeySDKPrivate.h"
-#import "BITOrderedDictionary.h"
 #import "BITEnvelope.h"
 #import "BITData.h"
 #import "BITDevice.h"
@@ -16,43 +16,116 @@
 static char *const BITDataItemsOperationsQueue = "net.hockeyapp.senderQueue";
 char *BITSafeJsonEventsString;
 
-static NSInteger const BITDefaultMaxBatchCount  = 1;
-static NSInteger const BITSchemaVersion  = 2;
+NSString *const BITChannelBlockedNotification = @"BITChannelBlockedNotification";
+
+static NSInteger const BITDefaultMaxBatchSize  = 50;
+static NSInteger const BITDefaultBatchInterval = 15;
+static NSInteger const BITSchemaVersion = 2;
+
+static NSInteger const BITDebugMaxBatchSize = 5;
+static NSInteger const BITDebugBatchInterval = 3;
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface BITChannel ()
+
+@property (nonatomic, weak, nullable)  id appDidEnterBackgroundObserver;
+
+@end
 
 @implementation BITChannel
 
 @synthesize persistence = _persistence;
+@synthesize channelBlocked = _channelBlocked;
 
 #pragma mark - Initialisation
 
 - (instancetype)init {
-  if(self = [super init]) {
+  if ((self = [super init])) {
     bit_resetSafeJsonStream(&BITSafeJsonEventsString);
     _dataItemCount = 0;
+    if (bit_isDebuggerAttached()) {
+      _maxBatchSize = BITDebugMaxBatchSize;
+      _batchInterval = BITDebugBatchInterval;
+    } else {
+      _maxBatchSize = BITDefaultMaxBatchSize;
+      _batchInterval = BITDefaultBatchInterval;
+    }
     dispatch_queue_t serialQueue = dispatch_queue_create(BITDataItemsOperationsQueue, DISPATCH_QUEUE_SERIAL);
     _dataItemsOperations = serialQueue;
+    
+    [self registerObservers];
   }
   return self;
 }
 
-- (instancetype)initWithTelemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *) persistence {
-  if(self = [self init]) {
+- (instancetype)initWithTelemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *)persistence {
+  if ((self = [self init])) {
     _telemetryContext = telemetryContext;
     _persistence = persistence;
   }
   return self;
 }
 
+- (void)dealloc {
+  [self unregisterObservers];
+  [self invalidateTimer];
+}
+
+#pragma mark - Observers
+
+- (void) registerObservers {
+  __weak typeof(self) weakSelf = self;
+  if(nil == self.appDidEnterBackgroundObserver) {
+    void (^notificationBlock)(NSNotification *note) = ^(NSNotification __unused *note) {
+      typeof(self) strongSelf = weakSelf;
+      if ([strongSelf timerIsRunning]) {
+        [strongSelf persistDataItemQueue];
+        
+        /**
+         * From the documentation for applicationDidEnterBackground:
+         * It's likely any background tasks you start in applicationDidEnterBackground: will not run until after that method exits,
+         * you should request additional background execution time before starting those tasks. In other words,
+         * first call beginBackgroundTaskWithExpirationHandler: and then run the task on a dispatch queue or secondary thread.
+         */
+        UIApplication *sharedApplication = [UIApplication sharedApplication];
+        __block UIBackgroundTaskIdentifier _backgroundTask = [sharedApplication beginBackgroundTaskWithExpirationHandler:^{
+          [sharedApplication endBackgroundTask:_backgroundTask];
+          _backgroundTask = UIBackgroundTaskInvalid;
+        }];
+      }
+    };
+    self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+                                                                                       object:nil
+                                                                                        queue:NSOperationQueue.mainQueue
+                                                                                   usingBlock:notificationBlock];
+  }
+}
+
+- (void) unregisterObservers {
+  id strongObserver = self.appDidEnterBackgroundObserver;
+  if(strongObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongObserver];
+    self.appDidEnterBackgroundObserver = nil;
+  }
+}
+
 #pragma mark - Queue management
 
-- (BOOL)isQueueBusy{
-  
-  [self.persistence isFreeSpaceAvailable];
-  return true;
+- (BOOL)isQueueBusy {
+  if (!self.channelBlocked) {
+    BOOL persistenceBusy = ![self.persistence isFreeSpaceAvailable];
+    if (persistenceBusy) {
+      self.channelBlocked = YES;
+      [self sendBlockingChannelNotification];
+    }
+  }
+  return self.channelBlocked;
 }
 
 - (void)persistDataItemQueue {
-  if(!BITSafeJsonEventsString || strlen(BITSafeJsonEventsString) == 0) {
+  [self invalidateTimer];
+  if (!BITSafeJsonEventsString || strlen(BITSafeJsonEventsString) == 0) {
     return;
   }
   
@@ -65,37 +138,55 @@ static NSInteger const BITSchemaVersion  = 2;
 
 - (void)resetQueue {
   bit_resetSafeJsonStream(&BITSafeJsonEventsString);
-  _dataItemCount = 0;
+  self.dataItemCount = 0;
 }
 
 #pragma mark - Adding to queue
 
 - (void)enqueueTelemetryItem:(BITTelemetryData *)item {
-  if(item) {
-    BITOrderedDictionary *dict = [self dictionaryForTelemetryData:item];
-    __weak typeof(self) weakSelf = self;
-    
-    dispatch_async(self.dataItemsOperations, ^{
-      typeof(self) strongSelf = weakSelf;
-      
-      // Enqueue item
-      [strongSelf appendDictionaryToJsonStream:dict];
-      
-      if(strongSelf->_dataItemCount >= self.maxBatchCount) {
-        // Max batch count has been reached, so write queue to disk and delete all items.
-        [strongSelf persistDataItemQueue];
-        
-      }
-    });
+  
+  if (!item) {
+    // Case 1: Item is nil: Do not enqueue item and abort operation
+    BITHockeyLogWarning(@"WARNING: TelemetryItem was nil.");
+    return;
   }
+  
+  __weak typeof(self) weakSelf = self;
+  dispatch_async(self.dataItemsOperations, ^{
+    typeof(self) strongSelf = weakSelf;
+    
+    if (strongSelf.isQueueBusy) {
+      // Case 2: Channel is in blocked state: Trigger sender, start timer to check after again after a while and abort operation.
+      BITHockeyLogDebug(@"INFO: The channel is saturated. %@ was dropped.", item.debugDescription);
+      if (![strongSelf timerIsRunning]) {
+        [strongSelf startTimer];
+      }
+      return;
+    }
+    
+    // Enqueue item
+    NSDictionary *dict = [self dictionaryForTelemetryData:item];
+    [strongSelf appendDictionaryToJsonStream:dict];
+    
+    if (strongSelf.dataItemCount >= self.maxBatchSize) {
+      // Case 3: Max batch count has been reached, so write queue to disk and delete all items.
+      [strongSelf persistDataItemQueue];
+      
+    } else if (strongSelf.dataItemCount == 1) {
+      // Case 4: It is the first item, let's start the timer.
+      if (![strongSelf timerIsRunning]) {
+        [strongSelf startTimer];
+      }
+    }
+  });
 }
 
 #pragma mark - Envelope telemerty items
 
-- (BITOrderedDictionary *)dictionaryForTelemetryData:(BITTelemetryData *) telemetryData {
+- (NSDictionary *)dictionaryForTelemetryData:(BITTelemetryData *) telemetryData {
   
   BITEnvelope *envelope = [self envelopeForTelemetryData:telemetryData];
-  BITOrderedDictionary *dict = [envelope serializeToDictionary];
+  NSDictionary *dict = [envelope serializeToDictionary];
   return dict;
 }
 
@@ -108,9 +199,9 @@ static NSInteger const BITSchemaVersion  = 2;
   
   BITEnvelope *envelope = [BITEnvelope new];
   envelope.time = bit_utcDateString([NSDate date]);
-  envelope.iKey = _telemetryContext.appIdentifier;
+  envelope.iKey = self.telemetryContext.appIdentifier;
   
-  envelope.tags = _telemetryContext.contextDictionary;
+  envelope.tags = self.telemetryContext.contextDictionary;
   envelope.data = data;
   envelope.name = telemetryData.envelopeTypeName;
   
@@ -119,27 +210,27 @@ static NSInteger const BITSchemaVersion  = 2;
 
 #pragma mark - Serialization Helper
 
-- (NSString *)serializeDictionaryToJSONString:(BITOrderedDictionary *)dictionary {
+- (NSString *)serializeDictionaryToJSONString:(NSDictionary *)dictionary {
   NSError *error;
   NSData *data = [NSJSONSerialization dataWithJSONObject:dictionary options:(NSJSONWritingOptions)0 error:&error];
   if (!data) {
-    BITHockeyLog(@"ERROR: JSONSerialization error: %@", error.localizedDescription);
+    BITHockeyLogError(@"ERROR: JSONSerialization error: %@", error.localizedDescription);
     return @"{}";
   } else {
-    return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    return (NSString *)[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
   }
 }
 
 #pragma mark JSON Stream
 
-- (void)appendDictionaryToJsonStream:(BITOrderedDictionary *)dictionary {
-  if(dictionary) {
+- (void)appendDictionaryToJsonStream:(NSDictionary *)dictionary {
+  if (dictionary) {
     NSString *string = [self serializeDictionaryToJSONString:dictionary];
     
     // Since we can't persist every event right away, we write it to a simple C string.
     // This can then be written to disk by a signal handler in case of a crash.
     bit_appendStringToSafeJsonStream(string, &(BITSafeJsonEventsString));
-    _dataItemCount += 1;
+    self.dataItemCount += 1;
   }
 }
 
@@ -169,13 +260,64 @@ void bit_resetSafeJsonStream(char **string) {
 
 #pragma mark - Batching
 
-- (NSUInteger)maxBatchCount {
-  if(_maxBatchCount <= 0){
-    return BITDefaultMaxBatchCount;
+- (NSUInteger)maxBatchSize {
+  if(_maxBatchSize <= 0){
+    return BITDefaultMaxBatchSize;
   }
-  return _maxBatchCount;
+  return _maxBatchSize;
+}
+
+- (void)invalidateTimer {
+  if ([self timerIsRunning]) {
+    dispatch_source_cancel((dispatch_source_t)self.timerSource);
+    self.timerSource = nil;
+  }
+}
+
+-(BOOL)timerIsRunning {
+  return self.timerSource != nil;
+}
+
+- (void)startTimer {
+  // Reset timer, if it is already running
+  if ([self timerIsRunning]) {
+    [self invalidateTimer];
+  }
+  
+  self.timerSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.dataItemsOperations);
+  dispatch_source_set_timer((dispatch_source_t)self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * self.batchInterval), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
+  
+  __weak typeof(self) weakSelf = self;
+  dispatch_source_set_event_handler((dispatch_source_t)self.timerSource, ^{
+    typeof(self) strongSelf = weakSelf;
+    
+    if(strongSelf) {
+      if (strongSelf.dataItemCount > 0) {
+        [strongSelf persistDataItemQueue];
+      } else {
+        strongSelf.channelBlocked = NO;
+      }
+      [strongSelf invalidateTimer];
+    }
+  });
+  
+  dispatch_resume((dispatch_source_t)self.timerSource);
+}
+
+/**
+ * Send a BITHockeyBlockingChannelNotification to the main thread to notify observers that channel can't enqueue new items.
+ * This is typically used to trigger sending.
+ */
+- (void)sendBlockingChannelNotification {
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [[NSNotificationCenter defaultCenter] postNotificationName:BITChannelBlockedNotification
+                                                        object:nil
+                                                      userInfo:nil];
+  });
 }
 
 @end
+
+NS_ASSUME_NONNULL_END
 
 #endif /* HOCKEYSDK_FEATURE_METRICS */

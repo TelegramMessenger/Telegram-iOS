@@ -72,7 +72,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  
  */
 
-@interface BITUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>
+@interface BITUpdateManager : BITHockeyBaseManager
 
 ///-----------------------------------------------------------------------------
 /// @name Update Checking
@@ -234,6 +234,5 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  e.g. to push it onto a navigation stack.
  */
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal;
-
 
 @end

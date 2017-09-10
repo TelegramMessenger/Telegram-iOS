@@ -38,7 +38,7 @@
             hockeyAttachmentData:(NSData *)hockeyAttachmentData
                      contentType:(NSString *)contentType
 {
-  if (self = [super init]) {
+  if ((self = [super init])) {
     _filename = filename;
 
     _hockeyAttachmentData = hockeyAttachmentData;

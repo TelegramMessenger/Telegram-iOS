@@ -47,23 +47,22 @@
 #define __IPHONE_6_1     60100
 #endif
 
-@implementation BITHockeyBaseManager {
-  UINavigationController *_navController;
-  
-  NSDateFormatter *_rfc3339Formatter;
-}
+@interface BITHockeyBaseManager ()
 
+@property (nonatomic, strong) UINavigationController *navController;
+@property (nonatomic, strong) NSDateFormatter *rfc3339Formatter;
+
+@end
+
+static void (^_presentAlert)(UIAlertController *) = nil;
+static void (^_presentView)(UIViewController *) = nil;
+
+@implementation BITHockeyBaseManager
 
 - (instancetype)init {
   if ((self = [super init])) {
     _serverURL = BITHOCKEYSDK_URL;
-
-    if ([self isPreiOS7Environment]) {
-      _barStyle = UIBarStyleBlackOpaque;
-      self.navigationBarTintColor = BIT_RGBCOLOR(25, 25, 25);
-    } else {
-      _barStyle = UIBarStyleDefault;
-    }
+    _barStyle = UIBarStyleDefault;
     _modalPresentationStyle = UIModalPresentationFormSheet;
     
     NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
@@ -87,15 +86,11 @@
 #pragma mark - Private
 
 - (void)reportError:(NSError *)error {
-  BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
+  BITHockeyLogError(@"ERROR: %@", [error localizedDescription]);
 }
 
 - (NSString *)encodedAppIdentifier {
-  return bit_encodeAppIdentifier(_appIdentifier);
-}
-
-- (BOOL)isPreiOS7Environment {
-  return bit_isPreiOS7Environment();
+  return bit_encodeAppIdentifier(self.appIdentifier);
 }
 
 - (NSString *)getDevicePlatform {
@@ -160,7 +155,7 @@
     if ([UIWindow instancesRespondToSelector:@selector(rootViewController)]) {
       if (!(window.hidden) && ([window rootViewController])) {
         visibleWindow = window;
-        BITHockeyLog(@"INFO: UIWindow with rootViewController found: %@", visibleWindow);
+        BITHockeyLogDebug(@"INFO: UIWindow with rootViewController found: %@", visibleWindow);
         break;
       }
     }
@@ -184,22 +179,20 @@
     navController.navigationBar.tintColor = self.navigationBarTintColor;
   } else {
     // in case of iOS 7 we overwrite the tint color on the navigation bar
-    if (![self isPreiOS7Environment]) {
-      if ([UIWindow instancesRespondToSelector:NSSelectorFromString(@"tintColor")]) {
-        [navController.navigationBar setTintColor:BIT_RGBCOLOR(0, 122, 255)];
-      }
+    if ([UIWindow instancesRespondToSelector:NSSelectorFromString(@"tintColor")]) {
+      [navController.navigationBar setTintColor:BIT_RGBCOLOR(0, 122, 255)];
     }
   }
-  navController.modalPresentationStyle = self.modalPresentationStyle;
+  navController.modalPresentationStyle = modalPresentationStyle;
   
   return navController;
 }
 
 - (UIViewController *)visibleWindowRootViewController {
   UIViewController *parentViewController = nil;
-  
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(viewControllerForHockeyManager:componentManager:)]) {
-    parentViewController = [[BITHockeyManager sharedHockeyManager].delegate viewControllerForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(viewControllerForHockeyManager:componentManager:)]) {
+    parentViewController = [strongDelegate viewControllerForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
   
   UIWindow *visibleWindow = [self findVisibleWindow];
@@ -226,29 +219,37 @@
   
   return parentViewController;
 }
-/* We won't use this for now until we have a more robust solution for displaying UIAlertController
+
 - (void)showAlertController:(UIViewController *)alertController {
   
   // always execute this on the main thread
   dispatch_async(dispatch_get_main_queue(), ^{
-    UIViewController *parentViewController = [self visibleWindowRootViewController];
-    
-    // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
-    // in tests this also worked fine on iOS 6 and 7 but not on iOS 5 so we are still trying this
-    if ([parentViewController isKindOfClass:NSClassFromString(@"UIAlertController")] || [parentViewController isBeingPresented]) {
-      BITHockeyLog(@"WARNING: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
-      [self performSelector:@selector(showAlertController:) withObject:alertController afterDelay:0.5];
-      return;
-    }
-    
-    if (parentViewController) {
-      [parentViewController presentViewController:alertController animated:YES completion:nil];
+    if (_presentAlert) {
+      _presentAlert(alertController);
+    } else {
+      UIViewController *parentViewController = [self visibleWindowRootViewController];
+      
+      // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
+      // in tests this also worked fine on iOS 6 and 7 but not on iOS 5 so we are still trying this
+      if ([parentViewController isKindOfClass:NSClassFromString(@"UIAlertController")] || [parentViewController isBeingPresented]) {
+        BITHockeyLogWarning(@"WARNING: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
+        [self performSelector:@selector(showAlertController:) withObject:alertController afterDelay:0.5];
+        return;
+      }
+      
+      if (parentViewController) {
+        [parentViewController presentViewController:alertController animated:YES completion:nil];
+      }
     }
   });
 }
-*/
 
 - (void)showView:(UIViewController *)viewController {
+  if (_presentView) {
+    _presentView(viewController);
+    return;
+  }
+  
   // if we compile Crash only, then BITHockeyBaseViewController is not included
   // in the headers and will cause a warning with the modulemap file
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
@@ -257,36 +258,36 @@
     // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
     // in tests this also worked fine on iOS 6 and 7 but not on iOS 5 so we are still trying this
     if ([parentViewController isBeingPresented]) {
-      BITHockeyLog(@"WARNING: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
+      BITHockeyLogDebug(@"INFO: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
       [self performSelector:@selector(showView:) withObject:viewController afterDelay:0.5];
       return;
     }
     
-    if (_navController != nil) _navController = nil;
+    if (self.navController != nil) self.navController = nil;
     
-    _navController = [self customNavigationControllerWithRootViewController:viewController presentationStyle:_modalPresentationStyle];
+    self.navController = [self customNavigationControllerWithRootViewController:viewController presentationStyle:self.modalPresentationStyle];
     
     if (parentViewController) {
-      _navController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
+      self.navController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
       
       // page sheet for the iPad
       if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-        _navController.modalPresentationStyle = UIModalPresentationFormSheet;
+        self.navController.modalPresentationStyle = UIModalPresentationFormSheet;
       }
       
       if ([viewController isKindOfClass:[BITHockeyBaseViewController class]])
         [(BITHockeyBaseViewController *)viewController setModalAnimated:YES];
       
-      [parentViewController presentViewController:_navController animated:YES completion:nil];
+      [parentViewController presentViewController:self.navController animated:YES completion:nil];
     } else {
       // if not, we add a subview to the window. A bit hacky but should work in most circumstances.
       // Also, we don't get a nice animation for free, but hey, this is for beta not production users ;)
       UIWindow *visibleWindow = [self findVisibleWindow];
       
-      BITHockeyLog(@"INFO: No rootViewController found, using UIWindow-approach: %@", visibleWindow);
+      BITHockeyLogDebug(@"INFO: No rootViewController found, using UIWindow-approach: %@", visibleWindow);
       if ([viewController isKindOfClass:[BITHockeyBaseViewController class]])
         [(BITHockeyBaseViewController *)viewController setModalAnimated:NO];
-      [visibleWindow addSubview:_navController.view];
+      [visibleWindow addSubview:self.navController.view];
     }
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK */
 }
@@ -346,12 +347,19 @@
 - (NSDate *)parseRFC3339Date:(NSString *)dateString {
   NSDate *date = nil;
   NSError *error = nil; 
-  if (![_rfc3339Formatter getObjectValue:&date forString:dateString range:nil error:&error]) {
-    BITHockeyLog(@"INFO: Invalid date '%@' string: %@", dateString, error);
+  if (![self.rfc3339Formatter getObjectValue:&date forString:dateString range:nil error:&error]) {
+    BITHockeyLogWarning(@"WARNING: Invalid date '%@' string: %@", dateString, error);
   }
   
   return date;
 }
 
++ (void)setPresentAlert:(void (^)(UIAlertController *))presentAlert {
+  _presentAlert = [presentAlert copy];
+}
+
++ (void)setPresentView:(void (^)(UIViewController *))presentView {
+  _presentView = [presentView copy];
+}
 
 @end

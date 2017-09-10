@@ -8,10 +8,7 @@
 
 #import <XCTest/XCTest.h>
 
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import <CrashReporter/CrashReporter.h>
@@ -253,13 +250,34 @@
   assertThat(crashLogString, notNilValue());
 }
 
-- (void)testAnonymizedProcessPathFromProcessPath {
-  NSString *testProcessPath = @"/Users/sampleuser/Library/Developer/CoreSimulator/Devices/CDF13B63-8B8A-4191-A528-1A2FAFC9A915/data/Containers/Bundle/Application/FF127199-5B93-4E84-87AF-5C11F1E639DB/Test.app/Test";
+- (void)testXamarinReport {
+  NSData *crashData = [BITTestHelper dataOfFixtureCrashReportWithFileName:@"live_report_xamarin"];
+  assertThat(crashData, notNilValue());
+  
+  NSError *error = nil;
+  BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
+  
+  NSString *filePath = [[NSBundle bundleForClass:self.class] pathForResource:@"log_report_xamarin" ofType:@""];
+  NSString *expected = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:nil];
+  
+  NSString *actual = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:@""];
+  
+  assertThat(expected, equalTo(actual));
+}
 
-  NSString *anonymizedProcessPath = [BITCrashReportTextFormatter anonymizedProcessPathFromProcessPath:testProcessPath];
+- (void)testAnonymizedPathFromPath {
+  NSString *testPath = @"/var/containers/Bundle/Application/2A0B0E6F-0BF2-419D-A699-FCDF8ADECD8C/Puppet.app/Puppet";
+  NSString *expected = testPath;
+  NSString *actual = [BITCrashReportTextFormatter anonymizedPathFromPath:testPath];
+  assertThat(actual, equalTo(expected));
+  
+  testPath = @"/Users/sampleuser/Library/Developer/CoreSimulator/Devices/B8321AD0-C30B-41BD-BA54-5A7759CEC4CD/data/Containers/Bundle/Application/8CC7B5B5-7841-45C4-BAC2-6AA1B944A5E1/Puppet.app/Puppet";
+  expected = @"/Users/USER/Library/Developer/CoreSimulator/Devices/B8321AD0-C30B-41BD-BA54-5A7759CEC4CD/data/Containers/Bundle/Application/8CC7B5B5-7841-45C4-BAC2-6AA1B944A5E1/Puppet.app/Puppet";
+  actual = [BITCrashReportTextFormatter anonymizedPathFromPath:testPath];
+  assertThat(actual, equalTo(expected));
+  XCTAssertFalse([actual containsString:@"sampleuser"]);
+  XCTAssertTrue([actual hasPrefix:@"/Users/USER/"]);
 
-  XCTAssertFalse([anonymizedProcessPath containsString:@"sampleuser"]);
-  XCTAssertTrue([anonymizedProcessPath hasPrefix:@"/Users/USER/"]);
 }
 
 @end

@@ -74,9 +74,13 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
    */
   BITFeedbackObservationModeOnScreenshot = 1,
   /**
-   *  Triggers when the user taps with three fingers on the screen.
+   *  Triggers when the user taps with three fingers on the screen. Captures a screenshot and attaches it to the composer.
    */
-  BITFeedbackObservationModeThreeFingerTap = 2
+  BITFeedbackObservationModeThreeFingerTap = 2,
+  /**
+   * Allows both BITFeedbackObservationModeOnScreenshot and BITFeedbackObservationModeThreeFingerTap at the same time.
+   */
+   BITFeedbackObservationModeAll = 3
 };
 
 
@@ -216,28 +220,16 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
    own trigger and then call `[[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeViewWithGeneratedScreenshot];` to handle your custom events
    that should trigger this.
  - `BITFeedbackObservationModeOnScreenshot`: Triggers when the user takes a screenshot.
-    This will grab the latest image from the camera roll. Requires iOS 7 or later!
- - `BITFeedbackObservationModeThreeFingerTap`: Triggers when the user taps on the screen for three seconds with three fingers.
+    This will grab the latest image from the camera roll. Requires iOS 7 or later! It also requires to add a NSPhotoLibraryUsageDescription to your app's Info.plist.
+ - `BITFeedbackObservationModeThreeFingerTap`: Triggers when the user taps on the screen with three fingers. Takes a screenshot and attaches it to the composer. It also requires to add a NSPhotoLibraryUsageDescription to your app's Info.plist.
  
- Default is `BITFeedbackObservationNone`
+ Default is `BITFeedbackObservationNone`.
+ If BITFeedbackManger was disabled, setting a new value will be ignored.
+ @see `[BITHockeyManager disableFeedbackManager]`
  
  @see showFeedbackComposeViewWithGeneratedScreenshot
  */
 @property (nonatomic, readwrite) BITFeedbackObservationMode feedbackObservationMode;
-
-
-/**
- Prefill feedback compose message user interface with the items given.
- 
- All NSString-Content in the array will be concatenated and result in the message,
- while all UIImage and NSData-instances will be turned into attachments.
- 
- @deprecated This property is deprecated in favor of `BITFeedbackManagerDelegate preparedItemsForFeedbackManager:`.
- 
- @see `[BITFeedbackComposeViewController prepareWithItems:]`
- */
-@property (nonatomic, copy, nullable) NSArray *feedbackComposerPreparedItems DEPRECATED_MSG_ATTRIBUTE("Use -preparedItemsForFeedbackManager: delegate method instead.");
-
 
 /**
  Don't show the option to add images from the photo library

@@ -1,15 +1,14 @@
 #import "BITSession.h"
-#import "BITOrderedDictionary.h"
 
 /// Data contract class for type Session.
 @implementation BITSession
 
 ///
 /// Adds all members of this class to a dictionary
-/// @param dictionary to which the members of this class will be added.
+/// @returns dictionary to which the members of this class will be added.
 ///
-- (BITOrderedDictionary *)serializeToDictionary {
-  BITOrderedDictionary *dict = [super serializeToDictionary];
+- (NSDictionary *)serializeToDictionary {
+  NSMutableDictionary *dict = [super serializeToDictionary].mutableCopy;
   if (self.sessionId != nil) {
     [dict setObject:self.sessionId forKey:@"ai.session.id"];
   }

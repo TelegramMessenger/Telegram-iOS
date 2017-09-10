@@ -80,5 +80,7 @@
  */
 @property (nonatomic, assign) UIModalPresentationStyle modalPresentationStyle;
 
++ (void)setPresentAlert:(void (^)(UIAlertController *))presentAlert;
++ (void)setPresentView:(void (^)(UIViewController *))presentView;
 
 @end

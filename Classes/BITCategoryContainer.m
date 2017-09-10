@@ -52,9 +52,9 @@
 
 static const NSUInteger ChunkSize = 16384;
 
-@implementation NSData (GZIP)
+@implementation NSData (BITGZIP)
 
-- (NSData *)gzippedDataWithCompressionLevel:(float)level
+- (NSData *)bit_gzippedDataWithCompressionLevel:(float)level
 {
   if ([self length])
   {
@@ -63,7 +63,10 @@ static const NSUInteger ChunkSize = 16384;
     stream.zfree = Z_NULL;
     stream.opaque = Z_NULL;
     stream.avail_in = (uint)[self length];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
     stream.next_in = (Bytef *)[self bytes];
+#pragma clang diagnostic pop
     stream.total_out = 0;
     stream.avail_out = 0;
     
@@ -89,12 +92,12 @@ static const NSUInteger ChunkSize = 16384;
   return nil;
 }
 
-- (NSData *)gzippedData
+- (NSData *)bit_gzippedData
 {
-  return [self gzippedDataWithCompressionLevel:-1.0f];
+  return [self bit_gzippedDataWithCompressionLevel:-1.0f];
 }
 
-- (NSData *)gunzippedData
+- (NSData *)bit_gunzippedData
 {
   if ([self length])
   {
@@ -102,7 +105,10 @@ static const NSUInteger ChunkSize = 16384;
     stream.zalloc = Z_NULL;
     stream.zfree = Z_NULL;
     stream.avail_in = (uint)[self length];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
     stream.next_in = (Bytef *)[self bytes];
+#pragma clang diagnostic pop
     stream.total_out = 0;
     stream.avail_out = 0;
     
