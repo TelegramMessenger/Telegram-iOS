@@ -157,11 +157,13 @@
     if (self != nil) {
         _keepKeyboard = keepKeyboard;
         _manager = manager;
+        _managedIsHidden = true;
     }
     
     self = [super initWithFrame:[[_manager context] fullscreenBounds]];
     if (self != nil)
     {
+        self.frame = [[_manager context] fullscreenBounds];
         self.windowLevel = UIWindowLevelStatusBar - 0.001f;
         
         _parentController = parentController;
@@ -185,7 +187,7 @@
 
 - (void)dealloc
 {
-
+    _manager = nil;
 }
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event

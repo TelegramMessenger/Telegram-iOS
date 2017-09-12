@@ -211,6 +211,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         }
         
         _collectionView = [[TGAttachmentCarouselCollectionView alloc] initWithFrame:CGRectMake(0, 0, self.bounds.size.width, TGAttachmentZoomedPhotoHeight + TGAttachmentEdgeInset * 2) collectionViewLayout:_smallLayout];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+        _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+#endif
         _collectionView.backgroundColor = [UIColor clearColor];
         _collectionView.dataSource = self;
         _collectionView.delegate = self;

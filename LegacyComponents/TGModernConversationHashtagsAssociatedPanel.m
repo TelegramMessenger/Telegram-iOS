@@ -75,6 +75,9 @@
         [self addSubview:_bottomView];
         
         _tableView = [[UITableView alloc] init];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+        _tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+#endif
         _tableView.delegate = self;
         _tableView.dataSource = self;
         _tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;

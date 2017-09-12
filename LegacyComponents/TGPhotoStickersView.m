@@ -182,6 +182,9 @@ typedef enum {
         
         _collectionLayout = [[TGPhotoStickersCollectionLayout alloc] init];
         _collectionView = [[TGPhotoStickersCollectionView alloc] initWithFrame:CGRectZero collectionViewLayout:_collectionLayout];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+        _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+#endif
         _collectionView.delegate = self;
         _collectionView.dataSource = self;
         _collectionView.backgroundColor = [UIColor clearColor];

@@ -328,14 +328,22 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     }
 }
 
+- (bool)isBackgroundView:(UIView *)view {
+    NSString *viewClass = NSStringFromClass([view class]);
+    if ([viewClass isEqualToString:@"_UINavigationBarBackground"] || [viewClass isEqualToString:@"_UIBarBackground"]) {
+        return true;
+    }
+    return false;
+}
+
 - (UIView *)findBackground:(UIView *)view
 {
     if (view == nil)
         return nil;
     
-    NSString *viewClass = NSStringFromClass([view class]);
-    if ([viewClass isEqualToString:@"_UINavigationBarBackground"] || [viewClass isEqualToString:@"_UIBarBackground"])
+    if ([self isBackgroundView:view]) {
         return view;
+    }
     
     for (UIView *subview in view.subviews)
     {
@@ -359,8 +367,18 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     }
 }
 
+- (void)addSubview:(UIView *)view {
+    if ([self isBackgroundView:view]) {
+        view.hidden = true;
+    }
+    [super addSubview:view];
+}
+
 - (void)insertSubview:(UIView *)view atIndex:(NSInteger)index
 {
+    if ([self isBackgroundView:view]) {
+        view.hidden = true;
+    }
     if (view != self.additionalView)
         [super insertSubview:view atIndex:MIN((int)self.subviews.count, MAX(index, 2))];
     else

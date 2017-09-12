@@ -13,10 +13,10 @@
 #import "TGMediaPickerGalleryVideoScrubberThumbnailView.h"
 #import "TGMediaPickerGalleryVideoTrimView.h"
 
-const CGFloat TGVideoScrubberMinimumTrimDuration = 1.0f;
-const CGFloat TGVideoScrubberZoomActivationInterval = 0.25f;
-const CGFloat TGVideoScrubberTrimRectEpsilon = 3.0f;
-const CGFloat TGVideoScrubberPadding = 8.0f;
+static const CGFloat TGVideoScrubberMinimumTrimDuration = 1.0f;
+static const CGFloat TGVideoScrubberZoomActivationInterval = 0.25f;
+static const CGFloat TGVideoScrubberTrimRectEpsilon = 3.0f;
+static const CGFloat TGVideoScrubberPadding = 8.0f;
 
 typedef enum
 {
