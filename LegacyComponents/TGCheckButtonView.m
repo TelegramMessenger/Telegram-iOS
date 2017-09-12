@@ -15,6 +15,9 @@
     UIImageView *_checkFillView;
     UIView *_checkShortFragment;
     UIView *_checkLongFragment;
+    
+    UILabel *_numberLabel;
+    NSInteger _number;
 }
 @end
 
@@ -346,26 +349,33 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
             }
             
             [UIView animateWithDuration:duration delay:0.0f usingSpringWithDamping:damping initialSpringVelocity:initialVelocity options:UIViewAnimationOptionBeginFromCurrentState animations:^
-            {
-                _wrapperView.transform = CGAffineTransformIdentity;
-            } completion:nil];
+             {
+                 _wrapperView.transform = CGAffineTransformIdentity;
+             } completion:nil];
             
-            _checkView.alpha = 1.0f;
-            _checkShortFragment.transform = CGAffineTransformMakeScale(1.0f, 0.0f);
-            _checkLongFragment.transform = CGAffineTransformMakeScale(0.0f, 1.0f);
-            
-            [UIView animateKeyframesWithDuration:0.21f delay:0.0f options:kNilOptions animations:^
+            if (_number > 0)
             {
-                [UIView addKeyframeWithRelativeStartTime:0.0f relativeDuration:0.333f animations:^
-                {
-                    _checkShortFragment.transform = CGAffineTransformIdentity;
-                }];
                 
-                [UIView addKeyframeWithRelativeStartTime:0.333f relativeDuration:0.666f animations:^
+            }
+            else
+            {
+                _checkView.alpha = 1.0f;
+                _checkShortFragment.transform = CGAffineTransformMakeScale(1.0f, 0.0f);
+                _checkLongFragment.transform = CGAffineTransformMakeScale(0.0f, 1.0f);
+                
+                [UIView animateKeyframesWithDuration:0.21f delay:0.0f options:kNilOptions animations:^
                 {
-                    _checkLongFragment.transform = CGAffineTransformIdentity;
-                }];
-            } completion:nil];
+                    [UIView addKeyframeWithRelativeStartTime:0.0f relativeDuration:0.333f animations:^
+                    {
+                        _checkShortFragment.transform = CGAffineTransformIdentity;
+                    }];
+                    
+                    [UIView addKeyframeWithRelativeStartTime:0.333f relativeDuration:0.666f animations:^
+                    {
+                        _checkLongFragment.transform = CGAffineTransformIdentity;
+                    }];
+                } completion:nil];
+            }
         }
         else
         {
@@ -375,8 +385,15 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
             
             [UIView animateWithDuration:duration animations:^
             {
-                _checkView.transform = CGAffineTransformScale(_checkView.transform, 0.01f, 0.01f);
-                _checkView.alpha = 0.0f;
+                if (_number > 0)
+                {
+                    
+                }
+                else
+                {
+                    _checkView.transform = CGAffineTransformScale(_checkView.transform, 0.01f, 0.01f);
+                    _checkView.alpha = 0.0f;
+                }
                 
                 if (bump)
                     _wrapperView.transform = CGAffineTransformIdentity;
@@ -391,13 +408,26 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
         _checkFillView.alpha = selected ? 1.0f : 0.0f;
         _checkFillView.transform = selected ? CGAffineTransformIdentity : CGAffineTransformMakeScale(0.1f, 0.1f);
 
-        _checkView.alpha = selected ? 1.0f : 0.0f;
-        _checkView.transform = TGCheckButtonDefaultTransform;
-        _checkShortFragment.transform = CGAffineTransformIdentity;
-        _checkLongFragment.transform = CGAffineTransformIdentity;
+        if (_number > 0)
+        {
+            _checkView.alpha = 0.0f;
+        }
+        else
+        {
+            _checkView.alpha = selected ? 1.0f : 0.0f;
+            _checkView.transform = TGCheckButtonDefaultTransform;
+            _checkShortFragment.transform = CGAffineTransformIdentity;
+            _checkLongFragment.transform = CGAffineTransformIdentity;
+        }
     }
     
     super.selected = selected;
+}
+
+- (void)setNumber:(NSInteger)number
+{
+    _number = number;
+    _numberLabel.text = number > 0 ? [NSString stringWithFormat:@"%ld", number] : @"";
 }
 
 #pragma mark -

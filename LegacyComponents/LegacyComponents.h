@@ -68,7 +68,9 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGModernConversationAssociatedInputPanel.h>
 #import <LegacyComponents/TGModernConversationHashtagsAssociatedPanel.h>
 #import <LegacyComponents/TGModernConversationMentionsAssociatedPanel.h>
+#import <LegacyComponents/TGModernConversationAlphacodeAssociatedPanel.h>
 #import <LegacyComponents/TGSuggestionContext.h>
+#import <LegacyComponents/TGAlphacode.h>
 
 #import <LegacyComponents/TGTextCheckingResult.h>
 #import <LegacyComponents/TGChannelBannedRights.h>

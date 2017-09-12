@@ -2,19 +2,13 @@
 
 #import "LegacyComponentsInternal.h"
 
+#import <LegacyComponents/TGImageUtils.h>
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 
 @interface TGMediaPickerGalleryVideoTrimView () <UIGestureRecognizerDelegate>
 {
-    UIControl *_leftSegmentView;
-    UIView *_topSegmentView;
-    UIControl *_rightSegmentView;
-    UIView *_bottomSegmentView;
-
-    UIView *_topShadowView;
-    
-    UIImageView *_leftHandleView;
-    UIImageView *_rightHandleView;
+    UIButton *_leftSegmentView;
+    UIButton *_rightSegmentView;
     
     UILongPressGestureRecognizer *_startHandlePressGestureRecognizer;
     UILongPressGestureRecognizer *_endHandlePressGestureRecognizer;
@@ -38,39 +32,42 @@
     {
         self.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -25, -5, -25);
         
-        UIColor *trimBackgroundColor = UIColorRGB(0x4d4d4d);
+        UIColor *normalColor = UIColorRGB(0x4d4d4d);
+        UIColor *accentColor = UIColorRGB(0x5ecdff);
         
-        _topShadowView = [[UIView alloc] initWithFrame:CGRectMake(12, 2, 0, 1)];
-        _topShadowView.backgroundColor = [UIColor colorWithWhite:0.0f alpha:0.3f];
-        [self addSubview:_topShadowView];
+        static dispatch_once_t onceToken;
+        static UIImage *handle;
+        dispatch_once(&onceToken, ^
+        {
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(12.0f, 36.0f), false, 0.0f);
+            
+            [normalColor setFill];
+            [[UIBezierPath bezierPathWithRoundedRect:CGRectMake(0.0f, 0.0f, 12.0f, 36.0f) byRoundingCorners:UIRectCornerTopLeft | UIRectCornerBottomLeft cornerRadii:CGSizeMake(4.0f, 4.0f)] fill];
+            
+            handle = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+        });
         
-        _leftSegmentView = [[UIControl alloc] initWithFrame:CGRectMake(0, 0, 12, 36)];
-        _leftSegmentView.backgroundColor = trimBackgroundColor;
+        UIImage *leftImage = handle;
+        UIImage *leftHighlightedImage = TGTintedImage(handle, accentColor);
+        UIImage *rightImage = [UIImage imageWithCGImage:handle.CGImage scale:handle.scale orientation:UIImageOrientationUpMirrored];
+        UIImage *rightHighlightedImage = [UIImage imageWithCGImage:leftHighlightedImage.CGImage scale:handle.scale orientation:UIImageOrientationUpMirrored];
+        
+        _leftSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 12, 36)];
+        _leftSegmentView.adjustsImageWhenHighlighted = false;
+        [_leftSegmentView setBackgroundImage:leftImage forState:UIControlStateNormal];
+        [_leftSegmentView setBackgroundImage:leftHighlightedImage forState:UIControlStateSelected];
+        [_leftSegmentView setBackgroundImage:leftHighlightedImage forState:UIControlStateSelected | UIControlStateHighlighted];
         _leftSegmentView.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -25, -5, -10);
         [self addSubview:_leftSegmentView];
         
-        _topSegmentView = [[UIView alloc] initWithFrame:CGRectMake(12, 0, 0, 2)];
-        _topSegmentView.backgroundColor = trimBackgroundColor;
-        [self addSubview:_topSegmentView];
-        
-        _rightSegmentView = [[UIControl alloc] initWithFrame:CGRectMake(0, 0, 12, 36)];
-        _rightSegmentView.backgroundColor = trimBackgroundColor;
+        _rightSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 12, 36)];
+        _rightSegmentView.adjustsImageWhenHighlighted = false;
+        [_rightSegmentView setBackgroundImage:rightImage forState:UIControlStateNormal];
+        [_rightSegmentView setBackgroundImage:rightHighlightedImage forState:UIControlStateSelected];
+        [_rightSegmentView setBackgroundImage:rightHighlightedImage forState:UIControlStateSelected | UIControlStateHighlighted];
         _rightSegmentView.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -10, -5, -25);
         [self addSubview:_rightSegmentView];
-        
-        _bottomSegmentView = [[UIView alloc] initWithFrame:CGRectMake(12, 0, 0, 2)];
-        _bottomSegmentView.backgroundColor = trimBackgroundColor;
-        [self addSubview:_bottomSegmentView];
-        
-        _leftHandleView = [[UIImageView alloc] initWithFrame:_leftSegmentView.bounds];
-        _leftHandleView.contentMode = UIViewContentModeCenter;
-        _leftHandleView.image = TGComponentsImageNamed(@"VideoScrubberLeftArrow");
-        [_leftSegmentView addSubview:_leftHandleView];
-        
-        _rightHandleView = [[UIImageView alloc] initWithFrame:_rightSegmentView.bounds];
-        _rightHandleView.contentMode = UIViewContentModeCenter;
-        _rightHandleView.image = TGComponentsImageNamed(@"VideoScrubberRightArrow");
-        [_rightSegmentView addSubview:_rightHandleView];
         
         _startHandlePressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleHandlePress:)];
         _startHandlePressGestureRecognizer.delegate = self;
@@ -97,35 +94,26 @@
 {
     _trimmingEnabled = trimmingEnabled;
     
-    _leftSegmentView.userInteractionEnabled = trimmingEnabled;
-    _rightSegmentView.userInteractionEnabled = trimmingEnabled;
-    
-    _leftHandleView.hidden = !trimmingEnabled;
-    _rightHandleView.hidden = !trimmingEnabled;
+    _leftSegmentView.hidden = !trimmingEnabled;
+    _rightSegmentView.hidden = !trimmingEnabled;
     
     [self setNeedsLayout];
 }
 
 - (void)setTrimming:(bool)trimming animated:(bool)animated
 {
-    UIColor *backgroundColor = trimming ? UIColorRGB(0x5cc0ff) : UIColorRGB(0x4d4d4d);
-    
     if (animated)
     {
         [UIView animateWithDuration:0.15f animations:^
-        {
-            _leftSegmentView.backgroundColor = backgroundColor;
-            _topSegmentView.backgroundColor = backgroundColor;
-            _rightSegmentView.backgroundColor = backgroundColor;
-            _bottomSegmentView.backgroundColor = backgroundColor;
-        }];
+         {
+             [_leftSegmentView setSelected:trimming];
+             [_rightSegmentView setSelected:trimming];
+         }];
     }
     else
     {
-        _leftSegmentView.backgroundColor = backgroundColor;
-        _topSegmentView.backgroundColor = backgroundColor;
-        _rightSegmentView.backgroundColor = backgroundColor;
-        _bottomSegmentView.backgroundColor = backgroundColor;
+        [_leftSegmentView setSelected:trimming];
+        [_rightSegmentView setSelected:trimming];
     }
 }
 
@@ -233,14 +221,10 @@
 
 - (void)layoutSubviews
 {
-    CGFloat handleWidth = self.trimmingEnabled ? 12.0f : 2.0f;
+    CGFloat handleWidth = 12.0f;
     
     _leftSegmentView.frame = CGRectMake(0, 0, handleWidth, self.frame.size.height);
     _rightSegmentView.frame = CGRectMake(self.frame.size.width - handleWidth, 0, handleWidth, self.frame.size.height);
- 
-    _topSegmentView.frame = CGRectMake(_leftSegmentView.frame.size.width, 0, self.frame.size.width - _leftSegmentView.frame.size.width - _rightSegmentView.frame.size.width, 2);
-    _bottomSegmentView.frame = CGRectMake(_leftSegmentView.frame.size.width, self.frame.size.height - _bottomSegmentView.frame.size.height, self.frame.size.width - _leftSegmentView.frame.size.width - _rightSegmentView.frame.size.width, 2);
-    _topShadowView.frame = CGRectMake(_topSegmentView.frame.origin.x, _topSegmentView.frame.size.height, _topSegmentView.frame.size.width, _topShadowView.frame.size.height);
 }
 
 @end

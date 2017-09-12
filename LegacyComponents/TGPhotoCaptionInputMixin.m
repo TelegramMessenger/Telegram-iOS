@@ -8,6 +8,7 @@
 
 #import "TGModernConversationMentionsAssociatedPanel.h"
 #import "TGModernConversationHashtagsAssociatedPanel.h"
+#import "TGModernConversationAlphacodeAssociatedPanel.h"
 
 @interface TGPhotoCaptionInputMixin () <TGMediaPickerCaptionInputPanelDelegate>
 {
@@ -230,6 +231,75 @@
         
         [panel setHashtagListSignal:hashtagListSignal];
     }
+}
+
+- (void)inputPanelAlphacodeEntered:(TGMediaPickerCaptionInputPanel *)inputTextPanel alphacode:(NSString *)alphacode
+{
+    if (alphacode == nil)
+    {
+        if ([[inputTextPanel associatedPanel] isKindOfClass:[TGModernConversationAlphacodeAssociatedPanel class]])
+            [inputTextPanel setAssociatedPanel:nil animated:true];
+    }
+    else
+    {
+        TGModernConversationAlphacodeAssociatedPanel *panel = nil;
+        if ([[inputTextPanel associatedPanel] isKindOfClass:[TGModernConversationAlphacodeAssociatedPanel class]])
+            panel = ((TGModernConversationAlphacodeAssociatedPanel *)[inputTextPanel associatedPanel]);
+        else
+        {
+            panel = [[TGModernConversationAlphacodeAssociatedPanel alloc] initWithStyle:TGModernConversationAssociatedInputPanelDarkStyle];
+            __weak TGPhotoCaptionInputMixin *weakSelf = self;
+            panel.alphacodeSelected = ^(TGAlphacodeEntry *entry)
+            {
+                __strong TGPhotoCaptionInputMixin *strongSelf = weakSelf;
+                if (strongSelf != nil)
+                {
+                    if ([[strongSelf->_inputPanel associatedPanel] isKindOfClass:[TGModernConversationAlphacodeAssociatedPanel class]])
+                    {
+                        [strongSelf->_inputPanel setAssociatedPanel:nil animated:false];
+                    }
+                    
+                    NSString *codeText = entry.emoji;
+                    
+                    [strongSelf appendAlphacode:[codeText stringByAppendingString:@" "]];
+                }
+            };
+            [inputTextPanel setAssociatedPanel:panel animated:true];
+        }
+        
+        SSignal *alphacodeListSignal = nil;
+        if (self.suggestionContext.alphacodeSignal != nil)
+            alphacodeListSignal = self.suggestionContext.alphacodeSignal(alphacode);
+        
+        [panel setAlphacodeListSignal:alphacodeListSignal];
+    }
+}
+
+- (void)appendAlphacode:(NSString *)alphacode
+{
+    NSString *currentText = [_inputPanel inputField].text;
+    NSRange selectRange = NSMakeRange(0, 0);
+    
+    if (currentText.length == 0)
+        currentText = alphacode;
+    else
+    {
+        NSInteger caretIndex = [_inputPanel textCaretPosition];
+        
+        for (NSInteger i = caretIndex - 1; i >= 0; i--)
+        {
+            if ([currentText characterAtIndex:i] == ':') {
+                currentText = [currentText stringByReplacingCharactersInRange:NSMakeRange(i, caretIndex - i) withString:alphacode];
+                selectRange = NSMakeRange(i + alphacode.length, 0);
+                break;
+            }
+        }
+    }
+    
+    [[_inputPanel inputField] setAttributedText:[[NSAttributedString alloc] initWithString:currentText] animated:false];
+    [[_inputPanel inputField] selectRange:selectRange force:true];
+    
+    [_inputPanel inputField].internalTextView.enableFirstResponder = true;
 }
 
 - (void)inputPanelWillChangeHeight:(TGMediaPickerCaptionInputPanel *)inputPanel height:(CGFloat)__unused height duration:(NSTimeInterval)duration animationCurve:(int)animationCurve

@@ -16,6 +16,12 @@
 		09750FC61F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */; };
 		09750FCD1F30E53A001B9886 /* TGClipboardGalleryMixin.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09750FCE1F30E53A001B9886 /* TGClipboardGalleryMixin.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */; };
+		09F916AD1F5D9A4E00E0AEFA /* TGAlphacode.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F916A71F5D9A4E00E0AEFA /* TGAlphacode.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09F916AE1F5D9A4E00E0AEFA /* TGAlphacode.m in Sources */ = {isa = PBXBuildFile; fileRef = 09F916A81F5D9A4E00E0AEFA /* TGAlphacode.m */; };
+		09F916AF1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F916A91F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09F916B01F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 09F916AA1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m */; };
+		09F916B11F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F916AB1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09F916B21F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 09F916AC1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m */; };
 		09FAA0B31F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09FAA0B11F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h */; };
 		09FAA0B41F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09FAA0B21F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m */; };
 		D017772C1F1F8F100044446D /* LegacyComponents.h in Headers */ = {isa = PBXBuildFile; fileRef = D017772A1F1F8F100044446D /* LegacyComponents.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1127,6 +1133,12 @@
 		09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryPhotoItem.m; sourceTree = "<group>"; };
 		09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryMixin.h; sourceTree = "<group>"; };
 		09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryMixin.m; sourceTree = "<group>"; };
+		09F916A71F5D9A4E00E0AEFA /* TGAlphacode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAlphacode.h; sourceTree = "<group>"; };
+		09F916A81F5D9A4E00E0AEFA /* TGAlphacode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAlphacode.m; sourceTree = "<group>"; };
+		09F916A91F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAlphacodePanelCell.h; sourceTree = "<group>"; };
+		09F916AA1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAlphacodePanelCell.m; sourceTree = "<group>"; };
+		09F916AB1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGModernConversationAlphacodeAssociatedPanel.h; sourceTree = "<group>"; };
+		09F916AC1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGModernConversationAlphacodeAssociatedPanel.m; sourceTree = "<group>"; };
 		09FAA0B11F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGEmbedTwitchPlayerView.h; sourceTree = "<group>"; };
 		09FAA0B21F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGEmbedTwitchPlayerView.m; sourceTree = "<group>"; };
 		D01777271F1F8F100044446D /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -3378,6 +3390,12 @@
 		D07BC9451F2A3E9900ED97AA /* Suggestions */ = {
 			isa = PBXGroup;
 			children = (
+				09F916A71F5D9A4E00E0AEFA /* TGAlphacode.h */,
+				09F916A81F5D9A4E00E0AEFA /* TGAlphacode.m */,
+				09F916A91F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h */,
+				09F916AA1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m */,
+				09F916AB1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h */,
+				09F916AC1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m */,
 				D07BC9561F2A3EBF00ED97AA /* TGModernConversationAssociatedInputPanel.h */,
 				D07BC9571F2A3EBF00ED97AA /* TGModernConversationAssociatedInputPanel.m */,
 				D07BC9461F2A3EA900ED97AA /* TGHashtagPanelCell.h */,
@@ -3791,6 +3809,7 @@
 				D07BCAEB1F2B507600ED97AA /* TGAttachmentGifCell.h in Headers */,
 				D01778481F1F961D0044446D /* TGDocumentAttributeFilename.h in Headers */,
 				D0177A751F2202260044446D /* TGModernBackToolbarButton.h in Headers */,
+				09F916AD1F5D9A4E00E0AEFA /* TGAlphacode.h in Headers */,
 				D07BCA0D1F2A9A2B00ED97AA /* TGMediaPickerGalleryVideoTrimView.h in Headers */,
 				D07BC9911F2A480800ED97AA /* TGStickerKeyboardTabCell.h in Headers */,
 				D07BC9F91F2A9A2B00ED97AA /* TGMediaPickerGalleryInterfaceView.h in Headers */,
@@ -3833,8 +3852,10 @@
 				D07BCAED1F2B507600ED97AA /* TGAttachmentVideoCell.h in Headers */,
 				D07BC9251F2A380D00ED97AA /* TGPaintSwatch.h in Headers */,
 				D07BC91D1F2A380D00ED97AA /* TGPaintShader.h in Headers */,
+				09F916B11F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h in Headers */,
 				D07BC9641F2A3F4000ED97AA /* TGRemoteImageView.h in Headers */,
 				D07BCB661F2B6A5600ED97AA /* TGEmbedPlayerState.h in Headers */,
+				09F916AF1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h in Headers */,
 				D07BCBC51F2B6F6300ED97AA /* CBLibrary.h in Headers */,
 				D01779841F2107D70044446D /* lmdb.h in Headers */,
 				D0177AF71F23DFC70044446D /* TGDataResource.h in Headers */,
@@ -4398,6 +4419,7 @@
 				D01778061F1F961D0044446D /* TGWebDocument.m in Sources */,
 				D0177A351F21F1980044446D /* UIImage+TGMediaEditableItem.m in Sources */,
 				D01778001F1F961D0044446D /* TGMessageHole.m in Sources */,
+				09F916B21F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m in Sources */,
 				D07BC73C1F2A2A7D00ED97AA /* PGPhotoEditorRawDataOutput.m in Sources */,
 				D07BCBC21F2B6F6300ED97AA /* CBGenericDownloadOperation.m in Sources */,
 				D07BC8CE1F2A37EC00ED97AA /* TGPhotoPaintSettingsView.m in Sources */,
@@ -4443,6 +4465,7 @@
 				D07BC8CC1F2A37EC00ED97AA /* TGPhotoPaintSelectionContainerView.m in Sources */,
 				D07BC80F1F2A2C0B00ED97AA /* PGPhotoEnhancePass.m in Sources */,
 				D026606F1F34A7F8000E2DC5 /* TGLocationTrackingButton.m in Sources */,
+				09F916AE1F5D9A4E00E0AEFA /* TGAlphacode.m in Sources */,
 				D0177A031F2139980044446D /* POPMath.mm in Sources */,
 				D0177A681F21FB9B0044446D /* TGModernGalleryItemView.m in Sources */,
 				D07BC6F01F2A19A700ED97AA /* TGCameraFlipButton.m in Sources */,
@@ -4740,6 +4763,7 @@
 				D07BC8491F2A2DA200ED97AA /* TGMenuSheetController.m in Sources */,
 				D01778E81F20CAE60044446D /* TGNavigationBar.m in Sources */,
 				D0177A861F2218AB0044446D /* TGModernGalleryZoomableItemView.m in Sources */,
+				09F916B01F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m in Sources */,
 				D01779321F20FFAC0044446D /* TGMediaAssetsLibrary.m in Sources */,
 				D07BC7711F2A2B3700ED97AA /* TGPhotoEditorCollectionView.m in Sources */,
 				D01779E51F2139980044446D /* POPAnimationEvent.mm in Sources */,

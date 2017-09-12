@@ -16,6 +16,7 @@
 const CGFloat TGVideoScrubberMinimumTrimDuration = 1.0f;
 const CGFloat TGVideoScrubberZoomActivationInterval = 0.25f;
 const CGFloat TGVideoScrubberTrimRectEpsilon = 3.0f;
+const CGFloat TGVideoScrubberPadding = 8.0f;
 
 typedef enum
 {
@@ -100,7 +101,7 @@ typedef enum
         _inverseTimeLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
         _inverseTimeLabel.font = TGSystemFontOfSize(12.0f);
         _inverseTimeLabel.backgroundColor = [UIColor clearColor];
-        _inverseTimeLabel.text = @"-0:00";
+        _inverseTimeLabel.text = @"0:00";
         _inverseTimeLabel.textAlignment = NSTextAlignmentRight;
         _inverseTimeLabel.textColor = [UIColor whiteColor];
         [self addSubview:_inverseTimeLabel];
@@ -162,7 +163,7 @@ typedef enum
             id<TGMediaPickerGalleryVideoScrubberDelegate> delegate = strongSelf.delegate;
             if ([delegate respondsToSelector:@selector(videoScrubberDidEndEditing:)])
                 [delegate videoScrubberDidEndEditing:strongSelf];
-        
+            
             CGRect newTrimRect = strongSelf->_trimView.frame;
             CGRect trimRect = [strongSelf _scrubbingRect];
             CGRect normalScrubbingRect = [strongSelf _scrubbingRectZoomedIn:false];
@@ -239,9 +240,9 @@ typedef enum
             if (strongSelf.maximumLength > DBL_EPSILON && duration > strongSelf.maximumLength)
             {
                 trimViewRect = CGRectMake(trimView.frame.origin.x + delta,
-                                                 trimView.frame.origin.y,
-                                                 trimView.frame.size.width,
-                                                 trimView.frame.size.height);
+                                          trimView.frame.origin.y,
+                                          trimView.frame.size.width,
+                                          trimView.frame.size.height);
                 
                 [strongSelf _trimStartPosition:&trimStartPosition trimEndPosition:&trimEndPosition forTrimFrame:trimViewRect duration:strongSelf.duration];
             }
@@ -334,8 +335,8 @@ typedef enum
         };
         [_wrapperView addSubview:_trimView];
         
-        _scrubberHandle = [[UIControl alloc] initWithFrame:CGRectMake(0, -1, 8, 38.5f)];
-        _scrubberHandle.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -10, -5, -10);
+        _scrubberHandle = [[UIControl alloc] initWithFrame:CGRectMake(0, -4.0f, 5.0f, 44.0f)];
+        _scrubberHandle.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -12, -5, -12);
         [_wrapperView addSubview:_scrubberHandle];
         
         static UIImage *handleViewImage = nil;
@@ -344,11 +345,10 @@ typedef enum
         {
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(_scrubberHandle.frame.size.width, _scrubberHandle.frame.size.height), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
-            CGContextSetShadowWithColor(context, CGSizeMake(0, 1.5f), 0.5f, [UIColor colorWithWhite:0.0f alpha:0.35f].CGColor);
+            CGContextSetShadowWithColor(context, CGSizeMake(0, 0), 0.5f, [UIColor colorWithWhite:0.0f alpha:0.65f].CGColor);
             CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
             
-            UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0.5f, 0.5f, _scrubberHandle.frame.size.width - 1, _scrubberHandle.frame.size.height - 2.5f)
-                                                            cornerRadius:3];
+            UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0.5f, 0.5f, _scrubberHandle.frame.size.width - 1, _scrubberHandle.frame.size.height - 1.0f) cornerRadius:2.0f];
             [path fill];
             
             handleViewImage = UIGraphicsGetImageFromCurrentImageContext();
@@ -742,7 +742,7 @@ typedef enum
 {
     if (orientation == UIImageOrientationLeft || orientation == UIImageOrientationRight)
         aspectRatio = 1.0f / aspectRatio;
-    return CGSizeMake(CGCeil(32 * aspectRatio), 32);
+    return CGSizeMake(CGCeil(36.0f * aspectRatio), 36.0f);
 }
 
 - (void)_layoutSummaryThumbnailViewsForZoom:(bool)forZoom
@@ -945,8 +945,11 @@ typedef enum
 
 - (void)_updateTimeLabels
 {
-    _currentTimeLabel.text = [TGMediaPickerGalleryVideoScrubber _stringFromTotalSeconds:(NSInteger)self.value];
-    _inverseTimeLabel.text = [NSString stringWithFormat:@"-%@", [TGMediaPickerGalleryVideoScrubber _stringFromTotalSeconds:(NSInteger)self.duration - (NSInteger)self.value]];
+    _currentTimeLabel.text = @"";
+    
+    NSString *text = [NSString stringWithFormat:@"%@ / %@", [TGMediaPickerGalleryVideoScrubber _stringFromTotalSeconds:(NSInteger)self.value], [TGMediaPickerGalleryVideoScrubber _stringFromTotalSeconds:(NSInteger)self.duration]];
+    
+    _inverseTimeLabel.text = text;
 }
 
 #pragma mark - Scrubber Handle
@@ -1164,16 +1167,11 @@ typedef enum
 {
     CGFloat width = self.frame.size.width;
     CGFloat origin = 0;
-    if (self.allowsTrimming)
-    {
-        width = width - 12 * 2 - 16;
-        origin = 12;
-    }
-    else
-    {
-        width = width - 2 * 2 - 16;
-        origin = 2;
-    }
+    CGFloat handleWidth = self.allowsTrimming ? 12.0f : 0.0f;
+    
+    width = width - handleWidth * 2.0f - TGVideoScrubberPadding * 2.0f;
+    origin = handleWidth;
+
 
     if (zoomedIn)
     {
@@ -1282,8 +1280,8 @@ typedef enum
         CGRect scrubbingRect = [self _scrubbingRect];
         CGRect normalScrubbingRect = [self _scrubbingRectZoomedIn:false];
         
-        _leftCurtainView.frame = CGRectMake(scrubbingRect.origin.x, 2, _trimView.frame.origin.x - scrubbingRect.origin.x + normalScrubbingRect.origin.x, 32);
-        _rightCurtainView.frame = CGRectMake(CGRectGetMaxX(_trimView.frame), 2, scrubbingRect.origin.x + scrubbingRect.size.width - CGRectGetMaxX(_trimView.frame) - scrubbingRect.origin.x + normalScrubbingRect.origin.x, 32);
+        _leftCurtainView.frame = CGRectMake(scrubbingRect.origin.x - 12.0f, 0.0f, _trimView.frame.origin.x - scrubbingRect.origin.x + normalScrubbingRect.origin.x + 12.0f, 36.0f);
+        _rightCurtainView.frame = CGRectMake(CGRectGetMaxX(_trimView.frame) - 4.0f, 0.0, scrubbingRect.origin.x + scrubbingRect.size.width - CGRectGetMaxX(_trimView.frame) - scrubbingRect.origin.x + normalScrubbingRect.origin.x + 4.0f + 12.0f, 36.0f);
     }
 }
 
@@ -1295,7 +1293,7 @@ typedef enum
     CGFloat screenWidth = MAX(self.frame.size.width, self.frame.size.height);
     CGFloat recipientWidth = MIN(_recipientLabel.frame.size.width, screenWidth - 100.0f);
     
-    _arrowView.frame = CGRectMake(48.0f, 6.0f, _arrowView.frame.size.width, _arrowView.frame.size.height);
+    _arrowView.frame = CGRectMake(14.0f, 6.0f, _arrowView.frame.size.width, _arrowView.frame.size.height);
     _recipientLabel.frame = CGRectMake(CGRectGetMaxX(_arrowView.frame) + 6.0f, _arrowView.frame.origin.y - 2.0f, recipientWidth, _recipientLabel.frame.size.height);
 }
 
@@ -1303,11 +1301,11 @@ typedef enum
 
 - (void)layoutSubviews
 {
-    _wrapperView.frame = CGRectMake(8, 24, self.frame.size.width - 16, 36);
+    _wrapperView.frame = CGRectMake(TGVideoScrubberPadding, 24, self.frame.size.width - TGVideoScrubberPadding * 2.0f, 36);
     [self _layoutTrimViewZoomedIn:_zoomedIn];
     
     CGRect scrubbingRect = [self _scrubbingRect];
-    _summaryThumbnailWrapperView.frame = CGRectMake(scrubbingRect.origin.x, 2, scrubbingRect.size.width, 32);
+    _summaryThumbnailWrapperView.frame = CGRectMake(MIN(0.0, scrubbingRect.origin.x), 0.0f, MAX(_wrapperView.frame.size.width, scrubbingRect.size.width), 36.0f);
     _zoomedThumbnailWrapperView.frame = _summaryThumbnailWrapperView.frame;
     
     [self _updateScrubberAnimationsAndResetCurrentPosition:true];

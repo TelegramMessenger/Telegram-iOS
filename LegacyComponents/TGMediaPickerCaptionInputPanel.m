@@ -582,6 +582,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     NSString *candidateMention = nil;
     bool candidateMentionStartOfLine = false;
     NSString *candidateHashtag = nil;
+    NSString *candidateAlphacode = nil;
     
     if (idx >= 0 && idx < textLength)
     {
@@ -641,13 +642,46 @@ static void setViewFrame(UIView *view, CGRect frame)
                     break;
             }
         }
-    }
+    
+        if (candidateHashtag == nil)
+        {
+            if (idx >= 0 && idx < textLength)
+            {
+                for (NSInteger i = idx; i >= 0; i--)
+                {
+                    unichar c = [text characterAtIndex:i];
+                    unichar previousC = 0;
+                    if (i > 0)
+                        previousC = [text characterAtIndex:i - 1];
+                    if (c == ':' && (previousC == 0 || ![characterSet characterIsMember:previousC]))
+                    {
+                        if (i == idx) {
+                            candidateAlphacode = nil;
+                        }
+                        else
+                        {
+                            @try {
+                                candidateAlphacode = [text substringWithRange:NSMakeRange(i + 1, idx - i)];
+                            } @catch(NSException *e) { }
+                        }
+                        break;
+                    }
+                    
+                    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'))
+                        break;
+                }
+            }
+        }
+}
     
     if ([delegate respondsToSelector:@selector(inputPanelMentionEntered:mention:startOfLine:)])
         [delegate inputPanelMentionEntered:self mention:candidateMention startOfLine:candidateMentionStartOfLine];
     
     if ([delegate respondsToSelector:@selector(inputPanelHashtagEntered:hashtag:)])
         [delegate inputPanelHashtagEntered:self hashtag:candidateHashtag];
+    
+    if ([delegate respondsToSelector:@selector(inputPanelAlphacodeEntered:alphacode:)])
+        [delegate inputPanelAlphacodeEntered:self alphacode:candidateAlphacode];
     
     if ([delegate respondsToSelector:@selector(inputPanelTextChanged:text:)])
         [delegate inputPanelTextChanged:self text:text];
@@ -696,6 +730,13 @@ static void setViewFrame(UIView *view, CGRect frame)
     }
     
     return string;
+}
+
+- (NSInteger)textCaretPosition {
+    UITextRange *selRange = _inputField.internalTextView.selectedTextRange;
+    UITextPosition *selStartPos = selRange.start;
+    NSInteger idx = [_inputField.internalTextView offsetFromPosition:_inputField.internalTextView.beginningOfDocument toPosition:selStartPos];
+    return idx;
 }
 
 #pragma mark -
