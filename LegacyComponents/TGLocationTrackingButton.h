@@ -1,5 +1,5 @@
-
 #import <MapKit/MKMapView.h>
+#import "TGModernButton.h"
 
 typedef enum {
     TGLocationTrackingModeNone,
@@ -7,7 +7,7 @@ typedef enum {
     TGLocationTrackingModeFollowWithHeading
 } TGLocationTrackingMode;
 
-@interface TGLocationTrackingButton : UIButton
+@interface TGLocationTrackingButton : TGModernButton
 
 @property (nonatomic, assign) TGLocationTrackingMode trackingMode;
 - (void)setTrackingMode:(TGLocationTrackingMode)trackingMode animated:(bool)animated;

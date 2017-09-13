@@ -1,11 +1,7 @@
 #import "TGPinAnnotationView.h"
 
-@interface TGLocationPinAnnotationView : TGPinAnnotationView
-
-@property (nonatomic, copy) void(^getDirectionsPressed)(void);
+@interface TGLocationPinAnnotationView : MKAnnotationView
 
 @end
 
 extern NSString * const TGLocationPinAnnotationKind;
-
-extern NSString * const TGLocationETAKey;

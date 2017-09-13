@@ -11,8 +11,8 @@
 #import "TGLocationReverseGeocodeResult.h"
 
 NSString *const TGLocationFoursquareSearchEndpointUrl = @"https://api.foursquare.com/v2/venues/search/";
-NSString *const TGLocationFoursquareClientId = @"BN3GWQF1OLMLKKQTFL0OADWD1X1WCDNISPPOT1EMMUYZTQV1";
-NSString *const TGLocationFoursquareClientSecret = @"WEEZHCKI040UVW2KWW5ZXFAZ0FMMHKQ4HQBWXVSX4WXWBWYN";
+NSString *const TGLocationFoursquareClientId = @"NHYBXYMHU5GJBSTLPSLFTARZNNDIDROIMZSEHF1ZS5AZ2ZNL"; //@"BN3GWQF1OLMLKKQTFL0OADWD1X1WCDNISPPOT1EMMUYZTQV1";
+NSString *const TGLocationFoursquareClientSecret = @"EC3LOC143Y4CNMP3FV4WT4PEZIEKDOD0ELIWEOWJROK5JVRZ"; //@"WEEZHCKI040UVW2KWW5ZXFAZ0FMMHKQ4HQBWXVSX4WXWBWYN";
 NSString *const TGLocationFoursquareVersion = @"20150326";
 NSString *const TGLocationFoursquareVenuesCountLimit = @"25";
 NSString *const TGLocationFoursquareLocale = @"en";

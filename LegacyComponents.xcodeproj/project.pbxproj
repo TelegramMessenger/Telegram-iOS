@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		090671C41F67F71700CCF2F5 /* TGLocationOptionsView.h in Headers */ = {isa = PBXBuildFile; fileRef = 090671C21F67F71700CCF2F5 /* TGLocationOptionsView.h */; };
+		090671C51F67F71700CCF2F5 /* TGLocationOptionsView.m in Sources */ = {isa = PBXBuildFile; fileRef = 090671C31F67F71700CCF2F5 /* TGLocationOptionsView.m */; };
 		09750F761F2FA816001B9886 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09750F741F2FA5E8001B9886 /* SSignalKit.framework */; };
 		09750FB71F30DB0E001B9886 /* TGClipboardGalleryModel.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FAF1F30DB0E001B9886 /* TGClipboardGalleryModel.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09750FB81F30DB0E001B9886 /* TGClipboardGalleryModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FB01F30DB0E001B9886 /* TGClipboardGalleryModel.m */; };
@@ -1147,6 +1149,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		090671C21F67F71700CCF2F5 /* TGLocationOptionsView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationOptionsView.h; sourceTree = "<group>"; };
+		090671C31F67F71700CCF2F5 /* TGLocationOptionsView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationOptionsView.m; sourceTree = "<group>"; };
 		09750F741F2FA5E8001B9886 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegraph-grvwvmixbmcefwboxkzfazvpcrxb/Build/Products/Release Hockeyapp-iphonesimulator/SSignalKit.framework"; sourceTree = "<group>"; };
 		09750FAF1F30DB0E001B9886 /* TGClipboardGalleryModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryModel.h; sourceTree = "<group>"; };
 		09750FB01F30DB0E001B9886 /* TGClipboardGalleryModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryModel.m; sourceTree = "<group>"; };
@@ -3284,6 +3288,8 @@
 				D02660551F34A7F8000E2DC5 /* TGLocationViewController.m */,
 				D026608C1F34BA71000E2DC5 /* TGPickPinAnnotationView.h */,
 				D026608D1F34BA71000E2DC5 /* TGPickPinAnnotationView.m */,
+				090671C21F67F71700CCF2F5 /* TGLocationOptionsView.h */,
+				090671C31F67F71700CCF2F5 /* TGLocationOptionsView.m */,
 			);
 			name = Location;
 			sourceTree = "<group>";
@@ -3909,6 +3915,7 @@
 				D01777F41F1F961D0044446D /* TGTextCheckingResult.h in Headers */,
 				D01778231F1F961D0044446D /* TGMessageEntityTextUrl.h in Headers */,
 				D0177A9B1F22204A0044446D /* TGModernGalleryEmbeddedStickersHeaderView.h in Headers */,
+				090671C41F67F71700CCF2F5 /* TGLocationOptionsView.h in Headers */,
 				D07BCAAE1F2B45DA00ED97AA /* TGFileUtils.h in Headers */,
 				D0177B1E1F2641B10044446D /* PGCameraMovieWriter.h in Headers */,
 				D01779641F2103910044446D /* TGPaintUtils.h in Headers */,
@@ -4910,6 +4917,7 @@
 				D07BCBAD1F2B6F6300ED97AA /* CBConstance.m in Sources */,
 				D017780A1F1F961D0044446D /* TGGameMediaAttachment.m in Sources */,
 				D0177A7E1F2204640044446D /* TGModernButton.m in Sources */,
+				090671C51F67F71700CCF2F5 /* TGLocationOptionsView.m in Sources */,
 				D07BC8271F2A2C0B00ED97AA /* PGTintTool.m in Sources */,
 				D07BC9F41F2A9A2B00ED97AA /* TGMediaPickerController.m in Sources */,
 				D0177A121F213B440044446D /* JNWSpringAnimation.m in Sources */,
@@ -5507,7 +5515,7 @@
 				D01778931F1FA58C0044446D /* Debug */,
 				D017772E1F1F8F100044446D /* Release */,
 				D07BCC011F2B79B900ED97AA /* Release AppStore */,
-				D01778951F1FA5960044446D /* Hockeyapp */,
+				D01778951F1FA5960044446D /* Release Hockeyapp */,
 				D02660951F34DCBF000E2DC5 /* Release Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -5521,7 +5529,7 @@
 				D01778941F1FA58C0044446D /* Debug */,
 				D01777311F1F8F100044446D /* Release */,
 				D07BCC021F2B79B900ED97AA /* Release AppStore */,
-				D01778961F1FA5960044446D /* Hockeyapp */,
+				D01778961F1FA5960044446D /* Release Hockeyapp */,
 				D02660961F34DCBF000E2DC5 /* Release Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;

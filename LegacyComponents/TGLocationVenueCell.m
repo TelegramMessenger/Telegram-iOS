@@ -11,7 +11,7 @@
 #import <LegacyComponents/TGImageView.h>
 
 NSString *const TGLocationVenueCellKind = @"TGLocationVenueCellKind";
-const CGFloat TGLocationVenueCellHeight = 48.5f;
+const CGFloat TGLocationVenueCellHeight = 56.0f;
 
 @interface TGLocationVenueCell ()
 {
@@ -65,7 +65,7 @@ const CGFloat TGLocationVenueCellHeight = 48.5f;
     _addressLabel.text = venue.displayAddress;
     if (venue.categoryIconUrl != nil)
     {
-        [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://url=%@&width=%d&height=%d", [TGStringUtils stringByEscapingForURL:venue.categoryIconUrl.absoluteString], 40, 40] withOptions:nil];
+        [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://url=%@&width=%d&height=%d", [TGStringUtils stringByEscapingForURL:venue.categoryIconUrl.absoluteString], 48, 48] withOptions:nil];
     }
     else
     {
@@ -77,12 +77,12 @@ const CGFloat TGLocationVenueCellHeight = 48.5f;
 {
     [super layoutSubviews];
     
-    CGFloat padding = 65.0f;
+    CGFloat padding = 76.0f;
     CGFloat separatorThickness = TGScreenPixel;
 
-    _iconView.frame = CGRectMake(14, 4, 40, 40);
-    _titleLabel.frame = CGRectMake(padding, 5, self.frame.size.width - padding - 14, 20);
-    _addressLabel.frame = CGRectMake(padding, 25, self.frame.size.width - padding - 14, 20);
+    _iconView.frame = CGRectMake(12.0f, 4.0f, 48.0f, 48.0f);
+    _titleLabel.frame = CGRectMake(padding, 9, self.frame.size.width - padding - 14, 20);
+    _addressLabel.frame = CGRectMake(padding, 29, self.frame.size.width - padding - 14, 20);
     _separatorView.frame = CGRectMake(padding, self.frame.size.height - separatorThickness, self.frame.size.width - padding, separatorThickness);
 }
 

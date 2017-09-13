@@ -22,6 +22,8 @@
 #import "TGLocationMapModeControl.h"
 #import "TGLocationPinAnnotationView.h"
 
+#import "TGLocationOptionsView.h"
+
 #import <LegacyComponents/TGMenuSheetController.h>
 
 @interface TGLocationViewController () <MKMapViewDelegate>
@@ -37,17 +39,12 @@
     
     CLLocation *_lastDirectionsStartLocation;
     MKDirections *_directions;
-    
-    TGLocationTitleView *_titleView;
+
     TGLocationMapView *_mapView;
-    
     UIBarButtonItem *_actionsBarItem;
-    UIView *_toolbarView;
-    TGLocationTrackingButton *_trackingButton;
-    TGLocationMapModeControl *_mapModeControl;
     id _peer;
     
-    TGNavigationBar *_previewNavigationBar;
+    TGLocationOptionsView *_optionsView;
     
     id<LegacyComponentsContext> _context;
 }
@@ -68,13 +65,8 @@
         _location = [[CLLocation alloc] initWithLatitude:coordinate.latitude longitude:coordinate.longitude];
         _venue = venue;
         _peer = peer;
-        NSString *title = @"";
-        if ([peer isKindOfClass:[TGUser class]]) {
-            title = ((TGUser *)peer).displayName;
-        } else if ([peer isKindOfClass:[TGConversation class]]) {
-            title = ((TGConversation *)peer).chatTitle;
-        }
-        _annotation = [[TGLocationAnnotation alloc] initWithCoordinate:coordinate title:title];
+        
+        _annotation = [[TGLocationAnnotation alloc] initWithCoordinate:coordinate];
     }
     return self;
 }
@@ -107,26 +99,20 @@
     _mapView.tapEnabled = false;
     [self.view addSubview:_mapView];
     
-    _toolbarView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, self.view.frame.size.height - 44.0f, self.view.frame.size.width, 44.0f)];
-    _toolbarView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
-    _toolbarView.backgroundColor = UIColorRGBA(0xf7f7f7, 1.0f);
-    _toolbarView.hidden = self.previewMode;
-    UIView *stripeView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, _toolbarView.frame.size.width, TGScreenPixel)];
-    stripeView.backgroundColor = UIColorRGB(0xb2b2b2);
-    stripeView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [_toolbarView addSubview:stripeView];
-    [self.view addSubview:_toolbarView];
-    
-    _trackingButton = [[TGLocationTrackingButton alloc] initWithFrame:CGRectMake(4, 2, 44, 44)];
-    [_trackingButton addTarget:self action:@selector(trackingModePressed) forControlEvents:UIControlEventTouchUpInside];
-    [_toolbarView addSubview:_trackingButton];
-    
-    _mapModeControl = [[TGLocationMapModeControl alloc] init];
-    _mapModeControl.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    _mapModeControl.frame = CGRectMake(55, (_toolbarView.frame.size.height - 29) / 2 + 0.5f, _toolbarView.frame.size.width - 55 - 7.5f, 29);
-    _mapModeControl.selectedSegmentIndex = MAX(0, MIN(2, (NSInteger)_mapView.mapType));
-    [_mapModeControl addTarget:self action:@selector(mapModeControlValueChanged:) forControlEvents:UIControlEventValueChanged];
-    [_toolbarView addSubview:_mapModeControl];
+    __weak TGLocationViewController *weakSelf = self;
+    _optionsView = [[TGLocationOptionsView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 45.0f, 90.0f)];
+    _optionsView.mapModeChanged = ^(NSInteger mapMode) {
+        __strong TGLocationViewController *strongSelf = weakSelf;
+        if (strongSelf != nil)
+            [strongSelf->_mapView setMapType:(MKMapType)mapMode];
+            
+    };
+    _optionsView.trackModePressed = ^{
+        __strong TGLocationViewController *strongSelf = weakSelf;
+        if (strongSelf != nil)
+            [strongSelf trackingModePressed];
+    };
+    [self.view addSubview:_optionsView];
     
     NSString *backButtonTitle = TGLocalized(@"Common.Back");
     if (TGIsPad() || _modalMode)
@@ -154,32 +140,12 @@
         else
             actionsButtonWidth += CGCeil([actionsButtonTitle sizeWithFont:TGSystemFontOfSize(16.0f)].width);
     }
-    
-    if (_venue.title.length > 0)
-    {
-        CGFloat backButtonWidth = 27.0f + 8.0f;
-        if ([backButtonTitle respondsToSelector:@selector(sizeWithAttributes:)])
-            backButtonWidth += CGCeil([backButtonTitle sizeWithAttributes:@{ NSFontAttributeName:TGSystemFontOfSize(16.0f) }].width);
-        else
-            backButtonWidth += CGCeil([backButtonTitle sizeWithFont:TGSystemFontOfSize(16.0f)].width);
-    
-        _titleView = [[TGLocationTitleView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 44)];
-        _titleView.title = _venue.title;
-        _titleView.address = _venue.address;
-        _titleView.interfaceOrientation = [[LegacyComponentsGlobals provider] applicationStatusBarOrientation];
-        _titleView.backButtonWidth = backButtonWidth;
-        _titleView.actionsButtonWidth = actionsButtonWidth;
-        [self setTitleView:_titleView];
-        
-        if (self.previewMode)
-        {
-            _previewNavigationBar = [[TGNavigationBar alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 44.0f) barStyle:UIBarStyleDefault];
-            [self.view addSubview:_previewNavigationBar];
-            
-            [self setRightBarButtonItem:nil];
-            [_previewNavigationBar setItems:@[ [self navigationItem] ]];
-        }
-    }
+}
+
+- (void)viewWillLayoutSubviews
+{
+    [super viewWillLayoutSubviews];
+    _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f, self.navigationController.navigationBar.frame.size.height + 20.0f + 6.0f, 45.0f, 90.0f);
 }
 
 - (void)viewDidLoad
@@ -217,26 +183,14 @@
     }
 }
 
-- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration
-{
-    [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
-    
-    _titleView.interfaceOrientation = toInterfaceOrientation;
-}
-
 #pragma mark - 
 
 - (void)setPreviewMode:(bool)previewMode
 {
     _previewMode = previewMode;
-    _toolbarView.hidden = previewMode;
     
     if (!previewMode)
-    {
         [self setRightBarButtonItem:_actionsBarItem];
-        [_previewNavigationBar removeFromSuperview];
-        _previewNavigationBar = nil;
-    }
 }
 
 #pragma mark - Actions
@@ -268,6 +222,7 @@
         }
     }))
     {
+        
     }
     else
     {
@@ -359,7 +314,6 @@
     }
 
     TGLocationTrackingMode newMode = TGLocationTrackingModeNone;
-
     switch ([TGLocationTrackingButton locationTrackingModeWithUserTrackingMode:_mapView.userTrackingMode])
     {
         case TGLocationTrackingModeFollow:
@@ -376,13 +330,7 @@
     }
     
     [_mapView setUserTrackingMode:[TGLocationTrackingButton userTrackingModeWithLocationTrackingMode:newMode] animated:true];
-    [_trackingButton setTrackingMode:newMode animated:true];
-}
-
-- (void)mapModeControlValueChanged:(TGLocationMapModeControl *)sender
-{
-    NSInteger mapMode = MAX(0, MIN(2, sender.selectedSegmentIndex));
-    [_mapView setMapType:(MKMapType)mapMode];
+    [_optionsView setTrackingMode:newMode animated:true];
 }
 
 - (void)getDirectionsPressed
@@ -429,7 +377,7 @@
 - (void)updateLocationAvailability
 {
     bool locationAvailable = [self _hasUserLocation] || _locationServicesDisabled;
-    [_trackingButton setLocationAvailable:locationAvailable animated:true];
+    [_optionsView setLocationAvailable:locationAvailable animated:true];
 }
 
 - (MKAnnotationView *)mapView:(MKMapView *)mapView viewForAnnotation:(id<MKAnnotation>)annotation
@@ -443,19 +391,9 @@
     else
         view.annotation = annotation;
     
-    view.selectable = false;
+    //view.selectable = false;
     view.canShowCallout = false;
-    view.animatesDrop = false;
     
-    __weak TGLocationViewController *weakSelf = self;
-    view.calloutPressed = self.calloutPressed;
-    view.getDirectionsPressed = ^
-    {
-        __strong TGLocationViewController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-            [strongSelf getDirectionsPressed];
-    };
-
     [view sizeToFit];
     [view setNeedsLayout];
     
@@ -468,7 +406,6 @@
         return;
     
     CLLocationDistance distanceToLocation =  [_location distanceFromLocation:_mapView.userLocation.location];
-    _annotation.subtitle = [NSString stringWithFormat:TGLocalized(@"Map.DistanceAway"), [TGLocationUtils stringFromDistance:distanceToLocation]];
     [self _updateAnnotationView];
     
     [self _updateDirectionsETA];
@@ -481,13 +418,13 @@
     [annotationView sizeToFit];
     [annotationView setNeedsLayout];
     
-    if (annotationView.appeared)
-    {
-        [UIView animateWithDuration:0.2f animations:^
-        {
-            [annotationView layoutIfNeeded];
-        }];
-    }
+//    if (annotationView.appeared)
+//    {
+//        [UIView animateWithDuration:0.2f animations:^
+//        {
+//            [annotationView layoutIfNeeded];
+//        }];
+//    }
 }
 
 - (void)_updateDirectionsETA
@@ -514,8 +451,7 @@
         {
             if (error != nil)
                 return;
-             
-            _annotation.userInfo = @{ TGLocationETAKey: @(response.expectedTravelTime) };
+            
             [self _updateAnnotationView];
         }];
         

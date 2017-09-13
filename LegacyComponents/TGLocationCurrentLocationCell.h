@@ -5,6 +5,7 @@
 
 - (void)configureForCurrentLocationWithAccuracy:(CLLocationAccuracy)accuracy;
 - (void)configureForCustomLocationWithAddress:(NSString *)address;
+- (void)configureForLiveLocationWithAccuracy:(CLLocationAccuracy)accuracy;
 
 @end
 

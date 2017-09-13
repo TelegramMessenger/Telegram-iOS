@@ -2,14 +2,12 @@
 
 @implementation TGLocationAnnotation
 
-- (instancetype)initWithCoordinate:(CLLocationCoordinate2D)coordinate title:(NSString *)title
+- (instancetype)initWithCoordinate:(CLLocationCoordinate2D)coordinate
 {
     self = [super init];
     if (self != nil)
     {
         _coordinate = coordinate;
-        self.title = title;
-        self.subtitle = nil;
     }
     return self;
 }
