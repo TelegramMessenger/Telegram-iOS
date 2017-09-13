@@ -599,7 +599,7 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
   NSDictionary *params = @{@"timestamp": timeString,
                            @"sdk": BITHOCKEY_NAME,
                            @"sdk_version": BITHOCKEY_VERSION,
-                           @"bundle_version": [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]
+                           @"bundle_version": (id)[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]
                            };
   
   NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
