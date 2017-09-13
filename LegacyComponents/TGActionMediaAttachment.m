@@ -180,6 +180,12 @@
         [data appendData:currencyBytes];
         int32_t totalAmount = [_actionData[@"totalAmount"] intValue];
         [data appendBytes:&totalAmount length:4];
+    } else if (actionType == TGMessageActionText) {
+        NSString *text = _actionData[@"text"];
+        NSData *textBytes = [text dataUsingEncoding:NSUTF8StringEncoding];
+        int32_t textLength = (int32_t)textBytes.length;
+        [data appendBytes:&textLength length:4];
+        [data appendData:textBytes];
     }
 
     int dataLength = (int)data.length - dataLengthPtr - 4;
@@ -380,6 +386,13 @@
         int32_t totalAmount = 0;
         [is read:(uint8_t *)&totalAmount maxLength:4];
         actionAttachment.actionData = @{@"currency": title, @"totalAmount": @(totalAmount)};
+    } else if (actionType == TGMessageActionText) {
+        int32_t currencyLength = 0;
+        [is read:(uint8_t *)&currencyLength maxLength:4];
+        uint8_t *titleBytes = malloc(currencyLength);
+        [is read:titleBytes maxLength:currencyLength];
+        NSString *title = [[NSString alloc] initWithBytesNoCopy:titleBytes length:currencyLength encoding:NSUTF8StringEncoding freeWhenDone:true];
+        actionAttachment.actionData = @{@"text": title};
     }
     
     return actionAttachment;
