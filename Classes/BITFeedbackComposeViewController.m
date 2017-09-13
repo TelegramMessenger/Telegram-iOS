@@ -233,7 +233,7 @@
   if([BITHockeyHelper isPhotoAccessPossible]) {
     self.textAccessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44)];
     self.textAccessoryView.backgroundColor = [UIColor colorWithRed:(CGFloat)0.9 green:(CGFloat)0.9 blue:(CGFloat)0.9 alpha:(CGFloat)1.0];
-  
+    
     self.addPhotoButton = [UIButton buttonWithType:UIButtonTypeCustom];
     [self.addPhotoButton setTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentAddImage") forState:UIControlStateNormal];
     [self.addPhotoButton setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
@@ -537,64 +537,48 @@
   NSInteger index = [self.attachmentScrollViewImageViews indexOfObject:sender];
   
   self.selectedAttachmentIndex = (self.attachmentScrollViewImageViews.count - index - 1);
-  /* We won't use this for now until we have a more robust solution for displaying UIAlertController
-   // requires iOS 8
-   id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
-   if (uialertcontrollerClass) {
-   __weak typeof(self) weakSelf = self;
-   
-   UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil
-   message:nil
-   preferredStyle:UIAlertControllerStyleActionSheet];
-   
-   
-   UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentCancel")
-   style:UIAlertActionStyleCancel
-   handler:^(UIAlertAction * action) {
-   typeof(self) strongSelf = weakSelf;
-   [strongSelf cancelAction];
-   _actionSheetVisible = NO;
-   }];
-   
-   [alertController addAction:cancelAction];
-   
-   UIAlertAction *editAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentEdit")
-   style:UIAlertActionStyleDefault
-   handler:^(UIAlertAction * action) {
-   typeof(self) strongSelf = weakSelf;
-   [strongSelf editAction];
-   _actionSheetVisible = NO;
-   }];
-   
-   [alertController addAction:editAction];
-   
-   UIAlertAction *deleteAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentDelete")
-   style:UIAlertActionStyleDestructive
-   handler:^(UIAlertAction * action) {
-   typeof(self) strongSelf = weakSelf;
-   [strongSelf deleteAction];
-   _actionSheetVisible = NO;
-   }];
-   
-   [alertController addAction:deleteAction];
-   
-   [self presentViewController:alertController animated:YES completion:nil];
-   } else {
-   */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle: nil
-                                                           delegate: self
-                                                  cancelButtonTitle: BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentCancel")
-                                             destructiveButtonTitle: BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentDelete")
-                                                  otherButtonTitles: BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentEdit"), nil];
   
-  [actionSheet showFromRect: sender.frame inView: self.attachmentScrollView animated: YES];
-#pragma clang diagnostic push
-  /*}*/
+  __weak typeof(self) weakSelf = self;
+  
+  UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil
+                                                                           message:nil
+                                                                    preferredStyle:UIAlertControllerStyleActionSheet];
+  
+  
+  UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentCancel")
+                                                         style:UIAlertActionStyleCancel
+                                                       handler:^(UIAlertAction * action) {
+                                                         typeof(self) strongSelf = weakSelf;
+                                                         [strongSelf cancelAction];
+                                                         strongSelf.actionSheetVisible = NO;
+                                                       }];
+  
+  [alertController addAction:cancelAction];
+  
+  UIAlertAction *editAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentEdit")
+                                                       style:UIAlertActionStyleDefault
+                                                     handler:^(UIAlertAction * action) {
+                                                       typeof(self) strongSelf = weakSelf;
+                                                       [strongSelf editAction];
+                                                       strongSelf.actionSheetVisible = NO;
+                                                     }];
+  
+  [alertController addAction:editAction];
+  
+  UIAlertAction *deleteAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentDelete")
+                                                         style:UIAlertActionStyleDestructive
+                                                       handler:^(UIAlertAction * action) {
+                                                         typeof(self) strongSelf = weakSelf;
+                                                         [strongSelf deleteAction];
+                                                         strongSelf.actionSheetVisible = NO;
+                                                       }];
+  
+  [alertController addAction:deleteAction];
+  
+  [self presentViewController:alertController animated:YES completion:nil];
   
   self.actionSheetVisible = YES;
-  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] respondsToSelector:@selector(isOperatingSystemAtLeastVersion:)] && [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
+  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
     [self.textView resignFirstResponder];
   }
 }
