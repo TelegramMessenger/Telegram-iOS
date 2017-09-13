@@ -45,6 +45,10 @@
 #import "BITImageAnnotationViewController.h"
 #import "BITHockeyAttachment.h"
 
+#ifndef __IPHONE_11_0
+#define __IPHONE_11_0 110000
+#endif
+
 
 @interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIActionSheetDelegate, BITImageAnnotationDelegate> {
 }
@@ -217,7 +221,7 @@
                                                                             style:UIBarButtonItemStyleDone
                                                                            target:self
                                                                            action:@selector(sendAction:)];
-  
+
   // Container that contains both the textfield and eventually the photo scroll view on the right side
   self.contentViewContainer = [[UIView alloc] initWithFrame:self.view.bounds];
   self.contentViewContainer.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
@@ -262,7 +266,11 @@
   self.attachmentScrollView.bounces = YES;
   self.attachmentScrollView.autoresizesSubviews = NO;
   self.attachmentScrollView.autoresizingMask = UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleRightMargin;
-  
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_11_0
+  if (@available(iOS 11.0, *)) {
+    self.attachmentScrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentAlways;
+  }
+#endif
   [self.contentViewContainer addSubview:self.attachmentScrollView];
 }
 
