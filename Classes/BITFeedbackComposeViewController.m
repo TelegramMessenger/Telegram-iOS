@@ -45,11 +45,6 @@
 #import "BITImageAnnotationViewController.h"
 #import "BITHockeyAttachment.h"
 
-#ifndef __IPHONE_11_0
-#define __IPHONE_11_0 110000
-#endif
-
-
 @interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIActionSheetDelegate, BITImageAnnotationDelegate> {
 }
 
