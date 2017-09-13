@@ -20,6 +20,7 @@
 @property (nonatomic, copy) void(^onDismiss)(bool isAuto);
 @property (nonatomic, copy) void(^onStop)(void);
 @property (nonatomic, copy) void(^onCancel)(void);
+@property (nonatomic, copy) void(^didDismiss)(void);
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface;
 - (void)buttonInteractionUpdate:(CGPoint)value;
@@ -27,7 +28,7 @@
 
 - (void)complete;
 - (void)dismiss;
-- (void)stop;
+- (bool)stop;
 
 + (void)clearStartImage;
 

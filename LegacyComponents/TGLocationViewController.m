@@ -55,23 +55,15 @@
 
 @implementation TGLocationViewController
 
-- (instancetype)init
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context coordinate:(CLLocationCoordinate2D)coordinate venue:(TGVenueAttachment *)venue peer:(id)peer
 {
-    self = [super init];
+    self = [self initWithContext:context];
     if (self != nil)
     {
         self.titleText = TGLocalized(@"Map.LocationTitle");
         
         _locationManager = [[CLLocationManager alloc] init];
-    }
-    return self;
-}
-
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context coordinate:(CLLocationCoordinate2D)coordinate venue:(TGVenueAttachment *)venue peer:(id)peer
-{
-    self = [self init];
-    if (self != nil)
-    {
+        
         _context = context;
         _location = [[CLLocation alloc] initWithLatitude:coordinate.latitude longitude:coordinate.longitude];
         _venue = venue;
@@ -137,7 +129,7 @@
     [_toolbarView addSubview:_mapModeControl];
     
     NSString *backButtonTitle = TGLocalized(@"Common.Back");
-    if (TGIsPad())
+    if (TGIsPad() || _modalMode)
     {
         backButtonTitle = TGLocalized(@"Common.Done");
         [self setLeftBarButtonItem:[[UIBarButtonItem alloc] initWithTitle:backButtonTitle style:UIBarButtonItemStyleDone target:self action:@selector(dismissButtonPressed)]];

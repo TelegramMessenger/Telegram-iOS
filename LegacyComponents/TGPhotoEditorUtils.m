@@ -467,10 +467,13 @@ UIImageOrientation TGVideoOrientationForAsset(AVAsset *asset, bool *mirrored)
     
     if (mirrored != NULL)
     {
-        UIView *tempView = [[UIView alloc] init];
+        CGFloat scaleX = sqrt(t.a * t.a + t.c * t.c);
+        CGFloat scaleY = sqrt(t.b * t.b + t.d * t.d);
+        /*UIView *tempView = [[UIView alloc] init];
         tempView.transform = t;
         CGSize scale = CGSizeMake([[tempView.layer valueForKeyPath: @"transform.scale.x"] floatValue],
-                                  [[tempView.layer valueForKeyPath: @"transform.scale.y"] floatValue]);
+                                  [[tempView.layer valueForKeyPath: @"transform.scale.y"] floatValue]);*/
+        CGSize scale = CGSizeMake(scaleX, scaleY);
         
         *mirrored = (scale.width < 0);
     }

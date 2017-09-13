@@ -135,7 +135,7 @@ typedef enum
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface
 {
-    self = [super init];
+    self = [super initWithContext:context];
     if (self != nil)
     {
         _context = context;
@@ -503,6 +503,10 @@ typedef enum
     
     if (_autorotationWasEnabled)
         [TGViewController enableAutorotation];
+    
+    if (_didDismiss) {
+        _didDismiss();
+    }
 }
 
 - (void)dismiss
@@ -557,30 +561,35 @@ typedef enum
 
 - (void)setLocked
 {
-    ((TGVideoMessageCaptureControllerWindow *)self.view.window).locked = true;
+    if ([self.view.window isKindOfClass:[TGVideoMessageCaptureControllerWindow class]]) {
+        ((TGVideoMessageCaptureControllerWindow *)self.view.window).locked = true;
+    }
     [_controlsView setLocked];
 }
 
-- (void)stop
+- (bool)stop
 {
     if (!_capturePipeline.isRecording)
-        return;
+        return false;
     
-    ((TGVideoMessageCaptureControllerWindow *)self.view.window).locked = false;
+    if ([self.view.window isKindOfClass:[TGVideoMessageCaptureControllerWindow class]]) {
+        ((TGVideoMessageCaptureControllerWindow *)self.view.window).locked = false;
+    }
     _stopped = true;
     _gpuAvailable = false;
     _switchButton.userInteractionEnabled = false;
     
     [_activityDisposable dispose];
     [self stopRecording];
+    return true;
 }
 
 - (void)sendPressed
 {
+    [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:_duration liveUploadData:_liveUploadData thumbnailImage:_thumbnailImage];
+    
     _automaticDismiss = true;
     [self dismiss:false];
-    
-    [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:_duration liveUploadData:_liveUploadData thumbnailImage:_thumbnailImage];
 }
 
 - (void)unmutePressed

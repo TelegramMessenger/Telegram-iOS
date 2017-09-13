@@ -1,4 +1,5 @@
-#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGViewController.h>
+#import <LegacyComponents/LegacyComponentsContext.h>
 
 #import <CoreLocation/CoreLocation.h>
 
@@ -13,6 +14,6 @@ typedef enum {
 
 @property (nonatomic, copy) void (^locationPicked)(CLLocationCoordinate2D coordinate, TGVenueAttachment *venue);
 
-- (instancetype)initWithIntent:(TGLocationPickerControllerIntent)intent;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context intent:(TGLocationPickerControllerIntent)intent;
 
 @end

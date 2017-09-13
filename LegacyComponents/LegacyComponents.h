@@ -284,10 +284,14 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGMediaAssetsController.h>
 
 #import <LegacyComponents/TGLocationPickerController.h>
+#import <LegacyComponents/TGLocationViewController.h>
 #import <LegacyComponents/TGListsTableView.h>
 #import <LegacyComponents/TGSearchBar.h>
 #import <LegacyComponents/TGSearchDisplayMixin.h>
 
+#import <LegacyComponents/TGPhotoEditorSliderView.h>
+
 #import <LegacyComponents/TGClipboardGalleryMixin.h>
 #import <LegacyComponents/TGClipboardGalleryPhotoItem.h>
 #import <LegacyComponents/TGVideoMessageCaptureController.h>
+#import <LegacyComponents/TGModernConversationInputMicButton.h>
