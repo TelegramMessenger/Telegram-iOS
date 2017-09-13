@@ -74,10 +74,6 @@ NSBundle *BITHockeyBundle(void);
 NSString *BITHockeyLocalizedString(NSString *stringToken);
 NSString *BITHockeyMD5(NSString *str);
 
-#ifndef __IPHONE_8_0
-#define __IPHONE_8_0     80000
-#endif
-
 #ifndef TARGET_OS_SIMULATOR
 
   #ifdef TARGET_IPHONE_SIMULATOR
@@ -92,14 +88,6 @@ NSString *BITHockeyMD5(NSString *str);
 
 #endif /* TARGET_OS_SIMULATOR */
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_6_1
-
 #define kBITButtonTypeSystem                UIButtonTypeSystem
-
-#else
-
-#define kBITButtonTypeSystem                UIButtonTypeRoundedRect
-
-#endif
 
 #endif /* HockeySDK_HockeySDKPrivate_h */

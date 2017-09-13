@@ -43,10 +43,6 @@
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
 
-#ifndef __IPHONE_6_1
-#define __IPHONE_6_1     60100
-#endif
-
 // We need BIT_UNUSED macro to make sure there aren't any warnings when building
 // HockeySDK Distribution scheme. Since several configurations are build in this scheme
 // and different features can be turned on and off we can't just use __unused attribute.

@@ -31,10 +31,6 @@
 
 #import <UIKit/UIKit.h>
 
-#ifndef __IPHONE_6_1
-#define __IPHONE_6_1     60100
-#endif
-
 @interface BITAppStoreHeader : UIView
 
 @property (nonatomic, copy) NSString *headerText;
