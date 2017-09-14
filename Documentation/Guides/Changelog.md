@@ -1,3 +1,8 @@
+## 5.0.0
+
+- [IMPROVEMENT] Use `UIAlertController` in Feedback instead of `UIAlertView`. [#460](https://github.com/bitstadium/HockeySDK-iOS/pull/460)
+- [BUGFIX] Fix bugs in the Feedback UI on iOS 11. [#459](https://github.com/bitstadium/HockeySDK-iOS/pull/459)
+
 ## 5.0.0-beta.2
 
 - [FEATURE] Added support for Metrics in app extensions. [#449](https://github.com/bitstadium/HockeySDK-iOS/pull/449)
