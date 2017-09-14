@@ -211,7 +211,7 @@
   if ([self.buttonData.label respondsToSelector:@selector(boundingRectWithSize:options:attributes:context:)]) {
     CGRect calculatedRect = [self.buttonData.label boundingRectWithSize:constr
                                                                 options:NSStringDrawingUsesFontLeading
-                                                             attributes:@{NSFontAttributeName:self.titleLabel.font}
+                                                             attributes:@{NSFontAttributeName:(id)self.titleLabel.font}
                                                                 context:nil];
     newSize = calculatedRect.size;
   } else {

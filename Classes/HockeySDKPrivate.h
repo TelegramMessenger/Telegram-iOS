@@ -74,6 +74,10 @@ NSBundle *BITHockeyBundle(void);
 NSString *BITHockeyLocalizedString(NSString *stringToken);
 NSString *BITHockeyMD5(NSString *str);
 
+#ifndef __IPHONE_11_0
+#define __IPHONE_11_0    110000
+#endif
+
 #ifndef TARGET_OS_SIMULATOR
 
   #ifdef TARGET_IPHONE_SIMULATOR
