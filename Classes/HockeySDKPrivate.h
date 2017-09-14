@@ -78,6 +78,10 @@ NSString *BITHockeyMD5(NSString *str);
 #define __IPHONE_8_0     80000
 #endif
 
+#ifndef __IPHONE_11_0
+#define __IPHONE_11_0    110000
+#endif
+
 #ifndef TARGET_OS_SIMULATOR
 
   #ifdef TARGET_IPHONE_SIMULATOR
