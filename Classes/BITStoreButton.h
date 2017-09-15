@@ -47,11 +47,6 @@
 - (void)storeButtonFired:(BITStoreButton *)button;
 @end
 
-
-#ifndef __IPHONE_6_1
-#define __IPHONE_6_1     60100
-#endif
-
 /**
  * Button style depending on the iOS version
  */
