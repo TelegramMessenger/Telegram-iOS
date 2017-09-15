@@ -1227,7 +1227,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   [self fetchLatestImageUsingPhotoLibraryWithCompletionHandler:completionHandler];
 }
 
-- (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0) {
+- (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
   // Safeguard in case the dev hasn't set the NSPhotoLibraryUsageDescription in their Info.plist
   if (![self isiOS10PhotoPolicySet]) {return;}
 
@@ -1248,7 +1248,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   }];
 }
 
-- (void)loadLatestImageAssetWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0) {
+- (void)loadLatestImageAssetWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
 
   // Safeguard in case the dev hasn't set the NSPhotoLibraryUsageDescription in their Info.plist
   if (![self isiOS10PhotoPolicySet]) {return;}
