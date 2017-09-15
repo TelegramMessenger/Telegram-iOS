@@ -550,7 +550,7 @@
   
   UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentCancel")
                                                          style:UIAlertActionStyleCancel
-                                                       handler:^(UIAlertAction * action) {
+                                                       handler:^(UIAlertAction __unused *action) {
                                                          typeof(self) strongSelf = weakSelf;
                                                          [strongSelf cancelAction];
                                                          strongSelf.actionSheetVisible = NO;
@@ -560,7 +560,7 @@
   
   UIAlertAction *editAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentEdit")
                                                        style:UIAlertActionStyleDefault
-                                                     handler:^(UIAlertAction * action) {
+                                                     handler:^(UIAlertAction __unused *action) {
                                                        typeof(self) strongSelf = weakSelf;
                                                        [strongSelf editAction];
                                                        strongSelf.actionSheetVisible = NO;
@@ -570,7 +570,7 @@
   
   UIAlertAction *deleteAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentDelete")
                                                          style:UIAlertActionStyleDestructive
-                                                       handler:^(UIAlertAction * action) {
+                                                       handler:^(UIAlertAction __unused *action) {
                                                          typeof(self) strongSelf = weakSelf;
                                                          [strongSelf deleteAction];
                                                          strongSelf.actionSheetVisible = NO;
