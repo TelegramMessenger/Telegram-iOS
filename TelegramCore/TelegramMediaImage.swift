@@ -7,6 +7,7 @@ import Foundation
 
 public enum TelegramMediaRemoteImageReference {
     case remoteImage(imageId: Int64, accessHash: Int64)
+    case none
 }
 
 public final class TelegramMediaImage: Media, Equatable {

@@ -455,6 +455,7 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
 }
 
 public final class Network: NSObject, MTRequestMessageServiceDelegate {
+    private let queue: Queue = Queue()
     let datacenterId: Int
     let context: MTContext
     let mtProto: MTProto
@@ -516,7 +517,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }))
         requestService.delegate = self
         
-        let shouldKeepConnectionSignal = self.shouldKeepConnection.get()
+        let shouldKeepConnectionSignal = self.shouldKeepConnection.get() |> deliverOn(queue)
             |> distinctUntilChanged
         self.shouldKeepConnectionDisposable.set(shouldKeepConnectionSignal.start(next: { [weak self] value in
             if let strongSelf = self {

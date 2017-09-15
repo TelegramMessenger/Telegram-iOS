@@ -651,35 +651,27 @@ public class Account {
             |> distinctUntilChanged
             |> mapToSignal { [weak self] online -> Signal<Void, NoError> in
                 if let strongSelf = self {
-                    if online {
-                        let delayRequest: Signal<Void, NoError> = .complete() |> delay(60.0, queue: Queue.concurrentDefaultQueue())
-                        let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: .boolFalse))
-                            |> retryRequest
-                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
-                        let pushStatusRepeatedly = (pushStatusOnce |> then(delayRequest)) |> restart
-                        let peerId = strongSelf.peerId
-                        let updatePresenceLocally = strongSelf.postbox.modify { modifier -> Void in
-                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60.0 * 60.0 * 24.0 * 356.0
-                            modifier.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
+                    let delayRequest: Signal<Void, NoError> = .complete() |> delay(60.0, queue: Queue.concurrentDefaultQueue())
+                    let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: online ? .boolFalse : .boolTrue))
+                        |> retryRequest
+                        |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
+                    let pushStatusRepeatedly = (pushStatusOnce |> then(delayRequest)) |> restart
+                    let peerId = strongSelf.peerId
+                    let updatePresenceLocally = strongSelf.postbox.modify { modifier -> Void in
+                        let timestamp: Double
+                        if online {
+                            timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60.0 * 60.0 * 24.0 * 356.0
+                        } else {
+                            timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - 1.0
                         }
-                        return combineLatest(pushStatusRepeatedly, updatePresenceLocally)
-                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
-                    } else {
-                        let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: .boolTrue))
-                            |> retryRequest
-                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
-                        let peerId = strongSelf.peerId
-                        let updatePresenceLocally = strongSelf.postbox.modify { modifier -> Void in
-                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - 1.0
-                            modifier.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
-                        }
-                        return combineLatest(pushStatusOnce, updatePresenceLocally)
-                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
+                        modifier.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
                     }
+                    return combineLatest(pushStatusRepeatedly, updatePresenceLocally)
+                        |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
                 } else {
                     return .complete()
                 }
-            }
+        }
         self.updatedPresenceDisposable.set(updatedPresence.start())
         
         self.deviceContactListDisposable.set(managedDeviceContacts(postbox: self.postbox, network: self.network, deviceContacts: self.deviceContactList.get()).start())
