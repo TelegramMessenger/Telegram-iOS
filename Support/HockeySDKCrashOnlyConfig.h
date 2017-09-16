@@ -93,7 +93,7 @@
  * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_METRICS
-#    define HOCKEYSDK_FEATURE_METRICS 1
+#    define HOCKEYSDK_FEATURE_METRICS 0
 #endif /* HOCKEYSDK_FEATURE_METRICS */
 
 #endif /* HockeySDK_HockeySDKFeatureConfig_h */
