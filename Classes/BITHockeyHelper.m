@@ -264,26 +264,6 @@ NSString *bit_appAnonID(BOOL forceNewAnonID) {
 
 #pragma mark Environment detection
 
-BOOL bit_isPreiOS8Environment(void) {
-  static BOOL isPreiOS8Environment = YES;
-  static dispatch_once_t checkOS8;
-  
-  dispatch_once(&checkOS8, ^{
-    // NSFoundationVersionNumber_iOS_7_1 = 1047.25
-    // We hardcode this, so compiling with iOS 7 is possible while still being able to detect the correct environment
-    
-    // runtime check according to
-    // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
-    if (floor(NSFoundationVersionNumber) <= 1047.25) {
-      isPreiOS8Environment = YES;
-    } else {
-      isPreiOS8Environment = NO;
-    }
-  });
-  
-  return isPreiOS8Environment;
-}
-
 BOOL bit_isPreiOS10Environment(void) {
   static BOOL isPreOS10Environment = YES;
   static dispatch_once_t checkOS10;

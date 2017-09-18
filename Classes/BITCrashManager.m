@@ -532,9 +532,6 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
                                                                                              if (!self.didLogLowMemoryWarning) {
                                                                                                [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
                                                                                                self.didLogLowMemoryWarning = YES;
-                                                                                               if(bit_isPreiOS8Environment()) {
-                                                                                                 // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
-                                                                                                 [[NSUserDefaults standardUserDefaults] synchronize];
                                                                                                }
                                                                                              }
                                                                                            }];
@@ -561,10 +558,6 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
 - (void)leavingAppSafely {
   if (self.isAppNotTerminatingCleanlyDetectionEnabled) {
     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppWentIntoBackgroundSafely];
-    if(bit_isPreiOS8Environment()) {
-      // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
-      [[NSUserDefaults standardUserDefaults] synchronize];
-    }
   }
 }
 
@@ -595,10 +588,6 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
                              ];
 
       [[NSUserDefaults standardUserDefaults] setObject:uuidString forKey:kBITAppUUIDs];
-      if(bit_isPreiOS8Environment()) {
-        // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
-        [[NSUserDefaults standardUserDefaults] synchronize];
-      }
     });
   }
 }
@@ -1262,11 +1251,6 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
 #endif
   
   [[NSUserDefaults standardUserDefaults] setBool:NO forKey:kBITAppDidReceiveLowMemoryNotification];
-  
-  if(bit_isPreiOS8Environment()) {
-    // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
-    [[NSUserDefaults standardUserDefaults] synchronize];
-  }
   
   [self triggerDelayedProcessing];
   BITHockeyLogVerbose(@"VERBOSE: CrashManager startManager has finished.");
