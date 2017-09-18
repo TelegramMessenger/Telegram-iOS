@@ -278,15 +278,7 @@
   }
   
   if (self.isStatusBarHiddenBeforeShowingPhotoPicker) {
-    // requires iOS 7
-    if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
       [self setNeedsStatusBarAppearanceUpdate];
-    } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-      [[UIApplication sharedApplication] setStatusBarHidden:self.isStatusBarHiddenBeforeShowingPhotoPicker.boolValue];
-#pragma clang diagnostic pop
-    }
   }
   
   self.isStatusBarHiddenBeforeShowingPhotoPicker = nil;

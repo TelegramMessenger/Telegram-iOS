@@ -363,22 +363,7 @@ BOOL bit_isDebuggerAttached(void) {
 #pragma mark NSString helpers
 
 NSString *bit_URLEncodedString(NSString *inputString) {
-  
-  // Requires iOS 7
-  if ([inputString respondsToSelector:@selector(stringByAddingPercentEncodingWithAllowedCharacters:)]) {
-    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet characterSetWithCharactersInString:@"!*'();:@&=+$,/?%#[] {}"].invertedSet];
-    
-  } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
-                                                                     (__bridge CFStringRef)inputString,
-                                                                     NULL,
-                                                                     CFSTR("!*'();:@&=+$,/?%#[] {}"),
-                                                                     kCFStringEncodingUTF8)
-                             );
-#pragma clang diagnostic pop
-  }
+  return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet characterSetWithCharactersInString:@"!*'();:@&=+$,/?%#[] {}"].invertedSet];
 }
 
 NSString *bit_base64String(NSData * data, unsigned long __unused length) {
@@ -398,7 +383,7 @@ NSString *bit_base64String(NSData * data, unsigned long __unused length) {
 // Return ISO 8601 string representation of the date
 NSString *bit_utcDateString(NSDate *date){
   static NSDateFormatter *dateFormatter;
-
+  
   static dispatch_once_t dateFormatterToken;
   dispatch_once(&dateFormatterToken, ^{
     NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
@@ -540,14 +525,14 @@ NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *ico
   NSString *currentBestMatch = nil;
   CGFloat currentBestMatchHeight = 0;
   CGFloat bestMatchHeight = 0;
-
+  
   bestMatchHeight = useiPadIcon ? (useHighResIcon ? 152 : 76) : 120;
-
+  
   for(NSString *icon in icons) {
     // Don't use imageNamed, otherwise unit tests won't find the fixture icon
     // and using imageWithContentsOfFile doesn't load @2x files with absolut paths (required in tests)
     
-
+    
     NSMutableArray *iconFilenameVariants = [NSMutableArray new];
     
     [iconFilenameVariants addObject:icon];
