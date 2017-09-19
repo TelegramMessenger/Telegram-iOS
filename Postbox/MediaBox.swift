@@ -614,7 +614,7 @@ public final class MediaBox {
                                             let updatedData: MediaResourceData
                                             if complete {
                                                 let linkResult = link(paths.partial, paths.complete)
-                                                assert(linkResult == 0)
+                                                //assert(linkResult == 0)
                                                 updatedData = MediaResourceData(path: paths.complete, size: updatedSize, complete: true)
                                             } else {
                                                 updatedData = MediaResourceData(path: paths.partial, size: updatedSize, complete: false)

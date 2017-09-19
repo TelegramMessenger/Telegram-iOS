@@ -192,7 +192,7 @@ final class SqliteValueBox: ValueBox {
         /*var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "PRAGMA integrity_check", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        while preparedStatement.step() {
+        while preparedStatement.step(handle: database.handle) {
             let value = preparedStatement.valueAt(0)
             let text = String(data: Data(bytes: value.memory.assumingMemoryBound(to: UInt8.self), count: value.length), encoding: .utf8)
             print("integrity_check: \(text ?? "")")
