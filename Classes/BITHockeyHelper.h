@@ -76,7 +76,6 @@ BOOL bit_isDebuggerAttached(void);
 
 /* NSString helpers */
 NSString *bit_URLEncodedString(NSString *inputString);
-NSString *bit_base64String(NSData * data, unsigned long length);
 
 /* Context helpers */
 NSString *bit_utcDateString(NSDate *date);

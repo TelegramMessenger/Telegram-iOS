@@ -366,18 +366,6 @@ NSString *bit_URLEncodedString(NSString *inputString) {
   return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet characterSetWithCharactersInString:@"!*'();:@&=+$,/?%#[] {}"].invertedSet];
 }
 
-NSString *bit_base64String(NSData * data, unsigned long __unused length) {
-  SEL base64EncodingSelector = NSSelectorFromString(@"base64EncodedStringWithOptions:");
-  if ([data respondsToSelector:base64EncodingSelector]) {
-    return [data base64EncodedStringWithOptions:0];
-  } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    return [data base64Encoding];
-#pragma clang diagnostic pop
-  }
-}
-
 #pragma mark Context helpers
 
 // Return ISO 8601 string representation of the date
