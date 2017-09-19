@@ -38,14 +38,6 @@
   return NO;
 }
 
-- (void)setSelected:(BOOL)selected {
-  self->_selected = selected;
-}
-
-- (BOOL)isSelected {
-  return self->_selected;
-}
-
 @end
 
 #endif

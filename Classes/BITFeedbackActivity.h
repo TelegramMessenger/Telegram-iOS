@@ -70,6 +70,6 @@
  
  @see customActivityImage
  */
-@property (nonatomic, strong) NSString *customActivityTitle;
+@property (nonatomic, copy) NSString *customActivityTitle;
 
 @end

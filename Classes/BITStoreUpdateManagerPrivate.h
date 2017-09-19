@@ -31,7 +31,7 @@
 
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
 
-@interface BITStoreUpdateManager () <UIAlertViewDelegate> {
+@interface BITStoreUpdateManager () {
 }
 
 ///-----------------------------------------------------------------------------

@@ -21,9 +21,13 @@ static NSString *const kBITMetaDataDirectory = @"MetaData";
 static char const *kBITPersistenceQueueString = "com.microsoft.HockeyApp.persistenceQueue";
 static NSUInteger const BITDefaultFileCount = 50;
 
-@implementation BITPersistence {
-  BOOL _directorySetupComplete;
-}
+@interface BITPersistence ()
+
+@property (nonatomic) BOOL directorySetupComplete;
+
+@end
+
+@implementation BITPersistence
 
 #pragma mark - Public
 
@@ -79,7 +83,7 @@ static NSUInteger const BITDefaultFileCount = 50;
 
 - (BOOL)isFreeSpaceAvailable {
   NSArray *files = [self persistedFilesForType:BITPersistenceTypeTelemetry];
-  return files.count < _maxFileCount;
+  return files.count < self.maxFileCount;
 }
 
 - (NSString *)requestNextFilePath {
@@ -170,7 +174,7 @@ static NSUInteger const BITDefaultFileCount = 50;
       filePath = [self.appHockeySDKDirectoryPath stringByAppendingPathComponent:kBITMetaDataDirectory];
       break;
     };
-    default: {
+    case BITPersistenceTypeTelemetry: {
       NSString *uuid = bit_UUID();
       fileName = [NSString stringWithFormat:@"%@%@", kBITFileBaseString, uuid];
       filePath = [self.appHockeySDKDirectoryPath stringByAppendingPathComponent:kBITTelemetryDirectory];
@@ -227,7 +231,7 @@ static NSUInteger const BITDefaultFileCount = 50;
       BITHockeyLogDebug(@"INFO: Exclude %@ from backup", appURL);
     }
     
-    _directorySetupComplete = YES;
+    self.directorySetupComplete = YES;
   }
 }
 

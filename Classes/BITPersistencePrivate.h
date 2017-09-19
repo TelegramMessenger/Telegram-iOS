@@ -37,7 +37,7 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
  */
 @property (nonatomic, assign) NSUInteger maxFileCount;
 
-@property (nonatomic, strong) NSString *appHockeySDKDirectoryPath;
+@property (nonatomic, copy) NSString *appHockeySDKDirectoryPath;
 
 /**
  *  An array with all file paths, that have been requested by the sender. If the sender

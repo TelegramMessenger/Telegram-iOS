@@ -1,3 +1,25 @@
+## 5.0.0
+
+- [IMPROVEMENT] Use `UIAlertController` in Feedback instead of `UIAlertView`. [#460](https://github.com/bitstadium/HockeySDK-iOS/pull/460)
+- [BUGFIX] Fix bugs in the Feedback UI on iOS 11. [#459](https://github.com/bitstadium/HockeySDK-iOS/pull/459)
+
+## 5.0.0-beta.2
+
+- [FEATURE] Added support for Metrics in app extensions. [#449](https://github.com/bitstadium/HockeySDK-iOS/pull/449)
+- [FEATURE] User Metrics can now be enabled after it was disabled [#451)(https://github.com/bitstadium/HockeySDK-iOS/pull/451)
+- [IMPROVEMENT] Don't use `UIAlertView` but `UIAlertController`.[#446](https://github.com/bitstadium/HockeySDK-iOS/pull/446)
+- [IMPROVEMENT] `BITAttributedLabel` is now based on `TTTAttributedLabel` 2.0. [#450](https://github.com/bitstadium/HockeySDK-iOS/pull/450)
+- [BUGFIX] Fix a bug in `BITAuthenticator`. [#447](https://github.com/bitstadium/HockeySDK-iOS/pull/447)
+- [BUGFIX] Fix for a bug in `BITImageAnnotation`. [#453](https://github.com/bitstadium/HockeySDK-iOS/pull/453)
+
+## 5.0.0-beta.1
+
+This version drops support for iOS 7. There is not other breaking change at this point.
+
+- [IMPROVEMENT] The code has been cleaned up as we have decided to drop support for iOS 7.
+- [IMPROVEMENT] `properties` of type `NSString` now use the `copy` attribute.
+- [BUGFIX] The logic that makes sure that the for HockeySDK-iOS is excluded from backups was changed to make sure it doesn't block app launch [#443](https://github.com/bitstadium/HockeySDK-iOS/pull/443).  
+
 ## 4.1.6
 
 - [BUGFIX] Fixed a string in the Italian translation [#430](https://github.com/bitstadium/HockeySDK-iOS/pull/430).
@@ -71,7 +93,7 @@ Additionally, we now also provide a new flavor in our binary distribution. To us
 This SDK release explicitly includes the Application Support directory into backups. If you want to opt-out of this fix and keep the Application Directory's backup flag untouched, add the following line above the SDK setup code:
 
   - Objective-C:
-        ```objectivec
+        ```objc
         [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"BITExcludeApplicationSupportFromBackup"];
         ```
 
@@ -116,7 +138,7 @@ This SDK release explicitly includes the Application Support directory into back
 This SDK release explicitly includes the Application Support directory into backups. If you want to opt-out of this fix and keep the Application Directory's backup flag untouched, add the following line above the SDK setup code:
 
   - Objective-C:
-        ```objectivec
+        ```objc
         [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"kBITExcludeApplicationSupportFromBackup"];
         ```
 

@@ -17,7 +17,6 @@
 #import "BITHockeyHelper.h"
 #import "BITAuthenticator_Private.h"
 #import "BITHockeyBaseManagerPrivate.h"
-#import "BITHTTPOperation.h"
 #import "BITTestHelper.h"
 #import "BITHockeyAppClient.h"
 
@@ -46,22 +45,22 @@
 static void *kInstallationIdentification = &kInstallationIdentification;
 
 @interface BITAuthenticatorTests : XCTestCase
+
+@property(nonatomic, strong) BITAuthenticator *sut;
+
 @end
 
-@implementation BITAuthenticatorTests {
-  BITAuthenticator *_sut;
-  BOOL _KVOCalled;
-}
+@implementation BITAuthenticatorTests
 
 - (void)setUp {
   [super setUp];
   
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentOther];
+  self.sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentOther];
 }
 
 - (void)tearDown {
-  [_sut cleanupInternalStorage];
-  _sut = nil;
+  [self.sut cleanupInternalStorage];
+  self.sut = nil;
   
   [super tearDown];
 }
@@ -79,254 +78,217 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 
 #pragma mark - Setup Tests
 - (void) testThatItInstantiates {
-  XCTAssertNotNil(_sut, @"Should be there");
+  XCTAssertNotNil(self.sut, @"Should be there");
 }
 
 #pragma mark - Persistence Tests
 - (void) testThatLastAuthenticatedVersionIsPersisted {
-  _sut.lastAuthenticatedVersion = @"1.2.1";
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentAppStore];
-  assertThat(_sut.lastAuthenticatedVersion, equalTo(@"1.2.1"));
+  self.sut.lastAuthenticatedVersion = @"1.2.1";
+  self.sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentAppStore];
+  assertThat(self.sut.lastAuthenticatedVersion, equalTo(@"1.2.1"));
 }
 
 - (void) testThatCleanupWorks {
-  _sut.lastAuthenticatedVersion = @"1.2";
+  self.sut.lastAuthenticatedVersion = @"1.2";
+  self.sut.identified = YES;
+  self.sut.validated = YES;
   
-  [_sut cleanupInternalStorage];
+  [self.sut cleanupInternalStorage];
   
-  assertThat(_sut.lastAuthenticatedVersion, equalTo(nil));
-  assertThat(_sut.installationIdentifier, equalTo(nil));
+  assertThat(self.sut.lastAuthenticatedVersion, equalTo(nil));
+  assertThat(self.sut.installationIdentifier, equalTo(nil));
+  assertThatBool(self.sut.isIdentified, isFalse());
+  assertThatBool(self.sut.isValidated, isFalse());
 }
 
 #pragma mark - Initial defaults
 - (void) testDefaultValues {
-  assertThatBool(_sut.restrictApplicationUsage, isFalse());
-  assertThatBool(_sut.isIdentified, isFalse());
-  assertThatBool(_sut.isValidated, isFalse());
-  assertThat(_sut.authenticationSecret, equalTo(nil));
-  assertThat(_sut.installationIdentifier, equalTo(nil));
-  assertThat(_sut.installationIdentifierParameterString, equalTo(@"uuid"));
+  assertThatBool(self.sut.restrictApplicationUsage, isFalse());
+  assertThatBool(self.sut.isIdentified, isFalse());
+  assertThatBool(self.sut.isValidated, isFalse());
+  assertThat(self.sut.authenticationSecret, equalTo(nil));
+  assertThat(self.sut.installationIdentifier, equalTo(nil));
+  assertThat(self.sut.installationIdentifierParameterString, equalTo(@"uuid"));
 }
 
 #pragma mark - General identification tests
 - (void) testThatIsDoesntShowMoreThanOneAuthenticationController {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
-  _sut.delegate = delegateMock;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
+  self.sut.delegate = delegateMock;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
   
-  [_sut identifyWithCompletion:nil];
-  [_sut identifyWithCompletion:nil];
-  [_sut identifyWithCompletion:nil];
+  [self.sut identifyWithCompletion:nil];
+  [self.sut identifyWithCompletion:nil];
+  [self.sut identifyWithCompletion:nil];
   
-  [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
+  [verifyCount(delegateMock, times(1)) authenticator:self.sut willShowAuthenticationController:(id)anything()];
 }
 
 - (void) testThatChangingIdentificationTypeResetsIdentifiedFlag {
-  _sut.identified = YES;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
-  assertThatBool(_sut.identified, isFalse());
+  self.sut.identified = YES;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
+  assertThatBool(self.sut.identified, isFalse());
 }
 
 - (void) testThatAfterChangingIdentificationTypeIdentificationIsRedone {
-  [_sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
-  _sut.identified = YES;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
-  [_sut identifyWithCompletion:nil];
-  assertThatBool(_sut.identified, isFalse());
-  assertThat(_sut.installationIdentifier, nilValue());
+  [self.sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
+  self.sut.identified = YES;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
+  [self.sut identifyWithCompletion:nil];
+  assertThatBool(self.sut.identified, isFalse());
+  assertThat(self.sut.installationIdentifier, nilValue());
 }
 
 - (void) testThatIdentifyingAnAlreadyIdentifiedInstanceDoesNothing {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
   
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [_sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
-  _sut.identified = YES;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
+  [self.sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
+  self.sut.identified = YES;
   
-  [_sut identifyWithCompletion:nil];
+  [self.sut identifyWithCompletion:nil];
   
-  [verifyCount(delegateMock, never()) authenticator:_sut willShowAuthenticationController:(id)anything()];
+  [verifyCount(delegateMock, never()) authenticator:self.sut willShowAuthenticationController:(id)anything()];
 }
 
 
 #pragma mark - Anonymous identification type
 - (void) testAnonymousIdentification {
-  _sut.identificationType = BITAuthenticatorIdentificationTypeAnonymous;
-  assertThatBool(_sut.isIdentified, isFalse());
-  [_sut identifyWithCompletion:^(BOOL identified, NSError *error) {
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeAnonymous;
+  assertThatBool(self.sut.isIdentified, isFalse());
+  [self.sut identifyWithCompletion:^(BOOL identified, NSError *error) {
     assertThatBool(identified, isTrue());
     assertThat(error, equalTo(nil));
   }];
-  assertThatBool(_sut.isIdentified, isTrue());
-  assertThat(_sut.installationIdentifier, notNilValue());
+  assertThatBool(self.sut.isIdentified, isTrue());
+  assertThat(self.sut.installationIdentifier, notNilValue());
 }
 
 //anoynmous users can't be validated
 - (void) testAnonymousValidation {
-  _sut.identificationType = BITAuthenticatorIdentificationTypeAnonymous;
-  assertThatBool(_sut.isValidated, isFalse());
-  [_sut validateWithCompletion:^(BOOL validated, NSError *error) {
-    assertThatBool(_sut.validated, isFalse());
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeAnonymous;
+  assertThatBool(self.sut.isValidated, isFalse());
+  [self.sut validateWithCompletion:^(BOOL __unused validated, NSError *error) {
+    assertThatBool(self.sut.validated, isFalse());
     assertThat(error, notNilValue());
   }];
-  assertThatBool(_sut.isValidated, isFalse());
+  assertThatBool(self.sut.isValidated, isFalse());
 }
 
 #pragma mark - Device identification type
 - (void) testDeviceIdentificationShowsViewController {
-  _sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
 
-  [_sut identifyWithCompletion:nil];
+  [self.sut identifyWithCompletion:nil];
   
-  [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
+  [verifyCount(delegateMock, times(1)) authenticator:self.sut willShowAuthenticationController:(id)anything()];
 }
 #pragma mark - Web auth identification type
 - (void) testWebAuthIdentificationShowsViewController {
-  _sut.identificationType = BITAuthenticatorIdentificationTypeWebAuth;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeWebAuth;
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
   
-  [_sut identifyWithCompletion:nil];
+  [self.sut identifyWithCompletion:nil];
   
-  [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
+  [verifyCount(delegateMock, times(1)) authenticator:self.sut willShowAuthenticationController:(id)anything()];
 }
 
 #pragma mark - Email identification type
 - (void) testEmailIdentificationFailsWithMissingSecret {
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [_sut identifyWithCompletion:^(BOOL identified, NSError *error) {
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
+  [self.sut identifyWithCompletion:^(BOOL identified, NSError *error) {
     assertThatBool(identified, isFalse());
     assertThat(error, notNilValue());
   }];
 }
 
 - (void) testEmailIdentificationShowsViewController {
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  _sut.authenticationSecret = @"mySecret";
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
+  self.sut.authenticationSecret = @"mySecret";
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
   
-  [_sut identifyWithCompletion:nil];
+  [self.sut identifyWithCompletion:nil];
   
-  [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
+  [verifyCount(delegateMock, times(1)) authenticator:self.sut willShowAuthenticationController:(id)anything()];
 }
 
 - (void) testEmailValidationFailsWithMissingSecret {
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [_sut validateWithCompletion:^(BOOL validated, NSError *error) {
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
+  [self.sut validateWithCompletion:^(BOOL validated, NSError *error) {
     assertThatBool(validated, isFalse());
     assertThat(error, notNilValue());
   }];
 }
 
-- (void) testThatEmailIdentificationQueuesAnOperation {
-  id helperMock = OCMClassMock([BITHockeyHelper class]);
-  OCMStub([helperMock isURLSessionSupported]).andReturn(NO);
-  
-  id httpClientMock = mock(BITHockeyAppClient.class);
-  _sut.hockeyAppClient = httpClientMock;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [_sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
-  _sut.authenticationSecret = @"double";
-  
-  [_sut authenticationViewController:nil handleAuthenticationWithEmail:@"stephan@dd.de" request:[NSURLRequest new] completion:nil];
-  
-  [verify(httpClientMock) enqeueHTTPOperation:anything()];
-}
-
 #pragma mark - User identification type
 - (void) testUserIdentificationShowsViewController {
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
   
-  [_sut identifyWithCompletion:nil];
+  [self.sut identifyWithCompletion:nil];
   
-  [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
+  [verifyCount(delegateMock, times(1)) authenticator:self.sut willShowAuthenticationController:(id)anything()];
 }
 
 
 #pragma mark - Generic validation tests
 - (void) testThatValidationFailsIfNotIdentified {
-  _sut.identified = NO;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
-  [_sut validateWithCompletion:^(BOOL validated, NSError *error) {
+  self.sut.identified = NO;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
+  [self.sut validateWithCompletion:^(BOOL validated, NSError *error) {
     assertThatBool(validated, isFalse());
     assertThatLong(error.code, equalToLong(BITAuthenticatorNotIdentified));
   }];
 }
 
-- (void) testThatValidationCreatesAGETRequest {
-  id helperMock = OCMClassMock([BITHockeyHelper class]);
-  OCMStub([helperMock isURLSessionSupported]).andReturn(NO);
-  id httpClientMock = mock(BITHockeyAppClient.class);
-  _sut.hockeyAppClient = httpClientMock;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [_sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
-  _sut.authenticationSecret = @"double";
-  [_sut validateWithCompletion:nil];
-  [verify(httpClientMock) getPath:(id)anything()
-                       parameters:(id)anything()
-                       completion:(id)anything()];
-}
-
 #pragma mark - Authentication
 - (void) testThatEnabledRestrictionTriggersValidation {
-  id mockAuthenticator = OCMPartialMock(_sut);
-  _sut.authenticationSecret = @"sekret";
-  _sut.restrictApplicationUsage = YES;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [_sut storeInstallationIdentifier:@"asd" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
+  id mockAuthenticator = OCMPartialMock(self.sut);
+  self.sut.authenticationSecret = @"sekret";
+  self.sut.restrictApplicationUsage = YES;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
+  [self.sut storeInstallationIdentifier:@"asd" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
   
   
   OCMExpect([mockAuthenticator validateWithCompletion:(id)anything()]);
-  [_sut authenticate];
+  [self.sut authenticate];
   OCMVerifyAll(mockAuthenticator);
-}
-
-- (void) testThatDisabledRestrictionDoesntTriggerValidation {
-  id clientMock = mock(BITHockeyAppClient.class);
-  _sut.hockeyAppClient = clientMock;
-  _sut.authenticationSecret = @"sekret";
-  _sut.restrictApplicationUsage = NO;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
-  [_sut storeInstallationIdentifier:@"asd" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
-  [_sut authenticate];
-  
-  [verifyCount(clientMock, never()) getPath:(id)anything() parameters:(id)anything() completion:(id)anything()];
 }
 
 #pragma mark - Lifetime checks
 - (void) testThatValidationTriggersOnDidBecomeActive {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
-  _sut.delegate = delegateMock;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
-  _sut.restrictApplicationUsage = YES;
+  self.sut.delegate = delegateMock;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
+  self.sut.restrictApplicationUsage = YES;
   
-  [_sut applicationDidBecomeActive:nil];
+  [self.sut applicationDidBecomeActive:nil];
   
-  [verify(delegateMock) authenticator:_sut willShowAuthenticationController:(id)anything()];
+  [verify(delegateMock) authenticator:self.sut willShowAuthenticationController:(id)anything()];
 }
 
 #pragma mark - Validation helper checks
 - (void) testThatValidationTriggersOnNewVersion {
-  _sut.restrictApplicationUsage = YES;
-  _sut.restrictionEnforcementFrequency = BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
-  _sut.validated = YES;
-  _sut.lastAuthenticatedVersion = @"111xxx";
-  assertThatBool(_sut.needsValidation, isTrue());
+  self.sut.restrictApplicationUsage = YES;
+  self.sut.restrictionEnforcementFrequency = BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch;
+  self.sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
+  self.sut.validated = YES;
+  self.sut.lastAuthenticatedVersion = @"111xxx";
+  assertThatBool(self.sut.needsValidation, isTrue());
 }
 
 - (void) testThatValidationDoesNotTriggerOnSameVersion {
-  _sut.restrictApplicationUsage = YES;
-  _sut.restrictionEnforcementFrequency = BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch;
-  _sut.validated = YES;
-  _sut.lastAuthenticatedVersion = _sut.executableUUID;
-  assertThatBool(_sut.needsValidation, isFalse());
+  self.sut.restrictApplicationUsage = YES;
+  self.sut.restrictionEnforcementFrequency = BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch;
+  self.sut.validated = YES;
+  self.sut.lastAuthenticatedVersion = self.sut.executableUUID;
+  assertThatBool(self.sut.needsValidation, isFalse());
 }
 
 @end

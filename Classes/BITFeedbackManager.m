@@ -31,7 +31,6 @@
 
 #if HOCKEYSDK_FEATURE_FEEDBACK
 
-#import <AssetsLibrary/AssetsLibrary.h>
 #import <Photos/Photos.h>
 
 #import "HockeySDKPrivate.h"
@@ -61,22 +60,19 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 @interface BITFeedbackManager () <UIGestureRecognizerDelegate>
 
+@property (nonatomic, strong) NSFileManager *fileManager;
+@property (nonatomic, copy) NSString *settingsFile;
+@property (nonatomic, weak) id appDidBecomeActiveObserver;
+@property (nonatomic, weak) id appDidEnterBackgroundObserver;
+@property (nonatomic, weak) id networkDidBecomeReachableObserver;
+@property (nonatomic) BOOL incomingMessagesAlertShowing;
+@property (nonatomic) BOOL didEnterBackgroundState;
+@property (nonatomic) BOOL networkRequestInProgress;
+@property (nonatomic) BITFeedbackObservationMode observationMode;
+
 @end
 
-@implementation BITFeedbackManager {
-  NSFileManager *_fileManager;
-  NSString *_settingsFile;
-
-  id _appDidBecomeActiveObserver;
-  id _appDidEnterBackgroundObserver;
-  id _networkDidBecomeReachableObserver;
-
-  BOOL _incomingMessagesAlertShowing;
-  BOOL _didEnterBackgroundState;
-  BOOL _networkRequestInProgress;
-
-  BITFeedbackObservationMode _observationMode;
-}
+@implementation BITFeedbackManager
 
 #pragma mark - Initialization
 
@@ -98,7 +94,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     _token = nil;
     _lastMessageID = nil;
 
-    _feedbackList = [NSMutableArray array];
+    self.feedbackList = [NSMutableArray array];
 
     _fileManager = [[NSFileManager alloc] init];
 
@@ -117,11 +113,11 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (void)didBecomeActiveActions {
   if ([self isFeedbackManagerDisabled]) return;
-  if (!_didEnterBackgroundState) return;
+  if (!self.didEnterBackgroundState) return;
 
-  _didEnterBackgroundState = NO;
+  self.didEnterBackgroundState = NO;
 
-  if ([_feedbackList count] == 0) {
+  if ([self.feedbackList count] == 0) {
     [self loadMessages];
   } else {
     [self updateAppDefinedUserData];
@@ -133,10 +129,10 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (void)didEnterBackgroundActions {
-  _didEnterBackgroundState = NO;
+  self.didEnterBackgroundState = NO;
 
   if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground) {
-    _didEnterBackgroundState = YES;
+    self.didEnterBackgroundState = YES;
   }
 }
 
@@ -144,29 +140,29 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (void)registerObservers {
   __weak typeof(self) weakSelf = self;
-  if (nil == _appDidEnterBackgroundObserver) {
-    _appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+  if (nil == self.appDidEnterBackgroundObserver) {
+    self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
                                                                                        object:nil
                                                                                         queue:NSOperationQueue.mainQueue
-                                                                                   usingBlock:^(NSNotification *note) {
+                                                                                   usingBlock:^(NSNotification __unused *note) {
                                                                                        typeof(self) strongSelf = weakSelf;
                                                                                        [strongSelf didEnterBackgroundActions];
                                                                                    }];
   }
-  if (nil == _appDidBecomeActiveObserver) {
-    _appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+  if (nil == self.appDidBecomeActiveObserver) {
+    self.appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
                                                                                     object:nil
                                                                                      queue:NSOperationQueue.mainQueue
-                                                                                usingBlock:^(NSNotification *note) {
+                                                                                usingBlock:^(NSNotification __unused *note) {
                                                                                     typeof(self) strongSelf = weakSelf;
                                                                                     [strongSelf didBecomeActiveActions];
                                                                                 }];
   }
-  if (nil == _networkDidBecomeReachableObserver) {
-    _networkDidBecomeReachableObserver = [[NSNotificationCenter defaultCenter] addObserverForName:BITHockeyNetworkDidBecomeReachableNotification
+  if (nil == self.networkDidBecomeReachableObserver) {
+    self.networkDidBecomeReachableObserver = [[NSNotificationCenter defaultCenter] addObserverForName:BITHockeyNetworkDidBecomeReachableNotification
                                                                                            object:nil
                                                                                             queue:NSOperationQueue.mainQueue
-                                                                                       usingBlock:^(NSNotification *note) {
+                                                                                       usingBlock:^(NSNotification __unused *note) {
                                                                                            typeof(self) strongSelf = weakSelf;
                                                                                            [strongSelf didBecomeActiveActions];
                                                                                        }];
@@ -174,17 +170,20 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (void)unregisterObservers {
-  if (_appDidEnterBackgroundObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:_appDidEnterBackgroundObserver];
-    _appDidEnterBackgroundObserver = nil;
+  id strongDidEnterBackgroundObserver = self.appDidEnterBackgroundObserver;
+  id strongDidBecomeActiveObserver = self.appDidBecomeActiveObserver;
+  id strongNetworkDidBecomeReachableObserver = self.networkDidBecomeReachableObserver;
+  if (strongDidEnterBackgroundObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongDidEnterBackgroundObserver];
+    self.appDidEnterBackgroundObserver = nil;
   }
-  if (_appDidBecomeActiveObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:_appDidBecomeActiveObserver];
-    _appDidBecomeActiveObserver = nil;
+  if (strongDidBecomeActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongDidBecomeActiveObserver];
+    self.appDidBecomeActiveObserver = nil;
   }
-  if (_networkDidBecomeReachableObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:_networkDidBecomeReachableObserver];
-    _networkDidBecomeReachableObserver = nil;
+  if (strongNetworkDidBecomeReachableObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:strongNetworkDidBecomeReachableObserver];
+    self.networkDidBecomeReachableObserver = nil;
   }
 }
 
@@ -213,7 +212,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (void)showFeedbackListView {
-  if (_currentFeedbackListViewController) {
+  if (self.currentFeedbackListViewController) {
     BITHockeyLogDebug(@"INFO: update view already visible, aborting");
     return;
   }
@@ -227,15 +226,16 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BITFeedbackComposeViewController *composeViewController = [[BITFeedbackComposeViewController alloc] init];
 
   NSArray *preparedItems = [NSArray array];
-  if ([self.delegate respondsToSelector:@selector(preparedItemsForFeedbackManager:)]) {
-    preparedItems = [preparedItems arrayByAddingObjectsFromArray:[self.delegate preparedItemsForFeedbackManager:self]];
+  id strongDelegate = self.delegate;
+  if ([strongDelegate respondsToSelector:@selector(preparedItemsForFeedbackManager:)]) {
+    preparedItems = [preparedItems arrayByAddingObjectsFromArray:(NSArray *)[strongDelegate preparedItemsForFeedbackManager:self]];
   }
 
   [composeViewController prepareWithItems:preparedItems];
   [composeViewController setHideImageAttachmentButton:self.feedbackComposeHideImageAttachmentButton];
 
   // by default set the delegate to be identical to the one of BITFeedbackManager
-  [composeViewController setDelegate:self.delegate];
+  [composeViewController setDelegate:strongDelegate];
   return composeViewController;
 }
 
@@ -244,7 +244,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items {
-  if (_currentFeedbackComposeViewController) {
+  if (self.currentFeedbackComposeViewController) {
     BITHockeyLogDebug(@"INFO: Feedback view already visible, aborting");
     return;
   }
@@ -273,7 +273,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   switch ([[UIApplication sharedApplication] applicationState]) {
     case UIApplicationStateActive:
       // we did startup, so yes we are coming from background
-      _didEnterBackgroundState = YES;
+      self.didEnterBackgroundState = YES;
 
       [self didBecomeActiveActions];
       break;
@@ -286,15 +286,15 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (BOOL)allowFetchingNewMessages {
   BOOL fetchNewMessages = YES;
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(allowAutomaticFetchingForNewFeedbackForManager:)]) {
-    fetchNewMessages = [[BITHockeyManager sharedHockeyManager].delegate
-            allowAutomaticFetchingForNewFeedbackForManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(allowAutomaticFetchingForNewFeedbackForManager:)]) {
+    fetchNewMessages = [strongDelegate allowAutomaticFetchingForNewFeedbackForManager:self];
   }
   return fetchNewMessages;
 }
 
 - (void)updateMessagesList {
-  if (_networkRequestInProgress) return;
+  if (self.networkRequestInProgress) return;
 
   NSArray *pendingMessages = [self messagesWithStatus:BITFeedbackMessageStatusSendPending];
   if ([pendingMessages count] > 0) {
@@ -306,7 +306,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (void)updateMessagesListIfRequired {
   double now = [[NSDate date] timeIntervalSince1970];
-  if ((now - [_lastCheck timeIntervalSince1970] > 30)) {
+  if ((now - [self.lastCheck timeIntervalSince1970] > 30)) {
     [self updateMessagesList];
   }
 }
@@ -315,11 +315,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BOOL availableViaDelegate = NO;
 
   NSString *userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID];
-
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
-    userID = [[BITHockeyManager sharedHockeyManager].delegate
-            userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                  componentManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+    userID = [strongDelegate userIDForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
 
   if (userID) {
@@ -334,11 +332,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BOOL availableViaDelegate = NO;
 
   NSString *userName = [self stringValueFromKeychainForKey:kBITHockeyMetaUserName];
-
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
-    userName = [[BITHockeyManager sharedHockeyManager].delegate
-            userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                    componentManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
+    userName = [strongDelegate userNameForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
 
   if (userName) {
@@ -354,11 +350,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BOOL availableViaDelegate = NO;
 
   NSString *userEmail = [self stringValueFromKeychainForKey:kBITHockeyMetaUserEmail];
-
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
-    userEmail = [[BITHockeyManager sharedHockeyManager].delegate
-            userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                     componentManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
+    userEmail = [strongDelegate userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
 
   if (userEmail) {
@@ -400,10 +394,10 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BOOL userNameViaDelegate = [self updateUserNameUsingKeychainAndDelegate];
   BOOL userEmailViaDelegate = [self updateUserEmailUsingKeychainAndDelegate];
 
-  if (![_fileManager fileExistsAtPath:_settingsFile])
+  if (![self.fileManager fileExistsAtPath:self.settingsFile])
     return;
 
-  NSData *codedData = [[NSData alloc] initWithContentsOfFile:_settingsFile];
+  NSData *codedData = [[NSData alloc] initWithContentsOfFile:self.settingsFile];
   if (codedData == nil) return;
 
   NSKeyedUnarchiver *unarchiver = nil;
@@ -411,7 +405,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   @try {
     unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:codedData];
   }
-  @catch (NSException *exception) {
+  @catch (NSException __unused *exception) {
     return;
   }
 
@@ -440,7 +434,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   }
 
   if ([unarchiver containsValueForKey:kBITFeedbackUserDataAsked])
-    _didAskUserData = YES;
+    self.didAskUserData = YES;
 
   if ([unarchiver containsValueForKey:kBITFeedbackToken]) {
     self.token = [unarchiver decodeObjectForKey:kBITFeedbackToken];
@@ -470,7 +464,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     self.lastMessageID = [unarchiver decodeObjectForKey:kBITFeedbackLastMessageID];
 
   if ([unarchiver containsValueForKey:kBITFeedbackMessages]) {
-    [self.feedbackList setArray:[unarchiver decodeObjectForKey:kBITFeedbackMessages]];
+    [self.feedbackList setArray:(NSArray *)[unarchiver decodeObjectForKey:kBITFeedbackMessages]];
 
     [self sortFeedbackList];
 
@@ -492,7 +486,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   NSMutableData *data = [[NSMutableData alloc] init];
   NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
 
-  if (_didAskUserData)
+  if (self.didAskUserData)
     [archiver encodeObject:[NSNumber numberWithBool:YES] forKey:kBITFeedbackUserDataAsked];
 
   if (self.token)
@@ -519,13 +513,13 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   [archiver encodeObject:self.feedbackList forKey:kBITFeedbackMessages];
 
   [archiver finishEncoding];
-  [data writeToFile:_settingsFile atomically:YES];
+  [data writeToFile:self.settingsFile atomically:YES];
 }
 
 
 - (void)updateDidAskUserData {
-  if (!_didAskUserData) {
-    _didAskUserData = YES;
+  if (!self.didAskUserData) {
+    self.didAskUserData = YES;
 
     [self saveMessages];
   }
@@ -534,7 +528,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 #pragma mark - Messages
 
 - (void)sortFeedbackList {
-  [_feedbackList sortUsingComparator:^(BITFeedbackMessage *obj1, BITFeedbackMessage *obj2) {
+  [self.feedbackList sortUsingComparator:^(BITFeedbackMessage *obj1, BITFeedbackMessage *obj2) {
       NSDate *date1 = [obj1 date];
       NSDate *date2 = [obj2 date];
 
@@ -557,12 +551,12 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (NSUInteger)numberOfMessages {
-  return [_feedbackList count];
+  return [self.feedbackList count];
 }
 
 - (BITFeedbackMessage *)messageAtIndex:(NSUInteger)index {
-  if ([_feedbackList count] > index) {
-    return [_feedbackList objectAtIndex:index];
+  if ([self.feedbackList count] > index) {
+    return [self.feedbackList objectAtIndex:index];
   }
 
   return nil;
@@ -571,7 +565,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (BITFeedbackMessage *)messageWithID:(NSNumber *)messageID {
   __block BITFeedbackMessage *message = nil;
 
-  [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
+  [self.feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger __unused messagesIdx, BOOL *stop) {
       if ([[objMessage identifier] isEqualToNumber:messageID]) {
         message = objMessage;
         *stop = YES;
@@ -582,9 +576,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (NSArray *)messagesWithStatus:(BITFeedbackMessageStatus)status {
-  NSMutableArray *resultMessages = [[NSMutableArray alloc] initWithCapacity:[_feedbackList count]];
+  NSMutableArray *resultMessages = [[NSMutableArray alloc] initWithCapacity:[self.feedbackList count]];
 
-  [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
+  [self.feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger __unused messagesIdx, BOOL __unused *stop) {
       if ([objMessage status] == status) {
         [resultMessages addObject:objMessage];
       }
@@ -597,9 +591,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   __block BITFeedbackMessage *message = nil;
 
 
-  // Note: the logic here is slightly different than in our mac SDK, as _feedbackList is sorted in different order.
+  // Note: the logic here is slightly different than in our mac SDK, as self.feedbackList is sorted in different order.
   // Compare the implementation of - (void)sortFeedbackList; in both SDKs.
-  [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
+  [self.feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger __unused messagesIdx, BOOL *stop) {
       if ([[objMessage identifier] integerValue] != 0) {
         message = objMessage;
         *stop = YES;
@@ -611,7 +605,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (void)markSendInProgressMessagesAsPending {
   // make sure message that may have not been send successfully, get back into the right state to be send again
-  [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+  [self.feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger __unused messagesIdx, BOOL __unused *stop) {
       if ([(BITFeedbackMessage *) objMessage status] == BITFeedbackMessageStatusSendInProgress)
         [(BITFeedbackMessage *) objMessage setStatus:BITFeedbackMessageStatusSendPending];
   }];
@@ -619,7 +613,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (void)markSendInProgressMessagesAsInConflict {
   // make sure message that may have not been send successfully, get back into the right state to be send again
-  [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+  [self.feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger __unused messagesIdx, BOOL __unused *stop) {
       if ([(BITFeedbackMessage *) objMessage status] == BITFeedbackMessageStatusSendInProgress)
         [(BITFeedbackMessage *) objMessage setStatus:BITFeedbackMessageStatusInConflict];
   }];
@@ -634,10 +628,10 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (BOOL)deleteMessageAtIndex:(NSUInteger)index {
-  if (_feedbackList && [_feedbackList count] > index && [_feedbackList objectAtIndex:index]) {
-    BITFeedbackMessage *message = _feedbackList[index];
+  if (self.feedbackList && [self.feedbackList count] > index && [self.feedbackList objectAtIndex:index]) {
+    BITFeedbackMessage *message = self.feedbackList[index];
     [message deleteContents];
-    [_feedbackList removeObjectAtIndex:index];
+    [self.feedbackList removeObjectAtIndex:index];
 
     [self saveMessages];
     return YES;
@@ -647,14 +641,15 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (void)deleteAllMessages {
-  [_feedbackList removeAllObjects];
+  [self.feedbackList removeAllObjects];
 
   [self saveMessages];
 }
 
 - (BOOL)shouldForceNewThread {
-  if (self.delegate && [self.delegate respondsToSelector:@selector(forceNewFeedbackThreadForFeedbackManager:)]) {
-    return [self.delegate forceNewFeedbackThreadForFeedbackManager:self];
+  id strongDelegate = self.delegate;
+  if (strongDelegate && [strongDelegate respondsToSelector:@selector(forceNewFeedbackThreadForFeedbackManager:)]) {
+    return [strongDelegate forceNewFeedbackThreadForFeedbackManager:self];
   } else {
     return NO;
   }
@@ -707,7 +702,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
     [self markSendInProgressMessagesAsPending];
 
-    [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+    [self.feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger __unused messagesIdx, BOOL __unused *stop) {
         if ([(BITFeedbackMessage *) objMessage status] != BITFeedbackMessageStatusSendPending)
           [(BITFeedbackMessage *) objMessage setStatus:BITFeedbackMessageStatusArchived];
     }];
@@ -752,7 +747,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     __block BOOL newMessage = NO;
     NSMutableSet *returnedMessageIDs = [[NSMutableSet alloc] init];
 
-    [feedMessages enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+    [feedMessages enumerateObjectsUsingBlock:^(id objMessage, NSUInteger __unused messagesIdx, BOOL __unused *stop) {
         if ([(NSDictionary *) objMessage objectForKey:@"id"]) {
           NSNumber *messageID = [(NSDictionary *) objMessage objectForKey:@"id"];
           [returnedMessageIDs addObject:messageID];
@@ -764,7 +759,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
             // TODO: match messages in state conflict
 
-            [messagesSendInProgress enumerateObjectsUsingBlock:^(id objSendInProgressMessage, NSUInteger messagesSendInProgressIdx, BOOL *stop2) {
+            [messagesSendInProgress enumerateObjectsUsingBlock:^(id objSendInProgressMessage, NSUInteger __unused messagesSendInProgressIdx, BOOL *stop2) {
                 if ([[(NSDictionary *) objMessage objectForKey:@"token"] isEqualToString:[(BITFeedbackMessage *) objSendInProgressMessage token]]) {
                   matchingSendInProgressOrInConflictMessage = objSendInProgressMessage;
                   *stop2 = YES;
@@ -804,7 +799,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
                   [message addAttachmentsObject:newAttachment];
                 }
 
-                [_feedbackList addObject:message];
+                [self.feedbackList addObject:message];
 
                 newMessage = YES;
               }
@@ -829,49 +824,30 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       BITFeedbackMessage *latestMessage = [self lastMessageHavingID];
       if (self.userEmail && latestMessage.email && [self.userEmail compare:latestMessage.email] == NSOrderedSame)
         latestMessageFromUser = YES;
-
+      id strongDelegate = self.delegate;
       if (!latestMessageFromUser) {
-        if ([self.delegate respondsToSelector:@selector(feedbackManagerDidReceiveNewFeedback:)]) {
-          [self.delegate feedbackManagerDidReceiveNewFeedback:self];
+        if ([strongDelegate respondsToSelector:@selector(feedbackManagerDidReceiveNewFeedback:)]) {
+          [strongDelegate feedbackManagerDidReceiveNewFeedback:self];
         }
 
         if (self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
           dispatch_async(dispatch_get_main_queue(), ^{
-              /*
-               // Requires iOS 8
-               id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
-               if (uialertcontrollerClass) {
-               UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
-               message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
-               preferredStyle:UIAlertControllerStyleAlert];
+            UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
+                                                                                     message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
+                                                                              preferredStyle:UIAlertControllerStyleAlert];
+            UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
+                                                                   style:UIAlertActionStyleCancel
+                                                                 handler:nil];
+            UIAlertAction *showAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackShow")
+                                                                 style:UIAlertActionStyleDefault
+                                                               handler:^(UIAlertAction __unused * __nonnull action) {
+                                                                 [self showFeedbackListView];
+                                                               }];
+            [alertController addAction:cancelAction];
+            [alertController addAction:showAction];
 
-               UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
-               style:UIAlertActionStyleCancel
-               handler:nil];
-               UIAlertAction *showAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackShow")
-               style:UIAlertActionStyleDefault
-               handler:^(UIAlertAction *__nonnull action) {
-               [self showFeedbackListView];
-               }];
-               [alertController addAction:cancelAction];
-               [alertController addAction:showAction];
-
-               [self showAlertController:alertController];
-               } else {
-               */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-              UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
-                                                                  message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
-                                                                 delegate:self
-                                                        cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
-                                                        otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackShow"), nil
-              ];
-              [alertView setTag:0];
-              [alertView show];
-#pragma clang diagnostic pop
-              /*}*/
-              _incomingMessagesAlertShowing = YES;
+            [self showAlertController:alertController];
+            self.incomingMessagesAlertShowing = YES;
           });
         }
       }
@@ -897,7 +873,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (void)sendNetworkRequestWithHTTPMethod:(NSString *)httpMethod withMessage:(BITFeedbackMessage *)message completionHandler:(void (^)(NSError *error))completionHandler {
   NSString *boundary = @"----FOO";
 
-  _networkRequestInProgress = YES;
+  self.networkRequestInProgress = YES;
   // inform the UI to update its data in case the list is already showing
   [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingStarted object:nil];
 
@@ -926,7 +902,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   NSString *url = [NSString stringWithFormat:@"%@%@", self.serverURL, parameter];
   BITHockeyLogDebug(@"INFO: sending api request to %@", url);
 
-  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
+  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
   [request setHTTPMethod:httpMethod];
   [request setValue:@"Hockey/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
@@ -977,40 +953,29 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       photoIndex++;
     }
 
-    [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+    [postBody appendData:(NSData *)[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
 
 
     [request setHTTPBody:postBody];
   }
   __weak typeof(self) weakSelf = self;
-  if ([BITHockeyHelper isURLSessionSupported]) {
-    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+  NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+  __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
 
-    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                            completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-                                                typeof(self) strongSelf = weakSelf;
+  NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                          completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+                                            typeof(self) strongSelf = weakSelf;
 
-                                                [session finishTasksAndInvalidate];
+                                            [session finishTasksAndInvalidate];
 
-                                                [strongSelf handleFeedbackMessageResponse:response data:data error:error completion:completionHandler];
-                                            }];
-    [task resume];
-
-  } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error) {
-#pragma clang diagnostic pop
-        typeof(self) strongSelf = weakSelf;
-        [strongSelf handleFeedbackMessageResponse:response data:responseData error:error completion:completionHandler];
-    }];
-  }
+                                            [strongSelf handleFeedbackMessageResponse:response data:data error:error completion:completionHandler];
+                                          }];
+  [task resume];
 
 }
 
 - (void)handleFeedbackMessageResponse:(NSURLResponse *)response data:(NSData *)responseData error:(NSError *)error completion:(void (^)(NSError *error))completionHandler {
-  _networkRequestInProgress = NO;
+  self.networkRequestInProgress = NO;
 
   if (error) {
     [self reportError:error];
@@ -1030,7 +995,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
         // set the token to the first message token, since this is identical
         __block NSString *token = nil;
 
-        [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+        [self.feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger __unused messagesIdx, BOOL *stop) {
             if ([(BITFeedbackMessage *) objMessage status] == BITFeedbackMessageStatusSendInProgress) {
               token = [(BITFeedbackMessage *) objMessage token];
               *stop = YES;
@@ -1050,13 +1015,13 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       BITHockeyLogDebug(@"INFO: Received API response: %@", responseString);
 
       if (responseString && [responseString dataUsingEncoding:NSUTF8StringEncoding]) {
-        NSError *error = NULL;
+        NSError *localError = NULL;
 
-        NSDictionary *feedDict = (NSDictionary *) [NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
+        NSDictionary *feedDict = (NSDictionary *) [NSJSONSerialization JSONObjectWithData:(NSData *)[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&localError];
 
         // server returned empty response?
-        if (error) {
-          [self reportError:error];
+        if (localError) {
+          [self reportError:localError];
         } else if (![feedDict count]) {
           [self reportError:[NSError errorWithDomain:kBITFeedbackErrorDomain
                                                 code:BITFeedbackAPIServerReturnedEmptyResponse
@@ -1083,7 +1048,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (void)fetchMessageUpdates {
-  if ([_feedbackList count] == 0 && !self.token) {
+  if ([self.feedbackList count] == 0 && !self.token) {
     // inform the UI to update its data in case the list is already showing
     [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingFinished object:nil];
 
@@ -1092,16 +1057,16 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
   [self sendNetworkRequestWithHTTPMethod:@"GET"
                              withMessage:nil
-                       completionHandler:^(NSError *error) {
+                       completionHandler:^(NSError __unused *error) {
                            // inform the UI to update its data in case the list is already showing
                            [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingFinished object:nil];
                        }];
 }
 
 - (void)submitPendingMessages {
-  if (_networkRequestInProgress) {
+  if (self.networkRequestInProgress) {
     [[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(submitPendingMessages) object:nil];
-    [self performSelector:@selector(submitPendingMessages) withObject:nil afterDelay:2.0f];
+    [self performSelector:@selector(submitPendingMessages) withObject:nil afterDelay:2.0];
     return;
   }
 
@@ -1150,28 +1115,10 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   [message setAttachments:attachments];
   [message setUserMessage:YES];
 
-  [_feedbackList addObject:message];
+  [self.feedbackList addObject:message];
 
   [self submitPendingMessages];
 }
-
-
-#pragma mark - UIAlertViewDelegate
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-
-// invoke the selected action from the action sheet for a location element
-- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-
-  _incomingMessagesAlertShowing = NO;
-  if (buttonIndex == [alertView firstOtherButtonIndex]) {
-    // Show button has been clicked
-    [self showFeedbackListView];
-  }
-}
-
-#pragma clang diagnostic pop
 
 #pragma mark - Observation Handling
 
@@ -1253,7 +1200,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   }
 }
 
-- (void)screenshotNotificationReceived:(NSNotification *)notification {
+- (void)screenshotNotificationReceived:(NSNotification *) __unused notification {
   // Don't do anything if FeedbackManager was disabled.
   if ([self isFeedbackManagerDisabled]) return;
 
@@ -1277,40 +1224,10 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   // Safeguard in case the dev hasn't set the NSPhotoLibraryUsageDescription in their Info.plist
   if (![self isiOS10PhotoPolicySet]) {return;}
 
-  // Only available from iOS 8 up
-  id phImageManagerClass = NSClassFromString(@"PHImageManager");
-  if (phImageManagerClass) {
-    [self fetchLatestImageUsingPhotoLibraryWithCompletionHandler:completionHandler];
-  } else {
-    [self fetchLatestImageUsingAssetsLibraryWithCompletionHandler:completionHandler];
-  }
+  [self fetchLatestImageUsingPhotoLibraryWithCompletionHandler:completionHandler];
 }
 
-- (void)fetchLatestImageUsingAssetsLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
-  [library enumerateGroupsWithTypes:ALAssetsGroupSavedPhotos usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
-
-      [group setAssetsFilter:[ALAssetsFilter allPhotos]];
-
-      [group enumerateAssetsWithOptions:NSEnumerationReverse usingBlock:^(ALAsset *alAsset, NSUInteger index, BOOL *innerStop) {
-
-          if (alAsset) {
-            ALAssetRepresentation *representation = [alAsset defaultRepresentation];
-            UIImage *latestPhoto = [UIImage imageWithCGImage:[representation fullScreenImage]];
-
-            completionHandler(latestPhoto);
-
-            *stop = YES;
-            *innerStop = YES;
-          }
-      }];
-  }                    failureBlock:nil];
-#pragma clang diagnostic pop
-}
-
-- (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0) {
+- (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
   // Safeguard in case the dev hasn't set the NSPhotoLibraryUsageDescription in their Info.plist
   if (![self isiOS10PhotoPolicySet]) {return;}
 
@@ -1331,7 +1248,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   }];
 }
 
-- (void)loadLatestImageAssetWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0) {
+- (void)loadLatestImageAssetWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
 
   // Safeguard in case the dev hasn't set the NSPhotoLibraryUsageDescription in their Info.plist
   if (![self isiOS10PhotoPolicySet]) {return;}
@@ -1351,9 +1268,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
       options.resizeMode = PHImageRequestOptionsResizeModeNone;
 
-      [imageManager requestImageDataForAsset:latestImageAsset options:options resultHandler:^(NSData *_Nullable imageData, NSString *_Nullable dataUTI, UIImageOrientation orientation, NSDictionary *_Nullable info) {
+      [imageManager requestImageDataForAsset:latestImageAsset options:options resultHandler:^(NSData *_Nullable imageData, NSString *_Nullable __unused dataUTI, UIImageOrientation __unused orientation, NSDictionary *_Nullable __unused info) {
           if (imageData) {
-            completionHandler([UIImage imageWithData:imageData]);
+            completionHandler((UIImage *)[UIImage imageWithData:(NSData *)imageData]);
           } else {
             BITHockeyLogDebug(@"INFO: The latest image could not be fetched, requested image data was empty.");
           }
@@ -1373,7 +1290,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   }
 }
 
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *) __unused gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *) __unused otherGestureRecognizer {
   return YES;
 }
 

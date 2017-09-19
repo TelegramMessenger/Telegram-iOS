@@ -6,7 +6,6 @@
 #import "BITChannelPrivate.h"
 #import "BITGZIP.h"
 #import "HockeySDKPrivate.h"
-#import "BITHTTPOperation.h"
 #import "BITHockeyHelper.h"
 
 static char const *kBITSenderTasksQueueString = "net.hockeyapp.sender.tasksQueue";
@@ -47,7 +46,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
   [center addObserverForName:BITPersistenceSuccessNotification
                       object:nil
                        queue:nil
-                  usingBlock:^(NSNotification *notification) {
+                  usingBlock:^(NSNotification __unused *notification) {
                     typeof(self) strongSelf = weakSelf;
                     [strongSelf sendSavedDataAsync];
                   }];
@@ -55,7 +54,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
   [center addObserverForName:BITChannelBlockedNotification
                       object:nil
                        queue:nil
-                  usingBlock:^(NSNotification *notification) {
+                  usingBlock:^(NSNotification __unused *notification) {
                     typeof(self) strongSelf = weakSelf;
                     [strongSelf sendSavedDataAsync];
                   }];
@@ -71,9 +70,9 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)sendSavedData {
   @synchronized(self){
-    if(_runningRequestsCount < _maxRequestCount){
-      _runningRequestsCount++;
-      BITHockeyLogDebug(@"INFO: Create new sender thread. Current count is %ld", (long) _runningRequestsCount);
+    if(self.runningRequestsCount < self.maxRequestCount){
+      self.runningRequestsCount++;
+      BITHockeyLogDebug(@"INFO: Create new sender thread. Current count is %ld", (long) self.runningRequestsCount);
     }else{
       return;
     }
@@ -93,35 +92,20 @@ static NSUInteger const BITDefaultRequestLimit = 10;
     [self sendRequest:request filePath:filePath];
   } else {
     self.runningRequestsCount -= 1;
-    BITHockeyLogDebug(@"INFO: Close sender thread due empty package. Current count is %ld", (long) _runningRequestsCount);
+    BITHockeyLogDebug(@"INFO: Close sender thread due empty package. Current count is %ld", (long) self.runningRequestsCount);
     // TODO: Delete data and send next file
   }
 }
 
 - (void)sendRequest:(nonnull NSURLRequest *) request filePath:(nonnull NSString *) path {
   if (!path || !request) {return;}
-  
-  if ([self isURLSessionSupported]) {
-    [self sendUsingURLSessionWithRequest:request filePath:path];
-  } else {
-    [self sendUsingURLConnectionWithRequest:request filePath:path];
-  }
+  [self sendUsingURLSessionWithRequest:request filePath:path];
 }
 
 - (BOOL)isURLSessionSupported {
   id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
   BOOL isUrlSessionSupported = (nsurlsessionClass && !bit_isRunningInAppExtension());
   return isUrlSessionSupported;
-}
-
-- (void)sendUsingURLConnectionWithRequest:(nonnull NSURLRequest *)request filePath:(nonnull NSString *)filePath {
-  BITHTTPOperation *operation = [BITHTTPOperation operationWithRequest:request];
-  [operation setCompletion:^(BITHTTPOperation *operation, NSData *responseData, NSError *error) {
-    NSInteger statusCode = [operation.response statusCode];
-    [self handleResponseWithStatusCode:statusCode responseData:responseData filePath:filePath error:error];
-  }];
-
-  [self.operationQueue addOperation:operation];
 }
 
 - (void)sendUsingURLSessionWithRequest:(nonnull NSURLRequest *)request filePath:(nonnull NSString *)filePath {
@@ -141,7 +125,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)handleResponseWithStatusCode:(NSInteger)statusCode responseData:(nonnull NSData *)responseData filePath:(nonnull NSString *)filePath error:(nonnull NSError *)error {
   self.runningRequestsCount -= 1;
-  BITHockeyLogDebug(@"INFO: Close sender thread due incoming response. Current count is %ld", (long) _runningRequestsCount);
+  BITHockeyLogDebug(@"INFO: Close sender thread due incoming response. Current count is %ld", (long) self.runningRequestsCount);
 
   if (responseData && (responseData.length > 0) && [self shouldDeleteDataWithStatusCode:statusCode]) {
     //we delete data that was either sent successfully or if we have a non-recoverable error
@@ -203,15 +187,15 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (NSUInteger)runningRequestsCount {
   __block NSUInteger count;
-  dispatch_sync(_requestsCountQueue, ^{
-    count = _runningRequestsCount;
+  dispatch_sync(self.requestsCountQueue, ^{
+    count = self->_runningRequestsCount;
   });
   return count;
 }
 
 - (void)setRunningRequestsCount:(NSUInteger)runningRequestsCount {
-  dispatch_sync(_requestsCountQueue, ^{
-    _runningRequestsCount = runningRequestsCount;
+  dispatch_sync(self.requestsCountQueue, ^{
+    self->_runningRequestsCount = runningRequestsCount;
   });
 }
 

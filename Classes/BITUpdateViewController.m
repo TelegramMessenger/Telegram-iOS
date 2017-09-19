@@ -48,20 +48,19 @@
 #define kWebCellIdentifier @"PSWebTableViewCell"
 #define kAppStoreViewHeight 99
 
+@interface BITUpdateViewController ()
 
-@implementation BITUpdateViewController {
-  BOOL _kvoRegistered;
-  BOOL _showAllVersions;
-  BITAppStoreHeader *_appStoreHeader;
-  BITStoreButton *_appStoreButton;
-  
-  id _popOverController;
-  
-  NSMutableArray *_cells;
-  
-  BITEnvironment _appEnvironment;
-}
+@property (nonatomic) BOOL kvoRegistered;
+@property (nonatomic) BOOL showAllVersions;
+@property (nonatomic, strong) BITAppStoreHeader *appStoreHeader;
+@property (nonatomic, strong) BITStoreButton *appStoreButton;
+@property (nonatomic, strong) id popOverController;
+@property (nonatomic, strong) NSMutableArray *cells;
+@property (nonatomic) BITEnvironment appEnvironment;
 
+@end
+
+@implementation BITUpdateViewController
 
 #pragma mark - Private
 
@@ -70,9 +69,9 @@
 }
 
 - (void)restoreStoreButtonStateAnimated:(BOOL)animated {
-  if (_appEnvironment == BITEnvironmentAppStore) {
+  if (self.appEnvironment == BITEnvironmentAppStore) {
     [self setAppStoreButtonState:AppStoreButtonStateOffline animated:animated];
-  } else if ([_updateManager isUpdateAvailable]) {
+  } else if ([self.updateManager isUpdateAvailable]) {
     [self setAppStoreButtonState:AppStoreButtonStateUpdate animated:animated];
   } else {
     [self setAppStoreButtonState:AppStoreButtonStateCheck animated:animated];
@@ -80,15 +79,16 @@
 }
 
 - (void)updateAppStoreHeader {
-  BITAppVersionMetaInfo *appVersion = _updateManager.newestAppVersion;
-  _appStoreHeader.headerText = appVersion.name;
-  _appStoreHeader.subHeaderText = _updateManager.companyName;
+  BITUpdateManager *strongManager = self.updateManager;
+  BITAppVersionMetaInfo *appVersion = strongManager.newestAppVersion;
+  self.appStoreHeader.headerText = appVersion.name;
+  self.appStoreHeader.subHeaderText = strongManager.companyName;
 }
 
 - (void)appDidBecomeActive {
   if (self.appStoreButtonState == AppStoreButtonStateInstalling) {
     [self setAppStoreButtonState:AppStoreButtonStateUpdate animated:YES];
-  } else if (![_updateManager isCheckInProgress]) {
+  } else if (![self.updateManager isCheckInProgress]) {
     [self restoreStoreButtonStateAnimated:YES];
   }
 }
@@ -119,7 +119,7 @@
   tableViewContentHeight += [UIApplication sharedApplication].statusBarFrame.size.height;
   
   NSUInteger footerViewSize = kMinPreviousVersionButtonHeight;
-  NSUInteger frameHeight = self.view.frame.size.height;
+  NSUInteger frameHeight = (NSUInteger)self.view.frame.size.height;
   if(tableViewContentHeight < frameHeight && (frameHeight - tableViewContentHeight > 100)) {
     footerViewSize = frameHeight - tableViewContentHeight;
   }
@@ -166,7 +166,7 @@
 }
 
 - (void)showHidePreviousVersionsButton {
-  BOOL multipleVersionButtonNeeded = [_updateManager.appVersions count] > 1 && !_showAllVersions;
+  BOOL multipleVersionButtonNeeded = [self.updateManager.appVersions count] > 1 && !self.showAllVersions;
   
   if(multipleVersionButtonNeeded) {
     // align at the bottom if tableview is small
@@ -188,7 +188,7 @@
     UIButton *footerButton = [UIButton buttonWithType:UIButtonTypeCustom];
     //footerButton.layer.shadowOffset = CGSizeMake(-2, 2);
     footerButton.layer.shadowColor = [[UIColor blackColor] CGColor];
-    footerButton.layer.shadowRadius = 2.0f;
+    footerButton.layer.shadowRadius = 2.0;
     footerButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
     [footerButton setTitle:BITHockeyLocalizedString(@"UpdateShowPreviousVersions") forState:UIControlStateNormal];
     [footerButton setTitleColor:BIT_RGBCOLOR(61, 61, 61) forState:UIControlStateNormal];
@@ -221,11 +221,12 @@
   }
   
   NSString *installed = @"";
-  if ([appVersion.version isEqualToString:[_updateManager currentAppVersion]]) {
+  BITUpdateManager *strongManager = self.updateManager;
+  if ([appVersion.version isEqualToString:[strongManager currentAppVersion]]) {
     installed = [NSString stringWithFormat:@"<span style=\"float:right;\"><b>%@</b></span>", BITHockeyLocalizedString(@"UpdateInstalled")];
   }
   
-  if ([appVersion isEqual:_updateManager.newestAppVersion]) {
+  if ([appVersion isEqual:strongManager.newestAppVersion]) {
     if ([appVersion.notes length] > 0) {
       cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, appVersion.notes];
     } else {
@@ -245,32 +246,32 @@
 
 #pragma mark - Init
 
-- (instancetype)initWithStyle:(UITableViewStyle)style {
+- (instancetype)initWithStyle:(UITableViewStyle) __unused style {
   if ((self = [super initWithStyle:UITableViewStylePlain])) {
-    _updateManager = [BITHockeyManager sharedHockeyManager].updateManager ;
-    _appEnvironment = [BITHockeyManager sharedHockeyManager].appEnvironment;
+    self.updateManager = [BITHockeyManager sharedHockeyManager].updateManager ;
+    self.appEnvironment = [BITHockeyManager sharedHockeyManager].appEnvironment;
     
     self.title = BITHockeyLocalizedString(@"UpdateScreenTitle");
     
-    _cells = [[NSMutableArray alloc] initWithCapacity:5];
-    _popOverController = nil;
+    self.cells = [[NSMutableArray alloc] initWithCapacity:5];
+    self.popOverController = nil;
   }
   return self;
 }
 
 - (void)dealloc {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
-  
+  BITUpdateManager *strongManager = self.updateManager;
   // test if KVO's are registered. if class is destroyed before it was shown(viewDidLoad) no KVOs are registered.
-  if (_kvoRegistered) {
-    [_updateManager removeObserver:self forKeyPath:@"checkInProgress"];
-    [_updateManager removeObserver:self forKeyPath:@"isUpdateURLOffline"];
-    [_updateManager removeObserver:self forKeyPath:@"updateAvailable"];
-    [_updateManager removeObserver:self forKeyPath:@"appVersions"];
-    _kvoRegistered = NO;
+  if (self.kvoRegistered) {
+    [strongManager removeObserver:self forKeyPath:@"checkInProgress"];
+    [strongManager removeObserver:self forKeyPath:@"isUpdateURLOffline"];
+    [strongManager removeObserver:self forKeyPath:@"updateAvailable"];
+    [strongManager removeObserver:self forKeyPath:@"appVersions"];
+    self.kvoRegistered = NO;
   }
   
-  for (UITableViewCell *cell in _cells) {
+  for (UITableViewCell *cell in self.cells) {
     [cell removeObserver:self forKeyPath:@"webViewSize"];
   }
   
@@ -285,13 +286,14 @@
   // add notifications only to loaded view
   NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
   [dnc addObserver:self selector:@selector(appDidBecomeActive) name:UIApplicationDidBecomeActiveNotification object:nil];
-  
+
   // hook into manager with kvo!
-  [_updateManager addObserver:self forKeyPath:@"checkInProgress" options:0 context:nil];
-  [_updateManager addObserver:self forKeyPath:@"isUpdateURLOffline" options:0 context:nil];
-  [_updateManager addObserver:self forKeyPath:@"updateAvailable" options:0 context:nil];
-  [_updateManager addObserver:self forKeyPath:@"appVersions" options:0 context:nil];
-  _kvoRegistered = YES;
+  BITUpdateManager *strongManager = self.updateManager;
+  [strongManager addObserver:self forKeyPath:@"checkInProgress" options:0 context:nil];
+  [strongManager addObserver:self forKeyPath:@"isUpdateURLOffline" options:0 context:nil];
+  [strongManager addObserver:self forKeyPath:@"updateAvailable" options:0 context:nil];
+  [strongManager addObserver:self forKeyPath:@"appVersions" options:0 context:nil];
+  self.kvoRegistered = YES;
   
   self.tableView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
@@ -301,15 +303,15 @@
   topView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   [self.tableView addSubview:topView];
   
-  _appStoreHeader = [[BITAppStoreHeader alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kAppStoreViewHeight)];
+  self.appStoreHeader = [[BITAppStoreHeader alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kAppStoreViewHeight)];
   [self updateAppStoreHeader];
   
   NSString *iconFilename = bit_validAppIconFilename([NSBundle mainBundle], [NSBundle mainBundle]);
   if (iconFilename) {
-    _appStoreHeader.iconImage = [UIImage imageNamed:iconFilename];
+    self.appStoreHeader.iconImage = [UIImage imageNamed:iconFilename];
   }
   
-  self.tableView.tableHeaderView = _appStoreHeader;
+  self.tableView.tableHeaderView = self.appStoreHeader;
   
   BITStoreButton *storeButton = [[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58) style:BITStoreButtonStyleOS7];
   storeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
@@ -317,25 +319,25 @@
   [self.tableView.tableHeaderView addSubview:storeButton];
   storeButton.buttonData = [BITStoreButtonData dataWithLabel:@"" enabled:NO];
   [storeButton alignToSuperview];
-  _appStoreButton = storeButton;
+  self.appStoreButton = storeButton;
   self.appStoreButtonState = AppStoreButtonStateCheck;
 }
 
 - (void)viewWillAppear:(BOOL)animated {
-  if (_appEnvironment != BITEnvironmentOther) {
+  if (self.appEnvironment != BITEnvironmentOther) {
     self.appStoreButtonState = AppStoreButtonStateOffline;
   } else if (self.mandatoryUpdate) {
     self.navigationItem.leftBarButtonItem = nil;
   }
-  _updateManager.currentHockeyViewController = self;
+  self.updateManager.currentHockeyViewController = self;
   [super viewWillAppear:animated];
   [self redrawTableView];
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
-  _updateManager.currentHockeyViewController = nil;
+  self.updateManager.currentHockeyViewController = nil;
   //if the popover is still visible, dismiss it
-  [_popOverController dismissPopoverAnimated:YES];
+  [self.popOverController dismissPopoverAnimated:YES];
   [super viewWillDisappear:animated];
 }
 
@@ -344,19 +346,20 @@
   [self updateAppStoreHeader];
   
   // clean up and remove any pending observers
-  for (UITableViewCell *cell in _cells) {
+  for (UITableViewCell *cell in self.cells) {
     [cell removeObserver:self forKeyPath:@"webViewSize"];
   }
-  [_cells removeAllObjects];
+  [self.cells removeAllObjects];
   
   int i = 0;
   BOOL breakAfterThisAppVersion = NO;
-  for (BITAppVersionMetaInfo *appVersion in _updateManager.appVersions) {
+  BITUpdateManager *stronManager = self.updateManager;
+  for (BITAppVersionMetaInfo *appVersion in stronManager.appVersions) {
     i++;
     
     // only show the newer version of the app by default, if we don't show all versions
-    if (!_showAllVersions) {
-      if ([appVersion.version isEqualToString:[_updateManager currentAppVersion]]) {
+    if (!self.showAllVersions) {
+      if ([appVersion.version isEqualToString:[stronManager currentAppVersion]]) {
         if (i == 1) {
           breakAfterThisAppVersion = YES;
         } else {
@@ -366,7 +369,7 @@
     }
 
     BITWebTableViewCell *cell = [self webCellWithAppVersion:appVersion];
-    [_cells addObject:cell];
+    [self.cells addObject:cell];
     
     if (breakAfterThisAppVersion) break;
   }
@@ -382,14 +385,14 @@
 }
 
 - (void)showPreviousVersionAction {
-  _showAllVersions = YES;
+  self.showAllVersions = YES;
   BOOL showAllPending = NO;
-  
-  for (BITAppVersionMetaInfo *appVersion in _updateManager.appVersions) {
+  BITUpdateManager *strongManager = self.updateManager;
+  for (BITAppVersionMetaInfo *appVersion in strongManager.appVersions) {
     if (!showAllPending) {
-      if ([appVersion.version isEqualToString:[_updateManager currentAppVersion]]) {            
+      if ([appVersion.version isEqualToString:[strongManager currentAppVersion]]) {
         showAllPending = YES;
-        if (appVersion == _updateManager.newestAppVersion) {
+        if (appVersion == strongManager.newestAppVersion) {
           continue; // skip this version already if it the latest version is the installed one
         }
       } else {
@@ -397,7 +400,7 @@
       }
     }
 
-    [_cells addObject:[self webCellWithAppVersion:appVersion]];
+    [self.cells addObject:[self webCellWithAppVersion:appVersion]];
   }
   [self.tableView reloadData];
   [self showHidePreviousVersionsButton];
@@ -406,19 +409,19 @@
 
 #pragma mark - Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+- (NSInteger)numberOfSectionsInTableView:(UITableView *) __unused tableView {
   return 1;
 }
 
-- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (CGFloat)tableView:(UITableView *) __unused tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
   CGFloat rowHeight = 0;
   
-  if ([_cells count] > (NSUInteger)indexPath.row) {
-    BITWebTableViewCell *cell = [_cells objectAtIndex:indexPath.row];
+  if ([self.cells count] > (NSUInteger)indexPath.row) {
+    BITWebTableViewCell *cell = [self.cells objectAtIndex:indexPath.row];
     rowHeight = cell.webViewSize.height;
   }
   
-  if ([_updateManager.appVersions count] > 1 && !_showAllVersions) {
+  if ([self.updateManager.appVersions count] > 1 && !self.showAllVersions) {
     self.tableView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   }
   
@@ -430,22 +433,22 @@
   return rowHeight;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-  NSInteger cellCount = [_cells count];
+- (NSInteger)tableView:(UITableView *) __unused tableView numberOfRowsInSection:(NSInteger) __unused section {
+  NSInteger cellCount = [self.cells count];
   return cellCount;
 }
 
 
 #pragma mark - KVO
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id) __unused object change:(NSDictionary *) __unused change context:(void *) __unused context {
   // only make changes if we are visible
   if(self.view.window) {
     if ([keyPath isEqualToString:@"webViewSize"]) {
       [self.tableView reloadData];
       [self realignPreviousVersionButton];
     } else if ([keyPath isEqualToString:@"checkInProgress"]) {
-      if (_updateManager.isCheckInProgress) {
+      if (self.updateManager.isCheckInProgress) {
         [self setAppStoreButtonState:AppStoreButtonStateSearching animated:YES];
       }else {
         [self restoreStoreButtonStateAnimated:YES];
@@ -461,9 +464,9 @@
 }
 
 // Customize the appearance of table view cells.
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-  if ([_cells count] > (NSUInteger)indexPath.row) {
-    return [_cells objectAtIndex:indexPath.row];
+- (UITableViewCell *)tableView:(UITableView *) __unused tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+  if ([self.cells count] > (NSUInteger)indexPath.row) {
+    return [self.cells objectAtIndex:indexPath.row];
   } else {
     BITHockeyLogWarning(@"Warning: cells_ and indexPath do not match? forgot calling redrawTableView? Returning empty UITableViewCell");
     return [UITableViewCell new];
@@ -474,11 +477,13 @@
 
 #pragma mark - Rotation
 
-- (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation duration:(NSTimeInterval)duration {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
+- (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation) __unused interfaceOrientation duration:(NSTimeInterval) __unused duration {
   // update all cells
-  [_cells makeObjectsPerformSelector:@selector(addWebView)];
+  [self.cells makeObjectsPerformSelector:@selector(addWebView)];
 }
-
+#pragma clang diagnostic pop
 
 #pragma mark - PSAppStoreHeaderDelegate
 
@@ -487,36 +492,41 @@
 }
 
 - (void)setAppStoreButtonState:(AppStoreButtonState)anAppStoreButtonState animated:(BOOL)animated {
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdirect-ivar-access"
   _appStoreButtonState = anAppStoreButtonState;
+#pragma clang diagnostic pop
   
   switch (anAppStoreButtonState) {
     case AppStoreButtonStateOffline:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonOffline") enabled:NO] animated:animated];
+      [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonOffline") enabled:NO] animated:animated];
       break;
     case AppStoreButtonStateCheck:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonCheck") enabled:YES] animated:animated];
+      [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonCheck") enabled:YES] animated:animated];
       break;
     case AppStoreButtonStateSearching:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonSearching") enabled:NO] animated:animated];
+      [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonSearching") enabled:NO] animated:animated];
       break;
     case AppStoreButtonStateUpdate:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonUpdate") enabled:YES] animated:animated];
+      [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonUpdate") enabled:YES] animated:animated];
       break;
     case AppStoreButtonStateInstalling:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonInstalling") enabled:NO] animated:animated];
+      [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonInstalling") enabled:NO] animated:animated];
       break;
     default:
       break;
   }
 }
 
-- (void)storeButtonFired:(BITStoreButton *)button {
-  switch (_appStoreButtonState) {
+- (void)storeButtonFired:(BITStoreButton *) __unused button {
+  BITUpdateManager *strongManager = self.updateManager;
+  switch (self.appStoreButtonState) {
     case AppStoreButtonStateCheck:
-      [_updateManager checkForUpdateShowFeedback:YES];
+      [strongManager checkForUpdateShowFeedback:YES];
       break;
     case AppStoreButtonStateUpdate:
-      if ([_updateManager initiateAppDownload]) {
+      if ([strongManager initiateAppDownload]) {
         [self setAppStoreButtonState:AppStoreButtonStateInstalling animated:YES];
       };
       break;

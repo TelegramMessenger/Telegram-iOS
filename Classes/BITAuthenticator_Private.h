@@ -35,7 +35,7 @@
 
 @class BITHockeyAppClient;
 
-@interface BITAuthenticator ()<BITAuthenticationViewControllerDelegate, UIAlertViewDelegate>
+@interface BITAuthenticator ()<BITAuthenticationViewControllerDelegate>
 
 /**
  Delegate that can be used to do any last minute configurations on the

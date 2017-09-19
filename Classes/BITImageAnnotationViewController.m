@@ -140,10 +140,10 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 }
 
 - (BOOL)prefersStatusBarHidden {
-  return self.navigationController.navigationBarHidden || self.navigationController.navigationBar.alpha == 0.0f;
+  return self.navigationController.navigationBarHidden || self.navigationController.navigationBar.alpha == 0;
 }
 
-- (void)orientationDidChange:(NSNotification *)notification {
+- (void)orientationDidChange:(NSNotification *) __unused notification {
   [self fitImageViewFrame];
 }
 
@@ -167,7 +167,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   self.imageView.frame = baseFrame;
 }
 
-- (void)editingAction:(id)sender {
+- (void)editingAction:(id) __unused sender {
   
 }
 
@@ -183,12 +183,12 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 
 #pragma mark - Actions
 
-- (void)discard:(id)sender {
+- (void)discard:(id) __unused sender {
   [self.delegate annotationControllerDidCancel:self];
   [self dismissViewControllerAnimated:YES completion:nil];
 }
 
-- (void)save:(id)sender {
+- (void)save:(id) __unused sender {
   UIImage *image = [self extractImage];
   [self.delegate annotationController:self didFinishWithImage:image];
   [self dismissViewControllerAnimated:YES completion:nil];
@@ -198,7 +198,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   UIGraphicsBeginImageContextWithOptions(self.image.size, YES, 0.0);
   CGContextRef ctx = UIGraphicsGetCurrentContext();
   [self.image drawInRect:CGRectMake(0, 0, self.image.size.width, self.image.size.height)];
-  CGContextScaleCTM(ctx,1.0/self.scaleFactor,1.0f/self.scaleFactor);
+  CGContextScaleCTM(ctx,((CGFloat)1.0)/self.scaleFactor,((CGFloat)1.0)/self.scaleFactor);
   
   // Drawing all the annotations onto the final image.
   for (BITImageAnnotation *annotation in self.objects){
@@ -348,14 +348,17 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   }
 }
 
-- (void)tapped:(UIGestureRecognizer *)tapRecognizer {
+- (void)tapped:(UIGestureRecognizer *) __unused tapRecognizer {
+  
+  // TODO: remove pre-iOS 8 code.
+  
   // This toggles the nav and status bar. Since iOS7 and pre-iOS7 behave weirdly different,
   // this might look rather hacky, but hiding the navbar under iOS6 leads to some ugly
   // animation effect which is avoided by simply hiding the navbar setting it's alpha to 0. // moritzh
   
   if (self.navigationController.navigationBar.alpha == 0 || self.navigationController.navigationBarHidden ){
     
-    [UIView animateWithDuration:0.35f animations:^{
+    [UIView animateWithDuration:0.35 animations:^{
       [self.navigationController setNavigationBarHidden:NO animated:NO];
       
       if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
@@ -367,12 +370,12 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 #pragma clang diagnostic pop
       }
       
-    } completion:^(BOOL finished) {
+    } completion:^(BOOL __unused finished) {
       [self fitImageViewFrame];
       
     }];
   } else {
-    [UIView animateWithDuration:0.35f animations:^{
+    [UIView animateWithDuration:0.35 animations:^{
       [self.navigationController setNavigationBarHidden:YES animated:NO];
       
       if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
@@ -384,7 +387,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 #pragma clang diagnostic pop
       }
       
-    } completion:^(BOOL finished) {
+    } completion:^(BOOL __unused finished) {
       [self fitImageViewFrame];
       
     }];

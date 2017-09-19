@@ -43,16 +43,25 @@
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
 
-#ifndef __IPHONE_6_1
-#define __IPHONE_6_1     60100
+// We need BIT_UNUSED macro to make sure there aren't any warnings when building
+// HockeySDK Distribution scheme. Since several configurations are build in this scheme
+// and different features can be turned on and off we can't just use __unused attribute.
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
+#define BIT_UNUSED
+#else
+#define BIT_UNUSED __unused
+#endif
 #endif
 
-@implementation BITHockeyBaseManager {
-  UINavigationController *_navController;
-  
-  NSDateFormatter *_rfc3339Formatter;
-}
+@interface BITHockeyBaseManager ()
 
+@property (nonatomic, strong) UINavigationController *navController;
+@property (nonatomic, strong) NSDateFormatter *rfc3339Formatter;
+
+@end
+
+@implementation BITHockeyBaseManager
 
 - (instancetype)init {
   if ((self = [super init])) {
@@ -85,7 +94,7 @@
 }
 
 - (NSString *)encodedAppIdentifier {
-  return bit_encodeAppIdentifier(_appIdentifier);
+  return bit_encodeAppIdentifier(self.appIdentifier);
 }
 
 - (NSString *)getDevicePlatform {
@@ -185,9 +194,9 @@
 
 - (UIViewController *)visibleWindowRootViewController {
   UIViewController *parentViewController = nil;
-  
-  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(viewControllerForHockeyManager:componentManager:)]) {
-    parentViewController = [[BITHockeyManager sharedHockeyManager].delegate viewControllerForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
+  id strongDelegate = [BITHockeyManager sharedHockeyManager].delegate;
+  if ([strongDelegate respondsToSelector:@selector(viewControllerForHockeyManager:componentManager:)]) {
+    parentViewController = [strongDelegate viewControllerForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
   
   UIWindow *visibleWindow = [self findVisibleWindow];
@@ -214,7 +223,7 @@
   
   return parentViewController;
 }
-/* We won't use this for now until we have a more robust solution for displaying UIAlertController
+
 - (void)showAlertController:(UIViewController *)alertController {
   
   // always execute this on the main thread
@@ -234,9 +243,8 @@
     }
   });
 }
-*/
 
-- (void)showView:(UIViewController *)viewController {
+- (void)showView:(BIT_UNUSED UIViewController *)viewController {
   // if we compile Crash only, then BITHockeyBaseViewController is not included
   // in the headers and will cause a warning with the modulemap file
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
@@ -250,22 +258,22 @@
       return;
     }
     
-    if (_navController != nil) _navController = nil;
+    if (self.navController != nil) self.navController = nil;
     
-    _navController = [self customNavigationControllerWithRootViewController:viewController presentationStyle:_modalPresentationStyle];
+    self.navController = [self customNavigationControllerWithRootViewController:viewController presentationStyle:self.modalPresentationStyle];
     
     if (parentViewController) {
-      _navController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
+      self.navController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
       
       // page sheet for the iPad
       if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-        _navController.modalPresentationStyle = UIModalPresentationFormSheet;
+        self.navController.modalPresentationStyle = UIModalPresentationFormSheet;
       }
       
       if ([viewController isKindOfClass:[BITHockeyBaseViewController class]])
         [(BITHockeyBaseViewController *)viewController setModalAnimated:YES];
       
-      [parentViewController presentViewController:_navController animated:YES completion:nil];
+      [parentViewController presentViewController:self.navController animated:YES completion:nil];
     } else {
       // if not, we add a subview to the window. A bit hacky but should work in most circumstances.
       // Also, we don't get a nice animation for free, but hey, this is for beta not production users ;)
@@ -274,7 +282,7 @@
       BITHockeyLogDebug(@"INFO: No rootViewController found, using UIWindow-approach: %@", visibleWindow);
       if ([viewController isKindOfClass:[BITHockeyBaseViewController class]])
         [(BITHockeyBaseViewController *)viewController setModalAnimated:NO];
-      [visibleWindow addSubview:_navController.view];
+      [visibleWindow addSubview:self.navController.view];
     }
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK */
 }
@@ -334,7 +342,7 @@
 - (NSDate *)parseRFC3339Date:(NSString *)dateString {
   NSDate *date = nil;
   NSError *error = nil; 
-  if (![_rfc3339Formatter getObjectValue:&date forString:dateString range:nil error:&error]) {
+  if (![self.rfc3339Formatter getObjectValue:&date forString:dateString range:nil error:&error]) {
     BITHockeyLogWarning(@"WARNING: Invalid date '%@' string: %@", dateString, error);
   }
   

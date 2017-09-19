@@ -81,30 +81,32 @@
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave
                                                                                          target:self
                                                                                          action:@selector(saveAction:)];
-  
-  if ([self.manager userName])
-    self.name = [self.manager userName];
 
-  if ([self.manager userEmail])
-    self.email = [self.manager userEmail];
+  BITFeedbackManager *strongManager = self.manager;
+  if ([strongManager userName])
+    self.name = [strongManager userName];
+
+  if ([strongManager userEmail])
+    self.email = [strongManager userEmail];
   
-  [self.manager updateDidAskUserData];
+  [strongManager updateDidAskUserData];
   
   self.navigationItem.rightBarButtonItem.enabled = [self allRequiredFieldsEntered];
 }
 
 #pragma mark - UIViewController Rotation
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
-  return YES;
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations{
+  return UIInterfaceOrientationMaskAll;
 }
 
 #pragma mark - Private methods
 - (BOOL)allRequiredFieldsEntered {
-  if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired && [self.name length] == 0)
+  BITFeedbackManager *strongManager = self.manager;
+  if ([strongManager requireUserName] == BITFeedbackUserDataElementRequired && [self.name length] == 0)
     return NO;
 
-  if ([self.manager requireUserEmail] == BITFeedbackUserDataElementRequired && [self.email length] == 0)
+  if ([strongManager requireUserEmail] == BITFeedbackUserDataElementRequired && [self.email length] == 0)
     return NO;
 
   if ([self.email length] > 0 && !bit_validateEmail(self.email))
@@ -125,18 +127,18 @@
   self.navigationItem.rightBarButtonItem.enabled = [self allRequiredFieldsEntered];
 }
 
-- (void)dismissAction:(id)sender {
+- (void)dismissAction:(id) __unused sender {
   [self.delegate userDataUpdateCancelled];
 }
 
-- (void)saveAction:(id)sender {
-  
-  if ([self.manager requireUserName]) {
-    [self.manager setUserName:self.name];
+- (void)saveAction:(id) __unused sender {
+  BITFeedbackManager *strongManager = self.manager;
+  if ([strongManager requireUserName]) {
+    [strongManager setUserName:self.name];
   }
   
-  if ([self.manager requireUserEmail]) {
-    [self.manager setUserEmail:self.email];
+  if ([strongManager requireUserEmail]) {
+    [strongManager setUserEmail:self.email];
   }
   
   [self.delegate userDataUpdateFinished];
@@ -144,23 +146,23 @@
 
 #pragma mark - Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+- (NSInteger)numberOfSectionsInTableView:(UITableView *) __unused tableView {
   return 1;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+- (NSInteger)tableView:(UITableView *) __unused tableView numberOfRowsInSection:(NSInteger) __unused section {
   NSInteger rows = 0;
-  
-  if ([self.manager requireUserName] != BITFeedbackUserDataElementDontShow)
+  BITFeedbackManager *strongManager = self.manager;
+  if ([strongManager requireUserName] != BITFeedbackUserDataElementDontShow)
     rows ++;
 
-  if ([self.manager requireUserEmail] != BITFeedbackUserDataElementDontShow)
+  if ([strongManager requireUserEmail] != BITFeedbackUserDataElementDontShow)
     rows ++;
 
   return rows;
 }
 
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+- (NSString *)tableView:(UITableView *) __unused tableView titleForFooterInSection:(NSInteger)section {
   if (section == 0) {
     return BITHockeyLocalizedString(@"HockeyFeedbackUserDataDescription");
   }
@@ -168,9 +170,9 @@
   return nil;
 }
 
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (UITableViewCell *)tableView:(UITableView *) __unused tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   static NSString *CellIdentifier = @"InputCell";
-  
+  BITFeedbackManager *strongManager = self.manager;
   UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:CellIdentifier];
   if (cell == nil) {
     cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
@@ -186,16 +188,16 @@
     textField.adjustsFontSizeToFitWidth = YES;
     textField.textColor = [UIColor blackColor];
     textField.backgroundColor = [UIColor lightGrayColor];
-    
-    if ([indexPath row] == 0 && [self.manager requireUserName] != BITFeedbackUserDataElementDontShow) {
+
+    if ([indexPath row] == 0 && [strongManager requireUserName] != BITFeedbackUserDataElementDontShow) {
       textField.placeholder = BITHockeyLocalizedString(@"HockeyFeedbackUserDataNamePlaceHolder");
       textField.text = self.name;
-      if (self.manager.requireUserName == BITFeedbackUserDataElementRequired) {
+      if (strongManager.requireUserName == BITFeedbackUserDataElementRequired) {
         textField.accessibilityHint = BITHockeyLocalizedString(@"HockeyAccessibilityHintRequired");
       }
       
       textField.keyboardType = UIKeyboardTypeDefault;
-      if ([self.manager requireUserEmail])
+      if ([strongManager requireUserEmail])
         textField.returnKeyType = UIReturnKeyNext;
       else
         textField.returnKeyType = UIReturnKeyDone;
@@ -205,7 +207,7 @@
     } else {
       textField.placeholder = BITHockeyLocalizedString(@"HockeyFeedbackUserDataEmailPlaceholder");
       textField.text = self.email;
-      if (self.manager.requireUserEmail == BITFeedbackUserDataElementRequired) {
+      if (strongManager.requireUserEmail == BITFeedbackUserDataElementRequired) {
         textField.accessibilityHint = BITHockeyLocalizedString(@"HockeyAccessibilityHintRequired");
       }
       
@@ -213,7 +215,7 @@
       textField.returnKeyType = UIReturnKeyDone;
       textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
       [textField addTarget:self action:@selector(userEmailEntered:) forControlEvents:UIControlEventEditingChanged];
-      if (![self.manager requireUserName])
+      if (![strongManager requireUserName])
         [textField becomeFirstResponder];
     } 
     
@@ -229,7 +231,7 @@
     [cell addSubview:textField];
   }
   
-  if ([indexPath row] == 0 && [self.manager requireUserName] != BITFeedbackUserDataElementDontShow) {
+  if ([indexPath row] == 0 && [strongManager requireUserName] != BITFeedbackUserDataElementDontShow) {
     cell.textLabel.text = BITHockeyLocalizedString(@"HockeyFeedbackUserDataName");
   } else {
     cell.textLabel.text = BITHockeyLocalizedString(@"HockeyFeedbackUserDataEmail");

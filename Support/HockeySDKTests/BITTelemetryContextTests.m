@@ -13,12 +13,12 @@
 
 @interface BITTelemetryContextTests : XCTestCase
 
+@property(nonatomic, strong) BITTelemetryContext *sut;
+@property(nonatomic, strong) BITPersistence *mockPersistence;
+
 @end
 
-@implementation BITTelemetryContextTests {
-  BITTelemetryContext *_sut;
-  BITPersistence *_mockPersistence;
-}
+@implementation BITTelemetryContextTests
 
 - (void)setUp {
   [super setUp];
@@ -31,25 +31,25 @@
 }
 
 - (void)testThatContextObjectsNotNil {
-  XCTAssertNotNil(_sut.device);
-  XCTAssertNotNil(_sut.internal);
-  XCTAssertNotNil(_sut.application);
-  XCTAssertNotNil(_sut.session);
-  XCTAssertNotNil(_sut.user);
-  XCTAssertNotNil(_sut.appIdentifier);
+  XCTAssertNotNil(self.sut.device);
+  XCTAssertNotNil(self.sut.internal);
+  XCTAssertNotNil(self.sut.application);
+  XCTAssertNotNil(self.sut.session);
+  XCTAssertNotNil(self.sut.user);
+  XCTAssertNotNil(self.sut.appIdentifier);
 }
 
 - (void)testUserMetaDataGetsLoadedOnInit {
   [self initDependencies];
   
-  [verify(_mockPersistence) metaData];
+  [verify(self.mockPersistence) metaData];
 }
 
 #ifndef CI
 - (void)testContextDictionaryPerformance {
   [self measureBlock:^{
     for (int i = 0; i < 1000; ++i) {
-      [_sut contextDictionary];
+      [self.sut contextDictionary];
     }
   }];
 }
@@ -58,8 +58,8 @@
 #pragma mark - Setup helpers
 
 - (void)initDependencies {
-  _mockPersistence = mock(BITPersistence.class);
-  _sut = [[BITTelemetryContext alloc] initWithAppIdentifier:@"123" persistence:_mockPersistence];
+  self.mockPersistence = mock(BITPersistence.class);
+  self.sut = [[BITTelemetryContext alloc] initWithAppIdentifier:@"123" persistence:self.mockPersistence];
 }
 
 -(void)wait {

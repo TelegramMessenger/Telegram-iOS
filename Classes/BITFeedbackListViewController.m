@@ -49,20 +49,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import <QuickLook/QuickLook.h>
 
-
-#define DEFAULT_BACKGROUNDCOLOR BIT_RGBCOLOR(245, 245, 245)
-#define DEFAULT_BACKGROUNDCOLOR_OS7 BIT_RGBCOLOR(255, 255, 255)
 #define DEFAULT_TEXTCOLOR BIT_RGBCOLOR(75, 75, 75)
-
-#define BUTTON_BORDERCOLOR BIT_RGBCOLOR(175, 175, 175)
-#define BUTTON_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 225, 225)
-#define BUTTON_TEXTCOLOR BIT_RGBCOLOR(58, 58, 58)
-#define BUTTON_TEXTCOLOR_SHADOW BIT_RGBCOLOR(255, 255, 255)
-
-#define BUTTON_DELETE_BORDERCOLOR BIT_RGBCOLOR(61, 61, 61)
-#define BUTTON_DELETE_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 0, 0)
-#define BUTTON_DELETE_TEXTCOLOR BIT_RGBCOLOR(240, 240, 240)
-#define BUTTON_DELETE_TEXTCOLOR_SHADOW BIT_RGBCOLOR(125, 0, 0)
 
 #define BORDER_COLOR BIT_RGBCOLOR(215, 215, 215)
 
@@ -74,24 +61,22 @@
 @property (nonatomic) BOOL userDataComposeFlow;
 @property (nonatomic, strong) NSArray *cachedPreviewItems;
 @property (nonatomic, strong) NSOperationQueue *thumbnailQueue;
+@property (nonatomic) NSInteger deleteButtonSection;
+@property (nonatomic) NSInteger userButtonSection;
+@property (nonatomic) NSInteger numberOfSectionsBeforeRotation;
+@property (nonatomic) NSInteger numberOfMessagesBeforeRotation;
 
 @end
 
 
-@implementation BITFeedbackListViewController {
-  NSInteger _deleteButtonSection;
-  NSInteger _userButtonSection;
-  
-  NSInteger _numberOfSectionsBeforeRotation;
-  NSInteger _numberOfMessagesBeforeRotation;
-}
+@implementation BITFeedbackListViewController
 
 - (instancetype)initWithStyle:(UITableViewStyle)style {
   if ((self = [super initWithStyle:style])) {
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
     
     _deleteButtonSection = -1;
-    _userButtonSection = -1;
+    self.userButtonSection = -1;
     _userDataComposeFlow = NO;
     
     _numberOfSectionsBeforeRotation = -1;
@@ -202,18 +187,19 @@
   if (self.userDataComposeFlow) {
     self.userDataComposeFlow = NO;
   }
-  self.manager.currentFeedbackListViewController = self;
+  BITFeedbackManager *strongManager = self.manager;
+  strongManager.currentFeedbackListViewController = self;
   
-  [self.manager updateMessagesListIfRequired];
+  [strongManager updateMessagesListIfRequired];
   
-  if ([self.manager numberOfMessages] == 0 &&
-      [self.manager askManualUserDataAvailable] &&
-      [self.manager requireManualUserDataMissing] &&
-      ![self.manager didAskUserData]
+  if ([strongManager numberOfMessages] == 0 &&
+      [strongManager askManualUserDataAvailable] &&
+      [strongManager requireManualUserDataMissing] &&
+      ![strongManager didAskUserData]
       ) {
     self.userDataComposeFlow = YES;
     
-    if ([self.manager showFirstRequiredPresentationModal]) {
+    if ([strongManager showFirstRequiredPresentationModal]) {
       [self setUserDataAction:nil];
     } else {
       // In case of presenting the feedback in a UIPopoverController it appears
@@ -246,7 +232,7 @@
   [self.navigationController pushViewController:userController animated:YES];
 }
 
-- (void)setUserDataAction:(id)sender {
+- (void)setUserDataAction:(id) __unused sender {
   BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
   userController.delegate = self;
   
@@ -256,86 +242,48 @@
   [self presentViewController:navController animated:YES completion:nil];
 }
 
-- (void)newFeedbackAction:(id)sender {
-  BITFeedbackComposeViewController *composeController = [self.manager feedbackComposeViewController];
+- (void)newFeedbackAction:(id) __unused sender {
+  BITFeedbackManager *strongManager = self.manager;
+  BITFeedbackComposeViewController *composeController = [strongManager feedbackComposeViewController];
   
-  UINavigationController *navController = [self.manager customNavigationControllerWithRootViewController:composeController
+  UINavigationController *navController = [strongManager customNavigationControllerWithRootViewController:composeController
                                                                                        presentationStyle:UIModalPresentationFormSheet];
   
   [self presentViewController:navController animated:YES completion:nil];
 }
 
 - (void)deleteAllMessages {
-  [_manager deleteAllMessages];
+  [self.manager deleteAllMessages];
   [self refreshPreviewItems];
   
   [self.tableView reloadData];
 }
 
-- (void)deleteAllMessagesAction:(id)sender {
-  /* We won't use this for now until we have a more robust solution for displaying UIAlertController
-  // requires iOS 8
-  id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
-  if (uialertcontrollerClass) {
-    
-    NSString *title = BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages");
-    NSString *message = BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle");
-    UIAlertControllerStyle controllerStyle = UIAlertControllerStyleAlert;
-    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-      controllerStyle = UIAlertControllerStyleActionSheet;
-      title = BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle");
-      message = nil;
-    }
-    __weak typeof(self) weakSelf = self;
-    
-    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:title
-                                                                             message:message
-                                                                      preferredStyle:controllerStyle];
-    
-    
-    UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
-                                                           style:UIAlertActionStyleCancel
-                                                         handler:^(UIAlertAction * action) {}];
-    
-    [alertController addAction:cancelAction];
-    
-    UIAlertAction* deleteAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
-                                                           style:UIAlertActionStyleDestructive
-                                                         handler:^(UIAlertAction * action) {
-                                                           typeof(self) strongSelf = weakSelf;
-                                                           [strongSelf deleteAllMessages];
-                                                         }];
-    
-    [alertController addAction:deleteAction];
-    
-    
-    [self presentViewController:alertController animated:YES completion:nil];
-  } else {
-   */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-      UIActionSheet *deleteAction = [[UIActionSheet alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
-                                                                delegate:self
-                                                       cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
-                                                  destructiveButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
-                                                       otherButtonTitles:nil
-                                     ];
-      [deleteAction setTag:0];
-      [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
-      [deleteAction showInView:[self viewForShowingActionSheetOnPhone]];
-    } else {
-      UIAlertView *deleteAction = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages")
-                                                             message:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
-                                                            delegate:self
-                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
-                                                   otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete"), nil];
-      
-      [deleteAction setTag:0];
-      [deleteAction show];
-    }
-#pragma clang diagnostic pop
-  /*}*/
+- (void)deleteAllMessagesAction:(id) __unused sender {
+  NSString *title = BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages");
+  NSString *message = BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle");
+  UIAlertControllerStyle controllerStyle = UIAlertControllerStyleAlert;
+  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+    controllerStyle = UIAlertControllerStyleActionSheet;
+    title = BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle");
+    message = nil;
+  }
+  __weak typeof(self) weakSelf = self;
+  UIAlertController *alertController = [UIAlertController alertControllerWithTitle:title
+                                                                           message:message
+                                                                    preferredStyle:controllerStyle];
+  UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
+                                                         style:UIAlertActionStyleCancel
+                                                       handler:^(UIAlertAction __unused *action) {}];
+  [alertController addAction:cancelAction];
+  UIAlertAction* deleteAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
+                                                         style:UIAlertActionStyleDestructive
+                                                       handler:^(UIAlertAction __unused *action) {
+                                                         typeof(self) strongSelf = weakSelf;
+                                                         [strongSelf deleteAllMessages];
+                                                       }];
+  [alertController addAction:deleteAction];
+  [self presentViewController:alertController animated:YES completion:nil];
 }
 
 - (UIView*) viewForShowingActionSheetOnPhone {
@@ -375,11 +323,12 @@
 }
 
 -(void)userDataUpdateFinished {
-  [self.manager saveMessages];
+  BITFeedbackManager *strongManager = self.manager;
+  [strongManager saveMessages];
   [self refreshPreviewItems];
   
   if (self.userDataComposeFlow) {
-    if ([self.manager showFirstRequiredPresentationModal]) {
+    if ([strongManager showFirstRequiredPresentationModal]) {
       __weak typeof(self) weakSelf = self;
       [self dismissViewControllerAnimated:YES completion:^(void){
         typeof(self) strongSelf = weakSelf;
@@ -401,8 +350,9 @@
 
 - (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController
                   didFinishWithResult:(BITFeedbackComposeResult)composeResult {
+  BITFeedbackManager *strongManager = self.manager;
   if (self.userDataComposeFlow) {
-    if ([self.manager showFirstRequiredPresentationModal]) {
+    if ([strongManager showFirstRequiredPresentationModal]) {
       __weak typeof(self) weakSelf = self;
       [self dismissViewControllerAnimated:YES completion:^(void){
         typeof(self) strongSelf = weakSelf;
@@ -414,61 +364,63 @@
   } else {
     [self dismissViewControllerAnimated:YES completion:^(void){}];
   }
-  
-  if ([self.manager.delegate respondsToSelector:@selector(feedbackComposeViewController:didFinishWithResult:)]) {
-    [self.manager.delegate feedbackComposeViewController:composeViewController didFinishWithResult:composeResult];
+  id strongDelegate = strongManager.delegate;
+  if ([strongDelegate respondsToSelector:@selector(feedbackComposeViewController:didFinishWithResult:)]) {
+    [strongDelegate feedbackComposeViewController:composeViewController didFinishWithResult:composeResult];
   }
 }
 
 
 #pragma mark - UIViewController Rotation
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 - (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
-  _numberOfSectionsBeforeRotation = [self numberOfSectionsInTableView:self.tableView];
-  _numberOfMessagesBeforeRotation = [self.manager numberOfMessages];
+  self.numberOfSectionsBeforeRotation = [self numberOfSectionsInTableView:self.tableView];
+  self.numberOfMessagesBeforeRotation = [self.manager numberOfMessages];
   [self.tableView reloadData];
   [self.tableView beginUpdates];
   [self.tableView endUpdates];
   
-  _numberOfSectionsBeforeRotation = -1;
-  _numberOfMessagesBeforeRotation = -1;
+  self.numberOfSectionsBeforeRotation = -1;
+  self.numberOfMessagesBeforeRotation = -1;
   [self.tableView reloadData];
   
   [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
 }
+#pragma clang diagnostic pop
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
-  return YES;
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations{
+  return UIInterfaceOrientationMaskAll;
 }
-
 
 #pragma mark - Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-  if (_numberOfSectionsBeforeRotation >= 0)
-    return _numberOfSectionsBeforeRotation;
+- (NSInteger)numberOfSectionsInTableView:(UITableView *) __unused tableView {
+  if (self.numberOfSectionsBeforeRotation >= 0)
+    return self.numberOfSectionsBeforeRotation;
   
   NSInteger sections = 2;
-  _deleteButtonSection = -1;
-  _userButtonSection = -1;
-  
-  if ([self.manager isManualUserDataAvailable] || [self.manager didAskUserData]) {
-    _userButtonSection = sections;
+  self.deleteButtonSection = -1;
+  self.userButtonSection = -1;
+  BITFeedbackManager *strongManager = self.manager;
+  if ([strongManager isManualUserDataAvailable] || [strongManager didAskUserData]) {
+    self.userButtonSection = sections;
     sections++;
   }
   
-  if ([self.manager numberOfMessages] > 0) {
-    _deleteButtonSection = sections;
+  if ([strongManager numberOfMessages] > 0) {
+    self.deleteButtonSection = sections;
     sections++;
   }
   
   return sections;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+- (NSInteger)tableView:(UITableView *) __unused tableView numberOfRowsInSection:(NSInteger)section {
   if (section == 1) {
-    if (_numberOfMessagesBeforeRotation >= 0)
-      return _numberOfMessagesBeforeRotation;
+    if (self.numberOfMessagesBeforeRotation >= 0)
+      return self.numberOfMessagesBeforeRotation;
     return [self.manager numberOfMessages];
   } else {
     return 1;
@@ -484,10 +436,11 @@
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
   if (section == 0) {
-    UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 30.0f)];
-    UILabel *textLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 5.0f, self.view.frame.size.width - 32.0f, 25.0f)];
+    BITFeedbackManager *strongManager = self.manager;
+    UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 30.0)];
+    UILabel *textLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0, 5.0, self.view.frame.size.width - (CGFloat)32.0, 25.0)];
     textLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
-                      [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
+                      [strongManager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[strongManager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
     textLabel.font = [UIFont systemFontOfSize:10];
     textLabel.textColor = DEFAULT_TEXTCOLOR;
     [containerView addSubview:textLabel];
@@ -504,7 +457,7 @@
   static NSString *ButtonTopIdentifier = @"ButtonTopCell";
   static NSString *ButtonBottomIdentifier = @"ButtonBottomCell";
   static NSString *ButtonDeleteIdentifier = @"ButtonDeleteCell";
-  
+  BITFeedbackManager *strongManager = self.manager;
   if (indexPath.section == 0 && indexPath.row == 1) {
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:LastUpdateIdentifier];
     
@@ -516,20 +469,18 @@
       cell.selectionStyle = UITableViewCellSelectionStyleNone;
       cell.textLabel.textAlignment = NSTextAlignmentCenter;
     }
-    
     cell.textLabel.accessibilityTraits = UIAccessibilityTraitStaticText;
     cell.textLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
-                           [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
+                           [strongManager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[strongManager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
     
     return cell;
   } else if (indexPath.section == 0 || indexPath.section >= 2) {
     UITableViewCell *cell = nil;
     
     NSString *identifier = nil;
-    
     if (indexPath.section == 0) {
       identifier = ButtonTopIdentifier;
-    } else if (indexPath.section == _userButtonSection) {
+    } else if (indexPath.section == self.userButtonSection) {
       identifier = ButtonBottomIdentifier;
     } else {
       identifier = ButtonDeleteIdentifier;
@@ -556,26 +507,25 @@
     if ([self.view respondsToSelector:@selector(tintColor)]){
       titleColor = self.view.tintColor;
     }
-
     if (indexPath.section == 0) {
       cell.textLabel.accessibilityTraits = UIAccessibilityTraitButton;
-      if ([self.manager numberOfMessages] == 0) {
+      if ([strongManager numberOfMessages] == 0) {
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonWriteFeedback");
       } else {
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonWriteResponse");
       }
-    } else if (indexPath.section == _userButtonSection) {
-      if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
-          ([self.manager requireUserName] == BITFeedbackUserDataElementOptional && [self.manager userName] != nil)
+    } else if (indexPath.section == self.userButtonSection) {
+      if ([strongManager requireUserName] == BITFeedbackUserDataElementRequired ||
+          ([strongManager requireUserName] == BITFeedbackUserDataElementOptional && [strongManager userName] != nil)
           ) {
         cell.textLabel.accessibilityTraits = UIAccessibilityTraitStaticText;
-        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataWithName"), [self.manager userName] ?: @"-"];
-      } else if ([self.manager requireUserEmail] == BITFeedbackUserDataElementRequired ||
-                 ([self.manager requireUserEmail] == BITFeedbackUserDataElementOptional && [self.manager userEmail] != nil)
+        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataWithName"), [strongManager userName] ?: @"-"];
+      } else if ([strongManager requireUserEmail] == BITFeedbackUserDataElementRequired ||
+                 ([strongManager requireUserEmail] == BITFeedbackUserDataElementOptional && [strongManager userEmail] != nil)
                  ) {
         cell.textLabel.accessibilityTraits = UIAccessibilityTraitStaticText;
-        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataWithEmail"), [self.manager userEmail] ?: @"-"];
-      } else if ([self.manager requireUserName] == BITFeedbackUserDataElementOptional) {
+        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataWithEmail"), [strongManager userEmail] ?: @"-"];
+      } else if ([strongManager requireUserName] == BITFeedbackUserDataElementOptional) {
         cell.textLabel.accessibilityTraits = UIAccessibilityTraitButton;
         titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataSetName");
       } else {
@@ -607,7 +557,7 @@
       cell.backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
     }
 
-    BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
+    BITFeedbackMessage *message = [strongManager messageAtIndex:indexPath.row];
     cell.message = message;
     cell.labelText.delegate = self;
     cell.labelText.userInteractionEnabled = YES;
@@ -617,33 +567,23 @@
     for (BITFeedbackMessageAttachment *attachment in message.attachments){
       if (attachment.needsLoadingFromURL && !attachment.isLoading){
         attachment.isLoading = YES;
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:attachment.sourceURL]];
         __weak typeof (self) weakSelf = self;
-        if ([BITHockeyHelper isURLSessionSupported]) {
-          NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-          __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-          
-          NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                                  completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
-                                                    typeof (self) strongSelf = weakSelf;
-                                                    
-                                                    [session finishTasksAndInvalidate];
-                                                    
-                                                    [strongSelf handleResponseForAttachment:attachment responseData:data error:error];
-                                                  }];
-          [task resume];
-        }else{
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-          [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
-#pragma clang diagnostic pop
-            typeof (self) strongSelf = weakSelf;
-            [strongSelf handleResponseForAttachment:attachment responseData:responseData error:err];
-          }];
-        }
+        NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+        __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+
+        NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                                completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError *error) {
+                                                  typeof (self) strongSelf = weakSelf;
+
+                                                  [session finishTasksAndInvalidate];
+
+                                                  [strongSelf handleResponseForAttachment:attachment responseData:data error:error];
+                                                }];
+        [task resume];
       }
     }
-    
+
     if (indexPath.row != 0) {
       UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
       lineView1.backgroundColor = BORDER_COLOR;
@@ -655,7 +595,7 @@
   }
 }
 
-- (void)handleResponseForAttachment:(BITFeedbackMessageAttachment *)attachment responseData:(NSData *)responseData error:(NSError *)error {
+- (void)handleResponseForAttachment:(BITFeedbackMessageAttachment *)attachment responseData:(NSData *)responseData error:(NSError *) __unused error {
   attachment.isLoading = NO;
   if (responseData.length) {
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -668,7 +608,7 @@
 }
 
 
-- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
+- (BOOL)tableView:(UITableView *) __unused tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
   if (indexPath.section == 1)
     return YES;
   
@@ -677,11 +617,12 @@
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
   if (editingStyle == UITableViewCellEditingStyleDelete) {
-    BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
+    BITFeedbackManager *strongManager = self.manager;
+    BITFeedbackMessage *message = [strongManager messageAtIndex:indexPath.row];
     BOOL messageHasAttachments = ([message attachments].count > 0);
     
-    if ([_manager deleteMessageAtIndex:indexPath.row]) {
-      if ([_manager numberOfMessages] > 0) {
+    if ([strongManager deleteMessageAtIndex:indexPath.row]) {
+      if ([strongManager numberOfMessages] > 0) {
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
       } else {
         [tableView reloadData];
@@ -697,7 +638,7 @@
 
 #pragma mark - Table view delegate
 
-- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (CGFloat)tableView:(UITableView *) __unused tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
   if (indexPath.section == 0 ) {
     return 44;
   }
@@ -711,111 +652,45 @@
   return [BITFeedbackListViewCell heightForRowWithMessage:message tableViewWidth:self.view.frame.size.width];
 }
 
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+- (void)tableView:(UITableView *) __unused tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
   if (indexPath.section == 0) {
     [self newFeedbackAction:self];
-  } else if (indexPath.section == _userButtonSection) {
+  } else if (indexPath.section == self.userButtonSection) {
     [self setUserDataAction:self];
-  } else if (indexPath.section == _deleteButtonSection) {
+  } else if (indexPath.section == self.deleteButtonSection) {
     [self deleteAllMessagesAction:self];
   }
 }
 
 #pragma mark - BITAttributedLabelDelegate
 
-- (void)attributedLabel:(BITAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url {
-  /*
-  // requires iOS 8
-  id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
-  if (uialertcontrollerClass) {
-    UIAlertControllerStyle controllerStyle = UIAlertControllerStyleAlert;
-    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-      controllerStyle = UIAlertControllerStyleActionSheet;
-    }
-    
-    UIAlertController *linkAction = [UIAlertController alertControllerWithTitle:[url absoluteString]
-                                                                        message:nil
-                                                                 preferredStyle:controllerStyle];
-    
-    
-    UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
-                                                           style:UIAlertActionStyleCancel
-                                                         handler:^(UIAlertAction * action) {}];
-    
-    [linkAction addAction:cancelAction];
-    
-    UIAlertAction* openAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen")
-                                                         style:UIAlertActionStyleDefault
-                                                       handler:^(UIAlertAction * action) {
-                                                         [[UIApplication sharedApplication] openURL:[NSURL URLWithString:[url absoluteString]]];
-                                                       }];
-    
-    [linkAction addAction:openAction];
-    
-    UIAlertAction* copyAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy")
-                                                         style:UIAlertActionStyleDefault
-                                                       handler:^(UIAlertAction * action) {
-                                                         UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
-                                                         pasteboard.URL = [NSURL URLWithString:[url absoluteString]];
-                                                       }];
-    
-    [linkAction addAction:copyAction];
-    
-    
-    [self presentViewController:linkAction animated:YES completion:nil];
-  } else {
-   */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-      UIActionSheet *linkAction = [[UIActionSheet alloc] initWithTitle:[url absoluteString]
-                                                              delegate:self
-                                                     cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
-                                                destructiveButtonTitle:nil
-                                                     otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen"), BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy"), nil
-                                   ];
-      [linkAction setTag:1];
-      [linkAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
-      [linkAction showInView:[self viewForShowingActionSheetOnPhone]];
-    } else {
-      UIAlertView *linkAction = [[UIAlertView alloc] initWithTitle:[url absoluteString]
-                                                           message:nil
-                                                          delegate:self
-                                                 cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
-                                                 otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen"), BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy"), nil
-                                 ];
-      
-      [linkAction setTag:1];
-      [linkAction show];
-    }
-#pragma clang diagnostic pop
-  /*}*/
-}
-
-
-#pragma mark - UIAlertViewDelegate
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  if (buttonIndex == alertView.cancelButtonIndex) {
-    return;
+- (void)attributedLabel:(BITAttributedLabel *) __unused label didSelectLinkWithURL:(NSURL *)url {
+  UIAlertControllerStyle controllerStyle = UIAlertControllerStyleAlert;
+  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+    controllerStyle = UIAlertControllerStyleActionSheet;
   }
-  
-  if ([alertView tag] == 0) {
-    if (buttonIndex == [alertView firstOtherButtonIndex]) {
-      [self deleteAllMessages];
-    }
-  } else {
-    if (buttonIndex == [alertView firstOtherButtonIndex]) {
-      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:alertView.title]];
-    } else {
-      UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
-      pasteboard.URL = [NSURL URLWithString:alertView.title];
-    }
-  }
+  UIAlertController *linkAction = [UIAlertController alertControllerWithTitle:[url absoluteString]
+                                                                      message:nil
+                                                               preferredStyle:controllerStyle];
+  UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
+                                                         style:UIAlertActionStyleCancel
+                                                       handler:^(UIAlertAction __unused *action) {}];
+  [linkAction addAction:cancelAction];
+  UIAlertAction* openAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen")
+                                                       style:UIAlertActionStyleDefault
+                                                     handler:^(UIAlertAction __unused *action) {
+                                                       [[UIApplication sharedApplication] openURL:(NSURL*)[NSURL URLWithString:(NSString*)[url absoluteString]]];
+                                                     }];
+  [linkAction addAction:openAction];
+  UIAlertAction* copyAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy")
+                                                       style:UIAlertActionStyleDefault
+                                                     handler:^(UIAlertAction __unused *action) {
+                                                       UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+                                                       pasteboard.URL = [NSURL URLWithString:(NSString*)[url absoluteString]];
+                                                     }];
+  [linkAction addAction:copyAction];
+  [self presentViewController:linkAction animated:YES completion:nil];
 }
-#pragma clang diagnostic pop
 
 #pragma mark - UIActionSheetDelegate
 
@@ -830,7 +705,7 @@
     }
   } else {
     if (buttonIndex == [actionSheet firstOtherButtonIndex]) {
-      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:actionSheet.title]];
+      [[UIApplication sharedApplication] openURL:(NSURL *)[NSURL URLWithString:actionSheet.title]];
     } else {
       UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
       pasteboard.URL = [NSURL URLWithString:actionSheet.title];
@@ -838,10 +713,9 @@
   }
 }
 
-
 #pragma mark - ListViewCellDelegate
 
-- (void)listCell:(id)cell didSelectAttachment:(BITFeedbackMessageAttachment *)attachment {
+- (void)listCell:(id) __unused cell didSelectAttachment:(BITFeedbackMessageAttachment *)attachment {
   QLPreviewController *previewController = [[QLPreviewController alloc] init];
   previewController.dataSource = self;
   
@@ -855,16 +729,16 @@
 - (void)refreshPreviewItems {
   self.cachedPreviewItems = nil;
   NSMutableArray *collectedAttachments = [NSMutableArray new];
-  
-  for (uint i = 0; i < self.manager.numberOfMessages; i++) {
-    BITFeedbackMessage *message = [self.manager messageAtIndex:i];
+  BITFeedbackManager *strongManager = self.manager;
+  for (uint i = 0; i < strongManager.numberOfMessages; i++) {
+    BITFeedbackMessage *message = [strongManager messageAtIndex:i];
     [collectedAttachments addObjectsFromArray:message.previewableAttachments];
   }
   
   self.cachedPreviewItems = collectedAttachments;
 }
 
-- (NSInteger)numberOfPreviewItemsInPreviewController:(QLPreviewController *)controller {
+- (NSInteger)numberOfPreviewItemsInPreviewController:(QLPreviewController *) __unused controller {
   if (!self.cachedPreviewItems){
     [self refreshPreviewItems];
   }
@@ -879,33 +753,23 @@
     
     if (attachment.needsLoadingFromURL && !attachment.isLoading) {
       attachment.isLoading = YES;
-      NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+      NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)[NSURL URLWithString:attachment.sourceURL]];
       
       __weak typeof (self) weakSelf = self;
-      if ([BITHockeyHelper isURLSessionSupported]) {
-        NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-        __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-        
-        NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                                completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
-                                                  dispatch_async(dispatch_get_main_queue(), ^{
-                                                    typeof (self) strongSelf = weakSelf;
-                                                    
-                                                    [session finishTasksAndInvalidate];
-                                                    
-                                                    [strongSelf previewController:blockController updateAttachment:attachment data:data];
-                                                  });
-                                                }];
-        [task resume];
-      }else{
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
-#pragma clang diagnostic pop
-          typeof (self) strongSelf = weakSelf;
-          [strongSelf previewController:blockController updateAttachment:attachment data:responseData];
-        }];
-      }
+      NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+      __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+
+      NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                              completionHandler: ^(NSData *data, NSURLResponse __unused *response, NSError __unused *error) {
+                                                dispatch_async(dispatch_get_main_queue(), ^{
+                                                  typeof (self) strongSelf = weakSelf;
+
+                                                  [session finishTasksAndInvalidate];
+
+                                                  [strongSelf previewController:blockController updateAttachment:attachment data:data];
+                                                });
+                                              }];
+      [task resume];
       return attachment;
     } else {
       return self.cachedPreviewItems[index];
@@ -930,7 +794,7 @@
 - (BITFeedbackMessageAttachment *)placeholder {
   UIImage *placeholderImage = bit_imageNamed(@"FeedbackPlaceHolder", BITHOCKEYSDK_BUNDLE);
 
-  BITFeedbackMessageAttachment *placeholder = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(placeholderImage, 0.7f) contentType:@"image/jpeg"];
+  BITFeedbackMessageAttachment *placeholder = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(placeholderImage, (CGFloat)0.7) contentType:@"image/jpeg"];
   
   return placeholder;
 }

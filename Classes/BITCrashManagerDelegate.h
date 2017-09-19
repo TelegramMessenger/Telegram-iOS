@@ -120,7 +120,7 @@
 /** Invoked after sending crash reports failed
  
  @param crashManager The `BITCrashManager` instance invoking this delegate
- @param error The error returned from the NSURLConnection/NSURLSession call or `kBITCrashErrorDomain`
+ @param error The error returned from the NSURLSession call or `kBITCrashErrorDomain`
  with reason of type `BITCrashErrorReason`.
  */
 - (void)crashManager:(BITCrashManager *)crashManager didFailWithError:(NSError *)error;

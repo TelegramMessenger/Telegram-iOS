@@ -35,11 +35,11 @@
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
+#import <tgmath.h>
 
-@interface BITAuthenticationViewController ()<UITextFieldDelegate> {
-  __weak UITextField *_emailField;
-}
+@interface BITAuthenticationViewController ()<UITextFieldDelegate>
 
+@property (nonatomic, weak) UITextField *emailField;
 @property (nonatomic, copy) NSString *password;
 
 @end
@@ -98,7 +98,7 @@
 
 - (void) updateWebLoginButton {
   if(self.showsLoginViaWebButton) {
-    static const CGFloat kFooterHeight = 60.f;
+    static const CGFloat kFooterHeight = 60.0;
     UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0,
                                                                      CGRectGetWidth(self.tableView.bounds),
                                                                      kFooterHeight)];
@@ -106,8 +106,8 @@
     [button setTitle:BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebLoginButtonTitle") forState:UIControlStateNormal];
     CGSize buttonSize = [button sizeThatFits:CGSizeMake(CGRectGetWidth(self.tableView.bounds),
                                                         kFooterHeight)];
-    button.frame = CGRectMake(floorf((CGRectGetWidth(containerView.bounds) - buttonSize.width) / 2.f),
-                              floorf((kFooterHeight - buttonSize.height) / 2.f),
+    button.frame = CGRectMake(floor((CGRectGetWidth(containerView.bounds) - buttonSize.width) / (CGFloat)2.0),
+                              floor((kFooterHeight - buttonSize.height) / (CGFloat)2.0),
                               buttonSize.width,
                               buttonSize.height);
     button.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
@@ -124,14 +124,14 @@
   }
 }
 
-- (IBAction) handleWebLoginButton:(id)sender {
+- (IBAction) handleWebLoginButton:(id) __unused sender {
   [self.delegate authenticationViewControllerDidTapWebButton:self];
 }
 
 - (void)setEmail:(NSString *)email {
   _email = email;
   if(self.isViewLoaded) {
-    _emailField.text = email;
+    self.emailField.text = email;
   }
 }
 
@@ -143,8 +143,8 @@
 }
 #pragma mark - UIViewController Rotation
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
-  return YES;
+-(UIInterfaceOrientationMask)supportedInterfaceOrientations {
+  return UIInterfaceOrientationMaskAll;
 }
 
 #pragma mark - Private methods
@@ -160,11 +160,11 @@
 
 #pragma mark - Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+- (NSInteger)numberOfSectionsInTableView:(UITableView *) __unused tableView {
   return 2;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+- (NSInteger)tableView:(UITableView *) __unused tableView numberOfRowsInSection:(NSInteger)section {
   if (section == 0) return 0;
   
   if(self.showsLoginViaWebButton) {
@@ -178,7 +178,7 @@
   }
 }
 
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+- (NSString *)tableView:(UITableView *) __unused tableView titleForFooterInSection:(NSInteger)section {
   if (section == 0) {
     return self.tableViewTitle;
   }
@@ -186,7 +186,7 @@
   return nil;
 }
 
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (UITableViewCell *)tableView:(UITableView *) __unused tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   static NSString *CellIdentifier = @"InputCell";
   
   UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -209,7 +209,7 @@
       textField.placeholder = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerEmailPlaceholder");
       textField.accessibilityHint = BITHockeyLocalizedString(@"HockeyAccessibilityHintRequired");
       textField.text = self.email;
-      _emailField = textField;
+      self.emailField = textField;
       
       textField.keyboardType = UIKeyboardTypeEmailAddress;
       if ([self requirePassword])
@@ -284,7 +284,7 @@
 }
 
 #pragma mark - Actions
-- (void)saveAction:(id)sender {
+- (void)saveAction:(id) __unused sender {
   [self setLoginUIEnabled:NO];
   
   __weak typeof(self) weakSelf = self;
@@ -296,35 +296,14 @@
                                        //controller should dismiss us shortly..
                                      } else {
                                        dispatch_async(dispatch_get_main_queue(), ^{
-                                         
-                                         /* We won't use this for now until we have a more robust solution for displaying UIAlertController
-                                          // requires iOS 8
-                                          id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
-                                          if (uialertcontrollerClass) {
-                                          UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil
-                                          message:error.localizedDescription
-                                          preferredStyle:UIAlertControllerStyleAlert];
-                                          
-                                          
-                                          UIAlertAction *okAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"OK")
-                                          style:UIAlertActionStyleCancel
-                                          handler:^(UIAlertAction * action) {}];
-                                          
-                                          [alertController addAction:okAction];
-                                          
-                                          [self presentViewController:alertController animated:YES completion:nil];
-                                          } else {
-                                          */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-                                         UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
-                                                                                             message:error.localizedDescription
-                                                                                            delegate:nil
-                                                                                   cancelButtonTitle:BITHockeyLocalizedString(@"OK")
-                                                                                   otherButtonTitles:nil];
-                                         [alertView show];
-#pragma clang diagnostic pop
-                                         /*}*/
+                                         UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil
+                                                                                                                  message:error.localizedDescription
+                                                                                                           preferredStyle:UIAlertControllerStyleAlert];
+                                         UIAlertAction *okAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"OK")
+                                                                                            style:UIAlertActionStyleCancel
+                                                                                          handler:^(UIAlertAction __unused *action) {}];
+                                         [alertController addAction:okAction];
+                                         [self presentViewController:alertController animated:YES completion:nil];
                                          typeof(self) strongSelf = weakSelf;
                                          [strongSelf setLoginUIEnabled:YES];
                                        });

@@ -28,37 +28,38 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
 @interface BITCrashManagerTests : XCTestCase
 
 @property BITCrashManager *sut;
+@property BOOL startManagerInitialized;
 
 @end
 
 
 @implementation BITCrashManagerTests {
-  BOOL _startManagerInitialized;
+
 }
 
 - (void)setUp {
   [super setUp];
   
-  _startManagerInitialized = NO;
-  _sut = [[BITCrashManager alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentOther hockeyAppClient:[[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString: BITHOCKEYSDK_URL]]];
+  self.startManagerInitialized = NO;
+  self.sut = [[BITCrashManager alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentOther hockeyAppClient:[[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString: BITHOCKEYSDK_URL]]];
 }
 
 - (void)tearDown {
-  [_sut cleanCrashReports];
+  [self.sut cleanCrashReports];
   [super tearDown];
 }
 
 #pragma mark - Private
 
 - (void)startManager {
-  [_sut startManager];
-  [NSObject cancelPreviousPerformRequestsWithTarget:_sut selector:@selector(invokeDelayedProcessing) object:nil];
-  _startManagerInitialized = YES;
+  [self.sut startManager];
+  [NSObject cancelPreviousPerformRequestsWithTarget:self.sut selector:@selector(invokeDelayedProcessing) object:nil];
+  self.startManagerInitialized = YES;
 }
 
 - (void)startManagerDisabled {
-  _sut.crashManagerStatus = BITCrashManagerStatusDisabled;
-  if (_startManagerInitialized) return;
+  self.sut.crashManagerStatus = BITCrashManagerStatusDisabled;
+  if (self.startManagerInitialized) return;
   [self startManager];
 }
 
@@ -68,15 +69,15 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
   [given([metricsManagerMock persistence]) willReturn:[[BITPersistence alloc] init]];
   [[BITHockeyManager sharedHockeyManager] setValue:metricsManagerMock forKey:@"metricsManager"];
   
-  _sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
-  if (_startManagerInitialized) return;
+  self.sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
+  if (self.startManagerInitialized) return;
   [self startManager];
 }
 
 #pragma mark - Setup Tests
 
 - (void)testThatItInstantiates {
-  XCTAssertNotNil(_sut, @"Should be there");
+  XCTAssertNotNil(self.sut, @"Should be there");
 }
 
 #pragma mark - Getter/Setter tests
@@ -100,14 +101,14 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
 
 - (void)testPersistUserProvidedMetaData {
   NSString *tempCrashName = @"tempCrash";
-  [_sut setLastCrashFilename:tempCrashName];
+  [self.sut setLastCrashFilename:tempCrashName];
   
   BITCrashMetaData *metaData = [BITCrashMetaData new];
   [metaData setUserProvidedDescription:@"Test string"];
-  [_sut persistUserProvidedMetaData:metaData];
+  [self.sut persistUserProvidedMetaData:metaData];
   
   NSError *error;
-  NSString *description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [[_sut crashesDir] stringByAppendingPathComponent: tempCrashName]] encoding:NSUTF8StringEncoding error:&error];
+  NSString *description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [[self.sut crashesDir] stringByAppendingPathComponent: tempCrashName]] encoding:NSUTF8StringEncoding error:&error];
   assertThat(description, equalTo(@"Test string"));
 }
 
@@ -118,11 +119,11 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
   NSString* type = @"text/plain";
   
   BITHockeyAttachment *originalAttachment = [[BITHockeyAttachment alloc] initWithFilename:filename hockeyAttachmentData:data contentType:type];
-  NSString *attachmentFilename = [[_sut crashesDir] stringByAppendingPathComponent:@"testAttachment"];
+  NSString *attachmentFilename = [[self.sut crashesDir] stringByAppendingPathComponent:@"testAttachment"];
   
-  [_sut persistAttachment:originalAttachment withFilename:attachmentFilename];
+  [self.sut persistAttachment:originalAttachment withFilename:attachmentFilename];
   
-  BITHockeyAttachment *decodedAttachment = [_sut attachmentForCrashReport:attachmentFilename];
+  BITHockeyAttachment *decodedAttachment = [self.sut attachmentForCrashReport:attachmentFilename];
   
   assertThat(decodedAttachment.filename, equalTo(filename));
   assertThat(decodedAttachment.hockeyAttachmentData, equalTo(data));
@@ -135,78 +136,78 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
   BITHockeyManager *hm = [BITHockeyManager sharedHockeyManager];
   id delegateMock = mockProtocol(@protocol(BITHockeyManagerDelegate));
   hm.delegate = delegateMock;
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
   
-  NSString *result = [_sut userIDForCrashReport];
+  NSString *result = [self.sut userIDForCrashReport];
   
   assertThat(result, notNilValue());
   
-  [verifyCount(delegateMock, times(1)) userIDForHockeyManager:hm componentManager:_sut];
+  [verifyCount(delegateMock, times(1)) userIDForHockeyManager:hm componentManager:self.sut];
 }
 
 - (void)testUserNameForCrashReport {
   BITHockeyManager *hm = [BITHockeyManager sharedHockeyManager];
   id delegateMock = mockProtocol(@protocol(BITHockeyManagerDelegate));
   hm.delegate = delegateMock;
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
   
-  NSString *result = [_sut userNameForCrashReport];
+  NSString *result = [self.sut userNameForCrashReport];
   
   assertThat(result, notNilValue());
   
-  [verifyCount(delegateMock, times(1)) userNameForHockeyManager:hm componentManager:_sut];
+  [verifyCount(delegateMock, times(1)) userNameForHockeyManager:hm componentManager:self.sut];
 }
 
 - (void)testUserEmailForCrashReport {
   BITHockeyManager *hm = [BITHockeyManager sharedHockeyManager];
   id delegateMock = mockProtocol(@protocol(BITHockeyManagerDelegate));
   hm.delegate = delegateMock;
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
   
-  NSString *result = [_sut userEmailForCrashReport];
+  NSString *result = [self.sut userEmailForCrashReport];
   
   assertThat(result, notNilValue());
   
-  [verifyCount(delegateMock, times(1)) userEmailForHockeyManager:hm componentManager:_sut];
+  [verifyCount(delegateMock, times(1)) userEmailForHockeyManager:hm componentManager:self.sut];
 }
 
 #pragma mark - Handle User Input
 
 - (void)testHandleUserInputDontSend {
   id <BITCrashManagerDelegate> delegateMock = mockProtocol(@protocol(BITCrashManagerDelegate));
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
   
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedMetaData:nil], isTrue());
+  assertThatBool([self.sut handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedMetaData:nil], isTrue());
   
-  [verify(delegateMock) crashManagerWillCancelSendingCrashReport:_sut];
+  [verify(delegateMock) crashManagerWillCancelSendingCrashReport:self.sut];
   
 }
 
 - (void)testHandleUserInputSend {
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputSend withUserProvidedMetaData:nil], isTrue());
+  assertThatBool([self.sut handleUserInput:BITCrashManagerUserInputSend withUserProvidedMetaData:nil], isTrue());
 }
 
 - (void)testHandleUserInputAlwaysSend {
   id <BITCrashManagerDelegate> delegateMock = mockProtocol(@protocol(BITCrashManagerDelegate));
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
   
   //Test if CrashManagerStatus is unset
   [given([mockUserDefaults integerForKey:@"BITCrashManagerStatus"]) willReturn:nil];
   
   //Test if method runs through
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedMetaData:nil], isTrue());
+  assertThatBool([self.sut handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedMetaData:nil], isTrue());
   
   //Test if correct CrashManagerStatus is now set
   [given([mockUserDefaults integerForKey:@"BITCrashManagerStauts"]) willReturnInt:BITCrashManagerStatusAutoSend];
   
   //Verify that delegate method has been called
-  [verify(delegateMock) crashManagerWillSendCrashReportsAlways:_sut];
+  [verify(delegateMock) crashManagerWillSendCrashReportsAlways:self.sut];
   
 }
 
 - (void)testHandleUserInputWithInvalidInput {
-  assertThatBool([_sut handleUserInput:3 withUserProvidedMetaData:nil], isFalse());
+  assertThatBool([self.sut handleUserInput:3 withUserProvidedMetaData:nil], isFalse());
 }
 
 #pragma mark - Debugger
@@ -220,20 +221,20 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
  *  TODO: what to do if we do run this e.g. on Jenkins or Xcode bots ?
  */
 - (void)testIsDebuggerAttached {
-  assertThatBool([_sut isDebuggerAttached], isTrue());
+  assertThatBool([self.sut isDebuggerAttached], isTrue());
 }
 #endif
 
 #pragma mark - Helper
 
 - (void)testHasPendingCrashReportWithNoFiles {
-  _sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
-  assertThatBool([_sut hasPendingCrashReport], isFalse());
+  self.sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
+  assertThatBool([self.sut hasPendingCrashReport], isFalse());
 }
 
 - (void)testFirstNotApprovedCrashReportWithNoFiles {
-  _sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
-  assertThat([_sut firstNotApprovedCrashReport], equalTo(nil));
+  self.sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
+  assertThat([self.sut firstNotApprovedCrashReport], equalTo(nil));
 }
 
 
@@ -242,7 +243,7 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
 - (void)testStartManagerWithModuleDisabled {
   [self startManagerDisabled];
   
-  assertThat(_sut.plCrashReporter, equalTo(nil));
+  assertThat(self.sut.plCrashReporter, equalTo(nil));
 }
 
 - (void)testStartManagerWithAutoSend {
@@ -254,128 +255,128 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
   // to make this better testable with unit tests
   
   id delegateMock = mockProtocol(@protocol(BITCrashManagerDelegate));
-  _sut.delegate = delegateMock;
+  self.sut.delegate = delegateMock;
 
   [self startManagerAutoSend];
   
-  assertThat(_sut.plCrashReporter, notNilValue());
+  assertThat(self.sut.plCrashReporter, notNilValue());
   
   // When running from the debugger this is always nil and not the exception handler from PLCR
   NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
   
-  BOOL result = (_sut.exceptionHandler == currentHandler);
+  BOOL result = (self.sut.exceptionHandler == currentHandler);
   
   assertThatBool(result, isTrue());
   
   // No files at startup
-  assertThatBool([_sut hasPendingCrashReport], isFalse());
-  assertThat([_sut firstNotApprovedCrashReport], equalTo(nil));
+  assertThatBool([self.sut hasPendingCrashReport], isFalse());
+  assertThat([self.sut firstNotApprovedCrashReport], equalTo(nil));
   
-  [_sut invokeDelayedProcessing];
+  [self.sut invokeDelayedProcessing];
   
   // handle a new empty crash report
   assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_empty"], isTrue());
   
-  [_sut handleCrashReport];
+  [self.sut handleCrashReport];
   
   // we should have 0 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], isFalse());
-  assertThat([_sut firstNotApprovedCrashReport], equalTo(nil));
+  assertThatBool([self.sut hasPendingCrashReport], isFalse());
+  assertThat([self.sut firstNotApprovedCrashReport], equalTo(nil));
   
-  [_sut cleanCrashReports];
+  [self.sut cleanCrashReports];
   
   // handle a new signal crash report
   assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_signal"], isTrue());
   
-  [_sut handleCrashReport];
+  [self.sut handleCrashReport];
 
   // this old report doesn't have a marketing version present
-  assertThat(_sut.lastSessionCrashDetails.appVersion, equalTo(nil));
+  assertThat(self.sut.lastSessionCrashDetails.appVersion, equalTo(nil));
 
-  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
-  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
+  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:self.sut];
+  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:self.sut];
   
   // we should have now 1 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], isTrue());
-  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
+  assertThatBool([self.sut hasPendingCrashReport], isTrue());
+  assertThat([self.sut firstNotApprovedCrashReport], notNilValue());
   
   // this is currently sending blindly, needs refactoring to test properly
-  [_sut sendNextCrashReport];
-  [verifyCount(delegateMock, times(1)) crashManagerWillSendCrashReport:_sut];
+  [self.sut sendNextCrashReport];
+  [verifyCount(delegateMock, times(1)) crashManagerWillSendCrashReport:self.sut];
   
-  [_sut cleanCrashReports];
+  [self.sut cleanCrashReports];
 
   // handle a new signal crash report
   assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception"], isTrue());
   
-  [_sut handleCrashReport];
+  [self.sut handleCrashReport];
   
   // this old report doesn't have a marketing version present
-  assertThat(_sut.lastSessionCrashDetails.appVersion, equalTo(nil));
+  assertThat(self.sut.lastSessionCrashDetails.appVersion, equalTo(nil));
   
-  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
-  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
+  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:self.sut];
+  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:self.sut];
   
   // we should have now 1 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], isTrue());
-  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
+  assertThatBool([self.sut hasPendingCrashReport], isTrue());
+  assertThat([self.sut firstNotApprovedCrashReport], notNilValue());
   
-  [_sut cleanCrashReports];
+  [self.sut cleanCrashReports];
   
   // handle a new signal crash report
   assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_signal_marketing"], isTrue());
   
-  [_sut handleCrashReport];
+  [self.sut handleCrashReport];
   
   // this old report doesn't have a marketing version present
-  assertThat(_sut.lastSessionCrashDetails.appVersion, notNilValue());
+  assertThat(self.sut.lastSessionCrashDetails.appVersion, notNilValue());
   
-  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
-  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
+  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:self.sut];
+  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:self.sut];
   
   // we should have now 1 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], isTrue());
-  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
+  assertThatBool([self.sut hasPendingCrashReport], isTrue());
+  assertThat([self.sut firstNotApprovedCrashReport], notNilValue());
   
   // this is currently sending blindly, needs refactoring to test properly
-  [_sut sendNextCrashReport];
-  [verifyCount(delegateMock, times(1)) crashManagerWillSendCrashReport:_sut];
+  [self.sut sendNextCrashReport];
+  [verifyCount(delegateMock, times(1)) crashManagerWillSendCrashReport:self.sut];
   
-  [_sut cleanCrashReports];
+  [self.sut cleanCrashReports];
   
   // handle a new signal crash report
   assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception_marketing"], isTrue());
   
-  [_sut handleCrashReport];
+  [self.sut handleCrashReport];
   
   // this old report doesn't have a marketing version present
-  assertThat(_sut.lastSessionCrashDetails.appVersion, notNilValue());
+  assertThat(self.sut.lastSessionCrashDetails.appVersion, notNilValue());
   
-  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
-  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
+  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:self.sut];
+  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:self.sut];
   
   // we should have now 1 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], isTrue());
-  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
+  assertThatBool([self.sut hasPendingCrashReport], isTrue());
+  assertThat([self.sut firstNotApprovedCrashReport], notNilValue());
   
-  [_sut cleanCrashReports];
+  [self.sut cleanCrashReports];
   
   // handle a new xamarin crash report
   assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_xamarin"], isTrue());
   
-  [_sut handleCrashReport];
+  [self.sut handleCrashReport];
   
   // this old report doesn't have a marketing version present
-  assertThat(_sut.lastSessionCrashDetails.appVersion, notNilValue());
+  assertThat(self.sut.lastSessionCrashDetails.appVersion, notNilValue());
   
-  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
-  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
+  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:self.sut];
+  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:self.sut];
   
   // we should have now 1 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], isTrue());
-  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
+  assertThatBool([self.sut hasPendingCrashReport], isTrue());
+  assertThat([self.sut firstNotApprovedCrashReport], notNilValue());
   
-  [_sut cleanCrashReports];
+  [self.sut cleanCrashReports];
 }
 
 @end

@@ -120,7 +120,7 @@ typedef NS_ENUM(NSInteger, BITStoreUpdateSetting) {
  @see checkForUpdateOnLaunch
  @see checkForUpdate
  */
-@property (nonatomic, strong) NSString *countryCode;
+@property (nonatomic, copy) NSString *countryCode;
 
 
 /**

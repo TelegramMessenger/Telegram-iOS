@@ -37,7 +37,6 @@
 @property (nonatomic, strong) CAShapeLayer *shapeLayer;
 @property (nonatomic, strong) CAShapeLayer *strokeLayer;
 
-
 @end
 
 @implementation BITRectangleImageAnnotation
@@ -72,12 +71,12 @@
   self.strokeLayer.frame = self.bounds;
   self.strokeLayer.path = [UIBezierPath bezierPathWithRoundedRect:self.bounds cornerRadius:10].CGPath;
   
-  CGFloat lineWidth = MAX(self.frame.size.width / 10.0f,10);
+  CGFloat lineWidth = MAX(self.frame.size.width / 10,10);
   
   [CATransaction begin];
   [CATransaction setAnimationDuration:0];
-  self.strokeLayer.lineWidth = lineWidth/1.5f;
-  self.shapeLayer.lineWidth = lineWidth / 3.0f;
+  self.strokeLayer.lineWidth = lineWidth/(CGFloat)1.5;
+  self.shapeLayer.lineWidth = lineWidth /(CGFloat)3.0;
   
   [CATransaction commit];
 }

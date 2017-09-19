@@ -53,7 +53,7 @@
       self.selectedLayer = [CALayer layer];
       [self.layer insertSublayer:self.selectedLayer above:self.imageLayer];
       
-      self.selectedLayer.backgroundColor = [[UIColor redColor] colorWithAlphaComponent:0.5f].CGColor;
+      self.selectedLayer.backgroundColor = [[UIColor redColor] colorWithAlphaComponent:0.5].CGColor;
       self.selectedLayer.opacity = 0.6f;
       self.clipsToBounds = YES;
     }
@@ -76,7 +76,7 @@
 }
 
 - (void)setSelected:(BOOL)selected {
-  self->_selected = selected;
+  super.selected = selected;
   
   if (selected){
     self.selectedLayer.opacity = 0.6f;
@@ -89,8 +89,10 @@
   [super layoutSubviews];
   
   [CATransaction begin];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
   [CATransaction setValue:(id)kCFBooleanTrue forKey:kCATransactionDisableActions];
-  
+#pragma clang diagnostic pop
   self.imageLayer.frame = self.imageFrame;
   self.imageLayer.masksToBounds = YES;
   

@@ -12,35 +12,35 @@
 
 @interface BITSenderTests : BITTestsDependencyInjection
 
+@property(nonatomic, strong) BITSender *sut;
+@property(nonatomic, strong) BITPersistence *mockPersistence;
+@property(nonatomic, strong) NSURL *testServerURL;
+
 @end
 
-@implementation BITSenderTests{
-  BITSender *_sut;
-  BITPersistence *_mockPersistence;
-  NSURL *_testServerURL;
-}
+@implementation BITSenderTests
 
 - (void)setUp {
   [super setUp];
-  _testServerURL = [NSURL URLWithString:@"http://test.com"];
-  _sut = [self newSender];
+  self.testServerURL = [NSURL URLWithString:@"http://test.com"];
+  self.sut = [self newSender];
 }
 
 - (void)tearDown {
-  _sut = nil;
+  self.sut = nil;
   [super tearDown];
 }
 
 - (BITSender *)newSender {
-  _mockPersistence = mock(BITPersistence.class);
-  return [[BITSender alloc]initWithPersistence:_mockPersistence serverURL:[_testServerURL copy]];
+  self.mockPersistence = mock(BITPersistence.class);
+  return [[BITSender alloc]initWithPersistence:self.mockPersistence serverURL:[self.testServerURL copy]];
 }
 
 - (void)testThatItInstantiatesCorrectly {
-  XCTAssertNotNil(_sut);
-  XCTAssertNotNil(_sut.senderTasksQueue);
-  XCTAssertEqualObjects(_sut.persistence, _mockPersistence);
-  XCTAssertEqualObjects(_sut.serverURL, _testServerURL);
+  XCTAssertNotNil(self.sut);
+  XCTAssertNotNil(self.sut.senderTasksQueue);
+  XCTAssertEqualObjects(self.sut.persistence, self.mockPersistence);
+  XCTAssertEqualObjects(self.sut.serverURL, self.testServerURL);
 }
 
 - (void)testRequestContainsDataItem {
@@ -48,7 +48,7 @@
   NSData *expectedBodyData = [NSJSONSerialization dataWithJSONObject:[testItem serializeToDictionary]
                                                               options:0
                                                                 error:nil];
-  NSURLRequest *testRequest = [_sut requestForData:expectedBodyData];
+  NSURLRequest *testRequest = [self.sut requestForData:expectedBodyData];
   
   XCTAssertNotNil(testRequest);
   XCTAssertEqualObjects(testRequest.HTTPBody, expectedBodyData);
@@ -56,31 +56,24 @@
 
 - (void)testSendDataTriggersPlatformSpecificNetworkOperation {
   // setup
-  _sut = OCMPartialMock(_sut);
-  OCMStub([_sut isURLSessionSupported]).andReturn(YES);
+  self.sut = OCMPartialMock(self.sut);
+  OCMStub([self.sut isURLSessionSupported]).andReturn(YES);
   
   NSURLRequest *testRequest = [NSURLRequest new];
   NSString *testFilePath = @"path/to/file";
-  [_sut sendRequest:testRequest filePath:testFilePath];
-  
-  OCMVerify([_sut sendUsingURLSessionWithRequest:testRequest filePath:testFilePath]);
-  
-  _sut = OCMPartialMock([self newSender]);
-  OCMStub([_sut isURLSessionSupported]).andReturn(NO);
-  
-  [_sut sendRequest:testRequest filePath:testFilePath];
-  
-  OCMVerify([_sut sendUsingURLConnectionWithRequest:testRequest filePath:testFilePath]);
+  [self.sut sendRequest:testRequest filePath:testFilePath];
+
+  OCMVerify([self.sut sendUsingURLSessionWithRequest:testRequest filePath:testFilePath]);
 }
 
 - (void)testSendDataVerifyDataIsGzipped {
-  _sut = OCMPartialMock(_sut);
+  self.sut = OCMPartialMock(self.sut);
   NSString *testFilePath = @"path/to/file";
   NSData *testData = [@"test" dataUsingEncoding:NSUTF8StringEncoding];
   
-  [_sut sendData:testData withFilePath:testFilePath];
+  [self.sut sendData:testData withFilePath:testFilePath];
   
-  OCMVerify([_sut sendRequest:[OCMArg checkWithBlock:^BOOL(id obj) {
+  OCMVerify([self.sut sendRequest:[OCMArg checkWithBlock:^BOOL(id obj) {
     NSMutableURLRequest *request = (NSMutableURLRequest *)obj;
     NSData *data = request.HTTPBody;
     if (data) {
@@ -96,32 +89,18 @@
   }] filePath:testFilePath]);
 }
 
-- (void)testSendUsingURLConnection {
-  
-  // setup
-  _sut = OCMPartialMock(_sut);
-  NSString *testFilePath = @"path/to/file";
-  NSURLRequest *testRequest = [NSURLRequest new];
-  
-  // test
-  [_sut sendUsingURLConnectionWithRequest:testRequest filePath:testFilePath];
-  
-  //verify
-  OCMVerify([_sut.operationQueue addOperation:(id)anything()]);
-}
-
 - (void)testSendUsingURLSession {
   
   // setup=
-  _sut = OCMPartialMock(_sut);
+  self.sut = OCMPartialMock(self.sut);
   NSString *testFilePath = @"path/to/file";
   NSURLRequest *testRequest = [NSURLRequest new];
-  if ([_sut isURLSessionSupported]) {
+  if ([self.sut isURLSessionSupported]) {
     // test
-    [_sut sendUsingURLSessionWithRequest:testRequest filePath:testFilePath];
+    [self.sut sendUsingURLSessionWithRequest:testRequest filePath:testFilePath];
     
     //verify
-    OCMVerify([_sut resumeSessionDataTask:(id)anything()]);
+    OCMVerify([self.sut resumeSessionDataTask:(id)anything()]);
   }
 }
 
@@ -129,16 +108,16 @@
   
   for(NSInteger statusCode = 100; statusCode <= 510; statusCode++){
     if((statusCode == 429) || (statusCode == 408) || (statusCode == 500) || (statusCode == 503) || (statusCode == 511)) {
-      XCTAssertTrue([_sut shouldDeleteDataWithStatusCode:statusCode] == NO);
+      XCTAssertTrue([self.sut shouldDeleteDataWithStatusCode:statusCode] == NO);
     }else{
-      XCTAssertTrue([_sut shouldDeleteDataWithStatusCode:statusCode] == YES);
+      XCTAssertTrue([self.sut shouldDeleteDataWithStatusCode:statusCode] == YES);
     }
   }
 }
 
 - (void)testRegisterObserversOnInit {
   self.mockNotificationCenter = mock(NSNotificationCenter.class);
-  _sut = [[BITSender alloc]initWithPersistence:_mockPersistence  serverURL:_testServerURL];
+  self.sut = [[BITSender alloc]initWithPersistence:self.mockPersistence  serverURL:self.testServerURL];
   
   [verify((id)self.mockNotificationCenter) addObserverForName:BITPersistenceSuccessNotification object:nil queue:nil usingBlock:(id)anything()];
 }
@@ -146,44 +125,44 @@
 - (void)testFilesGetDeletedOnPositiveOrUnrecoverableStatusCodes {
  
   // setup=
-  _sut = OCMPartialMock(_sut);
+  self.sut = OCMPartialMock(self.sut);
   NSInteger testStatusCode = 999;
-  OCMStub([_sut shouldDeleteDataWithStatusCode:testStatusCode]).andReturn(YES);
-  _sut.runningRequestsCount = 8;
+  OCMStub([self.sut shouldDeleteDataWithStatusCode:testStatusCode]).andReturn(YES);
+  self.sut.runningRequestsCount = 8;
    NSData *testData = [@"test" dataUsingEncoding:NSUTF8StringEncoding];
   NSString *testFilePath = @"path/to/file";
   
   // Stub `sendSavedData` method so there won't be already a new running request when our test request finishes
   // Otherwise `runningRequestsCount` will already have been decreased by one and been increased by one again.
-  OCMStub([_sut sendSavedData]).andDo(nil);
+  OCMStub([self.sut sendSavedData]).andDo(nil);
   
   // test
-  [_sut handleResponseWithStatusCode:testStatusCode responseData:testData filePath:testFilePath error:[NSError errorWithDomain:@"Network error" code:503 userInfo:nil]];
+  [self.sut handleResponseWithStatusCode:testStatusCode responseData:testData filePath:testFilePath error:[NSError errorWithDomain:@"Network error" code:503 userInfo:nil]];
   
   //verify
-  [verify(_mockPersistence) deleteFileAtPath:testFilePath];
-  XCTAssertTrue(_sut.runningRequestsCount == 7);
+  [verify(self.mockPersistence) deleteFileAtPath:testFilePath];
+  XCTAssertTrue(self.sut.runningRequestsCount == 7);
 }
 
 - (void)testFilesGetUnblockedOnRecoverableErrorCodes {
   
   // setup=
-  _sut = OCMPartialMock(_sut);
+  self.sut = OCMPartialMock(self.sut);
   NSInteger testStatusCode = 999;
-  OCMStub([_sut shouldDeleteDataWithStatusCode:testStatusCode]).andReturn(NO);
-  _sut.runningRequestsCount = 8;
+  OCMStub([self.sut shouldDeleteDataWithStatusCode:testStatusCode]).andReturn(NO);
+  self.sut.runningRequestsCount = 8;
   NSData *testData = [@"test" dataUsingEncoding:NSUTF8StringEncoding];
   NSString *testFilePath = @"path/to/file";
   
   // test
-  [_sut handleResponseWithStatusCode:testStatusCode
+  [self.sut handleResponseWithStatusCode:testStatusCode
                         responseData:testData
                             filePath:testFilePath
                                error:[NSError errorWithDomain:@"Network error" code:503 userInfo:nil]];
   
   //verify
-  [verify(_mockPersistence) giveBackRequestedFilePath:testFilePath];
-  XCTAssertTrue(_sut.runningRequestsCount == 7);
+  [verify(self.mockPersistence) giveBackRequestedFilePath:testFilePath];
+  XCTAssertTrue(self.sut.runningRequestsCount == 7);
 }
 
 @end

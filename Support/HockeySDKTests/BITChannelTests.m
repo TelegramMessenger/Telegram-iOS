@@ -14,20 +14,19 @@
 
 @interface BITChannelTests : XCTestCase
 
+@property(nonatomic, strong) BITChannel *sut;
+@property(nonatomic, strong) BITPersistence *mockPersistence;
+
 @end
 
-
-@implementation BITChannelTests {
-  BITChannel *_sut;
-  BITPersistence *_mockPersistence;
-}
+@implementation BITChannelTests
 
 - (void)setUp {
   [super setUp];
-  _mockPersistence = OCMPartialMock([[BITPersistence alloc] init]);
+  self.mockPersistence = OCMPartialMock([[BITPersistence alloc] init]);
   BITTelemetryContext *mockContext = mock(BITTelemetryContext.class);
   
-  _sut = [[BITChannel alloc]initWithTelemetryContext:mockContext persistence:_mockPersistence];
+  self.sut = [[BITChannel alloc]initWithTelemetryContext:mockContext persistence:self.mockPersistence];
   bit_resetSafeJsonStream(&BITSafeJsonEventsString);
 }
 
@@ -35,47 +34,47 @@
 
 - (void)testNewInstanceWasInitialisedCorrectly {
   XCTAssertNotNil([BITChannel new]);
-  XCTAssertNotNil(_sut.dataItemsOperations);
+  XCTAssertNotNil(self.sut.dataItemsOperations);
 }
 
 #pragma mark - Queue management
 
 - (void)testEnqueueEnvelopeWithOneEnvelopeAndJSONStream {
-  _sut = OCMPartialMock(_sut);
-  _sut.maxBatchSize = 3;
+  self.sut = OCMPartialMock(self.sut);
+  self.sut.maxBatchSize = 3;
   BITTelemetryData *testData = [BITTelemetryData new];
   
-  [_sut enqueueTelemetryItem:testData];
+  [self.sut enqueueTelemetryItem:testData];
   
-  dispatch_sync(_sut.dataItemsOperations, ^{
-    assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(1));
+  dispatch_sync(self.sut.dataItemsOperations, ^{
+    assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(1));
     XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
   });
 }
 
 - (void)testEnqueueEnvelopeWithMultipleEnvelopesAndJSONStream {
-  _sut = OCMPartialMock(_sut);
-  _sut.maxBatchSize = 3;
+  self.sut = OCMPartialMock(self.sut);
+  self.sut.maxBatchSize = 3;
   
   BITTelemetryData *testData = [BITTelemetryData new];
   
-  assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(0));
+  assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(0));
   
-  [_sut enqueueTelemetryItem:testData];
-  dispatch_sync(_sut.dataItemsOperations, ^{
-    assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(1));
+  [self.sut enqueueTelemetryItem:testData];
+  dispatch_sync(self.sut.dataItemsOperations, ^{
+    assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(1));
     XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
   });
   
-  [_sut enqueueTelemetryItem:testData];
-  dispatch_sync(_sut.dataItemsOperations, ^{
-    assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(2));
+  [self.sut enqueueTelemetryItem:testData];
+  dispatch_sync(self.sut.dataItemsOperations, ^{
+    assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(2));
     XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
   });
   
-  [_sut enqueueTelemetryItem:testData];
-  dispatch_sync(_sut.dataItemsOperations, ^{
-    assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(0));
+  [self.sut enqueueTelemetryItem:testData];
+  dispatch_sync(self.sut.dataItemsOperations, ^{
+    assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(0));
     XCTAssertTrue(strcmp(BITSafeJsonEventsString, "") == 0);
   });
 }

@@ -72,7 +72,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  
  */
 
-@interface BITUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>
+@interface BITUpdateManager : BITHockeyBaseManager
 
 ///-----------------------------------------------------------------------------
 /// @name Update Checking

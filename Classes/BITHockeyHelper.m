@@ -35,6 +35,7 @@
 #import <QuartzCore/QuartzCore.h>
 #endif
 
+#import <tgmath.h>
 #import <sys/sysctl.h>
 
 static NSString *const kBITUtcDateFormatter = @"utcDateFormatter";
@@ -62,19 +63,13 @@ NSString *const kBITExcludeApplicationSupportFromBackup = @"kBITExcludeApplicati
 
 @end
 
-#if __IPHONE_OS_VERSION_MAX_ALLOWED < 70000
-@interface NSData (BITHockeySDKiOS7)
-- (NSString *)base64Encoding;
-@end
-#endif
-
 typedef struct {
   uint8_t       info_version;
   const char    bit_version[16];
   const char    bit_build[16];
 } bit_info_t;
 
-bit_info_t hockeyapp_library_info __attribute__((section("__TEXT,__bit_ios,regular,no_dead_strip"))) = {
+static bit_info_t hockeyapp_library_info __attribute__((section("__TEXT,__bit_ios,regular,no_dead_strip"))) = {
   .info_version = 1,
   .bit_version = BITHOCKEY_C_VERSION,
   .bit_build = BITHOCKEY_C_BUILD
@@ -164,13 +159,18 @@ void bit_fixBackupAttributeForURL(NSURL *directoryURL) {
   }
   
   if (directoryURL) {
-    NSError *getResourceError = nil;
-    NSNumber *appSupportDirExcludedValue;
-    
-    if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
-      NSError *setResourceError = nil;
-      [directoryURL setResourceValue:@NO forKey:NSURLIsExcludedFromBackupKey error:&setResourceError];
-    }
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+      NSError *getResourceError = nil;
+      NSNumber *appSupportDirExcludedValue;
+      if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
+        NSError *setResourceError = nil;
+        if(![directoryURL setResourceValue:@NO forKey:NSURLIsExcludedFromBackupKey error:&setResourceError]) {
+          BITHockeyLogError(@"ERROR: Error while setting resource value: %@", setResourceError.localizedDescription);
+        }
+      } else {
+        BITHockeyLogError(@"ERROR: Error while retrieving resource value: %@", getResourceError.localizedDescription);
+      }
+    });
   }
 }
 
@@ -401,7 +401,7 @@ NSString *bit_URLEncodedString(NSString *inputString) {
   }
 }
 
-NSString *bit_base64String(NSData * data, unsigned long length) {
+NSString *bit_base64String(NSData * data, unsigned long __unused length) {
   SEL base64EncodingSelector = NSSelectorFromString(@"base64EncodedStringWithOptions:");
   if ([data respondsToSelector:base64EncodingSelector]) {
     return [data base64EncodedStringWithOptions:0];
@@ -554,12 +554,12 @@ NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *ico
   
   BOOL useHighResIcon = NO;
   BOOL useiPadIcon = NO;
-  if ([UIScreen mainScreen].scale >= 2.0f) useHighResIcon = YES;
+  if ([UIScreen mainScreen].scale >= (CGFloat) 2.0) useHighResIcon = YES;
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) useiPadIcon = YES;
   
   NSString *currentBestMatch = nil;
-  float currentBestMatchHeight = 0;
-  float bestMatchHeight = 0;
+  CGFloat currentBestMatchHeight = 0;
+  CGFloat bestMatchHeight = 0;
 
   bestMatchHeight = useiPadIcon ? (useHighResIcon ? 152 : 76) : 120;
 
@@ -649,7 +649,7 @@ NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle) {
 
 static void bit_addRoundedRectToPath(CGRect rect, CGContextRef context, CGFloat ovalWidth, CGFloat ovalHeight);
 static CGContextRef bit_MyOpenBitmapContext(int pixelsWide, int pixelsHigh);
-static CGImageRef bit_CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlpha, float toAlpha);
+static CGImageRef bit_CreateGradientImage(int pixelsWide, int pixelsHigh, CGFloat fromAlpha, CGFloat toAlpha);
 static BOOL bit_hasAlpha(UIImage *inputImage);
 UIImage *bit_imageWithAlpha(UIImage *inputImage);
 UIImage *bit_addGlossToImage(UIImage *inputImage);
@@ -675,7 +675,7 @@ void bit_addRoundedRectToPath(CGRect rect, CGContextRef context, CGFloat ovalWid
   CGContextRestoreGState(context);
 }
 
-CGImageRef bit_CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlpha, float toAlpha) {
+CGImageRef bit_CreateGradientImage(int pixelsWide, int pixelsHigh, CGFloat fromAlpha, CGFloat toAlpha) {
   CGImageRef theCGImage = NULL;
   
   // gradient is always black-white and the mask must be in the gray colorspace
@@ -734,8 +734,8 @@ UIImage *bit_imageWithAlpha(UIImage *inputImage) {
   }
   
   CGImageRef imageRef = inputImage.CGImage;
-  size_t width = CGImageGetWidth(imageRef) * inputImage.scale;
-  size_t height = CGImageGetHeight(imageRef) * inputImage.scale;
+  size_t width = (size_t)(CGImageGetWidth(imageRef) * inputImage.scale);
+  size_t height = (size_t)(CGImageGetHeight(imageRef) * inputImage.scale);
   
   // The bitsPerComponent and bitmapInfo values are hard-coded to prevent an "unsupported parameter combination" error
   CGContextRef offscreenContext = CGBitmapContextCreate(NULL,
@@ -779,21 +779,21 @@ UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScale
     return nil;
   }
   
-  float imageScaleFactor = 1.0;
+  CGFloat imageScaleFactor = 1.0;
   if (honorScaleFactor) {
     if ([inputImage respondsToSelector:@selector(scale)]) {
       imageScaleFactor = [inputImage scale];
     }
   }
   
-  float sourceWidth = [inputImage size].width * imageScaleFactor;
-  float sourceHeight = [inputImage size].height * imageScaleFactor;
-  float targetWidth = fitSize.width;
-  float targetHeight = fitSize.height;
+  CGFloat sourceWidth = [inputImage size].width * imageScaleFactor;
+  CGFloat sourceHeight = [inputImage size].height * imageScaleFactor;
+  CGFloat targetWidth = fitSize.width;
+  CGFloat targetHeight = fitSize.height;
   
   // Calculate aspect ratios
-  float sourceRatio = sourceWidth / sourceHeight;
-  float targetRatio = targetWidth / targetHeight;
+  CGFloat sourceRatio = sourceWidth / sourceHeight;
+  CGFloat targetRatio = targetWidth / targetHeight;
   
   // Determine what side of the source image to use for proportional scaling
   BOOL scaleWidth = (sourceRatio <= targetRatio);
@@ -801,9 +801,9 @@ UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScale
   scaleWidth = !scaleWidth;
   
   // Proportionally scale source image
-  float scalingFactor, scaledWidth, scaledHeight;
+  CGFloat scalingFactor, scaledWidth, scaledHeight;
   if (scaleWidth) {
-    scalingFactor = 1.0 / sourceRatio;
+    scalingFactor = ((CGFloat)1.0) / sourceRatio;
     scaledWidth = targetWidth;
     scaledHeight = round(targetWidth * scalingFactor);
   } else {
@@ -830,7 +830,7 @@ UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScale
   if (!image) {
     // Try older method.
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGContextRef context = CGBitmapContextCreate(NULL,  scaledWidth, scaledHeight, 8, (fitSize.width * 4),
+    CGContextRef context = CGBitmapContextCreate(NULL,  (size_t)scaledWidth, (size_t)scaledHeight, 8, (size_t)(fitSize.width * 4),
                                                  colorSpace, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
     sourceImg = CGImageCreateWithImageInRect([inputImage CGImage], sourceRect);
     CGContextDrawImage(context, destRect, sourceImg);
@@ -846,12 +846,12 @@ UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScale
 }
 
 
-UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, float fromAlpha, float toAlpha) {
+UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, CGFloat fromAlpha, CGFloat toAlpha) {
   if(height == 0)
     return nil;
   
   // create a bitmap graphics context the size of the image
-  CGContextRef mainViewContentContext = bit_MyOpenBitmapContext(inputImage.size.width, (int)height);
+  CGContextRef mainViewContentContext = bit_MyOpenBitmapContext((int)inputImage.size.width, (int)height);
   
   // create a 2 bit CGImage containing a gradient that will be used for masking the
   // main view content to create the 'fade' of the reflection.  The CGImageCreateWithMask
@@ -907,7 +907,7 @@ UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName) {
 // Creates a copy of this image with rounded corners
 // If borderSize is non-zero, a transparent border of the given size will also be added
 // Original author: Björn Sållarp. Used with permission. See: http://blog.sallarp.com/iphone-uiimage-round-corners/
-UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInteger borderSize) {
+UIImage *bit_roundedCornerImage(UIImage *inputImage, CGFloat cornerSize, NSInteger borderSize) {
   // If the image does not have an alpha layer, add one
   
   UIImage *roundedImage = nil;
@@ -933,8 +933,8 @@ UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInt
     
     // Build a context that's the same dimensions as the new size
     context = CGBitmapContextCreate(NULL,
-                                    image.size.width,
-                                    image.size.height,
+                                    (size_t)image.size.width,
+                                    (size_t)image.size.height,
                                     CGImageGetBitsPerComponent(image.CGImage),
                                     0,
                                     CGImageGetColorSpace(image.CGImage),
@@ -980,7 +980,7 @@ UIImage *bit_appIcon() {
   
   if (icons) {
     BOOL useHighResIcon = NO;
-    if ([UIScreen mainScreen].scale >= 2.0f) useHighResIcon = YES;
+    if ([UIScreen mainScreen].scale >= 2) useHighResIcon = YES;
     
     for(NSString *icon in icons) {
       iconString = icon;
@@ -1051,12 +1051,12 @@ UIImage *bit_screenshot(void) {
       
       if (needsRotation) {
         if (isLandscapeLeft) {
-          CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, 0), M_PI / 2.0));
+          CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, 0), (CGFloat)M_PI_2));
         } else if (isLandscapeRight) {
-          CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( 0, imageSize.height), 3 * M_PI / 2.0));
+          CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( 0, imageSize.height), 3 * (CGFloat)M_PI_2));
         }
       } else if (isUpsideDown) {
-        CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, imageSize.height), M_PI));
+        CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, imageSize.height), (CGFloat)M_PI));
       }
       
       if ([window respondsToSelector:@selector(drawViewHierarchyInRect:afterScreenUpdates:)]) {

@@ -36,7 +36,7 @@ extern NSString *const kBITFeedbackUpdateAttachmentThumbnail;
 
 @class UITapGestureRecognizer;
 
-@interface BITFeedbackManager () <UIAlertViewDelegate> {
+@interface BITFeedbackManager () {
 }
 
 
@@ -58,7 +58,7 @@ extern NSString *const kBITFeedbackUpdateAttachmentThumbnail;
 
 
 @property (nonatomic, strong) NSMutableArray *feedbackList;
-@property (nonatomic, strong) NSString *token;
+@property (nonatomic, copy) NSString *token;
 
 
 // used by BITHockeyManager if disable status is changed

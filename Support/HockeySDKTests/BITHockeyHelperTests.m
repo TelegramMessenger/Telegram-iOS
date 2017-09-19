@@ -76,7 +76,7 @@
 - (void)testUUID {
   NSString *resultString = bit_UUID();
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], equalToInteger(36));
+  assertThatInteger((NSInteger)[resultString length], equalToInteger(36));
 }
 
 - (void)testAppAnonID {
@@ -88,7 +88,7 @@
   
   NSString *resultString = bit_appAnonID(NO);
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], equalToInteger(36));
+  assertThatInteger((NSInteger)[resultString length], equalToInteger(36));
 }
 
 - (void)testValidAppIconFilename {
@@ -110,7 +110,7 @@
   // Regular icon names
   NSString *validIconPath = @"AppIcon";
   NSString *validIconPath2x = @"AppIcon@2x";
-  NSString *expected = ([UIScreen mainScreen].scale >= 2.0f) ? validIconPath2x : validIconPath;
+  NSString *expected = ([UIScreen mainScreen].scale >= 2.0) ? validIconPath2x : validIconPath;
 
   
   // No valid icons defined at all
@@ -205,7 +205,7 @@
 - (void)testOsName {
   NSString *resultString = bit_osName();
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], greaterThan(@(0)));
+  assertThatInteger((NSInteger)[resultString length], greaterThan(@(0)));
 }
 
 - (void)testDeviceType {
@@ -218,7 +218,7 @@
 - (void)testSdkVersion {
   NSString *resultString = bit_sdkVersion();
   assertThat(resultString, notNilValue());
-  assertThatInteger([resultString length], greaterThan(@(0)));
+  assertThatInteger((NSInteger)[resultString length], greaterThan(@(0)));
 }
 
 - (void)testUtcDateString{
@@ -307,15 +307,20 @@
 }
 
 - (BOOL)excludeAttributeIsSetForURL:(NSURL *)directoryURL {
-  
-  NSError *getResourceError = nil;
-  NSNumber *appSupportDirExcludedValue;
-  if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
-    if ([appSupportDirExcludedValue isEqualToValue:@YES]) {
-      return YES;
+  __block BOOL result = NO;
+  XCTestExpectation *expectation = [self expectationWithDescription:@"wait"];
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    NSError *getResourceError = nil;
+    NSNumber *appSupportDirExcludedValue;
+    if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
+      if ([appSupportDirExcludedValue isEqualToValue:@YES]) {
+        result = YES;
+      }
     }
-  }
-  return NO;
+    [expectation fulfill];
+  });
+  [self waitForExpectationsWithTimeout:5 handler:nil];
+  return result;
 }
 
 @end

@@ -8,13 +8,8 @@ env:
     - CONFIGURATION="DEBUG"
 
   matrix:
-    - SCHEME="HockeySDK"             DESTINATION="OS=8.1,name=iPad Air"                 RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=8.2,name=iPhone 6 Plus"            RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=8.3,name=iPad 2"                   RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=8.4,name=iPhone 4s"                RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=9.0,name=iPad Air"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.1,name=iPhone 6 Plus"            RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=10.2,name=iPad Pro (9.7-inch)"     RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=10.3.1,name=iPhone 6s"             RUN_TESTS="YES"
     - SCHEME="HockeySDK Framework"   DESTINATION="platform=iOS Simulator,OS=10.3.1,name=iPhone 6" RUN_TESTS="YES"
     - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO" LINT="YES"
@@ -24,6 +19,7 @@ before_install:
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
   - gem install xcpretty-travis-formatter --no-rdoc --no-ri --no-document --quiet
   - gem install cocoapods --no-rdoc --no-ri --no-document --quiet
+  - gem install jazzy --no-rdoc --no-ri --no-document --quiet
   - brew install carthage
 
 script:
@@ -47,7 +43,7 @@ script:
   - if [ $LINT == "YES" ]; then
       cp -R Products/HockeySDK-iOS/ HockeySDK-iOS;
       pod lib lint;
-      carthage build --no-skip-current ;
+      carthage build --no-skip-current;
     fi
 
 # Use better failure diagnostics, copied from https://github.com/0xced/XCDYouTubeKit

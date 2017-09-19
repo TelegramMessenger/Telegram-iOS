@@ -64,7 +64,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 }
 
 - (void)startManager {
-  self.sender = [[BITSender alloc] initWithPersistence:self.persistence serverURL:[NSURL URLWithString:self.serverURL]];
+  self.sender = [[BITSender alloc] initWithPersistence:self.persistence serverURL:(NSURL *)[NSURL URLWithString:self.serverURL]];
   [self.sender sendSavedDataAsync];
   [self startNewSessionWithId:bit_UUID()];
   [self registerObservers];
@@ -74,13 +74,12 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 
 - (void)setDisabled:(BOOL)disabled {
   if (_disabled == disabled) { return; }
-  
+    _disabled = disabled;
   if (disabled) {
     [self unregisterObservers];
   } else {
-    [self registerObservers];
+    [self startManager];
   }
-  _disabled = disabled;
 }
 
 #pragma mark - Sessions
@@ -94,7 +93,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
     self.appDidEnterBackgroundObserver = [nc addObserverForName:UIApplicationDidEnterBackgroundNotification
                                                      object:nil
                                                       queue:NSOperationQueue.mainQueue
-                                                 usingBlock:^(NSNotification *note) {
+                                                 usingBlock:^(NSNotification __unused *note) {
                                                    typeof(self) strongSelf = weakSelf;
                                                    [strongSelf updateDidEnterBackgroundTime];
                                                  }];
@@ -103,7 +102,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
     self.appWillEnterForegroundObserver = [nc addObserverForName:UIApplicationWillEnterForegroundNotification
                                                       object:nil
                                                        queue:NSOperationQueue.mainQueue
-                                                  usingBlock:^(NSNotification *note) {
+                                                  usingBlock:^(NSNotification __unused *note) {
                                                     typeof(self) strongSelf = weakSelf;
                                                     [strongSelf startNewSessionIfNeeded];
                                                   }];
@@ -211,7 +210,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
     typeof(self) strongSelf = weakSelf;
     BITEventData *eventData = [BITEventData new];
     [eventData setName:eventName];
-    [eventData setProperties:properties];
+    [eventData setProperties:(NSDictionary *)properties];
     [eventData setMeasurements:measurements];
     [strongSelf trackDataItem:eventData];
   });

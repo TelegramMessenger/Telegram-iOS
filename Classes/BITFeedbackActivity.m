@@ -44,14 +44,14 @@
 @interface BITFeedbackActivity()
 
 @property (nonatomic, strong) NSMutableArray *items;
+@property (nonatomic, strong, readwrite) UIViewController *activityViewController;
 
 @end
 
 
 @implementation BITFeedbackActivity
-{
-  UIViewController *_activityViewController;
-}
+
+@synthesize activityViewController = _activityViewController;
 
 #pragma mark - NSObject
 
@@ -117,7 +117,7 @@
         [item isKindOfClass:[NSData class]] ||
         [item isKindOfClass:[BITHockeyAttachment class]] ||
         [item isKindOfClass:[NSURL class]]) {
-      [_items addObject:item];
+      [self.items addObject:item];
     } else {
       BITHockeyLogWarning(@"WARNING: Unknown item type %@", item);
     }
@@ -131,7 +131,7 @@
     
     BITFeedbackComposeViewController *composeViewController = [manager feedbackComposeViewController];
     composeViewController.delegate = self;
-    [composeViewController prepareWithItems:_items];
+    [composeViewController prepareWithItems:self.items];
     
     _activityViewController = [manager customNavigationControllerWithRootViewController:composeViewController
                                                                       presentationStyle:UIModalPresentationFormSheet];
@@ -140,7 +140,7 @@
   return _activityViewController;
 }
 
-- (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController didFinishWithResult:(BITFeedbackComposeResult)composeResult {
+- (void)feedbackComposeViewController:(BITFeedbackComposeViewController *) __unused composeViewController didFinishWithResult:(BITFeedbackComposeResult)composeResult {
   [self activityDidFinish:composeResult == BITFeedbackComposeResultSubmitted];
 }
 
