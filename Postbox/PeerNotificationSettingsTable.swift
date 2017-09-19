@@ -1,42 +1,163 @@
 import Foundation
 
+private struct PeerNotificationSettingsTableEntry: Equatable {
+    let current: PeerNotificationSettings?
+    let pending: PeerNotificationSettings?
+    
+    static func ==(lhs: PeerNotificationSettingsTableEntry, rhs: PeerNotificationSettingsTableEntry) -> Bool {
+        if let lhsCurrent = lhs.current, let rhsCurrent = rhs.current {
+            if !lhsCurrent.isEqual(to: rhsCurrent) {
+                return false
+            }
+        } else if (lhs.current != nil) != (rhs.current != nil) {
+            return false
+        }
+        if let lhsPending = lhs.pending, let rhsPending = rhs.pending {
+            if !lhsPending.isEqual(to: rhsPending) {
+                return false
+            }
+        } else if (lhs.pending != nil) != (rhs.pending != nil) {
+            return false
+        }
+        return true
+    }
+    
+    var effective: PeerNotificationSettings? {
+        if let pending = self.pending {
+            return pending
+        }
+        return self.current
+    }
+    
+    func withUpdatedCurrent(_ current: PeerNotificationSettings?) -> PeerNotificationSettingsTableEntry {
+        return PeerNotificationSettingsTableEntry(current: current, pending: self.pending)
+    }
+    
+    func withUpdatedPending(_ pending: PeerNotificationSettings?) -> PeerNotificationSettingsTableEntry {
+        return PeerNotificationSettingsTableEntry(current: self.current, pending: pending)
+    }
+}
+
+private struct PeerNotificationSettingsTableEntryFlags: OptionSet {
+    var rawValue: Int32
+    
+    init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    static let hasCurrent = PeerNotificationSettingsTableEntryFlags(rawValue: 1 << 0)
+    static let hasPending = PeerNotificationSettingsTableEntryFlags(rawValue: 1 << 1)
+}
+
 final class PeerNotificationSettingsTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
+    private let pendingIndexTable: PendingPeerNotificationSettingsIndexTable
+    
     private let sharedEncoder = PostboxEncoder()
     private let sharedKey = ValueBoxKey(length: 8)
     
-    private var cachedSettings: [PeerId: PeerNotificationSettings] = [:]
-    private var updatedInitialSettings: [PeerId: PeerNotificationSettings?] = [:]
+    private var cachedSettings: [PeerId: PeerNotificationSettingsTableEntry] = [:]
+    private var updatedInitialSettings: [PeerId: PeerNotificationSettingsTableEntry] = [:]
+    
+    init(valueBox: ValueBox, table: ValueBoxTable, pendingIndexTable: PendingPeerNotificationSettingsIndexTable) {
+        self.pendingIndexTable = pendingIndexTable
+        
+        super.init(valueBox: valueBox, table: table)
+    }
     
     private func key(_ id: PeerId) -> ValueBoxKey {
         self.sharedKey.setInt64(0, value: id.toInt64())
         return self.sharedKey
     }
     
-    func set(id: PeerId, settings: PeerNotificationSettings) {
-        let current = self.get(id)
-        if current == nil || !current!.isEqual(to: settings) {
-            if self.updatedInitialSettings[id] == nil {
-               self.updatedInitialSettings[id] = current
+    private func getEntry(_ id: PeerId) -> PeerNotificationSettingsTableEntry {
+        if let entry = self.cachedSettings[id] {
+            return entry
+        } else if let value = self.valueBox.get(self.table, key: self.key(id)) {
+            var flagsValue: Int32 = 0
+            value.read(&flagsValue, offset: 0, length: 4)
+            let flags = PeerNotificationSettingsTableEntryFlags(rawValue: flagsValue)
+            
+            var current: PeerNotificationSettings?
+            if flags.contains(.hasCurrent) {
+                var length: Int32 = 0
+                value.read(&length, offset: 0, length: 4)
+                let object = PostboxDecoder(buffer: MemoryBuffer(memory: value.memory.advanced(by: value.offset), capacity: Int(length), length: Int(length), freeWhenDone: false)).decodeRootObject() as? PeerNotificationSettings
+                assert(object != nil)
+                current = object
+                value.skip(Int(length))
             }
-            self.cachedSettings[id] = settings
+            
+            var pending: PeerNotificationSettings?
+            if flags.contains(.hasPending) {
+                var length: Int32 = 0
+                value.read(&length, offset: 0, length: 4)
+                let object = PostboxDecoder(buffer: MemoryBuffer(memory: value.memory.advanced(by: value.offset), capacity: Int(length), length: Int(length), freeWhenDone: false)).decodeRootObject() as? PeerNotificationSettings
+                assert(object != nil)
+                pending = object
+                value.skip(Int(length))
+            }
+            let entry = PeerNotificationSettingsTableEntry(current: current, pending: pending)
+            self.cachedSettings[id] = entry
+            return entry
+        } else {
+            let entry = PeerNotificationSettingsTableEntry(current: nil, pending: nil)
+            self.cachedSettings[id] = entry
+            return entry
         }
     }
     
-    func get(_ id: PeerId) -> PeerNotificationSettings? {
-        if let settings = self.cachedSettings[id] {
-            return settings
+    func setCurrent(id: PeerId, settings: PeerNotificationSettings?) -> PeerNotificationSettings? {
+        let currentEntry = self.getEntry(id)
+        var updated = false
+        if let current = currentEntry.current, let settings = settings {
+            updated = !current.isEqual(to: settings)
+        } else if (currentEntry.current != nil) != (settings != nil) {
+            updated = true
         }
-        if let value = self.valueBox.get(self.table, key: self.key(id)) {
-            if let settings = PostboxDecoder(buffer: value).decodeRootObject() as? PeerNotificationSettings {
-                self.cachedSettings[id] = settings
-                return settings
+        if updated {
+            if self.updatedInitialSettings[id] == nil {
+               self.updatedInitialSettings[id] = currentEntry
             }
+            let updatedEntry = currentEntry.withUpdatedCurrent(settings)
+            self.cachedSettings[id] = updatedEntry
+            return updatedEntry.effective
+        } else {
+            return nil
         }
-        return nil
+    }
+    
+    func setPending(id: PeerId, settings: PeerNotificationSettings?, updatedSettings: inout Set<PeerId>) -> PeerNotificationSettings? {
+        let currentEntry = self.getEntry(id)
+        var updated = false
+        if let pending = currentEntry.pending, let settings = settings {
+            updated = !pending.isEqual(to: settings)
+        } else if (currentEntry.pending != nil) != (settings != nil) {
+            updated = true
+        }
+        if updated {
+            if self.updatedInitialSettings[id] == nil {
+                self.updatedInitialSettings[id] = currentEntry
+            }
+            updatedSettings.insert(id)
+            let updatedEntry = currentEntry.withUpdatedPending(settings)
+            self.cachedSettings[id] = updatedEntry
+            self.pendingIndexTable.set(peerId: id, pending: updatedEntry.pending != nil)
+            return updatedEntry.effective
+        } else {
+            return nil
+        }
+    }
+    
+    func getEffective(_ id: PeerId) -> PeerNotificationSettings? {
+        return self.getEntry(id).effective
+    }
+    
+    func getPending(_ id: PeerId) -> PeerNotificationSettings? {
+        return self.getEntry(id).pending
     }
     
     override func clearMemoryCache() {
@@ -50,10 +171,13 @@ final class PeerNotificationSettingsTable: Table {
         
         for (peerId, initialSettings) in self.updatedInitialSettings {
             var wasParticipating = false
-            if let initialSettings = initialSettings {
-                wasParticipating = !initialSettings.isRemovedFromTotalUnreadCount
+            if let initialEffective = initialSettings.effective {
+                wasParticipating = !initialEffective.isRemovedFromTotalUnreadCount
             }
-            let isParticipating = !self.cachedSettings[peerId]!.isRemovedFromTotalUnreadCount
+            var isParticipating = false
+            if let resultEffective = self.cachedSettings[peerId]?.effective {
+                isParticipating = !resultEffective.isRemovedFromTotalUnreadCount
+            }
             if wasParticipating != isParticipating {
                 if isParticipating {
                     added.insert(peerId)
@@ -66,7 +190,7 @@ final class PeerNotificationSettingsTable: Table {
         return (added, removed)
     }
     
-    func resetAll(to settings: PeerNotificationSettings) -> [PeerId] {
+    func resetAll(to settings: PeerNotificationSettings, updatedSettings: inout Set<PeerId>) -> [PeerId] {
         let lowerBound = ValueBoxKey(length: 8)
         lowerBound.setInt64(0, value: 0)
         let upperBound = ValueBoxKey(length: 8)
@@ -79,9 +203,11 @@ final class PeerNotificationSettingsTable: Table {
         
         var updatedPeerIds: [PeerId] = []
         for peerId in peerIds {
-            if let current = self.get(peerId), !current.isEqual(to: settings) {
+            let entry = self.getEntry(peerId)
+            if let current = entry.current, !current.isEqual(to: settings) || entry.pending != nil {
+                let _ = self.setCurrent(id: peerId, settings: settings)
+                let _ = self.setPending(id: peerId, settings: nil, updatedSettings: &updatedSettings)
                 updatedPeerIds.append(peerId)
-                self.set(id: peerId, settings: settings)
             }
         }
         
@@ -90,12 +216,48 @@ final class PeerNotificationSettingsTable: Table {
     
     override func beforeCommit() {
         if !self.updatedInitialSettings.isEmpty {
+            let buffer = WriteBuffer()
+            let encoder = PostboxEncoder()
             for (peerId, _) in self.updatedInitialSettings {
-                if let settings = self.cachedSettings[peerId] {
-                    self.sharedEncoder.reset()
-                    self.sharedEncoder.encodeRootObject(settings)
+                if let entry = self.cachedSettings[peerId] {
+                    buffer.reset()
                     
-                    self.valueBox.set(self.table, key: self.key(peerId), value: self.sharedEncoder.readBufferNoCopy())
+                    var flags = PeerNotificationSettingsTableEntryFlags()
+                    if entry.current != nil {
+                        flags.insert(.hasCurrent)
+                    }
+                    if entry.pending != nil {
+                        flags.insert(.hasPending)
+                    }
+                    
+                    var flagsValue: Int32 = flags.rawValue
+                    buffer.write(&flagsValue, offset: 0, length: 4)
+                    
+                    if let current = entry.current {
+                        encoder.reset()
+                        encoder.encodeRootObject(current)
+                        let object = encoder.readBufferNoCopy()
+                        withExtendedLifetime(object, {
+                            var length: Int32 = Int32(object.length)
+                            buffer.write(&length, offset: 0, length: 4)
+                            buffer.write(object.memory, offset: 0, length: object.length)
+                        })
+                    }
+                    
+                    if let pending = entry.pending {
+                        encoder.reset()
+                        encoder.encodeRootObject(pending)
+                        let object = encoder.readBufferNoCopy()
+                        withExtendedLifetime(object, {
+                            var length: Int32 = Int32(object.length)
+                            buffer.write(&length, offset: 0, length: 4)
+                            buffer.write(object.memory, offset: 0, length: object.length)
+                        })
+                    }
+                    
+                    self.valueBox.set(self.table, key: self.key(peerId), value: buffer.readBufferNoCopy())
+                } else {
+                    assertionFailure()
                 }
             }
             

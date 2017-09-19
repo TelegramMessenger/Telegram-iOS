@@ -1,40 +1,28 @@
 import Foundation
 
-private func writePeerIds(_ buffer: WriteBuffer, _ peerIds: Set<PeerId>) {
-    for id in peerIds {
-        var value: Int64 = id.toInt64()
-        buffer.write(&value, offset: 0, length: 8)
-    }
-}
-
 func postboxUpgrade_13to14(metadataTable: MetadataTable, valueBox: ValueBox) {
-    var reverseAssociations: [PeerId: Set<PeerId>] = [:]
+    var peerSettings: [PeerId: Data] = [:]
     
-    let peerTable = ValueBoxTable(id: 2, keyType: .int64)
-    valueBox.scan(peerTable, values: { _, value in
-        if let peer = PostboxDecoder(buffer: value).decodeRootObject() as? Peer {
-            if let association = peer.associatedPeerId {
-                if reverseAssociations[association] == nil {
-                    reverseAssociations[association] = Set()
-                }
-                reverseAssociations[association]!.insert(peer.id)
-            }
-        } else {
-            assertionFailure()
-        }
+    let peerNotificationSettingsTable = ValueBoxTable(id: 19, keyType: .int64)
+    valueBox.scanInt64(peerNotificationSettingsTable, values: { key, value in
+        let peerId = PeerId(key)
+        peerSettings[peerId] = value.makeData()
         return true
     })
     
-    let reverseAssociatedPeerTable = ValueBoxTable(id: 40, keyType: .int64)
-
-    let sharedKey = ValueBoxKey(length: 8)
-    let sharedBuffer = WriteBuffer()
-    for (peerId, associations) in reverseAssociations {
-        sharedBuffer.reset()
-        writePeerIds(sharedBuffer, associations)
+    valueBox.dropTable(peerNotificationSettingsTable)
+    let key = ValueBoxKey(length: 8)
+    let buffer = WriteBuffer()
+    for (peerId, settings) in peerSettings {
+        buffer.reset()
         
-        sharedKey.setInt64(0, value: peerId.toInt64())
-        valueBox.set(reverseAssociatedPeerTable, key: sharedKey, value: sharedBuffer)
+        key.setInt64(0, value: peerId.toInt64())
+        var flagsValue: Int32 = (1 << 0)
+        buffer.write(&flagsValue, offset: 0, length: 4)
+        var length: Int32 = Int32(settings.count)
+        buffer.write(&length, offset: 0, length: 4)
+        buffer.write(settings)
+        valueBox.set(peerNotificationSettingsTable, key: key, value: buffer)
     }
     
     metadataTable.setUserVersion(14)

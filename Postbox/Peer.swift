@@ -14,11 +14,11 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
     
     public init(_ n: Int64) {
         self.namespace = Int32((n >> 32) & 0x7fffffff)
-        self.id = unsafeBitCast(UInt32(n & 0xffffffff), to: Int32.self)
+        self.id = Int32(bitPattern: UInt32(n & 0xffffffff))
     }
     
     public func toInt64() -> Int64 {
-        return (Int64(self.namespace) << 32) | unsafeBitCast(UInt64(unsafeBitCast(self.id, to: UInt32.self)), to: Int64.self)
+        return (Int64(self.namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: self.id)))
     }
     
     public static func encodeArrayToBuffer(_ array: [PeerId], buffer: WriteBuffer) {

@@ -92,7 +92,7 @@ public func <(lhs: MessageId, rhs: MessageId) -> Bool {
     }
 }
 
-public struct MessageIndex: Equatable, Comparable, Hashable {
+public struct MessageIndex: Comparable, Hashable {
     public let id: MessageId
     public let timestamp: Int32
     

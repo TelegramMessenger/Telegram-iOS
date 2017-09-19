@@ -166,7 +166,7 @@ final class MessageHistoryTable: Table {
                         indicesWithMetadata.append((index.0, index.1, tags))
                         
                         if !globalTags.isEmpty {
-                            globalIndicesWithMetadata.append(globalTags, index.0)
+                            globalIndicesWithMetadata.append((globalTags, index.0))
                         }
                     } else {
                         indicesWithMetadata.append((index.0, index.1, MessageTags()))
@@ -185,7 +185,7 @@ final class MessageHistoryTable: Table {
                         indicesWithMetadata.append((index.0, index.1, tags))
                         
                         if !globalTags.isEmpty {
-                            globalIndicesWithMetadata.append(globalTags, index.0)
+                            globalIndicesWithMetadata.append((globalTags, index.0))
                         }
                     }
                 }
@@ -1671,7 +1671,7 @@ final class MessageHistoryTable: Table {
         }
         
         for mediaId in message.referencedMedia {
-            if let media = self.messageMediaTable.get(mediaId, embedded: { _ in
+            if let media = self.messageMediaTable.get(mediaId, embedded: { _, _ in
                 return nil
             }) {
                 parsedMedia.append(media)
@@ -2185,7 +2185,7 @@ final class MessageHistoryTable: Table {
                 }
                 
                 for mediaId in message.referencedMedia {
-                    if let media = self.messageMediaTable.get(mediaId, embedded: { _ in
+                    if let media = self.messageMediaTable.get(mediaId, embedded: { _, _ in
                         return nil
                     }) {
                         parsedMedia.append(media)

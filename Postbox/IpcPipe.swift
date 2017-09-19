@@ -7,7 +7,7 @@ import Foundation
 
 func ipcNotify(basePath: String, data: Int64) {
     DispatchQueue.global(qos: .default).async {
-        var path = basePath + ".ipc"
+        let path = basePath + ".ipc"
         let fd = open(path, open(path, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR))
         if fd != -1 {
             var value = data
@@ -23,7 +23,7 @@ func ipcNotifications(basePath: String) -> Signal<Int64, NoError> {
         let disposable = MetaDisposable()
         
         queue.async {
-            var path = basePath + ".ipc"
+            let path = basePath + ".ipc"
             let fd = open(path, open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR))
             if fd != -1 {
                 let readSource = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.write])

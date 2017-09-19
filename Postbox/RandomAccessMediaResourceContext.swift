@@ -204,7 +204,7 @@ public final class RandomAccessMediaResourceContext {
                 let fragmentBlockIndex = blockIndex % self.fragmentBlockCount
                 let fragmentBlockOffset = fragmentBlockIndex * self.blockSize
                 
-                range.data.withUnsafeBytes { (bytes: UnsafePointer<Void>) -> Void in
+                range.data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
                     fragmentFile.write(at: fragmentBlockOffset ..< (fragmentBlockOffset + currentBlockSize), from: bytes.advanced(by: offset - range.offset))
                 }
                 
@@ -286,7 +286,7 @@ public final class RandomAccessMediaResourceContext {
             }
             
             data.count += currentBlockEnd - currentBlockStart
-            data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Void>) -> Void in
+            data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                 fragmentFile.read(at: (fragmentBlockOffset + currentBlockStart) ..< (fragmentBlockOffset + currentBlockEnd), to: bytes.advanced(by: data.count - (currentBlockEnd - currentBlockStart)))
             }
         }

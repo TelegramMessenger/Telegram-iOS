@@ -159,6 +159,9 @@ final class ChatListTable: Table {
                     updatedTimestamp = max(updatedTimestamp, embeddedChatState.timestamp)
                 }
                 topMessageIndex = MessageIndex(id: topMessage.id, timestamp: updatedTimestamp)
+            } else if let embeddedChatState = embeddedChatState, embeddedChatState.timestamp != 0 {
+                topMessageIndex = MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 1), timestamp: embeddedChatState.timestamp)
+                rawTopMessageIndex = nil
             } else {
                 topMessageIndex = nil
                 rawTopMessageIndex = nil
