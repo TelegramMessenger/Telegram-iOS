@@ -155,6 +155,8 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                 break
         }
         
+        var addedHashtags: [String] = []
+        
         var globallyUniqueIds: [Int64] = []
         for (transformedMedia, message) in messages {
             var attributes: [MessageAttribute] = []
@@ -202,6 +204,29 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                     for attribute in attributes {
                         if let attribute = attribute as? TextEntitiesMessageAttribute {
                             entitiesAttribute = attribute
+                            var maybeNsText: NSString?
+                            for entity in attribute.entities {
+                                if case .Hashtag = entity.type {
+                                    let nsText: NSString
+                                    if let maybeNsText = maybeNsText {
+                                        nsText = maybeNsText
+                                    } else {
+                                        nsText = text as NSString
+                                        maybeNsText = nsText
+                                    }
+                                    var entityRange = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                                    if entityRange.location + entityRange.length > nsText.length {
+                                        entityRange.location = max(0, nsText.length - entityRange.length)
+                                        entityRange.length = nsText.length - entityRange.location
+                                    }
+                                    if entityRange.length > 1 {
+                                        entityRange.location += 1
+                                        entityRange.length -= 1
+                                        let hashtag = nsText.substring(with: entityRange)
+                                        addedHashtags.append(hashtag)
+                                    }
+                                }
+                            }
                             break
                         }
                     }
@@ -271,6 +296,9 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
             for globallyUniqueId in globallyUniqueIds {
                 messageIds.append(globallyUniqueIdToMessageId[globallyUniqueId])
             }
+        }
+        for hashtag in addedHashtags {
+            addRecentlyUsedHashtag(modifier: modifier, string: hashtag)
         }
         return messageIds
     } else {

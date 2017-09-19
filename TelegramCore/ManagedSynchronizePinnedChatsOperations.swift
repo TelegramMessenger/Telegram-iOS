@@ -221,7 +221,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 
                 modifier.updatePeerPresences(peerPresences)
                 
-                modifier.updatePeerNotificationSettings(notificationSettings)
+                modifier.updateCurrentPeerNotificationSettings(notificationSettings)
                 
                 var allPeersWithMessages = Set<PeerId>()
                 for message in storeMessages {
@@ -236,7 +236,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 for (peerId, chatState) in chatStates {
                     if let chatState = chatState as? ChannelState {
                         if let current = modifier.getPeerChatState(peerId) as? ChannelState {
-                            modifier.setPeerChatState(peerId, state: current.withUpdatedPts(chatState.pts))
+                            // skip changing state
                         } else {
                             modifier.setPeerChatState(peerId, state: chatState)
                         }

@@ -222,6 +222,22 @@ public final class TelegramUser: Peer {
     }
 }
 
+func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto?) -> [TelegramMediaImageRepresentation] {
+    var telegramPhoto: [TelegramMediaImageRepresentation] = []
+    if let photo = photo {
+        switch photo {
+            case let .userProfilePhoto(_, photoSmall, photoBig):
+                if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
+                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
+                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
+                }
+            case .userProfilePhotoEmpty:
+                break
+        }
+    }
+    return telegramPhoto
+}
+
 public extension TelegramUser {
     public convenience init(user: Api.User) {
         switch user {
@@ -270,18 +286,7 @@ public extension TelegramUser {
                 if let _ = accessHash {
                     return TelegramUser(user: rhs)
                 } else {
-                    var telegramPhoto: [TelegramMediaImageRepresentation] = []
-                    if let photo = photo {
-                        switch photo {
-                            case let .userProfilePhoto(_, photoSmall, photoBig):
-                                if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
-                                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
-                                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
-                                }
-                            case .userProfilePhotoEmpty:
-                                break
-                        }
-                    }
+                    let telegramPhoto = parsedTelegramProfilePhoto(photo)
                     if let lhs = lhs {
                         var userFlags: UserInfoFlags = []
                         if (flags & (1 << 17)) != 0 {

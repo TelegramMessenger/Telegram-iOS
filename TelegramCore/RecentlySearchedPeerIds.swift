@@ -19,6 +19,12 @@ public func removeRecentlySearchedPeer(postbox: Postbox, peerId: PeerId) -> Sign
     }
 }
 
+public func clearRecentlySearchedPeers(postbox: Postbox) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> Void in
+        modifier.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, items: [])
+    }
+}
+
 public func recentlySearchedPeers(postbox: Postbox) -> Signal<[RenderedPeer], NoError> {
     return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.RecentlySearchedPeerIds)])
         |> mapToSignal { view -> Signal<[RenderedPeer], NoError> in

@@ -107,14 +107,19 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                         fetchReference = packReference
                     case let .id(id, _):
                         let items = modifier.getItemCollectionItems(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id))
+                        var found = false
                         inner: for item in items {
                             if let stickerItem = item as? StickerPackItem {
                                 if stickerItem.file.fileId == file.fileId {
                                     let stringRepresentations = stickerItem.getStringRepresentationsOfIndexKeys()
+                                    found = true
                                     addSavedSticker(modifier: modifier, file: stickerItem.file, stringRepresentations: stringRepresentations)
                                     break inner
                                 }
                             }
+                        }
+                        if !found {
+                            fetchReference = packReference
                         }
                 }
                 if let fetchReference = fetchReference {
