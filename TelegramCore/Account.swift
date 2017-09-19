@@ -678,7 +678,7 @@ public class Account {
                 } else {
                     return .complete()
                 }
-            }
+        }
         self.updatedPresenceDisposable.set(updatedPresence.start())
         
         self.deviceContactListDisposable.set(managedDeviceContacts(postbox: self.postbox, network: self.network, deviceContacts: self.deviceContactList.get()).start())

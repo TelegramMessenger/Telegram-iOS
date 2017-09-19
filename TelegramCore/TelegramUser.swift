@@ -241,42 +241,42 @@ func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto?) -> [TelegramMedi
 public extension TelegramUser {
     public convenience init(user: Api.User) {
         switch user {
-            case let .user(flags, id, accessHash, firstName, lastName, username, phone, photo, _, _, _, botInlinePlaceholder, _):
-                var telegramPhoto: [TelegramMediaImageRepresentation] = []
-                if let photo = photo {
-                    switch photo {
-                        case let .userProfilePhoto(_, photoSmall, photoBig):
-                            if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
-                                telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
-                                telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
-                            }
-                        case .userProfilePhotoEmpty:
-                            break
+        case let .user(flags, id, accessHash, firstName, lastName, username, phone, photo, _, _, _, botInlinePlaceholder, _):
+            var telegramPhoto: [TelegramMediaImageRepresentation] = []
+            if let photo = photo {
+                switch photo {
+                case let .userProfilePhoto(_, photoSmall, photoBig):
+                    if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
+                        telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
+                        telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
                     }
+                case .userProfilePhotoEmpty:
+                    break
                 }
-                
-                var userFlags: UserInfoFlags = []
-                if (flags & (1 << 17)) != 0 {
-                    userFlags.insert(.isVerified)
+            }
+            
+            var userFlags: UserInfoFlags = []
+            if (flags & (1 << 17)) != 0 {
+                userFlags.insert(.isVerified)
+            }
+            
+            var botInfo: BotUserInfo?
+            if (flags & (1 << 14)) != 0 {
+                var botFlags = BotUserInfoFlags()
+                if (flags & (1 << 15)) != 0 {
+                    botFlags.insert(.hasAccessToChatHistory)
                 }
-                
-                var botInfo: BotUserInfo?
-                if (flags & (1 << 14)) != 0 {
-                    var botFlags = BotUserInfoFlags()
-                    if (flags & (1 << 15)) != 0 {
-                        botFlags.insert(.hasAccessToChatHistory)
-                    }
-                    if (flags & (1 << 16)) == 0 {
-                        botFlags.insert(.worksWithGroups)
-                    }
-                    if (flags & (1 << 21)) == 0 {
-                        botFlags.insert(.requiresGeolocationForInlineRequests)
-                    }
-                    botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
+                if (flags & (1 << 16)) == 0 {
+                    botFlags.insert(.worksWithGroups)
                 }
-                self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: accessHash, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: telegramPhoto, botInfo: botInfo, flags: userFlags)
-            case let .userEmpty(id):
-                self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, flags: [])
+                if (flags & (1 << 21)) == 0 {
+                    botFlags.insert(.requiresGeolocationForInlineRequests)
+                }
+                botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
+            }
+            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: accessHash, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: telegramPhoto, botInfo: botInfo, flags: userFlags)
+        case let .userEmpty(id):
+            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, flags: [])
         }
     }
     
