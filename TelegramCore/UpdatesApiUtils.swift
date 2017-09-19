@@ -252,6 +252,8 @@ extension Api.Update {
                 } else {
                     return []
                 }
+            case let .updateDraftMessage(peer: peer, draft: _):
+                return [peer.peerId]
             default:
                 return []
         }

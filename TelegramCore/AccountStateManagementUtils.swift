@@ -1527,7 +1527,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
             case let .UpdateChannelState(peerId, channelState):
                 modifier.setPeerChatState(peerId, state: channelState)
             case let .UpdatePeerNotificationSettings(peerId, notificationSettings):
-                modifier.updatePeerNotificationSettings([peerId: notificationSettings])
+                modifier.updateCurrentPeerNotificationSettings([peerId: notificationSettings])
             case let .AddHole(messageId):
                 modifier.addHole(messageId)
             case let .MergeApiChats(chats):

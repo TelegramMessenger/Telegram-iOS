@@ -529,7 +529,7 @@ public final class PendingMessageManager {
                 strongSelf.queue.async {
                     if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
                         for subscriber in context.messageDeliveredSubscribers.copyItems() {
-                            subscriber(Void())
+                            subscriber()
                         }
                     }
                 }
@@ -550,7 +550,7 @@ public final class PendingMessageManager {
                     self.peerSummaryContexts[peerId] = summaryContext
                 }
                 
-                let index = summaryContext.messageDeliveredSubscribers.add({ _ in
+                let index = summaryContext.messageDeliveredSubscribers.add({
                     subscriber.putNext(true)
                 })
                 
