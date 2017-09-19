@@ -574,27 +574,27 @@ public final class AccountViewTracker {
         }
     }
     
-    public func aroundMessageOfInterestHistoryViewForPeerId(_ peerId: PeerId, count: Int, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageOfInterestHistoryViewForPeerId(_ peerId: PeerId, count: Int, clipHoles: Bool = true, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageOfInterestHistoryViewForPeerId(peerId, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageOfInterestHistoryViewForPeerId(peerId, count: count, clipHoles: clipHoles, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
             return wrappedMessageHistorySignal(peerId: peerId, signal: signal)
         } else {
             return .never()
         }
     }
     
-    public func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, messageId: MessageId, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, clipHoles: Bool = true, messageId: MessageId, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
+            let signal = account.postbox.aroundIdMessageHistoryViewForPeerId(peerId, count: count, clipHoles: clipHoles, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
             return wrappedMessageHistorySignal(peerId: peerId, signal: signal)
         } else {
             return .never()
         }
     }
     
-    public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, clipHoles: Bool = true, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, count: count, clipHoles: clipHoles, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
             return wrappedMessageHistorySignal(peerId: peerId, signal: signal)
         } else {
             return .never()

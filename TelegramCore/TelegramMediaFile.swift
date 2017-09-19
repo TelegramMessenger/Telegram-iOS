@@ -200,6 +200,20 @@ func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> 
     return nil
 }
 
+func durationForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> Int32? {
+    for attribute in attributes {
+        switch attribute {
+            case let .Video(duration, _, _):
+                return Int32(duration)
+            case let .Audio(_, duration, _, _, _):
+                return Int32(duration)
+            default:
+                break
+        }
+    }
+    return nil
+}
+
 public final class TelegramMediaFile: Media, Equatable {
     public let fileId: MediaId
     public let resource: TelegramMediaResource
@@ -320,6 +334,10 @@ public final class TelegramMediaFile: Media, Equatable {
     
     public var dimensions: CGSize? {
         return dimensionsForFileAttributes(self.attributes)
+    }
+    
+    public var duration: Int32? {
+        return durationForFileAttributes(self.attributes)
     }
     
     public func isEqual(_ other: Media) -> Bool {

@@ -9,7 +9,8 @@ import Foundation
 
 private func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
-        if let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations), let toSmallestRepresentation = smallestImageRepresentation(toImage.representations) {
+        let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations)
+        if let fromSmallestRepresentation = fromSmallestRepresentation, let toSmallestRepresentation = smallestImageRepresentation(toImage.representations) {
             postbox.mediaBox.moveResourceData(from: fromSmallestRepresentation.resource.id, to: toSmallestRepresentation.resource.id)
         }
         if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {

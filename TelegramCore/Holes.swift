@@ -448,7 +448,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                     })
                     modifier.updatePeerPresences(peerPresences)
                     
-                    modifier.updatePeerNotificationSettings(notificationSettings)
+                    modifier.updateCurrentPeerNotificationSettings(notificationSettings)
                     
                     var allPeersWithMessages = Set<PeerId>()
                     for message in storeMessages {

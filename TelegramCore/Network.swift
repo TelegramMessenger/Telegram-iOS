@@ -425,7 +425,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             mtProto.delegate = connectionStatusDelegate
             mtProto.add(requestService)
             
-            subscriber.putNext(Network(datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath))
+            subscriber.putNext(Network(queue: Queue(), datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath))
             subscriber.putCompletion()
         }
         
@@ -455,6 +455,7 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
 }
 
 public final class Network: NSObject, MTRequestMessageServiceDelegate {
+    private let queue: Queue
     let datacenterId: Int
     let context: MTContext
     let mtProto: MTProto
@@ -472,7 +473,8 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     
     var loggedOut: (() -> Void)?
     
-    fileprivate init(datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String) {
+    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String) {
+        self.queue = queue
         self.datacenterId = datacenterId
         self.context = context
         self.mtProto = mtProto
@@ -517,7 +519,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         requestService.delegate = self
         
         let shouldKeepConnectionSignal = self.shouldKeepConnection.get()
-            |> distinctUntilChanged
+            |> distinctUntilChanged |> deliverOn(queue)
         self.shouldKeepConnectionDisposable.set(shouldKeepConnectionSignal.start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {

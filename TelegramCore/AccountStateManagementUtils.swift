@@ -936,6 +936,14 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         return peer
                     }
                 })
+            case let .updateUserPhoto(userId, _, photo, _):
+                updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), { peer in
+                    if let user = peer as? TelegramUser {
+                        return user.withUpdatedPhoto(parsedTelegramProfilePhoto(photo))
+                    } else {
+                        return peer
+                    }
+                })
             case let .updateUserPhone(userId, phone):
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), { peer in
                     if let user = peer as? TelegramUser {
@@ -1519,7 +1527,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
             case let .UpdateChannelState(peerId, channelState):
                 modifier.setPeerChatState(peerId, state: channelState)
             case let .UpdatePeerNotificationSettings(peerId, notificationSettings):
-                modifier.updatePeerNotificationSettings([peerId: notificationSettings])
+                modifier.updateCurrentPeerNotificationSettings([peerId: notificationSettings])
             case let .AddHole(messageId):
                 modifier.addHole(messageId)
             case let .MergeApiChats(chats):

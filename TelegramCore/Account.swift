@@ -214,6 +214,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SynchronizeConsumeMessageContentsOperation.self, f: { SynchronizeConsumeMessageContentsOperation(decoder: $0) })
     declareEncodable(RecentMediaItem.self, f: { RecentMediaItem(decoder: $0) })
     declareEncodable(RecentPeerItem.self, f: { RecentPeerItem(decoder: $0) })
+    declareEncodable(RecentHashtagItem.self, f: { RecentHashtagItem(decoder: $0) })
     declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
@@ -628,6 +629,11 @@ public class Account {
             }
         self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
         
+        let pendingMessageManager = self.pendingMessageManager
+        self.managedOperationsDisposable.add(postbox.unsentMessageIdsView().start(next: { [weak pendingMessageManager] view in
+            pendingMessageManager?.updatePendingMessageIds(view.ids)
+        }))
+        
         self.managedOperationsDisposable.add(managedSecretChatOutgoingOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
@@ -646,36 +652,29 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())
         
         let updatedPresence = self.shouldKeepOnlinePresence.get()
             |> distinctUntilChanged
             |> mapToSignal { [weak self] online -> Signal<Void, NoError> in
                 if let strongSelf = self {
-                    if online {
-                        let delayRequest: Signal<Void, NoError> = .complete() |> delay(60.0, queue: Queue.concurrentDefaultQueue())
-                        let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: .boolFalse))
-                            |> retryRequest
-                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
-                        let pushStatusRepeatedly = (pushStatusOnce |> then(delayRequest)) |> restart
-                        let peerId = strongSelf.peerId
-                        let updatePresenceLocally = strongSelf.postbox.modify { modifier -> Void in
-                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60.0 * 60.0 * 24.0 * 356.0
-                            modifier.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
+                    let delayRequest: Signal<Void, NoError> = .complete() |> delay(60.0, queue: Queue.concurrentDefaultQueue())
+                    let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: online ? .boolFalse : .boolTrue))
+                        |> retryRequest
+                        |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
+                    let pushStatusRepeatedly = (pushStatusOnce |> then(delayRequest)) |> restart
+                    let peerId = strongSelf.peerId
+                    let updatePresenceLocally = strongSelf.postbox.modify { modifier -> Void in
+                        let timestamp: Double
+                        if online {
+                            timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60.0 * 60.0 * 24.0 * 356.0
+                        } else {
+                            timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - 1.0
                         }
-                        return combineLatest(pushStatusRepeatedly, updatePresenceLocally)
-                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
-                    } else {
-                        let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: .boolTrue))
-                            |> retryRequest
-                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
-                        let peerId = strongSelf.peerId
-                        let updatePresenceLocally = strongSelf.postbox.modify { modifier -> Void in
-                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - 1.0
-                            modifier.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
-                        }
-                        return combineLatest(pushStatusOnce, updatePresenceLocally)
-                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
+                        modifier.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
                     }
+                    return combineLatest(pushStatusRepeatedly, updatePresenceLocally)
+                        |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
                 } else {
                     return .complete()
                 }
@@ -698,6 +697,10 @@ public class Account {
     
     public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
         return self.peerInputActivityManager.activities(peerId: peerId)
+    }
+    
+    public func allPeerInputActivities() -> Signal<[PeerId: [PeerId: PeerInputActivity]], NoError> {
+        return self.peerInputActivityManager.allActivities()
     }
     
     public func updateLocalInputActivity(peerId: PeerId, activity: PeerInputActivity, isPresent: Bool) {

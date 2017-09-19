@@ -114,7 +114,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                     updatePeers(modifier: modifier, peers: [telegramUser], update: { _, updated -> Peer in
                                         return updated
                                     })
-                                    modifier.updatePeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
+                                    modifier.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                     if let presence = TelegramUserPresence(apiUser: user) {
                                         modifier.updatePeerPresences([peer.id: presence])
                                     }
@@ -149,7 +149,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                 case let .chatFull(fullChat, chats, users):
                                     switch fullChat {
                                         case let .chatFull(_, _, _, notifySettings, _, _):
-                                            modifier.updatePeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
+                                            modifier.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                         case .channelFull:
                                             break
                                     }
@@ -214,7 +214,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                 case let .chatFull(fullChat, chats, users):
                                     switch fullChat {
                                         case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _, _):
-                                            modifier.updatePeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
+                                            modifier.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                         case .chatFull:
                                             break
                                     }

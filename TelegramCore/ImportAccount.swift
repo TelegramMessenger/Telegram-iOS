@@ -44,6 +44,6 @@ public func importAccount(account: UnauthorizedAccount, provider: ImportAccountP
                     }
                 }
             
-            return (importAccountState |> then(importPeers)) |> mapToSignal { _ in return .complete() } |> then(.single())
+            return (importAccountState |> then(importPeers)) |> mapToSignal { _ in return .complete() } |> then(.single(Void()))
         }
 }

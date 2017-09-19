@@ -506,6 +506,7 @@ private final class MultipartFetchManager {
                 }
                 processedParts.sort(by: { $0.0 < $1.0 })
                 var nextOffset = self.committedOffset
+                var requestPartSize = self.defaultPartSize
                 for (offset, size) in processedParts {
                     if offset >= self.committedOffset {
                         if offset == nextOffset {
@@ -516,8 +517,12 @@ private final class MultipartFetchManager {
                     }
                 }
                 
+                if nextOffset / (1024 * 1024) != (nextOffset + requestPartSize - 1) / (1024 * 1024) {
+                    let nextBoundary = (nextOffset / (1024 * 1024) + 1) * (1024 * 1024)
+                    requestPartSize = nextBoundary - nextOffset
+                }
+                
                 if nextOffset < self.range.upperBound {
-                    let requestPartSize = self.defaultPartSize
                     let partSize = min(requestPartSize, self.range.upperBound - nextOffset)
                     let part = self.source.request(offset: Int32(nextOffset), limit: Int32(requestPartSize))
                         |> deliverOn(self.queue)

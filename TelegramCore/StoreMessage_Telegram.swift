@@ -34,6 +34,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             }
         } else if let file = attachment as? TelegramMediaFile {
             var refinedTag: MessageTags? = .file
+            var isAnimated = false
             inner: for attribute in file.attributes {
                 switch attribute {
                     case let .Video(_, _, flags):
@@ -57,9 +58,14 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                     case .Sticker:
                         refinedTag = nil
                         break inner
+                    case .Animated:
+                        isAnimated = true
                     default:
                         break
                 }
+            }
+            if isAnimated {
+                refinedTag = nil
             }
             if let refinedTag = refinedTag {
                 tags.insert(refinedTag)
