@@ -166,7 +166,6 @@
     CGFloat navBarHeight = self.navigationController.navigationBar.frame.size.height;
     
     if (isPortraitOrientation) {
-      CGFloat modalGap = (windowHeight - self.view.bounds.size.height) / 2;
       frame.size.height = windowHeight - navBarHeight - kbSize.height;
     } else {
       windowHeight = windowSize.width - 20;
