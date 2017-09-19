@@ -151,7 +151,7 @@
   NSDictionary* info = [aNotification userInfo];
   CGSize kbSize = [[info objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue].size;
   
-  BOOL isPortraitOrientation = isPortraitOrientation = UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]);
+  BOOL isPortraitOrientation = UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]);
   
   CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
   if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
