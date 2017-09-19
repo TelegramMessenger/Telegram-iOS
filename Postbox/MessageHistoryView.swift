@@ -4,12 +4,14 @@ public enum AdditionalMessageHistoryViewData {
     case cachedPeerData(PeerId)
     case peerChatState(PeerId)
     case totalUnreadCount
+    case peerNotificationSettings(PeerId)
 }
 
 public enum AdditionalMessageHistoryViewDataEntry {
     case cachedPeerData(PeerId, CachedPeerData?)
     case peerChatState(PeerId, PeerChatState?)
     case totalUnreadCount(Int32)
+    case peerNotificationSettings(PeerNotificationSettings?)
 }
 
 public struct MessageHistoryViewId: Equatable {
@@ -373,11 +375,12 @@ final class MutableMessageHistoryView {
     fileprivate var later: MutableMessageHistoryEntry?
     fileprivate var entries: [MutableMessageHistoryEntry]
     fileprivate let fillCount: Int
+    fileprivate let clipHoles: Bool
     
     fileprivate var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?]
     fileprivate var additionalDatas: [AdditionalMessageHistoryViewDataEntry]
     
-    init(id: MessageHistoryViewId, postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerId: PeerId, anchorIndex: MessageHistoryAnchorIndex, combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
+    init(id: MessageHistoryViewId, postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerId: PeerId, anchorIndex: MessageHistoryAnchorIndex, combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int, clipHoles: Bool, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         self.id = id
         self.orderStatistics = orderStatistics
         self.anchorIndex = anchorIndex
@@ -388,6 +391,7 @@ final class MutableMessageHistoryView {
         self.later = later
         self.tagMask = tagMask
         self.fillCount = count
+        self.clipHoles = clipHoles
         self.topTaggedMessages = topTaggedMessages
         self.additionalDatas = additionalDatas
         
@@ -691,6 +695,8 @@ final class MutableMessageHistoryView {
                         hasChanges = true
                     }
                 case .totalUnreadCount:
+                    break
+                case .peerNotificationSettings:
                     break
             }
         }
@@ -1057,7 +1063,7 @@ public final class MessageHistoryView {
                 }
             }
         }
-        if !entries.isEmpty {
+        if !entries.isEmpty && mutableView.clipHoles {
             var referenceIndex = entries.count - 1
             for i in 0 ..< entries.count {
                 if entries[i].index > self.anchorIndex {

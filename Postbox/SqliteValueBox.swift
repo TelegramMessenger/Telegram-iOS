@@ -102,6 +102,10 @@ private struct SqlitePreparedStatement {
         return key
     }
     
+    func int64KeyValueAt(_ index: Int) -> Int64 {
+        return sqlite3_column_int64(statement, Int32(index))
+    }
+    
     func destroy() {
         sqlite3_finalize(statement)
     }
@@ -177,10 +181,8 @@ final class SqliteValueBox: ValueBox {
         var resultCode: Bool
         
         //database.execute("PRAGMA cache_size=-2097152")
+        resultCode = database.execute("PRAGMA mmap_size=0")
         resultCode = database.execute("PRAGMA journal_mode=WAL")
-        if !resultCode {
-            resultCode = database.execute("PRAGMA VACUUM")
-        }
         assert(resultCode)
         resultCode = database.execute("PRAGMA synchronous=NORMAL")
         assert(resultCode)
@@ -192,7 +194,7 @@ final class SqliteValueBox: ValueBox {
         /*var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "PRAGMA integrity_check", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        while preparedStatement.step() {
+        while preparedStatement.step(handle: database.handle) {
             let value = preparedStatement.valueAt(0)
             let text = String(data: Data(bytes: value.memory.assumingMemoryBound(to: UInt8.self), count: value.length), encoding: .utf8)
             print("integrity_check: \(text ?? "")")
@@ -1172,6 +1174,37 @@ final class SqliteValueBox: ValueBox {
                 startTime = CFAbsoluteTimeGetCurrent()
                 
                 let key = statement.keyAt(0)
+                let value = statement.valueAt(1)
+                
+                currentTime = CFAbsoluteTimeGetCurrent()
+                self.readQueryTime += currentTime - startTime
+                
+                if !values(key, value) {
+                    break
+                }
+            }
+            
+            statement.reset()
+        }
+    }
+    
+    public func scanInt64(_ table: ValueBoxTable, values: (Int64, ReadBuffer) -> Bool) {
+        assert(self.queue.isCurrent())
+        
+        if let _ = self.tables[table.id] {
+            let statement: SqlitePreparedStatement = self.scanStatement(table)
+            
+            var startTime = CFAbsoluteTimeGetCurrent()
+            
+            var currentTime = CFAbsoluteTimeGetCurrent()
+            self.readQueryTime += currentTime - startTime
+            
+            startTime = currentTime
+            
+            while statement.step(handle: self.database.handle) {
+                startTime = CFAbsoluteTimeGetCurrent()
+                
+                let key = statement.int64KeyValueAt(0)
                 let value = statement.valueAt(1)
                 
                 currentTime = CFAbsoluteTimeGetCurrent()

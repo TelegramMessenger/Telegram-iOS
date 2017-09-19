@@ -435,7 +435,7 @@ final class ViewTracker {
         }
         
         for (view, pipe) in self.unreadMessageCountsViews.copyItems() {
-            if view.replay(peerIdsWithUpdatedUnreadCounts: transaction.peerIdsWithUpdatedUnreadCounts, getTotalUnreadCount: self.getTotalUnreadCount, getPeerReadState: self.getPeerReadState) {
+            if view.replay(postbox: postbox, transaction: transaction) {
                 pipe.putNext(UnreadMessageCountsView(view))
             }
         }

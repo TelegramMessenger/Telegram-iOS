@@ -15,6 +15,9 @@ public enum PostboxViewKey: Hashable {
     case pendingMessageActionsSummary(type: PendingMessageActionType, peerId: PeerId, namespace: MessageId.Namespace)
     case historyTagSummaryView(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace)
     case cachedPeerData(peerId: PeerId)
+    case unreadCounts(items: [UnreadMessageCountsItem])
+    case peerNotificationSettings(peerId: PeerId)
+    case pendingPeerNotificationSettings
     
     public var hashValue: Int {
         switch self {
@@ -46,6 +49,12 @@ public enum PostboxViewKey: Hashable {
                 return tag.rawValue.hashValue ^ peerId.hashValue ^ namespace.hashValue
             case let .cachedPeerData(peerId):
                 return peerId.hashValue
+            case .unreadCounts:
+                return 5
+            case let .peerNotificationSettings(peerId):
+                return 6 &+ 31 &* peerId.hashValue
+            case .pendingPeerNotificationSettings:
+                return 7
         }
     }
     
@@ -135,6 +144,24 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case let .unreadCounts(lhsItems):
+                if case let .unreadCounts(rhsItems) = rhs, lhsItems == rhsItems {
+                    return true
+                } else {
+                    return false
+                }
+            case let .peerNotificationSettings(peerId):
+                if case .peerNotificationSettings(peerId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .pendingPeerNotificationSettings:
+                if case .pendingPeerNotificationSettings = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -169,5 +196,11 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutableMessageHistoryTagSummaryView(postbox: postbox, tag: tag, peerId: peerId, namespace: namespace)
         case let .cachedPeerData(peerId):
             return MutableCachedPeerDataView(postbox: postbox, peerId: peerId)
+        case let .unreadCounts(items):
+            return MutableUnreadMessageCountsView(postbox: postbox, items: items)
+        case let .peerNotificationSettings(peerId):
+            return MutablePeerNotificationSettingsView(postbox: postbox, peerId: peerId)
+        case .pendingPeerNotificationSettings:
+            return MutablePendingPeerNotificationSettingsView(postbox: postbox)
     }
 }

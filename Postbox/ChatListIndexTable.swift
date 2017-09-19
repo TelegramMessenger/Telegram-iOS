@@ -265,9 +265,9 @@ final class ChatListIndexTable: Table {
                     var notificationSettings: PeerNotificationSettings?
                     if let peer = getPeer(peerId) {
                         if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
-                            notificationSettings = self.notificationSettingsTable.get(notificationSettingsPeerId)
+                            notificationSettings = self.notificationSettingsTable.getEffective(notificationSettingsPeerId)
                         } else {
-                            notificationSettings = self.notificationSettingsTable.get(peerId)
+                            notificationSettings = self.notificationSettingsTable.getEffective(peerId)
                         }
                     }
                     if let _ = self.get(peerId).includedIndex(peerId: peerId), let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
@@ -292,9 +292,9 @@ final class ChatListIndexTable: Table {
                     var notificationSettings: PeerNotificationSettings?
                     if let peer = getPeer(peerId) {
                         if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
-                            notificationSettings = self.notificationSettingsTable.get(notificationSettingsPeerId)
+                            notificationSettings = self.notificationSettingsTable.getEffective(notificationSettingsPeerId)
                         } else {
-                            notificationSettings = self.notificationSettingsTable.get(peerId)
+                            notificationSettings = self.notificationSettingsTable.getEffective(peerId)
                         }
                     }
                     if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
@@ -335,9 +335,9 @@ final class ChatListIndexTable: Table {
                     var notificationSettings: PeerNotificationSettings?
                     if let peer = getPeer(peerId) {
                         if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
-                            notificationSettings = self.notificationSettingsTable.get(notificationSettingsPeerId)
+                            notificationSettings = self.notificationSettingsTable.getEffective(notificationSettingsPeerId)
                         } else {
-                            notificationSettings = self.notificationSettingsTable.get(peerId)
+                            notificationSettings = self.notificationSettingsTable.getEffective(peerId)
                         }
                     }
                     if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {

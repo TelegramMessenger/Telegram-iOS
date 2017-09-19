@@ -9,7 +9,7 @@ final class MutablePeerView: MutablePostboxView {
     var peerIsContact: Bool
     
     init(postbox: Postbox, peerId: PeerId) {
-        let notificationSettings = postbox.peerNotificationSettingsTable.get(peerId)
+        let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
         let cachedData = postbox.cachedPeerDataTable.get(peerId)
         let peerIsContact = postbox.contactsTable.isContact(peerId: peerId)
         

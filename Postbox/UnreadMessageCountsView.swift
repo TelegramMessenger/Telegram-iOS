@@ -1,8 +1,25 @@
 import Foundation
 
-public enum UnreadMessageCountsItem {
+public enum UnreadMessageCountsItem: Equatable {
     case total
     case peer(PeerId)
+    
+    public static func ==(lhs: UnreadMessageCountsItem, rhs: UnreadMessageCountsItem) -> Bool {
+        switch lhs {
+            case .total:
+                if case .total = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .peer(peerId):
+                if case .peer(peerId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 enum UnreadMessageCountsItemEntry {
@@ -10,41 +27,60 @@ enum UnreadMessageCountsItemEntry {
     case peer(PeerId, Int32)
 }
 
-final class MutableUnreadMessageCountsView {
+final class MutableUnreadMessageCountsView: MutablePostboxView {
     fileprivate var entries: [UnreadMessageCountsItemEntry]
     
-    init(entries: [UnreadMessageCountsItemEntry]) {
-        self.entries = entries
+    init(postbox: Postbox, items: [UnreadMessageCountsItem]) {
+        self.entries = items.map { item in
+            switch item {
+                case .total:
+                    return .total(postbox.messageHistoryMetadataTable.getChatListTotalUnreadCount())
+                case let .peer(peerId):
+                    var count: Int32 = 0
+                    if let combinedState = postbox.readStateTable.getCombinedState(peerId) {
+                        count = combinedState.count
+                    }
+                    return .peer(peerId, count)
+            }
+        }
     }
     
-    func replay(peerIdsWithUpdatedUnreadCounts: Set<PeerId>, getTotalUnreadCount: () -> Int32, getPeerReadState: (PeerId) -> CombinedPeerReadState?) -> Bool {
+    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
-        for i in 0 ..< self.entries.count {
-            switch self.entries[i] {
-                case let .total(count):
-                    let updatedCount = getTotalUnreadCount()
-                    if updatedCount != count {
-                        self.entries[i] = .total(updatedCount)
-                        updated = true
-                    }
-                case let .peer(peerId, count):
-                    if peerIdsWithUpdatedUnreadCounts.contains(peerId) {
-                        var updatedCount: Int32 = 0
-                        if let combinedState = getPeerReadState(peerId) {
-                            updatedCount = combinedState.count
+        if transaction.currentUpdatedTotalUnreadCount != nil || !transaction.peerIdsWithUpdatedUnreadCounts.isEmpty {
+            for i in 0 ..< self.entries.count {
+                switch self.entries[i] {
+                    case let .total(count):
+                        if transaction.currentUpdatedTotalUnreadCount != nil {
+                            let updatedCount = postbox.messageHistoryMetadataTable.getChatListTotalUnreadCount()
+                            if updatedCount != count {
+                                self.entries[i] = .total(updatedCount)
+                                updated = true
+                            }
                         }
-                        self.entries[i] = .peer(peerId, updatedCount)
-                        updated = true
-                    }
+                    case let .peer(peerId, count):
+                        if transaction.peerIdsWithUpdatedUnreadCounts.contains(peerId) {
+                            var updatedCount: Int32 = 0
+                            if let combinedState = postbox.readStateTable.getCombinedState(peerId) {
+                                updatedCount = combinedState.count
+                            }
+                            self.entries[i] = .peer(peerId, updatedCount)
+                            updated = true
+                        }
+                }
             }
         }
         
         return updated
     }
+    
+    func immutableView() -> PostboxView {
+        return UnreadMessageCountsView(self)
+    }
 }
 
-public final class UnreadMessageCountsView {
+public final class UnreadMessageCountsView: PostboxView {
     private let entries: [UnreadMessageCountsItemEntry]
     
     init(_ view: MutableUnreadMessageCountsView) {
