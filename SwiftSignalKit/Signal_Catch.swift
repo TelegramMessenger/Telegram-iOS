@@ -26,7 +26,7 @@ public func `catch`<T, E, R>(_ f: @escaping(E) -> Signal<T, R>) -> (Signal<T, E>
     }
 }
 
-private func recursiveFunction(_ f: @escaping(@escaping(Void) -> Void) -> Void) -> ((Void) -> Void) {
+private func recursiveFunction(_ f: @escaping(@escaping() -> Void) -> Void) -> (() -> Void) {
     return {
         f(recursiveFunction(f))
     }

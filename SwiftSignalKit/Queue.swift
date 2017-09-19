@@ -85,7 +85,7 @@ public final class Queue {
         self.nativeQueue.async(group: nil, qos: qos, flags: [.enforceQoS], execute: f)
     }
     
-    public func after(_ delay: Double, _ f: @escaping(Void) -> Void) {
+    public func after(_ delay: Double, _ f: @escaping() -> Void) {
         let time: DispatchTime = DispatchTime.now() + delay
         self.nativeQueue.asyncAfter(deadline: time, execute: f)
     }

@@ -4,10 +4,10 @@ public final class Timer {
     private let timer = Atomic<DispatchSourceTimer?>(value: nil)
     private let timeout: Double
     private let `repeat`: Bool
-    private let completion: (Void) -> Void
+    private let completion: () -> Void
     private let queue: Queue
     
-    public init(timeout: Double, `repeat`: Bool, completion: @escaping(Void) -> Void, queue: Queue) {
+    public init(timeout: Double, `repeat`: Bool, completion: @escaping() -> Void, queue: Queue) {
         self.timeout = timeout
         self.`repeat` = `repeat`
         self.completion = completion

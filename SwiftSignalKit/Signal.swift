@@ -1,6 +1,6 @@
 import Foundation
 
-internal let doNothing: () -> Void = { _ in }
+let doNothing: () -> Void = { }
 
 public typealias NoError = Void
 
