@@ -2328,6 +2328,7 @@
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private.modulemap";
 				OTHER_LDFLAGS = "-Wl,-dead_strip";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramCore;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2369,6 +2370,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private-mac.modulemap";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.TelegramCoreMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -2448,6 +2450,7 @@
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private.modulemap";
 				OTHER_LDFLAGS = "-Wl,-dead_strip";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramCore;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2592,6 +2595,7 @@
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private.modulemap";
 				OTHER_LDFLAGS = "-Wl,-dead_strip";
 				OTHER_SWIFT_FLAGS = "-DDEBUG -Xfrontend -debug-time-function-bodies";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramCore;
@@ -2629,6 +2633,7 @@
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private.modulemap";
 				OTHER_LDFLAGS = "-Wl,-dead_strip";
 				OTHER_SWIFT_FLAGS = "-DDEBUG -Xfrontend -debug-time-function-bodies";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramCore;
@@ -2682,6 +2687,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private-mac.modulemap";
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.TelegramCoreMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2712,6 +2718,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private-mac.modulemap";
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.TelegramCoreMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2741,6 +2748,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private-mac.modulemap";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.TelegramCoreMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;

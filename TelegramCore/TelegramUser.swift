@@ -226,15 +226,6 @@ func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto?) -> [TelegramMedi
     var telegramPhoto: [TelegramMediaImageRepresentation] = []
     if let photo = photo {
         switch photo {
-<<<<<<< HEAD
-        case let .userProfilePhoto(_, photoSmall, photoBig):
-            if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
-                telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
-                telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
-            }
-        case .userProfilePhotoEmpty:
-            break
-=======
             case let .userProfilePhoto(_, photoSmall, photoBig):
                 if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
                     telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
@@ -242,7 +233,6 @@ func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto?) -> [TelegramMedi
                 }
             case .userProfilePhotoEmpty:
                 break
->>>>>>> 9645d068bc34ff98458140a86db8fc15af4c28dd
         }
     }
     return telegramPhoto
