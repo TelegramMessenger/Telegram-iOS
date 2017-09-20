@@ -425,45 +425,45 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     _expiryDate = nil;
     _checkInProgress = NO;
     _dataFound = NO;
-    self.updateAvailable = NO;
+    _updateAvailable = NO;
     _lastCheckFailed = NO;
-    self.currentAppVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
+    _currentAppVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
     _blockingView = nil;
     _lastCheck = nil;
     _uuid = [[self executableUUID] copy];
     _versionUUID = nil;
     _versionID = nil;
-    self.sendUsageData = YES;
+    _sendUsageData = YES;
     _disableUpdateManager = NO;
     _firstStartAfterInstall = NO;
     _companyName = nil;
-    self.currentAppVersionUsageTime = @0;
+    _currentAppVersionUsageTime = @0;
     
     // set defaults
-    self.showDirectInstallOption = NO;
-    self.alwaysShowUpdateReminder = YES;
-    self.checkForUpdateOnLaunch = YES;
-    self.updateSetting = BITUpdateCheckStartup;
+    _showDirectInstallOption = NO;
+    _alwaysShowUpdateReminder = YES;
+    _checkForUpdateOnLaunch = YES;
+    _updateSetting = BITUpdateCheckStartup;
     
     if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateDateOfLastCheck]) {
       // we did write something else in the past, so for compatibility reasons do this
       id tempLastCheck = [[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateDateOfLastCheck];
       if ([tempLastCheck isKindOfClass:[NSDate class]]) {
-        self.lastCheck = tempLastCheck;
+        _lastCheck = tempLastCheck;
       }
     }
     
     if (!_lastCheck) {
-      self.lastCheck = [NSDate distantPast];
+      _lastCheck = [NSDate distantPast];
     }
     
     if (!BITHockeyBundle()) {
       BITHockeyLogWarning(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
     
-    self.fileManager = [[NSFileManager alloc] init];
+    _fileManager = [[NSFileManager alloc] init];
     
-    self.usageDataFile = [bit_settingsDir() stringByAppendingPathComponent:BITHOCKEY_USAGE_DATA];
+    _usageDataFile = [bit_settingsDir() stringByAppendingPathComponent:BITHOCKEY_USAGE_DATA];
     
     [self loadAppCache];
     
