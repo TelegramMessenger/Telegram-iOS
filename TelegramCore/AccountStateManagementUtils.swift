@@ -812,11 +812,14 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         }
                 }
             case let .updateNotifySettings(apiPeer, apiNotificationSettings):
-                let notificationSettings = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
                 switch apiPeer {
                     case let .notifyPeer(peer):
-                        updatedState.updatePeerNotificationSettings(peer.peerId, notificationSettings: notificationSettings)
-                        break
+                        let notificationSettings = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
+                        updatedState.updateNotificationSettings(.peer(peer.peerId), notificationSettings: notificationSettings)
+                    case .notifyUsers:
+                        updatedState.updateGlobalNotificationSettings(.privateChats, notificationSettings: MessageNotificationSettings(apiSettings: apiNotificationSettings))
+                    case .notifyChats:
+                        updatedState.updateGlobalNotificationSettings(.groups, notificationSettings: MessageNotificationSettings(apiSettings: apiNotificationSettings))
                     default:
                         break
                 }
@@ -1150,7 +1153,7 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Acc
                 var updatedState = state
                 for pair in peersAndSettings {
                     if let (peerId, settings) = pair {
-                        updatedState.updatePeerNotificationSettings(peerId, notificationSettings: settings)
+                        updatedState.updateNotificationSettings(.peer(peerId), notificationSettings: settings)
                     }
                 }
                 return updatedState
@@ -1283,6 +1286,42 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                                     case let .updateDeleteChannelMessages(_, messages, _, _):
                                         let peerId = peer.id
                                         updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
+                                    case let .updateEditChannelMessage(apiMessage, _, _):
+                                        if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id, messageId.peerId == peerId {
+                                            if let preCachedResources = apiMessage.preCachedResources {
+                                                for (resource, data) in preCachedResources {
+                                                    updatedState.addPreCachedResource(resource, data: data)
+                                                }
+                                            }
+                                            var attributes = message.attributes
+                                            attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
+                                            updatedState.editMessage(messageId, message: message.withUpdatedAttributes(attributes))
+                                        } else {
+                                            Logger.shared.log("State", "Invalid updateEditChannelMessage")
+                                        }
+                                    case let .updateChannelPinnedMessage(_, id):
+                                        updatedState.updateCachedPeerData(peer.id, { current in
+                                            let previous: CachedChannelData
+                                            if let current = current as? CachedChannelData {
+                                                previous = current
+                                            } else {
+                                                previous = CachedChannelData()
+                                            }
+                                            return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id))
+                                        })
+                                    case let .updateChannelReadMessagesContents(_, messages):
+                                        updatedState.addReadMessagesContents(peer.id, messages)
+                                    case let .updateChannelMessageViews(_, id, views):
+                                        updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)
+                                    case let .updateChannelWebPage(_, apiWebpage, _, _):
+                                        switch apiWebpage {
+                                            case let .webPageEmpty(id):
+                                                updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
+                                            default:
+                                                if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage) {
+                                                    updatedState.updateMedia(webpage.webpageId, media: webpage)
+                                                }
+                                        }
                                     default:
                                         break
                                 }
@@ -1433,7 +1472,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .ResetMessageTagSummary, .UpdatePeerNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1526,8 +1565,38 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 modifier.setState(currentState.changedState(state))
             case let .UpdateChannelState(peerId, channelState):
                 modifier.setPeerChatState(peerId, state: channelState)
-            case let .UpdatePeerNotificationSettings(peerId, notificationSettings):
-                modifier.updateCurrentPeerNotificationSettings([peerId: notificationSettings])
+            case let .UpdateNotificationSettings(subject, notificationSettings):
+                switch subject {
+                    case let .peer(peerId):
+                        modifier.updateCurrentPeerNotificationSettings([peerId: notificationSettings])
+                }
+            case let .UpdateGlobalNotificationSettings(subject, notificationSettings):
+                switch subject {
+                    case .privateChats:
+                        modifier.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
+                            var previous: GlobalNotificationSettings
+                            if let current = current as? GlobalNotificationSettings {
+                                previous = current
+                            } else {
+                                previous = GlobalNotificationSettings.defaultSettings
+                            }
+                            return GlobalNotificationSettings(toBeSynchronized: previous.toBeSynchronized, remote: previous.remote.withUpdatedPrivateChats { _ in
+                                return notificationSettings
+                            })
+                        })
+                    case .groups:
+                        modifier.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
+                            var previous: GlobalNotificationSettings
+                            if let current = current as? GlobalNotificationSettings {
+                                previous = current
+                            } else {
+                                previous = GlobalNotificationSettings.defaultSettings
+                            }
+                            return GlobalNotificationSettings(toBeSynchronized: previous.toBeSynchronized, remote: previous.remote.withUpdatedGroupChats { _ in
+                                return notificationSettings
+                            })
+                        })
+                }
             case let .AddHole(messageId):
                 modifier.addHole(messageId)
             case let .MergeApiChats(chats):

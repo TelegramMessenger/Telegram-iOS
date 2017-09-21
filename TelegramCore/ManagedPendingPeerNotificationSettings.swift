@@ -102,37 +102,23 @@ private func pushPeerNotificationSettings(postbox: Postbox, network: Network, pe
             }
             
             if let notificationPeer = modifier.getPeer(notificationPeerId), let inputPeer = apiInputPeer(notificationPeer), let settings = settings as? TelegramPeerNotificationSettings {
-                return network.request(Api.functions.account.getNotifySettings(peer: .inputNotifyPeer(peer: inputPeer)))
+                let muteUntil: Int32
+                switch settings.muteState {
+                    case let .muted(until):
+                        muteUntil = until
+                    case .unmuted:
+                        muteUntil = 0
+                }
+                let sound: String = settings.messageSound.apiSound
+                let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: Int32(1 << 0), muteUntil: muteUntil, sound: sound)
+                return network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyPeer(peer: inputPeer), settings: inputSettings))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
-                        let current = TelegramPeerNotificationSettings(apiSettings: result)
-                        
-                        let muteUntil: Int32
-                        switch settings.muteState {
-                        case let .muted(until):
-                            muteUntil = until
-                        case .unmuted:
-                            muteUntil = 0
-                        }
-                        let sound: String
-                        switch current.messageSound {
-                            case .none:
-                                sound = ""
-                            case let .bundledModern(id):
-                                sound = "\(id)"
-                            case let .bundledClassic(id):
-                                sound = "\(id + 12)"
-                        }
-                        let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: Int32(1 << 0), muteUntil: muteUntil, sound: sound)
-                        return network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyPeer(peer: inputPeer), settings: inputSettings))
-                            |> retryRequest
-                            |> mapToSignal { result -> Signal<Void, NoError> in
-                                return postbox.modify { modifier -> Void in
-                                    modifier.updateCurrentPeerNotificationSettings([notificationPeerId: settings])
-                                    if let pending = modifier.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
-                                        modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
-                                    }
-                                }
+                        return postbox.modify { modifier -> Void in
+                            modifier.updateCurrentPeerNotificationSettings([notificationPeerId: settings])
+                            if let pending = modifier.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
+                                modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
+                            }
                         }
                 }
             } else {

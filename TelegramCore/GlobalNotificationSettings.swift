@@ -104,6 +104,8 @@ public struct GlobalNotificationSettings: PreferencesEntry, Equatable {
     let toBeSynchronized: GlobalNotificationSettingsSet?
     let remote: GlobalNotificationSettingsSet
     
+    public static var defaultSettings: GlobalNotificationSettings = GlobalNotificationSettings(toBeSynchronized: nil, remote: GlobalNotificationSettingsSet.defaultSettings)
+    
     public var effective: GlobalNotificationSettingsSet {
         if let toBeSynchronized = self.toBeSynchronized {
             return toBeSynchronized
@@ -146,6 +148,17 @@ public struct GlobalNotificationSettings: PreferencesEntry, Equatable {
             return self == to
         } else {
             return false
+        }
+    }
+}
+
+extension MessageNotificationSettings {
+    init(apiSettings: Api.PeerNotifySettings) {
+        switch apiSettings {
+            case .peerNotifySettingsEmpty:
+                self = .defaultSettings
+            case let .peerNotifySettings(flags, muteUntil, sound):
+                self = MessageNotificationSettings(enabled: muteUntil == 0, displayPreviews: (flags & (1 << 0)) != 0, sound: PeerMessageSound(apiSound: sound))
         }
     }
 }

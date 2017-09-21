@@ -54,10 +54,12 @@ private enum PeerMessageSoundValue: Int32 {
     case none
     case bundledModern
     case bundledClassic
+    case `default`
 }
 
 public enum PeerMessageSound: Equatable {
     case none
+    case `default`
     case bundledModern(id: Int32)
     case bundledClassic(id: Int32)
     
@@ -69,6 +71,8 @@ public enum PeerMessageSound: Equatable {
                 return .bundledModern(id: decoder.decodeInt32ForKey("s.i", orElse: 0))
             case PeerMessageSoundValue.bundledClassic.rawValue:
                 return .bundledClassic(id: decoder.decodeInt32ForKey("s.i", orElse: 0))
+            case PeerMessageSoundValue.default.rawValue:
+                return .default
             default:
                 assertionFailure()
                 return .bundledModern(id: 0)
@@ -85,6 +89,8 @@ public enum PeerMessageSound: Equatable {
             case let .bundledClassic(id):
                 encoder.encodeInt32(PeerMessageSoundValue.bundledClassic.rawValue, forKey: "s.v")
                 encoder.encodeInt32(id, forKey: "s.i")
+            case .default:
+                encoder.encodeInt32(PeerMessageSoundValue.default.rawValue, forKey: "s.v")
         }
     }
     
@@ -108,6 +114,12 @@ public enum PeerMessageSound: Equatable {
                 } else {
                     return false
                 }
+            case .default:
+                if case .default = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -117,7 +129,7 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
     public let messageSound: PeerMessageSound
     
     public static var defaultSettings: TelegramPeerNotificationSettings {
-        return TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .bundledModern(id: 0))
+        return TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default)
     }
     
     public var isRemovedFromTotalUnreadCount: Bool {
@@ -178,22 +190,27 @@ extension TelegramPeerNotificationSettings {
 
 extension PeerMessageSound {
     init(apiSound: String) {
+        var rawApiSound = apiSound
+        if let index = rawApiSound.index(of: ".") {
+            rawApiSound = String(rawApiSound[..<index])
+        }
+        
         let parsedSound: PeerMessageSound
-        if apiSound == "default" {
-            parsedSound = .bundledModern(id: 0)
-        } else if apiSound == "" || apiSound == "0" {
+        if rawApiSound == "default" {
+            parsedSound = .default
+        } else if rawApiSound == "" || rawApiSound == "0" {
             parsedSound = .none
         } else {
             let soundId: Int32
-            if let id = Int32(apiSound) {
+            if let id = Int32(rawApiSound) {
                 soundId = id
             } else {
-                soundId = 1
+                soundId = 100
             }
-            if soundId >= 1 && soundId < 13 {
-                parsedSound = .bundledModern(id: soundId - 1)
-            } else if soundId >= 13 && soundId <= 20 {
-                parsedSound = .bundledClassic(id: soundId - 13)
+            if soundId >= 100 && soundId <= 111 {
+                parsedSound = .bundledModern(id: soundId - 100)
+            } else if soundId >= 2 && soundId <= 9 {
+                parsedSound = .bundledClassic(id: soundId - 2)
             } else {
                 parsedSound = .bundledModern(id: 0)
             }
@@ -205,14 +222,16 @@ extension PeerMessageSound {
         switch self {
             case .none:
                 return ""
+            case .default:
+                return "default"
             case let .bundledModern(id):
                 if id == 0 {
                     return "default"
                 } else {
-                    return "\(id + 1)"
+                    return "\(id + 100)"
                 }
             case let .bundledClassic(id):
-                return "\(id + 13)"
+                return "\(id + 2)"
         }
     }
 }

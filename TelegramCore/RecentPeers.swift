@@ -45,7 +45,28 @@ public func recentPeers(account: Account) -> Signal<[Peer], NoError> {
                 return .complete()
             }
         }
-    return cachedPeers |> then(updatedRemotePeers |> filter({ !$0.isEmpty })) 
+    return cachedPeers |> then(updatedRemotePeers |> filter({ !$0.isEmpty }))
+}
+
+public func removeRecentPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    return account.postbox.modify { modifier -> Signal<Void, NoError> in
+        var peerIds = modifier.getRecentPeerIds()
+        if let index = peerIds.index(of: peerId) {
+            peerIds.remove(at: index)
+            modifier.replaceRecentPeerIds(peerIds)
+        }
+        if let peer = modifier.getPeer(peerId), let apiPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.contacts.resetTopPeerRating(category: .topPeerCategoryCorrespondents, peer: apiPeer))
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
+                }
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
 }
 
 public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network) -> Signal<Void, NoError> {

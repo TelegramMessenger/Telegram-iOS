@@ -456,7 +456,7 @@ public final class AccountStateManager {
                 let signal = self.account.postbox.modify { modifier -> [Message] in
                     var messages: [Message] = []
                     for id in events.addedIncomingMessageIds {
-                        let (message, notify) = messageForNotification(modifier: modifier, id: id, alwaysReturnMessage: false)
+                        let (message, notify, _, _) = messageForNotification(modifier: modifier, id: id, alwaysReturnMessage: false)
                         if let message = message, notify {
                             messages.append(message)
                         }
@@ -680,12 +680,19 @@ public final class AccountStateManager {
     }
 }
 
-public func messageForNotification(modifier: Modifier, id: MessageId, alwaysReturnMessage: Bool) -> (message: Message?, notify: Bool) {
+public func messageForNotification(modifier: Modifier, id: MessageId, alwaysReturnMessage: Bool) -> (message: Message?, notify: Bool, sound: PeerMessageSound, displayContents: Bool) {
     var notify = true
+    var sound: PeerMessageSound = .bundledModern(id: 0)
+    var displayContents = true
     
     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
     
-    if let notificationSettings = modifier.getPeerNotificationSettings(id.peerId) as? TelegramPeerNotificationSettings {
+    var notificationPeerId = id.peerId
+    if let peer = modifier.getPeer(id.peerId), let associatedPeerId = peer.associatedPeerId {
+        notificationPeerId = associatedPeerId
+    }
+    
+    if let notificationSettings = modifier.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings {
         switch notificationSettings.muteState {
             case let .muted(until):
                 if until >= timestamp {
@@ -694,8 +701,26 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
             case .unmuted:
                 break
         }
+        var defaultSound: PeerMessageSound = .bundledModern(id: 0)
+        if let globalNotificationSettings = modifier.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings {
+            if id.peerId.namespace == Namespaces.Peer.CloudUser {
+                defaultSound = globalNotificationSettings.effective.privateChats.sound
+                displayContents = globalNotificationSettings.effective.privateChats.displayPreviews
+            } else if id.peerId.namespace == Namespaces.Peer.SecretChat {
+                defaultSound = globalNotificationSettings.effective.privateChats.sound
+                displayContents = false
+            } else {
+                defaultSound = globalNotificationSettings.effective.groupChats.sound
+                displayContents = globalNotificationSettings.effective.groupChats.displayPreviews
+            }
+        }
+        if case .default = notificationSettings.messageSound {
+            sound = defaultSound
+        } else {
+            sound = notificationSettings.messageSound
+        }
     } else {
-        Logger.shared.log("AccountStateManager", "notification settings for \(id.peerId) are undefined")
+        Logger.shared.log("AccountStateManager", "notification settings for \(notificationPeerId) are undefined")
     }
     
     let message = modifier.getMessage(id)
@@ -703,7 +728,7 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
         if let channel = message.peers[message.id.peerId] as? TelegramChannel {
             switch channel.participationStatus {
                 case .kicked, .left:
-                    return (nil, false)
+                    return (nil, false, sound, false)
                 case .member:
                     break
             }
@@ -723,14 +748,12 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
         }
         
         if notify || message.personal {
-            return (message, isUnread)
+            return (message, isUnread, sound, displayContents)
         } else {
-            return (alwaysReturnMessage ? message : nil, false)
+            return (alwaysReturnMessage ? message : nil, false, sound, displayContents)
         }
-        
-        
     } else {
         Logger.shared.log("AccountStateManager", "notification message doesn't exist")
-        return (nil, false)
+        return (nil, false, .bundledModern(id: 0), false)
     }
 }

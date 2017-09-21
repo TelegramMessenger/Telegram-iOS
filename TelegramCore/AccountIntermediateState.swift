@@ -44,6 +44,15 @@ enum AccountStateUpdateStickerPacksOperation {
     case sync
 }
 
+enum AccountStateNotificationSettingsSubject {
+    case peer(PeerId)
+}
+
+enum AccountStateGlobalNotificationSettingsSubject {
+    case privateChats
+    case groups
+}
+
 enum AccountStateMutationOperation {
     case AddMessages([StoreMessage], AddMessagesLocation)
     case DeleteMessagesWithGlobalIds([Int32])
@@ -56,7 +65,8 @@ enum AccountStateMutationOperation {
     case ResetMessageTagSummary(PeerId, MessageId.Namespace, Int32, MessageHistoryTagNamespaceCountValidityRange)
     case UpdateState(AuthorizedAccountState.State)
     case UpdateChannelState(PeerId, ChannelState)
-    case UpdatePeerNotificationSettings(PeerId, PeerNotificationSettings)
+    case UpdateNotificationSettings(AccountStateNotificationSettingsSubject, PeerNotificationSettings)
+    case UpdateGlobalNotificationSettings(AccountStateGlobalNotificationSettingsSubject, MessageNotificationSettings)
     case AddHole(MessageId)
     case MergeApiChats([Api.Chat])
     case UpdatePeer(PeerId, (Peer?) -> Peer?)
@@ -182,8 +192,12 @@ struct AccountMutableState {
         self.addOperation(.UpdateChannelState(peerId, state))
     }
     
-    mutating func updatePeerNotificationSettings(_ peerId: PeerId, notificationSettings: PeerNotificationSettings) {
-        self.addOperation(.UpdatePeerNotificationSettings(peerId, notificationSettings))
+    mutating func updateNotificationSettings(_ subject: AccountStateNotificationSettingsSubject, notificationSettings: PeerNotificationSettings) {
+        self.addOperation(.UpdateNotificationSettings(subject, notificationSettings))
+    }
+    
+    mutating func updateGlobalNotificationSettings(_ subject: AccountStateGlobalNotificationSettingsSubject, notificationSettings: MessageNotificationSettings) {
+        self.addOperation(.UpdateGlobalNotificationSettings(subject, notificationSettings))
     }
     
     mutating func addHole(_ messageId: MessageId) {
@@ -284,8 +298,12 @@ struct AccountMutableState {
                 self.state = state
             case let .UpdateChannelState(peerId, channelState):
                 self.channelStates[peerId] = channelState
-            case let .UpdatePeerNotificationSettings(peerId, notificationSettings):
-                self.peerNotificationSettings[peerId] = notificationSettings
+            case let .UpdateNotificationSettings(subject, notificationSettings):
+                if case let .peer(peerId) = subject {
+                    self.peerNotificationSettings[peerId] = notificationSettings
+                }
+            case .UpdateGlobalNotificationSettings:
+                break
             case let .MergeApiChats(chats):
                 for chat in chats {
                     if let groupOrChannel = mergeGroupOrChannel(lhs: peers[chat.peerId], rhs: chat) {
