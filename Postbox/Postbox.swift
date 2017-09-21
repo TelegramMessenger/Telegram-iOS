@@ -277,6 +277,15 @@ public final class Modifier {
         self.postbox?.replaceRecentPeerIds(peerIds)
     }
     
+    public func getRecentPeerIds() -> [PeerId] {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.peerRatingTable.get()
+        } else {
+            return []
+        }
+    }
+    
     public func updateMessage(_ id: MessageId, update: (Message) -> PostboxUpdateMessage) {
         assert(!self.disposed)
         self.postbox?.updateMessage(id, update: update)
