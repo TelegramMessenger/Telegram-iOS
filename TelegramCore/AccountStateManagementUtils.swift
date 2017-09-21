@@ -1287,7 +1287,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                                         let peerId = peer.id
                                         updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
                                     case let .updateEditChannelMessage(apiMessage, _, _):
-                                        if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id, messageId.peerId == peerId {
+                                        if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id, messageId.peerId == peer.id {
                                             if let preCachedResources = apiMessage.preCachedResources {
                                                 for (resource, data) in preCachedResources {
                                                     updatedState.addPreCachedResource(resource, data: data)
@@ -1307,10 +1307,10 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                                             } else {
                                                 previous = CachedChannelData()
                                             }
-                                            return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id))
+                                            return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id))
                                         })
                                     case let .updateChannelReadMessagesContents(_, messages):
-                                        updatedState.addReadMessagesContents(peer.id, messages)
+                                        updatedState.addReadMessagesContents((peer.id, messages))
                                     case let .updateChannelMessageViews(_, id, views):
                                         updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)
                                     case let .updateChannelWebPage(_, apiWebpage, _, _):
