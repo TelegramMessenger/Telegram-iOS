@@ -29,7 +29,7 @@
 #include "CongestionControl.h"
 #include "NetworkSocket.h"
 
-#define LIBTGVOIP_VERSION "1.0"
+#define LIBTGVOIP_VERSION "1.0.1"
 
 #define STATE_WAIT_INIT 1
 #define STATE_WAIT_INIT_ACK 2
