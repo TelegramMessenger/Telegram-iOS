@@ -18,6 +18,7 @@ public func convertGroupToSupergroup(account: Account, peerId: PeerId) -> Signal
         |> mapError { _ -> ConvertGroupToSupergroupError in
             return .generic
         }
+        |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
         |> mapToSignal { updates -> Signal<PeerId, ConvertGroupToSupergroupError> in
             account.stateManager.addUpdates(updates)
             var createdPeerId: PeerId?

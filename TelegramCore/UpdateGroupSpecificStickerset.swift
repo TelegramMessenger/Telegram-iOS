@@ -18,7 +18,7 @@ public func updateGroupSpecificStickerset(postbox: Postbox, network: Network, pe
         }
         if let inputChannel = apiInputChannel(peer) {
             let api = Api.functions.channels.setStickers(channel: inputChannel, stickerset: inputStickerset)
-            return network.request(api) |> retryRequest |> mapToSignal { value in
+            return network.request(api) |> mapError {_ in return} |> mapToSignal { value in
                 switch value {
                 case .boolTrue:
                     return postbox.modify { modifier -> Void in
