@@ -17,6 +17,15 @@ enum IntermediateMessageHistoryEntry {
                 return hole.maxIndex
         }
     }
+    
+    func debugDescription() -> String {
+        switch self {
+            case let .Message(message):
+                return message.text
+            case let .Hole(hole):
+                return "\(hole)"
+        }
+    }
 }
 
 enum RenderedMessageHistoryEntry {
