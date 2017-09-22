@@ -90,7 +90,7 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
 @property (nonatomic, strong) BITHockeyAppClient *hockeyAppClient;
 
 // Redeclare BITHockeyManager properties with readwrite attribute.
-@property (nonatomic, readwrite) NSString *installString;
+@property (nonatomic, readwrite, copy) NSString *installString;
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 @property (nonatomic, strong, readwrite) BITCrashManager *crashManager;

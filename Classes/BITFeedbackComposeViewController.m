@@ -151,11 +151,11 @@
   NSDictionary* info = [aNotification userInfo];
   CGSize kbSize = [[info objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue].size;
   
-  BOOL isPortraitOrientation = isPortraitOrientation = UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]);
+  BOOL isPortraitOrientation = UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]);
   
   CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
   if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    if (!bit_isPreiOS8Environment() || isPortraitOrientation) {
+    if (isPortraitOrientation) {
       frame.size.height -= kbSize.height;
     } else {
       frame.size.height -= kbSize.width;
@@ -165,12 +165,8 @@
     CGFloat windowHeight = windowSize.height - 20;
     CGFloat navBarHeight = self.navigationController.navigationBar.frame.size.height;
     
-    if (!bit_isPreiOS8Environment() || isPortraitOrientation) {
-      CGFloat modalGap = (windowHeight - self.view.bounds.size.height) / 2;
+    if (isPortraitOrientation) {
       frame.size.height = windowHeight - navBarHeight - kbSize.height;
-      if (bit_isPreiOS8Environment()) {
-        frame.size.height -= modalGap;
-      }
     } else {
       windowHeight = windowSize.width - 20;
       CGFloat modalGap = 0.0;
@@ -281,15 +277,7 @@
   }
   
   if (self.isStatusBarHiddenBeforeShowingPhotoPicker) {
-    // requires iOS 7
-    if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
       [self setNeedsStatusBarAppearanceUpdate];
-    } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-      [[UIApplication sharedApplication] setStatusBarHidden:self.isStatusBarHiddenBeforeShowingPhotoPicker.boolValue];
-#pragma clang diagnostic pop
-    }
   }
   
   self.isStatusBarHiddenBeforeShowingPhotoPicker = nil;

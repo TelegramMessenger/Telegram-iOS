@@ -109,10 +109,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   // Important: The iOS dialog offers the user to deny installation, we can't find out which button
   // was tapped, so we assume the user agreed
   if (self.didStartUpdateProcess) {
-    self.didStartUpdateProcess = NO;
-    
-    // we only care about iOS 8 or later
-    if (bit_isPreiOS8Environment()) return;
+    self.didStartUpdateProcess = NO;    
     id strongDelegate = self.delegate;
     if ([strongDelegate respondsToSelector:@selector(updateManagerWillExitApp:)]) {
       [strongDelegate updateManagerWillExitApp:self];
