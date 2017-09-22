@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=master)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
+[![Build Status](https://www.bitrise.io/app/30bf519f6bd0a5e2/status.svg?token=RKqHc7-ojjLiEFds53d-ZA&branch=master)](https://www.bitrise.io/app/30bf519f6bd0a5e2)
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 [![Slack Status](https://slack.hockeyapp.net/badge.svg)](https://slack.hockeyapp.net)
