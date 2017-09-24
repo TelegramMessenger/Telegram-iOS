@@ -1017,6 +1017,7 @@ final class MutableMessageHistoryView {
 
 public final class MessageHistoryView {
     public let id: MessageHistoryViewId
+    public let tagMask: MessageTags?
     public let anchorIndex: MessageIndex
     public let earlierId: MessageIndex?
     public let laterId: MessageIndex?
@@ -1028,6 +1029,7 @@ public final class MessageHistoryView {
     
     init(_ mutableView: MutableMessageHistoryView) {
         self.id = mutableView.id
+        self.tagMask = mutableView.tagMask
         self.anchorIndex = mutableView.anchorIndex.index
         
         var earlierId = mutableView.earlier?.index
