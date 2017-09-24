@@ -46,18 +46,17 @@ private struct SqlitePreparedStatement {
     func step(handle: OpaquePointer?, _ initial: Bool = false, path: String?) -> Bool {
         let res = sqlite3_step(statement)
         if res != SQLITE_ROW && res != SQLITE_DONE {
-            if initial {
+            if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
+                print("SQL error \(res): \(str) on step")
+            } else {
+                print("SQL error \(res) on step")
+            }
+            
+            if res == SQLITE_CORRUPT {
                 if let path = path {
                     try? FileManager.default.removeItem(atPath: path)
                     preconditionFailure()
                 }
-            } else  {
-                if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
-                    print("SQL error \(res): \(str) on step")
-                } else {
-                    print("SQL error \(res) on step")
-                }
-                return false
             }
         }
         return res == SQLITE_ROW
