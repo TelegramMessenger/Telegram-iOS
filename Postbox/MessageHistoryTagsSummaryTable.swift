@@ -96,7 +96,7 @@ class MessageHistoryTagsSummaryTable: Table {
         super.init(valueBox: valueBox, table: table)
     }
     
-    private func key(key: MessageHistoryTagsSummaryKey, sharedKey: ValueBoxKey = ValueBoxKey(length: 1 + 8 + 4)) -> ValueBoxKey {
+    private func key(key: MessageHistoryTagsSummaryKey, sharedKey: ValueBoxKey = ValueBoxKey(length: 4 + 8 + 4)) -> ValueBoxKey {
         sharedKey.setUInt32(0, value: key.tag.rawValue)
         sharedKey.setInt64(4, value: key.peerId.toInt64())
         sharedKey.setInt32(4 + 8, value: key.namespace)
