@@ -26,6 +26,16 @@ private class WindowRootViewController: UIViewController {
         }
     }
     
+    var gestureEdges: UIRectEdge = [] {
+        didSet {
+            if oldValue != self.gestureEdges {
+                if #available(iOSApplicationExtension 11.0, *) {
+                    self.setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
+                }
+            }
+        }
+    }
+    
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .default
     }
@@ -36,6 +46,10 @@ private class WindowRootViewController: UIViewController {
     
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         return orientations
+    }
+    
+    override func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
+        return self.gestureEdges
     }
 }
 
@@ -115,6 +129,8 @@ public func nativeWindowHostView() -> WindowHostView {
         return window.isRotating()
     }, updateSupportedInterfaceOrientations: { orientations in
         rootViewController.orientations = orientations
+    }, updateDeferScreenEdgeGestures: { edges in
+        rootViewController.gestureEdges = edges
     })
     
     window.updateSize = { [weak hostView] size in

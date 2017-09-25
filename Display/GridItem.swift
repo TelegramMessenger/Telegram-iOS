@@ -13,10 +13,15 @@ public protocol GridItem {
     func node(layout: GridNodeLayout) -> GridItemNode
     func update(node: GridItemNode)
     var aspectRatio: CGFloat { get }
+    var fillsRowWithHeight: CGFloat? { get }
 }
 
 public extension GridItem {
     var aspectRatio: CGFloat {
         return 1.0
+    }
+    
+    var fillsRowWithHeight: CGFloat? {
+        return nil
     }
 }

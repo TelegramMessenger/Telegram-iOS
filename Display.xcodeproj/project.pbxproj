@@ -82,6 +82,7 @@
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
 		D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D077B8E81F4637040046D27A /* NavigationBarBadge.swift */; };
 		D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */; };
+		D087BFB51F75181D003FD209 /* ChildWindowHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D087BFB41F75181D003FD209 /* ChildWindowHostView.swift */; };
 		D08CAA7B1ED73C990000FDA8 /* ViewControllerTracingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7A1ED73C990000FDA8 /* ViewControllerTracingNode.swift */; };
 		D08E903A1D24159200533158 /* ActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E90391D24159200533158 /* ActionSheetItem.swift */; };
 		D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */; };
@@ -113,6 +114,7 @@
 		D0C85DD21D1C08AE00124894 /* ActionSheetItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DD11D1C08AE00124894 /* ActionSheetItemNode.swift */; };
 		D0C85DD41D1C1E6A00124894 /* ActionSheetItemGroupNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DD31D1C1E6A00124894 /* ActionSheetItemGroupNode.swift */; };
 		D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */; };
+		D0CE8CE91F6FC7EC00AA2DB0 /* NavigationBarTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE8CE81F6FC7EC00AA2DB0 /* NavigationBarTitleView.swift */; };
 		D0D94A171D3814F900740E02 /* UniversalTapRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */; };
 		D0DA444C1E4DCA4A005FDCA7 /* AlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA444B1E4DCA4A005FDCA7 /* AlertController.swift */; };
 		D0DA444E1E4DCA6E005FDCA7 /* AlertControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA444D1E4DCA6E005FDCA7 /* AlertControllerNode.swift */; };
@@ -220,6 +222,7 @@
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
 		D077B8E81F4637040046D27A /* NavigationBarBadge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarBadge.swift; sourceTree = "<group>"; };
 		D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainerViewLayout.swift; sourceTree = "<group>"; };
+		D087BFB41F75181D003FD209 /* ChildWindowHostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChildWindowHostView.swift; sourceTree = "<group>"; };
 		D08CAA7A1ED73C990000FDA8 /* ViewControllerTracingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewControllerTracingNode.swift; sourceTree = "<group>"; };
 		D08E90391D24159200533158 /* ActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItem.swift; sourceTree = "<group>"; };
 		D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetButtonItem.swift; sourceTree = "<group>"; };
@@ -251,6 +254,7 @@
 		D0C85DD11D1C08AE00124894 /* ActionSheetItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemNode.swift; sourceTree = "<group>"; };
 		D0C85DD31D1C1E6A00124894 /* ActionSheetItemGroupNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemGroupNode.swift; sourceTree = "<group>"; };
 		D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScrollToTopProxyView.swift; sourceTree = "<group>"; };
+		D0CE8CE81F6FC7EC00AA2DB0 /* NavigationBarTitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBarTitleView.swift; sourceTree = "<group>"; };
 		D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UniversalTapRecognizer.swift; sourceTree = "<group>"; };
 		D0DA444B1E4DCA4A005FDCA7 /* AlertController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlertController.swift; sourceTree = "<group>"; };
 		D0DA444D1E4DCA6E005FDCA7 /* AlertControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlertControllerNode.swift; sourceTree = "<group>"; };
@@ -310,6 +314,7 @@
 			children = (
 				D05CC2A11B69326C00E235A3 /* WindowContent.swift */,
 				D0BE93181E8ED71100DCC1E6 /* NativeWindowHostView.swift */,
+				D087BFB41F75181D003FD209 /* ChildWindowHostView.swift */,
 			);
 			name = Window;
 			sourceTree = "<group>";
@@ -529,6 +534,7 @@
 				D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */,
 				D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */,
 				D077B8E81F4637040046D27A /* NavigationBarBadge.swift */,
+				D0CE8CE81F6FC7EC00AA2DB0 /* NavigationBarTitleView.swift */,
 			);
 			name = Navigation;
 			sourceTree = "<group>";
@@ -810,6 +816,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */,
+				D087BFB51F75181D003FD209 /* ChildWindowHostView.swift in Sources */,
 				D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */,
 				D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */,
 				D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */,
@@ -862,6 +869,7 @@
 				D05CC2FA1B6955D000E235A3 /* UINavigationItem+Proxy.m in Sources */,
 				D096A4501EA64F580000A7AE /* ActionSheetCheckboxItem.swift in Sources */,
 				D0C2DFCE1CC4431D0044FF83 /* ListViewAccessoryItem.swift in Sources */,
+				D0CE8CE91F6FC7EC00AA2DB0 /* NavigationBarTitleView.swift in Sources */,
 				D0C12A1A1F3375B400B3F66D /* NavigationBarTitleTransitionNode.swift in Sources */,
 				D0A749951E3A9E7B00AD786E /* SwitchNode.swift in Sources */,
 				D03725C51D6DF8B9007FC290 /* ContextMenuController.swift in Sources */,
@@ -1281,7 +1289,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				OTHER_SWIFT_FLAGS = "-Xfrontend -debug-time-function-bodies";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
@@ -1308,7 +1316,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				OTHER_SWIFT_FLAGS = "-Xfrontend -debug-time-function-bodies";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
@@ -1406,7 +1414,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				OTHER_SWIFT_FLAGS = "-Xfrontend -debug-time-function-bodies";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
@@ -1485,7 +1493,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				OTHER_SWIFT_FLAGS = "-Xfrontend -debug-time-function-bodies";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;

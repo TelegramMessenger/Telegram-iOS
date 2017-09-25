@@ -233,8 +233,8 @@ class StatusBarManager {
                     statusBarWindow.bounds = statusBarBounds
                 }
             }
-        } else {
-            self.host.statusBarWindow?.alpha = 0.0
+        } else if let statusBarWindow = self.host.statusBarWindow {
+            statusBarWindow.alpha = 0.0
         }
     }
 }

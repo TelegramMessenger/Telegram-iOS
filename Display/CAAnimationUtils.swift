@@ -90,7 +90,7 @@ public extension CALayer {
     
     public func animate(from: AnyObject, to: AnyObject, keyPath: String, timingFunction: String, duration: Double, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let animation = self.makeAnimation(from: from, to: to, keyPath: keyPath, timingFunction: timingFunction, duration: duration, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
-        self.add(animation, forKey: keyPath)
+        self.add(animation, forKey: additive ? nil : keyPath)
     }
     
     public func animateGroup(_ animations: [CAAnimation], key: String) {

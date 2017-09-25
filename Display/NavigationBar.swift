@@ -5,11 +5,13 @@ private var backArrowImageCache: [Int32: UIImage] = [:]
 
 public final class NavigationBarTheme {
     public static func generateBackArrowImage(color: UIColor) -> UIImage? {
-        return generateImage(CGSize(width: 13.0, height: 22.0), contextGenerator: { size, context in
+        return generateImage(CGSize(width: 13.0, height: 22.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(color.cgColor)
             
-            let _ = try? drawSvgPath(context, path: "M10.3824541,0.421094342 L1.53851,8.52547877 L1.53851,8.52547877 C0.724154418,9.27173527 0.668949198,10.5368613 1.41520569,11.3512169 C1.45449493,11.3940915 1.49563546,11.435232 1.53851,11.4745212 L10.3824541,19.5789057 L10.3824541,19.5789057 C10.9981509,20.1431158 11.9429737,20.1431158 12.5586704,19.5789057 L12.5586704,19.5789057 L12.5586704,19.5789057 C13.1093629,19.0742639 13.1466944,18.2187464 12.6420526,17.6680539 C12.615484,17.6390608 12.5876635,17.6112403 12.5586704,17.5846717 L4.28186505,10 L12.5586704,2.41532829 L12.5586704,2.41532829 C13.1093629,1.91068651 13.1466944,1.05516904 12.6420526,0.50447654 C12.615484,0.475483443 12.5876635,0.447662941 12.5586704,0.421094342 L12.5586704,0.421094342 L12.5586704,0.421094342 C11.9429737,-0.143115824 10.9981509,-0.143115824 10.3824541,0.421094342 Z ")
+            context.translateBy(x: 0.0, y: 2.0)
+            
+            let _ = try? drawSvgPath(context, path: "M8.16012402,0.373030797 L0.635333572,7.39652821 L0.635333572,7.39652821 C-0.172148528,8.15021677 -0.215756811,9.41579564 0.537931744,10.2232777 C0.56927099,10.2568538 0.601757528,10.2893403 0.635333572,10.3206796 L8.16012402,17.344177 L8.16012402,17.344177 C8.69299787,17.8415514 9.51995274,17.8415514 10.0528266,17.344177 L10.0528266,17.344177 L10.0528266,17.344177 C10.5406633,16.8888394 10.567009,16.1242457 10.1116715,15.636409 C10.092738,15.6161242 10.0731114,15.5964976 10.0528266,15.5775641 L2.85430928,8.85860389 L10.0528266,2.13964366 L10.0528266,2.13964366 C10.5406633,1.68430612 10.567009,0.919712345 10.1116715,0.431875673 C10.092738,0.411590857 10.0731114,0.391964261 10.0528266,0.373030797 L10.0528266,0.373030797 L10.0528266,0.373030797 C9.51995274,-0.124343599 8.69299787,-0.124343599 8.16012402,0.373030797 Z ")
         })
     }
     
@@ -77,6 +79,8 @@ open class NavigationBar: ASDisplayNode {
     
     private var itemBadgeListenerKey: Int?
     
+    private var hintAnimateTitleNodeOnNextLayout: Bool = false
+    
     private var _item: UINavigationItem?
     public var item: UINavigationItem? {
         get {
@@ -120,9 +124,13 @@ open class NavigationBar: ASDisplayNode {
             
             if let item = value {
                 self.title = item.title
-                self.itemTitleListenerKey = item.addSetTitleListener { [weak self] text in
+                self.itemTitleListenerKey = item.addSetTitleListener { [weak self] text, animated in
                     if let strongSelf = self {
+                        let animateIn = animated && (strongSelf.title?.isEmpty ?? true)
                         strongSelf.title = text
+                        if animateIn {
+                            strongSelf.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        }
                     }
                 }
                 
@@ -133,20 +141,20 @@ open class NavigationBar: ASDisplayNode {
                     }
                 }
                 
-                self.itemLeftButtonListenerKey = item.addSetLeftBarButtonItemListener { [weak self] previousItem, _, _ in
+                self.itemLeftButtonListenerKey = item.addSetLeftBarButtonItemListener { [weak self] previousItem, _, animated in
                     if let strongSelf = self {
                         if let itemLeftButtonSetEnabledListenerKey = strongSelf.itemLeftButtonSetEnabledListenerKey {
                             previousItem?.removeSetEnabledListener(itemLeftButtonSetEnabledListenerKey)
                             strongSelf.itemLeftButtonSetEnabledListenerKey = nil
                         }
                         
-                        strongSelf.updateLeftButton()
+                        strongSelf.updateLeftButton(animated: animated)
                         strongSelf.invalidateCalculatedLayout()
                         strongSelf.setNeedsLayout()
                     }
                 }
                 
-                self.itemRightButtonListenerKey = item.addSetRightBarButtonItemListener { [weak self] previousItem, currentItem, _ in
+                self.itemRightButtonListenerKey = item.addSetRightBarButtonItemListener { [weak self] previousItem, currentItem, animated in
                     if let strongSelf = self {
                         if let itemRightButtonSetEnabledListenerKey = strongSelf.itemRightButtonSetEnabledListenerKey {
                             previousItem?.removeSetEnabledListener(itemRightButtonSetEnabledListenerKey)
@@ -156,12 +164,12 @@ open class NavigationBar: ASDisplayNode {
                         if let currentItem = currentItem {
                             strongSelf.itemRightButtonSetEnabledListenerKey = currentItem.addSetEnabledListener { _ in
                                 if let strongSelf = self {
-                                    strongSelf.updateRightButton()
+                                    strongSelf.updateRightButton(animated: false)
                                 }
                             }
                         }
                         
-                        strongSelf.updateRightButton()
+                        strongSelf.updateRightButton(animated: animated)
                         strongSelf.invalidateCalculatedLayout()
                         strongSelf.setNeedsLayout()
                     }
@@ -174,12 +182,12 @@ open class NavigationBar: ASDisplayNode {
                 }
                 self.updateBadgeText(text: item.badge)
                 
-                self.updateLeftButton()
-                self.updateRightButton()
+                self.updateLeftButton(animated: false)
+                self.updateRightButton(animated: false)
             } else {
                 self.title = nil
-                self.updateLeftButton()
-                self.updateRightButton()
+                self.updateLeftButton(animated: false)
+                self.updateRightButton(animated: false)
             }
             self.invalidateCalculatedLayout()
         }
@@ -188,7 +196,7 @@ open class NavigationBar: ASDisplayNode {
     private var title: String? {
         didSet {
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.theme.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.theme.primaryTextColor)
                 if self.titleNode.supernode == nil {
                     self.clippingNode.addSubnode(self.titleNode)
                 }
@@ -239,7 +247,7 @@ open class NavigationBar: ASDisplayNode {
             self._previousItem = value
             
             if let previousItem = value {
-                self.previousItemListenerKey = previousItem.addSetTitleListener { [weak self] _ in
+                self.previousItemListenerKey = previousItem.addSetTitleListener { [weak self] _, _ in
                     if let strongSelf = self, let previousItem = strongSelf.previousItem {
                         if let backBarButtonItem = previousItem.backBarButtonItem {
                             strongSelf.backButtonNode.text = backBarButtonItem.title ?? ""
@@ -261,7 +269,7 @@ open class NavigationBar: ASDisplayNode {
                     }
                 }
             }
-            self.updateLeftButton()
+            self.updateLeftButton(animated: false)
             
             self.invalidateCalculatedLayout()
         }
@@ -278,9 +286,51 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
-    private func updateLeftButton() {
+    private func updateLeftButton(animated: Bool) {
         if let item = self.item {
             if let leftBarButtonItem = item.leftBarButtonItem {
+                if animated {
+                    if self.leftButtonNode.view.superview != nil {
+                        if let snapshotView = self.leftButtonNode.view.snapshotContentTree() {
+                            snapshotView.frame = self.leftButtonNode.frame
+                            self.leftButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.leftButtonNode.view)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                        }
+                    }
+                    
+                    if self.backButtonNode.view.superview != nil {
+                        if let snapshotView = self.backButtonNode.view.snapshotContentTree() {
+                            snapshotView.frame = self.backButtonNode.frame
+                            self.backButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.backButtonNode.view)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                        }
+                    }
+                    
+                    if self.backButtonArrow.view.superview != nil {
+                        if let snapshotView = self.backButtonArrow.view.snapshotContentTree() {
+                            snapshotView.frame = self.backButtonArrow.frame
+                            self.backButtonArrow.view.superview?.insertSubview(snapshotView, aboveSubview: self.backButtonArrow.view)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                        }
+                    }
+                    
+                    if self.badgeNode.view.superview != nil {
+                        if let snapshotView = self.badgeNode.view.snapshotContentTree() {
+                            snapshotView.frame = self.badgeNode.frame
+                            self.badgeNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.badgeNode.view)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                        }
+                    }
+                }
+                
                 self.backButtonNode.removeFromSupernode()
                 self.backButtonArrow.removeFromSupernode()
                 self.badgeNode.removeFromSupernode()
@@ -291,7 +341,22 @@ open class NavigationBar: ASDisplayNode {
                 if self.leftButtonNode.supernode == nil {
                     self.clippingNode.addSubnode(self.leftButtonNode)
                 }
+                
+                if animated {
+                    self.leftButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
             } else {
+                if animated {
+                    if self.leftButtonNode.view.superview != nil {
+                        if let snapshotView = self.leftButtonNode.view.snapshotContentTree() {
+                            snapshotView.frame = self.leftButtonNode.frame
+                            self.leftButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.leftButtonNode.view)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                        }
+                    }
+                }
                 self.leftButtonNode.removeFromSupernode()
                 
                 if let previousItem = self.previousItem {
@@ -306,9 +371,14 @@ open class NavigationBar: ASDisplayNode {
                         self.clippingNode.addSubnode(self.backButtonArrow)
                         self.clippingNode.addSubnode(self.badgeNode)
                     }
+                    
+                    if animated {
+                        self.backButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        self.backButtonArrow.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        self.badgeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    }
                 } else {
                     self.backButtonNode.removeFromSupernode()
-                    
                 }
             }
         } else {
@@ -317,11 +387,24 @@ open class NavigationBar: ASDisplayNode {
             self.backButtonArrow.removeFromSupernode()
             self.badgeNode.removeFromSupernode()
         }
+        
+        if animated {
+            self.hintAnimateTitleNodeOnNextLayout = true
+        }
     }
     
-    private func updateRightButton() {
+    private func updateRightButton(animated: Bool) {
         if let item = self.item {
             if let rightBarButtonItem = item.rightBarButtonItem {
+                if animated, self.rightButtonNode.view.superview != nil {
+                    if let snapshotView = self.rightButtonNode.view.snapshotContentTree() {
+                        snapshotView.frame = self.rightButtonNode.frame
+                        self.rightButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.rightButtonNode.view)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                }
                 self.rightButtonNode.text = rightBarButtonItem.title ?? ""
                 self.rightButtonNode.image = rightBarButtonItem.image
                 self.rightButtonNode.bold = rightBarButtonItem.style == .done
@@ -330,11 +413,18 @@ open class NavigationBar: ASDisplayNode {
                 if self.rightButtonNode.supernode == nil {
                     self.clippingNode.addSubnode(self.rightButtonNode)
                 }
+                if animated {
+                    self.rightButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                }
             } else {
                 self.rightButtonNode.removeFromSupernode()
             }
         } else {
             self.rightButtonNode.removeFromSupernode()
+        }
+        
+        if animated {
+            self.hintAnimateTitleNodeOnNextLayout = true
         }
     }
     
@@ -497,7 +587,7 @@ open class NavigationBar: ASDisplayNode {
     open override func layout() {
         let size = self.bounds.size
         
-        let leftButtonInset: CGFloat = 8.0
+        let leftButtonInset: CGFloat = 16.0
         let backButtonInset: CGFloat = 27.0
         
         self.clippingNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -666,6 +756,12 @@ open class NavigationBar: ASDisplayNode {
                         titleView.alpha = progress * progress
                 }
             } else {
+                if self.hintAnimateTitleNodeOnNextLayout {
+                    self.hintAnimateTitleNodeOnNextLayout = false
+                    if let titleView = titleView as? NavigationBarTitleView {
+                        titleView.animateLayoutTransition()
+                    }
+                }
                 titleView.alpha = 1.0
                 titleView.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
             }

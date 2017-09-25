@@ -138,6 +138,7 @@ public final class WindowHostView {
     public let isRotating: () -> Bool
     
     let updateSupportedInterfaceOrientations: (UIInterfaceOrientationMask) -> Void
+    let updateDeferScreenEdgeGestures: (UIRectEdge) -> Void
     
     var present: ((ViewController, PresentationSurfaceLevel) -> Void)?
     var presentNative: ((UIViewController) -> Void)?
@@ -147,10 +148,11 @@ public final class WindowHostView {
     var isUpdatingOrientationLayout = false
     var hitTest: ((CGPoint, UIEvent?) -> UIView?)?
     
-    init(view: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void) {
+    init(view: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void) {
         self.view = view
         self.isRotating = isRotating
         self.updateSupportedInterfaceOrientations = updateSupportedInterfaceOrientations
+        self.updateDeferScreenEdgeGestures = updateDeferScreenEdgeGestures
     }
 }
 
@@ -358,7 +360,9 @@ public class Window1 {
             self._rootController = value
             
             if let rootController = self._rootController {
-                rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
+                if !self.windowLayout.size.width.isZero && !self.windowLayout.size.height.isZero {
+                    rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
+                }
                 
                 self.hostView.view.addSubview(rootController.view)
             }
@@ -423,7 +427,9 @@ public class Window1 {
                 }
             }
             keyboardManager.surfaces = keyboardSurfaces
-            self.hostView.updateSupportedInterfaceOrientations(self.presentationContext.combinedSupportedOrientations())
+        self.hostView.updateSupportedInterfaceOrientations(self.presentationContext.combinedSupportedOrientations())
+            
+        self.hostView.updateDeferScreenEdgeGestures(self.presentationContext.combinedDeferScreenEdgeGestures())
         }
         
         if !UIWindow.isDeviceRotating() {

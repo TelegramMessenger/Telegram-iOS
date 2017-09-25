@@ -67,7 +67,6 @@ private class StatusBarItemNode: ASDisplayNode {
                 UIGraphicsPopContext()
             }
         }
-        //print("\(self.targetView)")
         let type: StatusBarItemType = self.targetView.checkIsKind(of: batteryItemClass!) ? .Battery : .Generic
         tintStatusBarItem(context, type: type, style: statusBarStyle)
         self.contents = context.generateImage()?.cgImage
@@ -184,7 +183,9 @@ private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemTyp
                     pixel += 1
                 }
                 
-                if batteryColor != 0xffffffff && batteryColor != 0xff000000 {
+                let whiteColor: UInt32 = 0xffffffff as UInt32
+                let blackColor: UInt32 = 0xff000000 as UInt32
+                if batteryColor != whiteColor && batteryColor != blackColor {
                     var y = baseY + 2
                     while y < targetY {
                         let baseRow = basePixel + pixelsPerRow * y

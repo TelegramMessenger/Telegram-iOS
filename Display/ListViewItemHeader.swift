@@ -133,4 +133,10 @@ open class ListViewItemHeaderNode: ASDisplayNode {
         
         return continueAnimations
     }
+    
+    open func animateRemoved(duration: Double) {
+        self.alpha = 0.0
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
+        self.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+    }
 }

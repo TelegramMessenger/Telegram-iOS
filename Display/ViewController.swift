@@ -38,6 +38,11 @@ open class ViewControllerPresentationArguments {
         return self.supportedOrientations
     }
     
+    public final var deferScreenEdgeGestures: UIRectEdge = []
+    override open func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
+        return .bottom
+    }
+    
     public private(set) var presentationArguments: Any?
     
     private var _displayNode: ASDisplayNode?
@@ -187,7 +192,9 @@ open class ViewControllerPresentationArguments {
     open override func loadView() {
         self.view = self.displayNode.view
         if let navigationBar = self.navigationBar {
-            self.displayNode.addSubnode(navigationBar)
+            if navigationBar.supernode == nil {
+                self.displayNode.addSubnode(navigationBar)
+            }
         }
         self.view.addSubview(self.statusBar.view)
         self.presentationContext.view = self.view

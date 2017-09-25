@@ -67,7 +67,7 @@ private final class TabBarNodeContainer {
     var selectedImageValue: UIImage?
     var appliedSelectedImageValue: UIImage?
     
-    init(item: UITabBarItem, imageNode: ASImageNode, updateBadge: @escaping (String) -> Void, updateTitle: @escaping (String) -> Void, updateImage: @escaping (UIImage?) -> Void, updateSelectedImage: @escaping (UIImage?) -> Void) {
+    init(item: UITabBarItem, imageNode: ASImageNode, updateBadge: @escaping (String) -> Void, updateTitle: @escaping (String, Bool) -> Void, updateImage: @escaping (UIImage?) -> Void, updateSelectedImage: @escaping (UIImage?) -> Void) {
         self.item = item
         
         self.imageNode = imageNode
@@ -88,8 +88,8 @@ private final class TabBarNodeContainer {
         })
         
         self.titleValue = item.title
-        self.updateTitleListenerIndex = item.addSetTitleListener { value in
-            updateTitle(value ?? "")
+        self.updateTitleListenerIndex = item.addSetTitleListener { value, animated in
+            updateTitle(value ?? "", animated)
         }
         
         self.imageValue = item.image
@@ -193,7 +193,7 @@ class TabBarNode: ASDisplayNode {
             node.isLayerBacked = true
             let container = TabBarNodeContainer(item: item, imageNode: node, updateBadge: { [weak self] value in
                 self?.updateNodeBadge(i, value: value)
-            }, updateTitle: { [weak self] _ in
+            }, updateTitle: { [weak self] _, _ in
                 self?.updateNodeImage(i)
             }, updateImage: { [weak self] _ in
                 self?.updateNodeImage(i)
@@ -287,7 +287,7 @@ class TabBarNode: ASDisplayNode {
                 if !container.badgeBackgroundNode.isHidden {
                     let badgeSize = container.badgeTextNode.measure(CGSize(width: 200.0, height: 100.0))
                     let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
-                    let backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.calculatedSize.width / 2.0) - 5.0, y: 2.0), size: backgroundSize)
+                    let backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.calculatedSize.width / 2.0) - 3.0 + node.calculatedSize.width - backgroundSize.width - 1.0, y: 2.0), size: backgroundSize)
                     container.badgeBackgroundNode.frame = backgroundFrame
                     container.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: 3.0), size: badgeSize)
                 }

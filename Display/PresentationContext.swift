@@ -173,4 +173,14 @@ final class PresentationContext {
         
         return mask
     }
+    
+    func combinedDeferScreenEdgeGestures() -> UIRectEdge {
+        var edges: UIRectEdge = []
+        
+        for controller in self.controllers {
+            edges = edges.union(controller.deferScreenEdgeGestures)
+        }
+        
+        return edges
+    }
 }

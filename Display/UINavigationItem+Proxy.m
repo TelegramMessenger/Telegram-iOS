@@ -42,7 +42,20 @@ static const void *badgeKey = &badgeKey;
         [targetItem setTitle:title];
     } else {
         [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] enumerateItems:^(UINavigationItemSetTitleListener listener) {
-            listener(title);
+            listener(title, false);
+        }];
+    }
+}
+
+- (void)setTitle:(NSString * _Nullable)title animated:(bool)animated {
+    [self _ac91f40f_setTitle:title];
+    
+    UINavigationItem *targetItem = [self associatedObjectForKey:targetItemKey];
+    if (targetItem != nil) {
+        [targetItem setTitle:title];
+    } else {
+        [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] enumerateItems:^(UINavigationItemSetTitleListener listener) {
+            listener(title, animated);
         }];
     }
 }
@@ -287,7 +300,7 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem *item, UITabBarItemSetBa
     [self _ac91f40f_setTitle:value];
     
     [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] enumerateItems:^(UINavigationItemSetTitleListener listener) {
-        listener(value);
+        listener(value, false);
     }];
 }
 

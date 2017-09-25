@@ -124,9 +124,25 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     public final var stackFromBottom: Bool = false
     public final var stackFromBottomInsetItemFactor: CGFloat = 0.0
     public final var limitHitTestToNodes: Bool = false
-    public final var keepBottomItemOverscrollBackground: Bool = false
+    public final var keepTopItemOverscrollBackground: UIColor? {
+        didSet {
+            if let color = self.keepTopItemOverscrollBackground {
+                self.topItemOverscrollBackground?.backgroundColor = color
+            }
+            self.updateTopItemOverscrollBackground()
+        }
+    }
+    public final var keepBottomItemOverscrollBackground: UIColor? {
+        didSet {
+            if let color = self.keepBottomItemOverscrollBackground {
+                self.bottomItemOverscrollBackground?.backgroundColor = color
+            }
+            self.updateBottomItemOverscrollBackground()
+        }
+    }
     public final var snapToBottomInsetUntilFirstInteraction: Bool = false
     
+    private var topItemOverscrollBackground: ASDisplayNode?
     private var bottomItemOverscrollBackground: ASDisplayNode?
     
     private var touchesPosition = CGPoint()
@@ -153,6 +169,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private final var opaqueTransactionState: Any?
     
     public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
+    public final var beganInteractiveDragging: () -> Void = { }
     
     private final var animations: [ListViewAnimation] = []
     private final var actionsForVSync: [() -> ()] = []
@@ -381,6 +398,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         if self.snapToBottomInsetUntilFirstInteraction {
             self.snapToBottomInsetUntilFirstInteraction = false
         }
+        
+        self.beganInteractiveDragging()
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -706,10 +725,53 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.ignoreScrollingEvents = wasIgnoringScrollingEvents
     }
     
+    private func updateTopItemOverscrollBackground() {
+        if let color = self.keepTopItemOverscrollBackground {
+            let topItemOverscrollBackground: ASDisplayNode
+            if let current = self.topItemOverscrollBackground {
+                topItemOverscrollBackground = current
+            } else {
+                topItemOverscrollBackground = ASDisplayNode()
+                topItemOverscrollBackground.isLayerBacked = true
+                topItemOverscrollBackground.backgroundColor = color
+                self.topItemOverscrollBackground = topItemOverscrollBackground
+                self.insertSubnode(topItemOverscrollBackground, at: 0)
+            }
+            var topItemFound = false
+            var topItemNodeIndex: Int?
+            if !self.itemNodes.isEmpty {
+                topItemNodeIndex = self.itemNodes[0].index
+            }
+            if topItemNodeIndex == 0 {
+                topItemFound = true
+            }
+            
+            if topItemFound {
+                let realTopItemEdge = itemNodes.first!.apparentFrame.origin.y
+                let realTopItemEdgeOffset = max(0.0, realTopItemEdge)
+                let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.visibleSize.width, height: realTopItemEdgeOffset))
+                if !backgroundFrame.equalTo(topItemOverscrollBackground.frame) {
+                    topItemOverscrollBackground.frame = backgroundFrame
+                }
+            } else {
+                let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.visibleSize.width, height: 0.0))
+                if !backgroundFrame.equalTo(topItemOverscrollBackground.frame) {
+                    topItemOverscrollBackground.frame = backgroundFrame
+                }
+            }
+        } else if let topItemOverscrollBackground = self.topItemOverscrollBackground {
+            self.topItemOverscrollBackground = nil
+            topItemOverscrollBackground.removeFromSupernode()
+        }
+    }
+    
     private func updateBottomItemOverscrollBackground() {
-        if self.keepBottomItemOverscrollBackground {
+        if let color = self.keepBottomItemOverscrollBackground {
             var bottomItemFound = false
-            let lastItemNodeIndex: Int? = self.itemNodes[itemNodes.count - 1].index
+            var lastItemNodeIndex: Int?
+            if !itemNodes.isEmpty {
+                lastItemNodeIndex = self.itemNodes[itemNodes.count - 1].index
+            }
             if lastItemNodeIndex == self.items.count - 1 {
                 bottomItemFound = true
             }
@@ -719,7 +781,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 bottomItemOverscrollBackground = currentBottomItemOverscrollBackground
             } else {
                 bottomItemOverscrollBackground = ASDisplayNode()
-                bottomItemOverscrollBackground.backgroundColor = .white
+                bottomItemOverscrollBackground.backgroundColor = color
                 bottomItemOverscrollBackground.isLayerBacked = true
                 self.insertSubnode(bottomItemOverscrollBackground, at: 0)
                 self.bottomItemOverscrollBackground = bottomItemOverscrollBackground
@@ -738,6 +800,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     bottomItemOverscrollBackground.frame = backgroundFrame
                 }
             }
+        } else if let bottomItemOverscrollBackground = self.bottomItemOverscrollBackground {
+            self.bottomItemOverscrollBackground = nil
+            bottomItemOverscrollBackground.removeFromSupernode()
         }
     }
     
@@ -791,6 +856,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         
+        self.updateTopItemOverscrollBackground()
         self.updateBottomItemOverscrollBackground()
         
         let wasIgnoringScrollingEvents = self.ignoreScrollingEvents
@@ -2264,10 +2330,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 headerNode.updateInternalStickLocationDistanceFactor(stickLocationDistanceFactor, animated: true)
                 headerNode.internalStickLocationDistance = stickLocationDistance
                 if !hasValidNodes && !headerNode.alpha.isZero {
-                    headerNode.alpha = 0.0
                     if animateInsertion {
-                        headerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                        headerNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
+                        headerNode.animateRemoved(duration: 0.2)
                     }
                 } else if hasValidNodes && headerNode.alpha.isZero {
                     headerNode.alpha = 1.0

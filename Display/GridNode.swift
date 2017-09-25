@@ -29,6 +29,7 @@ public enum GridNodeScrollToItemPosition {
     case top
     case bottom
     case center
+    case visible
 }
 
 public struct GridNodeScrollToItem {
@@ -287,7 +288,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     public func transaction(_ transaction: GridNodeTransaction, completion: (GridNodeDisplayedItemRange) -> Void) {
         if transaction.deleteItems.isEmpty && transaction.insertItems.isEmpty && transaction.scrollToItem == nil && transaction.updateItems.isEmpty && (transaction.updateLayout == nil || transaction.updateLayout!.layout == self.gridLayout && (transaction.updateFirstIndexInSectionOffset == nil || transaction.updateFirstIndexInSectionOffset == self.firstIndexInSectionOffset)) {
             if let presentationLayoutUpdated = self.presentationLayoutUpdated {
-                presentationLayoutUpdated(GridNodeCurrentPresentationLayout(layout: self.gridLayout, contentOffset: self.scrollView.contentOffset, contentSize: self.itemLayout.contentSize), .immediate)
+                presentationLayoutUpdated(GridNodeCurrentPresentationLayout(layout: self.gridLayout, contentOffset: self.scrollView.contentOffset, contentSize: self.itemLayout.contentSize), transaction.updateLayout?.transition ?? .immediate)
             }
             completion(self.displayedItemRange())
             return
@@ -424,24 +425,35 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     }
     
     private func generateItemLayout() -> GridNodeItemLayout {
-        if CGFloat(0.0).isLess(than: gridLayout.size.width) && CGFloat(0.0).isLess(than: gridLayout.size.height) && !self.items.isEmpty {
+        if CGFloat(0.0).isLess(than: gridLayout.size.width) && CGFloat(0.0).isLess(than: gridLayout.size.height) {
             var contentSize = CGSize(width: gridLayout.size.width, height: 0.0)
             var items: [GridNodePresentationItem] = []
             var sections: [GridNodePresentationSection] = []
             
             switch gridLayout.type {
-                case let .fixed(itemSize, lineSpacing):
-                    let itemsInRow = Int(gridLayout.size.width / itemSize.width)
-                    let itemsInRowWidth = CGFloat(itemsInRow) * itemSize.width
-                    let remainingWidth = max(0.0, gridLayout.size.width - itemsInRowWidth)
+                case let .fixed(defaultItemSize, lineSpacing):
+                    let itemInsets = gridLayout.insets
+                    
+                    let effectiveWidth = gridLayout.size.width - itemInsets.left - itemInsets.right
+                    
+                    let itemsInRow = Int(effectiveWidth / defaultItemSize.width)
+                    let itemsInRowWidth = CGFloat(itemsInRow) * defaultItemSize.width
+                    let remainingWidth = max(0.0, effectiveWidth - itemsInRowWidth)
                     
                     let itemSpacing = floorToScreenPixels(remainingWidth / CGFloat(itemsInRow + 1))
                     
                     var incrementedCurrentRow = false
-                    var nextItemOrigin = CGPoint(x: itemSpacing, y: 0.0)
+                    var nextItemOrigin = CGPoint(x: itemInsets.left + itemSpacing, y: 0.0)
                     var index = 0
                     var previousSection: GridSection?
                     for item in self.items {
+                        var itemSize = defaultItemSize
+                        if let height = item.fillsRowWithHeight {
+                            nextItemOrigin.x = 0.0
+                            itemSize.width = gridLayout.size.width
+                            itemSize.height = height
+                        }
+                        
                         let section = item.section
                         var keepSection = true
                         if let previousSection = previousSection, let section = section {
@@ -452,7 +464,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         
                         if !keepSection {
                             if incrementedCurrentRow {
-                                nextItemOrigin.x = itemSpacing
+                                nextItemOrigin.x = itemSpacing + itemInsets.left
                                 nextItemOrigin.y += itemSize.height + lineSpacing
                                 incrementedCurrentRow = false
                             }
@@ -471,7 +483,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         }
                         
                         if index == 0 {
-                            let itemsInRow = Int(gridLayout.size.width) / Int(itemSize.width)
+                            let itemsInRow = max(1, Int(effectiveWidth) / Int(itemSize.width))
                             let normalizedIndexOffset = self.firstIndexInSectionOffset % itemsInRow
                             nextItemOrigin.x += (itemSize.width + itemSpacing) * CGFloat(normalizedIndexOffset)
                         }
@@ -481,7 +493,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         
                         nextItemOrigin.x += itemSize.width + itemSpacing
                         if nextItemOrigin.x + itemSize.width > gridLayout.size.width {
-                            nextItemOrigin.x = itemSpacing
+                            nextItemOrigin.x = itemSpacing + itemInsets.left
                             nextItemOrigin.y += itemSize.height + lineSpacing
                             incrementedCurrentRow = false
                         }
@@ -576,7 +588,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     }
     
     private func generatePresentationLayoutTransition(stationaryItems: GridNodeStationaryItems = .none, layoutTransactionOffset: CGFloat, scrollToItem: GridNodeScrollToItem? = nil) -> GridNodePresentationLayoutTransition {
-        if CGFloat(0.0).isLess(than: gridLayout.size.width) && CGFloat(0.0).isLess(than: gridLayout.size.height) && !self.itemLayout.items.isEmpty {
+        if CGFloat(0.0).isLess(than: gridLayout.size.width) && CGFloat(0.0).isLess(than: gridLayout.size.height) {
             var transitionDirectionHint: GridNodePreviousItemsTransitionDirectionHint = .up
             var transition: ContainedViewLayoutTransition = .immediate
             let contentOffset: CGPoint
@@ -587,61 +599,73 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             switch updatedStationaryItems {
                 case .none:
                     if let scrollToItem = scrollToItem {
-                        let itemFrame = self.itemLayout.items[scrollToItem.index]
-                        
-                        var additionalOffset: CGFloat = 0.0
-                        if scrollToItem.adjustForSection {
-                            var adjustForSection: GridSection?
-                            if scrollToItem.index == 0 {
-                                if let itemSection = self.items[scrollToItem.index].section {
-                                    adjustForSection = itemSection
-                                }
-                            } else {
-                                let itemSection = self.items[scrollToItem.index].section
-                                let previousSection = self.items[scrollToItem.index - 1].section
-                                if let itemSection = itemSection, let previousSection = previousSection {
-                                    if !itemSection.isEqual(to: previousSection) {
+                        if self.itemLayout.items.isEmpty {
+                            transitionDirectionHint = scrollToItem.directionHint
+                            transition = scrollToItem.transition
+                            contentOffset = CGPoint(x: 0.0, y: -self.gridLayout.insets.top)
+                        } else {
+                            let itemFrame = self.itemLayout.items[scrollToItem.index]
+                            
+                            var additionalOffset: CGFloat = 0.0
+                            if scrollToItem.adjustForSection {
+                                var adjustForSection: GridSection?
+                                if scrollToItem.index == 0 {
+                                    if let itemSection = self.items[scrollToItem.index].section {
                                         adjustForSection = itemSection
                                     }
-                                } else if let itemSection = itemSection {
-                                    adjustForSection = itemSection
+                                } else {
+                                    let itemSection = self.items[scrollToItem.index].section
+                                    let previousSection = self.items[scrollToItem.index - 1].section
+                                    if let itemSection = itemSection, let previousSection = previousSection {
+                                        if !itemSection.isEqual(to: previousSection) {
+                                            adjustForSection = itemSection
+                                        }
+                                    } else if let itemSection = itemSection {
+                                        adjustForSection = itemSection
+                                    }
                                 }
+                                
+                                if let adjustForSection = adjustForSection {
+                                    additionalOffset = -adjustForSection.height
+                                }
+                                
+                                if scrollToItem.adjustForTopInset {
+                                    additionalOffset += -gridLayout.insets.top
+                                }
+                            } else if scrollToItem.adjustForTopInset {
+                                additionalOffset = -gridLayout.insets.top
                             }
                             
-                            if let adjustForSection = adjustForSection {
-                                additionalOffset = -adjustForSection.height
+                            let displayHeight = max(0.0, self.gridLayout.size.height - self.gridLayout.insets.top - self.gridLayout.insets.bottom)
+                            var verticalOffset: CGFloat = self.scrollView.contentOffset.y
+                            
+                            switch scrollToItem.position {
+                                case .top:
+                                    verticalOffset = itemFrame.frame.minY + additionalOffset
+                                case .center:
+                                    verticalOffset = floor(itemFrame.frame.minY + itemFrame.frame.size.height / 2.0 - displayHeight / 2.0 - self.gridLayout.insets.top) + additionalOffset
+                                case .bottom:
+                                    verticalOffset = itemFrame.frame.maxY - displayHeight + additionalOffset
+                                case .visible:
+                                    if verticalOffset + self.gridLayout.insets.top > itemFrame.frame.minY {
+                                        //verticalOffset = -self.gridLayout.insets.top + itemFrame.frame.minY
+                                    } else if verticalOffset + self.gridLayout.insets.top + displayHeight < itemFrame.frame.maxY {
+                                        verticalOffset = -self.gridLayout.insets.top - displayHeight + itemFrame.frame.maxY
+                                    }
                             }
                             
-                            if scrollToItem.adjustForTopInset {
-                                additionalOffset += -gridLayout.insets.top
+                            if verticalOffset > self.itemLayout.contentSize.height + self.gridLayout.insets.bottom - self.gridLayout.size.height {
+                                verticalOffset = self.itemLayout.contentSize.height + self.gridLayout.insets.bottom - self.gridLayout.size.height
                             }
-                        } else if scrollToItem.adjustForTopInset {
-                            additionalOffset = -gridLayout.insets.top
+                            if verticalOffset < -self.gridLayout.insets.top {
+                                verticalOffset = -self.gridLayout.insets.top
+                            }
+                            
+                            transitionDirectionHint = scrollToItem.directionHint
+                            transition = scrollToItem.transition
+                            
+                            contentOffset = CGPoint(x: 0.0, y: verticalOffset)
                         }
-                        
-                        let displayHeight = max(0.0, self.gridLayout.size.height - self.gridLayout.insets.top - self.gridLayout.insets.bottom)
-                        var verticalOffset: CGFloat
-                        
-                        switch scrollToItem.position {
-                            case .top:
-                                verticalOffset = itemFrame.frame.minY + additionalOffset
-                            case .center:
-                                verticalOffset = floor(itemFrame.frame.minY + itemFrame.frame.size.height / 2.0 - displayHeight / 2.0 - self.gridLayout.insets.top) + additionalOffset
-                            case .bottom:
-                                verticalOffset = itemFrame.frame.maxY - displayHeight + additionalOffset
-                        }
-                        
-                        if verticalOffset > self.itemLayout.contentSize.height + self.gridLayout.insets.bottom - self.gridLayout.size.height {
-                            verticalOffset = self.itemLayout.contentSize.height + self.gridLayout.insets.bottom - self.gridLayout.size.height
-                        }
-                        if verticalOffset < -self.gridLayout.insets.top {
-                            verticalOffset = -self.gridLayout.insets.top
-                        }
-                        
-                        transitionDirectionHint = scrollToItem.directionHint
-                        transition = scrollToItem.transition
-                        
-                        contentOffset = CGPoint(x: 0.0, y: verticalOffset)
                     } else {
                         if !layoutTransactionOffset.isZero {
                             var verticalOffset = self.scrollView.contentOffset.y - layoutTransactionOffset
@@ -686,17 +710,17 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     }
             }
             
-            let lowerDisplayBound = contentOffset.y - self.gridLayout.preloadSize
-            let upperDisplayBound = contentOffset.y + self.gridLayout.size.height + self.gridLayout.preloadSize
+            let lowerDisplayBound = contentOffset.y - self.gridLayout.insets.top - self.gridLayout.preloadSize
+            let upperDisplayBound = contentOffset.y + self.gridLayout.insets.bottom + self.gridLayout.size.height + self.gridLayout.preloadSize
             
             var presentationItems: [GridNodePresentationItem] = []
             
             var validSections = Set<WrappedGridSection>()
             for item in self.itemLayout.items {
-                if item.frame.origin.y < lowerDisplayBound {
+                if item.frame.maxY < lowerDisplayBound {
                     continue
                 }
-                if item.frame.origin.y + item.frame.size.height > upperDisplayBound {
+                if item.frame.minY > upperDisplayBound {
                     break
                 }
                 presentationItems.append(item)
@@ -741,6 +765,8 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     }
     
     private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, itemTransition: ContainedViewLayoutTransition, completion: (GridNodeDisplayedItemRange) -> Void) {
+        let boundsTransition: ContainedViewLayoutTransition = updateLayoutTransition ?? .immediate
+        
         var previousItemFrames: [WrappedGridItemNode: CGRect]?
         var saveItemFrames = false
         switch presentationLayoutTransition.transition {
@@ -770,16 +796,22 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         
         applyingContentOffset = true
         
+        let previousBounds = self.bounds
         self.scrollView.contentSize = presentationLayoutTransition.layout.contentSize
-        self.scrollView.contentInset = presentationLayoutTransition.layout.layout.insets
+        let layoutInsets = presentationLayoutTransition.layout.layout.insets
+        self.scrollView.contentInset = UIEdgeInsets(top: layoutInsets.top, left: 0.0, bottom: layoutInsets.bottom, right: 0.0)
         if let scrollIndicatorInsets = presentationLayoutTransition.layout.layout.scrollIndicatorInsets {
             self.scrollView.scrollIndicatorInsets = scrollIndicatorInsets
         } else {
             self.scrollView.scrollIndicatorInsets = presentationLayoutTransition.layout.layout.insets
         }
+        var boundsOffset: CGFloat = 0.0
         if !self.scrollView.contentOffset.equalTo(presentationLayoutTransition.layout.contentOffset) || self.bounds.size != presentationLayoutTransition.layout.layout.size {
-            //self.scrollView.contentOffset = presentationLayoutTransition.layout.contentOffset
-            self.bounds = CGRect(origin: presentationLayoutTransition.layout.contentOffset, size: presentationLayoutTransition.layout.layout.size)
+            let updatedBounds = CGRect(origin: presentationLayoutTransition.layout.contentOffset, size: presentationLayoutTransition.layout.layout.size)
+            boundsOffset = updatedBounds.origin.y - previousBounds.origin.y
+            self.bounds = updatedBounds
+            //boundsTransition.animateOffsetAdditive(layer: self.layer, offset: -boundsOffset - insetsOffset)
+            boundsTransition.animateBounds(layer: self.layer, from: previousBounds)
         }
         applyingContentOffset = false
         
@@ -832,7 +864,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             for (index, itemNode) in self.itemNodes {
                 if let previousFrame = previousItemFrames[WrappedGridItemNode(node: itemNode)], existingItemIndices.contains(index) {
                     let currentFrame = itemNode.frame.offsetBy(dx: 0.0, dy: -presentationLayoutTransition.layout.contentOffset.y)
-                    offset = previousFrame.origin.y - currentFrame.origin.y
+                    offset = previousFrame.origin.y - currentFrame.origin.y - boundsOffset
                     break
                 }
             }
@@ -962,6 +994,8 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     timingFunction = kCAMediaTimingFunctionSpring
             }
             
+            let contentOffset = self.scrollView.contentOffset
+            
             for index in self.itemNodes.keys {
                 let itemNode = self.itemNodes[index]!
                 if !existingItemIndices.contains(index) {
@@ -975,7 +1009,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         self.removeItemNodeWithIndex(index, removeNode: true)
                     }
                 } else if let previousFrame = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
-                    itemNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY), to: itemNode.layer.position, duration: duration, timingFunction: timingFunction)
+                    itemNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY + contentOffset.y), to: itemNode.layer.position, duration: duration, timingFunction: timingFunction)
                 } else {
                     itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12, timingFunction: kCAMediaTimingFunctionEaseIn)
                     itemNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
@@ -1005,7 +1039,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         self.removeSectionNodeWithSection(wrappedSection, removeNode: true)
                     }
                 } else if let previousFrame = previousItemFrames[WrappedGridItemNode(node: sectionNode)] {
-                    sectionNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY), to: sectionNode.layer.position, duration: duration, timingFunction: timingFunction)
+                    sectionNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY + contentOffset.y), to: sectionNode.layer.position, duration: duration, timingFunction: timingFunction)
                 } else {
                     sectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseIn)
                 }

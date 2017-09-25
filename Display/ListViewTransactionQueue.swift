@@ -34,7 +34,9 @@ public final class ListViewTransactionQueue {
     private func endTransaction() {
         Queue.mainQueue().async {
             self.transactionCompleted()
-            let _ = self.transactions.removeFirst()
+            if !self.transactions.isEmpty {
+                let _ = self.transactions.removeFirst()
+            }
             
             if let nextTransaction = self.transactions.first {
                 nextTransaction({ [weak self] in

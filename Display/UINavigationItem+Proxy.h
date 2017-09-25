@@ -1,45 +1,47 @@
 #import <UIKit/UIKit.h>
 
-typedef void (^UINavigationItemSetTitleListener)(NSString *);
-typedef void (^UINavigationItemSetTitleViewListener)(UIView *);
-typedef void (^UINavigationItemSetImageListener)(UIImage *);
-typedef void (^UINavigationItemSetBarButtonItemListener)(UIBarButtonItem *, UIBarButtonItem *, BOOL);
-typedef void (^UITabBarItemSetBadgeListener)(NSString *);
+typedef void (^UINavigationItemSetTitleListener)(NSString * _Nullable, bool);
+typedef void (^UINavigationItemSetTitleViewListener)(UIView * _Nullable);
+typedef void (^UINavigationItemSetImageListener)(UIImage * _Nullable);
+typedef void (^UINavigationItemSetBarButtonItemListener)(UIBarButtonItem * _Nullable, UIBarButtonItem * _Nullable, BOOL);
+typedef void (^UITabBarItemSetBadgeListener)(NSString * _Nullable);
 
 @interface UINavigationItem (Proxy)
 
-- (void)setTargetItem:(UINavigationItem *)targetItem;
+- (void)setTargetItem:(UINavigationItem * _Nullable)targetItem;
 
-- (NSInteger)addSetTitleListener:(UINavigationItemSetTitleListener)listener;
+- (void)setTitle:(NSString * _Nullable)title animated:(bool)animated;
+
+- (NSInteger)addSetTitleListener:(UINavigationItemSetTitleListener _Nonnull)listener;
 - (void)removeSetTitleListener:(NSInteger)key;
-- (NSInteger)addSetTitleViewListener:(UINavigationItemSetTitleViewListener)listener;
+- (NSInteger)addSetTitleViewListener:(UINavigationItemSetTitleViewListener _Nonnull)listener;
 - (void)removeSetTitleViewListener:(NSInteger)key;
-- (NSInteger)addSetLeftBarButtonItemListener:(UINavigationItemSetBarButtonItemListener)listener;
+- (NSInteger)addSetLeftBarButtonItemListener:(UINavigationItemSetBarButtonItemListener _Nonnull)listener;
 - (void)removeSetLeftBarButtonItemListener:(NSInteger)key;
-- (NSInteger)addSetRightBarButtonItemListener:(UINavigationItemSetBarButtonItemListener)listener;
+- (NSInteger)addSetRightBarButtonItemListener:(UINavigationItemSetBarButtonItemListener _Nonnull)listener;
 - (void)removeSetRightBarButtonItemListener:(NSInteger)key;
-- (NSInteger)addSetBackBarButtonItemListener:(UINavigationItemSetBarButtonItemListener)listener;
+- (NSInteger)addSetBackBarButtonItemListener:(UINavigationItemSetBarButtonItemListener _Nonnull)listener;
 - (void)removeSetBackBarButtonItemListener:(NSInteger)key;
-- (NSInteger)addSetBadgeListener:(UITabBarItemSetBadgeListener)listener;
+- (NSInteger)addSetBadgeListener:(UITabBarItemSetBadgeListener _Nonnull)listener;
 - (void)removeSetBadgeListener:(NSInteger)key;
 
-@property (nonatomic, strong) NSString *badge;
+@property (nonatomic, strong) NSString * _Nullable badge;
 
 @end
 
-NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem *item, UITabBarItemSetBadgeListener listener);
+NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem * _Nonnull item, UITabBarItemSetBadgeListener  _Nonnull listener);
 
 @interface UITabBarItem (Proxy)
 
 - (void)removeSetBadgeListener:(NSInteger)key;
 
-- (NSInteger)addSetTitleListener:(UINavigationItemSetTitleListener)listener;
+- (NSInteger)addSetTitleListener:(UINavigationItemSetTitleListener _Nonnull)listener;
 - (void)removeSetTitleListener:(NSInteger)key;
 
-- (NSInteger)addSetImageListener:(UINavigationItemSetImageListener)listener;
+- (NSInteger)addSetImageListener:(UINavigationItemSetImageListener _Nonnull)listener;
 - (void)removeSetImageListener:(NSInteger)key;
 
-- (NSInteger)addSetSelectedImageListener:(UINavigationItemSetImageListener)listener;
+- (NSInteger)addSetSelectedImageListener:(UINavigationItemSetImageListener _Nonnull)listener;
 - (void)removeSetSelectedImageListener:(NSInteger)key;
 
 @end
