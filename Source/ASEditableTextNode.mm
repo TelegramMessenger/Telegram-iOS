@@ -79,6 +79,7 @@
 {
   BOOL _shouldBlockPanGesture;
 }
+
 @end
 
 @implementation ASPanningOverriddenUITextView
@@ -97,6 +98,11 @@
 
   [super setScrollEnabled:YES];
 }
+
+- (void)setContentSize:(CGSize)contentSize {
+  [super setContentSize:contentSize];
+}
+
 #endif
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
@@ -490,6 +496,14 @@
 
   // When you type beyond UITextView's bounds it scrolls you down a line. We need to remain at the top.
   [_textKitComponents.textView setContentOffset:CGPointZero animated:NO];
+  [_textKitComponents.layoutManager ensureGlyphsForCharacterRange:NSMakeRange(0, [_textKitComponents.textStorage length])];
+  NSRange range = [self selectedRange];
+  range.location = range.location + range.length - 1;
+  range.length = 1;
+  [self.textView scrollRangeToVisible:range];
+  
+  CGPoint bottomOffset = CGPointMake(0, self.textView.contentSize.height - self.textView.bounds.size.height);
+  //[self.textView setContentOffset:bottomOffset animated:NO];
 }
 
 #pragma mark - Keyboard
