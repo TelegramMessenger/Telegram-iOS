@@ -46,9 +46,17 @@ private struct SqlitePreparedStatement {
     func step(handle: OpaquePointer?, _ initial: Bool = false, path: String?) -> Bool {
         let res = sqlite3_step(statement)
         if res != SQLITE_ROW && res != SQLITE_DONE {
-            if let path = path {
-                try? FileManager.default.removeItem(atPath: path)
-                preconditionFailure()
+            if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
+                print("SQL error \(res): \(str) on step")
+            } else {
+                print("SQL error \(res) on step")
+            }
+            
+            if res == SQLITE_CORRUPT {
+                if let path = path {
+                    try? FileManager.default.removeItem(atPath: path)
+                    preconditionFailure()
+                }
             }
         }
         return res == SQLITE_ROW
@@ -162,15 +170,14 @@ final class SqliteValueBox: ValueBox {
         if let result = Database(path) {
             database = result
         } else {
-            //preconditionFailure("Couldn't open database")
-            let _ = try? FileManager.default.removeItem(atPath: path)
-            database = Database(path)!
+            preconditionFailure("Couldn't open database")
+            //let _ = try? FileManager.default.removeItem(atPath: path)
+            //database = Database(path)!
         }
         
         sqlite3_busy_timeout(database.handle, 1000 * 10000)
         
         var resultCode: Bool
-        
         
         //database.execute("PRAGMA cache_size=-2097152")
         resultCode = database.execute("PRAGMA mmap_size=0")
