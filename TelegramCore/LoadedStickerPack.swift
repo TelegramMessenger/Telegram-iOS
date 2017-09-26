@@ -86,7 +86,18 @@ func remoteStickerPack(network: Network, reference: StickerPackReference) -> Sig
         }
 }
 
-public func loadedStickerPack(account: Account, reference: StickerPackReference) -> Signal<LoadedStickerPack, NoError> {
+public func loadedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<LoadedStickerPack, NoError> {
+    return cachedStickerPack(postbox: postbox, network: network, reference: reference)
+        |> map { result -> LoadedStickerPack in
+            if let result = result {
+                return .result(info: result.0, items: result.1, installed: result.2)
+            } else {
+                return .fetching
+            }
+        }
+}
+
+private func loadedStickerPack1(account: Account, reference: StickerPackReference) -> Signal<LoadedStickerPack, NoError> {
     return account.postbox.modify { modifier -> Signal<LoadedStickerPack, NoError> in
         switch reference {
             case let .id(id, _):

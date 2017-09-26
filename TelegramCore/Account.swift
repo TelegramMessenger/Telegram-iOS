@@ -245,6 +245,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SavedStickerItem.self, f: { SavedStickerItem(decoder: $0) })
     declareEncodable(ConsumablePersonalMentionMessageAttribute.self, f: { ConsumablePersonalMentionMessageAttribute(decoder: $0) })
     declareEncodable(ConsumePersonalMessageAction.self, f: { ConsumePersonalMessageAction(decoder: $0) })
+    declareEncodable(CachedStickerPack.self, f: { CachedStickerPack(decoder: $0) })
     
     return
 }()

@@ -113,6 +113,7 @@ public final class CachedChannelData: CachedPeerData {
     public let stickerPack: StickerPackCollectionInfo?
     
     public let peerIds: Set<PeerId>
+    public let messageIds: Set<MessageId>
     
     init() {
         self.flags = []
@@ -124,6 +125,7 @@ public final class CachedChannelData: CachedPeerData {
         self.reportStatus = .unknown
         self.pinnedMessageId = nil
         self.peerIds = Set()
+        self.messageIds = Set()
         self.stickerPack = nil
     }
     
@@ -148,6 +150,12 @@ public final class CachedChannelData: CachedPeerData {
             peerIds.insert(botInfo.peerId)
         }
         self.peerIds = peerIds
+        
+        var messageIds = Set<MessageId>()
+        if let pinnedMessageId = self.pinnedMessageId {
+            messageIds.insert(pinnedMessageId)
+        }
+        self.messageIds = messageIds
     }
     
     func withUpdatedFlags(_ flags: CachedChannelFlags) -> CachedChannelData {
@@ -217,6 +225,12 @@ public final class CachedChannelData: CachedPeerData {
         }
         
         self.peerIds = peerIds
+        
+        var messageIds = Set<MessageId>()
+        if let pinnedMessageId = self.pinnedMessageId {
+            messageIds.insert(pinnedMessageId)
+        }
+        self.messageIds = messageIds
     }
     
     public func encode(_ encoder: PostboxEncoder) {
