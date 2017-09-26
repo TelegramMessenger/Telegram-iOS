@@ -441,16 +441,7 @@ public final class Modifier {
     
     public func getMessage(_ id: MessageId) -> Message? {
         assert(!self.disposed)
-        if let postbox = self.postbox {
-            if let entry = postbox.messageHistoryIndexTable.get(id) {
-                if case let .Message(index) = entry {
-                    if let message = postbox.messageHistoryTable.getMessage(index) {
-                        return postbox.renderIntermediateMessage(message)
-                    }
-                }
-            }
-        }
-        return nil
+        return self.postbox?.getMessage(id)
     }
     
     public func getMedia(_ id: MediaId) -> Media? {
@@ -748,8 +739,10 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
         queue.async {
             let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
             
+            #if DEBUG
             //debugSaveState(basePath: basePath, name: "beforeHoles1")
             //debugRestoreState(basePath: basePath, name: "beforeHoles1")
+            #endif
             
             loop: while true {
                 let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
@@ -1865,6 +1858,16 @@ public final class Postbox {
             switch data {
                 case let .cachedPeerData(peerId):
                     additionalDataEntries.append(.cachedPeerData(peerId, self.cachedPeerDataTable.get(peerId)))
+                case let .cachedPeerDataMessages(peerId):
+                    var messages: [MessageId: Message] = [:]
+                    if let messageIds = self.cachedPeerDataTable.get(peerId)?.messageIds {
+                        for id in messageIds {
+                            if let message = self.getMessage(id) {
+                                messages[id] = message
+                            }
+                        }
+                    }
+                    additionalDataEntries.append(.cachedPeerDataMessages(peerId, messages))
                 case let .peerChatState(peerId):
                     additionalDataEntries.append(.peerChatState(peerId, self.peerChatStateTable.get(peerId) as? PeerChatState))
                 case .totalUnreadCount:
@@ -2463,6 +2466,17 @@ public final class Postbox {
     
     fileprivate func removeInvalidatedMessageHistoryTagsSummaryEntry(_ entry: InvalidatedMessageHistoryTagsSummaryEntry) {
         self.invalidatedMessageHistoryTagsSummaryTable.remove(entry, operations: &self.currentInvalidateMessageTagSummaries)
+    }
+    
+    func getMessage(_ id: MessageId) -> Message? {
+        if let entry = self.messageHistoryIndexTable.get(id) {
+            if case let .Message(index) = entry {
+                if let message = self.messageHistoryTable.getMessage(index) {
+                    return self.renderIntermediateMessage(message)
+                }
+            }
+        }
+        return nil
     }
     
     public func isMasterClient() -> Signal<Bool, NoError> {

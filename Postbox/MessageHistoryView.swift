@@ -2,6 +2,7 @@ import Foundation
 
 public enum AdditionalMessageHistoryViewData {
     case cachedPeerData(PeerId)
+    case cachedPeerDataMessages(PeerId)
     case peerChatState(PeerId)
     case totalUnreadCount
     case peerNotificationSettings(PeerId)
@@ -9,6 +10,7 @@ public enum AdditionalMessageHistoryViewData {
 
 public enum AdditionalMessageHistoryViewDataEntry {
     case cachedPeerData(PeerId, CachedPeerData?)
+    case cachedPeerDataMessages(PeerId, [MessageId: Message]?)
     case peerChatState(PeerId, PeerChatState?)
     case totalUnreadCount(Int32)
     case peerNotificationSettings(PeerNotificationSettings?)
@@ -682,13 +684,22 @@ final class MutableMessageHistoryView {
             }
         }
         
+        var updatedCachedPeerDataMessages = false
+        var currentCachedPeerData: CachedPeerData?
         for i in 0 ..< self.additionalDatas.count {
             switch self.additionalDatas[i] {
-                case let .cachedPeerData(peerId, _):
+                case let .cachedPeerData(peerId, currentData):
+                    currentCachedPeerData = currentData
                     if let updatedData = updatedCachedPeerData[peerId] {
+                        if currentData?.messageIds != updatedData.messageIds {
+                            updatedCachedPeerDataMessages = true
+                        }
+                        currentCachedPeerData = updatedData
                         self.additionalDatas[i] = .cachedPeerData(peerId, updatedData)
                         hasChanges = true
                     }
+                case .cachedPeerDataMessages:
+                    break
                 case let .peerChatState(peerId, _):
                     if transaction.currentUpdatedPeerChatStates.contains(peerId) {
                         self.additionalDatas[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId) as? PeerChatState)
@@ -698,6 +709,53 @@ final class MutableMessageHistoryView {
                     break
                 case .peerNotificationSettings:
                     break
+            }
+        }
+        if let cachedData = currentCachedPeerData, !cachedData.messageIds.isEmpty {
+            for i in 0 ..< self.additionalDatas.count {
+                switch self.additionalDatas[i] {
+                    case .cachedPeerDataMessages(_, _):
+                        outer: for operation in operations {
+                            switch operation {
+                                case let .InsertMessage(message):
+                                    if cachedData.messageIds.contains(message.id) {
+                                        updatedCachedPeerDataMessages = true
+                                        break outer
+                                    }
+                                case let .Remove(indicesWithTags):
+                                    for (index, _, _) in indicesWithTags {
+                                        if cachedData.messageIds.contains(index.id) {
+                                            updatedCachedPeerDataMessages = true
+                                            break outer
+                                        }
+                                    }
+                                default:
+                                    break
+                            }
+                        }
+                    default:
+                        break
+                }
+            }
+        }
+        
+        if updatedCachedPeerDataMessages {
+            hasChanges = true
+            for i in 0 ..< self.additionalDatas.count {
+                switch self.additionalDatas[i] {
+                    case let .cachedPeerDataMessages(peerId, _):
+                        var messages: [MessageId: Message] = [:]
+                        if let cachedData = currentCachedPeerData {
+                            for id in cachedData.messageIds {
+                                if let message = postbox.getMessage(id) {
+                                    messages[id] = message
+                                }
+                            }
+                        }
+                        self.additionalDatas[i] = .cachedPeerDataMessages(peerId, messages)
+                    default:
+                        break
+                }
             }
         }
         
