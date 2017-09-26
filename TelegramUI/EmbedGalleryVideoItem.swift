@@ -241,7 +241,7 @@ final class EmbedVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = node.view.snapshotContentTree()!
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollView)
+        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
         let intermediateCompletion = { [weak copyView] in

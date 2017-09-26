@@ -11,75 +11,96 @@ final class HorizontalPeerItem: ListViewItem {
     let account: Account
     let peer: Peer
     let action: (Peer) -> Void
+    let isPeerSelected: (PeerId) -> Bool
+    let customWidth: CGFloat?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, action: @escaping (Peer) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, action: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
         self.theme = theme
         self.strings = strings
         self.account = account
         self.peer = peer
         self.action = action
+        self.isPeerSelected = isPeerSelected
+        self.customWidth = customWidth
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = HorizontalPeerItemNode()
-            node.contentSize = CGSize(width: 92.0, height: 80.0)
-            node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
-            node.update(account: self.account, peer: self.peer, theme: self.theme, strings: self.strings)
-            node.action = self.action
+            
+            let (nodeLayout, apply) = node.asyncLayout()(self, width)
+            
+            node.insets = nodeLayout.insets
+            node.contentSize = nodeLayout.contentSize
+            
             completion(node, {
-                return (nil, {})
+                return (nil, {
+                    apply(false)
+                })
             })
         }
     }
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
-        })
+        assert(node is HorizontalPeerItemNode)
+        if let node = node as? HorizontalPeerItemNode {
+            Queue.mainQueue().async {
+                let layout = node.asyncLayout()
+                async {
+                    let (nodeLayout, apply) = layout(self, width)
+                    Queue.mainQueue().async {
+                        completion(nodeLayout, {
+                            apply(animation.isAnimated)
+                        })
+                    }
+                }
+            }
+        }
     }
 }
 
 final class HorizontalPeerItemNode: ListViewItemNode {
-    private let avatarNode: AvatarNode
-    private let titleNode: ASTextNode
-    private(set) var peer: Peer?
-    fileprivate var action: ((Peer) -> Void)?
+    private(set) var peerNode: SelectablePeerNode
+    
+    private(set) var item: HorizontalPeerItem?
     
     init() {
-        self.avatarNode = AvatarNode(font: Font.regular(14.0))
-        //self.avatarNode.transform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
-        self.avatarNode.frame = CGRect(origin: CGPoint(x: floor((92.0 - 60.0) / 2.0), y: 4.0), size: CGSize(width: 60.0, height: 60.0))
-        
-        self.titleNode = ASTextNode()
-        //self.titleNode.transform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
+        self.peerNode = SelectablePeerNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.avatarNode)
-        self.addSubnode(self.titleNode)
+        self.addSubnode(self.peerNode)
+        self.peerNode.toggleSelection = { [weak self] in
+            if let item = self?.item {
+                item.action(item.peer)
+            }
+        }
     }
     
     override func didLoad() {
         super.didLoad()
         
         self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
-        
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func update(account: Account, peer: Peer, theme: PresentationTheme, strings: PresentationStrings) {
-        self.peer = peer
-        self.avatarNode.setPeer(account: account, peer: peer)
-        self.titleNode.attributedText = NSAttributedString(string: peer.compactDisplayTitle, font: Font.regular(11.0), textColor: theme.list.itemPrimaryTextColor)
-        let titleSize = self.titleNode.measure(CGSize(width: 84.0, height: CGFloat.infinity))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: floor((92.0 - titleSize.width) / 2.0), y: 4.0 + 60.0 + 6.0), size: titleSize)
+    func asyncLayout() -> (HorizontalPeerItem, CGFloat) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+        return { [weak self] item, width in
+            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 92.0, height: item.customWidth ?? 80.0), insets: UIEdgeInsets())
+            return (itemLayout, { animated in
+                if let strongSelf = self {
+                    strongSelf.item = item
+                    
+                    strongSelf.peerNode.setup(account: item.account, peer: item.peer, chatPeer: nil, numberOfLines: 1)
+                    strongSelf.peerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.size)
+                    strongSelf.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: false)
+                }
+            })
+        }
     }
     
-    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            if let peer = self.peer, let action = self.action {
-                action(peer)
-            }
+    func updateSelection(animated: Bool) {
+        if let item = self.item {
+            self.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: animated)
         }
     }
 }

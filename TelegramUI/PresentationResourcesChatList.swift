@@ -91,4 +91,22 @@ struct PresentationResourcesChatList {
             return generateBadgeBackgroundImage(theme: theme, active: true, icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/MentionBadgeIcon"), color: .white))
         })
     }
+    
+    static func badgeBackgroundPinned(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListBadgeBackgroundPinned.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPinnedIcon"), color: theme.chatList.pinnedBadgeColor)
+        })
+    }
+    
+    static func mutedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListMutedIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerMutedIcon"), color: theme.chatList.muteIconColor)
+        })
+    }
+    
+    static func verifiedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListVerifiedIcon.rawValue, { theme in
+            return UIImage(bundleImageName: "Chat List/PeerVerifiedIcon")?.precomposed()
+        })
+    }
 }

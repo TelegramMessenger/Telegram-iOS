@@ -47,7 +47,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
     
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
         let peer = self.peer
-        return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: self.peer, chatPeer: self.peer, status: .none, selection: .none, index: nil, header: ChatListSearchItemHeader(type: self.section.chatListHeaderType, theme: theme, strings: strings), action: { _ in
+        return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: self.peer, chatPeer: self.peer, status: .none, selection: .none, hasActiveRevealControls: false, index: nil, header: ChatListSearchItemHeader(type: self.section.chatListHeaderType, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
             peerSelected(peer)
         })
     }
@@ -173,6 +173,10 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     }
                 }
             })
+        
+        self.listNode.beganInteractiveDragging = { [weak self] in
+            self?.dismissInput?()
+        }
     }
     
     deinit {

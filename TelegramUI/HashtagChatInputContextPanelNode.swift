@@ -4,12 +4,24 @@ import Postbox
 import TelegramCore
 import Display
 
+private struct HashtagChatInputContextPanelEntryStableId: Hashable {
+    let text: String
+    
+    var hashValue: Int {
+        return self.text.hashValue
+    }
+    
+    static func ==(lhs: HashtagChatInputContextPanelEntryStableId, rhs: HashtagChatInputContextPanelEntryStableId) -> Bool {
+        return lhs.text == rhs.text
+    }
+}
+
 private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let text: String
     
-    var stableId: Int {
-        return self.text.hashValue
+    var stableId: HashtagChatInputContextPanelEntryStableId {
+        return HashtagChatInputContextPanelEntryStableId(text: self.text)
     }
     
     static func ==(lhs: HashtagChatInputContextPanelEntry, rhs: HashtagChatInputContextPanelEntry) -> Bool {
@@ -20,7 +32,7 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
+    func item(account: Account, hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
         return HashtagChatInputPanelItem(text: self.text, hashtagSelected: hashtagSelected)
     }
 }
@@ -31,12 +43,12 @@ private struct HashtagChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelEntry], to toEntries: [HashtagChatInputContextPanelEntry], hashtagSelected: @escaping (String) -> Void) -> HashtagChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelEntry], to toEntries: [HashtagChatInputContextPanelEntry], account: Account, hashtagSelected: @escaping (String) -> Void) -> HashtagChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(hashtagSelected: hashtagSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(hashtagSelected: hashtagSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
     
     return HashtagChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -52,7 +64,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
-        self.listView.stackFromBottomInsetItemFactor = 3.5
+        self.listView.keepBottomItemOverscrollBackground = .white
         self.listView.limitHitTestToNodes = true
         
         super.init(account: account)
@@ -66,19 +78,19 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     func updateResults(_ results: [String]) {
         var entries: [HashtagChatInputContextPanelEntry] = []
         var index = 0
-        var textSet = Set<Int>()
+        var stableIds = Set<HashtagChatInputContextPanelEntryStableId>()
         for text in results {
-            let textHash = text.hashValue
-            if textSet.contains(textHash) {
+            let entry = HashtagChatInputContextPanelEntry(index: index, text: text)
+            if stableIds.contains(entry.stableId) {
                 continue
             }
-            textSet.insert(textHash)
-            entries.append(HashtagChatInputContextPanelEntry(index: index, text: text))
+            stableIds.insert(entry.stableId)
+            entries.append(entry)
             index += 1
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hashtagSelected: { [weak self] text in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputState { textInputState in
                     if let (range, type, _) = textInputStateContextQueryRangeAndType(textInputState) {
@@ -122,12 +134,18 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             
             var options = ListViewDeleteAndInsertOptions()
             if firstTime {
-                options.insert(.Synchronous)
-                options.insert(.LowLatency)
+                //options.insert(.Synchronous)
+                //options.insert(.LowLatency)
             } else {
-            //options.insert(.AnimateInsertion)
+                options.insert(.AnimateTopItemPosition)
             }
-            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
+            
+            var insets = UIEdgeInsets()
+            insets.top = topInsetForLayout(size: self.listView.bounds.size)
+            
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default)
+            
+            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
                     var topItemOffset: CGFloat?
                     strongSelf.listView.forEachItemNode { itemNode in
@@ -145,24 +163,31 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         }
     }
     
+    private func topInsetForLayout(size: CGSize) -> CGFloat {
+        var minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
+        
+        return max(size.height - minimumItemHeights, 0.0)
+    }
+    
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
-        let insets = UIEdgeInsets()
+        var insets = UIEdgeInsets()
+        insets.top = self.topInsetForLayout(size: size)
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
-            case .immediate:
+        case .immediate:
+            break
+        case let .animated(animationDuration, animationCurve):
+            duration = animationDuration
+            switch animationCurve {
+            case .easeInOut:
                 break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                    switch animationCurve {
-                    case .easeInOut:
-                        break
-                    case .spring:
-                        curve = 7
-                }
+            case .spring:
+                curve = 7
+            }
         }
         
         let listViewCurve: ListViewAnimationCurve
@@ -207,3 +232,4 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         return self.listView.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
     }
 }
+

@@ -25,9 +25,18 @@ public enum ChatHistoryNodeHistoryState: Equatable {
     }
 }
 
+public enum ChatHistoryNodeLoadState {
+    case loading
+    case empty
+    case messages
+}
+
 public protocol ChatHistoryNode: class {
     var historyState: ValuePromise<ChatHistoryNodeHistoryState> { get }
     var preloadPages: Bool { get set }
+    
+    var loadState: ChatHistoryNodeLoadState? { get }
+    func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState) -> Void)
     
     func messageInCurrentHistoryView(_ id: MessageId) -> Message?
     func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets)

@@ -93,10 +93,17 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     
     @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
+            let point = recognizer.location(in: self.imageNode.view)
             if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 self.activateLocalContent()
             } else {
-                self.progressPressed()
+                if let (_, flags) = self.messageIdAndFlags, flags.isSending {
+                    if let statusNode = self.statusNode, statusNode.frame.contains(point) {
+                        self.progressPressed()
+                    }
+                } else {
+                    self.progressPressed()
+                }
             }
         }
     }
@@ -174,7 +181,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 if isSecretMedia {
                     resultWidth = maxWidth
                 } else {
-                    resultWidth = min(maxWidth, nativeSize.width)
+                    //resultWidth = min(maxWidth, nativeSize.width)
+                    resultWidth = min(constrainedSize.width, nativeSize.aspectFitted(layoutConstants.image.maxDimensions).width)
                 }
                 
                 return (resultWidth, { boundingWidth in
@@ -185,8 +193,9 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                         boundingSize = CGSize(width: maxWidth, height: maxWidth)
                         drawingSize = nativeSize.aspectFilled(boundingSize)
                     } else {
-                        drawingSize = nativeSize.fittedToWidthOrSmaller(boundingWidth)
-                        boundingSize = CGSize(width: max(boundingWidth, drawingSize.width), height: drawingSize.height).cropped(CGSize(width: CGFloat.greatestFiniteMagnitude, height: layoutConstants.image.maxDimensions.height))
+                        let fittedSize = nativeSize.fittedToWidthOrSmaller(boundingWidth)
+                        boundingSize = CGSize(width: boundingWidth, height: fittedSize.height).cropped(CGSize(width: CGFloat.greatestFiniteMagnitude, height: layoutConstants.image.maxDimensions.height))
+                        drawingSize = nativeSize.fitted(boundingSize)
                     }
                     
                     var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
@@ -272,7 +281,11 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: account, photo: image), account.pendingMessageManager.pendingMessageStatus(message.id))
                                     |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                         if let pendingStatus = pendingStatus {
-                                            return .Fetching(progress: pendingStatus.progress)
+                                            var progress = pendingStatus.progress
+                                            if pendingStatus.isRunning {
+                                                progress = max(progress, 0.027)
+                                            }
+                                            return .Fetching(progress: progress)
                                         } else {
                                             return resourceStatus
                                         }
@@ -284,7 +297,11 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             updatedStatusSignal = combineLatest(chatMessageFileStatus(account: account, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
                                 |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                     if let pendingStatus = pendingStatus {
-                                        return .Fetching(progress: pendingStatus.progress)
+                                        var progress = pendingStatus.progress
+                                        if pendingStatus.isRunning {
+                                            progress = max(progress, 0.027)
+                                        }
+                                        return .Fetching(progress: progress)
                                     } else {
                                         return resourceStatus
                                     }

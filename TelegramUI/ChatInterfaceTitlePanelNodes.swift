@@ -7,7 +7,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         loop: for context in chatPresentationInterfaceState.titlePanelContexts.reversed() {
             switch context {
                 case .pinnedMessage:
-                    if chatPresentationInterfaceState.pinnedMessageId != chatPresentationInterfaceState.interfaceState.messageActionsState.closedPinnedMessageId {
+                    if let pinnedMessage = chatPresentationInterfaceState.pinnedMessage, pinnedMessage.id != chatPresentationInterfaceState.interfaceState.messageActionsState.closedPinnedMessageId {
                         selectedContext = context
                         break loop
                     }

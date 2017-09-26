@@ -8,31 +8,40 @@ import TelegramCore
 private let titleFont = Font.regular(13.0)
 private let titleBoldFont = Font.bold(13.0)
 
-private func peerMentionAttributes(theme: PresentationThemeServiceMessage, peerId: PeerId) -> MarkdownAttributeSet {
-    return MarkdownAttributeSet(font: titleBoldFont, textColor: theme.serviceMessagePrimaryTextColor, additionalAttributes: [TextNode.TelegramPeerMentionAttribute: TelegramPeerMention(peerId: peerId, mention: "")])
+private func peerMentionAttributes(primaryTextColor: UIColor, peerId: PeerId) -> MarkdownAttributeSet {
+    return MarkdownAttributeSet(font: titleBoldFont, textColor: primaryTextColor, additionalAttributes: [TextNode.TelegramPeerMentionAttribute: TelegramPeerMention(peerId: peerId, mention: "")])
 }
 
-private func peerMentionsAttributes(theme: PresentationThemeServiceMessage, peerIds: [(Int, PeerId?)]) -> [Int: MarkdownAttributeSet] {
+private func peerMentionsAttributes(primaryTextColor: UIColor, peerIds: [(Int, PeerId?)]) -> [Int: MarkdownAttributeSet] {
     var result: [Int: MarkdownAttributeSet] = [:]
     for (index, peerId) in peerIds {
         if let peerId = peerId {
-            result[index] = peerMentionAttributes(theme: theme, peerId: peerId)
+            result[index] = peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: peerId)
         }
     }
     return result
 }
 
-func serviceMessageString(theme: PresentationTheme, strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
+private func attributedServiceMessageString(theme: PresentationTheme, strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
+    return universalServiceMessageString(theme: theme, strings: strings, message: message, accountPeerId: accountPeerId)
+}
+
+func plainServiceMessageString(strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> String? {
+    return universalServiceMessageString(theme: nil, strings: strings, message: message, accountPeerId: accountPeerId)?.string
+}
+
+private func universalServiceMessageString(theme: PresentationTheme?, strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
     var attributedString: NSAttributedString?
     
-    let theme = theme.chat.serviceMessage
+    let theme = theme?.chat.serviceMessage
     
-    let bodyAttributes = MarkdownAttributeSet(font: titleFont, textColor: theme.serviceMessagePrimaryTextColor, additionalAttributes: [:])
+    let primaryTextColor = theme?.serviceMessagePrimaryTextColor ?? UIColor.black
+    
+    let bodyAttributes = MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [:])
     
     for media in message.media {
         if let action = media as? TelegramMediaAction {
             let authorName = message.author?.displayTitle ?? ""
-            
             
             var isChannel = false
             if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
@@ -40,307 +49,311 @@ func serviceMessageString(theme: PresentationTheme, strings: PresentationStrings
             }
             
             switch action.action {
-            case .groupCreated:
-                if isChannel {
-                    attributedString = NSAttributedString(string: strings.Notification_CreatedChannel, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-                } else {
-                    attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-                }
-            case let .addedMembers(peerIds):
-                if let peerId = peerIds.first, peerId == message.author?.id {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedChat(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, peerId)]))
-                } else {
-                    var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
-                    if peerIds.count == 1 {
-                        attributePeerIds.append((1, peerIds.first))
-                    }
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_Invited(authorName, peerDisplayTitles(peerIds, message.peers)), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: attributePeerIds))
-                }
-            case let .removedMembers(peerIds):
-                if peerIds.first == message.author?.id {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_LeftChat(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                } else {
-                    var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
-                    if peerIds.count == 1 {
-                        attributePeerIds.append((1, peerIds.first))
-                    }
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_Kicked(authorName, peerDisplayTitles(peerIds, message.peers)), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: attributePeerIds))
-                }
-            case let .photoUpdated(image):
-                if authorName.isEmpty || isChannel {
+                case .groupCreated:
                     if isChannel {
-                        if image != nil {
-                            attributedString = NSAttributedString(string: strings.Channel_MessagePhotoUpdated, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-                        } else {
-                            attributedString = NSAttributedString(string: strings.Channel_MessagePhotoRemoved, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
+                        attributedString = NSAttributedString(string: strings.Notification_CreatedChannel, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
+                    }
+                case let .addedMembers(peerIds):
+                    if let peerId = peerIds.first, peerId == message.author?.id {
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedChat(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId)]))
+                    } else {
+                        var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                        if peerIds.count == 1 {
+                            attributePeerIds.append((1, peerIds.first))
                         }
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_Invited(authorName, peerDisplayTitles(peerIds, message.peers)), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    }
+                case let .removedMembers(peerIds):
+                    if peerIds.first == message.author?.id {
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_LeftChat(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     } else {
-                        if image != nil {
-                            attributedString = NSAttributedString(string: strings.Group_MessagePhotoUpdated, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-                        } else {
-                            attributedString = NSAttributedString(string: strings.Group_MessagePhotoRemoved, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
+                        var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                        if peerIds.count == 1 {
+                            attributePeerIds.append((1, peerIds.first))
                         }
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_Kicked(authorName, peerDisplayTitles(peerIds, message.peers)), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                     }
-                } else {
-                    if image != nil {
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_ChangedGroupPhoto(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    } else {
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_RemovedGroupPhoto(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    }
-                }
-            case let .titleUpdated(title):
-                if authorName.isEmpty || isChannel {
-                    if isChannel {
-                        attributedString = NSAttributedString(string: strings.Channel_MessageTitleUpdated(title).0, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-                    } else {
-                        attributedString = NSAttributedString(string: strings.Group_MessageTitleUpdated(title).0, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-                    }
-                } else {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_ChangedGroupName(authorName, title), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                }
-            case .pinnedMessageUpdated:
-                enum PinnnedMediaType {
-                    case text(String)
-                    case photo
-                    case video
-                    case round
-                    case audio
-                    case file
-                    case gif
-                    case sticker
-                    case location
-                    case contact
-                    case deleted
-                }
-                
-                var pinnedMessage: Message?
-                for attribute in message.attributes {
-                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
-                        pinnedMessage = message
-                    }
-                }
-                
-                var type: PinnnedMediaType
-                if let pinnedMessage = pinnedMessage {
-                    type = .text(pinnedMessage.text)
-                    inner: for media in pinnedMessage.media {
-                        if let _ = media as? TelegramMediaImage {
-                            type = .photo
-                        } else if let file = media as? TelegramMediaFile {
-                            type = .file
-                            if file.isAnimated {
-                                type = .gif
+                case let .photoUpdated(image):
+                    if authorName.isEmpty || isChannel {
+                        if isChannel {
+                            if image != nil {
+                                attributedString = NSAttributedString(string: strings.Channel_MessagePhotoUpdated, font: titleFont, textColor: primaryTextColor)
                             } else {
-                                for attribute in file.attributes {
-                                    switch attribute {
-                                    case let .Video(_, _, flags):
-                                        if flags.contains(.instantRoundVideo) {
-                                            type = .round
-                                        } else {
-                                            type = .video
-                                        }
-                                        break inner
-                                    case let .Audio(isVoice, _, performer, title, _):
-                                        if isVoice {
-                                            type = .audio
-                                        } else {
-                                            let descriptionString: String
-                                            if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                                                descriptionString = title + " — " + performer
-                                            } else if let title = title, !title.isEmpty {
-                                                descriptionString = title
-                                            } else if let performer = performer, !performer.isEmpty {
-                                                descriptionString = performer
-                                            } else if let fileName = file.fileName {
-                                                descriptionString = fileName
+                                attributedString = NSAttributedString(string: strings.Channel_MessagePhotoRemoved, font: titleFont, textColor: primaryTextColor)
+                            }
+                        } else {
+                            if image != nil {
+                                attributedString = NSAttributedString(string: strings.Group_MessagePhotoUpdated, font: titleFont, textColor: primaryTextColor)
+                            } else {
+                                attributedString = NSAttributedString(string: strings.Group_MessagePhotoRemoved, font: titleFont, textColor: primaryTextColor)
+                            }
+                        }
+                    } else {
+                        if image != nil {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_ChangedGroupPhoto(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        } else {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_RemovedGroupPhoto(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        }
+                    }
+                case let .titleUpdated(title):
+                    if authorName.isEmpty || isChannel {
+                        if isChannel {
+                            attributedString = NSAttributedString(string: strings.Channel_MessageTitleUpdated(title).0, font: titleFont, textColor: primaryTextColor)
+                        } else {
+                            attributedString = NSAttributedString(string: strings.Group_MessageTitleUpdated(title).0, font: titleFont, textColor: primaryTextColor)
+                        }
+                    } else {
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_ChangedGroupName(authorName, title), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    }
+                case .pinnedMessageUpdated:
+                    enum PinnnedMediaType {
+                        case text(String)
+                        case photo
+                        case video
+                        case round
+                        case audio
+                        case file
+                        case gif
+                        case sticker
+                        case location
+                        case contact
+                        case deleted
+                    }
+                    
+                    var pinnedMessage: Message?
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                            pinnedMessage = message
+                        }
+                    }
+                    
+                    var type: PinnnedMediaType
+                    if let pinnedMessage = pinnedMessage {
+                        type = .text(pinnedMessage.text)
+                        inner: for media in pinnedMessage.media {
+                            if let _ = media as? TelegramMediaImage {
+                                type = .photo
+                            } else if let file = media as? TelegramMediaFile {
+                                type = .file
+                                if file.isAnimated {
+                                    type = .gif
+                                } else {
+                                    for attribute in file.attributes {
+                                        switch attribute {
+                                        case let .Video(_, _, flags):
+                                            if flags.contains(.instantRoundVideo) {
+                                                type = .round
                                             } else {
-                                                descriptionString = strings.Message_Audio
+                                                type = .video
                                             }
-                                            type = .text(descriptionString)
+                                            break inner
+                                        case let .Audio(isVoice, _, performer, title, _):
+                                            if isVoice {
+                                                type = .audio
+                                            } else {
+                                                let descriptionString: String
+                                                if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
+                                                    descriptionString = title + " — " + performer
+                                                } else if let title = title, !title.isEmpty {
+                                                    descriptionString = title
+                                                } else if let performer = performer, !performer.isEmpty {
+                                                    descriptionString = performer
+                                                } else if let fileName = file.fileName {
+                                                    descriptionString = fileName
+                                                } else {
+                                                    descriptionString = strings.Message_Audio
+                                                }
+                                                type = .text(descriptionString)
+                                            }
+                                            break inner
+                                        case .Sticker:
+                                            type = .sticker
+                                            break inner
+                                        case .Animated:
+                                            break
+                                        default:
+                                            break
                                         }
-                                        break inner
-                                    case .Sticker:
-                                        type = .sticker
-                                        break inner
-                                    case .Animated:
-                                        break
-                                    default:
-                                        break
                                     }
                                 }
-                            }
-                        } else if let _ = media as? TelegramMediaMap {
-                            type = .location
-                        } else if let _ = media as? TelegramMediaContact {
-                            type = .contact
-                        }
-                    }
-                } else {
-                    type = .deleted
-                }
-                
-                switch type {
-                    case let .text(text):
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedTextMessage(authorName, text.replacingOccurrences(of: "\n", with: " ")), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .photo:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPhotoMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .video:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedVideoMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .round:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedRoundMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .audio:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedAudioMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .file:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedDocumentMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .gif:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedAnimationMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .sticker:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedStickerMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .location:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedLocationMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .contact:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedContactMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                    case .deleted:
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedDeletedMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-                }
-            case .joinedByLink:
-                attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)]))
-            case .channelMigratedFromGroup, .groupMigratedToChannel:
-                attributedString = NSAttributedString(string: strings.Notification_ChannelMigratedFrom, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-            case let .messageAutoremoveTimeoutUpdated(timeout):
-                if timeout > 0 {
-                    let timeValue = timeIntervalString(strings: strings, value: timeout)
-                    
-                    let string: String
-                    if message.author?.id == accountPeerId {
-                        string = strings.Notification_MessageLifetimeChangedOutgoing(timeValue).0
-                    } else {
-                        let authorString: String
-                        if let author = messageMainPeer(message) {
-                            authorString = author.compactDisplayTitle
-                        } else {
-                            authorString = ""
-                        }
-                        string = strings.Notification_MessageLifetimeChanged(authorString, timeValue).0
-                    }
-                    attributedString = NSAttributedString(string: string, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-                } else {
-                    let string: String
-                    if message.author?.id == accountPeerId {
-                        string = strings.Notification_MessageLifetimeRemovedOutgoing
-                    } else {
-                        let authorString: String
-                        if let author = messageMainPeer(message) {
-                            authorString = author.compactDisplayTitle
-                        } else {
-                            authorString = ""
-                        }
-                        string = strings.Notification_MessageLifetimeRemoved(authorString).0
-                    }
-                    attributedString = NSAttributedString(string: string, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-                }
-            case .historyCleared:
-                break
-            case .historyScreenshot:
-                attributedString = NSAttributedString(string: strings.Notification_SecretChatScreenshot, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-            case let .gameScore(gameId: _, score):
-                var gameTitle: String?
-                inner: for attribute in message.attributes {
-                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
-                        for media in message.media {
-                            if let game = media as? TelegramMediaGame {
-                                gameTitle = game.title
-                                break inner
+                            } else if let _ = media as? TelegramMediaMap {
+                                type = .location
+                            } else if let _ = media as? TelegramMediaContact {
+                                type = .contact
                             }
                         }
-                    }
-                }
-                
-                var baseString: String
-                if message.author?.id == accountPeerId {
-                    if let _ = gameTitle {
-                        baseString = strings.ServiceMessage_GameScoreSelfExtended(score)
                     } else {
-                        baseString = strings.ServiceMessage_GameScoreSelfSimple(score)
+                        type = .deleted
                     }
-                } else {
-                    if let _ = gameTitle {
-                        baseString = strings.ServiceMessage_GameScoreExtended(score)
+                    
+                    switch type {
+                        case let .text(text):
+                            var clippedText = text.replacingOccurrences(of: "\n", with: " ")
+                            if clippedText.count > 14 {
+                                clippedText = "\(clippedText[...clippedText.index(clippedText.startIndex, offsetBy: 14)])..."
+                            }
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedTextMessage(authorName, clippedText), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .photo:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPhotoMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .video:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedVideoMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .round:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedRoundMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .audio:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedAudioMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .file:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedDocumentMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .gif:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedAnimationMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .sticker:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedStickerMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .location:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedLocationMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .contact:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedContactMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .deleted:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedDeletedMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    }
+                case .joinedByLink:
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                case .channelMigratedFromGroup, .groupMigratedToChannel:
+                    attributedString = NSAttributedString(string: strings.Notification_ChannelMigratedFrom, font: titleFont, textColor: primaryTextColor)
+                case let .messageAutoremoveTimeoutUpdated(timeout):
+                    if timeout > 0 {
+                        let timeValue = timeIntervalString(strings: strings, value: timeout)
+                        
+                        let string: String
+                        if message.author?.id == accountPeerId {
+                            string = strings.Notification_MessageLifetimeChangedOutgoing(timeValue).0
+                        } else {
+                            let authorString: String
+                            if let author = messageMainPeer(message) {
+                                authorString = author.compactDisplayTitle
+                            } else {
+                                authorString = ""
+                            }
+                            string = strings.Notification_MessageLifetimeChanged(authorString, timeValue).0
+                        }
+                        attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
                     } else {
-                        baseString = strings.ServiceMessage_GameScoreSimple(score)
+                        let string: String
+                        if message.author?.id == accountPeerId {
+                            string = strings.Notification_MessageLifetimeRemovedOutgoing
+                        } else {
+                            let authorString: String
+                            if let author = messageMainPeer(message) {
+                                authorString = author.compactDisplayTitle
+                            } else {
+                                authorString = ""
+                            }
+                            string = strings.Notification_MessageLifetimeRemoved(authorString).0
+                        }
+                        attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
                     }
-                }
-                let baseStringValue = baseString as NSString
-                var ranges: [(Int, NSRange)] = []
-                if baseStringValue.range(of: "{name}").location != NSNotFound {
-                    ranges.append((0, baseStringValue.range(of: "{name}")))
-                }
-                if baseStringValue.range(of: "{game}").location != NSNotFound {
-                    ranges.append((1, baseStringValue.range(of: "{game}")))
-                }
-                ranges.sort(by: { $0.1.location < $1.1.location })
-                
-                var argumentAttributes = peerMentionsAttributes(theme: theme, peerIds: [(0, message.author?.id)])
-                argumentAttributes[1] = MarkdownAttributeSet(font: titleBoldFont, textColor: theme.serviceMessagePrimaryTextColor, additionalAttributes: [:])
-                attributedString = addAttributesToStringWithRanges(formatWithArgumentRanges(baseString, ranges, [authorName, gameTitle ?? ""]), body: bodyAttributes, argumentAttributes: argumentAttributes)
-            case let .paymentSent(currency, totalAmount):
-                var invoiceMessage: Message?
-                for attribute in message.attributes {
-                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
-                        invoiceMessage = message
-                    }
-                }
-                
-                var invoiceTitle: String?
-                if let invoiceMessage = invoiceMessage {
-                    for media in invoiceMessage.media {
-                        if let invoice = media as? TelegramMediaInvoice {
-                            invoiceTitle = invoice.title
+                case .historyCleared:
+                    break
+                case .historyScreenshot:
+                    attributedString = NSAttributedString(string: strings.Notification_SecretChatScreenshot, font: titleFont, textColor: primaryTextColor)
+                case let .gameScore(gameId: _, score):
+                    var gameTitle: String?
+                    inner: for attribute in message.attributes {
+                        if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                            for media in message.media {
+                                if let game = media as? TelegramMediaGame {
+                                    gameTitle = game.title
+                                    break inner
+                                }
+                            }
                         }
                     }
-                }
-                
-                if let invoiceTitle = invoiceTitle {
-                    let botString: String
-                    if let peer = messageMainPeer(message) {
-                        botString = peer.compactDisplayTitle
+                    
+                    var baseString: String
+                    if message.author?.id == accountPeerId {
+                        if let _ = gameTitle {
+                            baseString = strings.ServiceMessage_GameScoreSelfExtended(score)
+                        } else {
+                            baseString = strings.ServiceMessage_GameScoreSelfSimple(score)
+                        }
                     } else {
-                        botString = ""
+                        if let _ = gameTitle {
+                            baseString = strings.ServiceMessage_GameScoreExtended(score)
+                        } else {
+                            baseString = strings.ServiceMessage_GameScoreSimple(score)
+                        }
                     }
-                    let mutableString = NSMutableAttributedString()
-                    mutableString.append(NSAttributedString(string: strings.Notification_PaymentSent, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor))
+                    let baseStringValue = baseString as NSString
+                    var ranges: [(Int, NSRange)] = []
+                    if baseStringValue.range(of: "{name}").location != NSNotFound {
+                        ranges.append((0, baseStringValue.range(of: "{name}")))
+                    }
+                    if baseStringValue.range(of: "{game}").location != NSNotFound {
+                        ranges.append((1, baseStringValue.range(of: "{game}")))
+                    }
+                    ranges.sort(by: { $0.1.location < $1.1.location })
                     
-                    var range = NSRange(location: NSNotFound, length: 0)
+                    var argumentAttributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    argumentAttributes[1] = MarkdownAttributeSet(font: titleBoldFont, textColor: primaryTextColor, additionalAttributes: [:])
+                    attributedString = addAttributesToStringWithRanges(formatWithArgumentRanges(baseString, ranges, [authorName, gameTitle ?? ""]), body: bodyAttributes, argumentAttributes: argumentAttributes)
+                case let .paymentSent(currency, totalAmount):
+                    var invoiceMessage: Message?
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                            invoiceMessage = message
+                        }
+                    }
                     
-                    range = (mutableString.string as NSString).range(of: "{amount}")
-                    if range.location != NSNotFound {
-                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: formatCurrencyAmount(totalAmount, currency: currency), font: titleBoldFont, textColor: theme.serviceMessagePrimaryTextColor))
+                    var invoiceTitle: String?
+                    if let invoiceMessage = invoiceMessage {
+                        for media in invoiceMessage.media {
+                            if let invoice = media as? TelegramMediaInvoice {
+                                invoiceTitle = invoice.title
+                            }
+                        }
                     }
-                    range = (mutableString.string as NSString).range(of: "{name}")
-                    if range.location != NSNotFound {
-                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: botString, font: titleBoldFont, textColor: theme.serviceMessagePrimaryTextColor))
+                    
+                    if let invoiceTitle = invoiceTitle {
+                        let botString: String
+                        if let peer = messageMainPeer(message) {
+                            botString = peer.compactDisplayTitle
+                        } else {
+                            botString = ""
+                        }
+                        let mutableString = NSMutableAttributedString()
+                        mutableString.append(NSAttributedString(string: strings.Notification_PaymentSent, font: titleFont, textColor: primaryTextColor))
+                        
+                        var range = NSRange(location: NSNotFound, length: 0)
+                        
+                        range = (mutableString.string as NSString).range(of: "{amount}")
+                        if range.location != NSNotFound {
+                            mutableString.replaceCharacters(in: range, with: NSAttributedString(string: formatCurrencyAmount(totalAmount, currency: currency), font: titleBoldFont, textColor: primaryTextColor))
+                        }
+                        range = (mutableString.string as NSString).range(of: "{name}")
+                        if range.location != NSNotFound {
+                            mutableString.replaceCharacters(in: range, with: NSAttributedString(string: botString, font: titleBoldFont, textColor: primaryTextColor))
+                        }
+                        range = (mutableString.string as NSString).range(of: "{title}")
+                        if range.location != NSNotFound {
+                            mutableString.replaceCharacters(in: range, with: NSAttributedString(string: invoiceTitle, font: titleFont, textColor: primaryTextColor))
+                        }
+                        attributedString = mutableString
+                    } else {
+                        attributedString = NSAttributedString(string: strings.Message_PaymentSent(formatCurrencyAmount(totalAmount, currency: currency)).0, font: titleFont, textColor: primaryTextColor)
                     }
-                    range = (mutableString.string as NSString).range(of: "{title}")
-                    if range.location != NSNotFound {
-                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: invoiceTitle, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor))
-                    }
-                    attributedString = mutableString
-                } else {
-                    attributedString = NSAttributedString(string: strings.Message_PaymentSent(formatCurrencyAmount(totalAmount, currency: currency)).0, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
-                }
-            case .phoneCall:
-                break
-            default:
-                attributedString = nil
+                case .phoneCall:
+                    break
+                default:
+                    attributedString = nil
             }
             
             break
         } else if let expiredMedia = media as? TelegramMediaExpiredContent {
             switch expiredMedia.data {
                 case .image:
-                    attributedString = NSAttributedString(string: strings.Message_ImageExpired, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
+                    attributedString = NSAttributedString(string: strings.Message_ImageExpired, font: titleFont, textColor: primaryTextColor)
                 case .file:
-                    attributedString = NSAttributedString(string: strings.Message_VideoExpired, font: titleFont, textColor: theme.serviceMessagePrimaryTextColor)
+                    attributedString = NSAttributedString(string: strings.Message_VideoExpired, font: titleFont, textColor: primaryTextColor)
             }
         }
     }
@@ -400,7 +413,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
         let backgroundLayout = self.filledBackgroundNode.asyncLayout()
         
         return { item, width, mergedTop, mergedBottom, dateHeaderAtBottom in
-            let attributedString = serviceMessageString(theme: item.theme, strings: item.strings, message: item.message, accountPeerId: item.account.peerId)
+            let attributedString = attributedServiceMessageString(theme: item.theme, strings: item.strings, message: item.message, accountPeerId: item.account.peerId)
             
             let (labelLayout, apply) = makeLabelLayout(attributedString, nil, 0, .end, CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), .center, nil, UIEdgeInsets())
             
@@ -527,6 +540,17 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                                     }
                             }
                             if !foundTapAction {
+                                if let item = self.item {
+                                    for attribute in item.message.attributes {
+                                        if let attribute = attribute as? ReplyMessageAttribute {
+                                            self.controllerInteraction?.navigateToMessage(item.message.id, attribute.messageId)
+                                            foundTapAction = true
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                            if !foundTapAction {
                                 self.controllerInteraction?.clickThroughMessage()
                             }
                         case .longTap, .doubleTap:
@@ -586,7 +610,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
     
     private func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
-            var rects: [CGRect]?
+            var rects: [(CGRect, CGRect)]?
             let textNodeFrame = self.labelNode.frame
             if let point = point {
                 if let (index, attributes) = self.labelNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)) {
@@ -599,7 +623,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
-                            rects = self.labelNode.attributeRects(name: name, at: index)
+                            rects = self.labelNode.lineAndAttributeRects(name: name, at: index)
                             break
                         }
                     }
@@ -607,16 +631,19 @@ class ChatMessageActionItemNode: ChatMessageItemView {
             }
         
             if let rects = rects {
-                var mappedRects = rects
-                for i in 0 ..< mappedRects.count {
-                    mappedRects[i].origin.x = floor((textNodeFrame.size.width - mappedRects[i].width) / 2.0)
+                var mappedRects: [CGRect] = []
+                for i in 0 ..< rects.count {
+                    let lineRect = rects[i].0
+                    var itemRect = rects[i].1
+                    itemRect.origin.x = floor((textNodeFrame.size.width - lineRect.width) / 2.0) + itemRect.origin.x
+                    mappedRects.append(itemRect)
                 }
                 
                 let linkHighlightingNode: LinkHighlightingNode
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming ? item.theme.chat.bubble.incomingLinkHighlightColor : item.theme.chat.bubble.outgoingLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: item.theme.chat.serviceMessage.serviceMessageLinkHighlightColor)
                     linkHighlightingNode.inset = 2.5
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.labelNode)

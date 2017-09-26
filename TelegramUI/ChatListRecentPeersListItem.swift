@@ -113,6 +113,8 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                         } else {
                             peersNode = ChatListSearchRecentPeersNode(account: item.account, theme: item.theme, strings: item.strings, peerSelected: { peer in
                                 self?.item?.peerSelected(peer)
+                            }, isPeerSelected: { _ in
+                                return false
                             })
                             strongSelf.peersNode = peersNode
                             strongSelf.addSubnode(peersNode)
@@ -155,5 +157,9 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
             }
         }
         return nil
+    }
+    
+    func removePeer(_ peerId: PeerId) {
+        self.peersNode?.removePeer(peerId)
     }
 }

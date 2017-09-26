@@ -7,7 +7,10 @@ import Postbox
 
 func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
     let legacyController = LegacyController(presentation: .custom)
+    legacyController.supportedOrientations = .portrait
     legacyController.statusBar.statusBarStyle = .Hide
+    
+    legacyController.deferScreenEdgeGestures = [.top]
     
     let controller: TGCameraController
     if let cameraView = cameraView, let previewView = cameraView.previewView() {

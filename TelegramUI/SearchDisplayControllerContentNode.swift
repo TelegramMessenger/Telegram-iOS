@@ -4,6 +4,9 @@ import Display
 import SwiftSignalKit
 
 class SearchDisplayControllerContentNode: ASDisplayNode {
+    final var dismissInput: (() -> Void)?
+    final var cancel: (() -> Void)?
+    
     override init() {
         super.init()
         

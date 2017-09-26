@@ -28,13 +28,13 @@ enum PresentationResourceKey: Int32 {
     case navigationPlayerMaximizedRepeatIcon
     case navigationPlayerHandleIcon
     
-    case navigationDropdownArrowImage
-    
     case itemListDisclosureArrow
     case itemListCheckIcon
+    case itemListSecondaryCheckIcon
     case itemListPlusIcon
     
     case itemListStickerItemUnreadDot
+    case itemListVerifiedPeerIcon
     
     case chatListLockTopLockedImage
     case chatListLockBottomLockedImage
@@ -45,6 +45,9 @@ enum PresentationResourceKey: Int32 {
     case chatListBadgeBackgroundActive
     case chatListBadgeBackgroundInactive
     case chatListBadgeBackgroundMention
+    case chatListBadgeBackgroundPinned
+    case chatListMutedIcon
+    case chatListVerifiedIcon
 
     case chatPrincipalThemeEssentialGraphics
     case chatBubbleVerticalLineIncomingImage
@@ -65,6 +68,7 @@ enum PresentationResourceKey: Int32 {
     
     case chatBubbleMediaOverlayControlSecret
     
+    case chatLoadingIndicatorBackgroundImage
     case chatServiceBubbleFillImage
     
     case chatBubbleSecretMediaIcon
@@ -143,4 +147,7 @@ enum PresentationResourceKey: Int32 {
     
     case callListOutgoingIcon
     case callListInfoButton
+    
+    case genericSearchBarLoupeImage
+    case genericSearchBar
 }

@@ -92,6 +92,7 @@ public final class CallListController: ViewController {
         }
         
         self.tabBarItem.title = self.presentationData.strings.Calls_TabTitle
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style

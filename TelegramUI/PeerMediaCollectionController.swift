@@ -28,7 +28,6 @@ public class PeerMediaCollectionController: ViewController {
     
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
-    private var titleView: PeerMediaCollectionTitleView?
     private var controllerInteraction: ChatControllerInteraction?
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
@@ -48,13 +47,7 @@ public class PeerMediaCollectionController: ViewController {
         
         self.title = self.presentationData.strings.SharedMedia_TitleAll
         
-        /*self.titleView = PeerMediaCollectionTitleView(mediaCollectionInterfaceState: self.interfaceState, toggle: { [weak self] in
-            self?.updateInterfaceState { $0.withToggledSelectingMode() }
-        })*/
-        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
-        
-        self.navigationItem.titleView = self.titleView
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
@@ -68,8 +61,9 @@ public class PeerMediaCollectionController: ViewController {
         
         let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] id in
             if let strongSelf = self, strongSelf.isNodeLoaded {
+                let galleryMessage = strongSelf.mediaCollectionDisplayNode.messageForGallery(id)
                 var galleryMedia: Media?
-                if let message = strongSelf.mediaCollectionDisplayNode.historyNode.messageInCurrentHistoryView(id) {
+                if let message = galleryMessage?.message {
                     for media in message.media {
                         if let file = media as? TelegramMediaFile {
                             galleryMedia = file
@@ -85,59 +79,38 @@ public class PeerMediaCollectionController: ViewController {
                     }
                 }
                 
-                if let galleryMedia = galleryMedia {
-                    if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "audio/mpeg" {
+                if let galleryMessage = galleryMessage, let galleryMedia = galleryMedia {
+                    if let file = galleryMedia as? TelegramMediaFile, file.isVoice || file.isMusic {
                         
                     } else {
-                        let gallery = GalleryController(account: strongSelf.account, messageId: id, replaceRootController: { controller, ready in
+                        let _ = (storedMessageFromSearch(account: strongSelf.account, message: galleryMessage.message) |> deliverOnMainQueue).start(completed: {
                             if let strongSelf = self {
-                                (strongSelf.navigationController as? NavigationController)?.replaceTopController(controller, animated: false, ready: ready)
-                            }
-                        }, baseNavigationController: nil)
-                        
-                        strongSelf.galleryHiddenMesageAndMediaDisposable.set(gallery.hiddenMedia.start(next: { [weak strongSelf] messageIdAndMedia in
-                            if let strongSelf = strongSelf {
-                                if let messageIdAndMedia = messageIdAndMedia {
-                                    strongSelf.controllerInteraction?.hiddenMedia = [messageIdAndMedia.0: [messageIdAndMedia.1]]
-                                } else {
-                                    strongSelf.controllerInteraction?.hiddenMedia = [:]
-                                }
-                                strongSelf.mediaCollectionDisplayNode.historyNode.forEachItemNode { itemNode in
-                                    if let itemNode = itemNode as? ChatMessageItemView {
-                                        itemNode.updateHiddenMedia()
-                                    } else if let itemNode = itemNode as? ListMessageNode {
-                                        itemNode.updateHiddenMedia()
-                                    } else if let itemNode = itemNode as? GridMessageItemNode {
-                                        itemNode.updateHiddenMedia()
+                                let gallery = GalleryController(account: strongSelf.account, messageId: id, replaceRootController: { controller, ready in
+                                    if let strongSelf = self {
+                                        (strongSelf.navigationController as? NavigationController)?.replaceTopController(controller, animated: false, ready: ready)
                                     }
-                                }
-                            }
-                        }))
-                        
-                        strongSelf.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak self] messageId, media in
-                            if let strongSelf = self {
-                                var transitionNode: ASDisplayNode?
-                                strongSelf.mediaCollectionDisplayNode.historyNode.forEachItemNode { itemNode in
-                                    if let itemNode = itemNode as? ChatMessageItemView {
-                                        if let result = itemNode.transitionNode(id: messageId, media: media) {
-                                            transitionNode = result
+                                }, baseNavigationController: nil)
+                                strongSelf.galleryHiddenMesageAndMediaDisposable.set(gallery.hiddenMedia.start(next: { [weak strongSelf] messageIdAndMedia in
+                                    if let strongSelf = strongSelf {
+                                        if let messageIdAndMedia = messageIdAndMedia {
+                                            strongSelf.controllerInteraction?.hiddenMedia = [messageIdAndMedia.0: [messageIdAndMedia.1]]
+                                        } else {
+                                            strongSelf.controllerInteraction?.hiddenMedia = [:]
                                         }
-                                    } else if let itemNode = itemNode as? ListMessageNode {
-                                        if let result = itemNode.transitionNode(id: messageId, media: media) {
-                                            transitionNode = result
-                                        }
-                                    } else if let itemNode = itemNode as? GridMessageItemNode {
-                                        if let result = itemNode.transitionNode(id: messageId, media: media) {
-                                            transitionNode = result
+                                        strongSelf.mediaCollectionDisplayNode.updateHiddenMedia()
+                                    }
+                                }))
+                                
+                                strongSelf.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak self] messageId, media in
+                                    if let strongSelf = self {
+                                        if let transitionNode = strongSelf.mediaCollectionDisplayNode.transitionNodeForGallery(messageId: messageId, media: media) {
+                                            return GalleryTransitionArguments(transitionNode: transitionNode, transitionContainerNode: strongSelf.mediaCollectionDisplayNode, transitionBackgroundNode: strongSelf.mediaCollectionDisplayNode.historyNode as! ASDisplayNode)
                                         }
                                     }
-                                }
-                                if let transitionNode = transitionNode {
-                                    return GalleryTransitionArguments(transitionNode: transitionNode, transitionContainerNode: strongSelf.mediaCollectionDisplayNode, transitionBackgroundNode: strongSelf.mediaCollectionDisplayNode.historyNode as! ASDisplayNode)
-                                }
+                                    return nil
+                                }))
                             }
-                            return nil
-                        }))
+                        })
                     }
                 }
             }
@@ -208,6 +181,8 @@ public class PeerMediaCollectionController: ViewController {
             }, callPeer: { _ in
             }, longTap: { _ in
             }, openCheckoutOrReceipt: { _ in
+            }, openSearch: { [weak self] in
+                self?.activateSearch()
             }, automaticMediaDownloadSettings: .none)
         
         self.controllerInteraction = controllerInteraction
@@ -369,7 +344,9 @@ public class PeerMediaCollectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerMediaCollectionControllerNode(account: self.account, peerId: self.peerId, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, interfaceInteraction: self.interfaceInteraction!)
+        self.displayNode = PeerMediaCollectionControllerNode(account: self.account, peerId: self.peerId, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, interfaceInteraction: self.interfaceInteraction!, navigationBar: self.navigationBar, requestDeactivateSearch: { [weak self] in
+            self?.deactivateSearch()
+        })
         
         self.ready.set(combineLatest(self.mediaCollectionDisplayNode.historyNode.historyState.get(), self._peerReady.get()) |> map { $1 })
         
@@ -409,7 +386,6 @@ public class PeerMediaCollectionController: ViewController {
         
         if self.isNodeLoaded {
             self.mediaCollectionDisplayNode.updateMediaCollectionInterfaceState(updatedInterfaceState, animated: animated)
-            self.titleView?.updateMediaCollectionInterfaceState(updatedInterfaceState, animated: animated)
         }
         self.interfaceState = updatedInterfaceState
         
@@ -448,6 +424,23 @@ public class PeerMediaCollectionController: ViewController {
                 self.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
             case .beginMessageSelection:
                 self.updateInterfaceState(animated: true, { $0.withSelectionState() })
+        }
+    }
+    
+    private func activateSearch() {
+        if self.displayNavigationBar {
+            if let scrollToTop = self.scrollToTop {
+                scrollToTop()
+            }
+            self.mediaCollectionDisplayNode.activateSearch()
+            self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
+        }
+    }
+    
+    private func deactivateSearch() {
+        if !self.displayNavigationBar {
+            self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
+            self.mediaCollectionDisplayNode.deactivateSearch()
         }
     }
 }

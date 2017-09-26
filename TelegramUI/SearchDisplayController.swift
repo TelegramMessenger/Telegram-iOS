@@ -5,9 +5,11 @@ import Display
 
 final class SearchDisplayController {
     private let searchBar: SearchBarNode
-    private let contentNode: SearchDisplayControllerContentNode
+    let contentNode: SearchDisplayControllerContentNode
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
+    
+    private(set) var isDeactivating = false
     
     init(theme: PresentationTheme, strings: PresentationStrings, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
         self.searchBar = SearchBarNode(theme: theme, strings: strings)
@@ -16,7 +18,17 @@ final class SearchDisplayController {
         self.searchBar.textUpdated = { [weak contentNode] text in
             contentNode?.searchTextUpdated(text: text)
         }
-        self.searchBar.cancel = cancel
+        self.searchBar.cancel = { [weak self] in
+            self?.isDeactivating = true
+            cancel()
+        }
+        self.contentNode.cancel = { [weak self] in
+            self?.isDeactivating = true
+            cancel()
+        }
+        self.contentNode.dismissInput = { [weak self] in
+            self?.searchBar.deactivate(clear: false)
+        }
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
@@ -71,6 +83,12 @@ final class SearchDisplayController {
         
         let contentNode = self.contentNode
         if animated {
+            if let placeholder = placeholder, let (_, navigationBarHeight) = self.containerLayout {
+                let contentNodePosition = self.contentNode.layer.position
+                let targetTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: self.contentNode.supernode)
+                
+                self.contentNode.layer.animatePosition(from: contentNodePosition, to: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (targetTextBackgroundFrame.maxY + 8.0 - navigationBarHeight)), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            }
             contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak contentNode] _ in
                 contentNode?.removeFromSupernode()
             })

@@ -38,6 +38,7 @@ private let activeNavigationSearchBar = PresentationThemeActiveNavigationSearchB
     inputTextColor: .black,
     inputPlaceholderTextColor: UIColor(rgb: 0x8e8e93),
     inputIconColor: UIColor(rgb: 0x8e8e93),
+    inputClearButtonColor: UIColor(rgb: 0x7b7b81),
     separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
 )
 
@@ -88,11 +89,13 @@ private let chatList = PresentationThemeChatList(
     messageDraftTextColor: UIColor(rgb: 0xdd4b39),
     checkmarkColor: UIColor(rgb: 0x21c004),
     pendingIndicatorColor: UIColor(rgb: 0x8e8e93),
-    unreadBadgeActiveBackgroundColor: UIColor(rgb: 0x007ee5),
+    muteIconColor: UIColor(rgb: 0xa7a7ad),
+    unreadBadgeActiveBackgroundColor: accentColor,
     unreadBadgeActiveTextColor: .white,
-    unreadBadgeInactiveBackgroundColor: UIColor(rgb: 0xadb3bb),
+    unreadBadgeInactiveBackgroundColor: UIColor(rgb: 0xb6b6bb),
     unreadBadgeInactiveTextColor: .white,
-    pinnedSearchBarColor: UIColor(rgb: 0xdfdfdf),
+    pinnedBadgeColor: UIColor(rgb: 0x939399),
+    pinnedSearchBarColor: UIColor(rgb: 0xe5e5e5),
     regularSearchBarColor: UIColor(rgb: 0xe9e9e9),
     sectionHeaderFillColor: UIColor(rgb: 0xf7f7f7),
     sectionHeaderTextColor: UIColor(rgb: 0x8e8e93),
@@ -145,6 +148,7 @@ private let bubble = PresentationThemeChatBubble(
 private let serviceMessage = PresentationThemeServiceMessage(
     serviceMessageFillColor: UIColor(rgb: 0x748391, alpha: 0.45),
     serviceMessagePrimaryTextColor: .white,
+    serviceMessageLinkHighlightColor: UIColor(rgb: 0x748391, alpha: 0.25),
     unreadBarFillColor: UIColor(white: 1.0, alpha: 0.9),
     unreadBarStrokeColor: UIColor(white: 0.0, alpha: 0.2),
     unreadBarTextColor: UIColor(rgb: 0x86868d),
@@ -181,7 +185,7 @@ private let inputMediaPanel = PresentationThemeInputMediaPanel(
 
 private let inputButtonPanel = PresentationThemeInputButtonPanel(
     panelSerapatorColor: UIColor(rgb: 0xBEC2C6),
-    panelBackgroundColor: UIColor(rgb: 0x9099A2),
+    panelBackgroundColor: UIColor(rgb: 0xdee2e6),
     buttonFillColor: .white,
     buttonStrokeColor: UIColor(rgb: 0xc3c7c9),
     buttonHighlightedFillColor: UIColor(rgb: 0xa8b3c0),

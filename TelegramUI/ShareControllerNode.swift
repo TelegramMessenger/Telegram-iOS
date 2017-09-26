@@ -9,9 +9,6 @@ private let defaultBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 1.0)
 private let highlightedBackgroundColor: UIColor = UIColor(white: 0.9, alpha: 1.0)
 private let separatorColor: UIColor = UIColor(rgb: 0xbcbbc1)
 
-private let subtitleFont = Font.regular(12.0)
-private let subtitleColor = UIColor(rgb: 0x7b7b81)
-
 private let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: .white)
 private let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: highlightedBackgroundColor)
 
@@ -31,6 +28,11 @@ private let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0,
 
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let account: Account
+    private var presentationData: PresentationData
+    private let externalShare: Bool
+    
+    private let defaultAction: ShareControllerAction?
+    private let requestLayout: (ContainedViewLayoutTransition) -> Void
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -41,35 +43,40 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let contentContainerNode: ASDisplayNode
     private let contentBackgroundNode: ASImageNode
-    private let contentGridNode: GridNode
-    private let installActionButtonNode: ShareActionButtonNode
-    private let installActionSeparatorNode: ASDisplayNode
-    private let contentTitleNode: ASTextNode
-    private let contentSubtitleNode: ASTextNode
-    private let contentSeparatorNode: ASDisplayNode
     
-    private var activityIndicatorView: UIActivityIndicatorView?
+    private var contentNode: (ASDisplayNode & ShareContentContainerNode)?
+    private var previousContentNode: (ASDisplayNode & ShareContentContainerNode)?
+    private var animateContentNodeOffsetFromBackgroundOffset: CGFloat?
+    
+    private let actionsBackgroundNode: ASImageNode
+    private let actionButtonNode: ShareActionButtonNode
+    private let inputFieldNode: ShareInputFieldNode
+    private let actionSeparatorNode: ASDisplayNode
     
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
-    var share: (([PeerId]) -> Void)?
+    var share: ((String, [PeerId]) -> Signal<Void, NoError>)?
+    var shareExternal: (() -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
     
-    private var peers: [Peer]?
-    private var inProgress = false
-    private var peersUpdated = false
-    
-    private var didSetItems = false
-    
-    private var selectedPeers: [Peer] = []
     private var controllerInteraction: ShareControllerInteraction?
     
-    private var defaultAction: ShareControllerAction?
+    private var peersContentNode: SharePeersContainerNode?
     
-    init(account: Account) {
+    private var scheduledLayoutTransitionRequestId: Int = 0
+    private var scheduledLayoutTransitionRequest: (Int, ContainedViewLayoutTransition)?
+    
+    private let shareDisposable = MetaDisposable()
+    
+    init(account: Account, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, externalShare: Bool) {
         self.account = account
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.externalShare = externalShare
+        
+        self.defaultAction = defaultAction
+        self.requestLayout = requestLayout
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -83,47 +90,34 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.cancelButtonNode.displaysAsynchronously = false
         self.cancelButtonNode.setBackgroundImage(roundedBackground, for: .normal)
         self.cancelButtonNode.setBackgroundImage(highlightedRoundedBackground, for: .highlighted)
-        //self.cancelButtonNode.cornerRadius = 16.0
-        //self.cancelButtonNode.clipsToBounds = true
         
         self.contentContainerNode = ASDisplayNode()
-        //self.contentContainerNode.cornerRadius = 16.0
-        //self.contentContainerNode.clipsToBounds = true
         self.contentContainerNode.isOpaque = false
+        self.contentContainerNode.clipsToBounds = true
         
         self.contentBackgroundNode = ASImageNode()
         self.contentBackgroundNode.displaysAsynchronously = false
         self.contentBackgroundNode.displayWithoutProcessing = true
         self.contentBackgroundNode.image = roundedBackground
-        //self.contentBackgroundNode.cornerRadius = 16.0
-        //self.contentBackgroundNode.clipsToBounds = true
         
-        self.contentGridNode = GridNode()
+        self.actionsBackgroundNode = ASImageNode()
+        self.actionsBackgroundNode.isLayerBacked = true
+        self.actionsBackgroundNode.displayWithoutProcessing = true
+        self.actionsBackgroundNode.displaysAsynchronously = false
+        self.actionsBackgroundNode.image = halfRoundedBackground
         
-        self.installActionButtonNode = ShareActionButtonNode()
-        self.installActionButtonNode.displaysAsynchronously = false
-        self.installActionButtonNode.titleNode.displaysAsynchronously = false
-        self.installActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
-        self.installActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        self.actionButtonNode = ShareActionButtonNode()
+        self.actionButtonNode.displaysAsynchronously = false
+        self.actionButtonNode.titleNode.displaysAsynchronously = false
+        self.actionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
         
-        self.contentTitleNode = ASTextNode()
+        self.inputFieldNode = ShareInputFieldNode(placeholder: self.presentationData.strings.ShareMenu_Comment)
+        self.inputFieldNode.alpha = 0.0
         
-        self.contentSubtitleNode = ASTextNode()
-        self.contentSubtitleNode.maximumNumberOfLines = 1
-        self.contentSubtitleNode.isLayerBacked = true
-        self.contentSubtitleNode.displaysAsynchronously = false
-        self.contentSubtitleNode.truncationMode = .byTruncatingTail
-        self.contentSubtitleNode.attributedText = NSAttributedString(string: "Select chats", font: subtitleFont, textColor: subtitleColor)
-        
-        self.contentSeparatorNode = ASDisplayNode()
-        self.contentSeparatorNode.isLayerBacked = true
-        self.contentSeparatorNode.displaysAsynchronously = false
-        self.contentSeparatorNode.backgroundColor = separatorColor
-        
-        self.installActionSeparatorNode = ASDisplayNode()
-        self.installActionSeparatorNode.isLayerBacked = true
-        self.installActionSeparatorNode.displaysAsynchronously = false
-        self.installActionSeparatorNode.backgroundColor = separatorColor
+        self.actionSeparatorNode = ASDisplayNode()
+        self.actionSeparatorNode.isLayerBacked = true
+        self.actionSeparatorNode.displaysAsynchronously = false
+        self.actionSeparatorNode.backgroundColor = separatorColor
         
         super.init()
         
@@ -131,38 +125,30 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             if let strongSelf = self {
                 if strongSelf.controllerInteraction!.selectedPeerIds.contains(peer.id) {
                     strongSelf.controllerInteraction!.selectedPeerIds.remove(peer.id)
-                    strongSelf.selectedPeers = strongSelf.selectedPeers.filter({ $0.id != peer.id })
+                    strongSelf.controllerInteraction!.selectedPeers = strongSelf.controllerInteraction!.selectedPeers.filter({ $0.id != peer.id })
                 } else {
                     strongSelf.controllerInteraction!.selectedPeerIds.insert(peer.id)
-                    strongSelf.selectedPeers.append(peer)
+                    strongSelf.controllerInteraction!.selectedPeers.append(peer)
+                    
+                    strongSelf.contentNode?.setEnsurePeerVisibleOnLayout(peer.id)
                 }
                 
-                strongSelf.updateVisibleItemsSelection(animated: true)
-                if strongSelf.selectedPeers.isEmpty {
-                    if let defaultAction = strongSelf.defaultAction {
-                        strongSelf.installActionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
-                    } else {
-                        strongSelf.installActionButtonNode.setTitle("Send", with: Font.medium(20.0), with: .gray, for: .normal)
+                let inputNodeAlpha: CGFloat = strongSelf.controllerInteraction!.selectedPeers.isEmpty ? 0.0 : 1.0
+                if !strongSelf.inputFieldNode.alpha.isEqual(to: inputNodeAlpha) {
+                    let previousAlpha = strongSelf.inputFieldNode.alpha
+                    strongSelf.inputFieldNode.alpha = inputNodeAlpha
+                    strongSelf.inputFieldNode.layer.animateAlpha(from: previousAlpha, to: inputNodeAlpha, duration: inputNodeAlpha.isZero ? 0.18 : 0.32)
+                    
+                    if inputNodeAlpha.isZero {
+                        strongSelf.inputFieldNode.deactivateInput()
                     }
-                    strongSelf.installActionButtonNode.badge = nil
-                } else {
-                    strongSelf.installActionButtonNode.setTitle("Send", with: Font.medium(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
-                    strongSelf.installActionButtonNode.badge = "\(strongSelf.selectedPeers.count)"
                 }
                 
-                var subtitleText = "Select chats"
-                if !strongSelf.selectedPeers.isEmpty {
-                    subtitleText = strongSelf.selectedPeers.reduce("", { string, peer in
-                        if !string.isEmpty {
-                            return string + ", " + peer.displayTitle
-                        } else {
-                            return string + peer.displayTitle
-                        }
-                    })
-                }
-                strongSelf.contentSubtitleNode.attributedText = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: subtitleColor)
+                strongSelf.updateButton()
                 
-                if let (layout, navigationBarHeight) = strongSelf.containerLayout, let _ = strongSelf.peers {
+                strongSelf.contentNode?.updateSelectedPeers()
+                
+                if let (layout, navigationBarHeight) = strongSelf.containerLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
                 }
             }
@@ -177,50 +163,34 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.wrappingScrollNode.view.delegate = self
         self.addSubnode(self.wrappingScrollNode)
         
-        self.cancelButtonNode.setTitle("Cancel", with: Font.medium(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
-        /*self.cancelButtonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.cancelButtonNode.backgroundColor = highlightedBackgroundColor
-                } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.cancelButtonNode.backgroundColor = defaultBackgroundColor
-                    })
-                }
-            }
-        }*/
-        
-        /*self.installActionButtonNode.backgroundColor = defaultBackgroundColor
-        self.installActionButtonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.installActionButtonNode.backgroundColor = highlightedBackgroundColor
-                } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.installActionButtonNode.backgroundColor = defaultBackgroundColor
-                    })
-                }
-            }
-        }*/
+        self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
         
         self.wrappingScrollNode.addSubnode(self.cancelButtonNode)
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         
-        self.installActionButtonNode.addTarget(self, action: #selector(self.installActionButtonPressed), forControlEvents: .touchUpInside)
+        self.actionButtonNode.addTarget(self, action: #selector(self.installActionButtonPressed), forControlEvents: .touchUpInside)
         
         self.wrappingScrollNode.addSubnode(self.contentBackgroundNode)
         
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
-        self.contentContainerNode.addSubnode(self.contentGridNode)
-        self.contentContainerNode.addSubnode(self.installActionSeparatorNode)
-        self.contentContainerNode.addSubnode(self.installActionButtonNode)
-        self.wrappingScrollNode.addSubnode(self.contentTitleNode)
-        self.wrappingScrollNode.addSubnode(self.contentSubtitleNode)
-        self.wrappingScrollNode.addSubnode(self.contentSeparatorNode)
+        self.contentContainerNode.addSubnode(self.actionSeparatorNode)
+        self.contentContainerNode.addSubnode(self.actionsBackgroundNode)
+        self.contentContainerNode.addSubnode(self.actionButtonNode)
+        self.contentContainerNode.addSubnode(self.inputFieldNode)
         
-        self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
-            self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
+        self.inputFieldNode.updateHeight = { [weak self] in
+            if let strongSelf = self {
+                if let (layout, navigationBarHeight) = strongSelf.containerLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.15, curve: .spring))
+                }
+            }
         }
+        
+        self.updateButton()
+    }
+    
+    deinit {
+        self.shareDisposable.dispose()
     }
     
     override func didLoad() {
@@ -231,12 +201,73 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
+    func transitionToContentNode(_ contentNode: (ASDisplayNode & ShareContentContainerNode)?, fastOut: Bool = false) {
+        if self.contentNode !== contentNode {
+            let transition: ContainedViewLayoutTransition
+            
+            let previous = self.contentNode
+            if let previous = previous {
+                previous.setContentOffsetUpdated(nil)
+                transition = .animated(duration: 0.4, curve: .spring)
+                
+                self.previousContentNode = previous
+                previous.alpha = 0.0
+                previous.layer.animateAlpha(from: 1.0, to: 0.0, duration: fastOut ? 0.1 : 0.2, removeOnCompletion: true, completion: { [weak self, weak previous] _ in
+                    if let strongSelf = self, let previous = previous {
+                        if strongSelf.previousContentNode === previous {
+                            strongSelf.previousContentNode = nil
+                        }
+                        previous.removeFromSupernode()
+                    }
+                })
+            } else {
+                transition = .immediate
+            }
+            self.contentNode = contentNode
+            if let contentNode = contentNode {
+                contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
+                    self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
+                })
+                self.contentContainerNode.insertSubnode(contentNode, at: 0)
+            }
+            
+            if let (layout, navigationBarHeight) = self.containerLayout {
+                if let contentNode = contentNode, let previous = previous {
+                    contentNode.alpha = 1.0
+                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.35)
+                    animation.fillMode = kCAFillModeBoth
+                    if !fastOut {
+                        animation.beginTime = CACurrentMediaTime() + 0.1
+                    }
+                    contentNode.layer.add(animation, forKey: "opacity")
+                    
+                    contentNode.frame = previous.frame
+                    var bottomGridInset: CGFloat = 57.0
+                    
+                    let inputHeight = self.inputFieldNode.bounds.size.height
+                    
+                    if !self.controllerInteraction!.selectedPeers.isEmpty {
+                        bottomGridInset += inputHeight
+                    }
+                    self.animateContentNodeOffsetFromBackgroundOffset = self.contentBackgroundNode.frame.minY
+                    self.scheduleInteractiveTransition(transition)
+                    contentNode.activate()
+                    previous.deactivate()
+                    //self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+                } else {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+                }
+            }
+        }
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
+        self.scheduledLayoutTransitionRequest = nil
         
         transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        var insets = layout.insets(options: [.statusBar])
+        var insets = layout.insets(options: [.statusBar, .input])
         insets.top = max(10.0, insets.top)
         
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
@@ -252,113 +283,54 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         transition.updateFrame(node: self.cancelButtonNode, frame: CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: width, height: buttonHeight)))
         
-        let maximumContentHeight = layout.size.height - insets.top - bottomInset - buttonHeight - sectionSpacing
+        let maximumContentHeight = layout.size.height - insets.top - max(bottomInset + buttonHeight, insets.bottom) - sectionSpacing
         
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
-        let contentFrame = contentContainerFrame.insetBy(dx: 12.0, dy: 0.0)
+        let contentFrame = contentContainerFrame.insetBy(dx: 0.0, dy: 0.0)
         
-        var insertItems: [GridNodeInsertItem] = []
+        var bottomGridInset = buttonHeight
         
-        var itemCount = 0
-        var animateIn = false
+        let inputHeight = self.inputFieldNode.updateLayout(width: contentContainerFrame.size.width, transition: transition)
         
-        if let peers = self.peers {
-            if let activityIndicatorView = self.activityIndicatorView {
-                activityIndicatorView.removeFromSuperview()
-                activityIndicatorView.stopAnimating()
-            }
-            itemCount = peers.count
-            if !self.didSetItems {
-                self.contentTitleNode.attributedText = NSAttributedString(string: "Share to", font: Font.medium(20.0), textColor: .black)
-                
-                self.didSetItems = true
-                animateIn = true
-                for i in 0 ..< peers.count {
-                    insertItems.append(GridNodeInsertItem(index: i, item: ShareControllerPeerGridItem(account: self.account, peer: peers[i], controllerInteraction: self.controllerInteraction!), previousIndex: nil))
-                }
-            }
+        if !self.controllerInteraction!.selectedPeers.isEmpty {
+            bottomGridInset += inputHeight
         }
-        
-        let titleSize = self.contentTitleNode.measure(contentContainerFrame.size)
-        let titleFrame = CGRect(origin: CGPoint(x: contentContainerFrame.minX + floor((contentContainerFrame.size.width - titleSize.width) / 2.0), y: self.contentBackgroundNode.frame.minY + 15.0), size: titleSize)
-        let deltaTitlePosition = CGPoint(x: titleFrame.midX - self.contentTitleNode.frame.midX, y: titleFrame.midY - self.contentTitleNode.frame.midY)
-        self.contentTitleNode.frame = titleFrame
-        transition.animatePosition(node: self.contentTitleNode, from: CGPoint(x: titleFrame.midX + deltaTitlePosition.x, y: titleFrame.midY + deltaTitlePosition.y))
-        
-        let subtitleSize = self.contentSubtitleNode.measure(CGSize(width: contentContainerFrame.size.width - 44.0 * 2.0 - 4.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        let subtitleFrame = CGRect(origin: CGPoint(x: contentContainerFrame.minX + floor((contentContainerFrame.size.width - subtitleSize.width) / 2.0), y: self.contentBackgroundNode.frame.minY + 40.0), size: subtitleSize)
-        let deltaSubtitlePosition = CGPoint(x: subtitleFrame.midX - self.contentSubtitleNode.frame.midX, y: subtitleFrame.midY - self.contentSubtitleNode.frame.midY)
-        self.contentSubtitleNode.frame = subtitleFrame
-        transition.animatePosition(node: self.contentSubtitleNode, from: CGPoint(x: subtitleFrame.midX, y: subtitleFrame.midY + deltaSubtitlePosition.y))
-        
-        transition.updateFrame(node: self.contentSeparatorNode, frame: CGRect(origin: CGPoint(x: contentContainerFrame.minX, y: self.contentBackgroundNode.frame.minY + titleAreaHeight), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
-        
-        let itemsPerRow = 4
-        let itemWidth = floor(contentFrame.size.width / CGFloat(itemsPerRow))
-        let rowCount = itemCount / itemsPerRow + (itemCount % itemsPerRow != 0 ? 1 : 0)
-        
-        let minimallyRevealedRowCount: CGFloat = 3.5
-        let initiallyRevealedRowCount = min(minimallyRevealedRowCount, CGFloat(rowCount))
-        
-        let topInset = max(0.0, contentFrame.size.height - initiallyRevealedRowCount * itemWidth - titleAreaHeight)
-        let bottomGridInset = buttonHeight
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         
-        if let activityIndicatorView = activityIndicatorView {
-            transition.updateFrame(layer: activityIndicatorView.layer, frame: CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - activityIndicatorView.bounds.size.width) / 2.0), y: contentFrame.maxY - activityIndicatorView.bounds.size.height - 34.0), size: activityIndicatorView.bounds.size))
-        }
+        transition.updateFrame(node: self.actionsBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: bottomGridInset)))
         
-        transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
-        transition.updateFrame(node: self.installActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.actionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
+        
+        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: inputHeight)))
+        
+        transition.updateFrame(node: self.actionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
         
         let gridSize = CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))
         
-        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: gridSize, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth + 25.0), lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
-        transition.updateFrame(node: self.contentGridNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
-        
-        if animateIn {
-            var durationOffset = 0.0
-            self.contentGridNode.forEachRow { itemNodes in
-                for itemNode in itemNodes {
-                    itemNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 4.0), to: CGPoint(), duration: 0.4 + durationOffset, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                    if let itemNode = itemNode as? StickerPackPreviewGridItemNode {
-                        itemNode.animateIn()
-                    }
-                }
-                durationOffset += 0.04
-            }
-            
-            self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.installActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.installActionSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            
-            self.contentGridNode.layer.animateBoundsOriginYAdditive(from: -(topInset - buttonHeight), to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-        }
-        
-        if let _ = self.peers, self.peersUpdated {
-            self.dequeueUpdatePeers()
+        if let contentNode = self.contentNode {
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
+            contentNode.updateLayout(size: gridSize, bottomInset: bottomGridInset, transition: transition)
         }
     }
     
-    private func gridPresentationLayoutUpdated(_ presentationLayout: GridNodeCurrentPresentationLayout, transition: ContainedViewLayoutTransition) {
+    private func contentNodeOffsetUpdated(_ contentOffset: CGFloat, transition: ContainedViewLayoutTransition) {
         if let (layout, _) = self.containerLayout {
-            var insets = layout.insets(options: [.statusBar])
+            var insets = layout.insets(options: [.statusBar, .input])
             insets.top = max(10.0, insets.top)
             
             let bottomInset: CGFloat = 10.0
             let buttonHeight: CGFloat = 57.0
             let sectionSpacing: CGFloat = 8.0
-            let titleAreaHeight: CGFloat = 64.0
             
             let width = min(layout.size.width, layout.size.height) - 20.0
             
             let sideInset = floor((layout.size.width - width) / 2.0)
             
-            let maximumContentHeight = layout.size.height - insets.top - bottomInset - buttonHeight - sectionSpacing
+            let maximumContentHeight = layout.size.height - insets.top - max(bottomInset + buttonHeight, insets.bottom) - sectionSpacing
             let contentFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
             
-            var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY - presentationLayout.contentOffset.y), size: contentFrame.size)
+            var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY - contentOffset), size: contentFrame.size)
             if backgroundFrame.minY < contentFrame.minY {
                 backgroundFrame.origin.y = contentFrame.minY
             }
@@ -369,29 +341,17 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 backgroundFrame.origin.y -= buttonHeight + 32.0 - backgroundFrame.size.height
                 backgroundFrame.size.height = buttonHeight + 32.0
             }
-            var compactFrame = true
-            if let _ = self.peers, !inProgress {
-                compactFrame = false
-            }
-            if compactFrame {
-                backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.maxY - buttonHeight - 32.0), size: CGSize(width: contentFrame.size.width, height: buttonHeight + 32.0))
-            }
             transition.updateFrame(node: self.contentBackgroundNode, frame: backgroundFrame)
             
-            let titleSize = self.contentTitleNode.bounds.size
-            let titleFrame = CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.size.width - titleSize.width) / 2.0), y: backgroundFrame.minY + 15.0), size: titleSize)
-            transition.updateFrame(node: self.contentTitleNode, frame: titleFrame)
-            
-            let subtitleSize = self.contentSubtitleNode.bounds.size
-            let subtitleFrame = CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.size.width - subtitleSize.width) / 2.0), y: backgroundFrame.minY + 40.0), size: subtitleSize)
-            transition.updateFrame(node: self.contentSubtitleNode, frame: subtitleFrame)
-            
-            transition.updateFrame(node: self.contentSeparatorNode, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: backgroundFrame.minY + titleAreaHeight), size: CGSize(width: contentFrame.size.width, height: UIScreenPixel)))
-            
-            if !compactFrame && CGFloat(0.0).isLessThanOrEqualTo(presentationLayout.contentOffset.y) {
-                self.contentSeparatorNode.alpha = 1.0
-            } else {
-                self.contentSeparatorNode.alpha = 0.0
+            if let animateContentNodeOffsetFromBackgroundOffset = self.animateContentNodeOffsetFromBackgroundOffset {
+                self.animateContentNodeOffsetFromBackgroundOffset = nil
+                let offset = backgroundFrame.minY - animateContentNodeOffsetFromBackgroundOffset
+                if let contentNode = self.contentNode {
+                    transition.animatePositionAdditive(node: contentNode, offset: -offset)
+                }
+                if let previousContentNode = self.previousContentNode {
+                    transition.updatePosition(node: previousContentNode, position: previousContentNode.position.offsetBy(dx: 0.0, dy: offset))
+                }
             }
         }
     }
@@ -407,16 +367,31 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     @objc func installActionButtonPressed() {
-        if self.selectedPeers.isEmpty {
+        if self.controllerInteraction!.selectedPeers.isEmpty {
             if let defaultAction = self.defaultAction {
                 defaultAction.action()
             }
         } else {
-            self.share?(self.selectedPeers.map { $0.id })
-            /*self.inProgress = true
-            if let (layout, navigationBarHeight) = self.containerLayout {
-                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
-            }*/
+            self.inputFieldNode.deactivateInput()
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
+            transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
+            transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
+            transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
+            transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
+            
+            if let signal = self.share?(self.inputFieldNode.text, self.controllerInteraction!.selectedPeers.map { $0.id }) {
+                self.transitionToContentNode(ShareLoadingContainerNode(), fastOut: true)
+                let timestamp = CACurrentMediaTime()
+                self.shareDisposable.set(signal.start(completed: { [weak self] in
+                    let minDelay = 1.2
+                    let delay = max(0.0, (timestamp + minDelay) - CACurrentMediaTime())
+                    Queue.mainQueue().after(delay, {
+                        if let strongSelf = self {
+                            strongSelf.cancel?()
+                        }
+                    })
+                }))
+            }
         }
     }
     
@@ -456,44 +431,51 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func updatePeers(peers: [Peer], defaultAction: ShareControllerAction?) {
-        self.defaultAction = defaultAction
+        self.ready.set(.single(true))
         
-        self.peers = peers
+        let peersContentNode = SharePeersContainerNode(account: self.account, strings: self.presentationData.strings, peers: peers, controllerInteraction: self.controllerInteraction!, externalShare: false && self.externalShare)
+        self.peersContentNode = peersContentNode
+        peersContentNode.openSearch = { [weak self] in
+            if let strongSelf = self {
+                let _ = (recentlySearchedPeers(postbox: strongSelf.account.postbox)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { peers in
+                        if let strongSelf = self {
+                            let searchContentNode = ShareSearchContainerNode(account: strongSelf.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers)
+                            searchContentNode.cancel = {
+                                if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
+                                    strongSelf.transitionToContentNode(peersContentNode)
+                                }
+                            }
+                            strongSelf.transitionToContentNode(searchContentNode)
+                        }
+                    })
+            }
+        }
+        peersContentNode.openShare = { [weak self] in
+            self?.shareExternal?()
+        }
+        self.transitionToContentNode(peersContentNode)
+        
+        /*self.defaultAction = defaultAction
+        
+        self.peersContainerNode.peers = peers
         self.peersUpdated = true
         if let _ = self.containerLayout {
             self.dequeueUpdatePeers()
         }
         
-        self.installActionSeparatorNode.alpha = 1.0
+        self.actionSeparatorNode.alpha = 1.0
         
         if let defaultAction = defaultAction {
-            self.installActionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
+            self.actionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
         } else {
-            self.installActionButtonNode.setTitle("Send", with: Font.medium(20.0), with: .gray, for: .normal)
-        }
-    }
-    
-    func dequeueUpdatePeers() {
-        if let (layout, navigationBarHeight) = self.containerLayout, let _ = peers, self.peersUpdated {
-            self.peersUpdated = false
-            
-            let transition: ContainedViewLayoutTransition
-            if self.didSetReady {
-                transition = .animated(duration: 0.4, curve: .spring)
-            } else {
-                transition = .immediate
-            }
-            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
-            
-            if !self.didSetReady {
-                self.didSetReady = true
-                self.ready.set(.single(true))
-            }
-        }
+            self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: .gray, for: .normal)
+        }*/
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let result = self.installActionButtonNode.hitTest(self.installActionButtonNode.convert(point, from: self), with: event) {
+        if let result = self.actionButtonNode.hitTest(self.actionButtonNode.convert(point, from: self), with: event) {
             return result
         }
         if self.bounds.contains(point) {
@@ -513,11 +495,66 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
-    private func updateVisibleItemsSelection(animated: Bool) {
-        self.contentGridNode.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ShareControllerPeerGridItemNode {
-                itemNode.updateSelection(animated: animated)
+    private func scheduleInteractiveTransition(_ transition: ContainedViewLayoutTransition) {
+        if let scheduledLayoutTransitionRequest = self.scheduledLayoutTransitionRequest {
+            switch scheduledLayoutTransitionRequest.1 {
+                case .immediate:
+                    self.scheduleLayoutTransitionRequest(transition)
+                default:
+                    break
             }
+        } else {
+            self.scheduleLayoutTransitionRequest(transition)
         }
+    }
+    
+    private func scheduleLayoutTransitionRequest(_ transition: ContainedViewLayoutTransition) {
+        let requestId = self.scheduledLayoutTransitionRequestId
+        self.scheduledLayoutTransitionRequestId += 1
+        self.scheduledLayoutTransitionRequest = (requestId, transition)
+        (self.view as? UITracingLayerView)?.schedule(layout: { [weak self] in
+            if let strongSelf = self {
+                if let (currentRequestId, currentRequestTransition) = strongSelf.scheduledLayoutTransitionRequest, currentRequestId == requestId {
+                    strongSelf.scheduledLayoutTransitionRequest = nil
+                    strongSelf.requestLayout(currentRequestTransition)
+                }
+            }
+        })
+        self.setNeedsLayout()
+    }
+    
+    private func updateButton() {
+        if self.controllerInteraction!.selectedPeers.isEmpty {
+            if let defaultAction = self.defaultAction {
+                self.actionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
+            } else {
+                self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: UIColor(rgb: 0x787878), for: .normal)
+            }
+            self.actionButtonNode.badge = nil
+        } else {
+            self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
+            self.actionButtonNode.badge = "\(self.controllerInteraction!.selectedPeers.count)"
+        }
+    }
+    
+    func transitionToProgress(signal: Signal<Void, NoError>) {
+        self.inputFieldNode.deactivateInput()
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
+        transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
+        transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
+        transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
+        transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
+        
+        self.transitionToContentNode(ShareLoadingContainerNode(), fastOut: true)
+        let timestamp = CACurrentMediaTime()
+        self.shareDisposable.set(signal.start(completed: { [weak self] in
+            let minDelay = 1.2
+            let delay = max(0.0, (timestamp + minDelay) - CACurrentMediaTime())
+            Queue.mainQueue().after(delay, {
+                if let strongSelf = self {
+                    strongSelf.cancel?()
+                }
+            })
+        }))
     }
 }

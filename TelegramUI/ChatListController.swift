@@ -292,8 +292,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     
     private func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
-            self.chatListDisplayNode.deactivateSearch(animated: animated)
             self.setDisplayNavigationBar(true, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
+            self.chatListDisplayNode.deactivateSearch(animated: animated)
         }
     }
     
@@ -312,6 +312,13 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                     }
                     
                     let chatController = ChatController(account: self.account, peerId: peerId)
+                    chatController.peekActions = .remove({ [weak self] in
+                        if let strongSelf = self {
+                            let _ = removeRecentPeer(account: strongSelf.account, peerId: peerId).start()
+                            let searchContainer = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode
+                            searchContainer?.removePeerFromTopPeers(peerId)
+                        }
+                    })
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil), transition: .immediate)
                     return chatController

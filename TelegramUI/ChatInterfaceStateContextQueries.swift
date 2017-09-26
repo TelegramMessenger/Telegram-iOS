@@ -27,7 +27,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
                         }
                     return (inputQuery, signal |> then(stickers))
                 case let .hashtag(query):
-                    /*var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+                    var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
                     if let currentQuery = currentQuery {
                         switch currentQuery {
                             case .hashtag:
@@ -37,10 +37,18 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
                         }
                     }
                     
-                    let hashtags: Signal<ChatPresentationInputQueryResult?, NoError> = .single(.hashtags((0 ..< 3).map { "tag\($0)" }))
+                    let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = recentlyUsedHashtags(postbox: account.postbox) |> map { hashtags -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                        let normalizedQuery = query.lowercased()
+                        var result: [String] = []
+                        for hashtag in hashtags {
+                            if hashtag.lowercased().hasPrefix(normalizedQuery) {
+                                result.append(hashtag)
+                            }
+                        }
+                        return { _ in return .hashtags(result) }
+                    }
                     
-                    return (inputQuery, signal |> then(hashtags))*/
-                    return (nil, .single({ _ in return nil }))
+                    return (inputQuery, signal |> then(hashtags))
                 case let .mention(query):
                     let normalizedQuery = query.lowercased()
                     

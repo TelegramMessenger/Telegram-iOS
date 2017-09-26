@@ -123,12 +123,12 @@ final class TextNodeLayout: NSObject {
         return rects
     }
     
-    func attributeRects(name: String, at index: Int) -> [CGRect]? {
+    func lineAndAttributeRects(name: String, at index: Int) -> [(CGRect, CGRect)]? {
         if let attributedString = self.attributedString {
             var range = NSRange()
             let _ = attributedString.attribute(NSAttributedStringKey(rawValue: name), at: index, effectiveRange: &range)
             if range.length != 0 {
-                var rects: [CGRect] = []
+                var rects: [(CGRect, CGRect)] = []
                 for line in self.lines {
                     let lineRange = NSIntersectionRange(range, line.range)
                     if lineRange.length != 0 {
@@ -141,7 +141,7 @@ final class TextNodeLayout: NSObject {
                             rightOffset = ceil(CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, nil))
                         }
                         let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
-                        rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height)))
+                        rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height))))
                     }
                 }
                 if !rects.isEmpty {
@@ -200,7 +200,15 @@ final class TextNode: ASDisplayNode {
     
     func attributeRects(name: String, at index: Int) -> [CGRect]? {
         if let cachedLayout = self.cachedLayout {
-            return cachedLayout.attributeRects(name: name, at: index)
+            return cachedLayout.lineAndAttributeRects(name: name, at: index)?.map { $0.1 }
+        } else {
+            return nil
+        }
+    }
+    
+    func lineAndAttributeRects(name: String, at index: Int) -> [(CGRect, CGRect)]? {
+        if let cachedLayout = self.cachedLayout {
+            return cachedLayout.lineAndAttributeRects(name: name, at: index)
         } else {
             return nil
         }

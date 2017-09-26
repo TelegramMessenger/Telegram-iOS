@@ -210,7 +210,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
             case let .index(index):
                 switch self.location {
                     case let .messages(peerId, tagMask, _):
-                        self.navigationDisposable.set((self.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 10, anchorIndex: index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: []) |> take(1) |> deliverOnMainQueue).start(next: { [weak self] view in
+                        self.navigationDisposable.set((self.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, count: 10, clipHoles: false, anchorIndex: index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: []) |> take(1) |> deliverOnMainQueue).start(next: { [weak self] view in
                             if let strongSelf = self {
                                 assert(strongSelf.loadingItem)
                                 

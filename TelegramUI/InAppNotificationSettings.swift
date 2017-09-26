@@ -2,12 +2,12 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-struct InAppNotificationSettings: PreferencesEntry, Equatable {
-    let playSounds: Bool
-    let vibrate: Bool
-    let displayPreviews: Bool
+public struct InAppNotificationSettings: PreferencesEntry, Equatable {
+    public let playSounds: Bool
+    public let vibrate: Bool
+    public let displayPreviews: Bool
     
-    static var defaultSettings: InAppNotificationSettings {
+    public static var defaultSettings: InAppNotificationSettings {
         return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true)
     }
     
@@ -17,13 +17,13 @@ struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.displayPreviews = displayPreviews
     }
     
-    init(decoder: PostboxDecoder) {
+    public init(decoder: PostboxDecoder) {
         self.playSounds = decoder.decodeInt32ForKey("s", orElse: 0) != 0
         self.vibrate = decoder.decodeInt32ForKey("v", orElse: 0) != 0
         self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
     }
     
-    func encode(_ encoder: PostboxEncoder) {
+    public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.playSounds ? 1 : 0, forKey: "s")
         encoder.encodeInt32(self.vibrate ? 1 : 0, forKey: "v")
         encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")
@@ -41,7 +41,7 @@ struct InAppNotificationSettings: PreferencesEntry, Equatable {
         return InAppNotificationSettings(playSounds: self.playSounds, vibrate: self.vibrate, displayPreviews: displayPreviews)
     }
     
-    func isEqual(to: PreferencesEntry) -> Bool {
+    public func isEqual(to: PreferencesEntry) -> Bool {
         if let to = to as? InAppNotificationSettings {
             return self == to
         } else {
@@ -49,7 +49,7 @@ struct InAppNotificationSettings: PreferencesEntry, Equatable {
         }
     }
     
-    static func ==(lhs: InAppNotificationSettings, rhs: InAppNotificationSettings) -> Bool {
+    public static func ==(lhs: InAppNotificationSettings, rhs: InAppNotificationSettings) -> Bool {
         if lhs.playSounds != rhs.playSounds {
             return false
         }

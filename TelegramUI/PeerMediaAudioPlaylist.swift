@@ -176,7 +176,7 @@ func peerMessageHistoryAudioPlaylist(account: Account, messageId: MessageId) -> 
                     break
             }
             if let tagMask = tagMask {
-                return account.postbox.aroundMessageHistoryViewForPeerId(item.entry.index.id.peerId, index: item.entry.index, count: 10, anchorIndex: item.entry.index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                return account.postbox.aroundMessageHistoryViewForPeerId(item.entry.index.id.peerId, index: item.entry.index, count: 10, clipHoles: false, anchorIndex: item.entry.index, fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
                     |> take(1)
                     |> map { (view, _, _) -> AudioPlaylistItem? in
                         var index = 0

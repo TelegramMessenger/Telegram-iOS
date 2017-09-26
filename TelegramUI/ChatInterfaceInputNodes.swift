@@ -2,7 +2,10 @@ import Foundation
 import AsyncDisplayKit
 import TelegramCore
 
-func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, inputMediaNode: ChatMediaInputNode?, controllerInteraction: ChatControllerInteraction) -> ChatInputNode? {
+func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, inputMediaNode: ChatMediaInputNode?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?) -> ChatInputNode? {
+    if !(inputPanelNode is ChatTextInputPanelNode) {
+        return nil
+    }
     switch chatPresentationInterfaceState.inputMode {
         case .media:
             if let currentNode = currentNode as? ChatMediaInputNode {

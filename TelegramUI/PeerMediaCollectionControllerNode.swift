@@ -5,7 +5,12 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
-private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction) -> ASDisplayNode {
+struct PeerMediaCollectionMessageForGallery {
+    let message: Message
+    let fromSearchResults: Bool
+}
+
+private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction) -> ChatHistoryNode & ASDisplayNode {
     switch mode {
         case .photoOrVideo:
             return ChatHistoryGridNode(account: account, peerId: peerId, messageId: messageId, tagMask: .photoOrVideo, controllerInteraction: controllerInteraction)
@@ -24,18 +29,51 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, account: Ac
     }
 }
 
+private func updateLoadNodeState(_ node: PeerMediaCollectionEmptyNode, _ loadState: ChatHistoryNodeLoadState?) {
+    if let loadState = loadState {
+        switch loadState {
+            case .messages:
+                node.isHidden = true
+                node.isLoading = false
+            case .empty:
+                node.isHidden = false
+                node.isLoading = false
+            case .loading:
+                node.isHidden = false
+                node.isLoading = true
+        }
+    } else {
+        node.isHidden = false
+        node.isLoading = true
+    }
+}
+
+private func tagMaskForMode(_ mode: PeerMediaCollectionMode) -> MessageTags {
+    switch mode {
+        case .photoOrVideo:
+            return .photoOrVideo
+        case .file:
+            return .file
+        case .music:
+            return .music
+        case .webpage:
+            return .webPage
+    }
+}
+
 class PeerMediaCollectionControllerNode: ASDisplayNode {
     private let account: Account
     private let peerId: PeerId
     private let controllerInteraction: ChatControllerInteraction
     private let interfaceInteraction: ChatPanelInterfaceInteraction
+    private let navigationBar: NavigationBar?
     
     private let sectionsNode: PeerMediaCollectionSectionsNode
     
-    private var historyNodeImpl: ASDisplayNode
-    var historyNode: ChatHistoryNode {
-        return self.historyNodeImpl as! ChatHistoryNode
-    }
+    private(set) var historyNode: ChatHistoryNode & ASDisplayNode
+    private var historyEmptyNode: PeerMediaCollectionEmptyNode
+    
+    private var searchDisplayController: SearchDisplayController?
     
     private let candidateHistoryNodeReadyDisposable = MetaDisposable()
     private var candidateHistoryNode: (ASDisplayNode, PeerMediaCollectionMode)?
@@ -44,6 +82,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     
     var requestLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     var requestUpdateMediaCollectionInterfaceState: (Bool, (PeerMediaCollectionInterfaceState) -> PeerMediaCollectionInterfaceState) -> Void = { _, _ in }
+    let requestDeactivateSearch: () -> Void
     
     private var mediaCollectionInterfaceState: PeerMediaCollectionInterfaceState
     
@@ -54,20 +93,25 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     
     private var presentationData: PresentationData
     
-    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) {
+    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction, navigationBar: NavigationBar?, requestDeactivateSearch: @escaping () -> Void) {
         self.account = account
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
         self.interfaceInteraction = interfaceInteraction
+        self.navigationBar = navigationBar
+        
+        self.requestDeactivateSearch = requestDeactivateSearch
         
         self.presentationData = (account.applicationContext as! TelegramApplicationContext).currentPresentationData.with { $0 }
         self.mediaCollectionInterfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         self.sectionsNode = PeerMediaCollectionSectionsNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
-        self.historyNodeImpl = historyNodeImplForMode(self.mediaCollectionInterfaceState.mode, account: account, peerId: peerId, messageId: messageId, controllerInteraction: controllerInteraction)
+        self.historyNode = historyNodeImplForMode(self.mediaCollectionInterfaceState.mode, account: account, peerId: peerId, messageId: messageId, controllerInteraction: controllerInteraction)
+        self.historyEmptyNode = PeerMediaCollectionEmptyNode(mode: self.mediaCollectionInterfaceState.mode, theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.historyEmptyNode.isHidden = true
         
-        self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, accountPeerId: account.peerId)
         
         super.init()
         
@@ -75,10 +119,14 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.historyNodeImpl.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+        self.historyNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         
-        self.addSubnode(self.historyNodeImpl)
+        self.addSubnode(self.historyNode)
+        self.addSubnode(self.historyEmptyNode)
+        if let navigationBar = navigationBar {
+            self.addSubnode(navigationBar)
+        }
         self.addSubnode(self.sectionsNode)
         
         self.sectionsNode.indexUpdated = { [weak self] index in
@@ -99,6 +147,13 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 strongSelf.requestUpdateMediaCollectionInterfaceState(true, { $0.withMode(mode) })
             }
         }
+        
+        updateLoadNodeState(self.historyEmptyNode, self.historyNode.loadState)
+        self.historyNode.setLoadStateUpdated { [weak self] loadState in
+            if let strongSelf = self {
+                updateLoadNodeState(strongSelf.historyEmptyNode, loadState)
+            }
+        }
     }
     
     deinit {
@@ -108,13 +163,31 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets) -> Void) {
         self.containerLayout = (layout, navigationBarHeight)
         
-        var insets = layout.insets(options: [.input])
-        insets.top += navigationBarHeight
+        var vanillaInsets = layout.insets(options: [])
+        vanillaInsets.top += navigationBarHeight
+        
+        if let searchDisplayController = self.searchDisplayController {
+            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+            if !searchDisplayController.isDeactivating {
+                vanillaInsets.top += 20.0
+            }
+        }
         
         let sectionsHeight = self.sectionsNode.updateLayout(width: layout.size.width, transition: transition)
-        transition.updateFrame(node: self.sectionsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: sectionsHeight)))
+        var sectionOffset: CGFloat = 0.0
+        if navigationBarHeight.isZero {
+            sectionOffset = -sectionsHeight
+        }
+        transition.updateFrame(node: self.sectionsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + sectionOffset), size: CGSize(width: layout.size.width, height: sectionsHeight)))
         
-        insets.top += sectionsHeight
+        var insets = vanillaInsets
+        if !navigationBarHeight.isZero {
+            insets.top += sectionsHeight
+        }
+        
+        if let inputHeight = layout.inputHeight {
+            insets.bottom += inputHeight
+        }
         
         if let selectionState = self.mediaCollectionInterfaceState.selectionState {
             let interfaceState = self.chatPresentationInterfaceState.updatedPeer({ _ in self.mediaCollectionInterfaceState.peer })
@@ -156,10 +229,13 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 }
         }
         
-        let previousBounds = self.historyNodeImpl.bounds
-        self.historyNodeImpl.bounds = CGRect(x: previousBounds.origin.x, y: previousBounds.origin.y, width: layout.size.width, height: layout.size.height)
-        self.historyNodeImpl.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
-        
+        let previousBounds = self.historyNode.bounds
+        self.historyNode.bounds = CGRect(x: previousBounds.origin.x, y: previousBounds.origin.y, width: layout.size.width, height: layout.size.height)
+        self.historyNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+
+        self.historyEmptyNode.updateLayout(size: layout.size, insets: vanillaInsets, transition: transition)
+        transition.updateFrame(node: self.historyEmptyNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+
         let listViewCurve: ListViewAnimationCurve
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
@@ -204,7 +280,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 modeSelectionNode.frame = CGRect(origin: CGPoint(), size: layout.size)
                 modeSelectionNode.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                 modeSelectionNode.mediaCollectionInterfaceState = self.mediaCollectionInterfaceState
-                self.insertSubnode(modeSelectionNode, aboveSubnode: self.historyNodeImpl)
+                self.insertSubnode(modeSelectionNode, aboveSubnode: self.historyNode)
                 modeSelectionNode.animateIn()
                 self.modeSelectionNode = modeSelectionNode
             }
@@ -216,16 +292,79 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         }
     }
     
+    func activateSearch() {
+        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar else {
+            return
+        }
+        
+        var maybePlaceholderNode: SearchBarPlaceholderNode?
+        if let listNode = historyNode as? ListView {
+            listNode.forEachItemNode { node in
+                if let node = node as? ChatListSearchItemNode {
+                    maybePlaceholderNode = node.searchBarNode
+                }
+            }
+        }
+        
+        if let _ = self.searchDisplayController {
+            return
+        }
+        
+        if let placeholderNode = maybePlaceholderNode {
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatHistorySearchContainerNode(account: self.account, peerId: self.peerId, tagMask: tagMaskForMode(self.mediaCollectionInterfaceState.mode), interfaceInteraction: self.controllerInteraction), cancel: { [weak self] in
+                self?.requestDeactivateSearch()
+            })
+            
+            self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            self.searchDisplayController?.activate(insertSubnode: { subnode in
+                self.insertSubnode(subnode, belowSubnode: navigationBar)
+            }, placeholder: placeholderNode)
+        }
+    }
+    
+    func deactivateSearch() {
+        if let searchDisplayController = self.searchDisplayController {
+            self.searchDisplayController = nil
+            var maybePlaceholderNode: SearchBarPlaceholderNode?
+            if let listNode = self.historyNode as? ListView {
+                listNode.forEachItemNode { node in
+                    if let node = node as? ChatListSearchItemNode {
+                        maybePlaceholderNode = node.searchBarNode
+                    }
+                }
+            }
+            
+            searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
+        }
+    }
+    
     func updateMediaCollectionInterfaceState(_ mediaCollectionInterfaceState: PeerMediaCollectionInterfaceState, animated: Bool) {
         if self.mediaCollectionInterfaceState != mediaCollectionInterfaceState {
             if self.mediaCollectionInterfaceState.mode != mediaCollectionInterfaceState.mode {
+                let previousMode = self.mediaCollectionInterfaceState.mode
                 if let containerLayout = self.containerLayout, self.candidateHistoryNode == nil || self.candidateHistoryNode!.1 != mediaCollectionInterfaceState.mode {
                     let node = historyNodeImplForMode(mediaCollectionInterfaceState.mode, account: self.account, peerId: self.peerId, messageId: nil, controllerInteraction: self.controllerInteraction)
                     node.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
                     self.candidateHistoryNode = (node, mediaCollectionInterfaceState.mode)
                     
-                    var insets = containerLayout.0.insets(options: [.input])
-                    insets.top += containerLayout.1
+                    var vanillaInsets = containerLayout.0.insets(options: [])
+                    vanillaInsets.top += containerLayout.1
+                    
+                    if let searchDisplayController = self.searchDisplayController {
+                        if !searchDisplayController.isDeactivating {
+                            vanillaInsets.top += 20.0
+                        }
+                    }
+                    
+                    var insets = vanillaInsets
+                    
+                    if !containerLayout.1.isZero {
+                        insets.top += self.sectionsNode.bounds.size.height
+                    }
+                    
+                    if let inputHeight = containerLayout.0.inputHeight {
+                        insets.bottom += inputHeight
+                    }
                     
                     let previousBounds = node.bounds
                     node.bounds = CGRect(x: previousBounds.origin.x, y: previousBounds.origin.y, width: containerLayout.0.size.width, height: containerLayout.0.size.height)
@@ -236,20 +375,46 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                         additionalBottomInset = selectionPanel.bounds.size.height
                     }
                     
-                    (node as! ChatHistoryNode).updateLayout(transition: .immediate, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: containerLayout.0.size, insets: UIEdgeInsets(top: insets.top, left: insets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left), duration: 0.0, curve: .Default))
+                    node.updateLayout(transition: .immediate, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: containerLayout.0.size, insets: UIEdgeInsets(top: insets.top, left: insets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left), duration: 0.0, curve: .Default))
                     
-                    self.candidateHistoryNodeReadyDisposable.set(((node as! ChatHistoryNode).historyState.get()
+                    let historyEmptyNode = PeerMediaCollectionEmptyNode(mode: mediaCollectionInterfaceState.mode, theme: self.presentationData.theme, strings: self.presentationData.strings)
+                    historyEmptyNode.isHidden = true
+                    historyEmptyNode.updateLayout(size: containerLayout.0.size, insets: vanillaInsets, transition: .immediate)
+                    historyEmptyNode.frame = CGRect(origin: CGPoint(), size: containerLayout.0.size)
+                    
+                    self.candidateHistoryNodeReadyDisposable.set((node.historyState.get()
                         |> deliverOnMainQueue).start(next: { [weak self, weak node] _ in
                             if let strongSelf = self, let strongNode = node, strongNode == strongSelf.candidateHistoryNode?.0 {
                                 strongSelf.candidateHistoryNode = nil
-                                strongSelf.insertSubnode(strongNode, belowSubnode: strongSelf.historyNodeImpl)
+                                strongSelf.insertSubnode(strongNode, belowSubnode: strongSelf.historyNode)
+                                strongSelf.insertSubnode(historyEmptyNode, aboveSubnode: strongNode)
                                 
-                                let previousNode = strongSelf.historyNodeImpl
-                                strongSelf.historyNodeImpl = strongNode
+                                let previousNode = strongSelf.historyNode
+                                let previousEmptyNode = strongSelf.historyEmptyNode
+                                strongSelf.historyNode = strongNode
+                                strongSelf.historyEmptyNode = historyEmptyNode
+                                updateLoadNodeState(strongSelf.historyEmptyNode, strongSelf.historyNode.loadState)
+                                strongSelf.historyNode.setLoadStateUpdated { loadState in
+                                    if let strongSelf = self {
+                                        updateLoadNodeState(strongSelf.historyEmptyNode, loadState)
+                                    }
+                                }
                                 
-                                previousNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousNode] _ in
+                                let directionMultiplier: CGFloat
+                                if previousMode.rawValue < mediaCollectionInterfaceState.mode.rawValue {
+                                    directionMultiplier = 1.0
+                                } else {
+                                    directionMultiplier = -1.0
+                                }
+                                
+                                previousNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -directionMultiplier * strongSelf.bounds.width, y: 0.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak previousNode] _ in
                                     previousNode?.removeFromSupernode()
                                 })
+                                previousEmptyNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -directionMultiplier * strongSelf.bounds.width, y: 0.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak previousEmptyNode] _ in
+                                    previousEmptyNode?.removeFromSupernode()
+                                })
+                                strongSelf.historyNode.layer.animatePosition(from: CGPoint(x: directionMultiplier * strongSelf.bounds.width, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                                strongSelf.historyEmptyNode.layer.animatePosition(from: CGPoint(x: directionMultiplier * strongSelf.bounds.width, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                             }
                         }))
                 }
@@ -263,5 +428,65 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             
             self.requestLayout(animated ? .animated(duration: 0.4, curve: .spring) : .immediate)
         }
+    }
+    
+    func updateHiddenMedia() {
+        self.historyNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                itemNode.updateHiddenMedia()
+            } else if let itemNode = itemNode as? ListMessageNode {
+                itemNode.updateHiddenMedia()
+            } else if let itemNode = itemNode as? GridMessageItemNode {
+                itemNode.updateHiddenMedia()
+            }
+        }
+        
+        if let searchContentNode = self.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
+            searchContentNode.updateHiddenMedia()
+        }
+    }
+    
+    func messageForGallery(_ id: MessageId) -> PeerMediaCollectionMessageForGallery? {
+        if let message = self.historyNode.messageInCurrentHistoryView(id) {
+            return PeerMediaCollectionMessageForGallery(message: message, fromSearchResults: false)
+        }
+        
+        if let searchContentNode = self.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
+            if let message = searchContentNode.messageForGallery(id) {
+                return PeerMediaCollectionMessageForGallery(message: message, fromSearchResults: true)
+            }
+        }
+        
+        return nil
+    }
+    
+    func transitionNodeForGallery(messageId: MessageId, media: Media) -> ASDisplayNode? {
+        if let searchContentNode = self.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
+            if let transitionNode = searchContentNode.transitionNodeForGallery(messageId: messageId, media: media) {
+                return transitionNode
+            }
+        }
+        
+        var transitionNode: ASDisplayNode?
+        self.historyNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                    transitionNode = result
+                }
+            } else if let itemNode = itemNode as? ListMessageNode {
+                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                    transitionNode = result
+                }
+            } else if let itemNode = itemNode as? GridMessageItemNode {
+                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                    transitionNode = result
+                }
+            }
+        }
+        if let transitionNode = transitionNode {
+            return transitionNode
+        }
+        
+        return nil
     }
 }

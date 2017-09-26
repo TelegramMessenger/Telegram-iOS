@@ -378,6 +378,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 case let .result(info, items, installed):
                     if installed {
                         let _ = removeStickerPackInteractively(postbox: self.account.postbox, id: info.id).start()
+                        self.cancelButtonPressed()
                     } else {
                         let _ = addStickerPackInteractively(postbox: self.account.postbox, info: info, items: items).start()
                         self.cancelButtonPressed()

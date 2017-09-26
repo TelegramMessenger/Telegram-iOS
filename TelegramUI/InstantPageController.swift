@@ -7,6 +7,7 @@ import Display
 final class InstantPageController: ViewController {
     private let account: Account
     private var webPage: TelegramMediaWebpage
+    private let anchor: String?
     
     private var presentationData: PresentationData
     
@@ -24,11 +25,12 @@ final class InstantPageController: ViewController {
     private var settings: InstantPagePresentationSettings?
     private var settingsDisposable: Disposable?
     
-    init(account: Account, webPage: TelegramMediaWebpage) {
+    init(account: Account, webPage: TelegramMediaWebpage, anchor: String? = nil) {
         self.account = account
         self.presentationData = (account.telegramApplicationContext.currentPresentationData.with { $0 })
         
         self.webPage = webPage
+        self.anchor = anchor
         
         super.init(navigationBarTheme: nil)
         
@@ -38,7 +40,7 @@ final class InstantPageController: ViewController {
             if let strongSelf = self {
                 strongSelf.webPage = result
                 if strongSelf.isNodeLoaded {
-                    strongSelf.controllerNode.updateWebPage(result)
+                    strongSelf.controllerNode.updateWebPage(result, anchor: strongSelf.anchor)
                 }
             }
         })
@@ -82,7 +84,7 @@ final class InstantPageController: ViewController {
         
         self.displayNodeDidLoad()
         
-        self.controllerNode.updateWebPage(self.webPage)
+        self.controllerNode.updateWebPage(self.webPage, anchor: self.anchor)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

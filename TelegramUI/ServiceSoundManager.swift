@@ -39,6 +39,12 @@ public final class ServiceSoundManager {
             }
         }
     }
+    
+    public func playVibrationSound() {
+        self.queue.async {
+            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        }
+    }
 }
 
 public let serviceSoundManager = ServiceSoundManager()

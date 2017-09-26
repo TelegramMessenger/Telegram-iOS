@@ -68,13 +68,16 @@ final class ContactsControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
+        if let searchDisplayController = self.searchDisplayController {
+            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+            if !searchDisplayController.isDeactivating {
+                insets.top += 20.0
+            }
+        }
+        
         self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
         
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        
-        if let searchDisplayController = self.searchDisplayController {
-            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
-        }
     }
     
     func activateSearch() {
@@ -113,6 +116,7 @@ final class ContactsControllerNode: ASDisplayNode {
     
     func deactivateSearch() {
         if let searchDisplayController = self.searchDisplayController {
+            self.searchDisplayController = nil
             var maybePlaceholderNode: SearchBarPlaceholderNode?
             self.contactListNode.listNode.forEachItemNode { node in
                 if let node = node as? ChatListSearchItemNode {
@@ -121,7 +125,6 @@ final class ContactsControllerNode: ASDisplayNode {
             }
             
             searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
-            self.searchDisplayController = nil
         }
     }
 }

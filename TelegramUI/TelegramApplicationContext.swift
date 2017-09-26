@@ -57,7 +57,16 @@ public final class TelegramApplicationContext {
         
         self.presentationDataDisposable.set(self._presentationData.get().start(next: { [weak self] next in
             if let strongSelf = self {
-                let _ = strongSelf.currentPresentationData.swap(next)
+                var stringsUpdated = false
+                let _ = strongSelf.currentPresentationData.modify { current in
+                    if next.strings !== current.strings {
+                        stringsUpdated = true
+                    }
+                    return next
+                }
+                if stringsUpdated {
+                    updateLegacyLocalization(strings: next.strings)
+                }
             }
         }))
         
@@ -78,8 +87,8 @@ public final class TelegramApplicationContext {
     }
 }
 
-extension Account {
-    var telegramApplicationContext: TelegramApplicationContext {
+public extension Account {
+    public var telegramApplicationContext: TelegramApplicationContext {
         return self.applicationContext as! TelegramApplicationContext
     }
 }

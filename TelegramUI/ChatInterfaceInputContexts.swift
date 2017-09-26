@@ -50,7 +50,7 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
                 if c == " " {
                     if index != startIndex {
                         contextAddressRange = startIndex ..< index
-                        index = inputText.index(after: index)
+                    index = inputText.index(after: index)
                     }
                     break
                 } else {
@@ -86,7 +86,7 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
             return (inputText.startIndex ..< inputText.endIndex, [.emoji], nil)
         }
         
-        var possibleTypes = PossibleContextQueryTypes([.command, .mention])
+        var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag])
         var definedType = false
         
         while true {
@@ -132,7 +132,7 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
 func inputContextQueryForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> ChatPresentationInputQuery? {
     let inputState = chatPresentationInterfaceState.interfaceState.effectiveInputState
     if let (possibleQueryRange, possibleTypes, additionalStringRange) = textInputStateContextQueryRangeAndType(inputState) {
-        let query = inputState.inputText.substring(with: possibleQueryRange)
+        let query = String(inputState.inputText[possibleQueryRange])
         if possibleTypes == [.emoji] {
             return .emoji(query)
         } else if possibleTypes == [.hashtag] {
@@ -142,7 +142,7 @@ func inputContextQueryForChatPresentationIntefaceState(_ chatPresentationInterfa
         } else if possibleTypes == [.command] {
             return .command(query)
         } else if possibleTypes == [.contextRequest], let additionalStringRange = additionalStringRange {
-            let additionalString = inputState.inputText.substring(with: additionalStringRange)
+            let additionalString = String(inputState.inputText[additionalStringRange])
             return .contextRequest(addressName: query, query: additionalString)
         }
         return nil

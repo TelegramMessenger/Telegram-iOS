@@ -505,10 +505,23 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             }
             
             var needShareButton = false
-            if let peer = item.message.peers[item.message.id.peerId] {
-                if let channel = peer as? TelegramChannel {
-                    if case .broadcast = channel.info {
-                        needShareButton = true
+            if item.message.effectivelyIncoming {
+                if let peer = item.message.peers[item.message.id.peerId] {
+                    if let channel = peer as? TelegramChannel {
+                        if case .broadcast = channel.info {
+                            needShareButton = true
+                        }
+                    }
+                }
+                if !needShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo {
+                    needShareButton = true
+                }
+                if !needShareButton {
+                    loop: for media in item.message.media {
+                        if media is TelegramMediaGame || media is TelegramMediaInvoice {
+                            needShareButton = true
+                            break loop
+                        }
                     }
                 }
             }
@@ -1000,7 +1013,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
         
         if let selectionNode = self.selectionNode {
-            if selectionNode.frame.offsetBy(dx: 42.0, dy: 0.0).contains(point) {
+            var selectionNodeFrame = selectionNode.frame
+            //selectionNodeFrame.origin.x -= 42.0
+            selectionNodeFrame.size.width += 42.0
+            if selectionNodeFrame.contains(point) {
                 return selectionNode.view
             } else {
                 return nil

@@ -551,7 +551,7 @@ struct PresentationResourcesChat {
     
     static func chatTitlePanelUnmuteImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatTitlePanelUnmuteImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/RevealActionMuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/RevealActionUnmuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
         })
     }
     
@@ -569,25 +569,31 @@ struct PresentationResourcesChat {
     
     static func chatMessageAttachedContentButtonIncoming(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonIncoming.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 8.0, color: nil, strokeColor: theme.chat.bubble.incomingAccentColor, strokeWidth: 1.0, backgroundColor: nil)
+            return generateStretchableFilledCircleImage(diameter: 9.0, color: nil, strokeColor: theme.chat.bubble.incomingAccentColor, strokeWidth: 1.0, backgroundColor: nil)
         })
     }
     
     static func chatMessageAttachedContentHighlightedButtonIncoming(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIncoming.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 8.0, color: theme.chat.bubble.incomingAccentColor)
+            return generateStretchableFilledCircleImage(diameter: 9.0, color: theme.chat.bubble.incomingAccentColor)
         })
     }
     
     static func chatMessageAttachedContentButtonOutgoing(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonOutgoing.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 8.0, color: nil, strokeColor: theme.chat.bubble.outgoingAccentColor, strokeWidth: 1.0, backgroundColor: nil)
+            return generateStretchableFilledCircleImage(diameter: 9.0, color: nil, strokeColor: theme.chat.bubble.outgoingAccentColor, strokeWidth: 1.0, backgroundColor: nil)
         })
     }
     
     static func chatMessageAttachedContentHighlightedButtonOutgoing(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonOutgoing.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 8.0, color: theme.chat.bubble.outgoingAccentColor)
+            return generateStretchableFilledCircleImage(diameter: 9.0, color: theme.chat.bubble.outgoingAccentColor)
+        })
+    }
+    
+    static func chatLoadingIndicatorBackgroundImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatLoadingIndicatorBackgroundImage.rawValue, { theme in
+            return generateStretchableFilledCircleImage(diameter: 30.0, color: theme.chat.serviceMessage.serviceMessageFillColor)
         })
     }
 }

@@ -7,6 +7,7 @@ import TelegramCore
 final class OverlayUniversalVideoNode: OverlayMediaItemNode {
     private let content: UniversalVideoContent
     private let videoNode: UniversalVideoNode
+    private let decoration: OverlayVideoDecoration
     
     private var validLayoutSize: CGSize?
     
@@ -14,11 +15,18 @@ final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         return OverlayMediaItemNodeGroup(rawValue: 0)
     }
     
+    override var isMinimizeable: Bool {
+        return true
+    }
+    
     init(account: Account, manager: UniversalVideoContentManager, content: UniversalVideoContent, expand: @escaping () -> Void, close: @escaping () -> Void) {
         self.content = content
+        var unminimizeImpl: (() -> Void)?
         var togglePlayPauseImpl: (() -> Void)?
         var closeImpl: (() -> Void)?
-        let decoration = OverlayVideoDecoration(togglePlayPause: {
+        let decoration = OverlayVideoDecoration(unminimize: {
+            unminimizeImpl?()
+        }, togglePlayPause: {
             togglePlayPauseImpl?()
         }, expand: {
             expand()
@@ -26,9 +34,13 @@ final class OverlayUniversalVideoNode: OverlayMediaItemNode {
             closeImpl?()
         })
         self.videoNode = UniversalVideoNode(account: account, manager: manager, decoration: decoration, content: content, priority: .overlay)
+        self.decoration = decoration
         
         super.init()
         
+        unminimizeImpl = { [weak self] in
+            self?.unminimize?()
+        }
         togglePlayPauseImpl = { [weak self] in
             self?.videoNode.togglePlayPause()
         }
@@ -79,5 +91,9 @@ final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         
         self.videoNode.frame = CGRect(origin: CGPoint(), size: size)
         self.videoNode.updateLayout(size: size, transition: .immediate)
+    }
+    
+    override func updateMinimizedEdge(_ edge: OverlayMediaItemMinimizationEdge?, adjusting: Bool) {
+        self.decoration.updateMinimizedEdge(edge, adjusting: adjusting)
     }
 }

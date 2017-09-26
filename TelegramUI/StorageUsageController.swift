@@ -131,21 +131,19 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     }
 }
 
-private func stringForKeepMediaTimeout(_ timeout: Int32) -> String {
-    if timeout <= 7 * 24 * 60 * 60 {
-        return "1 week"
-    } else if timeout <= 1 * 31 * 24 * 60 * 60 {
-        return "1 month"
+private func stringForKeepMediaTimeout(strings: PresentationStrings, timeout: Int32) -> String {
+    if timeout > 1 * 31 * 24 * 60 * 60 {
+        return strings.MessageTimer_Forever
     } else {
-        return "Forever"
+        return timeIntervalString(strings: strings, value: timeout)
     }
 }
 
 private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?) -> [StorageUsageEntry] {
     var entries: [StorageUsageEntry] = []
     
-    entries.append(.keepMedia(presentationData.theme, "Keep Media", stringForKeepMediaTimeout(cacheSettings.defaultCacheStorageTimeout)))
-    entries.append(.keepMediaInfo(presentationData.theme, "Photos, videos and other files from cloud chats that you have **not accessed** during this period will be removed from this device to save disk space.\n\nAll media will stay in the Telegram cloud and can be re-downloaded if you need it again."))
+    entries.append(.keepMedia(presentationData.theme, presentationData.strings.Cache_KeepMedia, stringForKeepMediaTimeout(strings: presentationData.strings, timeout: cacheSettings.defaultCacheStorageTimeout)))
+    entries.append(.keepMediaInfo(presentationData.theme, presentationData.strings.Cache_Help))
     
     var addedHeader = false
     
@@ -166,7 +164,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
                 if let peer = stats.peers[peerId] {
                     if !addedHeader {
                         addedHeader = true
-                        entries.append(.peersHeader(presentationData.theme, "CHATS"))
+                        entries.append(.peersHeader(presentationData.theme, presentationData.strings.Cache_ByPeerHeader))
                     }
                     entries.append(.peer(index, presentationData.theme, presentationData.strings, peer, dataSizeString(Int(size))))
                     index += 1
@@ -174,22 +172,22 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
             }
         }
     } else {
-        entries.append(.collecting(presentationData.theme, "Calculating current cache size..."))
+        entries.append(.collecting(presentationData.theme, presentationData.strings.Cache_Indexing))
     }
     
     return entries
 }
 
-private func stringForCategory(_ category: PeerCacheUsageCategory) -> String {
+private func stringForCategory(strings: PresentationStrings, category: PeerCacheUsageCategory) -> String {
     switch category {
         case .image:
-            return "Photos"
+            return strings.Cache_Photos
         case .video:
-            return "Videos"
+            return strings.Cache_Videos
         case .audio:
-            return "Audio"
+            return strings.Cache_Music
         case .file:
-            return "Documents"
+            return strings.Cache_Files
     }
 }
 
@@ -218,6 +216,7 @@ func storageUsageController(account: Account) -> ViewController {
     actionDisposables.add(clearDisposable)
     
     let arguments = StorageUsageControllerArguments(account: account, updateKeepMedia: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController()
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -227,28 +226,27 @@ func storageUsageController(account: Account) -> ViewController {
                 return current.withUpdatedDefaultCacheStorageTimeout(timeout)
             }).start()
         }
+        let values: [Int32] = [
+            7 * 24 * 60 * 60,
+            1 * 31 * 24 * 60 * 60,
+            Int32.max
+        ]
+        let timeoutItems: [ActionSheetItem] = values.map { value in
+            return ActionSheetButtonItem(title: stringForKeepMediaTimeout(strings: presentationData.strings, timeout: value), action: {
+                dismissAction()
+                timeoutAction(value)
+            })
+        }
         controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "1 week", action: {
-                    dismissAction()
-                    timeoutAction(7 * 24 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: "1 month", action: {
-                    dismissAction()
-                    timeoutAction(1 * 31 * 24 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: "Forever", action: {
-                    dismissAction()
-                    timeoutAction(Int32.max)
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+            ActionSheetItemGroup(items: timeoutItems),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller)
     }, openPeerMedia: { peerId in
         let _ = (statsPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
             if let result = result, case let .result(stats) = result {
                 if let categories = stats.media[peerId] {
+                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                     let controller = ActionSheetController()
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
@@ -264,9 +262,9 @@ func storageUsageController(account: Account) -> ViewController {
                             let filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
                             
                             if filteredSize == 0 {
-                                title = "Clear"
+                                title = presentationData.strings.Cache_ClearNone
                             } else {
-                                title = "Clear (\(dataSizeString(Int(filteredSize))))"
+                                title = presentationData.strings.Cache_Clear("\(dataSizeString(Int(filteredSize)))").0
                             }
                             
                             if let item = item as? ActionSheetButtonItem {
@@ -303,7 +301,7 @@ func storageUsageController(account: Account) -> ViewController {
                             sizeIndex[categoryId] = (true, categorySize)
                             totalSize += categorySize
                             let index = itemIndex
-                            items.append(ActionSheetCheckboxItem(title: stringForCategory(categoryId), label: dataSizeString(Int(categorySize)), value: true, action: { value in
+                            items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(Int(categorySize)), value: true, action: { value in
                                 toggleCheck(categoryId, index)
                             }))
                             itemIndex += 1
@@ -311,7 +309,7 @@ func storageUsageController(account: Account) -> ViewController {
                     }
                     
                     if !items.isEmpty {
-                        items.append(ActionSheetButtonItem(title: "Clear (\(dataSizeString(Int(totalSize))))", action: {
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(Int(totalSize)))").0, action: {
                             if let statsPromise = statsPromise {
                                 var clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                                 //var clearSize: Int64 = 0
@@ -352,7 +350,7 @@ func storageUsageController(account: Account) -> ViewController {
                         
                         controller.setItemGroups([
                             ActionSheetItemGroup(items: items),
-                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                         ])
                         presentControllerImpl?(controller)
                     }
@@ -364,7 +362,7 @@ func storageUsageController(account: Account) -> ViewController {
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState<StorageUsageEntry>, StorageUsageEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Storage Usage"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Cache_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: storageUsageControllerEntries(presentationData: presentationData, cacheSettings: cacheSettings, cacheStats: cacheStats), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))

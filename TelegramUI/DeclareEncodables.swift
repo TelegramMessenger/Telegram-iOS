@@ -1,6 +1,7 @@
 import Postbox
 
 private var telegramUIDeclaredEncodables: Void = {
+    declareEncodable(InAppNotificationSettings.self, f: { InAppNotificationSettings(decoder: $0) })
     declareEncodable(ChatInterfaceState.self, f: { ChatInterfaceState(decoder: $0) })
     declareEncodable(ChatEmbeddedInterfaceState.self, f: { ChatEmbeddedInterfaceState(decoder: $0) })
     declareEncodable(VideoLibraryMediaResource.self, f: { VideoLibraryMediaResource(decoder: $0) })

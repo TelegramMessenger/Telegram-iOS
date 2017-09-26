@@ -25,7 +25,7 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
             case .UnreadEntry:
                 assertionFailure()
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
-            case .ChatInfoEntry, .EmptyChatInfoEntry:
+            case .ChatInfoEntry, .EmptyChatInfoEntry, .SearchEntry:
                 assertionFailure()
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
         }
@@ -42,7 +42,7 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
             case .UnreadEntry:
                 assertionFailure()
                 return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridHoleItem())
-            case .ChatInfoEntry, .EmptyChatInfoEntry:
+            case .ChatInfoEntry, .EmptyChatInfoEntry, .SearchEntry:
                 assertionFailure()
                 return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridHoleItem())
         }
@@ -174,6 +174,9 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     private var presentationData: PresentationData
     private let themeAndStringsPromise = Promise<(PresentationTheme, PresentationStrings)>()
     
+    public private(set) var loadState: ChatHistoryNodeLoadState?
+    private var loadStateUpdated: ((ChatHistoryNodeLoadState) -> Void)?
+    
     public init(account: Account, peerId: PeerId, messageId: MessageId?, tagMask: MessageTags?, controllerInteraction: ChatControllerInteraction) {
         self.account = account
         self.peerId = peerId
@@ -205,6 +208,12 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                 case .Loading:
                     Queue.mainQueue().async { [weak self] in
                         if let strongSelf = self {
+                            let loadState: ChatHistoryNodeLoadState = .loading
+                            if strongSelf.loadState != loadState {
+                                strongSelf.loadState = loadState
+                                strongSelf.loadStateUpdated?(loadState)
+                            }
+                            
                             let historyState: ChatHistoryNodeHistoryState = .loading
                             if strongSelf.currentHistoryState != historyState {
                                 strongSelf.currentHistoryState = historyState
@@ -233,10 +242,10 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                             }
                     }
                     
-                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, theme: themeAndStrings.0, strings: themeAndStrings.1))
+                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, includeSearchEntry: false, theme: themeAndStrings.0, strings: themeAndStrings.1))
                     let previous = previousView.swap(processedView)
                     
-                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil, readStateData: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0, from: previous, theme: themeAndStrings.0, strings: themeAndStrings.1) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
+                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0, from: previous, theme: themeAndStrings.0, strings: themeAndStrings.1) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
             }
         }
         
@@ -302,6 +311,10 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         self.historyDisposable.dispose()
     }
     
+    public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState) -> Void) {
+        self.loadStateUpdated = f
+    }
+    
     public func scrollToStartOfHistory() {
         self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: MessageIndex.lowerBound(peerId: self.peerId), anchorIndex: MessageIndex.lowerBound(peerId: self.peerId), sourceIndex: MessageIndex.upperBound(peerId: self.peerId), scrollPosition: .bottom(0.0), animated: true))
     }
@@ -337,6 +350,17 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                 if strongSelf.isNodeLoaded {
                     strongSelf.dequeueHistoryViewTransition()
                 } else {
+                    let loadState: ChatHistoryNodeLoadState
+                    if transition.historyView.filteredEntries.isEmpty {
+                        loadState = .empty
+                    } else {
+                        loadState = .messages
+                    }
+                    if strongSelf.loadState != loadState {
+                        strongSelf.loadState = loadState
+                        strongSelf.loadStateUpdated?(loadState)
+                    }
+                    
                     let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
                     if strongSelf.currentHistoryState != historyState {
                         strongSelf.currentHistoryState = historyState
@@ -361,6 +385,22 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     
                     if let range = visibleRange.loadedRange {
                         strongSelf.account.postbox.updateMessageHistoryViewVisibleRange(transition.historyView.originalView.id, earliestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.upperBound].index, latestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.lowerBound].index)
+                    }
+                    
+                    let loadState: ChatHistoryNodeLoadState
+                    if let historyView = strongSelf.historyView {
+                        if historyView.filteredEntries.isEmpty {
+                            loadState = .empty
+                        } else {
+                            loadState = .messages
+                        }
+                    } else {
+                        loadState = .loading
+                    }
+                    
+                    if strongSelf.loadState != loadState {
+                        strongSelf.loadState = loadState
+                        strongSelf.loadStateUpdated?(loadState)
                     }
                     
                     let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)

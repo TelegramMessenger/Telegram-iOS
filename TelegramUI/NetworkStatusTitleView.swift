@@ -21,7 +21,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
     var title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false) {
         didSet {
             if self.title != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: title.text, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 if self.title.activity != oldValue.activity {
                     if self.title.activity {
                         if self.activityIndicator.layer.superlayer == nil {

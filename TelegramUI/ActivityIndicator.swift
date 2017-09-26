@@ -57,7 +57,7 @@ final class ActivityIndicator: ASDisplayNode {
             case let .navigationAccent(theme):
                 self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
             case let .custom(color):
-                self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color)
+                self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: 22.0)
         }
         
         super.init()

@@ -58,9 +58,9 @@ private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat,
     var bottomRight = CGPoint(x: rects[0].maxX, y: rects[0].maxY)
     for i in 1 ..< rects.count {
         topLeft.x = min(topLeft.x, rects[i].origin.x)
-        topLeft.y = min(topLeft.x, rects[i].origin.y)
+        topLeft.y = min(topLeft.y, rects[i].origin.y)
         bottomRight.x = max(bottomRight.x, rects[i].maxX)
-        bottomRight.y = max(bottomRight.x, rects[i].maxY)
+        bottomRight.y = max(bottomRight.y, rects[i].maxY)
     }
     
     topLeft.x -= inset

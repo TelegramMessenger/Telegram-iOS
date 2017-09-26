@@ -37,6 +37,7 @@ private let activeNavigationSearchBar = PresentationThemeActiveNavigationSearchB
     inputTextColor: accentColor,
     inputPlaceholderTextColor: UIColor(rgb: 0x5e5e5e),
     inputIconColor: UIColor(rgb: 0x5e5e5e),
+    inputClearButtonColor: UIColor(rgb: 0x5e5e5e),
     separatorColor: UIColor(rgb: 0x1a1a1a)
 )
 
@@ -87,10 +88,12 @@ private let chatList = PresentationThemeChatList(
     messageDraftTextColor: UIColor(rgb: 0xdd4b39),
     checkmarkColor: UIColor(rgb: 0x545454),
     pendingIndicatorColor: UIColor(rgb: 0x545454),
+    muteIconColor: UIColor(rgb: 0x626262),
     unreadBadgeActiveBackgroundColor: UIColor(rgb: 0xb2b2b2),
     unreadBadgeActiveTextColor: UIColor(rgb: 0x121212),
     unreadBadgeInactiveBackgroundColor: UIColor(rgb: 0x626262),
     unreadBadgeInactiveTextColor:UIColor(rgb: 0x121212),
+    pinnedBadgeColor: UIColor(rgb: 0x121212),
     pinnedSearchBarColor: UIColor(rgb: 0x545454),
     regularSearchBarColor: UIColor(rgb: 0x545454),
     sectionHeaderFillColor: UIColor(rgb: 0x000000),
@@ -144,6 +147,7 @@ private let bubble = PresentationThemeChatBubble(
 private let serviceMessage = PresentationThemeServiceMessage(
     serviceMessageFillColor: UIColor(rgb: 0xffffff, alpha: 0.2),
     serviceMessagePrimaryTextColor: UIColor(rgb: 0xb2b2b2),
+    serviceMessageLinkHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.2),
     unreadBarFillColor: UIColor(rgb: 0x1b1b1b),
     unreadBarStrokeColor: UIColor(rgb: 0x000000),
     unreadBarTextColor: UIColor(rgb: 0xb2b2b2),

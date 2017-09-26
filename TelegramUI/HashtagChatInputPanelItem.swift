@@ -115,13 +115,13 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
             let leftInset: CGFloat = 15.0
             let rightInset: CGFloat = 10.0
             
-            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: item.text, font: textFont, textColor: .black), nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil, UIEdgeInsets())
+            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: "#\(item.text)", font: textFont, textColor: .black), nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil, UIEdgeInsets())
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: HashtagChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
             
             return (nodeLayout, { _ in
                 if let strongSelf = self {
-                    textApply()
+                    let _ = textApply()
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((nodeLayout.contentSize.height - textLayout.size.height) / 2.0)), size: textLayout.size)
                     
                     strongSelf.topSeparatorNode.isHidden = mergedTop

@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 
-func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, theme: PresentationTheme, strings: PresentationStrings) -> [ChatHistoryEntry] {
+func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, theme: PresentationTheme, strings: PresentationStrings) -> [ChatHistoryEntry] {
     var entries: [ChatHistoryEntry] = []
     
     for entry in view.entries {
@@ -52,7 +52,24 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
             if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
                 entries.insert(.ChatInfoEntry(botInfo.description, theme, strings), at: 0)
             } else if view.entries.isEmpty && includeEmptyEntry {
-                entries.insert(.EmptyChatInfoEntry(theme, strings), at: 0)
+                entries.insert(.EmptyChatInfoEntry(theme, strings, view.tagMask), at: 0)
+            }
+        }
+    } else if includeSearchEntry {
+        if view.laterId == nil {
+            var hasMessages = false
+            loop: for entry in view.entries {
+                if case .MessageEntry = entry {
+                    hasMessages = true
+                    break loop
+                }
+            }
+            if hasMessages {
+                entries.append(.SearchEntry(theme, strings))
+            } else if view.entries.isEmpty {
+                if view.tagMask != nil {
+                    entries.insert(.EmptyChatInfoEntry(theme, strings, view.tagMask), at: 0)
+                }
             }
         }
     }

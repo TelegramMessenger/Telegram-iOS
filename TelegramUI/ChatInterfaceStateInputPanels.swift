@@ -4,14 +4,20 @@ import TelegramCore
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputPanelNode? {
     if let _ = chatPresentationInterfaceState.search {
-        if let currentPanel = currentPanel as? ChatSearchInputPanelNode {
-            currentPanel.interfaceInteraction = interfaceInteraction
-            return currentPanel
-        } else {
-            let panel = ChatSearchInputPanelNode(theme: chatPresentationInterfaceState.theme)
-            panel.account = account
-            panel.interfaceInteraction = interfaceInteraction
-            return panel
+        var hasSelection = false
+        if let selectionState = chatPresentationInterfaceState.interfaceState.selectionState, !selectionState.selectedIds.isEmpty {
+            hasSelection = true
+        }
+        if !hasSelection {
+            if let currentPanel = currentPanel as? ChatSearchInputPanelNode {
+                currentPanel.interfaceInteraction = interfaceInteraction
+                return currentPanel
+            } else {
+                let panel = ChatSearchInputPanelNode(theme: chatPresentationInterfaceState.theme)
+                panel.account = account
+                panel.interfaceInteraction = interfaceInteraction
+                return panel
+            }
         }
     }
     

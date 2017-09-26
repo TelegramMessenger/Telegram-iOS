@@ -7,6 +7,7 @@ import Postbox
 
 final class ShareControllerInteraction {
     var selectedPeerIds = Set<PeerId>()
+    var selectedPeers: [Peer] = []
     let togglePeer: (Peer) -> Void
     
     init(togglePeer: @escaping (Peer) -> Void) {
@@ -14,31 +15,92 @@ final class ShareControllerInteraction {
     }
 }
 
-private let selectionBackgroundImage = generateImage(CGSize(width: 60.0 + 4.0, height: 60.0 + 4.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor(rgb: 0x007ee5).cgColor)
-    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor.white.cgColor)
-    context.fillEllipse(in: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
-})
+final class ShareControllerGridSection: GridSection {
+    let height: CGFloat = 33.0
+    
+    private let title: String
+    
+    var hashValue: Int {
+        return 1
+    }
+    
+    init(title: String) {
+        self.title = title
+    }
+    
+    func isEqual(to: GridSection) -> Bool {
+        if let to = to as? ShareControllerGridSection {
+            return self.title == to.title
+        } else {
+            return false
+        }
+    }
+    
+    func node() -> ASDisplayNode {
+        return ShareControllerGridSectionNode(title: self.title)
+    }
+}
+
+private let sectionTitleFont = Font.medium(12.0)
+
+final class ShareControllerGridSectionNode: ASDisplayNode {
+    let backgroundNode: ASDisplayNode
+    let titleNode: ASTextNode
+    
+    init(title: String) {
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode.backgroundColor = UIColor(rgb: 0xf7f7f7)
+        
+        self.titleNode = ASTextNode()
+        self.titleNode.isLayerBacked = true
+        self.titleNode.attributedText = NSAttributedString(string: title.uppercased(), font: sectionTitleFont, textColor: UIColor(rgb: 0x8e8e93))
+        self.titleNode.maximumNumberOfLines = 1
+        self.titleNode.truncationMode = .byTruncatingTail
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.titleNode)
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        let bounds = self.bounds
+        
+        self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: bounds.size.width, height: 27.0))
+        
+        let titleSize = self.titleNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
+        self.titleNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 6.0), size: titleSize)
+    }
+}
 
 final class ShareControllerPeerGridItem: GridItem {
     let account: Account
     let peer: Peer
+    let chatPeer: Peer?
     let controllerInteraction: ShareControllerInteraction
     
-    let section: GridSection? = nil
+    let section: GridSection?
     
-    init(account: Account, peer: Peer, controllerInteraction: ShareControllerInteraction) {
+    init(account: Account, peer: Peer, chatPeer: Peer?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil) {
         self.account = account
         self.peer = peer
+        self.chatPeer = chatPeer
         self.controllerInteraction = controllerInteraction
+        
+        if let sectionTitle = sectionTitle {
+            self.section = ShareControllerGridSection(title: sectionTitle)
+        } else {
+            self.section = nil
+        }
     }
     
     func node(layout: GridNodeLayout) -> GridItemNode {
         let node = ShareControllerPeerGridItemNode()
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, peer: self.peer)
+        node.setup(account: self.account, peer: self.peer, chatPeer: self.chatPeer)
         return node
     }
     
@@ -48,121 +110,59 @@ final class ShareControllerPeerGridItem: GridItem {
             return
         }
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, peer: self.peer)
+        node.setup(account: self.account, peer: self.peer, chatPeer: self.chatPeer)
     }
 }
 
-private let avatarFont = Font.medium(18.0)
-private let textFont = Font.regular(11.0)
-
 final class ShareControllerPeerGridItemNode: GridItemNode {
-    private var currentState: (Account, Peer)?
-    private let avatarSelectionNode: ASImageNode
-    private let avatarNodeContainer: ASDisplayNode
-    private let avatarNode: AvatarNode
-    private let textNode: ASTextNode
+    private var currentState: (Account, Peer, Peer?)?
+    private let peerNode: SelectablePeerNode
     
     var controllerInteraction: ShareControllerInteraction?
     
-    var currentSelected = false
-    
     override init() {
-        self.avatarNodeContainer = ASDisplayNode()
-        
-        self.avatarSelectionNode = ASImageNode()
-        self.avatarSelectionNode.image = selectionBackgroundImage
-        self.avatarSelectionNode.isLayerBacked = true
-        self.avatarSelectionNode.displayWithoutProcessing = true
-        self.avatarSelectionNode.displaysAsynchronously = false
-        self.avatarSelectionNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 60.0, height: 60.0))
-        self.avatarSelectionNode.alpha = 0.0
-        
-        self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 60.0, height: 60.0))
-        self.avatarNode.isLayerBacked = true
-        
-        self.textNode = ASTextNode()
-        self.textNode.isLayerBacked = true
-        self.textNode.displaysAsynchronously = true
-        self.textNode.maximumNumberOfLines = 2
+        self.peerNode = SelectablePeerNode()
         
         super.init()
         
-        self.avatarNodeContainer.addSubnode(self.avatarSelectionNode)
-        self.avatarNodeContainer.addSubnode(self.avatarNode)
-        self.addSubnode(self.avatarNodeContainer)
-        self.addSubnode(self.textNode)
+        self.peerNode.toggleSelection = { [weak self] in
+            if let strongSelf = self {
+                if let (_, peer, chatPeer) = strongSelf.currentState {
+                    let mainPeer = chatPeer ?? peer
+                    strongSelf.controllerInteraction?.togglePeer(mainPeer)
+                }
+            }
+        }
+        self.addSubnode(self.peerNode)
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-    }
-    
-    func setup(account: Account, peer: Peer) {
+    func setup(account: Account, peer: Peer, chatPeer: Peer?) {
         if self.currentState == nil || self.currentState!.0 !== account || !arePeersEqual(self.currentState!.1, peer) {
-            let text = peer.displayTitle
-            self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? UIColor(rgb: 0x007ee5) : UIColor.black, paragraphAlignment: .center)
-            self.avatarNode.setPeer(account: account, peer: peer)
-            self.currentState = (account, peer)
+            self.peerNode.setup(account: account, peer: peer, chatPeer: chatPeer)
+            self.currentState = (account, peer, chatPeer)
             self.setNeedsLayout()
         }
         self.updateSelection(animated: false)
     }
     
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            if let (_, peer) = self.currentState {
-                self.controllerInteraction?.togglePeer(peer)
-            }
-        }
-    }
-    
     func updateSelection(animated: Bool) {
         var selected = false
-        if let controllerInteraction = self.controllerInteraction, let (_, peer) = self.currentState {
-            selected = controllerInteraction.selectedPeerIds.contains(peer.id)
+        if let controllerInteraction = self.controllerInteraction, let (_, peer, chatPeer) = self.currentState {
+            let mainPeer = chatPeer ?? peer
+            selected = controllerInteraction.selectedPeerIds.contains(mainPeer.id)
         }
         
-        if selected != self.currentSelected {
-            self.currentSelected = selected
-            
-            if let (_, peer) = self.currentState {
-                self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: selected ? UIColor(rgb: 0x007ee5) : UIColor.black, paragraphAlignment: .center)
-            }
-            
-            if selected {
-                self.avatarNode.transform = CATransform3DMakeScale(0.866666, 0.866666, 1.0)
-                self.avatarSelectionNode.alpha = 1.0
-                if animated {
-                    //self.avatarNode.layer.animateSpring(from: 1.0 as NSNumber, to: 0.866666 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 10.0)
-                    self.avatarNode.layer.animateScale(from: 1.0, to: 0.866666, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-                    self.avatarSelectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                }
-            } else {
-                self.avatarNode.transform = CATransform3DIdentity
-                self.avatarSelectionNode.alpha = 0.0
-                if animated {
-                    //self.avatarNode.layer.animateSpring(from: 0.866666 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, initialVelocity: 10.0)
-                    self.avatarNode.layer.animateScale(from: 0.866666, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                    self.avatarSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.28)
-                }
-            }
-        }
+        self.peerNode.updateSelection(selected: selected, animated: animated)
     }
     
     override func layout() {
         super.layout()
         
         let bounds = self.bounds
-        
-        self.avatarNodeContainer.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - 60.0) / 2.0), y: 4.0), size: CGSize(width: 60.0, height: 60.0))
-        
-        self.textNode.frame = CGRect(origin: CGPoint(x: 2.0, y: 4.0 + 60.0 + 4.0), size: CGSize(width: bounds.size.width - 4.0, height: 34.0))
+        self.peerNode.frame = bounds
     }
     
     func animateIn() {
-        self.textNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 60.0), to: CGPoint(), duration: 0.42, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        self.peerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 60.0), to: CGPoint(), duration: 0.42, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
     }
 }

@@ -282,7 +282,11 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
     }
     
     func withUpdatedSynchronizeableInputState(_ state: SynchronizeableChatInputState?) -> SynchronizeableChatInterfaceState {
-        return self.withUpdatedComposeInputState(ChatTextInputState(inputText: state?.text ?? "")).withUpdatedReplyMessageId(state?.replyToMessageId)
+        var result = self.withUpdatedComposeInputState(ChatTextInputState(inputText: state?.text ?? "")).withUpdatedReplyMessageId(state?.replyToMessageId)
+        if let timestamp = state?.timestamp {
+            result = result.withUpdatedTimestamp(timestamp)
+        }
+        return result
     }
     
     var effectiveInputState: ChatTextInputState {

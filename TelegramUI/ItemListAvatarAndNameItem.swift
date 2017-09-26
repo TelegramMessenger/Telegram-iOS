@@ -174,6 +174,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
     private let callButton: HighlightableButtonNode
     
     private let nameNode: TextNode
+    private var verificationIconNode: ASImageNode?
     private let statusNode: TextNode
     
     private var inputSeparator: ASDisplayNode?
@@ -255,6 +256,17 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                 updatedTheme = item.theme
             }
             
+            var isVerified = false
+            if let peer = item.peer as? TelegramUser {
+                isVerified = peer.flags.contains(.isVerified)
+            } else if let peer = item.peer as? TelegramChannel {
+                isVerified = peer.flags.contains(.isVerified)
+            }
+            var verificationIconImage: UIImage?
+            if isVerified {
+                verificationIconImage = PresentationResourcesItemList.verifiedPeerIcon(item.theme)
+            }
+            
             let displayTitle: ItemListAvatarAndNameInfoItemName
             if let updatingName = item.state.updatingName {
                 displayTitle = updatingName
@@ -264,11 +276,17 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                 displayTitle = .title(title: "")
             }
             
-            let (nameNodeLayout, nameNodeApply) = layoutNameNode(NSAttributedString(string: displayTitle.composedTitle, font: nameFont, textColor: item.theme.list.itemPrimaryTextColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            var additionalTitleInset: CGFloat = 0.0
+            if let verificationIconImage = verificationIconImage {
+                additionalTitleInset += 3.0 + verificationIconImage.size.width
+            }
+            
+            let (nameNodeLayout, nameNodeApply) = layoutNameNode(NSAttributedString(string: displayTitle.composedTitle, font: nameFont, textColor: item.theme.list.itemPrimaryTextColor), nil, 1, .end, CGSize(width: width - 20 - 94.0 - (item.call != nil ? 36.0 : 0.0) - additionalTitleInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
             
             let statusText: String
             let statusColor: UIColor
-            if let presence = item.presence as? TelegramUserPresence {
+            if let _ = item.peer as? TelegramUser {
+                let presence = (item.presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none)
                 let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                 let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, presence: presence, relativeTo: Int32(timestamp))
                 statusText = string
@@ -279,20 +297,20 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                 }
             } else if let channel = item.peer as? TelegramChannel {
                 if let cachedChannelData = item.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-                    statusText = "\(memberCount) members"
+                    statusText = item.strings.GroupInfo_ParticipantCount(memberCount)
                     statusColor = item.theme.list.itemSecondaryTextColor
                 } else {
                     switch channel.info {
                         case .broadcast:
-                            statusText = "channel"
+                            statusText = item.strings.Channel_Status
                             statusColor = item.theme.list.itemSecondaryTextColor
                         case .group:
-                            statusText = "group"
+                            statusText = item.strings.Group_Status
                             statusColor = item.theme.list.itemSecondaryTextColor
                     }
                 }
             } else if let group = item.peer as? TelegramGroup {
-                statusText = "\(group.participantCount) members"
+                statusText = item.strings.GroupInfo_ParticipantCount(Int32(group.participantCount))
                 statusColor = item.theme.list.itemSecondaryTextColor
             } else {
                 statusText = ""
@@ -426,22 +444,6 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                     let _ = nameNodeApply()
                     let _ = statusNodeApply()
                     
-                    /*if let _ = item.state.updatingName {
-                        if !strongSelf.nameNode.alpha.isEqual(to: 0.5) {
-                            strongSelf.nameNode.alpha = 0.5
-                            if animated {
-                                strongSelf.nameNode.layer.animateAlpha(from: 1.0, to: 0.5, duration: 0.4)
-                            }
-                        }
-                    } else {
-                        if !strongSelf.nameNode.alpha.isEqual(to: 1.0) {
-                            strongSelf.nameNode.alpha = 1.0
-                            if animated {
-                                strongSelf.nameNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 0.4)
-                            }
-                        }
-                    }*/
-                    
                     if let peer = item.peer {
                         strongSelf.avatarNode.setPeer(account: item.account, peer: peer, temporaryRepresentation: item.updatingImage)
                     }
@@ -450,7 +452,25 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                     strongSelf.avatarNode.frame = avatarFrame
                     strongSelf.updatingAvatarOverlay.frame = avatarFrame
                     
-                    strongSelf.nameNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0), size: nameNodeLayout.size)
+                    let nameFrame = CGRect(origin: CGPoint(x: 94.0, y: 25.0), size: nameNodeLayout.size)
+                    strongSelf.nameNode.frame = nameFrame
+                    
+                    if let verificationIconImage = verificationIconImage {
+                        if strongSelf.verificationIconNode == nil {
+                            let verificationIconNode = ASImageNode()
+                            verificationIconNode.isLayerBacked = true
+                            verificationIconNode.displayWithoutProcessing = true
+                            verificationIconNode.displaysAsynchronously = false
+                            verificationIconNode.alpha = strongSelf.nameNode.alpha
+                            strongSelf.verificationIconNode = verificationIconNode
+                            strongSelf.addSubnode(verificationIconNode)
+                        }
+                        strongSelf.verificationIconNode?.image = verificationIconImage
+                        strongSelf.verificationIconNode?.frame = CGRect(origin: CGPoint(x: nameFrame.maxX + 3.0, y: nameFrame.minY + 4.0 + UIScreenPixel), size: verificationIconImage.size)
+                    } else if let verificationIconNode = strongSelf.verificationIconNode {
+                        strongSelf.verificationIconNode = nil
+                        verificationIconNode.removeFromSupernode()
+                    }
                     
                     strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0 + nameNodeLayout.size.height + 4.0), size: statusNodeLayout.size)
                     
@@ -475,7 +495,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                                     inputFirstField.textColor = item.theme.list.itemPrimaryTextColor
                                     inputFirstField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
                                     inputFirstField.autocorrectionType = .no
-                                    inputFirstField.attributedPlaceholder = NSAttributedString(string: "First Name", font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
+                                    inputFirstField.attributedPlaceholder = NSAttributedString(string: item.strings.UserInfo_FirstNamePlaceholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
                                     inputFirstField.attributedText = NSAttributedString(string: firstName, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
                                     strongSelf.inputFirstField = inputFirstField
                                     strongSelf.view.addSubview(inputFirstField)
@@ -490,7 +510,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                                     inputSecondField.textColor = item.theme.list.itemPrimaryTextColor
                                     inputSecondField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
                                     inputSecondField.autocorrectionType = .no
-                                    inputSecondField.attributedPlaceholder = NSAttributedString(string: "Last Name", font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
+                                    inputSecondField.attributedPlaceholder = NSAttributedString(string: item.strings.UserInfo_LastNamePlaceholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
                                     inputSecondField.attributedText = NSAttributedString(string: lastName, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
                                     strongSelf.inputSecondField = inputSecondField
                                     strongSelf.view.addSubview(inputSecondField)
@@ -523,7 +543,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                                     inputFirstField.textColor = item.theme.list.itemPrimaryTextColor
                                     inputFirstField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
                                     inputFirstField.autocorrectionType = .no
-                                    inputFirstField.attributedPlaceholder = NSAttributedString(string: "Title", font: Font.regular(19.0), textColor: item.theme.list.itemPlaceholderTextColor)
+                                    inputFirstField.attributedPlaceholder = NSAttributedString(string: item.strings.GroupInfo_GroupNamePlaceholder, font: Font.regular(19.0), textColor: item.theme.list.itemPlaceholderTextColor)
                                     inputFirstField.attributedText = NSAttributedString(string: title, font: Font.regular(19.0), textColor: item.theme.list.itemPrimaryTextColor)
                                     strongSelf.inputFirstField = inputFirstField
                                     strongSelf.view.addSubview(inputFirstField)
@@ -548,10 +568,15 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                             strongSelf.nameNode.alpha = 0.0
                             strongSelf.callButton.layer.animateAlpha(from: CGFloat(strongSelf.callButton.layer.opacity), to: 0.0, duration: 0.3)
                             strongSelf.callButton.alpha = 0.0
+                            if let verificationIconNode = strongSelf.verificationIconNode {
+                                verificationIconNode.layer.animateAlpha(from: CGFloat(verificationIconNode.layer.opacity), to: 0.0, duration: 0.3)
+                                verificationIconNode.alpha = 0.0
+                            }
                         } else {
                             strongSelf.statusNode.alpha = 0.0
                             strongSelf.nameNode.alpha = 0.0
                             strongSelf.callButton.alpha = 0.0
+                            strongSelf.verificationIconNode?.alpha = 0.0
                         }
                     } else {
                         var animateOut = false
@@ -596,10 +621,16 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
                             
                             strongSelf.callButton.layer.animateAlpha(from: CGFloat(strongSelf.callButton.layer.opacity), to: 1.0, duration: 0.3)
                             strongSelf.callButton.alpha = 1.0
+                            
+                            if let verificationIconNode = strongSelf.verificationIconNode {
+                                verificationIconNode.layer.animateAlpha(from: CGFloat(verificationIconNode.layer.opacity), to: 1.0, duration: 0.3)
+                                verificationIconNode.alpha = 1.0
+                            }
                         } else {
                             strongSelf.statusNode.alpha = 1.0
                             strongSelf.nameNode.alpha = 1.0
                             strongSelf.callButton.alpha = 1.0
+                            strongSelf.verificationIconNode?.alpha = 1.0
                         }
                     }
                     if let presence = item.presence as? TelegramUserPresence {

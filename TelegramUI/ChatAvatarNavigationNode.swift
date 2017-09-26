@@ -32,12 +32,12 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
             if !self.avatarNode.bounds.size.equalTo(bounds.size) {
                 self.avatarNode.font = smallFont
             }
-            self.avatarNode.frame = bounds
+            self.avatarNode.frame = bounds.offsetBy(dx: 8.0, dy: 0.0)
         } else {
             if !self.avatarNode.bounds.size.equalTo(bounds.size) {
                 self.avatarNode.font = normalFont
             }
-            self.avatarNode.frame = bounds.offsetBy(dx: 2.0, dy: 1.0)
+            self.avatarNode.frame = bounds.offsetBy(dx: 10.0, dy: 1.0)
         }
     }
 }

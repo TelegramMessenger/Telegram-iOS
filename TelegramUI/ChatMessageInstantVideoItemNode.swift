@@ -120,7 +120,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 updatedPlaybackStatus = combineLatest(fileMediaResourceStatus(account: item.account, file: updatedFile, message: item.message), item.account.pendingMessageManager.pendingMessageStatus(item.message.id))
                     |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
                         if let pendingStatus = pendingStatus {
-                            return .fetchStatus(.Fetching(progress: pendingStatus.progress))
+                            var progress = pendingStatus.progress
+                            if pendingStatus.isRunning {
+                                progress = max(progress, 0.27)
+                            }
+                            return .fetchStatus(.Fetching(progress: progress))
                         } else {
                             return resourceStatus
                         }

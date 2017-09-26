@@ -290,22 +290,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         if let controllerInteraction = self.controllerInteraction, let currentMessage = self.currentMessage {
             var saveToCameraRoll: (() -> Void)?
             var shareAction: (([PeerId]) -> Void)?
-            let shareController = ShareController(account: self.account, shareAction: { peerIds in
-                shareAction?(peerIds)
-            }, defaultAction: ShareControllerAction(title: "Save to Camera Roll", action: {
-                saveToCameraRoll?()
-            }))
+            let shareController = ShareController(account: self.account, subject: .message(currentMessage), saveToCameraRoll: true)
             controllerInteraction.presentController(shareController, nil)
-            shareAction = { [weak shareController, weak self] peerIds in
-                shareController?.dismiss()
-                
-                if let strongSelf = self, let currentMessage = strongSelf.currentMessage {
-                    for peerId in peerIds {
-                        let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: [.forward(source: currentMessage.id)]).start()
-                    }
-                }
-            }
-            saveToCameraRoll = { [weak shareController, weak self] in
+            /*saveToCameraRoll = { [weak shareController, weak self] in
                 shareController?.dismiss()
                 
                 if let strongSelf = self, let currentMessage = strongSelf.currentMessage {
@@ -462,6 +449,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                 })
             ])])
             controllerInteraction.presentController(actionSheet, nil)
+ */
         }
     }
     

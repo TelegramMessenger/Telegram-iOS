@@ -303,45 +303,45 @@ private struct DataAndStorageData: Equatable {
     }
 }
 
-private func stringForUseLessDataSetting(_ settings: VoiceCallSettings) -> String {
+private func stringForUseLessDataSetting(strings: PresentationStrings, settings: VoiceCallSettings) -> String {
     switch settings.dataSaving {
         case .never:
-            return "Never"
+            return strings.CallSettings_Never
         case .cellular:
-            return "On Mobile Network"
+            return strings.CallSettings_OnMobile
         case .always:
-            return "Always"
+            return strings.CallSettings_Always
     }
 }
 
 private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
-    entries.append(.storageUsage(presentationData.theme, "Storage Usage"))
-    entries.append(.networkUsage(presentationData.theme, "Network Usage"))
+    entries.append(.storageUsage(presentationData.theme, presentationData.strings.Cache_Title))
+    entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title))
     
-    entries.append(.automaticPhotoDownloadHeader(presentationData.theme, "AUTOMATIC PHOTO DOWNLOAD"))
-    entries.append(.automaticPhotoDownloadPrivateChats(presentationData.theme, "Private Chats", data.automaticMediaDownloadSettings.categories.photo.privateChats))
-    entries.append(.automaticPhotoDownloadGroupsAndChannels(presentationData.theme, "Groups and Channels", data.automaticMediaDownloadSettings.categories.photo.groupsAndChannels))
+    entries.append(.automaticPhotoDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutomaticPhotoDownload))
+    entries.append(.automaticPhotoDownloadPrivateChats(presentationData.theme, presentationData.strings.ChatSettings_PrivateChats, data.automaticMediaDownloadSettings.categories.photo.privateChats))
+    entries.append(.automaticPhotoDownloadGroupsAndChannels(presentationData.theme, presentationData.strings.ChatSettings_Groups, data.automaticMediaDownloadSettings.categories.photo.groupsAndChannels))
     
-    entries.append(.automaticVoiceDownloadHeader(presentationData.theme, "AUTOMATIC AUDIO DOWNLOAD"))
-    entries.append(.automaticVoiceDownloadPrivateChats(presentationData.theme, "Private Chats", data.automaticMediaDownloadSettings.categories.voice.privateChats))
-    entries.append(.automaticVoiceDownloadGroupsAndChannels(presentationData.theme, "Groups and Channels", data.automaticMediaDownloadSettings.categories.voice.groupsAndChannels))
+    entries.append(.automaticVoiceDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutomaticAudioDownload))
+    entries.append(.automaticVoiceDownloadPrivateChats(presentationData.theme, presentationData.strings.ChatSettings_PrivateChats, data.automaticMediaDownloadSettings.categories.voice.privateChats))
+    entries.append(.automaticVoiceDownloadGroupsAndChannels(presentationData.theme, presentationData.strings.ChatSettings_Groups, data.automaticMediaDownloadSettings.categories.voice.groupsAndChannels))
     
-    entries.append(.automaticInstantVideoDownloadHeader(presentationData.theme, "AUTOMATIC VIDEO MESSAGE DOWNLOAD"))
-    entries.append(.automaticInstantVideoDownloadPrivateChats(presentationData.theme, "Private Chats", data.automaticMediaDownloadSettings.categories.instantVideo.privateChats))
-    entries.append(.automaticInstantVideoDownloadGroupsAndChannels(presentationData.theme, "Groups and Channels", data.automaticMediaDownloadSettings.categories.instantVideo.groupsAndChannels))
+    entries.append(.automaticInstantVideoDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutomaticVideoMessageDownload))
+    entries.append(.automaticInstantVideoDownloadPrivateChats(presentationData.theme, presentationData.strings.ChatSettings_PrivateChats, data.automaticMediaDownloadSettings.categories.instantVideo.privateChats))
+    entries.append(.automaticInstantVideoDownloadGroupsAndChannels(presentationData.theme, presentationData.strings.ChatSettings_Groups, data.automaticMediaDownloadSettings.categories.instantVideo.groupsAndChannels))
     
     /*entries.append(.automaticGifDownloadHeader("AUTOMATIC GIF DOWNLOAD"))
     entries.append(.automaticGifDownloadPrivateChats("Private Chats", data.automaticMediaDownloadSettings.categories.gif.privateChats))
     entries.append(.automaticGifDownloadGroupsAndChannels("Groups and Channels", data.automaticMediaDownloadSettings.categories.gif.groupsAndChannels))*/
     
-    entries.append(.voiceCallsHeader(presentationData.theme, "VOICE CALLS"))
-    entries.append(.useLessVoiceData(presentationData.theme, "Use Less Data", stringForUseLessDataSetting(data.voiceCallSettings)))
+    entries.append(.voiceCallsHeader(presentationData.theme, presentationData.strings.Settings_CallSettings.uppercased()))
+    entries.append(.useLessVoiceData(presentationData.theme, presentationData.strings.CallSettings_UseLessData, stringForUseLessDataSetting(strings: presentationData.strings, settings: data.voiceCallSettings)))
     
-    entries.append(.otherHeader(presentationData.theme, "OTHER"))
-    entries.append(.saveIncomingPhotos(presentationData.theme, "Save Incoming Photos", data.automaticMediaDownloadSettings.saveIncomingPhotos))
-    entries.append(.saveEditedPhotos(presentationData.theme, "Save Edited Photos", data.generatedMediaStoreSettings.storeEditedPhotos))
+    entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
+    entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos, data.automaticMediaDownloadSettings.saveIncomingPhotos))
+    entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
     
     return entries
 }
@@ -434,7 +434,7 @@ func dataAndStorageController(account: Account) -> ViewController {
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), dataAndStorageDataPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state, dataAndStorageData -> (ItemListControllerState, (ItemListNodeState<DataAndStorageEntry>, DataAndStorageEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Data and Storage"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))

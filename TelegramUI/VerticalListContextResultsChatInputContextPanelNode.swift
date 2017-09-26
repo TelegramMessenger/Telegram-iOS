@@ -117,7 +117,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
-        self.listView.keepBottomItemOverscrollBackground = true
+        self.listView.keepBottomItemOverscrollBackground = .white
         self.listView.limitHitTestToNodes = true
         self.listView.isHidden = true
         

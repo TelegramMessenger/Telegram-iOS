@@ -11,26 +11,30 @@ private final class UserInfoControllerArguments {
     let tapAvatarAction: () -> Void
     let openChat: () -> Void
     let changeNotificationMuteSettings: () -> Void
+    let changeNotificationSoundSettings: () -> Void
     let openSharedMedia: () -> Void
     let openGroupsInCommon: () -> Void
     let updatePeerBlocked: (Bool) -> Void
     let deleteContact: () -> Void
     let displayUsernameContextMenu: (String) -> Void
     let call: () -> Void
+    let openCallMenu: (String) -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, call: @escaping () -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.updateEditingName = updateEditingName
         self.tapAvatarAction = tapAvatarAction
         self.openChat = openChat
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
+        self.changeNotificationSoundSettings = changeNotificationSoundSettings
         self.openSharedMedia = openSharedMedia
         self.openGroupsInCommon = openGroupsInCommon
         self.updatePeerBlocked = updatePeerBlocked
         self.deleteContact = deleteContact
         self.displayUsernameContextMenu = displayUsernameContextMenu
         self.call = call
+        self.openCallMenu = openCallMenu
     }
 }
 
@@ -243,7 +247,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return ItemListTextWithLabelItem(theme: theme, label: text, text: value, multiline: true, sectionId: self.section, action: nil)
             case let .phoneNumber(theme, _, value):
                 return ItemListTextWithLabelItem(theme: theme, label: value.label, text: formatPhoneNumber(value.number), multiline: false, sectionId: self.section, action: {
-                    
+                    arguments.openCallMenu(value.number)
                 })
             case let .userName(theme, text, value):
                 return ItemListTextWithLabelItem(theme: theme, label: text, text: "@\(value)", multiline: false, sectionId: self.section, action: {
@@ -271,6 +275,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 })
             case let .notificationSound(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
+                    arguments.changeNotificationSoundSettings()
                 })
             case let .groupsInCommon(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: "\(value)", sectionId: self.section, style: .plain, action: {
@@ -355,7 +360,7 @@ private func stringForBlockAction(strings: PresentationStrings, action: Destruct
     }
 }
 
-private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, state: UserInfoState, peerChatState: PostboxCoding?) -> [UserInfoEntry] {
+private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
     var entries: [UserInfoEntry] = []
     
     guard let peer = view.peers[view.peerId], let user = peerViewMainPeer(view) as? TelegramUser else {
@@ -373,7 +378,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         }
     }
     
-    entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: true))
+    entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: user.botInfo == nil))
     if let cachedUserData = view.cachedData as? CachedUserData {
         if let about = cachedUserData.about, !about.isEmpty {
             entries.append(UserInfoEntry.about(presentationData.theme, presentationData.strings.Profile_About, about))
@@ -410,7 +415,12 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
     }
     
     if isEditing {
-        entries.append(UserInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, "Default"))
+        var messageSound: PeerMessageSound = .default
+        if let settings = view.notificationSettings as? TelegramPeerNotificationSettings {
+            messageSound = settings.messageSound
+        }
+        
+        entries.append(UserInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: messageSound, default: globalNotificationSettings.effective.privateChats.sound)))
         
         if view.peerIsContact {
             entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .removeContact), .removeContact))
@@ -462,6 +472,28 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
     var updateHiddenAvatarImpl: (() -> Void)?
     
+    let cachedAvatarEntries = Atomic<Promise<[AvatarGalleryEntry]>?>(value: nil)
+    
+    let requestCallImpl: () -> Void = {
+        let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: false)
+        if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
+            if currentPeerId == peerId {
+                account.telegramApplicationContext.navigateToCurrentCall?()
+            } else {
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let _ = (account.postbox.modify { modifier -> (Peer?, Peer?) in
+                    return (modifier.getPeer(peerId), modifier.getPeer(currentPeerId))
+                    } |> deliverOnMainQueue).start(next: { peer, current in
+                        if let peer = peer, let current = current {
+                            presentControllerImpl?(standardTextAlertController(title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
+                            })]), nil)
+                        }
+                    })
+            }
+        }
+    }
+    
     let arguments = UserInfoControllerArguments(account: account, avatarAndNameInfoContext: avatarAndNameInfoContext, updateEditingName: { editingName in
         updateState { state in
             if let _ = state.editingState {
@@ -476,7 +508,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 return
             }
             
-            let galleryController = AvatarGalleryController(account: account, peer: peer, replaceRootController: { controller, ready in
+            let galleryController = AvatarGalleryController(account: account, peer: peer, remoteEntries: cachedAvatarEntries.with { $0 }, replaceRootController: { controller, ready in
                 
             })
             hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
@@ -490,6 +522,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     }, openChat: {
         openChatImpl?()
     }, changeNotificationMuteSettings: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController()
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -505,32 +538,43 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             }
             changeMuteSettingsDisposable.set(changePeerNotificationSettings(account: account, peerId: peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
         }
+        var items: [ActionSheetItem] = []
+        items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsEnable, action: {
+            dismissAction()
+            notificationAction(0)
+        }))
+        let intervals: [Int32] = [
+            1 * 60 * 60,
+            8 * 60 * 60,
+            2 * 24 * 60 * 60
+        ]
+        for value in intervals {
+            items.append(ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: value), action: {
+                dismissAction()
+                notificationAction(value)
+            }))
+        }
+        items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsDisable, action: {
+            dismissAction()
+            notificationAction(Int32.max)
+        }))
+        
         controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Enable", action: {
-                    dismissAction()
-                    notificationAction(0)
-                }),
-                ActionSheetButtonItem(title: "Mute for 1 hour", action: {
-                    dismissAction()
-                    notificationAction(1 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: "Mute for 8 hours", action: {
-                    dismissAction()
-                    notificationAction(8 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: "Mute for 2 days", action: {
-                    dismissAction()
-                    notificationAction(2 * 24 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: "Disable", action: {
-                    dismissAction()
-                    notificationAction(Int32.max)
-                })
-                ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+            ActionSheetItemGroup(items: items),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }, changeNotificationSoundSettings: {
+        let _ = (account.postbox.modify { modifier -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
+            let peerSettings: TelegramPeerNotificationSettings = (modifier.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
+            let globalSettings: GlobalNotificationSettings = (modifier.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
+            return (peerSettings, globalSettings)
+        } |> deliverOnMainQueue).start(next: { settings in
+            let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: settings.0.messageSound, defaultSound: settings.1.effective.privateChats.sound, completion: { sound in
+                let _ = updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound).start()
+            })
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        })
     }, openSharedMedia: {
         if let controller = peerSharedMediaController(account: account, peerId: peerId) {
             pushControllerImpl?(controller)
@@ -544,28 +588,60 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     }, displayUsernameContextMenu: { text in
         displayUsernameContextMenuImpl?(text)
     }, call: {
-        let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: false)
-        if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-            if currentPeerId == peerId {
-                account.telegramApplicationContext.navigateToCurrentCall?()
+        requestCallImpl()
+    }, openCallMenu: { number in
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let _ = (account.postbox.modify { modifier -> Peer? in
+            return modifier.getPeer(peerId)
+        } |> deliverOnMainQueue).start(next: { peer in
+            if let peer = peer as? TelegramUser, let peerPhoneNumber = peer.phone, formatPhoneNumber(number) == formatPhoneNumber(peerPhoneNumber) {
+                let controller = ActionSheetController()
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.UserInfo_TelegramCall, action: {
+                            dismissAction()
+                            requestCallImpl()
+                        }),
+                        ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
+                            dismissAction()
+                            account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
+                        }),
+                    ]),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                    ])
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             } else {
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                let _ = (account.postbox.modify { modifier -> (Peer?, Peer?) in
-                    return (modifier.getPeer(peerId), modifier.getPeer(currentPeerId))
-                } |> deliverOnMainQueue).start(next: { peer, current in
-                    if let peer = peer, let current = current {
-                        presentControllerImpl?(standardTextAlertController(title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                            let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
-                        })]), nil)
-                    }
-                })
+                account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
             }
-        }
+        })
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [.peerChatState(peerId: peerId)]))
-        |> map { presentationData, state, view, chatState -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
+    let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [.peerChatState(peerId: peerId), globalNotificationsKey]))
+        |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
+            
+            var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
+            if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
+                if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                    globalNotificationSettings = settings
+                }
+            }
+            
+            if let peer = peer {
+                let _ = cachedAvatarEntries.modify { value in
+                    if value != nil {
+                        return value
+                    } else {
+                        let promise = Promise<[AvatarGalleryEntry]>()
+                        promise.set(fetchedAvatarGalleryEntries(account: account, peer: peer))
+                        return promise
+                    }
+                }
+            }
             var leftNavigationButton: ItemListNavigationButton?
             let rightNavigationButton: ItemListNavigationButton
             if let editingState = state.editingState {
@@ -624,12 +700,12 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
-            let listState = ItemListNodeState(entries: userInfoEntries(account: account, presentationData: presentationData, view: view, state: state, peerChatState: (chatState.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState), style: .plain)
+            let listState = ItemListNodeState(entries: userInfoEntries(account: account, presentationData: presentationData, view: view, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
-    }
+        }
     
     let controller = ItemListController(account: account, state: signal)
     

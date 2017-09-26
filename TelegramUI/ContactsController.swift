@@ -135,8 +135,8 @@ public class ContactsController: ViewController {
     
     private func deactivateSearch() {
         if !self.displayNavigationBar {
-            self.contactsNode.deactivateSearch()
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
+            self.contactsNode.deactivateSearch()
         }
     }
 }

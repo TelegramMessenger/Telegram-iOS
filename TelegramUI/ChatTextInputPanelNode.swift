@@ -17,63 +17,6 @@ private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height
     context.clear(CGRect(origin: CGPoint(x: (size.width - cutoutWidth) / 2.0, y: 0.0), size: CGSize(width: cutoutWidth, height: size.height / 2.0)))
 })
 
-enum ChatTextInputAccessoryItem: Equatable {
-    case keyboard
-    case stickers
-    case inputButtons
-    case messageAutoremoveTimeout(Int32?)
-}
-
-enum ChatVideoRecordingStatus: Equatable {
-    case recording(InstantVideoControllerRecordingStatus)
-    case editing
-}
-
-enum ChatTextInputPanelMediaRecordingState: Equatable {
-    case audio(recorder: ManagedAudioRecorder, isLocked: Bool)
-    case video(status: ChatVideoRecordingStatus, isLocked: Bool)
-    
-    var isLocked: Bool {
-        switch self {
-            case let .audio(_, isLocked):
-                return isLocked
-            case let .video(_, isLocked):
-                return isLocked
-        }
-    }
-    
-    func withLocked(_ isLocked: Bool) -> ChatTextInputPanelMediaRecordingState {
-        switch self {
-            case let .audio(recorder, _):
-                return .audio(recorder: recorder, isLocked: isLocked)
-            case let .video(status, _):
-                return .video(status: status, isLocked: isLocked)
-        }
-    }
-}
-
-struct ChatTextInputPanelState: Equatable {
-    let accessoryItems: [ChatTextInputAccessoryItem]
-    let contextPlaceholder: NSAttributedString?
-    let mediaRecordingState: ChatTextInputPanelMediaRecordingState?
-    
-    init(accessoryItems: [ChatTextInputAccessoryItem], contextPlaceholder: NSAttributedString?, mediaRecordingState: ChatTextInputPanelMediaRecordingState?) {
-        self.accessoryItems = accessoryItems
-        self.contextPlaceholder = contextPlaceholder
-        self.mediaRecordingState = mediaRecordingState
-    }
-    
-    init() {
-        self.accessoryItems = []
-        self.contextPlaceholder = nil
-        self.mediaRecordingState = nil
-    }
-    
-    func withUpdatedMediaRecordingState(_ mediaRecordingState: ChatTextInputPanelMediaRecordingState?) -> ChatTextInputPanelState {
-        return ChatTextInputPanelState(accessoryItems: self.accessoryItems, contextPlaceholder: self.contextPlaceholder, mediaRecordingState: mediaRecordingState)
-    }
-}
-
 private final class AccessoryItemIconButton: HighlightableButton {
     private let item: ChatTextInputAccessoryItem
     
@@ -232,10 +175,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
-    let textFieldInsets = UIEdgeInsets(top: 6.0, left: 42.0, bottom: 6.0, right: 42.0)
-    let textInputViewInternalInsets = UIEdgeInsets(top: 6.5, left: 13.0, bottom: 7.5, right: 13.0)
-    let accessoryButtonSpacing: CGFloat = 0.0
-    let accessoryButtonInset: CGFloat = 4.0 + UIScreenPixel
+    private let textFieldInsets = UIEdgeInsets(top: 6.0, left: 42.0, bottom: 6.0, right: 42.0)
+    private let textInputViewInternalInsets = UIEdgeInsets(top: 1.0, left: 13.0, bottom: 1.0, right: 13.0)
+    private let textInputViewRealInsets = UIEdgeInsets(top: 5.5, left: 0.0, bottom: 6.5, right: 0.0)
+    private let accessoryButtonSpacing: CGFloat = 0.0
+    private let accessoryButtonInset: CGFloat = 4.0 + UIScreenPixel
     
     init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
         self.textInputBackgroundView = UIImageView()
@@ -340,6 +284,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.delegate = self
         textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
         textInputNode.keyboardAppearance = keyboardAppearance
+        textInputNode.textContainerInset = UIEdgeInsets(top: self.textInputViewRealInsets.top, left: 0.0, bottom: self.textInputViewRealInsets.bottom, right: 0.0)
         self.addSubnode(textInputNode)
         self.textInputNode = textInputNode
         
@@ -375,9 +320,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         let textFieldHeight: CGFloat
         if let textInputNode = self.textInputNode {
-            textFieldHeight = min(115.0, max(21.0, ceil(textInputNode.measure(CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height)))
+            let unboundTextFieldHeight = max(33.0, ceil(textInputNode.measure(CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height))
+            
+            textFieldHeight = min(114.0, unboundTextFieldHeight)
         } else {
-            textFieldHeight = 21.0
+            textFieldHeight = 33.0
         }
         
         return (accessoryButtonsWidth, textFieldHeight)
@@ -695,6 +642,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         if let textInputNode = self.textInputNode {
             transition.updateFrame(node: textInputNode, frame: CGRect(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + audioRecordingItemsVerticalOffset, width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
+            textInputNode.layout()
         }
         
         if let contextPlaceholder = interfaceState.inputTextPanelState.contextPlaceholder {
@@ -713,13 +661,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             let _ = placeholderApply()
             
-            contextPlaceholderNode.frame = CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + 0.5 + audioRecordingItemsVerticalOffset), size: placeholderSize.size)
+            contextPlaceholderNode.frame = CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + UIScreenPixel + audioRecordingItemsVerticalOffset), size: placeholderSize.size)
         } else if let contextPlaceholderNode = self.contextPlaceholderNode {
             self.contextPlaceholderNode = nil
             contextPlaceholderNode.removeFromSupernode()
         }
         
-        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + 0.5 + audioRecordingItemsVerticalOffset), size: self.textPlaceholderNode.frame.size))
+        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + UIScreenPixel + audioRecordingItemsVerticalOffset), size: self.textPlaceholderNode.frame.size))
         
         transition.updateFrame(layer: self.textInputBackgroundView.layer, frame: CGRect(x: self.textFieldInsets.left, y: self.textFieldInsets.top + audioRecordingItemsVerticalOffset, width: width - self.textFieldInsets.left - self.textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom))
         
@@ -975,9 +923,5 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         return super.hitTest(point, with: event)
-    }
-    
-    func f2() {
-        
     }
 }

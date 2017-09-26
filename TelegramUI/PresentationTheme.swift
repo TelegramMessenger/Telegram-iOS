@@ -149,15 +149,17 @@ public final class PresentationThemeActiveNavigationSearchBar {
     public let inputTextColor: UIColor
     public let inputPlaceholderTextColor: UIColor
     public let inputIconColor: UIColor
+    public let inputClearButtonColor: UIColor
     public let separatorColor: UIColor
     
-    public init(backgroundColor: UIColor, accentColor: UIColor, inputFillColor: UIColor, inputTextColor: UIColor, inputPlaceholderTextColor: UIColor, inputIconColor: UIColor, separatorColor: UIColor) {
+    public init(backgroundColor: UIColor, accentColor: UIColor, inputFillColor: UIColor, inputTextColor: UIColor, inputPlaceholderTextColor: UIColor, inputIconColor: UIColor, inputClearButtonColor: UIColor, separatorColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.accentColor = accentColor
         self.inputFillColor = inputFillColor
         self.inputTextColor = inputTextColor
         self.inputPlaceholderTextColor = inputPlaceholderTextColor
         self.inputIconColor = inputIconColor
+        self.inputClearButtonColor = inputClearButtonColor
         self.separatorColor = separatorColor
     }
     
@@ -168,6 +170,7 @@ public final class PresentationThemeActiveNavigationSearchBar {
         self.inputTextColor = try parseColor(decoder, "inputTextColor")
         self.inputPlaceholderTextColor = try parseColor(decoder, "inputPlaceholderTextColor")
         self.inputIconColor = try parseColor(decoder, "inputIconColor")
+        self.inputClearButtonColor = try parseColor(decoder, "inputClearButtonColor")
         self.separatorColor = try parseColor(decoder, "separatorColor")
     }
     
@@ -350,17 +353,19 @@ public final class PresentationThemeChatList {
     public let messageDraftTextColor: UIColor
     public let checkmarkColor: UIColor
     public let pendingIndicatorColor: UIColor
+    public let muteIconColor: UIColor
     public let unreadBadgeActiveBackgroundColor: UIColor
     public let unreadBadgeActiveTextColor: UIColor
     public let unreadBadgeInactiveBackgroundColor: UIColor
     public let unreadBadgeInactiveTextColor: UIColor
+    public let pinnedBadgeColor: UIColor
     public let pinnedSearchBarColor: UIColor
     public let regularSearchBarColor: UIColor
     public let sectionHeaderFillColor: UIColor
     public let sectionHeaderTextColor: UIColor
     public let searchBarKeyboardColor: PresentationThemeKeyboardColor
     
-    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, searchBarKeyboardColor: PresentationThemeKeyboardColor) {
+    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, searchBarKeyboardColor: PresentationThemeKeyboardColor) {
         self.backgroundColor = backgroundColor
         self.itemSeparatorColor = itemSeparatorColor
         self.itemBackgroundColor = itemBackgroundColor
@@ -374,10 +379,12 @@ public final class PresentationThemeChatList {
         self.messageDraftTextColor = messageDraftTextColor
         self.checkmarkColor = checkmarkColor
         self.pendingIndicatorColor = pendingIndicatorColor
+        self.muteIconColor = muteIconColor
         self.unreadBadgeActiveBackgroundColor = unreadBadgeActiveBackgroundColor
         self.unreadBadgeActiveTextColor = unreadBadgeActiveTextColor
         self.unreadBadgeInactiveBackgroundColor = unreadBadgeInactiveBackgroundColor
         self.unreadBadgeInactiveTextColor = unreadBadgeInactiveTextColor
+        self.pinnedBadgeColor = pinnedBadgeColor
         self.pinnedSearchBarColor = pinnedSearchBarColor
         self.regularSearchBarColor = regularSearchBarColor
         self.sectionHeaderFillColor = sectionHeaderFillColor
@@ -399,10 +406,12 @@ public final class PresentationThemeChatList {
         self.messageDraftTextColor = try parseColor(decoder, "messageDraftTextColor")
         self.checkmarkColor = try parseColor(decoder, "checkmarkColor")
         self.pendingIndicatorColor = try parseColor(decoder, "pendingIndicatorColor")
+        self.muteIconColor = try parseColor(decoder, "muteIconColor")
         self.unreadBadgeActiveBackgroundColor = try parseColor(decoder, "unreadBadgeActiveBackgroundColor")
         self.unreadBadgeActiveTextColor = try parseColor(decoder, "unreadBadgeActiveTextColor")
         self.unreadBadgeInactiveBackgroundColor = try parseColor(decoder, "unreadBadgeInactiveBackgroundColor")
         self.unreadBadgeInactiveTextColor = try parseColor(decoder, "unreadBadgeInactiveTextColor")
+        self.pinnedBadgeColor = try parseColor(decoder, "pinnedBadgeColor")
         self.pinnedSearchBarColor = try parseColor(decoder, "pinnedSearchBarColor")
         self.regularSearchBarColor = try parseColor(decoder, "regularSearchBarColor")
         self.sectionHeaderFillColor = try parseColor(decoder, "sectionHeaderFillColor")
@@ -602,6 +611,7 @@ public final class PresentationThemeChatBubble {
 public final class PresentationThemeServiceMessage {
     public let serviceMessageFillColor: UIColor
     public let serviceMessagePrimaryTextColor: UIColor
+    public let serviceMessageLinkHighlightColor: UIColor
     
     public let unreadBarFillColor: UIColor
     public let unreadBarStrokeColor: UIColor
@@ -611,9 +621,10 @@ public final class PresentationThemeServiceMessage {
     public let dateFillFloatingColor: UIColor
     public let dateTextColor: UIColor
     
-    public init(serviceMessageFillColor: UIColor, serviceMessagePrimaryTextColor: UIColor, unreadBarFillColor: UIColor, unreadBarStrokeColor: UIColor, unreadBarTextColor: UIColor, dateFillStaticColor: UIColor, dateFillFloatingColor: UIColor, dateTextColor: UIColor) {
+    public init(serviceMessageFillColor: UIColor, serviceMessagePrimaryTextColor: UIColor, serviceMessageLinkHighlightColor: UIColor, unreadBarFillColor: UIColor, unreadBarStrokeColor: UIColor, unreadBarTextColor: UIColor, dateFillStaticColor: UIColor, dateFillFloatingColor: UIColor, dateTextColor: UIColor) {
         self.serviceMessageFillColor = serviceMessageFillColor
         self.serviceMessagePrimaryTextColor = serviceMessagePrimaryTextColor
+        self.serviceMessageLinkHighlightColor = serviceMessageLinkHighlightColor
         self.unreadBarFillColor = unreadBarFillColor
         self.unreadBarStrokeColor = unreadBarStrokeColor
         self.unreadBarTextColor = unreadBarTextColor
@@ -625,6 +636,7 @@ public final class PresentationThemeServiceMessage {
     public init(decoder: PostboxDecoder) throws {
         self.serviceMessageFillColor = try parseColor(decoder, "serviceMessageFillColor")
         self.serviceMessagePrimaryTextColor = try parseColor(decoder, "serviceMessagePrimaryTextColor")
+        self.serviceMessageLinkHighlightColor = try parseColor(decoder, "serviceMessageLinkHighlightColor")
         self.unreadBarFillColor = try parseColor(decoder, "unreadBarFillColor")
         self.unreadBarStrokeColor = try parseColor(decoder, "unreadBarStrokeColor")
         self.unreadBarTextColor = try parseColor(decoder, "unreadBarTextColor")

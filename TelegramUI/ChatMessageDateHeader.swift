@@ -87,8 +87,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
     
-    //private let testNode = ASDisplayNode()
-    
     init(timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings) {
         self.timestamp = timestamp
         self.theme = theme
@@ -111,7 +109,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         //self.testNode.backgroundColor = .black
         //self.testNode.isLayerBacked = true
         
-        super.init(layerBacked: true, dynamicBounce: true, isRotated: true, seeThrough: false)
+        super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
@@ -160,6 +158,12 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
                 print("position \(position.x), \(position.y)")
             }
         }*/
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
@@ -227,6 +231,22 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
                 self.backgroundNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
                 self.labelNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
             }
+        }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.labelNode.alpha.isZero {
+            return nil
+        }
+        if self.backgroundNode.frame.contains(point) {
+            return self.view
+        }
+        return nil
+    }
+    
+    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            
         }
     }
 }

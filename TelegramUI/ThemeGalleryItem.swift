@@ -111,7 +111,7 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = node.view.snapshotContentTree()!
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollView)
+        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
         copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak copyView] _ in
@@ -151,7 +151,7 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = node.view.snapshotContentTree()!
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollView)
+        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
         let intermediateCompletion = { [weak copyView] in

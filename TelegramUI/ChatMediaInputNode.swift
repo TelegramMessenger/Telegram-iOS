@@ -52,7 +52,7 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, from fr
                 index += 1
             }
             stationaryItems = .indices(indices)
-        case let .navigate(index):
+        case let .navigate(index, collectionId):
             if let index = index {
                 for i in 0 ..< toEntries.count {
                     if toEntries[i].index >= index {
@@ -65,7 +65,21 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, from fr
                     }
                 }
             } else if !toEntries.isEmpty {
-                scrollToItem = GridNodeScrollToItem(index: 0, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: .up, adjustForSection: true)
+                if let collectionId = collectionId {
+                    for i in 0 ..< toEntries.count {
+                        if toEntries[i].index.collectionId == collectionId {
+                            var directionHint: GridNodePreviousItemsTransitionDirectionHint = .up
+                            if !fromEntries.isEmpty && fromEntries[0].index < toEntries[i].index {
+                                directionHint = .down
+                            }
+                            scrollToItem = GridNodeScrollToItem(index: i, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: directionHint, adjustForSection: true)
+                            break
+                        }
+                    }
+                }
+                if scrollToItem == nil {
+                    scrollToItem = GridNodeScrollToItem(index: 0, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: .up, adjustForSection: true)
+                }
             }
     }
     
@@ -112,10 +126,12 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
         }
     }
     
+    var savedStickerIds = Set<Int64>()
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
         let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_Favorited.uppercased(), shortName: "", hash: 0, count: 0)
         for i in 0 ..< savedStickers.items.count {
             if let item = savedStickers.items[i].contents as? SavedStickerItem {
+                savedStickerIds.insert(item.file.fileId.id)
                 let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                 let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
                 entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
@@ -125,11 +141,18 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
     
     if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
         let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", hash: 0, count: 0)
-        for i in 0 ..< min(20, recentStickers.items.count) {
+        var addedCount = 0
+        for i in 0 ..< recentStickers.items.count {
+            if addedCount >= 20 {
+                break
+            }
             if let item = recentStickers.items[i].contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
-                let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
-                let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
-                entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
+                if !savedStickerIds.contains(mediaId.id) {
+                    let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
+                    let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
+                    entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
+                    addedCount += 1
+                }
             }
         }
     }
@@ -145,7 +168,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
 private enum StickerPacksCollectionPosition: Equatable {
     case initial
     case scroll(aroundIndex: ItemCollectionViewEntryIndex?)
-    case navigate(index: ItemCollectionViewEntryIndex?)
+    case navigate(index: ItemCollectionViewEntryIndex?, collectionId: ItemCollectionId?)
     
     static func ==(lhs: StickerPacksCollectionPosition, rhs: StickerPacksCollectionPosition) -> Bool {
         switch lhs {
@@ -170,7 +193,7 @@ private enum StickerPacksCollectionPosition: Equatable {
 private enum StickerPacksCollectionUpdate {
     case generic
     case scroll
-    case navigate(ItemCollectionViewEntryIndex?)
+    case navigate(ItemCollectionViewEntryIndex?, ItemCollectionId?)
 }
 
 final class ChatMediaInputNodeInteraction {
@@ -280,17 +303,17 @@ final class ChatMediaInputNode: ChatInputNode {
                     strongSelf.setCurrentPane(.gifs, transition: .animated(duration: 0.25, curve: .spring))
                 } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue {
                     strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
-                    strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil)))
+                    strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil, collectionId: collectionId)))
                 } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue {
                     strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
-                    strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil)))
+                    strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil, collectionId: collectionId)))
                 } else {
                     strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
                     for (id, _, _) in currentView.collectionInfos {
                         if id.namespace == collectionId.namespace {
                             if id == collectionId {
                                 let itemIndex = ItemCollectionViewEntryIndex.lowerBound(collectionIndex: index, collectionId: id)
-                                strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: itemIndex)))
+                                strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: itemIndex, collectionId: nil)))
                                 break
                             }
                             index += 1
@@ -329,14 +352,14 @@ final class ChatMediaInputNode: ChatInputNode {
                                 }
                                 return (view, update)
                             }
-                    case let .navigate(index):
+                    case let .navigate(index, collectionId):
                         var firstTime = true
                         return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 140)
                             |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                                 let update: StickerPacksCollectionUpdate
                                 if firstTime {
                                     firstTime = false
-                                    update = .navigate(index)
+                                    update = .navigate(index, collectionId)
                                 } else {
                                     update = .generic
                                 }

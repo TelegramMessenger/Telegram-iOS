@@ -1,11 +1,11 @@
 import Foundation
 import Postbox
 
-enum PeerMediaCollectionMode {
+enum PeerMediaCollectionMode: Int32 {
     case photoOrVideo
     case file
-    case music
     case webpage
+    case music
 }
 
 func titleForPeerMediaCollectionMode(_ mode: PeerMediaCollectionMode, strings: PresentationStrings) -> String {

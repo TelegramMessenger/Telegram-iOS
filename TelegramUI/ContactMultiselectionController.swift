@@ -23,6 +23,8 @@ public class ContactMultiselectionController: ViewController {
     private let index: PeerNameIndex = .lastNameFirst
     
     private var _ready = Promise<Bool>()
+    private var _limitsReady = Promise<Bool>()
+    private var _listReady = Promise<Bool>()
     override public var ready: Promise<Bool> {
         return self._ready
     }
@@ -39,6 +41,9 @@ public class ContactMultiselectionController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var limitsConfiguration: LimitsConfiguration?
+    private var limitsConfigurationDisposable: Disposable?
+    
     public init(account: Account, mode: ContactMultiselectionControllerMode) {
         self.account = account
         self.mode = mode
@@ -50,22 +55,6 @@ public class ContactMultiselectionController: ViewController {
         super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
-        
-        switch mode {
-            case .groupCreation:
-                self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.Compose_NewGroup, counter: "0/5000")
-                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
-                self.rightNavigationButton = rightNavigationButton
-                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
-                rightNavigationButton.isEnabled = false
-            case .peerSelection:
-                self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
-                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
-                self.rightNavigationButton = rightNavigationButton
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
-                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
-                rightNavigationButton.isEnabled = false
-        }
         
         self.navigationItem.titleView = self.titleView
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
@@ -89,6 +78,18 @@ public class ContactMultiselectionController: ViewController {
                     }
                 }
             })
+        
+        self.limitsConfigurationDisposable = (account.postbox.modify { modifier -> LimitsConfiguration in
+            return currentLimitsConfiguration(modifier: modifier)
+        } |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.limitsConfiguration = value
+                strongSelf.updateTitle()
+                strongSelf._limitsReady.set(.single(true))
+            }
+        })
+        
+        self._ready.set(combineLatest(self._listReady.get(), self._limitsReady.get()) |> map { $0 && $1 })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -97,18 +98,38 @@ public class ContactMultiselectionController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.limitsConfigurationDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
-        //self.title = self.presentationData.strings.Contacts_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.updateTitle()
+    }
+    
+    private func updateTitle() {
+        switch self.mode {
+            case .groupCreation:
+                let maxCount: Int32 = self.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
+                self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.Compose_NewGroup, counter: "0/\(maxCount)")
+                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.rightNavigationButton = rightNavigationButton
+                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
+                rightNavigationButton.isEnabled = false
+            case .peerSelection:
+                self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
+                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.rightNavigationButton = rightNavigationButton
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
+                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
+                rightNavigationButton.isEnabled = false
+        }
     }
     
     override public func loadDisplayNode() {
         self.displayNode = ContactMultiselectionControllerNode(account: self.account)
-        self._ready.set(self.contactsNode.contactListNode.ready)
+        self._listReady.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
@@ -120,14 +141,22 @@ public class ContactMultiselectionController: ViewController {
                 var addedToken: EditableTokenListToken?
                 var removedTokenId: AnyHashable?
                 
+                let maxRegularCount: Int32 = strongSelf.limitsConfiguration?.maxGroupMemberCount ?? 200
+                var displayCountAlert = false
+                
                 var selectionState: ContactListNodeGroupSelectionState?
                 strongSelf.contactsNode.contactListNode.updateSelectionState { state in
                     if let state = state {
-                        let updatedState = state.withToggledPeerId(peer.id)
+                        var updatedState = state.withToggledPeerId(peer.id)
                         if updatedState.selectedPeerIndices[peer.id] == nil {
                             removedTokenId = peer.id
                         } else {
-                            addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle)
+                            if updatedState.selectedPeerIndices.count >= maxRegularCount {
+                                displayCountAlert = true
+                                updatedState = updatedState.withToggledPeerId(peer.id)
+                            } else {
+                                addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle)
+                            }
                         }
                         updatedCount = updatedState.selectedPeerIndices.count
                         selectionState = updatedState
@@ -146,7 +175,8 @@ public class ContactMultiselectionController: ViewController {
                     strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
                     switch strongSelf.mode {
                         case .groupCreation:
-                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroup, counter: "\(updatedCount)/5000")
+                            let maxCount: Int32 = strongSelf.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
+                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroup, counter: "\(updatedCount)/\(maxCount)")
                         case .peerSelection:
                             break
                     }
@@ -160,6 +190,10 @@ public class ContactMultiselectionController: ViewController {
                     }
                 }
                 strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
+                
+                if displayCountAlert {
+                    strongSelf.present(standardTextAlertController(title: nil, text: strongSelf.presentationData.strings.CreateGroup_SoftUserLimitAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }
             }
         }
         
@@ -192,7 +226,8 @@ public class ContactMultiselectionController: ViewController {
                     strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0
                     switch strongSelf.mode {
                         case .groupCreation:
-                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroup, counter: "\(updatedCount)/5000")
+                            let maxCount: Int32 = strongSelf.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
+                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroup, counter: "\(updatedCount)/\(maxCount)")
                         case .peerSelection:
                             break
                     }

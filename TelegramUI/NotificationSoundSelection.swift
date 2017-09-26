@@ -29,6 +29,7 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
     case modernHeader(PresentationTheme, String)
     case classicHeader(PresentationTheme, String)
     case none(section: NotificationSoundSelectionSection, theme: PresentationTheme, text: String, selected: Bool)
+    case `default`(section: NotificationSoundSelectionSection, theme: PresentationTheme, text: String, selected: Bool)
     case sound(section: NotificationSoundSelectionSection, index: Int32, theme: PresentationTheme, text: String, sound: PeerMessageSound, selected: Bool)
     
     var section: ItemListSectionId {
@@ -38,6 +39,8 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
             case .classicHeader:
                 return NotificationSoundSelectionSection.classic.rawValue
             case let .none(section, _, _, _):
+                return section.rawValue
+            case let .default(section, _, _, _):
                 return section.rawValue
             case let .sound(section, _, _, _, _, _):
                 return section.rawValue
@@ -57,12 +60,19 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
                     case .classic:
                         return 1001
                 }
+            case let .default(section, _, _, _):
+                switch section {
+                    case .modern:
+                        return 2
+                    case .classic:
+                        return 1002
+                }
             case let .sound(section, index, _, _, _, _):
                 switch section {
                     case .modern:
-                        return 2 + index
+                        return 3 + index
                     case .classic:
-                        return 1002 + index
+                        return 1003 + index
                 }
         }
     }
@@ -83,6 +93,12 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
                 }
             case let .none(lhsSection, lhsTheme, lhsText, lhsSelected):
                 if case let .none(rhsSection, rhsTheme, rhsText, rhsSelected) = rhs, lhsSection == rhsSection, lhsTheme === rhsTheme, lhsText == rhsText, lhsSelected == rhsSelected {
+                    return true
+                } else {
+                    return false
+                }
+            case let .default(lhsSection, lhsTheme, lhsText, lhsSelected):
+                if case let .default(rhsSection, rhsTheme, rhsText, rhsSelected) = rhs, lhsSection == rhsSection, lhsTheme === rhsTheme, lhsText == rhsText, lhsSelected == rhsSelected {
                     return true
                 } else {
                     return false
@@ -110,6 +126,10 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
                 return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: true, sectionId: self.section, action: {
                     arguments.selectSound(.none)
                 })
+            case let .default(_, theme, text, selected):
+                return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    arguments.selectSound(.default)
+                })
             case let .sound(_, _, theme, text, sound, selected):
                 return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.selectSound(sound)
@@ -118,11 +138,14 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
     }
 }
 
-private func notificationsAndSoundsEntries(presentationData: PresentationData, state: NotificationSoundSelectionState) -> [NotificationSoundSelectionEntry] {
+private func notificationsAndSoundsEntries(presentationData: PresentationData, defaultSound: PeerMessageSound?, state: NotificationSoundSelectionState) -> [NotificationSoundSelectionEntry] {
     var entries: [NotificationSoundSelectionEntry] = []
     
     entries.append(.modernHeader(presentationData.theme, presentationData.strings.Notifications_AlertTones))
-    entries.append(.none(section: .modern, theme: presentationData.theme, text: "None", selected: state.selectedSound == .none))
+    entries.append(.none(section: .modern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .none), selected: state.selectedSound == .none))
+    if let defaultSound = defaultSound {
+        entries.append(.default(section: .modern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .default, default: defaultSound), selected: state.selectedSound == .default))
+    }
     for i in 0 ..< 12 {
         let sound: PeerMessageSound = .bundledModern(id: Int32(i))
         entries.append(.sound(section: .modern, index: Int32(i), theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
@@ -137,7 +160,87 @@ private func notificationsAndSoundsEntries(presentationData: PresentationData, s
     return entries
 }
 
-public func notificationSoundSelectionController(account: Account, isModal: Bool, currentSound: PeerMessageSound) -> (ViewController, Signal<PeerMessageSound?, NoError>) {
+private final class AudioPlayerWrapper: NSObject, AVAudioPlayerDelegate {
+    private let completed: () -> Void
+    private var player: AVAudioPlayer?
+    
+    init(url: URL, completed: @escaping () -> Void) {
+        self.completed = completed
+        
+        super.init()
+        
+        self.player = try? AVAudioPlayer(contentsOf: url, fileTypeHint: "m4a")
+        self.player?.delegate = self
+    }
+    
+    func play() {
+        self.player?.play()
+    }
+    
+    func stop() {
+        self.player?.stop()
+        self.player = nil
+    }
+    
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        self.completed()
+    }
+}
+
+public func fileNameForNotificationSound(_ sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> String {
+    switch sound {
+        case .none:
+            return ""
+        case .default:
+            if let defaultSound = defaultSound {
+                if case .default = defaultSound {
+                    return "\(100)"
+                } else {
+                    return fileNameForNotificationSound(defaultSound, defaultSound: nil)
+                }
+            } else {
+                return "\(100)"
+            }
+        case let .bundledModern(id):
+            return "\(id + 100)"
+        case let .bundledClassic(id):
+            return "\(id + 2)"
+    }
+}
+
+private func playSound(account: Account, sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> Signal<Void, NoError> {
+    if case .none = sound {
+        return .complete()
+    } else {
+        return Signal { subscriber in
+            var currentPlayer: AudioPlayerWrapper?
+            var deactivateImpl: (() -> Void)?
+            let session = account.telegramApplicationContext.mediaManager.audioSession.push(audioSessionType: .play, activate: {
+                if let url = Bundle.main.url(forResource: fileNameForNotificationSound(sound, defaultSound: defaultSound), withExtension: "m4a") {
+                    currentPlayer = AudioPlayerWrapper(url: url, completed: {
+                        deactivateImpl?()
+                    })
+                    currentPlayer?.play()
+                }
+            }, deactivate: {
+                currentPlayer?.stop()
+                currentPlayer = nil
+                
+                return .complete()
+            })
+            deactivateImpl = {
+                session.dispose()
+            }
+            return ActionDisposable {
+                session.dispose()
+                currentPlayer?.stop()
+                currentPlayer = nil
+            }
+        } |> runOn(Queue.mainQueue())
+    }
+}
+
+public func notificationSoundSelectionController(account: Account, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
     let statePromise = ValuePromise(NotificationSoundSelectionState(selectedSound: currentSound), ignoreRepeated: true)
     let stateValue = Atomic(value: NotificationSoundSelectionState(selectedSound: currentSound))
     let updateState: ((NotificationSoundSelectionState) -> NotificationSoundSelectionState) -> Void = { f in
@@ -147,10 +250,14 @@ public func notificationSoundSelectionController(account: Account, isModal: Bool
     var completeImpl: (() -> Void)?
     var cancelImpl: (() -> Void)?
     
+    let playSoundDisposable = MetaDisposable()
+    
     let arguments = NotificationSoundSelectionArguments(account: account, selectSound: { sound in
         updateState { state in
             return NotificationSoundSelectionState(selectedSound: sound)
         }
+        
+        playSoundDisposable.set(playSound(account: account, sound: sound, defaultSound: defaultSound).start())
     }, complete: {
         completeImpl?()
     }, cancel: {
@@ -169,28 +276,27 @@ public func notificationSoundSelectionController(account: Account, isModal: Bool
             })
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Notifications_TextTone), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: notificationsAndSoundsEntries(presentationData: presentationData, state: state), style: .blocks)
+            let listState = ItemListNodeState(entries: notificationsAndSoundsEntries(presentationData: presentationData, defaultSound: defaultSound, state: state), style: .blocks)
             
             return (controllerState, (listState, arguments))
         }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(account: account, state: signal |> afterDisposed {
+        playSoundDisposable.dispose()
+    })
     controller.enableInteractiveDismiss = true
-    
-    let result = Promise<PeerMessageSound?>()
     
     completeImpl = { [weak controller] in
         let sound = stateValue.with { state in
             return state.selectedSound
         }
-        result.set(.single(sound))
+        completion(sound)
         controller?.dismiss()
     }
     
     cancelImpl = { [weak controller] in
-        result.set(.single(nil))
         controller?.dismiss()
     }
     
-    return (controller, result.get())
+    return controller
 }

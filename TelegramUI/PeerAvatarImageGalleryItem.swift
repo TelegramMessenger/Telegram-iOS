@@ -7,19 +7,21 @@ import TelegramCore
 
 class PeerAvatarImageGalleryItem: GalleryItem {
     let account: Account
+    let strings: PresentationStrings
     let entry: AvatarGalleryEntry
     
-    init(account: Account, entry: AvatarGalleryEntry) {
+    init(account: Account, strings: PresentationStrings, entry: AvatarGalleryEntry) {
         self.account = account
+        self.strings = strings
         self.entry = entry
     }
     
     func node() -> GalleryItemNode {
         let node = PeerAvatarImageGalleryItemNode(account: self.account)
         
-        /*if let location = self.location {
-            node._title.set(.single("\(location.index + 1) of \(location.count)"))
-        }*/
+        if let indexData = self.entry.indexData {
+            node._title.set(.single("\(indexData.position + 1) \(self.strings.Common_of) \(indexData.totalCount)"))
+        }
         
         node.setEntry(self.entry)
         
@@ -28,9 +30,9 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? PeerAvatarImageGalleryItemNode {
-            /*if let location = self.location {
-                node._title.set(.single("\(location.index + 1) of \(location.count)"))
-            }*/
+            if let indexData = self.entry.indexData {
+                node._title.set(.single("\(indexData.position + 1) \(self.strings.Common_of) \(indexData.totalCount)"))
+            }
             
             node.setEntry(self.entry)
         }
@@ -102,7 +104,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = node.view.snapshotContentTree()!
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollView)
+        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
         copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak copyView] _ in
@@ -142,7 +144,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = node.view.snapshotContentTree()!
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollView)
+        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
         let intermediateCompletion = { [weak copyView] in

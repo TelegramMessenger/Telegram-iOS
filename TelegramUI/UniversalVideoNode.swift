@@ -114,7 +114,7 @@ final class UniversalVideoNode: ASDisplayNode {
             self?.playbackCompleted?()
         })
         
-        self._status.set(self.manager.statusSignal(id: self.content.id))
+        self._status.set(self.manager.statusSignal(content: self.content))
         
         self.decoration.setStatus(self.status)
         

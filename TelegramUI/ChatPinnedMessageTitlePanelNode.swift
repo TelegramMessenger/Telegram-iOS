@@ -13,9 +13,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let titleNode: TextNode
     private let textNode: TextNode
     private let separatorNode: ASDisplayNode
-    
-    private let disposable = MetaDisposable()
-    private var currentMessageId: MessageId?
 
     private var currentLayout: CGFloat?
     private var currentMessage: Message?
@@ -81,10 +78,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.addSubnode(self.separatorNode)
     }
     
-    deinit {
-        self.disposable.dispose()
-    }
-    
     private var theme: PresentationTheme?
     
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
@@ -98,18 +91,21 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }
         
-        if self.currentMessageId != interfaceState.pinnedMessageId {
-            self.currentMessageId = interfaceState.pinnedMessageId
-            if let pinnedMessageId = interfaceState.pinnedMessageId {
-                self.disposable.set((singleMessageView(account: account, messageId: pinnedMessageId, loadIfNotExists: true)
-                    |> deliverOnMainQueue).start(next: { [weak self] view in
-                        if let strongSelf = self, let message = view.message {
-                            strongSelf.currentMessage = message
-                            if let currentLayout = strongSelf.currentLayout {
-                                strongSelf.enqueueTransition(width: currentLayout, transition: .immediate, message: message, theme: interfaceState.theme, strings: interfaceState.strings)
-                            }
-                        }
-                    }))
+        var messageUpdated = false
+        if let currentMessage = self.currentMessage, let pinnedMessage = interfaceState.pinnedMessage {
+            if currentMessage.id != pinnedMessage.id || currentMessage.stableVersion != pinnedMessage.stableVersion {
+                messageUpdated = true
+            }
+        } else if (self.currentMessage != nil) != (interfaceState.pinnedMessage != nil) {
+            messageUpdated = true
+        }
+        
+        if messageUpdated {
+            let previousMessageWasNil = self.currentMessage == nil
+            self.currentMessage = interfaceState.pinnedMessage
+            
+            if let currentMessage = currentMessage, let currentLayout = self.currentLayout {
+                self.enqueueTransition(width: currentLayout, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, accountPeerId: self.account.peerId, firstTime: previousMessageWasNil)
             }
         }
         
@@ -128,35 +124,42 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentLayout = width
             
             if let currentMessage = self.currentMessage {
-                self.enqueueTransition(width: width, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings)
+                self.enqueueTransition(width: width, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, accountPeerId: interfaceState.accountPeerId, firstTime: true)
             }
         }
         
         return panelHeight
     }
     
-    private func enqueueTransition(width: CGFloat, transition: ContainedViewLayoutTransition, message: Message, theme: PresentationTheme, strings: PresentationStrings) {
+    private func enqueueTransition(width: CGFloat, transition: ContainedViewLayoutTransition, message: Message, theme: PresentationTheme, strings: PresentationStrings, accountPeerId: PeerId, firstTime: Bool) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
-        queue.async { [weak self] in
+        let targetQueue: Queue
+        if firstTime {
+            targetQueue = Queue.mainQueue()
+        } else {
+            targetQueue = self.queue
+        }
+        
+        targetQueue.async { [weak self] in
             let leftInset: CGFloat = 10.0
             let textLineInset: CGFloat = 10.0
             let rightInset: CGFloat = 18.0
             let textRightInset: CGFloat = 25.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: strings.Conversation_PinnedMessage, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: strings.Conversation_PinnedMessage, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0))
             
-            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: message.text, font: Font.regular(15.0), textColor: theme.chat.inputPanel.primaryTextColor), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (textLayout, textApply) = makeTextLayout(NSAttributedString(string: descriptionStringForMessage(message, strings: strings, accountPeerId: accountPeerId), font: Font.regular(15.0), textColor: theme.chat.inputPanel.primaryTextColor), nil, 1, .end, CGSize(width: width - leftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0))
             
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     let _ = titleApply()
                     let _ = textApply()
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 8.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 6.0), size: titleLayout.size)
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 26.0), size: textLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 24.0), size: textLayout.size)
                 }
             }
         }

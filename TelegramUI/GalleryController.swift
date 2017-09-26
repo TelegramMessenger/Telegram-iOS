@@ -80,7 +80,6 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo || file.mimeType.hasPrefix("video/") {
                         return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(file: file), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, caption: message.text)
-                        //return ChatVideoGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                     } else {
                         if file.mimeType.hasPrefix("image/") {
                             return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
@@ -88,8 +87,10 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
                             return ChatDocumentGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                         }
                     }
-                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-                    return EmbedVideoGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
+                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = webpage.content {
+                    if let content = WebEmbedVideoContent(webpageContent: webpageContent) {
+                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, caption: message.text)
+                    }
                 }
             }
         default:
@@ -169,7 +170,7 @@ class GalleryController: ViewController {
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
-    init(account: Account, messageId: MessageId, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+    init(account: Account, messageId: MessageId, invertItemOrder: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
         self.account = account
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
@@ -188,7 +189,7 @@ class GalleryController: ViewController {
             |> filter({ $0 != nil })
             |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, Void> in
                 if let tags = tagsForMessage(message!) {
-                    let view = account.postbox.aroundMessageHistoryViewForPeerId(messageId.peerId, index: MessageIndex(message!), count: 50, anchorIndex: MessageIndex(message!), fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
+                    let view = account.postbox.aroundMessageHistoryViewForPeerId(messageId.peerId, index: MessageIndex(message!), count: 50, clipHoles: false, anchorIndex: MessageIndex(message!), fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
                         
                     return view
                         |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, Void> in

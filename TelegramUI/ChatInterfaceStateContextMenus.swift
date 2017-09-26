@@ -92,30 +92,30 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.canReply {
-            actions.append(ContextMenuAction(content: .text("Reply"), action: {
+            actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuReply), action: {
                 interfaceInteraction.setupReplyMessage(message.id)
             }))
         }
         
         if data.canEdit {
-            actions.append(ContextMenuAction(content: .text("Edit"), action: {
+            actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_Edit), action: {
                 interfaceInteraction.setupEditMessage(message.id)
             }))
         }
         
-        actions.append(ContextMenuAction(content: .text("Copy"), action: {
+        actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy), action: {
             if !message.text.isEmpty {
                 UIPasteboard.general.string = message.text
             }
         }))
         
         if data.canPin {
-            if chatPresentationInterfaceState.pinnedMessageId != message.id {
-                actions.append(ContextMenuAction(content: .text("Pin"), action: {
+            if chatPresentationInterfaceState.pinnedMessage?.id != message.id {
+                actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_Pin), action: {
                     interfaceInteraction.pinMessage(message.id)
                 }))
             } else {
-                actions.append(ContextMenuAction(content: .text("Unpin"), action: {
+                actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_Unpin), action: {
                     interfaceInteraction.unpinMessage()
                 }))
             }
@@ -124,7 +124,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         for media in message.media {
             if let file = media as? TelegramMediaFile {
                 if file.isVideo && file.isAnimated {
-                    actions.append(ContextMenuAction(content: .text("Save"), action: {
+                    actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_LinkDialogSave), action: {
                         let _ = addSavedGif(postbox: account.postbox, file: file).start()
                     }))
                     break
@@ -132,7 +132,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        actions.append(ContextMenuAction(content: .text("More..."), action: {
+    actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuMore), action: {
             interfaceInteraction.beginMessageSelection(message.id)
         }))
         

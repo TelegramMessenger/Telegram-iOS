@@ -10,10 +10,10 @@ private func generateArrowImage(_ theme: PresentationTheme) -> UIImage? {
     })
 }
 
-private func generateCheckIcon(_ theme: PresentationTheme) -> UIImage? {
+private func generateCheckIcon(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 14.0, height: 11.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setStrokeColor(theme.list.itemAccentColor.cgColor)
+        context.setStrokeColor(color.cgColor)
         context.setLineWidth(2.0)
         context.move(to: CGPoint(x: 12.0, y: 1.0))
         context.addLine(to: CGPoint(x: 4.16482734, y: 9.0))
@@ -38,7 +38,15 @@ struct PresentationResourcesItemList {
     }
     
     static func checkIconImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.itemListCheckIcon.rawValue, generateCheckIcon)
+        return theme.image(PresentationResourceKey.itemListCheckIcon.rawValue, { theme in
+            return generateCheckIcon(color: theme.list.itemAccentColor)
+        })
+    }
+    
+    static func secondaryCheckIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListSecondaryCheckIcon.rawValue, { theme in
+            return generateCheckIcon(color: theme.list.itemSecondaryTextColor)
+        })
     }
     
     static func plusIconImage(_ theme: PresentationTheme) -> UIImage? {
@@ -48,6 +56,12 @@ struct PresentationResourcesItemList {
     static func stickerUnreadDotImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListStickerItemUnreadDot.rawValue, { theme in
             return generateFilledCircleImage(diameter: 6.0, color: theme.list.itemAccentColor)
+        })
+    }
+    
+    static func verifiedPeerIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListVerifiedPeerIcon.rawValue, { theme in
+            return UIImage(bundleImageName: "Item List/PeerVerifiedIcon")?.precomposed()
         })
     }
 }

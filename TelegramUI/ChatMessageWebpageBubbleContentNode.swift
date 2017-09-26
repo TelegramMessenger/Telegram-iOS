@@ -96,10 +96,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (file, [])
                     }
                 } else if let image = webpage.image {
-                    if let type = webpage.type, ["photo", "video", "embed"].contains(type) {
+                    if let type = webpage.type, ["photo", "video", "embed", "article"].contains(type) {
                         var flags = ChatMessageAttachedContentNodeMediaFlags()
-                        if webpage.instantPage != nil {
-                            flags.insert(.preferMediaBeforeText)
+                        if webpage.instantPage != nil, let largest = largestImageRepresentation(image.representations) {
+                            if largest.dimensions.width >= 256.0 {
+                                flags.insert(.preferMediaBeforeText)
+                            }
                         }
                         mediaAndFlags = (image, flags)
                     } else if let _ = largestImageRepresentation(image.representations)?.dimensions {
@@ -167,14 +169,18 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     return .instantPage
                 }
             }
-            return .ignore
+            let contentNodeFrame = self.contentNode.frame
+            if self.contentNode.hasActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY)) {
+                return .ignore
+            }
+            return .none
         }
         return .none
     }
     
     override func updateHiddenMedia(_ media: [Media]?) {
         if let media = media {
-            var updatedMedia: [Media]?
+            var updatedMedia = media
             for item in media {
                 if let webpage = item as? TelegramMediaWebpage, let current = self.webPage, webpage.isEqual(current) {
                     var mediaList: [Media] = [webpage]

@@ -85,14 +85,14 @@ private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode
         self.addSubnode(self.textNode)
     }
     
-    func updateLayout(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(_ size: CGSize, transition: ContainedViewLayoutTransition) {
         let iconSize = self.iconNode.image?.size ?? CGSize()
-        let textSize = self.textNode.measure(CGSize(width: layout.size.width - 20.0, height: CGFloat.greatestFiniteMagnitude))
+        let textSize = self.textNode.measure(CGSize(width: size.width - 20.0, height: CGFloat.greatestFiniteMagnitude))
         let spacing: CGFloat = 10.0
         let contentHeight = iconSize.height + spacing + textSize.height
-        let contentVerticalOrigin = floor((layout.size.height - contentHeight) / 2.0)
-        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize))
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: contentVerticalOrigin + iconSize.height + spacing), size: textSize))
+        let contentVerticalOrigin = floor((size.height - contentHeight) / 2.0)
+        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: contentVerticalOrigin + iconSize.height + spacing), size: textSize))
     }
 }
 
@@ -169,8 +169,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(), size: statusFrame.size))
         
         if let pictureInPictureNode = self.pictureInPictureNode {
-            transition.updateFrame(node: pictureInPictureNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-            pictureInPictureNode.updateLayout(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+            if let item = self.item {
+                let placeholderSize = item.content.dimensions.fitted(layout.size)
+                transition.updateFrame(node: pictureInPictureNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - placeholderSize.width) / 2.0), y: floor((layout.size.height - placeholderSize.height) / 2.0)), size: placeholderSize))
+                pictureInPictureNode.updateLayout(placeholderSize, transition: transition)
+            }
         }
     }
     
@@ -207,6 +210,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             self.videoNode = videoNode
+            videoNode.isUserInteractionEnabled = false
             videoNode.backgroundColor = videoNode.ownsContentNode ? UIColor.black : UIColor(rgb: 0x333335)
             videoNode.canAttachContent = true
             self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
@@ -254,11 +258,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if displayPlaceholder {
             if self.pictureInPictureNode == nil {
                 let pictureInPictureNode = UniversalVideoGalleryItemPictureInPictureNode(strings: self.strings)
+                pictureInPictureNode.isUserInteractionEnabled = false
                 self.pictureInPictureNode = pictureInPictureNode
-                self.addSubnode(pictureInPictureNode)
+                self.insertSubnode(pictureInPictureNode, aboveSubnode: self.scrollNode)
                 if let validLayout = self.validLayout {
-                    pictureInPictureNode.frame = CGRect(origin: CGPoint(), size: validLayout.0.size)
-                    pictureInPictureNode.updateLayout(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
+                    if let item = self.item {
+                        let placeholderSize = item.content.dimensions.fitted(validLayout.0.size)
+                        pictureInPictureNode.frame = CGRect(origin: CGPoint(x: floor((validLayout.0.size.width - placeholderSize.width) / 2.0), y: floor((validLayout.0.size.height - placeholderSize.height) / 2.0)), size: placeholderSize)
+                        pictureInPictureNode.updateLayout(placeholderSize, transition: .immediate)
+                    }
                 }
                 self.videoNode?.backgroundColor = UIColor(rgb: 0x333335)
             }
@@ -318,6 +326,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+            
+            if let pictureInPictureNode = self.pictureInPictureNode {
+                let transformedPlaceholderFrame = node.view.convert(node.view.bounds, to: pictureInPictureNode.view)
+                let transform = CATransform3DScale(pictureInPictureNode.layer.transform, transformedPlaceholderFrame.size.width / pictureInPictureNode.layer.bounds.size.width, transformedPlaceholderFrame.size.height / pictureInPictureNode.layer.bounds.size.height, 1.0)
+                pictureInPictureNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: pictureInPictureNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+                
+                pictureInPictureNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: pictureInPictureNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+            }
         }
     }
     
@@ -338,7 +354,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = node.view.snapshotContentTree()!
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollView)
+        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
         let intermediateCompletion = { [weak copyView] in
@@ -378,6 +394,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             boundsCompleted = true
             intermediateCompletion()
         })
+        
+        if let pictureInPictureNode = self.pictureInPictureNode {
+            let transformedPlaceholderFrame = node.view.convert(node.view.bounds, to: pictureInPictureNode.view)
+            let pictureInPictureTransform = CATransform3DScale(pictureInPictureNode.layer.transform, transformedPlaceholderFrame.size.width / pictureInPictureNode.layer.bounds.size.width, transformedPlaceholderFrame.size.height / pictureInPictureNode.layer.bounds.size.height, 1.0)
+            pictureInPictureNode.layer.animate(from: NSValue(caTransform3D: pictureInPictureNode.layer.transform), to: NSValue(caTransform3D: pictureInPictureTransform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            })
+            
+            pictureInPictureNode.layer.animatePosition(from: pictureInPictureNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+                positionCompleted = true
+                intermediateCompletion()
+            })
+            pictureInPictureNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        }
     }
     
     func animateOut(toOverlay node: ASDisplayNode, completion: @escaping () -> Void) {
@@ -399,7 +428,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = node.view.snapshotContentTree()!
         
-        //self.view.insertSubview(copyView, belowSubview: self.scrollView)
         videoNode.isHidden = true
         copyView.frame = transformedSelfFrame
         
@@ -435,13 +463,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         transformedFrame.origin = CGPoint()
         
-        let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
-        videoNode.layer.animate(from: NSValue(caTransform3D: videoNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+        let videoTransform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
+        videoNode.layer.animate(from: NSValue(caTransform3D: videoNode.layer.transform), to: NSValue(caTransform3D: videoTransform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
             boundsCompleted = true
             intermediateCompletion()
         })
         
-        //node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        if let pictureInPictureNode = self.pictureInPictureNode {
+            pictureInPictureNode.isHidden = true
+        }
+        
         let nodeTransform = CATransform3DScale(node.layer.transform, videoNode.layer.bounds.size.width / transformedFrame.size.width, videoNode.layer.bounds.size.height / transformedFrame.size.height, 1.0)
         node.layer.animatePosition(from: CGPoint(x: transformedSelfTargetSuperFrame.midX, y: transformedSelfTargetSuperFrame.midY), to: node.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
         node.layer.animate(from: NSValue(caTransform3D: nodeTransform), to: NSValue(caTransform3D: node.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in

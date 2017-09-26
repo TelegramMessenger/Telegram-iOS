@@ -7,28 +7,37 @@ import AsyncDisplayKit
 import TelegramCore
 
 enum AvatarGalleryEntry: Equatable {
-    case topImage([TelegramMediaImageRepresentation])
-    case image(TelegramMediaImage)
+    case topImage([TelegramMediaImageRepresentation], GalleryItemIndexData?)
+    case image(TelegramMediaImage, GalleryItemIndexData?)
     
     var representations: [TelegramMediaImageRepresentation] {
         switch self {
-            case let .topImage(representations):
+            case let .topImage(representations, _):
                 return representations
-            case let.image(image):
+            case let .image(image, _):
                 return image.representations
+        }
+    }
+    
+    var indexData: GalleryItemIndexData? {
+        switch self {
+            case let .topImage(_, indexData):
+                return indexData
+            case let .image(_, indexData):
+                return indexData
         }
     }
     
     static func ==(lhs: AvatarGalleryEntry, rhs: AvatarGalleryEntry) -> Bool {
         switch lhs {
-            case let .topImage(lhsRepresentations):
-                if case let .topImage(rhsRepresentations) = rhs, lhsRepresentations == rhsRepresentations {
+            case let .topImage(lhsRepresentations, lhsIndexData):
+                if case let .topImage(rhsRepresentations, rhsIndexData) = rhs, lhsRepresentations == rhsRepresentations, lhsIndexData == rhsIndexData {
                     return true
                 } else {
                     return false
                 }
-            case let .image(lhsImage):
-                if case let .image(rhsImage) = rhs, lhsImage.isEqual(rhsImage) {
+            case let .image(lhsImage, lhsIndexData):
+                if case let .image(rhsImage, rhsIndexData) = rhs, lhsImage.isEqual(rhsImage), lhsIndexData == rhsIndexData {
                     return true
                 } else {
                     return false
@@ -45,12 +54,49 @@ final class AvatarGalleryControllerPresentationArguments {
     }
 }
 
+private func initialAvatarGalleryEntries(peer: Peer) -> [AvatarGalleryEntry]{
+    var initialEntries: [AvatarGalleryEntry] = []
+    if let user = peer as? TelegramUser, !user.photo.isEmpty {
+        initialEntries.append(.topImage(user.photo, nil))
+    } else if let group = peer as? TelegramGroup {
+        initialEntries.append(.topImage(group.photo, nil))
+    } else if let channel = peer as? TelegramChannel {
+        initialEntries.append(.topImage(channel.photo, nil))
+    }
+    return initialEntries
+}
+
+func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
+    return requestPeerPhotos(account: account, peerId: peer.id) |> map { photos -> [AvatarGalleryEntry] in
+        var result: [AvatarGalleryEntry] = []
+        let initialEntries = initialAvatarGalleryEntries(peer: peer)
+        if photos.isEmpty {
+            result = initialEntries
+        } else {
+            var index: Int32 = 0
+            for photo in photos {
+                let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
+                if result.isEmpty, let first = initialEntries.first {
+                    let image = TelegramMediaImage(imageId: photo.image.imageId, representations: first.representations)
+                    result.append(.image(image, indexData))
+                } else {
+                    result.append(.image(photo.image, indexData))
+                }
+                index += 1
+            }
+        }
+        return result
+    }
+}
+
 class AvatarGalleryController: ViewController {
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
     }
     
     private let account: Account
+    
+    private var presentationData: PresentationData
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -76,50 +122,33 @@ class AvatarGalleryController: ViewController {
     
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     
-    init(account: Account, peer: Peer, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
+    init(account: Account, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
         self.account = account
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.replaceRootController = replaceRootController
         
         super.init(navigationBarTheme: GalleryController.darkNavigationTheme)
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.donePressed))
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
         
         self.statusBar.statusBarStyle = .White
         
-        var initialEntries: [AvatarGalleryEntry] = []
-        if let user = peer as? TelegramUser, !user.photo.isEmpty {
-            initialEntries.append(.topImage(user.photo))
-        } else if let group = peer as? TelegramGroup {
-            initialEntries.append(.topImage(group.photo))
-        } else if let channel = peer as? TelegramChannel {
-            initialEntries.append(.topImage(channel.photo))
+        let remoteEntriesSignal: Signal<[AvatarGalleryEntry], NoError>
+        if let remoteEntries = remoteEntries {
+            remoteEntriesSignal = remoteEntries.get()
+        } else {
+            remoteEntriesSignal = fetchedAvatarGalleryEntries(account: account, peer: peer)
         }
         
-        let remoteEntriesSignal: Signal<[AvatarGalleryEntry], NoError> = requestPeerPhotos(account: account, peerId: peer.id) |> map { photos -> [AvatarGalleryEntry] in
-            var result: [AvatarGalleryEntry] = []
-            if photos.isEmpty {
-                result = initialEntries
-            } else {
-                for photo in photos {
-                    if result.isEmpty, let first = initialEntries.first {
-                        let image = TelegramMediaImage(imageId: photo.image.imageId, representations: first.representations)
-                        result.append(.image(image))
-                    } else {
-                        result.append(.image(photo.image))
-                    }
-                }
-            }
-            return result
-        }
+        let entriesSignal: Signal<[AvatarGalleryEntry], NoError> = .single(initialAvatarGalleryEntries(peer: peer)) |> then(remoteEntriesSignal)
         
-        let entriesSignal: Signal<[AvatarGalleryEntry], NoError> = .single(initialEntries) |> then(remoteEntriesSignal)
-        
+        let presentationData = self.presentationData
         self.disposable.set((entriesSignal |> deliverOnMainQueue).start(next: { [weak self] entries in
             if let strongSelf = self {
                 strongSelf.entries = entries
                 strongSelf.centralEntryIndex = 0
                 if strongSelf.isViewLoaded {
-                    strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ PeerAvatarImageGalleryItem(account: account, entry: $0) }), centralItemIndex: 0, keepFirst: true)
+                    strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ PeerAvatarImageGalleryItem(account: account, strings: presentationData.strings, entry: $0) }), centralItemIndex: 0, keepFirst: true)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                         strongSelf?.didSetReady = true
@@ -130,7 +159,9 @@ class AvatarGalleryController: ViewController {
         }))
         
         self.centralItemAttributesDisposable.add(self.centralItemTitle.get().start(next: { [weak self] title in
-            self?.navigationItem.title = title
+            if let strongSelf = self {
+                strongSelf.navigationItem.setTitle(title, animated: strongSelf.navigationItem.title?.isEmpty ?? true)
+            }
         }))
         
         self.centralItemAttributesDisposable.add(self.centralItemTitleView.get().start(next: { [weak self] titleView in
@@ -207,6 +238,9 @@ class AvatarGalleryController: ViewController {
         self.galleryNode.transitionNodeForCentralItem = { [weak self] in
             if let strongSelf = self {
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? AvatarGalleryControllerPresentationArguments {
+                    if centralItemNode.index != 0 {
+                        return nil
+                    }
                     if let transitionArguments = presentationArguments.transitionArguments(strongSelf.entries[centralItemNode.index]) {
                         return transitionArguments.transitionNode
                     }
@@ -219,7 +253,8 @@ class AvatarGalleryController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.galleryNode.pager.replaceItems(self.entries.map({ PeerAvatarImageGalleryItem(account: self.account, entry: $0) }), centralItemIndex: self.centralEntryIndex)
+        let presentationData = self.presentationData
+        self.galleryNode.pager.replaceItems(self.entries.map({ PeerAvatarImageGalleryItem(account: self.account, strings: presentationData.strings, entry: $0) }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {

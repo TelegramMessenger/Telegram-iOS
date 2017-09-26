@@ -349,25 +349,48 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             
             return (initialWidth, { constrainedSize in
-                let statusType: ChatMessageDateAndStatusType
-                if message.effectivelyIncoming {
-                    statusType = .BubbleIncoming
-                } else {
-                    if message.flags.contains(.Failed) {
-                        statusType = .BubbleOutgoing(.Failed)
-                    } else if message.flags.isSending {
-                        statusType = .BubbleOutgoing(.Sending)
-                    } else {
-                        statusType = .BubbleOutgoing(.Sent(read: messageRead))
-                    }
-                }
+                var statusInText = false
+                var statusSizeAndApply: (CGSize, (Bool) -> Void)?
                 
                 let textConstrainedSize = CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height - insets.top - insets.bottom)
                 
-                var statusSizeAndApply: (CGSize, (Bool) -> Void)?
-                
-                if (refineContentImageLayout == nil && refineContentFileLayout == nil) || preferMediaBeforeText {
-                    statusSizeAndApply = statusLayout(theme, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                switch position.bottom {
+                    case .None:
+                        let imageMode = !((refineContentImageLayout == nil && refineContentFileLayout == nil) || preferMediaBeforeText)
+                        statusInText = !imageMode
+                        
+                        let statusType: ChatMessageDateAndStatusType
+                        if message.effectivelyIncoming {
+                            if imageMode {
+                                statusType = .ImageIncoming
+                            } else {
+                                statusType = .BubbleIncoming
+                            }
+                        } else {
+                            if message.flags.contains(.Failed) {
+                                if imageMode {
+                                    statusType = .ImageOutgoing(.Failed)
+                                } else {
+                                    statusType = .BubbleOutgoing(.Failed)
+                                }
+                            } else if message.flags.isSending {
+                                if imageMode {
+                                    statusType = .ImageOutgoing(.Sending)
+                                } else {
+                                    statusType = .BubbleOutgoing(.Sending)
+                                }
+                            } else {
+                                if imageMode {
+                                    statusType = .ImageOutgoing(.Sent(read: messageRead))
+                                } else {
+                                    statusType = .BubbleOutgoing(.Sent(read: messageRead))
+                                }
+                            }
+                        }
+                    
+                        statusSizeAndApply = statusLayout(theme, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                    default:
+                        break
                 }
                 
                 let (textLayout, textApply) = textAsyncLayout(textString, nil, 12, .end, textConstrainedSize, .natural, textCutout, UIEdgeInsets())
@@ -376,7 +399,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 
                 var statusFrame: CGRect?
                 
-                if let (statusSize, _) = statusSizeAndApply {
+                if statusInText, let (statusSize, _) = statusSizeAndApply {
                     var frame = CGRect(origin: CGPoint(), size: statusSize)
                     
                     let trailingLineWidth = textLayout.trailingLineWidth
@@ -489,6 +512,10 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
                         adjustedBoundingSize.height += imageHeigthAddition + 5.0
                         adjustedLineHeight += imageHeigthAddition + 4.0
+                        
+                        if !statusInText, let (statusSize, _) = statusSizeAndApply {
+                            statusFrame = CGRect(origin: CGPoint(), size: statusSize)
+                        }
                     }
                     
                     var contentFileSizeAndApply: (CGSize, () -> ChatMessageInteractiveFileNode)?
@@ -513,7 +540,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                     
                     var adjustedStatusFrame: CGRect?
-                    if let statusFrame = statusFrame {
+                    if statusInText, let statusFrame = statusFrame {
                         adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - insets.right, y: statusFrame.origin.y), size: statusFrame.size)
                     }
                     
@@ -567,10 +594,17 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     contentImageNode.visibility = strongSelf.visibility
                                 }
                                 let _ = contentImageApply()
+                                let contentImageFrame: CGRect
                                 if let (_, flags) = mediaAndFlags, flags.contains(.preferMediaBeforeText) {
-                                    contentImageNode.frame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: contentImageSize)
+                                    contentImageFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: contentImageSize)
                                 } else {
-                                    contentImageNode.frame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat.ulpOfOne ? 4.0 : 0.0)), size: contentImageSize)
+                                    contentImageFrame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat.ulpOfOne ? 4.0 : 0.0)), size: contentImageSize)
+                                }
+                                
+                                contentImageNode.frame = contentImageFrame
+                                
+                                if !statusInText, let statusFrame = statusFrame {
+                                    adjustedStatusFrame = CGRect(origin: CGPoint(x: contentImageFrame.width - statusFrame.size.width - 2.0, y: contentImageFrame.height - statusFrame.size.height - 2.0), size: statusFrame.size)
                                 }
                             } else if let contentImageNode = strongSelf.contentImageNode {
                                 contentImageNode.visibility = .none
@@ -629,8 +663,14 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             
                             if let (_, statusApply) = statusSizeAndApply, let adjustedStatusFrame = adjustedStatusFrame {
                                 strongSelf.statusNode.frame = adjustedStatusFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)
-                                if strongSelf.statusNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.statusNode)
+                                if statusInText {
+                                    if strongSelf.statusNode.supernode != strongSelf {
+                                        strongSelf.addSubnode(strongSelf.statusNode)
+                                    }
+                                } else if let contentImageNode = strongSelf.contentImageNode {
+                                    if strongSelf.statusNode.supernode != contentImageNode {
+                                        contentImageNode.addSubnode(strongSelf.statusNode)
+                                    }
                                 }
                                 statusApply(hasAnimation)
                             } else if strongSelf.statusNode.supernode != nil {
@@ -669,5 +709,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             return self.contentImageNode
         }
         return nil
+    }
+    
+    func hasActionAtPoint(_ point: CGPoint) -> Bool {
+        if let buttonNode = self.buttonNode, buttonNode.frame.contains(point) {
+            return true
+        }
+        return false
     }
 }

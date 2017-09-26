@@ -134,8 +134,8 @@ public final class PeerSelectionController: ViewController {
     
     private func deactivateSearch() {
         if !self.displayNavigationBar {
-            self.peerSelectionNode.deactivateSearch()
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
+            self.peerSelectionNode.deactivateSearch()
         }
     }
     

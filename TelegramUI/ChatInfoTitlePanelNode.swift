@@ -55,8 +55,13 @@ private func peerButtons(_ peer: Peer, isMuted: Bool) -> [ChatInfoTitleButton] {
         muteAction = .mute
     }
     
-    if let _ = peer as? TelegramUser {
-        return [.search, muteAction, .call, .info]
+    if let peer = peer as? TelegramUser {
+        var buttons: [ChatInfoTitleButton] = [.search, muteAction]
+        if peer.botInfo == nil {
+            buttons.append(.call)
+        }
+        buttons.append(.info)
+        return buttons
     } else if let channel = peer as? TelegramChannel {
         if channel.flags.contains(.isCreator) {
             return [.search, muteAction, .info]

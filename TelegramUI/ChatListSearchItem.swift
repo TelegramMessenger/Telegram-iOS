@@ -5,7 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 
-private let searchBarFont = Font.regular(15.0)
+private let searchBarFont = Font.regular(14.0)
 
 class ChatListSearchItem: ListViewItem {
     let selectable: Bool = false
@@ -100,7 +100,7 @@ class ChatListSearchItemNode: ListViewItemNode {
         let placeholder = self.placeholder
         
         return { item, width, nextIsPinned in
-            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: UIColor(rgb: 0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude), nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, nextIsPinned ? item.theme.chatList.itemBackgroundColor : item.theme.chatList.pinnedItemBackgroundColor)
+            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: UIColor(rgb: 0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude), UIColor(rgb: 0x8e8e93), nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, nextIsPinned ? item.theme.chatList.itemBackgroundColor : item.theme.chatList.pinnedItemBackgroundColor)
             
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 44.0 + 4.0), insets: UIEdgeInsets())
             

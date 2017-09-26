@@ -247,7 +247,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 case let .installation(installed):
                     rightInset += 50.0
                     if installed {
-                        installationActionImage = PresentationResourcesItemList.checkIconImage(item.theme)
+                        installationActionImage = PresentationResourcesItemList.secondaryCheckIconImage(item.theme)
                     } else {
                         installationActionImage = PresentationResourcesItemList.plusIconImage(item.theme)
                     }

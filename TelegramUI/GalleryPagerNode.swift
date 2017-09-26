@@ -4,6 +4,37 @@ import Display
 import SwiftSignalKit
 import Postbox
 
+struct GalleryPagerInsertItem {
+    public let index: Int
+    public let item: GalleryItem
+    public let previousIndex: Int?
+    
+    public init(index: Int, item: GalleryItem, previousIndex: Int?) {
+        self.index = index
+        self.item = item
+        self.previousIndex = previousIndex
+    }
+}
+
+struct GalleryPagerUpdateItem {
+    let index: Int
+    let previousIndex: Int
+    let item: GalleryItem
+    
+    init(index: Int, previousIndex: Int, item: GalleryItem) {
+        self.index = index
+        self.previousIndex = previousIndex
+        self.item = item
+    }
+}
+
+struct GalleryPagerTransaction {
+    let deleteItems: [Int]
+    let insertItems: [GalleryPagerInsertItem]
+    let updateItems: [GalleryPagerUpdateItem]
+    let focusOnItem: Int?
+}
+
 final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private let pageGap: CGFloat
     
@@ -87,26 +118,85 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func replaceItems(_ items: [GalleryItem], centralItemIndex: Int?, keepFirst: Bool = false) {
-        var keptItemNode: GalleryItemNode?
-        for itemNode in self.itemNodes {
-            if keepFirst && itemNode.index == 0 {
-                keptItemNode = itemNode
+        var updateItems: [GalleryPagerUpdateItem] = []
+        let deleteItems: [Int] = []
+        var insertItems: [GalleryPagerInsertItem] = []
+        for i in 0 ..< items.count {
+            if i == 0 && keepFirst {
+                updateItems.append(GalleryPagerUpdateItem(index: 0, previousIndex: 0, item: items[i]))
             } else {
-                itemNode.removeFromSupernode()
+                insertItems.append(GalleryPagerInsertItem(index: i, item: items[i], previousIndex: nil))
             }
         }
-        self.itemNodes.removeAll()
-        if let keptItemNode = keptItemNode {
-            self.itemNodes.append(keptItemNode)
+        self.transaction(GalleryPagerTransaction(deleteItems: deleteItems, insertItems: insertItems, updateItems: updateItems, focusOnItem: centralItemIndex))
+    }
+    
+    func transaction(_ transaction: GalleryPagerTransaction) {
+        for updatedItem in transaction.updateItems {
+            self.items[updatedItem.previousIndex] = updatedItem.item
+            if let itemNode = self.visibleItemNode(at: updatedItem.previousIndex) {
+                updatedItem.item.updateNode(node: itemNode)
+            }
         }
-        if let centralItemIndex = centralItemIndex, centralItemIndex >= 0 && centralItemIndex < items.count {
-            self.centralItemIndex = centralItemIndex
-        } else {
-            self.centralItemIndex = nil
-        }
-        self.items = items
         
-        self.updateItemNodes()
+        var removedNodes: [GalleryItemNode] = []
+        
+        if !transaction.deleteItems.isEmpty || !transaction.insertItems.isEmpty {
+            let deleteItems = transaction.deleteItems.sorted()
+            
+            for deleteItemIndex in deleteItems.reversed() {
+                self.items.remove(at: deleteItemIndex)
+                for i in 0 ..< self.itemNodes.count {
+                    if self.itemNodes[i].index == deleteItemIndex {
+                        removedNodes.append(self.itemNodes[i])
+                        self.removeVisibleItemNode(internalIndex: i)
+                    }
+                }
+            }
+            
+            for itemNode in self.itemNodes {
+                var indexOffset = 0
+                for deleteIndex in deleteItems {
+                    if deleteIndex < itemNode.index {
+                        indexOffset += 1
+                    } else {
+                        break
+                    }
+                }
+                
+                itemNode.index = itemNode.index - indexOffset
+            }
+            
+            let insertItems = transaction.insertItems.sorted(by: { $0.index < $1.index })
+            if self.items.count == 0 && !insertItems.isEmpty {
+                if insertItems[0].index != 0 {
+                    fatalError("transaction: invalid insert into empty list")
+                }
+            }
+            
+            for insertedItem in insertItems {
+                self.items.insert(insertedItem.item, at: insertedItem.index)
+            }
+            
+            let sortedInsertItems = transaction.insertItems.sorted(by: { $0.index < $1.index })
+            
+            for itemNode in self.itemNodes {
+                var indexOffset = 0
+                for insertedItem in sortedInsertItems {
+                    if insertedItem.index <= itemNode.index + indexOffset {
+                        indexOffset += 1
+                    }
+                }
+                
+                itemNode.index = itemNode.index + indexOffset
+            }
+            
+            if let focusOnItem = transaction.focusOnItem {
+                self.centralItemIndex = focusOnItem
+            }
+            
+            self.updateItemNodes()
+        }
     }
     
     private func makeNodeForItem(at index: Int) -> GalleryItemNode {
@@ -282,3 +372,4 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
 }
+

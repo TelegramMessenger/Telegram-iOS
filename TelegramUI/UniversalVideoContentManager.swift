@@ -171,32 +171,32 @@ final class UniversalVideoContentManager {
         }
     }
     
-    func statusSignal(id: AnyHashable) -> Signal<MediaPlayerStatus?, NoError> {
+    func statusSignal(content: UniversalVideoContent) -> Signal<MediaPlayerStatus?, NoError> {
         return Signal { subscriber in
             var callbacks: UniversalVideoContentHolderCallbacks
-            if let current = self.holderCallbacks[id] {
+            if let current = self.holderCallbacks[content.id] {
                 callbacks = current
             } else {
                 callbacks = UniversalVideoContentHolderCallbacks()
-                self.holderCallbacks[id] = callbacks
+                self.holderCallbacks[content.id] = callbacks
             }
             
             let index = callbacks.status.add({ value in
                 subscriber.putNext(value)
             })
             
-            if let current = self.holders[id] {
+            if let current = self.holders[content.id] {
                 subscriber.putNext(current.statusValue)
             } else {
-                subscriber.putNext(nil)
+                subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(content.duration), timestamp: 0.0, status: .paused))
             }
             
             return ActionDisposable {
                 Queue.mainQueue().async {
-                    if let current = self.holderCallbacks[id] {
+                    if let current = self.holderCallbacks[content.id] {
                         current.status.remove(index)
                         if current.playbackCompleted.isEmpty {
-                            self.holderCallbacks.removeValue(forKey: id)
+                            self.holderCallbacks.removeValue(forKey: content.id)
                         }
                     }
                 }

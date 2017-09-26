@@ -52,7 +52,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     }))
                     
                     for participant in participants {
-                        items.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peer: participant.peer, chatPeer: nil, status: .none, selection: .none, index: nil, header: nil, action: { peer in
+                        items.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peer: participant.peer, chatPeer: nil, status: .none, selection: .none, hasActiveRevealControls: false, index: nil, header: nil, action: { peer in
                             if let strongSelf = self {
                                 strongSelf.requestOpenPeerFromSearch?(peer)
                             }

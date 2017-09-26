@@ -31,7 +31,7 @@ final class StickerPackPreviewController: ViewController {
         
         self.statusBar.statusBarStyle = .Ignore
         
-        self.stickerPackContents.set(loadedStickerPack(account: account, reference: stickerPack))
+        self.stickerPackContents.set(loadedStickerPack(postbox: account.postbox, network: account.network, reference: stickerPack))
     }
     
     required init(coder aDecoder: NSCoder) {

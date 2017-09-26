@@ -302,71 +302,71 @@ private func networkUsageStatsControllerEntries(presentationData: PresentationDa
     
     switch section {
         case .cellular:
-            entries.append(.messagesHeader(presentationData.theme, "MESSAGES"))
-            entries.append(.messagesSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.generic.cellular.outgoing))))
-            entries.append(.messagesReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.generic.cellular.incoming))))
+            entries.append(.messagesHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_GeneralDataSection))
+            entries.append(.messagesSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.generic.cellular.outgoing))))
+            entries.append(.messagesReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.generic.cellular.incoming))))
             
-            entries.append(.imageHeader(presentationData.theme, "PHOTOS"))
-            entries.append(.imageSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.image.cellular.outgoing))))
-            entries.append(.imageReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.image.cellular.incoming))))
+            entries.append(.imageHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaImageDataSection))
+            entries.append(.imageSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.image.cellular.outgoing))))
+            entries.append(.imageReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.image.cellular.incoming))))
             
-            entries.append(.videoHeader(presentationData.theme, "VIDEOS"))
-            entries.append(.videoSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.video.cellular.outgoing))))
-            entries.append(.videoReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.video.cellular.incoming))))
+            entries.append(.videoHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaVideoDataSection))
+            entries.append(.videoSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.video.cellular.outgoing))))
+            entries.append(.videoReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.video.cellular.incoming))))
             
-            entries.append(.audioHeader(presentationData.theme, "AUDIO"))
-            entries.append(.audioSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.audio.cellular.outgoing))))
-            entries.append(.audioReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.audio.cellular.incoming))))
+            entries.append(.audioHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaAudioDataSection))
+            entries.append(.audioSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.audio.cellular.outgoing))))
+            entries.append(.audioReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.audio.cellular.incoming))))
             
-            entries.append(.fileHeader(presentationData.theme, "DOCUMENTS"))
-            entries.append(.fileSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.file.cellular.outgoing))))
-            entries.append(.fileReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.file.cellular.incoming))))
+            entries.append(.fileHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaDocumentDataSection))
+            entries.append(.fileSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.file.cellular.outgoing))))
+            entries.append(.fileReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.file.cellular.incoming))))
             
-            entries.append(.callHeader(presentationData.theme, "CALLS"))
-            entries.append(.callSent(presentationData.theme, "Bytes Sent", dataSizeString(0)))
-            entries.append(.callReceived(presentationData.theme, "Bytes Received", dataSizeString(0)))
+            entries.append(.callHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_CallDataSection))
+            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(0)))
+            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(0)))
             
-            entries.append(.reset(presentationData.theme, section, "Reset Statistics"))
+            entries.append(.reset(presentationData.theme, section, presentationData.strings.NetworkUsageSettings_ResetStats))
         
             if stats.resetCellularTimestamp != 0 {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "E, d MMM yyyy HH:mm"
                 let dateStringPlain = formatter.string(from: Date(timeIntervalSince1970: Double(stats.resetCellularTimestamp)))
                 
-                entries.append(.resetTimestamp(presentationData.theme, "Cellular usage since \(dateStringPlain)"))
+                entries.append(.resetTimestamp(presentationData.theme, presentationData.strings.NetworkUsageSettings_CellularUsageSince(dateStringPlain).0))
             }
         case .wifi:
-            entries.append(.messagesHeader(presentationData.theme, "MESSAGES"))
-            entries.append(.messagesSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.generic.wifi.outgoing))))
-            entries.append(.messagesReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.generic.wifi.incoming))))
+            entries.append(.messagesHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_GeneralDataSection))
+            entries.append(.messagesSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.generic.wifi.outgoing))))
+            entries.append(.messagesReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.generic.wifi.incoming))))
             
-            entries.append(.imageHeader(presentationData.theme, "PHOTOS"))
-            entries.append(.imageSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.image.wifi.outgoing))))
-            entries.append(.imageReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.image.wifi.incoming))))
+            entries.append(.imageHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaImageDataSection))
+            entries.append(.imageSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.image.wifi.outgoing))))
+            entries.append(.imageReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.image.wifi.incoming))))
             
-            entries.append(.videoHeader(presentationData.theme, "VIDEOS"))
-            entries.append(.videoSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.video.wifi.outgoing))))
-            entries.append(.videoReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.video.wifi.incoming))))
+            entries.append(.videoHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaVideoDataSection))
+            entries.append(.videoSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.video.wifi.outgoing))))
+            entries.append(.videoReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.video.wifi.incoming))))
             
-            entries.append(.audioHeader(presentationData.theme, "AUDIO"))
-            entries.append(.audioSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.audio.wifi.outgoing))))
-            entries.append(.audioReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.audio.wifi.incoming))))
+            entries.append(.audioHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaAudioDataSection))
+            entries.append(.audioSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.audio.wifi.outgoing))))
+            entries.append(.audioReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.audio.wifi.incoming))))
             
-            entries.append(.fileHeader(presentationData.theme, "DOCUMENTS"))
-            entries.append(.fileSent(presentationData.theme, "Bytes Sent", dataSizeString(Int(stats.file.wifi.outgoing))))
-            entries.append(.fileReceived(presentationData.theme, "Bytes Received", dataSizeString(Int(stats.file.wifi.incoming))))
+            entries.append(.fileHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_MediaDocumentDataSection))
+            entries.append(.fileSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(Int(stats.file.wifi.outgoing))))
+            entries.append(.fileReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(Int(stats.file.wifi.incoming))))
             
-            entries.append(.callHeader(presentationData.theme, "CALLS"))
-            entries.append(.callSent(presentationData.theme, "Bytes Sent", dataSizeString(0)))
-            entries.append(.callReceived(presentationData.theme, "Bytes Received", dataSizeString(0)))
+            entries.append(.callHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_CallDataSection))
+            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(0)))
+            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(0)))
             
-            entries.append(.reset(presentationData.theme, section, "Reset Statistics"))
+            entries.append(.reset(presentationData.theme, section, presentationData.strings.NetworkUsageSettings_ResetStats))
             if stats.resetWifiTimestamp != 0 {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "E, d MMM yyyy HH:mm"
                 let dateStringPlain = formatter.string(from: Date(timeIntervalSince1970: Double(stats.resetWifiTimestamp)))
                 
-                entries.append(.resetTimestamp(presentationData.theme, "Wifi usage since \(dateStringPlain)"))
+                entries.append(.resetTimestamp(presentationData.theme, presentationData.strings.NetworkUsageSettings_WifiUsageSince(dateStringPlain).0))
             }
     }
     
@@ -381,13 +381,14 @@ func networkUsageStatsController(account: Account) -> ViewController {
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let arguments = NetworkUsageStatsControllerArguments(resetStatistics: { [weak stats] section in
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController()
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Reset Statistics", color: .destructive, action: {
+                ActionSheetButtonItem(title: presentationData.strings.NetworkUsageSettings_ResetStats, color: .destructive, action: {
                     dismissAction()
                     
                     let reset: ResetNetworkUsageStats
@@ -400,7 +401,7 @@ func networkUsageStatsController(account: Account) -> ViewController {
                     stats?.set(accountNetworkUsageStats(account: account, reset: reset))
                 }),
             ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller)
     })
@@ -408,7 +409,7 @@ func networkUsageStatsController(account: Account) -> ViewController {
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, section.get(), stats.get()) |> deliverOnMainQueue
         |> map { presentationData, section, stats -> (ItemListControllerState, (ItemListNodeState<NetworkUsageStatsEntry>, NetworkUsageStatsEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .sectionControl(["Cellular", "Wifi"], 0), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .sectionControl([presentationData.strings.NetworkUsageSettings_Cellular, presentationData.strings.NetworkUsageSettings_Wifi], 0), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: networkUsageStatsControllerEntries(presentationData: presentationData, section: section, stats: stats), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))

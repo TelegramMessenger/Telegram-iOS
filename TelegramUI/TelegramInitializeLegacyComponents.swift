@@ -7,7 +7,12 @@ import MtProtoKitDynamic
 
 var legacyComponentsApplication: UIApplication!
 
-private let legacyLocalization = TGLocalization(version: 0, code: "en", dict: [:], isActive: true)
+private var legacyLocalization = TGLocalization(version: 0, code: "en", dict: [:], isActive: true)
+
+func updateLegacyLocalization(strings: PresentationStrings) {
+    legacyLocalization = TGLocalization(version: 0, code: strings.languageCode, dict: strings.dict, isActive: true)
+}
+
 private var legacyDocumentsStorePath: String?
 private var legacyCanOpenUrl: (URL) -> Bool = { _ in return false }
 private var legacyOpenUrl: (URL) -> Void = { _ in }

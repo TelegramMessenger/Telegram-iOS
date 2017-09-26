@@ -3,7 +3,7 @@ import Display
 import AsyncDisplayKit
 
 class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
-    let scrollView: UIScrollView
+    let scrollNode: ASScrollNode
     
     private var containerLayout: ContainerViewLayout?
     
@@ -15,35 +15,35 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
                 }
             }
             if let node = self.zoomableContent?.1 {
-                self.scrollView.addSubview(node.view)
+                self.scrollNode.addSubnode(node)
             }
             self.resetScrollViewContents()
         }
     }
     
     override init() {
-        self.scrollView = UIScrollView()
+        self.scrollNode = ASScrollNode()
         if #available(iOSApplicationExtension 11.0, *) {
-            self.scrollView.contentInsetAdjustmentBehavior = .never
+            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         
         super.init()
         
-        self.scrollView.delegate = self
-        self.scrollView.showsVerticalScrollIndicator = false
-        self.scrollView.showsHorizontalScrollIndicator = false
-        self.scrollView.clipsToBounds = false
-        self.scrollView.scrollsToTop = false
-        self.scrollView.delaysContentTouches = false
+        self.scrollNode.view.delegate = self
+        self.scrollNode.view.showsVerticalScrollIndicator = false
+        self.scrollNode.view.showsHorizontalScrollIndicator = false
+        self.scrollNode.view.clipsToBounds = false
+        self.scrollNode.view.scrollsToTop = false
+        self.scrollNode.view.delaysContentTouches = false
         
         let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.contentTap(_:)))
         tapRecognizer.tapActionAtPoint = { _ in
             return .waitForDoubleTap
         }
         
-        self.scrollView.addGestureRecognizer(tapRecognizer)
+        self.scrollNode.view.addGestureRecognizer(tapRecognizer)
         
-        self.view.addSubview(self.scrollView)
+        self.addSubnode(self.scrollNode)
     }
     
     @objc func contentTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
@@ -53,11 +53,11 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
                     case .tap:
                         self.toggleControlsVisibility()
                     case .doubleTap:
-                        if let contentView = self.zoomableContent?.1.view, self.scrollView.zoomScale.isLessThanOrEqualTo(self.scrollView.minimumZoomScale) {
-                            let pointInView = self.scrollView.convert(location, to: contentView)
+                        if let contentView = self.zoomableContent?.1.view, self.scrollNode.view.zoomScale.isLessThanOrEqualTo(self.scrollNode.view.minimumZoomScale) {
+                            let pointInView = self.scrollNode.view.convert(location, to: contentView)
                             
-                            let newZoomScale = self.scrollView.maximumZoomScale
-                            let scrollViewSize = self.scrollView.bounds.size
+                            let newZoomScale = self.scrollNode.view.maximumZoomScale
+                            let scrollViewSize = self.scrollNode.view.bounds.size
                             
                             let w = scrollViewSize.width / newZoomScale
                             let h = scrollViewSize.height / newZoomScale
@@ -66,9 +66,9 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
                             
                             let rectToZoomTo = CGRect(x: x, y: y, width: w, height: h)
                             
-                            self.scrollView.zoom(to: rectToZoomTo, animated: true)
+                            self.scrollNode.view.zoom(to: rectToZoomTo, animated: true)
                         } else {
-                            self.scrollView.setZoomScale(self.scrollView.minimumZoomScale, animated: true)
+                            self.scrollNode.view.setZoomScale(self.scrollNode.view.minimumZoomScale, animated: true)
                         }
                     default:
                         break
@@ -89,7 +89,7 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
         self.containerLayout = layout
         
         if shouldResetContents {
-            self.scrollView.frame = CGRect(origin: CGPoint(), size: layout.size)
+            self.scrollNode.frame = CGRect(origin: CGPoint(), size: layout.size)
             self.resetScrollViewContents()
         }
     }
@@ -99,18 +99,18 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
             return
         }
         
-        self.scrollView.minimumZoomScale = 1.0
-        self.scrollView.maximumZoomScale = 1.0
+        self.scrollNode.view.minimumZoomScale = 1.0
+        self.scrollNode.view.maximumZoomScale = 1.0
         //self.scrollView.normalZoomScale = 1.0
-        self.scrollView.zoomScale = 1.0
-        self.scrollView.contentSize = contentSize
+        self.scrollNode.view.zoomScale = 1.0
+        self.scrollNode.view.contentSize = contentSize
         
         contentNode.transform = CATransform3DIdentity
         contentNode.frame = CGRect(origin: CGPoint(), size: contentSize)
         
         self.centerScrollViewContents()
         
-        self.scrollView.zoomScale = self.scrollView.minimumZoomScale
+        self.scrollNode.view.zoomScale = self.scrollNode.view.minimumZoomScale
     }
     
     private func centerScrollViewContents() {
@@ -118,7 +118,7 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
             return
         }
         
-        let boundsSize = self.scrollView.bounds.size
+        let boundsSize = self.scrollNode.view.bounds.size
         if contentSize.width.isLessThanOrEqualTo(0.0) || contentSize.height.isLessThanOrEqualTo(0.0) || boundsSize.width.isLessThanOrEqualTo(0.0) || boundsSize.height.isLessThanOrEqualTo(0.0) {
             return
         }
@@ -133,16 +133,16 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
             maxScale = minScale
         }
         
-        if !self.scrollView.minimumZoomScale.isEqual(to: minScale) {
-            self.scrollView.minimumZoomScale = minScale
+        if !self.scrollNode.view.minimumZoomScale.isEqual(to: minScale) {
+            self.scrollNode.view.minimumZoomScale = minScale
         }
         
         /*if !self.scrollView.normalZoomScale.isEqual(to: minScale) {
          self.scrollView.normalZoomScale = minScale
          }*/
         
-        if !self.scrollView.maximumZoomScale.isEqual(to: maxScale) {
-            self.scrollView.maximumZoomScale = maxScale
+        if !self.scrollNode.view.maximumZoomScale.isEqual(to: maxScale) {
+            self.scrollNode.view.maximumZoomScale = maxScale
         }
         
         var contentFrame = contentNode.view.frame

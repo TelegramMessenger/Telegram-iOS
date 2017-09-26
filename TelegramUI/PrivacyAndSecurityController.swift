@@ -239,42 +239,30 @@ private struct PrivacyAndSecurityControllerState: Equatable {
     }
 }
 
-private func stringForSelectiveSettings(_ settings: SelectivePrivacySettings) -> String {
+private func stringForSelectiveSettings(strings: PresentationStrings, settings: SelectivePrivacySettings) -> String {
     switch settings {
         case let .disableEveryone(enableFor):
             if enableFor.isEmpty {
-                return "Nobody"
+                return strings.PrivacySettings_LastSeenNobody
             } else {
-                return "Nobody (+\(enableFor.count))"
+                return strings.PrivacySettings_LastSeenNobodyPlus("\(enableFor.count)").0
             }
         case let .enableEveryone(disableFor):
             if disableFor.isEmpty {
-                return "Everybody"
+                return strings.PrivacySettings_LastSeenEverybody
             } else {
-                return "Everybody (-\(disableFor.count))"
+                return strings.PrivacySettings_LastSeenEverybodyMinus("\(disableFor.count)").0
             }
         case let .enableContacts(enableFor, disableFor):
             if !enableFor.isEmpty && !disableFor.isEmpty {
-                return "My Contacts (+\(enableFor.count), -\(disableFor.count))"
+                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(enableFor.count)", "\(disableFor.count)").0
             } else if !enableFor.isEmpty {
-                return "My Contacts (+\(enableFor.count))"
+                return strings.PrivacySettings_LastSeenContactsPlus("\(enableFor.count)").0
             } else if !disableFor.isEmpty {
-                return "My Contacts (-\(disableFor.count))"
+                return strings.PrivacySettings_LastSeenContactsMinus("\(enableFor.count)").0
             } else {
-                return "My Contacts"
+                return strings.PrivacySettings_LastSeenContacts
             }
-    }
-}
-
-private func stringForAccountTimeout(_ timeout: Int32) -> String {
-    if timeout <= 1 * 31 * 24 * 60 * 60 {
-        return "1 month"
-    } else if timeout <= 3 * 31 * 24 * 60 * 60 {
-        return "3 months"
-    } else if timeout <= 6 * 31 * 24 * 60 * 60 {
-        return "6 months"
-    } else {
-        return "1 year"
     }
 }
 
@@ -284,9 +272,9 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     entries.append(.privacyHeader(presentationData.theme, presentationData.strings.PrivacySettings_PrivacyTitle))
     entries.append(.blockedPeers(presentationData.theme, presentationData.strings.Settings_BlockedUsers))
     if let privacySettings = privacySettings {
-        entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, stringForSelectiveSettings(privacySettings.presence)))
-        entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, stringForSelectiveSettings(privacySettings.groupInvitations)))
-        entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, stringForSelectiveSettings(privacySettings.voiceCalls)))
+        entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.presence)))
+        entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.groupInvitations)))
+        entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceCalls)))
     } else {
         entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, presentationData.strings.Channel_NotificationLoading))
         entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, presentationData.strings.Channel_NotificationLoading))
@@ -305,7 +293,7 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
         } else {
             value = privacySettings.accountRemovalTimeout
         }
-        entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor, stringForAccountTimeout(value)))
+        entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor, timeIntervalString(strings: presentationData.strings, value: value)))
     } else {
         entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor, presentationData.strings.Channel_NotificationLoading))
     }
@@ -429,6 +417,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             |> deliverOnMainQueue
         updateAccountTimeoutDisposable.set(signal.start(next: { [weak updateAccountTimeoutDisposable] privacySettingsValue in
             if let _ = privacySettingsValue {
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 let controller = ActionSheetController()
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
@@ -457,26 +446,21 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
                             }))
                     }
                 }
+                let timeoutValues: [Int32] = [
+                    1 * 30 * 24 * 60 * 60,
+                    3 * 30 * 24 * 60 * 60,
+                    6 * 30 * 24 * 60 * 60,
+                    12 * 30 * 24 * 60 * 60
+                ]
+                let timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
+                    return ActionSheetButtonItem(title: timeIntervalString(strings: presentationData.strings, value: value), action: {
+                        dismissAction()
+                        timeoutAction(value)
+                    })
+                }
                 controller.setItemGroups([
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: "1 month", action: {
-                            dismissAction()
-                            timeoutAction(1 * 30 * 24 * 60 * 60)
-                        }),
-                        ActionSheetButtonItem(title: "3 months", action: {
-                            dismissAction()
-                            timeoutAction(3 * 30 * 24 * 60 * 60)
-                        }),
-                        ActionSheetButtonItem(title: "6 months", action: {
-                            dismissAction()
-                            timeoutAction(6 * 30 * 24 * 60 * 60)
-                        }),
-                        ActionSheetButtonItem(title: "1 year", action: {
-                            dismissAction()
-                            timeoutAction(12 * 30 * 24 * 60 * 60)
-                        }),
-                    ]),
-                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+                    ActionSheetItemGroup(items: timeoutItems),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                 ])
                 presentControllerImpl?(controller)
             }
@@ -491,7 +475,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Privacy and Security"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PrivacySettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings), style: .blocks, animateChanges: false)
             
             return (controllerState, (listState, arguments))

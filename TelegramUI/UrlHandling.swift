@@ -11,6 +11,7 @@ private enum ParsedInternalPeerUrlParameter {
 
 private enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
+    case stickerPack(String)
 }
 
 private enum ParsedUrl {
@@ -24,6 +25,7 @@ enum ResolvedUrl {
     case botStart(peerId: PeerId, payload: String)
     case groupBotStart(peerId: PeerId, payload: String)
     case channelMessage(peerId: PeerId, messageId: MessageId)
+    case stickerPack(name: String)
 }
 
 private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
@@ -50,7 +52,9 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 }
                 return .peerName(peerName, nil)
             } else if pathComponents.count == 2 {
-                if let value = Int(pathComponents[1]) {
+                if pathComponents[0] == "addstickers" {
+                    return .stickerPack(pathComponents[1])
+                } else if let value = Int(pathComponents[1]) {
                     return .peerName(peerName, .channelMessage(Int32(value)))
                 } else {
                     return nil
@@ -86,17 +90,19 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                         return nil
                     }
                 }
+        case let .stickerPack(name):
+            return .single(.stickerPack(name: name))
     }
 }
 
 func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
-    let schemes = ["http://", "https://"]
+    let schemes = ["http://", "https://", ""]
     let basePaths = ["telegram.me", "t.me"]
     for basePath in basePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
-            if url.hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(query: url.substring(from: basePrefix.endIndex)) {
+            if url.lowercased().hasPrefix(basePrefix) {
+                if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
                     return resolveInternalUrl(account: account, url: internalUrl)
                         |> map { resolved -> ResolvedUrl in
                             if let resolved = resolved {

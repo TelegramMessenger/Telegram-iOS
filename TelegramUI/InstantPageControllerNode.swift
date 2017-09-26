@@ -15,8 +15,11 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let openPeer: (PeerId) -> Void
     
     private var webPage: TelegramMediaWebpage?
+    private var initialAnchor: String?
     
     private var containerLayout: ContainerViewLayout?
+    private var setupScrollOffsetOnLayout: Bool = false
+    
     private let statusBar: StatusBar
     private let navigationBar: InstantPageNavigationBar
     private let scrollNode: ASScrollNode
@@ -73,18 +76,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBar.back = navigateBack
         self.navigationBar.share = { [weak self] in
             if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                var shareImpl: (([PeerId]) -> Void)?
-                let shareController = ShareController(account: account, shareAction: { peerIds in
-                    shareImpl?(peerIds)
-                }, defaultAction: nil)
+                let shareController = ShareController(account: account, subject: .url(content.url))
                 strongSelf.present(shareController, nil)
-                shareImpl = { [weak shareController] peerIds in
-                    shareController?.dismiss()
-                    
-                    for peerId in peerIds {
-                        let _ = enqueueMessages(account: account, peerId: peerId, messages: [.message(text: content.url, attributes: [], media: nil, replyToMessageId: nil)]).start()
-                    }
-                }
             }
         }
         self.navigationBar.settings = { [weak self] in
@@ -186,9 +179,11 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.addGestureRecognizer(recognizer)
     }
     
-    func updateWebPage(_ webPage: TelegramMediaWebpage?) {
+    func updateWebPage(_ webPage: TelegramMediaWebpage?, anchor: String?) {
         if self.webPage != webPage {
+            self.setupScrollOffsetOnLayout = self.webPage == nil
             self.webPage = webPage
+            self.initialAnchor = anchor
             
             self.currentLayout = nil
             self.updateLayout()
@@ -215,21 +210,37 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         let scrollInsetTop = 44.0 + statusBarHeight
         
-        let resetOffset = self.scrollNode.bounds.size.width.isZero
+        let resetOffset = self.scrollNode.bounds.size.width.isZero || self.setupScrollOffsetOnLayout
         let widthUpdated = !self.scrollNode.bounds.size.width.isEqual(to: layout.size.width)
         
+        var shouldUpdateVisibleItems = false
         if self.scrollNode.bounds.size != layout.size || !self.scrollNode.view.contentInset.top.isEqual(to: scrollInsetTop) {
             self.scrollNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
             self.scrollNodeHeader.frame = CGRect(origin: CGPoint(x: 0.0, y: -2000.0), size: CGSize(width: layout.size.width, height: 2000.0))
             self.scrollNode.view.contentInset = UIEdgeInsetsMake(scrollInsetTop, 0.0, 0.0, 0.0)
-            if resetOffset {
-                self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: -self.scrollNode.view.contentInset.top)
-            }
             if widthUpdated {
                 self.updateLayout()
             }
-            self.updateVisibleItems()
+            shouldUpdateVisibleItems = true
             self.updateNavigationBar()
+        }
+        if resetOffset {
+            var contentOffset = CGPoint(x: 0.0, y: -self.scrollNode.view.contentInset.top)
+            if let anchor = self.initialAnchor, let items = self.currentLayout?.items {
+                self.setupScrollOffsetOnLayout = false
+                if !anchor.isEmpty {
+                    outer: for item in items {
+                        if let item = item as? InstantPageAnchorItem, item.anchor == anchor {
+                            contentOffset = CGPoint(x: 0.0, y: item.frame.origin.y - self.scrollNode.view.contentInset.top)
+                            break outer
+                        }
+                    }
+                }
+            }
+            self.scrollNode.view.contentOffset = contentOffset
+        }
+        if shouldUpdateVisibleItems {
+            self.updateVisibleItems()
         }
     }
     

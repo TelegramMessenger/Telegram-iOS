@@ -237,13 +237,10 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .messageSound(theme, text, value, sound):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    let (controller, result) = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound)
+                    let controller = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
+                        arguments?.updateMessageSound(value)
+                    })
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                    arguments.soundSelectionDisposable.set(result.start(next: { [weak arguments] value in
-                        if let value = value {
-                            arguments?.updateMessageSound(value)
-                        }
-                    }))
                 })
             case let .messageNotice(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
@@ -259,13 +256,10 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .groupSound(theme, text, value, sound):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    let (controller, result) = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound)
+                    let controller = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
+                        arguments?.updateGroupSound(value)
+                    })
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                    arguments.soundSelectionDisposable.set(result.start(next: { [weak arguments] value in
-                        if let value = value {
-                            arguments?.updateGroupSound(value)
-                        }
-                    }))
                 })
             case let .groupNotice(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
@@ -293,19 +287,27 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     }
 }
 
+private func filteredGlobalSound(_ sound: PeerMessageSound) -> PeerMessageSound {
+    if case .default = sound {
+        return .bundledModern(id: 0)
+    } else {
+        return sound
+    }
+}
+
 private func notificationsAndSoundsEntries(globalSettings: GlobalNotificationSettingsSet, inAppSettings: InAppNotificationSettings, presentationData: PresentationData) -> [NotificationsAndSoundsEntry] {
     var entries: [NotificationsAndSoundsEntry] = []
     
     entries.append(.messageHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications))
     entries.append(.messageAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.privateChats.enabled))
     entries.append(.messagePreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.privateChats.displayPreviews))
-    entries.append(.messageSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: globalSettings.privateChats.sound), globalSettings.privateChats.sound))
+    entries.append(.messageSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.privateChats.sound)), filteredGlobalSound(globalSettings.privateChats.sound)))
     entries.append(.messageNotice(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsHelp))
     
     entries.append(.groupHeader(presentationData.theme, presentationData.strings.Notifications_GroupNotifications))
     entries.append(.groupAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.groupChats.enabled))
     entries.append(.groupPreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.groupChats.displayPreviews))
-    entries.append(.groupSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: globalSettings.groupChats.sound), globalSettings.groupChats.sound))
+    entries.append(.groupSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.groupChats.sound)), filteredGlobalSound(globalSettings.groupChats.sound)))
     entries.append(.groupNotice(presentationData.theme, presentationData.strings.Notifications_GroupNotificationsHelp))
     
     entries.append(.inAppHeader(presentationData.theme, presentationData.strings.Notifications_InAppNotifications))
@@ -373,9 +375,10 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
             return settings.withUpdatedDisplayPreviews(value)
         }).start()
     }, resetNotifications: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController()
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: "Reset", color: .destructive, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: presentationData.strings.Notifications_Reset, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
                 let modifyPeers = account.postbox.modify { modifier -> Void in
@@ -389,7 +392,7 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
                 let _ = signal.start()
             })
         ]), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
             })
         ])])
@@ -415,7 +418,7 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
                 inAppSettings = InAppNotificationSettings.defaultSettings
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Notifications"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"))
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Notifications_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: notificationsAndSoundsEntries(globalSettings: viewSettings, inAppSettings: inAppSettings, presentationData: presentationData), style: .blocks)
             
             return (controllerState, (listState, arguments))

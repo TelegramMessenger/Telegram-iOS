@@ -29,6 +29,10 @@ final class ThemeGridController: TelegramController {
         self.title = self.presentationData.strings.Wallpaper_Title
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
+        self.scrollToTop = { [weak self] in
+            self?.controllerNode.scrollToTop()
+        }
+        
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {

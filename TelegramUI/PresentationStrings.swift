@@ -96,6 +96,7 @@ public final class PresentationStrings {
     private let lc: UInt32
 
     public let languageCode: String
+    public let dict: [String: String]
 
     public let Channel_BanUser_Title: String
     public let Notification_SecretChatMessageScreenshotSelf: String
@@ -4989,6 +4990,7 @@ public final class PresentationStrings {
 
     init(languageCode: String, dict: [String: String]) {
         self.languageCode = languageCode
+        self.dict = dict
         var rawCode = languageCode as NSString
         let range = rawCode.range(of: "_")
         if range.location != NSNotFound {

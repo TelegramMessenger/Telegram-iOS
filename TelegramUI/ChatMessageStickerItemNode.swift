@@ -19,6 +19,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var replyInfoNode: ChatMessageReplyInfoNode?
     private var replyBackgroundNode: ASImageNode?
     
+    private var highlightedState: Bool = false
+    
     required init() {
         self.imageNode = TransformImageNode()
         
@@ -307,6 +309,27 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 } else {
                     selectionNode.removeFromSupernode()
+                }
+            }
+        }
+    }
+    
+    override func updateHighlightedState(animated: Bool) {
+        if let controllerInteraction = self.controllerInteraction, let item = self.item {
+            var highlighted = false
+            if let highlightedState = controllerInteraction.highlightedState {
+                if highlightedState.messageStableId == item.message.stableId {
+                    highlighted = true
+                }
+            }
+            
+            if self.highlightedState != highlighted {
+                self.highlightedState = highlighted
+                
+                if highlighted {
+                    self.imageNode.setOverlayColor(UIColor(white: 0.0, alpha: 0.2), animated: false)
+                } else {
+                    self.imageNode.setOverlayColor(nil, animated: animated)
                 }
             }
         }

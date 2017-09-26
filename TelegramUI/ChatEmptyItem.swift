@@ -10,15 +10,17 @@ private let messageFont = Font.medium(14.0)
 final class ChatEmptyItem: ListViewItem {
     fileprivate let theme: PresentationTheme
     fileprivate let strings: PresentationStrings
+    fileprivate let tagMask: MessageTags?
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    init(theme: PresentationTheme, strings: PresentationStrings, tagMask: MessageTags?) {
         self.theme = theme
         self.strings = strings
+        self.tagMask = tagMask
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = {
-            let node = ChatEmptyItemNode()
+            let node = ChatEmptyItemNode(rotated: self.tagMask == nil)
             
             let nodeLayout = node.asyncLayout()
             let (layout, apply) = nodeLayout(self, width)
@@ -58,6 +60,8 @@ final class ChatEmptyItem: ListViewItem {
 }
 
 final class ChatEmptyItemNode: ListViewItemNode {
+    private let rotated: Bool
+    
     var controllerInteraction: ChatControllerInteraction?
     
     let offsetContainer: ASDisplayNode
@@ -67,7 +71,8 @@ final class ChatEmptyItemNode: ListViewItemNode {
     
     private var theme: PresentationTheme?
     
-    init() {
+    init(rotated: Bool) {
+        self.rotated = rotated
         self.offsetContainer = ASDisplayNode()
         
         self.backgroundNode = ASImageNode()
@@ -76,9 +81,11 @@ final class ChatEmptyItemNode: ListViewItemNode {
         self.iconNode = ASImageNode()
         self.textNode = TextNode()
         
-        super.init(layerBacked: false, dynamicBounce: true, rotated: true)
+        super.init(layerBacked: false, dynamicBounce: true, rotated: rotated)
         
-        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        if rotated {
+            self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        }
         
         self.addSubnode(self.offsetContainer)
         self.offsetContainer.addSubnode(self.backgroundNode)
@@ -92,16 +99,27 @@ final class ChatEmptyItemNode: ListViewItemNode {
         let currentTheme = self.theme
         return { [weak self] item, width in
             var updatedBackgroundImage: UIImage?
-            var updatedIconImage: UIImage?
             
-            let iconImage = PresentationResourcesChat.chatEmptyItemIconImage(item.theme)
+            let iconImage: UIImage? = PresentationResourcesChat.chatEmptyItemIconImage(item.theme)
             
             if currentTheme !== item.theme {
                 updatedBackgroundImage = PresentationResourcesChat.chatEmptyItemBackgroundImage(item.theme)
-                updatedIconImage = iconImage
             }
             
-            let attributedText = NSAttributedString(string: item.strings.Conversation_EmptyPlaceholder, font: messageFont, textColor: item.theme.chat.serviceMessage.serviceMessagePrimaryTextColor, paragraphAlignment: .center)
+            let attributedText: NSAttributedString
+            if let tagMask = item.tagMask {
+                let text: String
+                if tagMask == .photoOrVideo {
+                    text = item.strings.SharedMedia_EmptyText
+                } else if tagMask == .file {
+                    text = item.strings.SharedMedia_EmptyFilesText
+                } else {
+                    text = ""
+                }
+                attributedText = NSAttributedString(string: text, font: messageFont, textColor: item.theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+            } else {
+                attributedText = NSAttributedString(string: item.strings.Conversation_EmptyPlaceholder, font: messageFont, textColor: item.theme.chat.serviceMessage.serviceMessagePrimaryTextColor, paragraphAlignment: .center)
+            }
                 
             let horizontalEdgeInset: CGFloat = 10.0
             let horizontalContentInset: CGFloat = 12.0
@@ -131,9 +149,7 @@ final class ChatEmptyItemNode: ListViewItemNode {
                         strongSelf.backgroundNode.image = updatedBackgroundImage
                     }
                     
-                    if let updatedIconImage = updatedIconImage {
-                        strongSelf.iconNode.image = updatedIconImage
-                    }
+                    strongSelf.iconNode.image = iconImage
                     
                     let _ = textApply()
                     strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)
@@ -149,7 +165,7 @@ final class ChatEmptyItemNode: ListViewItemNode {
         if height.isLessThanOrEqualTo(0.0) {
             transition.updateBounds(node: self.offsetContainer, bounds: CGRect(origin: CGPoint(), size: self.offsetContainer.bounds.size))
         } else {
-            transition.updateBounds(node: self.offsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: floor(height) / 2.0), size: self.offsetContainer.bounds.size))
+            transition.updateBounds(node: self.offsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: self.rotated ? (floor(height) / 2.0) : (-floor(height) / 4.0)), size: self.offsetContainer.bounds.size))
         }
     }
     

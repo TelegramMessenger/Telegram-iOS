@@ -14,6 +14,7 @@ private final class ChannelInfoControllerArguments {
     let updateEditingDescriptionText: (String) -> Void
     let openChannelTypeSetup: () -> Void
     let changeNotificationMuteSettings: () -> Void
+    let changeNotificationSoundSettings: () -> Void
     let openSharedMedia: () -> Void
     let openAdmins: () -> Void
     let openMembers: () -> Void
@@ -23,7 +24,7 @@ private final class ChannelInfoControllerArguments {
     let deleteChannel: () -> Void
     let displayAddressNameContextMenu: (String) -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -32,6 +33,7 @@ private final class ChannelInfoControllerArguments {
         self.updateEditingDescriptionText = updateEditingDescriptionText
         self.openChannelTypeSetup = openChannelTypeSetup
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
+        self.changeNotificationSoundSettings = changeNotificationSoundSettings
         self.openSharedMedia = openSharedMedia
         self.openAdmins = openAdmins
         self.openMembers = openMembers
@@ -65,6 +67,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     case members(theme: PresentationTheme, text: String, value: String)
     case banned(theme: PresentationTheme, text: String, value: String)
     case notifications(theme: PresentationTheme, text: String, value: String)
+    case notificationSound(theme: PresentationTheme, text: String, value: String)
     case sharedMedia(theme: PresentationTheme, text: String)
     case report(theme: PresentationTheme, text: String)
     case leave(theme: PresentationTheme, text: String)
@@ -76,7 +79,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return ChannelInfoSection.info.rawValue
             case .admins, .members, .banned:
                 return ChannelInfoSection.members.rawValue
-            case .sharedMedia, .notifications:
+            case .sharedMedia, .notifications, .notificationSound:
                 return ChannelInfoSection.sharedMediaAndNotifications.rawValue
             case .report, .leave, .deleteChannel:
                 return ChannelInfoSection.reportOrLeave.rawValue
@@ -105,14 +108,16 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return 8
             case .notifications:
                 return 9
-            case .sharedMedia:
+            case .notificationSound:
                 return 10
-            case .report:
+            case .sharedMedia:
                 return 11
-            case .leave:
+            case .report:
                 return 12
-            case .deleteChannel:
+            case .leave:
                 return 13
+            case .deleteChannel:
+                return 14
         }
     }
     
@@ -228,6 +233,12 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .notificationSound(lhsTheme, lhsText, lhsValue):
+                if case let .notificationSound(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -282,6 +293,10 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
             case let .notifications(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.changeNotificationMuteSettings()
+                })
+            case let .notificationSound(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
+                    arguments.changeNotificationSoundSettings()
                 })
             case let .report(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
@@ -361,13 +376,12 @@ private struct ChannelInfoEditingState: Equatable {
     }
 }
 
-private func channelInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, state: ChannelInfoState) -> [ChannelInfoEntry] {
+private func channelInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, globalNotificationSettings: GlobalNotificationSettings, state: ChannelInfoState) -> [ChannelInfoEntry] {
     var entries: [ChannelInfoEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramChannel {
         let canEditChannel = peer.hasAdminRights(.canChangeInfo)
         let canEditMembers = peer.hasAdminRights(.canBanUsers)
-        let isPublic = peer.username != nil
         
         let infoState = ItemListAvatarAndNameInfoItemState(editingName: canEditChannel ? state.editingState?.editingName : nil, updatingName: nil)
         entries.append(.info(presentationData.theme, presentationData.strings, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
@@ -424,7 +438,16 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             }
             entries.append(ChannelInfoEntry.notifications(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Notifications, value: notificationsText))
         }
-        entries.append(ChannelInfoEntry.sharedMedia(theme: presentationData.theme, text: presentationData.strings.GroupInfo_SharedMedia))
+        if state.editingState != nil {
+            var messageSound: PeerMessageSound = .default
+            if let settings = view.notificationSettings as? TelegramPeerNotificationSettings {
+                messageSound = settings.messageSound
+            }
+            
+            entries.append(ChannelInfoEntry.notificationSound(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Sound, value: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: messageSound, default: globalNotificationSettings.effective.groupChats.sound)))
+        } else {
+            entries.append(ChannelInfoEntry.sharedMedia(theme: presentationData.theme, text: presentationData.strings.GroupInfo_SharedMedia))
+        }
         
         if peer.flags.contains(.isCreator) {
             if state.editingState != nil {
@@ -623,6 +646,17 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }, changeNotificationSoundSettings: {
+        let _ = (account.postbox.modify { modifier -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
+            let peerSettings: TelegramPeerNotificationSettings = (modifier.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
+            let globalSettings: GlobalNotificationSettings = (modifier.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
+            return (peerSettings, globalSettings)
+        } |> deliverOnMainQueue).start(next: { settings in
+            let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: settings.0.messageSound, defaultSound: settings.1.effective.privateChats.sound, completion: { sound in
+                let _ = updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound).start()
+            })
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        })
     }, openSharedMedia: {
         if let controller = peerSharedMediaController(account: account, peerId: peerId) {
             pushControllerImpl?(controller)
@@ -658,9 +692,17 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         displayAddressNameContextMenuImpl?(text)
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId))
-        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
+    let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [globalNotificationsKey]))
+        |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
+            
+            var globalNotificationSettings: GlobalNotificationSettings = GlobalNotificationSettings.defaultSettings
+            if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
+                if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                    globalNotificationSettings = settings
+                }
+            }
             
             var canManageChannel = false
             if let peer = peer as? TelegramChannel {
@@ -733,7 +775,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                         }))
                     })
                 }
-            } else if canManageChannel {
+            } else {
                 rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         var text = ""
@@ -748,7 +790,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: channelInfoEntries(account: account, presentationData: presentationData, view: view, state: state), style: .plain)
+            let listState = ItemListNodeState(entries: channelInfoEntries(account: account, presentationData: presentationData, view: view, globalNotificationSettings: globalNotificationSettings, state: state), style: .plain)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
