@@ -445,39 +445,6 @@ static inline NSString *dialogTimeFormat()
     return [[NSString alloc] initWithFormat:today ? TGLocalized(@"Time.TodayAt") : TGLocalized(@"Time.YesterdayAt"), timeString];
 }
 
-+ (NSString *)stringForLastSeenTodayOrYesterday:(bool)today hours:(int)hours minutes:(int)minutes
-{
-    NSString *timeString = [self stringForShortTimeWithHours:hours minutes:minutes];
-    
-    return [[NSString alloc] initWithFormat:today ? TGLocalized(@"LastSeen.TodayAt") : TGLocalized(@"LastSeen.YesterdayAt"), timeString];
-}
-
-+ (NSString *)stringForLastSeen:(int)date
-{
-    time_t t = date;
-    struct tm timeinfo;
-    localtime_r(&t, &timeinfo);
-    
-    time_t t_now;
-    time(&t_now);
-    struct tm timeinfo_now;
-    localtime_r(&t_now, &timeinfo_now);
-    
-    if (timeinfo.tm_year != timeinfo_now.tm_year)
-        return [[NSString alloc] initWithFormat:TGLocalized(@"LastSeen.AtDate"), [self stringForFullDateWithDay:timeinfo.tm_mday month:timeinfo.tm_mon + 1 year:timeinfo.tm_year]];
-    else
-    {
-        int dayDiff = timeinfo.tm_yday - timeinfo_now.tm_yday;
-        
-        if(dayDiff == 0 || dayDiff == -1)
-            return [self stringForLastSeenTodayOrYesterday:dayDiff == 0 hours:timeinfo.tm_hour minutes:timeinfo.tm_min];
-        else
-            return [[NSString alloc] initWithFormat:TGLocalized(@"LastSeen.AtDate"), [self stringForFullDateWithDay:timeinfo.tm_mday month:timeinfo.tm_mon + 1 year:timeinfo.tm_year]];
-    }
-    
-    return nil;
-}
-
 + (NSString *)stringForRelativeLastSeen:(int)date
 {
     if (date == -1)
@@ -524,8 +491,6 @@ static inline NSString *dialogTimeFormat()
                 return [legacyEffectiveLocalization() getPluralized:@"LastSeen.HoursAgo" count:(int32_t)hoursDiff];
             }
         }
-        else if (dayDiff == 0 || dayDiff == -1)
-            return [self stringForLastSeenTodayOrYesterday:dayDiff == 0 hours:timeinfo.tm_hour minutes:timeinfo.tm_min];
         else
             return [[NSString alloc] initWithFormat:TGLocalized(@"LastSeen.AtDate"), [self stringForFullDateWithDay:timeinfo.tm_mday month:timeinfo.tm_mon + 1 year:timeinfo.tm_year]];
     }

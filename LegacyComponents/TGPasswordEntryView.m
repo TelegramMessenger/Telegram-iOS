@@ -485,6 +485,14 @@
     [_textField becomeFirstResponder];
 }
 
+- (void)willMoveToWindow:(UIWindow *)window {
+    [super willMoveToWindow:window];
+    [_textField becomeFirstResponder];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [_textField becomeFirstResponder];
+    });
+}
+
 - (BOOL)resignFirstResponder
 {
     return [_textField resignFirstResponder];
