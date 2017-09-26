@@ -4,7 +4,7 @@
 #import "TGFont.h"
 
 NSString *const TGLocationSectionHeaderKind = @"TGLocationSectionHeaderKind";
-const CGFloat TGLocationSectionHeaderHeight = 28.5f;
+const CGFloat TGLocationSectionHeaderHeight = 29.0f;
 
 @interface TGLocationSectionHeaderCell ()
 {
@@ -19,12 +19,12 @@ const CGFloat TGLocationSectionHeaderHeight = 28.5f;
     self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
     if (self != nil)
     {
+        self.backgroundColor = UIColorRGB(0xf7f7f7);
         self.selectedBackgroundView = [[UIView alloc] init];
-        self.contentView.backgroundColor = UIColorRGB(0xf7f7f7);
         
         _titleLabel = [[UILabel alloc] init];
-        _titleLabel.backgroundColor = self.contentView.backgroundColor;
-        _titleLabel.font = TGMediumSystemFontOfSize(14);
+        _titleLabel.backgroundColor = self.backgroundColor;
+        _titleLabel.font = TGMediumSystemFontOfSize(12);
         _titleLabel.textColor = UIColorRGB(0x8e8e93);
         [self addSubview:_titleLabel];
     }
@@ -33,15 +33,28 @@ const CGFloat TGLocationSectionHeaderHeight = 28.5f;
 
 - (void)configureWithTitle:(NSString *)title
 {
-    _titleLabel.text = title;
+    title = [title uppercaseString];
+    
+    void (^changeBlock)(void) = ^
+    {
+        _titleLabel.text = title;
+    };
+    
+    if ([_titleLabel.text isEqualToString:title])
+        return;
+    
+    if (_titleLabel.text.length == 0)
+        changeBlock();
+    else
+        [UIView transitionWithView:_titleLabel duration:0.2 options:UIViewAnimationOptionTransitionCrossDissolve animations:changeBlock completion:nil];
 }
 
 - (void)layoutSubviews
 {
     [super layoutSubviews];
     
-    CGFloat padding = 14;
-    _titleLabel.frame = CGRectMake(padding, 0, self.frame.size.width - padding, self.frame.size.height - 2);
+    CGFloat padding = 14.0f;
+    _titleLabel.frame = CGRectMake(padding, 1.0f, self.frame.size.width - padding, self.frame.size.height - 2.0f);
 }
 
 @end

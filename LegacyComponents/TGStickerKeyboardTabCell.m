@@ -62,10 +62,16 @@ static void setViewFrame(UIView *view, CGRect frame)
     {
         UIColor *color = self.selected ? [UIColor blackColor] : UIColorRGB(0xb4b5b5);
         _imageView.image = TGTintedImage(image, color);
+        
+        if (iosMajorVersion() >= 11)
+            _imageView.accessibilityIgnoresInvertColors = true;
     }
     else
     {
         _imageView.image = image;
+        
+        if (iosMajorVersion() >= 11)
+            _imageView.accessibilityIgnoresInvertColors = false;
     }
 }
 
@@ -144,6 +150,9 @@ static void setViewFrame(UIView *view, CGRect frame)
     [uri appendFormat:@"&highQuality=1"];
     
     [_imageView loadUri:uri withOptions:nil];
+    
+    if (iosMajorVersion() >= 11)
+        _imageView.accessibilityIgnoresInvertColors = true;
 }
 
 - (void)setUrl:(NSString *)avatarUrl peerId:(int64_t)peerId title:(NSString *)title

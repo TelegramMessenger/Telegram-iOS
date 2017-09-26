@@ -10,8 +10,6 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 
 @interface TGPhotoEditorSliderView () <UIGestureRecognizerDelegate>
 {
-    UIImageView *_knobView;
-    
     CGFloat _knobTouchStart;
     CGFloat _knobTouchCenterStart;
     CGFloat _knobDragCenter;

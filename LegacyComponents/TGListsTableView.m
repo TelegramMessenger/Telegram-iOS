@@ -107,6 +107,13 @@
     }
 }
 
+- (void)sendSubviewToBack:(UIView *)view
+{
+    [super sendSubviewToBack:view];
+    if (_whiteFooterView != nil && view != _whiteFooterView)
+        [super sendSubviewToBack:_whiteFooterView];
+}
+
 - (void)hackHeaderSize
 {
     _hackHeaderSize = true;

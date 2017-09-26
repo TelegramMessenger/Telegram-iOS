@@ -423,6 +423,8 @@
         
         _searchResultsTableView = [delegate createTableViewForSearchMixin:self];
         _searchResultsTableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        if (iosMajorVersion() >= 11)
+            _searchResultsTableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
         
         [self setSearchResultsTableViewHidden:true];
     }

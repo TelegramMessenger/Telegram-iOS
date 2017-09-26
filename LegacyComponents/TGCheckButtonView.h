@@ -17,4 +17,6 @@ typedef enum
 - (void)setSelected:(bool)selected animated:(bool)animated;
 - (void)setSelected:(bool)selected animated:(bool)animated bump:(bool)bump;
 
+- (void)setNumber:(NSInteger)number;
+
 @end

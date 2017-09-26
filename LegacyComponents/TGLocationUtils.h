@@ -10,6 +10,8 @@
 + (NSString *)stringFromDistance:(CLLocationDistance)distance;
 + (NSString *)stringFromAccuracy:(CLLocationAccuracy)accuracy;
 
++ (NSString *)stringForCoordinate:(CLLocationCoordinate2D)coordinate;
+
 @end
 
 @interface TGLocationUtils (GoogleMaps)

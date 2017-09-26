@@ -1,12 +1,26 @@
 #import <MapKit/MapKit.h>
+#import <SSignalKit/SSignalKit.h>
+
+@class TGLocationMediaAttachment;
+@class TGUser;
+
+@interface TGLocationPickerAnnotation: NSObject <MKAnnotation>
+
+@property (nonatomic, assign) CLLocationCoordinate2D coordinate;
+@property (nonatomic, strong) id peer;
+
+- (instancetype)initWithCoordinate:(CLLocationCoordinate2D)coordinate;
+
+@end
+
 
 @interface TGLocationAnnotation : NSObject <MKAnnotation>
 
+@property (nonatomic, readonly) TGLocationMediaAttachment *location;
+@property (nonatomic, strong) id peer;
 @property (nonatomic, assign) CLLocationCoordinate2D coordinate;
-@property (nonatomic, copy) NSString *title;
-@property (nonatomic, copy) NSString *subtitle;
-@property (nonatomic, strong) NSDictionary *userInfo;
+@property (nonatomic, assign) int32_t messageId;
 
-- (instancetype)initWithCoordinate:(CLLocationCoordinate2D)coordinate title:(NSString *)title;
+- (instancetype)initWithLocation:(TGLocationMediaAttachment *)location;
 
 @end

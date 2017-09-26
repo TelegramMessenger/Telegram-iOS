@@ -1212,11 +1212,18 @@ static id<LegacyComponentsContext> _defaultContext = nil;
                 [UIView animateWithDuration:duration delay:0 options:0 animations:^
                 {
                     if (navigationBarHidden)
+                    {
+                        self.navigationController.navigationBar.alpha = 0.0f;
                         self.navigationController.navigationBar.frame = CGRectMake(0, -barHeight, screenSize.width, barHeight);
+                    }
                     else
+                    {
                         self.navigationController.navigationBar.frame = CGRectMake(0, statusBarHeight, screenSize.width, barHeight);
+                    }
                 } completion:^(BOOL finished)
                 {
+                    if (navigationBarHidden)
+                        self.navigationController.navigationBar.alpha = 1.0f;
                     if (finished)
                     {
                         if (navigationBarHidden)

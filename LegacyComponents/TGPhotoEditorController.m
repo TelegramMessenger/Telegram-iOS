@@ -332,6 +332,11 @@
     return true;
 }
 
+- (UIRectEdge)preferredScreenEdgesDeferringSystemGestures
+{
+    return [_currentTabController preferredScreenEdgesDeferringSystemGestures];
+}
+
 - (UIBarStyle)requiredNavigationBarStyle
 {
     return UIBarStyleDefault;
@@ -470,6 +475,9 @@
             [_context setApplicationStatusBarAlpha:1.0f];
         }
     }
+    
+    if ([self respondsToSelector:@selector(setNeedsUpdateOfScreenEdgesDeferringSystemGestures)])
+        [self setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
     
     [super viewWillDisappear:animated];
 }
@@ -1207,6 +1215,9 @@
     [_landscapeToolbarView setToolbarTabs:[_currentTabController availableTabs] animated:true];
     
     [self updateEditorButtons];
+    
+    if ([self respondsToSelector:@selector(setNeedsUpdateOfScreenEdgesDeferringSystemGestures)])
+        [self setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
 }
 
 - (void)updatePreviewView

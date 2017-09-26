@@ -36,6 +36,8 @@
 
 - (void)setContentAreaHeight:(CGFloat)contentAreaHeight;
 
+- (NSInteger)textCaretPosition;
+
 @end
 
 @protocol TGMediaPickerCaptionInputPanelDelegate <NSObject>
@@ -45,6 +47,7 @@
 - (void)inputPanelRequestedSetCaption:(TGMediaPickerCaptionInputPanel *)inputPanel text:(NSString *)text;
 - (void)inputPanelMentionEntered:(TGMediaPickerCaptionInputPanel *)inputTextPanel mention:(NSString *)mention startOfLine:(bool)startOfLine;
 - (void)inputPanelHashtagEntered:(TGMediaPickerCaptionInputPanel *)inputTextPanel hashtag:(NSString *)hashtag;
+- (void)inputPanelAlphacodeEntered:(TGMediaPickerCaptionInputPanel *)inputTextPanel alphacode:(NSString *)alphacode;
 - (void)inputPanelWillChangeHeight:(TGMediaPickerCaptionInputPanel *)inputPanel height:(CGFloat)height duration:(NSTimeInterval)duration animationCurve:(int)animationCurve;
 
 @optional

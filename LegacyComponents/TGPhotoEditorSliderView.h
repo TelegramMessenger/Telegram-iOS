@@ -24,6 +24,7 @@
 @property (nonatomic, assign) bool bordered;
 
 @property (nonatomic, strong) UIImage *knobImage;
+@property (nonatomic, readonly) UIImageView *knobView;
 
 @property (nonatomic, assign) NSInteger positionsCount;
 @property (nonatomic, assign) CGFloat dotSize;

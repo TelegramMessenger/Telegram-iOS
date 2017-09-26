@@ -45,10 +45,13 @@
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context itemViews:(NSArray *)itemViews;
 - (void)setItemViews:(NSArray *)itemViews;
 - (void)setItemViews:(NSArray *)itemViews animated:(bool)animated;
+- (void)removeItemViewsAtIndexes:(NSIndexSet *)indexes;
 
 - (void)presentInViewController:(UIViewController *)viewController sourceView:(UIView *)sourceView animated:(bool)animated;
 - (void)dismissAnimated:(bool)animated;
 - (void)dismissAnimated:(bool)animated manual:(bool)manual;
 - (void)dismissAnimated:(bool)animated manual:(bool)manual completion:(void (^)(void))completion;
+
+- (void)setDimViewHidden:(bool)hidden animated:(bool)animated;
 
 @end

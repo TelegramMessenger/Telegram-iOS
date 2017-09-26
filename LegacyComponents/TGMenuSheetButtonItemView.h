@@ -8,7 +8,12 @@ typedef enum
     TGMenuSheetButtonTypeSend
 } TGMenuSheetButtonType;
 
+@class TGModernButton;
+
 @interface TGMenuSheetButtonItemView : TGMenuSheetItemView
+{
+    TGModernButton *_button;
+}
 
 @property (nonatomic, strong) NSString *title;
 @property (nonatomic, assign) TGMenuSheetButtonType buttonType;

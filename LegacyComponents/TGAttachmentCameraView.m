@@ -98,6 +98,12 @@
         _zoomedView.alpha = 0.0f;
         _zoomedView.userInteractionEnabled = false;
         [self addSubview:_zoomedView];
+        
+        if (iosMajorVersion() >= 11)
+        {
+            _fadeView.accessibilityIgnoresInvertColors = true;
+            _iconView.accessibilityIgnoresInvertColors = true;
+        }
     }
     return self;
 }

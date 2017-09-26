@@ -72,6 +72,11 @@ function fixPlayer() {
     video.play();
     
     hidePlayButton();
+    
+    var ageButton = document.getElementById('mature-link');
+    if (ageButton != null) {
+        eventFire(ageButton, 'click');
+    }
 }
 
 function onPlaybackStart() {

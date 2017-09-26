@@ -2,7 +2,7 @@
 
 @implementation TGVenueAttachment
 
-- (instancetype)initWithTitle:(NSString *)title address:(NSString *)address provider:(NSString *)provider venueId:(NSString *)venueId
+- (instancetype)initWithTitle:(NSString *)title address:(NSString *)address provider:(NSString *)provider venueId:(NSString *)venueId type:(NSString *)type
 {
     self = [super init];
     if (self != nil)
@@ -11,13 +11,14 @@
         _address = address;
         _provider = provider;
         _venueId = venueId;
+        _type = type;
     }
     return self;
 }
 
 - (instancetype)initWithCoder:(NSCoder *)aDecoder
 {
-    return [self initWithTitle:[aDecoder decodeObjectForKey:@"title"] address:[aDecoder decodeObjectForKey:@"address"] provider:[aDecoder decodeObjectForKey:@"provider"] venueId:[aDecoder decodeObjectForKey:@"venueId"]];
+    return [self initWithTitle:[aDecoder decodeObjectForKey:@"title"] address:[aDecoder decodeObjectForKey:@"address"] provider:[aDecoder decodeObjectForKey:@"provider"] venueId:[aDecoder decodeObjectForKey:@"venueId"] type:[aDecoder decodeObjectForKey:@"type"]];
 }
 
 - (void)encodeWithCoder:(NSCoder *)aCoder
@@ -30,6 +31,8 @@
         [aCoder encodeObject:_provider forKey:@"provider"];
     if (_venueId != nil)
         [aCoder encodeObject:_venueId forKey:@"venueId"];
+    if (_type != nil)
+        [aCoder encodeObject:_type forKey:@"type"];
 }
 
 @end
@@ -62,6 +65,9 @@
     [data appendBytes:&venueDataLength length:4];
     [data appendData:venueData];
     
+    if (_venue == nil)
+        [data appendBytes:&_period length:4];
+    
     int dataLength = (int)(data.length - dataLengthPtr - 4);
     [data replaceBytesInRange:NSMakeRange(dataLengthPtr, 4) withBytes:&dataLength];
 }
@@ -92,6 +98,12 @@
             NSData *venueData = [[NSData alloc] initWithBytesNoCopy:venueBytes length:venueDataLength freeWhenDone:true];
             locationAttachment.venue = [NSKeyedUnarchiver unarchiveObjectWithData:venueData];
         }
+        else if (dataLength == 8 + 8 + 4 + 4)
+        {
+            int32_t period = 0;
+            [is read:(uint8_t *)&period maxLength:4];
+            locationAttachment.period = period;
+        }
     }
     
     return locationAttachment;
@@ -104,6 +116,7 @@
         _latitude = [aDecoder decodeDoubleForKey:@"latitude"];
         _longitude = [aDecoder decodeDoubleForKey:@"longitude"];
         _venue = [aDecoder decodeObjectForKey:@"venue"];
+        _period = [aDecoder decodeInt32ForKey:@"period"];
     }
     return self;
 }
@@ -112,6 +125,12 @@
     [aCoder encodeDouble:_latitude forKey:@"latitude"];
     [aCoder encodeDouble:_longitude forKey:@"longitude"];
     [aCoder encodeObject:_venue forKey:@"venue"];
+    [aCoder encodeInt32:_period forKey:@"period"];
+}
+
+- (bool)isLiveLocation
+{
+    return _period > 0;
 }
 
 @end

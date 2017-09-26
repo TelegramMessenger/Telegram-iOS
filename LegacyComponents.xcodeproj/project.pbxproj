@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		090671C41F67F71700CCF2F5 /* TGLocationOptionsView.h in Headers */ = {isa = PBXBuildFile; fileRef = 090671C21F67F71700CCF2F5 /* TGLocationOptionsView.h */; };
+		090671C51F67F71700CCF2F5 /* TGLocationOptionsView.m in Sources */ = {isa = PBXBuildFile; fileRef = 090671C31F67F71700CCF2F5 /* TGLocationOptionsView.m */; };
 		09750F761F2FA816001B9886 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09750F741F2FA5E8001B9886 /* SSignalKit.framework */; };
 		09750FB71F30DB0E001B9886 /* TGClipboardGalleryModel.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FAF1F30DB0E001B9886 /* TGClipboardGalleryModel.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09750FB81F30DB0E001B9886 /* TGClipboardGalleryModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FB01F30DB0E001B9886 /* TGClipboardGalleryModel.m */; };
@@ -16,6 +18,24 @@
 		09750FC61F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */; };
 		09750FCD1F30E53A001B9886 /* TGClipboardGalleryMixin.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09750FCE1F30E53A001B9886 /* TGClipboardGalleryMixin.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */; };
+		09A8BD761F6B4C390043A393 /* TGLocationInfoCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */; };
+		09A8BD771F6B4C390043A393 /* TGLocationInfoCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */; };
+		09A8BD7A1F6B4C6E0043A393 /* TGLocationLiveCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09A8BD781F6B4C6E0043A393 /* TGLocationLiveCell.h */; };
+		09A8BD7B1F6B4C6E0043A393 /* TGLocationLiveCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 09A8BD791F6B4C6E0043A393 /* TGLocationLiveCell.m */; };
+		09AB58141F6C401B0087449F /* TGLocationWavesView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09AB58121F6C401B0087449F /* TGLocationWavesView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09AB58151F6C401B0087449F /* TGLocationWavesView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09AB58131F6C401B0087449F /* TGLocationWavesView.m */; };
+		09B51E001F6AF476000EE471 /* TGLocationMapViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09B51E011F6AF476000EE471 /* TGLocationMapViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */; };
+		09F36E561F748E040022A5FE /* TGLocationLiveSessionItemView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F36E541F748E040022A5FE /* TGLocationLiveSessionItemView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09F36E571F748E040022A5FE /* TGLocationLiveSessionItemView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09F36E551F748E040022A5FE /* TGLocationLiveSessionItemView.m */; };
+		09F36E5A1F74FB130022A5FE /* TGLocationLiveElapsedView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F36E581F74FB130022A5FE /* TGLocationLiveElapsedView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09F36E5B1F74FB130022A5FE /* TGLocationLiveElapsedView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09F36E591F74FB130022A5FE /* TGLocationLiveElapsedView.m */; };
+		09F916AD1F5D9A4E00E0AEFA /* TGAlphacode.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F916A71F5D9A4E00E0AEFA /* TGAlphacode.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09F916AE1F5D9A4E00E0AEFA /* TGAlphacode.m in Sources */ = {isa = PBXBuildFile; fileRef = 09F916A81F5D9A4E00E0AEFA /* TGAlphacode.m */; };
+		09F916AF1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F916A91F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09F916B01F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 09F916AA1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m */; };
+		09F916B11F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F916AB1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09F916B21F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 09F916AC1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m */; };
 		09FAA0B31F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09FAA0B11F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h */; };
 		09FAA0B41F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09FAA0B21F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m */; };
 		D017772C1F1F8F100044446D /* LegacyComponents.h in Headers */ = {isa = PBXBuildFile; fileRef = D017772A1F1F8F100044446D /* LegacyComponents.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -468,16 +488,12 @@
 		D02660771F34A7F8000E2DC5 /* TGLocationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D02660551F34A7F8000E2DC5 /* TGLocationViewController.m */; };
 		D026607A1F34A961000E2DC5 /* TGLocationVenue.h in Headers */ = {isa = PBXBuildFile; fileRef = D02660781F34A961000E2DC5 /* TGLocationVenue.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D026607B1F34A961000E2DC5 /* TGLocationVenue.m in Sources */ = {isa = PBXBuildFile; fileRef = D02660791F34A961000E2DC5 /* TGLocationVenue.m */; };
-		D026607E1F34A97B000E2DC5 /* TGPinAnnotationView.h in Headers */ = {isa = PBXBuildFile; fileRef = D026607C1F34A97B000E2DC5 /* TGPinAnnotationView.h */; };
-		D026607F1F34A97B000E2DC5 /* TGPinAnnotationView.m in Sources */ = {isa = PBXBuildFile; fileRef = D026607D1F34A97B000E2DC5 /* TGPinAnnotationView.m */; };
 		D02660821F34B986000E2DC5 /* TGListsTableView.h in Headers */ = {isa = PBXBuildFile; fileRef = D02660801F34B986000E2DC5 /* TGListsTableView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D02660831F34B986000E2DC5 /* TGListsTableView.m in Sources */ = {isa = PBXBuildFile; fileRef = D02660811F34B986000E2DC5 /* TGListsTableView.m */; };
 		D02660861F34B9B1000E2DC5 /* TGSearchBar.h in Headers */ = {isa = PBXBuildFile; fileRef = D02660841F34B9B1000E2DC5 /* TGSearchBar.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D02660871F34B9B1000E2DC5 /* TGSearchBar.m in Sources */ = {isa = PBXBuildFile; fileRef = D02660851F34B9B1000E2DC5 /* TGSearchBar.m */; };
 		D026608A1F34B9F9000E2DC5 /* TGSearchDisplayMixin.h in Headers */ = {isa = PBXBuildFile; fileRef = D02660881F34B9F9000E2DC5 /* TGSearchDisplayMixin.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D026608B1F34B9F9000E2DC5 /* TGSearchDisplayMixin.m in Sources */ = {isa = PBXBuildFile; fileRef = D02660891F34B9F9000E2DC5 /* TGSearchDisplayMixin.m */; };
-		D026608E1F34BA71000E2DC5 /* TGPickPinAnnotationView.h in Headers */ = {isa = PBXBuildFile; fileRef = D026608C1F34BA71000E2DC5 /* TGPickPinAnnotationView.h */; };
-		D026608F1F34BA71000E2DC5 /* TGPickPinAnnotationView.m in Sources */ = {isa = PBXBuildFile; fileRef = D026608D1F34BA71000E2DC5 /* TGPickPinAnnotationView.m */; };
 		D04268F91F58687D0037ECE8 /* TGVideoCameraGLView.h in Headers */ = {isa = PBXBuildFile; fileRef = D04268F71F58687D0037ECE8 /* TGVideoCameraGLView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D04268FA1F58687D0037ECE8 /* TGVideoCameraGLView.m in Sources */ = {isa = PBXBuildFile; fileRef = D04268F81F58687D0037ECE8 /* TGVideoCameraGLView.m */; };
 		D04269031F586A070037ECE8 /* TGVideoMessageRingView.h in Headers */ = {isa = PBXBuildFile; fileRef = D04268FB1F586A070037ECE8 /* TGVideoMessageRingView.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1141,6 +1157,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		090671C21F67F71700CCF2F5 /* TGLocationOptionsView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationOptionsView.h; sourceTree = "<group>"; };
+		090671C31F67F71700CCF2F5 /* TGLocationOptionsView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationOptionsView.m; sourceTree = "<group>"; };
 		09750F741F2FA5E8001B9886 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegraph-grvwvmixbmcefwboxkzfazvpcrxb/Build/Products/Release Hockeyapp-iphonesimulator/SSignalKit.framework"; sourceTree = "<group>"; };
 		09750FAF1F30DB0E001B9886 /* TGClipboardGalleryModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryModel.h; sourceTree = "<group>"; };
 		09750FB01F30DB0E001B9886 /* TGClipboardGalleryModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryModel.m; sourceTree = "<group>"; };
@@ -1150,6 +1168,24 @@
 		09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryPhotoItem.m; sourceTree = "<group>"; };
 		09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryMixin.h; sourceTree = "<group>"; };
 		09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryMixin.m; sourceTree = "<group>"; };
+		09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationInfoCell.h; sourceTree = "<group>"; };
+		09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationInfoCell.m; sourceTree = "<group>"; };
+		09A8BD781F6B4C6E0043A393 /* TGLocationLiveCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveCell.h; sourceTree = "<group>"; };
+		09A8BD791F6B4C6E0043A393 /* TGLocationLiveCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationLiveCell.m; sourceTree = "<group>"; };
+		09AB58121F6C401B0087449F /* TGLocationWavesView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationWavesView.h; sourceTree = "<group>"; };
+		09AB58131F6C401B0087449F /* TGLocationWavesView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationWavesView.m; sourceTree = "<group>"; };
+		09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationMapViewController.h; sourceTree = "<group>"; };
+		09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationMapViewController.m; sourceTree = "<group>"; };
+		09F36E541F748E040022A5FE /* TGLocationLiveSessionItemView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveSessionItemView.h; sourceTree = "<group>"; };
+		09F36E551F748E040022A5FE /* TGLocationLiveSessionItemView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGLocationLiveSessionItemView.m; sourceTree = "<group>"; };
+		09F36E581F74FB130022A5FE /* TGLocationLiveElapsedView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveElapsedView.h; sourceTree = "<group>"; };
+		09F36E591F74FB130022A5FE /* TGLocationLiveElapsedView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGLocationLiveElapsedView.m; sourceTree = "<group>"; };
+		09F916A71F5D9A4E00E0AEFA /* TGAlphacode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAlphacode.h; sourceTree = "<group>"; };
+		09F916A81F5D9A4E00E0AEFA /* TGAlphacode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAlphacode.m; sourceTree = "<group>"; };
+		09F916A91F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAlphacodePanelCell.h; sourceTree = "<group>"; };
+		09F916AA1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAlphacodePanelCell.m; sourceTree = "<group>"; };
+		09F916AB1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGModernConversationAlphacodeAssociatedPanel.h; sourceTree = "<group>"; };
+		09F916AC1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGModernConversationAlphacodeAssociatedPanel.m; sourceTree = "<group>"; };
 		09FAA0B11F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGEmbedTwitchPlayerView.h; sourceTree = "<group>"; };
 		09FAA0B21F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGEmbedTwitchPlayerView.m; sourceTree = "<group>"; };
 		D01777271F1F8F100044446D /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1604,16 +1640,12 @@
 		D02660551F34A7F8000E2DC5 /* TGLocationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationViewController.m; sourceTree = "<group>"; };
 		D02660781F34A961000E2DC5 /* TGLocationVenue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationVenue.h; sourceTree = "<group>"; };
 		D02660791F34A961000E2DC5 /* TGLocationVenue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationVenue.m; sourceTree = "<group>"; };
-		D026607C1F34A97B000E2DC5 /* TGPinAnnotationView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPinAnnotationView.h; sourceTree = "<group>"; };
-		D026607D1F34A97B000E2DC5 /* TGPinAnnotationView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPinAnnotationView.m; sourceTree = "<group>"; };
 		D02660801F34B986000E2DC5 /* TGListsTableView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGListsTableView.h; sourceTree = "<group>"; };
 		D02660811F34B986000E2DC5 /* TGListsTableView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGListsTableView.m; sourceTree = "<group>"; };
 		D02660841F34B9B1000E2DC5 /* TGSearchBar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGSearchBar.h; sourceTree = "<group>"; };
 		D02660851F34B9B1000E2DC5 /* TGSearchBar.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGSearchBar.m; sourceTree = "<group>"; };
 		D02660881F34B9F9000E2DC5 /* TGSearchDisplayMixin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGSearchDisplayMixin.h; sourceTree = "<group>"; };
 		D02660891F34B9F9000E2DC5 /* TGSearchDisplayMixin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGSearchDisplayMixin.m; sourceTree = "<group>"; };
-		D026608C1F34BA71000E2DC5 /* TGPickPinAnnotationView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPickPinAnnotationView.h; sourceTree = "<group>"; };
-		D026608D1F34BA71000E2DC5 /* TGPickPinAnnotationView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPickPinAnnotationView.m; sourceTree = "<group>"; };
 		D04268F71F58687D0037ECE8 /* TGVideoCameraGLView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoCameraGLView.h; sourceTree = "<group>"; };
 		D04268F81F58687D0037ECE8 /* TGVideoCameraGLView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGVideoCameraGLView.m; sourceTree = "<group>"; };
 		D04268FB1F586A070037ECE8 /* TGVideoMessageRingView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoMessageRingView.h; sourceTree = "<group>"; };
@@ -3236,18 +3268,24 @@
 		D02660331F34A7DA000E2DC5 /* Location */ = {
 			isa = PBXGroup;
 			children = (
-				D026607C1F34A97B000E2DC5 /* TGPinAnnotationView.h */,
-				D026607D1F34A97B000E2DC5 /* TGPinAnnotationView.m */,
 				D02660781F34A961000E2DC5 /* TGLocationVenue.h */,
 				D02660791F34A961000E2DC5 /* TGLocationVenue.m */,
 				D02660341F34A7F8000E2DC5 /* TGLocationAnnotation.h */,
 				D02660351F34A7F8000E2DC5 /* TGLocationAnnotation.m */,
 				D02660361F34A7F8000E2DC5 /* TGLocationCurrentLocationCell.h */,
 				D02660371F34A7F8000E2DC5 /* TGLocationCurrentLocationCell.m */,
+				09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */,
+				09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */,
+				09A8BD781F6B4C6E0043A393 /* TGLocationLiveCell.h */,
+				09A8BD791F6B4C6E0043A393 /* TGLocationLiveCell.m */,
 				D02660381F34A7F8000E2DC5 /* TGLocationMapModeControl.h */,
 				D02660391F34A7F8000E2DC5 /* TGLocationMapModeControl.m */,
 				D026603A1F34A7F8000E2DC5 /* TGLocationMapView.h */,
 				D026603B1F34A7F8000E2DC5 /* TGLocationMapView.m */,
+				09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */,
+				09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */,
+				090671C21F67F71700CCF2F5 /* TGLocationOptionsView.h */,
+				090671C31F67F71700CCF2F5 /* TGLocationOptionsView.m */,
 				D026603C1F34A7F8000E2DC5 /* TGLocationPickerController.h */,
 				D026603D1F34A7F8000E2DC5 /* TGLocationPickerController.m */,
 				D026603E1F34A7F8000E2DC5 /* TGLocationPinAnnotationView.h */,
@@ -3270,8 +3308,12 @@
 				D02660511F34A7F8000E2DC5 /* TGLocationVenueCell.m */,
 				D02660541F34A7F8000E2DC5 /* TGLocationViewController.h */,
 				D02660551F34A7F8000E2DC5 /* TGLocationViewController.m */,
-				D026608C1F34BA71000E2DC5 /* TGPickPinAnnotationView.h */,
-				D026608D1F34BA71000E2DC5 /* TGPickPinAnnotationView.m */,
+				09AB58121F6C401B0087449F /* TGLocationWavesView.h */,
+				09AB58131F6C401B0087449F /* TGLocationWavesView.m */,
+				09F36E541F748E040022A5FE /* TGLocationLiveSessionItemView.h */,
+				09F36E551F748E040022A5FE /* TGLocationLiveSessionItemView.m */,
+				09F36E581F74FB130022A5FE /* TGLocationLiveElapsedView.h */,
+				09F36E591F74FB130022A5FE /* TGLocationLiveElapsedView.m */,
 			);
 			name = Location;
 			sourceTree = "<group>";
@@ -3426,6 +3468,12 @@
 		D07BC9451F2A3E9900ED97AA /* Suggestions */ = {
 			isa = PBXGroup;
 			children = (
+				09F916A71F5D9A4E00E0AEFA /* TGAlphacode.h */,
+				09F916A81F5D9A4E00E0AEFA /* TGAlphacode.m */,
+				09F916A91F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h */,
+				09F916AA1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m */,
+				09F916AB1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h */,
+				09F916AC1F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m */,
 				D07BC9561F2A3EBF00ED97AA /* TGModernConversationAssociatedInputPanel.h */,
 				D07BC9571F2A3EBF00ED97AA /* TGModernConversationAssociatedInputPanel.m */,
 				D07BC9461F2A3EA900ED97AA /* TGHashtagPanelCell.h */,
@@ -3804,6 +3852,7 @@
 				D026605A1F34A7F8000E2DC5 /* TGLocationMapModeControl.h in Headers */,
 				D07BC8651F2A2F1300ED97AA /* TGMediaPickerCaptionInputPanel.h in Headers */,
 				D07BC9191F2A380D00ED97AA /* TGPaintRadialBrush.h in Headers */,
+				09A8BD761F6B4C390043A393 /* TGLocationInfoCell.h in Headers */,
 				D07BC7131F2A269400ED97AA /* TGImageView.h in Headers */,
 				D01779751F2104320044446D /* TGVideoEditAdjustments.h in Headers */,
 				D07BCA031F2A9A2B00ED97AA /* TGMediaPickerGallerySelectedItemsModel.h in Headers */,
@@ -3872,6 +3921,7 @@
 				D07BCAEB1F2B507600ED97AA /* TGAttachmentGifCell.h in Headers */,
 				D01778481F1F961D0044446D /* TGDocumentAttributeFilename.h in Headers */,
 				D0177A751F2202260044446D /* TGModernBackToolbarButton.h in Headers */,
+				09F916AD1F5D9A4E00E0AEFA /* TGAlphacode.h in Headers */,
 				D07BCA0D1F2A9A2B00ED97AA /* TGMediaPickerGalleryVideoTrimView.h in Headers */,
 				D07BC9911F2A480800ED97AA /* TGStickerKeyboardTabCell.h in Headers */,
 				D07BC9F91F2A9A2B00ED97AA /* TGMediaPickerGalleryInterfaceView.h in Headers */,
@@ -3890,6 +3940,7 @@
 				D01777F41F1F961D0044446D /* TGTextCheckingResult.h in Headers */,
 				D01778231F1F961D0044446D /* TGMessageEntityTextUrl.h in Headers */,
 				D0177A9B1F22204A0044446D /* TGModernGalleryEmbeddedStickersHeaderView.h in Headers */,
+				090671C41F67F71700CCF2F5 /* TGLocationOptionsView.h in Headers */,
 				D07BCAAE1F2B45DA00ED97AA /* TGFileUtils.h in Headers */,
 				D0177B1E1F2641B10044446D /* PGCameraMovieWriter.h in Headers */,
 				D01779641F2103910044446D /* TGPaintUtils.h in Headers */,
@@ -3916,8 +3967,12 @@
 				D07BCAED1F2B507600ED97AA /* TGAttachmentVideoCell.h in Headers */,
 				D07BC9251F2A380D00ED97AA /* TGPaintSwatch.h in Headers */,
 				D07BC91D1F2A380D00ED97AA /* TGPaintShader.h in Headers */,
+				09F916B11F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h in Headers */,
 				D07BC9641F2A3F4000ED97AA /* TGRemoteImageView.h in Headers */,
 				D07BCB661F2B6A5600ED97AA /* TGEmbedPlayerState.h in Headers */,
+				09F916AF1F5D9A4E00E0AEFA /* TGAlphacodePanelCell.h in Headers */,
+				09F36E5A1F74FB130022A5FE /* TGLocationLiveElapsedView.h in Headers */,
+				09A8BD7A1F6B4C6E0043A393 /* TGLocationLiveCell.h in Headers */,
 				D07BCBC51F2B6F6300ED97AA /* CBLibrary.h in Headers */,
 				D01779841F2107D70044446D /* lmdb.h in Headers */,
 				D0177AF71F23DFC70044446D /* TGDataResource.h in Headers */,
@@ -3957,7 +4012,6 @@
 				D07BC9721F2A467D00ED97AA /* TGPhotoTextSettingsView.h in Headers */,
 				D07BC8A71F2A37A500ED97AA /* TGPhotoAvatarCropView.h in Headers */,
 				D07BCBCD1F2B6F6300ED97AA /* CBVideoPlayer.h in Headers */,
-				D026607E1F34A97B000E2DC5 /* TGPinAnnotationView.h in Headers */,
 				D07BCBB91F2B6F6300ED97AA /* CBCoubPlayer.h in Headers */,
 				D07BCAB21F2B460B00ED97AA /* TGGifConverter.h in Headers */,
 				D01778011F1F961D0044446D /* TGMessageViewCountContentProperty.h in Headers */,
@@ -3965,6 +4019,7 @@
 				D07BCA9C1F2B443700ED97AA /* TGMediaAssetsUtils.h in Headers */,
 				D0177A6E1F2201F00044446D /* TGModernGalleryDefaultFooterAccessoryView.h in Headers */,
 				D017777A1F1F927A0044446D /* NSObject+TGLock.h in Headers */,
+				09B51E001F6AF476000EE471 /* TGLocationMapViewController.h in Headers */,
 				D01779451F20FFF60044446D /* TGMediaAssetFetchResultChange.h in Headers */,
 				D01778A71F1FD0900044446D /* TGFont.h in Headers */,
 				D07BC6F11F2A19A700ED97AA /* TGCameraInterfaceAssets.h in Headers */,
@@ -4116,7 +4171,6 @@
 				D07BC90B1F2A380D00ED97AA /* TGPaintFaceDetector.h in Headers */,
 				D07BCA481F2A9CE300ED97AA /* TGModernMediaListSelectableItem.h in Headers */,
 				D07BC9F31F2A9A2B00ED97AA /* TGMediaPickerController.h in Headers */,
-				D026608E1F34BA71000E2DC5 /* TGPickPinAnnotationView.h in Headers */,
 				D07BC8161F2A2C0B00ED97AA /* PGPhotoGaussianBlurFilter.h in Headers */,
 				D017783B1F1F961D0044446D /* TGStickerPackReference.h in Headers */,
 				D01779DF1F2139980044446D /* POPAction.h in Headers */,
@@ -4161,6 +4215,7 @@
 				D01778331F1F961D0044446D /* TGWebPageMediaAttachment.h in Headers */,
 				D07BC7A81F2A2B8900ED97AA /* GPUImageFramebuffer.h in Headers */,
 				D01779331F20FFAC0044446D /* TGMediaAssetsModernLibrary.h in Headers */,
+				09F36E561F748E040022A5FE /* TGLocationLiveSessionItemView.h in Headers */,
 				D07BC7BC1F2A2BDD00ED97AA /* PGPhotoTool.h in Headers */,
 				D0177A971F221DB60044446D /* TGModernGalleryContainerView.h in Headers */,
 				D017790A1F20F3F90044446D /* TGImageBlur.h in Headers */,
@@ -4213,6 +4268,7 @@
 				D07BC92B1F2A3A3F00ED97AA /* matrix.h in Headers */,
 				D07BCAA61F2B445E00ED97AA /* TGMediaGroupsController.h in Headers */,
 				D07BC9111F2A380D00ED97AA /* TGPaintInput.h in Headers */,
+				09AB58141F6C401B0087449F /* TGLocationWavesView.h in Headers */,
 				D01777FD1F1F961D0044446D /* TGMessageGroup.h in Headers */,
 				D01777541F1F8FE60044446D /* PSData.h in Headers */,
 				D01778091F1F961D0044446D /* TGGameMediaAttachment.h in Headers */,
@@ -4404,6 +4460,7 @@
 				D02660831F34B986000E2DC5 /* TGListsTableView.m in Sources */,
 				D0177A081F2139980044446D /* POPSpringAnimation.mm in Sources */,
 				D07BCBA91F2B6F6300ED97AA /* CBAssetDownloadManager.m in Sources */,
+				09A8BD7B1F6B4C6E0043A393 /* TGLocationLiveCell.m in Sources */,
 				D07BCBBE1F2B6F6300ED97AA /* CBCoubVideoSource.m in Sources */,
 				D07BCBAB1F2B6F6300ED97AA /* CBChunkDownloadOperation.m in Sources */,
 				D07BCACA1F2B4E6200ED97AA /* TGMediaAvatarMenuMixin.m in Sources */,
@@ -4457,6 +4514,7 @@
 				D07BC76D1F2A2B3700ED97AA /* TGPhotoEditorBlurTypeButton.m in Sources */,
 				D07BC9921F2A480800ED97AA /* TGStickerKeyboardTabCell.m in Sources */,
 				D026606D1F34A7F8000E2DC5 /* TGLocationTitleView.m in Sources */,
+				09F36E5B1F74FB130022A5FE /* TGLocationLiveElapsedView.m in Sources */,
 				D01779541F2100520044446D /* TGMediaEditingContext.m in Sources */,
 				D07BC6F41F2A19A700ED97AA /* TGCameraModeControl.m in Sources */,
 				D017782C1F1F961D0044446D /* TGBotReplyMarkupButton.m in Sources */,
@@ -4490,6 +4548,7 @@
 				D01778061F1F961D0044446D /* TGWebDocument.m in Sources */,
 				D0177A351F21F1980044446D /* UIImage+TGMediaEditableItem.m in Sources */,
 				D01778001F1F961D0044446D /* TGMessageHole.m in Sources */,
+				09F916B21F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.m in Sources */,
 				D07BC73C1F2A2A7D00ED97AA /* PGPhotoEditorRawDataOutput.m in Sources */,
 				D07BCBC21F2B6F6300ED97AA /* CBGenericDownloadOperation.m in Sources */,
 				D07BC8CE1F2A37EC00ED97AA /* TGPhotoPaintSettingsView.m in Sources */,
@@ -4535,6 +4594,7 @@
 				D07BC8CC1F2A37EC00ED97AA /* TGPhotoPaintSelectionContainerView.m in Sources */,
 				D07BC80F1F2A2C0B00ED97AA /* PGPhotoEnhancePass.m in Sources */,
 				D026606F1F34A7F8000E2DC5 /* TGLocationTrackingButton.m in Sources */,
+				09F916AE1F5D9A4E00E0AEFA /* TGAlphacode.m in Sources */,
 				D0177A031F2139980044446D /* POPMath.mm in Sources */,
 				D0177A681F21FB9B0044446D /* TGModernGalleryItemView.m in Sources */,
 				D07BC6F01F2A19A700ED97AA /* TGCameraFlipButton.m in Sources */,
@@ -4624,12 +4684,12 @@
 				D01778321F1F961D0044446D /* TGInstantPage.m in Sources */,
 				D017776B1F1F909E0044446D /* LegacyComponentsGlobals.m in Sources */,
 				D07BCB651F2B6A5600ED97AA /* TGEmbedPlayerScrubber.m in Sources */,
-				D026608F1F34BA71000E2DC5 /* TGPickPinAnnotationView.m in Sources */,
 				D01778301F1F961D0044446D /* TGReplyMarkupAttachment.m in Sources */,
 				D07BC97A1F2A471000ED97AA /* TGStickerKeyboardTabPanel.m in Sources */,
 				D07BC78D1F2A2B3700ED97AA /* TGPhotoEditorToolButtonsView.m in Sources */,
 				D01779FB1F2139980044446D /* POPDecayAnimation.mm in Sources */,
 				D07BCAC01F2B4E3900ED97AA /* UICollectionView+TGTransitioning.m in Sources */,
+				09B51E011F6AF476000EE471 /* TGLocationMapViewController.m in Sources */,
 				D07BCB6F1F2B6A5600ED97AA /* TGEmbedVimeoPlayerView.m in Sources */,
 				D07BC9551F2A3EA900ED97AA /* TGModernConversationMentionsAssociatedPanel.m in Sources */,
 				D07BCAF41F2B509200ED97AA /* TGAttachmentAssetCell.m in Sources */,
@@ -4670,6 +4730,8 @@
 				D07BCB731F2B6A5600ED97AA /* TGEmbedVKPlayerView.m in Sources */,
 				D07BCA0E1F2A9A2B00ED97AA /* TGMediaPickerGalleryVideoTrimView.m in Sources */,
 				D026608B1F34B9F9000E2DC5 /* TGSearchDisplayMixin.m in Sources */,
+				09A8BD771F6B4C390043A393 /* TGLocationInfoCell.m in Sources */,
+				09AB58151F6C401B0087449F /* TGLocationWavesView.m in Sources */,
 				D04269121F586E430037ECE8 /* TGVideoCameraPipeline.m in Sources */,
 				D07BCA501F2A9DDD00ED97AA /* FLAnimatedImage.m in Sources */,
 				D07BC9881F2A472900ED97AA /* TGPhotoStickersSectionHeader.m in Sources */,
@@ -4702,10 +4764,10 @@
 				D07BC6EE1F2A19A700ED97AA /* TGCameraFlashControl.m in Sources */,
 				D017797C1F21075C0044446D /* TGModernCache.m in Sources */,
 				D07BCBF21F2B72DC00ED97AA /* STKDataSourceWrapper.m in Sources */,
+				09F36E571F748E040022A5FE /* TGLocationLiveSessionItemView.m in Sources */,
 				09750FC61F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m in Sources */,
 				D017783D1F1F961D0044446D /* TGDocumentAttributeFilename.m in Sources */,
 				D017796C1F2103DB0044446D /* TGPhotoPaintEntity.m in Sources */,
-				D026607F1F34A97B000E2DC5 /* TGPinAnnotationView.m in Sources */,
 				D07BCBF41F2B72DC00ED97AA /* STKHTTPDataSource.m in Sources */,
 				D026605D1F34A7F8000E2DC5 /* TGLocationMapView.m in Sources */,
 				D07BCABC1F2B4E2600ED97AA /* TGTransitionLayout.m in Sources */,
@@ -4839,6 +4901,7 @@
 				D07BC8491F2A2DA200ED97AA /* TGMenuSheetController.m in Sources */,
 				D01778E81F20CAE60044446D /* TGNavigationBar.m in Sources */,
 				D0177A861F2218AB0044446D /* TGModernGalleryZoomableItemView.m in Sources */,
+				09F916B01F5D9A4E00E0AEFA /* TGAlphacodePanelCell.m in Sources */,
 				D01779321F20FFAC0044446D /* TGMediaAssetsLibrary.m in Sources */,
 				D07BC7711F2A2B3700ED97AA /* TGPhotoEditorCollectionView.m in Sources */,
 				D01779E51F2139980044446D /* POPAnimationEvent.mm in Sources */,
@@ -4886,6 +4949,7 @@
 				D07BCBAD1F2B6F6300ED97AA /* CBConstance.m in Sources */,
 				D017780A1F1F961D0044446D /* TGGameMediaAttachment.m in Sources */,
 				D0177A7E1F2204640044446D /* TGModernButton.m in Sources */,
+				090671C51F67F71700CCF2F5 /* TGLocationOptionsView.m in Sources */,
 				D07BC8271F2A2C0B00ED97AA /* PGTintTool.m in Sources */,
 				D07BC9F41F2A9A2B00ED97AA /* TGMediaPickerController.m in Sources */,
 				D0177A121F213B440044446D /* JNWSpringAnimation.m in Sources */,
@@ -5483,7 +5547,7 @@
 				D01778931F1FA58C0044446D /* Debug */,
 				D017772E1F1F8F100044446D /* Release */,
 				D07BCC011F2B79B900ED97AA /* Release AppStore */,
-				D01778951F1FA5960044446D /* Hockeyapp */,
+				D01778951F1FA5960044446D /* Release Hockeyapp */,
 				D02660951F34DCBF000E2DC5 /* Release Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -5497,7 +5561,7 @@
 				D01778941F1FA58C0044446D /* Debug */,
 				D01777311F1F8F100044446D /* Release */,
 				D07BCC021F2B79B900ED97AA /* Release AppStore */,
-				D01778961F1FA5960044446D /* Hockeyapp */,
+				D01778961F1FA5960044446D /* Release Hockeyapp */,
 				D02660961F34DCBF000E2DC5 /* Release Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;

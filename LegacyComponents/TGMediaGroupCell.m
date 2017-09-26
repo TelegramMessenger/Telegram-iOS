@@ -133,6 +133,12 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         _iconView.contentMode = UIViewContentModeCenter;
         [self addSubview:_iconView];
         
+        if (iosMajorVersion() >= 11)
+        {
+            _shadowView.accessibilityIgnoresInvertColors = true;
+            _iconView.accessibilityIgnoresInvertColors = true;
+        }
+        
         _nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(96, 24, 0, 0)];
         _nameLabel.backgroundColor = [UIColor whiteColor];
         _nameLabel.contentMode = UIViewContentModeLeft;
@@ -205,6 +211,9 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
                 [imageView setSignal:[TGMediaAssetImageSignals imageForAsset:assets[i]
                                                                    imageType:TGMediaAssetImageTypeThumbnail
                                                                         size:CGSizeMake(138, 138)]];
+                
+                if (iosMajorVersion() >= 11)
+                    imageView.accessibilityIgnoresInvertColors = true;
             }
             else
             {
@@ -212,6 +221,9 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
                 borderView.hidden = true;
                 
                 [imageView reset];
+                
+                if (iosMajorVersion() >= 11)
+                    imageView.accessibilityIgnoresInvertColors = false;
             }
         }
     }
@@ -226,6 +238,9 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
             borderView.hidden = false;
             
             [imageView reset];
+            
+            if (iosMajorVersion() >= 11)
+                imageView.accessibilityIgnoresInvertColors = false;
         }
         
         [(TGImageView *)_imageViews.firstObject setImage:TGComponentsImageNamed(@"ModernMediaEmptyAlbumIcon")];

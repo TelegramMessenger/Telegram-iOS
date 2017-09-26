@@ -363,9 +363,20 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     }
 }
 
+- (void)pushNavigationItem:(UINavigationItem *)item animated:(BOOL)animated
+{
+    [super pushNavigationItem:item animated:animated];
+}
+
+- (UINavigationItem *)popNavigationItemAnimated:(BOOL)animated
+{
+    return [super popNavigationItemAnimated:animated];
+}
+
 - (void)addSubview:(UIView *)view {
     if ([self isBackgroundView:view]) {
         view.hidden = true;
+        return;
     }
     [super addSubview:view];
 }
@@ -374,6 +385,7 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
 {
     if ([self isBackgroundView:view]) {
         view.hidden = true;
+        return;
     }
     if (view != self.additionalView)
         [super insertSubview:view atIndex:MIN((int)self.subviews.count, MAX(index, 2))];
@@ -522,6 +534,16 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     UIView *result = [_musicPlayerContainer hitTest:CGPointMake(point.x - _musicPlayerContainer.frame.origin.x, point.y - _musicPlayerContainer.frame.origin.y) withEvent:event];
     if (result != nil && self.alpha > FLT_EPSILON)
         return result;
+    
+    if (self.topItem.titleView != nil)
+    {
+        if (CGRectContainsPoint(self.bounds, point))
+        {
+            UIView *result = [self.topItem.titleView hitTest:[self convertPoint:point toView:self.topItem.titleView] withEvent:event];
+            if (result != nil)
+                return result;
+        }
+    }
     
     if (self.additionalView != nil)
     {

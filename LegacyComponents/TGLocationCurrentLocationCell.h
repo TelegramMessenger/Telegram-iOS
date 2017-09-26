@@ -3,8 +3,12 @@
 
 @interface TGLocationCurrentLocationCell : UITableViewCell
 
+@property (nonatomic, weak) UIImageView *edgeView;
+
 - (void)configureForCurrentLocationWithAccuracy:(CLLocationAccuracy)accuracy;
 - (void)configureForCustomLocationWithAddress:(NSString *)address;
+- (void)configureForLiveLocationWithAccuracy:(CLLocationAccuracy)accuracy;
+- (void)configureForStopLiveLocation;
 
 @end
 

@@ -45,6 +45,9 @@
     
     _subtitleLabel.backgroundColor = [UIColor clearColor];
     _subtitleLabel.textColor = UIColorRGB(0x777777);
+    
+    if (iosMajorVersion() >= 11)
+        self.accessibilityIgnoresInvertColors = true;
 }
 
 - (CGFloat)preferredHeightForWidth:(CGFloat)width screenHeight:(CGFloat)__unused screenHeight

@@ -8,3 +8,12 @@
 - (instancetype)initWithViewCount:(int32_t)viewCount;
 
 @end
+
+
+@interface TGMessageEditDateContentProperty : NSObject <PSCoding>
+
+@property (nonatomic, readonly) NSTimeInterval editDate;
+
+- (instancetype)initWithEditDate:(NSTimeInterval)editDate;
+
+@end

@@ -63,6 +63,12 @@ NSString *const TGMediaAssetsGifCellKind = @"TGMediaAssetsGifCellKind";
         _typeLabel.text = @"GIF";
         [_typeLabel sizeToFit];
         [self addSubview:_typeLabel];
+        
+        if (iosMajorVersion() >= 11)
+        {
+            _shadowView.accessibilityIgnoresInvertColors = true;
+            _typeLabel.accessibilityIgnoresInvertColors = true;
+        }
     }
     return self;
 }

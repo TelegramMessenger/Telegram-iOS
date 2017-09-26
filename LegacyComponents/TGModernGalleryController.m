@@ -96,6 +96,13 @@
     return [super prefersStatusBarHidden];
 }
 
+- (UIRectEdge)preferredScreenEdgesDeferringSystemGestures
+{
+    if (self.childViewControllers.count > 0)
+        return [self.childViewControllers.lastObject preferredScreenEdgesDeferringSystemGestures];
+    
+    return [super preferredScreenEdgesDeferringSystemGestures];
+}
 
 - (void)complexDismiss
 {

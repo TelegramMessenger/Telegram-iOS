@@ -1,4 +1,5 @@
 #import "TGMediaPickerCell.h"
+#import "LegacyComponentsInternal.h"
 #import <LegacyComponents/TGImageView.h>
 
 #import <LegacyComponents/TGMediaSelectionContext.h>
@@ -27,6 +28,9 @@
         _imageView.contentMode = UIViewContentModeScaleAspectFill;
         _imageView.clipsToBounds = true;
         [self addSubview:_imageView];
+        
+        if (iosMajorVersion() >= 11)
+            _imageView.accessibilityIgnoresInvertColors = true;
     }
     return self;
 }
@@ -47,6 +51,9 @@
             _checkButton = [[TGCheckButtonView alloc] initWithStyle:TGCheckButtonStyleMedia];
             [_checkButton addTarget:self action:@selector(checkButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [self addSubview:_checkButton];
+            
+            if (iosMajorVersion() >= 11)
+                _checkButton.accessibilityIgnoresInvertColors = true;
         }
         
         if (_itemSelectedDisposable == nil)

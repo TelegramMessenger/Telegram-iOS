@@ -47,6 +47,25 @@
         return [self _customStringFromDistance:accuracy];
 }
 
++ (NSString *)stringForCoordinate:(CLLocationCoordinate2D)coordinate
+{
+    NSInteger latSeconds = (NSInteger)(coordinate.latitude * 3600);
+    NSInteger latDegrees = latSeconds / 3600;
+    latSeconds = labs(latSeconds % 3600);
+    NSInteger latMinutes = latSeconds / 60;
+    latSeconds %= 60;
+    
+    NSInteger longSeconds = (NSInteger)(coordinate.longitude * 3600);
+    NSInteger longDegrees = longSeconds / 3600;
+    longSeconds = labs(longSeconds % 3600);
+    NSInteger longMinutes = longSeconds / 60;
+    longSeconds %= 60;
+    
+    NSString *result = [NSString stringWithFormat:@"%@%02ld° %02ld' %02ld\" %@%02ld° %02ld' %02ld\"", latDegrees >= 0 ? @"N" : @"S", labs(latDegrees), (long)latMinutes, (long)latSeconds, longDegrees >= 0 ? @"E" : @"W", labs(longDegrees), (long)longMinutes, (long)longSeconds];
+    
+    return result;
+}
+
 + (NSString *)_customStringFromDistance:(CLLocationDistance)distance
 {
     static bool metricUnits = true;

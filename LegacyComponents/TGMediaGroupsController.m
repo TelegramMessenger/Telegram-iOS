@@ -49,9 +49,8 @@
     [super loadView];
     
     _tableView = [[UITableView alloc] initWithFrame:self.view.bounds];
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-    _tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
-#endif
+    if (iosMajorVersion() >= 11)
+        _tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     _tableView.alwaysBounceVertical = true;
     _tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     _tableView.backgroundColor = [UIColor whiteColor];

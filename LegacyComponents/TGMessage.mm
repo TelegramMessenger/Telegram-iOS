@@ -286,6 +286,21 @@ typedef enum {
     return 0;
 }
 
+- (NSTimeInterval)editDate {
+    TGMessageEditDateContentProperty *property = _contentProperties[@"editDate"];
+    return property.editDate;
+}
+
+- (void)setEditDate:(NSTimeInterval)editDate {
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithDictionary:_contentProperties];
+    if (editDate > 0) {
+        dict[@"editDate"] = [[TGMessageEditDateContentProperty alloc] initWithEditDate:editDate];
+    } else {
+        [dict removeObjectForKey:@"editDate"];
+    }
+    _contentProperties = dict;
+}
+
 - (TGMessageViewCountContentProperty *)viewCount {
     return _contentProperties[@"viewCount"];
 }
@@ -1161,6 +1176,11 @@ typedef enum {
         }
     }
     return false;
+}
+
+- (int32_t)actualDate
+{
+    return self.editDate > 0 ? self.editDate : self.date;
 }
 
 @end

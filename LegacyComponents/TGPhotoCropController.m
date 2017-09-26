@@ -941,4 +941,9 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
 
 }
 
+- (UIRectEdge)preferredScreenEdgesDeferringSystemGestures
+{
+    return UIRectEdgeTop | UIRectEdgeBottom;
+}
+
 @end

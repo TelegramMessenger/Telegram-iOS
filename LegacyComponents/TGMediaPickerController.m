@@ -2,6 +2,7 @@
 
 #import <LegacyComponents/TGMediaEditingContext.h>
 #import <LegacyComponents/TGMediaSelectionContext.h>
+#import "LegacyComponentsInternal.h"
 
 #import "TGMediaPickerSelectionGestureRecognizer.h"
 
@@ -55,9 +56,8 @@
     [self.view addSubview:_wrapperView];
 
     _collectionView = [[[self _collectionViewClass] alloc] initWithFrame:_wrapperView.bounds collectionViewLayout:[self _collectionLayout]];
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-    _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
-#endif
+    if (iosMajorVersion() >= 11)
+        _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     _collectionView.alwaysBounceVertical = true;
     _collectionView.backgroundColor = [UIColor whiteColor];
     _collectionView.delaysContentTouches = true;

@@ -27,6 +27,9 @@
     self = [super initWithFrame:frame];
     if (self != nil)
     {
+        if (iosMajorVersion() >= 11)
+            self.accessibilityIgnoresInvertColors = true;
+        
         _label = [[TGGradientLabel alloc] init];
         _label.backgroundColor = [UIColor clearColor];
         [self addSubview:_label];

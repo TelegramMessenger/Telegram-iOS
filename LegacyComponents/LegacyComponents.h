@@ -69,7 +69,9 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGModernConversationAssociatedInputPanel.h>
 #import <LegacyComponents/TGModernConversationHashtagsAssociatedPanel.h>
 #import <LegacyComponents/TGModernConversationMentionsAssociatedPanel.h>
+#import <LegacyComponents/TGModernConversationAlphacodeAssociatedPanel.h>
 #import <LegacyComponents/TGSuggestionContext.h>
+#import <LegacyComponents/TGAlphacode.h>
 
 #import <LegacyComponents/TGTextCheckingResult.h>
 #import <LegacyComponents/TGChannelBannedRights.h>
@@ -283,6 +285,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGAttachmentCarouselItemView.h>
 #import <LegacyComponents/TGMediaAssetsController.h>
 
+#import <LegacyComponents/TGLocationMapViewController.h>
 #import <LegacyComponents/TGLocationPickerController.h>
 #import <LegacyComponents/TGLocationViewController.h>
 #import <LegacyComponents/TGListsTableView.h>
@@ -295,3 +298,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGClipboardGalleryPhotoItem.h>
 #import <LegacyComponents/TGVideoMessageCaptureController.h>
 #import <LegacyComponents/TGModernConversationInputMicButton.h>
+
+#import <LegacyComponents/TGLocationWavesView.h>
+#import <LegacyComponents/TGLocationLiveElapsedView.h>
+#import <LegacyComponents/TGLocationLiveSessionItemView.h>
