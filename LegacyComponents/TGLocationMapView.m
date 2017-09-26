@@ -76,4 +76,26 @@
         self.pitchEnabled = enabled;
 }
 
+- (void)setCompassInsets:(UIEdgeInsets)compassInsets
+{
+    _compassInsets = compassInsets;
+    [self setNeedsLayout];
+}
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    
+    if (UIEdgeInsetsEqualToEdgeInsets(self.compassInsets, UIEdgeInsetsZero))
+        return;
+    
+    for (UIView *view in self.subviews)
+    {
+        if ([NSStringFromClass([view class]) rangeOfString:@"Compass"].location != NSNotFound)
+        {
+            view.frame = CGRectMake(self.frame.size.width - self.compassInsets.right - view.frame.size.width, self.compassInsets.top, view.frame.size.width, view.frame.size.height);
+        }
+    }
+}
+
 @end

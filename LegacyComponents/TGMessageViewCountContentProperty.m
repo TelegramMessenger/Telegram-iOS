@@ -21,3 +21,24 @@
 }
 
 @end
+
+
+@implementation TGMessageEditDateContentProperty
+
+- (instancetype)initWithEditDate:(NSTimeInterval)editDate {
+    self = [super init];
+    if (self != nil) {
+        _editDate = editDate;
+    }
+    return self;
+}
+
+- (instancetype)initWithKeyValueCoder:(PSKeyValueCoder *)coder {
+    return [self initWithEditDate:[coder decodeDoubleForCKey:"ed"]];
+}
+
+- (void)encodeWithKeyValueCoder:(PSKeyValueCoder *)coder {
+    [coder encodeDouble:_editDate forCKey:"ed"];
+}
+
+@end

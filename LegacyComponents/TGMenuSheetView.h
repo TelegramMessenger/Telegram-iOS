@@ -32,6 +32,8 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context itemViews:(NSArray *)itemViews sizeClass:(UIUserInterfaceSizeClass)sizeClass dark:(bool)dark;
 
+- (void)setItemViews:(NSArray *)itemViews animated:(bool)animated;
+
 - (void)menuWillAppearAnimated:(bool)animated;
 - (void)menuDidAppearAnimated:(bool)animated;
 - (void)menuWillDisappearAnimated:(bool)animated;

@@ -26,14 +26,15 @@ NSString *const TGLocationFoursquareVenueProvider = @"foursquare";
     if (categories.count > 0)
     {
         NSDictionary *category = categories.firstObject;
-        venue->_categoryName = category[@"name"];
-        
         NSDictionary *icon = category[@"icon"];
         if (icon != nil)
             venue->_categoryIconUrl = [NSURL URLWithString:[NSString stringWithFormat:@"%@64%@", icon[@"prefix"], icon[@"suffix"]]];
+        
+        NSURL *url = [NSURL URLWithString:icon[@"prefix"]];
+        NSArray *components = url.pathComponents;
+        NSString *categoryName = [[NSString stringWithFormat:@"%@/%@", [components objectAtIndex:components.count - 2], components.lastObject] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"_"]];
+        venue->_categoryName = categoryName;
     }
-    
-    
     
     venue->_country = location[@"country"];
     venue->_state = location[@"state"];
@@ -53,8 +54,7 @@ NSString *const TGLocationFoursquareVenueProvider = @"foursquare";
     venue->_name = dictionary[@"name"];
     
     NSDictionary *location = dictionary[@"geometry"][@"location"];
-    venue->_coordinate = CLLocationCoordinate2DMake([location[@"lat"] doubleValue],
-                                                    [location[@"lng"] doubleValue]);
+    venue->_coordinate = CLLocationCoordinate2DMake([location[@"lat"] doubleValue], [location[@"lng"] doubleValue]);
     
     NSArray *types = dictionary[@"types"];
     if (types.count > 0)
@@ -96,7 +96,7 @@ NSString *const TGLocationFoursquareVenueProvider = @"foursquare";
 
 - (TGVenueAttachment *)venueAttachment
 {
-    return [[TGVenueAttachment alloc] initWithTitle:self.name address:self.displayAddress provider:self.provider venueId:self.identifier];
+    return [[TGVenueAttachment alloc] initWithTitle:self.name address:self.displayAddress provider:self.provider venueId:self.identifier type:self.categoryName];
 }
 
 @end

@@ -148,6 +148,9 @@
                 return [strongSelf->_interfaceView.timerButton convertRect:strongSelf->_interfaceView.timerButton.bounds toView:controller.view];
             }];
         };
+        
+        if (iosMajorVersion() >= 11)
+            _interfaceView.accessibilityIgnoresInvertColors = true;
     }
     return self;
 }
@@ -488,6 +491,9 @@
         else {
             [_context setStatusBarHidden:false withAnimation:UIStatusBarAnimationNone];
         }
+        
+        if (iosMajorVersion() >= 11)
+            [strongSelf.controller setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
     };
     
     controller.requestThumbnailImage = ^SSignal *(id<TGMediaEditableItem> editableItem)

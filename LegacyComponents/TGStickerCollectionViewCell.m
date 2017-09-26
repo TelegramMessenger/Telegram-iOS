@@ -26,6 +26,9 @@
         _imageView = [[TGImageView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 62.0f, 62.0f)];
         _imageView.contentMode = UIViewContentModeScaleAspectFit;
         [self.contentView addSubview:_imageView];
+        
+        if (iosMajorVersion() >= 11)
+            _imageView.accessibilityIgnoresInvertColors = true;
     }
     return self;
 }

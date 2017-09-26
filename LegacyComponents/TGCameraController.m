@@ -413,9 +413,16 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             [strongSelf->_momentSession removeLastSegment];
         }
     };
-    
+
     if (_intent == TGCameraControllerAvatarIntent)
         [_interfaceView setHasModeControl:false];
+
+    if (iosMajorVersion() >= 11)
+    {
+        _backgroundView.accessibilityIgnoresInvertColors = true;
+        _interfaceView.accessibilityIgnoresInvertColors = true;
+        _focusControl.accessibilityIgnoresInvertColors = true;
+    }
     
     [_autorotationCorrectionView addSubview:_interfaceView];
     

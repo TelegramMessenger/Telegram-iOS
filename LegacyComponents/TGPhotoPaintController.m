@@ -2395,4 +2395,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     }]];
 }
 
+- (UIRectEdge)preferredScreenEdgesDeferringSystemGestures
+{
+    return UIRectEdgeTop | UIRectEdgeBottom;
+}
+
 @end

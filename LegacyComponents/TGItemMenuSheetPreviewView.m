@@ -509,13 +509,31 @@ typedef enum
 {
     [self setArrowHidden:_actionsPresented animated:true];
     
-    [UIView animateWithDuration:0.44 delay:0.0 usingSpringWithDamping:0.72f initialSpringVelocity:0.0f options:UIViewAnimationOptionAllowUserInteraction animations:^
+    void (^changeBlock)(void) = ^
     {
         _mainSheetView.frame = [self _mainViewFrameExpanded:true];
         _shadowView.frame = [self _shadowFrame];
         if (_actionsPresented && !_actionsAnimatingDismiss)
             _actionsSheetView.frame = [self _actionsViewFrameExpanded:true];
-    } completion:nil];
+    };
+    
+    void (^completionBlock)(BOOL) = ^(BOOL finished)
+    {
+        if (finished)
+        {
+            if (_actionsSheetView.superview != _containerView)
+                [_containerView addSubview:_actionsSheetView];
+        }
+    };
+    
+    if (iosMajorVersion() >= 7)
+    {
+        [UIView animateWithDuration:0.44 delay:0.0 usingSpringWithDamping:0.72f initialSpringVelocity:0.0f options:UIViewAnimationOptionAllowUserInteraction animations:changeBlock completion:nil];
+    }
+    else
+    {
+        [UIView animateWithDuration:0.3 delay:0.0 options:0 animations:changeBlock completion:completionBlock];
+    }
 }
 
 - (CGRect)_mainViewFrameExpanded:(bool)expanded
@@ -580,29 +598,42 @@ typedef enum
     _actionsWerePresented = true;
     _actionsSheetView.hidden = false;
     
-    [UIView animateWithDuration:0.5 delay:0.0 usingSpringWithDamping:0.8f initialSpringVelocity:0.0f options:0 animations:^
+    void (^changeBlock)(void) = ^
     {
         _actionsSheetView.frame = [self _actionsViewFrameExpanded:true];
         if (animationBlock != nil)
             animationBlock();
-    } completion:^(BOOL finished)
+    };
+    
+    void (^completionBlock)(BOOL) = ^(BOOL finished)
     {
         if (finished)
         {
             if (_actionsSheetView.superview != _containerView)
                 [_containerView addSubview:_actionsSheetView];
         }
-    }];
+    };
+    
+    if (iosMajorVersion() >= 7)
+    {
+        [UIView animateWithDuration:0.5 delay:0.0 usingSpringWithDamping:0.8f initialSpringVelocity:0.0f options:0 animations:changeBlock completion:completionBlock];
+    }
+    else
+    {
+        [UIView animateWithDuration:0.3 delay:0.0 options:0 animations:changeBlock completion:completionBlock];
+    }
 }
 
 - (void)dismissActions
 {
     _actionsAnimatingDismiss = true;
     
-    [UIView animateWithDuration:0.3 delay:0.0 usingSpringWithDamping:1.5 initialSpringVelocity:0.0 options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowAnimatedContent animations:^
+    void (^changeBlock)(void) = ^
     {
-         _actionsSheetView.frame = [self _actionsViewFrameExpanded:false];
-    } completion:^(__unused BOOL finished)
+        _actionsSheetView.frame = [self _actionsViewFrameExpanded:false];
+    };
+    
+    void (^completionBlock)(BOOL) = ^(BOOL finished)
     {
         _actionsAnimatingDismiss = false;
         _actionsPresented = false;
@@ -610,7 +641,16 @@ typedef enum
         
         if (_panGestureRecognizer != nil && _panGestureRecognizer.state != UIGestureRecognizerStateChanged)
             [self performDismissal];
-    }];
+    };
+    
+    if (iosMajorVersion() >= 7)
+    {
+        [UIView animateWithDuration:0.3 delay:0.0 usingSpringWithDamping:1.5 initialSpringVelocity:0.0 options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowAnimatedContent animations:changeBlock completion:completionBlock];
+    }
+    else
+    {
+        [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowAnimatedContent animations:changeBlock completion:completionBlock];
+    }
 }
 
 - (void)performCommit
@@ -618,21 +658,32 @@ typedef enum
     if (self.willDismiss != nil)
         self.willDismiss();
     
-    [UIView animateWithDuration:0.3 delay:0.0 usingSpringWithDamping:1.5 initialSpringVelocity:0.0 options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowAnimatedContent animations:^
+    void (^changeBlock)(void) = ^
     {
         _mainSheetView.frame = CGRectMake(_mainSheetView.frame.origin.x, -_mainSheetView.frame.size.height, _mainSheetView.frame.size.width, _mainSheetView.frame.size.height);
         _shadowView.frame = [self _shadowFrame];
         _actionsSheetView.frame = [self _actionsViewFrameExpanded:false];
-    } completion:^(__unused BOOL finished)
+    };
+    
+    void (^completionBlock)(BOOL) = ^(BOOL finished)
     {
         _mainSheetView.hidden = true;
         _actionsSheetView.hidden = true;
         [self animateDismiss:^
-        {
-            if (self.onDismiss != nil)
-                self.onDismiss();
-        }];
-    }];
+         {
+             if (self.onDismiss != nil)
+                 self.onDismiss();
+         }];
+    };
+    
+    if (iosMajorVersion() >= 7)
+    {
+        [UIView animateWithDuration:0.3 delay:0.0 usingSpringWithDamping:1.5 initialSpringVelocity:0.0 options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowAnimatedContent animations:changeBlock completion:completionBlock];
+    }
+    else
+    {
+        [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowAnimatedContent animations:changeBlock completion:completionBlock];
+    }
 }
 
 - (void)performDismissal
@@ -643,8 +694,8 @@ typedef enum
     if (_actionsPresented)
     {
         [self addSubview:_actionsSheetView];
-    
-        [UIView animateWithDuration:0.24 delay:0.0 usingSpringWithDamping:1.5 initialSpringVelocity:0.0 options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowAnimatedContent animations:^
+        
+        void (^changeBlock)(void) = ^
         {
             if (!_actionsAnimatingDismiss)
                 _actionsSheetView.frame = [self _actionsViewFrameExpanded:false];
@@ -654,7 +705,16 @@ typedef enum
                 _mainSheetView.frame = [self _mainViewFrameExpanded:false];
                 _shadowView.frame = [self _shadowFrame];
             }
-        } completion:nil];
+        };
+        
+        if (iosMajorVersion() >= 7)
+        {
+            [UIView animateWithDuration:0.24 delay:0.0 usingSpringWithDamping:1.5 initialSpringVelocity:0.0 options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowAnimatedContent animations:changeBlock completion:nil];
+        }
+        else
+        {
+            [UIView animateWithDuration:0.2 delay:0.0 options:0 animations:changeBlock completion:nil];
+        }
         
         TGDispatchAfter(0.15, dispatch_get_main_queue(), ^
         {

@@ -254,6 +254,12 @@ typedef enum
     _placeholderView.image = [TGVideoMessageCaptureController startImage];
     [_circleView addSubview:_placeholderView];
     
+    if (iosMajorVersion() >= 11)
+    {
+        _shadowView.accessibilityIgnoresInvertColors = true;
+        _placeholderView.accessibilityIgnoresInvertColors = true;
+    }
+    
     _ringView = [[TGVideoMessageRingView alloc] initWithFrame:CGRectMake((_circleWrapperView.frame.size.width - 234.0f) / 2.0f, (_circleWrapperView.frame.size.height - 234.0f) / 2.0f, 234.0f, 234.0f)];
     [_circleWrapperView addSubview:_ringView];
     
@@ -348,6 +354,9 @@ typedef enum
 {
     _previewView = [[TGVideoCameraGLView alloc] initWithFrame:_circleView.bounds];
     [_circleView insertSubview:_previewView belowSubview:_placeholderView];
+    
+    if (iosMajorVersion() >= 11)
+        _previewView.accessibilityIgnoresInvertColors = true;
     
     [self captureStarted];
 }

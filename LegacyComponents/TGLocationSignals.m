@@ -6,6 +6,7 @@
 #import <UIKit/UIKit.h>
 
 #import <CoreLocation/CoreLocation.h>
+#import <MapKit/MapKit.h>
 
 #import "TGLocationVenue.h"
 #import "TGLocationReverseGeocodeResult.h"
@@ -109,6 +110,40 @@ NSString *const TGLocationGoogleGeocodeLocale = @"en";
     }];
 }
 
++ (SSignal *)driveEta:(CLLocationCoordinate2D)destinationCoordinate
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        MKPlacemark *destinationPlacemark = [[MKPlacemark alloc] initWithCoordinate:destinationCoordinate addressDictionary:nil];
+        MKMapItem *destinationMapItem = [[MKMapItem alloc] initWithPlacemark:destinationPlacemark];
+        
+        MKDirectionsRequest *request = [[MKDirectionsRequest alloc] init];
+        request.source = [MKMapItem mapItemForCurrentLocation];
+        request.destination = destinationMapItem;
+        request.transportType = MKDirectionsTransportTypeAutomobile;
+        request.requestsAlternateRoutes = false;
+
+        MKDirections *directions = [[MKDirections alloc] initWithRequest:request];
+        [directions calculateETAWithCompletionHandler:^(MKETAResponse *response, NSError *error)
+        {
+             if (error != nil)
+             {
+                 [subscriber putError:error];
+                 return;
+             }
+            
+            [subscriber putNext:@(response.expectedTravelTime)];
+            [subscriber putCompletion];
+        }];
+        
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [directions cancel];
+        }];
+    }];
+}
+
 + (SSignal *)searchNearbyPlacesWithQuery:(NSString *)query coordinate:(CLLocationCoordinate2D)coordinate service:(TGLocationPlacesService)service
 {
     switch (service)
@@ -179,8 +214,6 @@ NSString *const TGLocationGoogleGeocodeLocale = @"en";
         return venues;
     }];
 }
-
-
 
 + (NSString *)_urlForService:(TGLocationPlacesService)service parameters:(NSDictionary *)parameters
 {

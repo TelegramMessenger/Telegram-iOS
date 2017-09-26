@@ -23,9 +23,6 @@ const CGFloat TGSelectionGestureVerticalFailureThreshold = 5.0f;
     if (self != nil)
     {
         _collectionView = collectionView;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-        _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
-#endif
         
         _gestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
         _gestureRecognizer.delegate = self;

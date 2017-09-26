@@ -42,6 +42,12 @@ NSString *const TGAttachmentVideoCellIdentifier = @"AttachmentVideoCell";
         [self bringSubviewToFront:_cornersView];
         
         _adjustmentsDisposable = [[SMetaDisposable alloc] init];
+        
+        if (iosMajorVersion() >= 11)
+        {
+            _iconView.accessibilityIgnoresInvertColors = true;
+            _durationLabel.accessibilityIgnoresInvertColors = true;
+        }
     }
     return self;
 }

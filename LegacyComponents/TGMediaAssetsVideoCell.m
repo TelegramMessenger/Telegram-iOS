@@ -78,6 +78,13 @@ NSString *const TGMediaAssetsVideoCellKind = @"TGMediaAssetsVideoCellKind";
         [self addSubview:_durationLabel];
         
         _adjustmentsDisposable = [[SMetaDisposable alloc] init];
+        
+        if (iosMajorVersion() >= 11)
+        {
+            _shadowView.accessibilityIgnoresInvertColors = true;
+            _iconView.accessibilityIgnoresInvertColors = true;
+            _durationLabel.accessibilityIgnoresInvertColors = true;
+        }
     }
     return self;
 }

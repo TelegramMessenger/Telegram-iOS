@@ -11,14 +11,11 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 
 @interface TGMenuSheetButtonItemView ()
 {
-    TGModernButton *_button;
     bool _dark;
 }
-
 @end
 
 @implementation TGMenuSheetButtonItemView
-
 
 - (instancetype)initWithTitle:(NSString *)title type:(TGMenuSheetButtonType)type action:(void (^)(void))action
 {
@@ -52,6 +49,9 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
     _dark = true;
     _button.highlightBackgroundColor = nil;
     [self _updateForType:_buttonType];
+    
+    if (iosMajorVersion() >= 11)
+        self.accessibilityIgnoresInvertColors = true;
 }
 
 - (void)buttonPressed

@@ -41,6 +41,12 @@ static const CGFloat TGStickersTopMargin = 140.0f;
         _imageView.expectExtendedEdges = true;
         [self.wrapperView addSubview:_imageView];
         
+        if (iosMajorVersion() >= 11)
+        {
+            _altWrapperView.accessibilityIgnoresInvertColors = true;
+            _imageView.accessibilityIgnoresInvertColors = true;
+        }
+        
         if (iosMajorVersion() >= 10)
             _feedbackGenerator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
     }

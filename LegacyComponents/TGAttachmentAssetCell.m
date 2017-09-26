@@ -15,7 +15,7 @@
 {
     self = [super initWithFrame:frame];
     if (self != nil)
-    {        
+    {
         _imageView = [[TGImageView alloc] initWithFrame:self.bounds];
         _imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         _imageView.contentMode = UIViewContentModeScaleAspectFill;
@@ -58,6 +58,12 @@
         _gradientView.hidden = true;
         [self addSubview:_gradientView];
         
+        if (iosMajorVersion() >= 11)
+        {
+            _imageView.accessibilityIgnoresInvertColors = true;
+            _gradientView.accessibilityIgnoresInvertColors = true;
+        }
+        
         [self bringSubviewToFront:_cornersView];
     }
     return self;
@@ -79,6 +85,9 @@
             _checkButton = [[TGCheckButtonView alloc] initWithStyle:TGCheckButtonStyleMedia];
             [_checkButton addTarget:self action:@selector(checkButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [self addSubview:_checkButton];
+            
+            if (iosMajorVersion() >= 11)
+                _checkButton.accessibilityIgnoresInvertColors = true;
         }
         
         if (_itemSelectedDisposable == nil)

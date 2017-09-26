@@ -258,6 +258,13 @@ typedef enum
     _itemViews = itemViews;
 }
 
+- (void)removeItemViewsAtIndexes:(NSIndexSet *)indexes
+{
+    NSMutableArray *newItemViews = [_itemViews mutableCopy];
+    [newItemViews removeObjectsAtIndexes:indexes];
+    [_sheetView setItemViews:nil animated:true]; 
+}
+
 - (void)dimViewPressed
 {
     if (!self.dismissesByOutsideTap)

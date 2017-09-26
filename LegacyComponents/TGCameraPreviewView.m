@@ -73,6 +73,9 @@
         _fadeView.backgroundColor = [UIColor blackColor];
         _fadeView.userInteractionEnabled = false;
         [self addSubview:_fadeView];
+        
+        if (iosMajorVersion() >= 11)
+            _fadeView.accessibilityIgnoresInvertColors = true;
     }
     return self;
 }
@@ -200,6 +203,9 @@
     snapshotView.contentMode = UIViewContentModeScaleAspectFill;
     snapshotView.image = image;
     [self insertSubview:snapshotView aboveSubview:_wrapperView];
+    
+    if (iosMajorVersion() >= 11)
+        snapshotView.accessibilityIgnoresInvertColors = true;
     
     _snapshotView = snapshotView;
     

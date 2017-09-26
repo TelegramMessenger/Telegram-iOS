@@ -285,6 +285,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGAttachmentCarouselItemView.h>
 #import <LegacyComponents/TGMediaAssetsController.h>
 
+#import <LegacyComponents/TGLocationMapViewController.h>
 #import <LegacyComponents/TGLocationPickerController.h>
 #import <LegacyComponents/TGLocationViewController.h>
 #import <LegacyComponents/TGListsTableView.h>
@@ -297,3 +298,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGClipboardGalleryPhotoItem.h>
 #import <LegacyComponents/TGVideoMessageCaptureController.h>
 #import <LegacyComponents/TGModernConversationInputMicButton.h>
+
+#import <LegacyComponents/TGLocationWavesView.h>
+#import <LegacyComponents/TGLocationLiveElapsedView.h>
+#import <LegacyComponents/TGLocationLiveSessionItemView.h>

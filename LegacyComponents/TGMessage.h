@@ -204,6 +204,7 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 @property (nonatomic) int64_t cid;
 @property (nonatomic, copy) NSString *text;
 @property (nonatomic) NSTimeInterval date;
+@property (nonatomic) NSTimeInterval editDate;
 @property (nonatomic, strong) NSArray *mediaAttachments;
 
 @property (nonatomic) int32_t realDate;
@@ -268,6 +269,8 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 - (void)filterOutExpiredMedia;
 - (bool)hasExpiredMedia;
 - (bool)hasUnreadContent;
+
+- (int32_t)actualDate;
 
 @end
 

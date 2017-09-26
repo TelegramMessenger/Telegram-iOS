@@ -61,6 +61,9 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
                 _effectView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
                 _effectView.frame = self.bounds;
                 [self addSubview:_effectView];
+                
+                if (iosMajorVersion() >= 11)
+                    _effectView.accessibilityIgnoresInvertColors = true;
             }
             else
             {
@@ -308,6 +311,27 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
             hasHeader = true;
         else if (itemView.type == TGMenuSheetItemTypeFooter)
             hasFooter = true;
+    }
+}
+
+- (void)setItemViews:(NSArray *)itemViews animated:(bool)animated
+{
+    NSMutableArray *itemViewsToDelete = [[NSMutableArray alloc] init];
+    for (TGMenuSheetItemView *itemView in _itemViews)
+    {
+        if (![itemViews containsObject:itemView])
+        {
+            [itemViewsToDelete addObject:itemView];
+        }
+    }
+    
+    if (animated)
+    {
+        
+    }
+    else
+    {
+        
     }
 }
 

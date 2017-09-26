@@ -855,7 +855,9 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
             return;
         }
         
-        bool shouldBlock = [result isKindOfClass:[UINavigationBar class]] || [result.superview isKindOfClass:[UINavigationBar class]] || result.tag == -1;
+        NSString *stringClass = NSStringFromClass(result.superview.class);
+        bool navBarDescendant = stringClass.length > 0 && ([stringClass rangeOfString:@"UINav"].location != NSNotFound || [stringClass rangeOfString:@"AdaptorView"].location != NSNotFound);
+        bool shouldBlock = [result isKindOfClass:[UINavigationBar class]] || navBarDescendant || result.tag == -1;
         if (shouldBlock)
         {
             block = true;

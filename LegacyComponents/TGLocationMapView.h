@@ -8,4 +8,6 @@
 @property (nonatomic, assign) bool tapEnabled;
 @property (nonatomic, assign) bool manipulationEnabled;
 
+@property (nonatomic, assign) UIEdgeInsets compassInsets;
+
 @end

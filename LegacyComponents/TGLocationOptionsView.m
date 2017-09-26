@@ -30,17 +30,20 @@
         [self addSubview:_mapModeClipView];
         
         _backgroundView = [[UIImageView alloc] init];
-        _backgroundView.backgroundColor = [UIColor whiteColor];
+        _backgroundView.image = [TGComponentsImageNamed(@"LocationTopPanel") resizableImageWithCapInsets:UIEdgeInsetsMake(15.0f, 15.0f, 18.0f, 15.0f)];
         [self addSubview:_backgroundView];
         
+        UIView *mapModeBackgroundView = nil;
         if (iosMajorVersion() >= 8)
         {
             _mapModeBackgroundView = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleExtraLight]];
+            mapModeBackgroundView = ((UIVisualEffectView *)_mapModeBackgroundView).contentView;
         }
         else
         {
             _mapModeBackgroundView = [[UIView alloc] init];
             _mapModeBackgroundView.backgroundColor = [UIColor whiteColor];
+            mapModeBackgroundView = _mapModeBackgroundView;
         }
         _mapModeBackgroundView.clipsToBounds = true;
         _mapModeBackgroundView.layer.cornerRadius = 4.0f;
@@ -52,7 +55,7 @@
         _mapModeControl = [[TGLocationMapModeControl alloc] init];
         _mapModeControl.selectedSegmentIndex = 0;
         [_mapModeControl addTarget:self action:@selector(modeChanged:) forControlEvents:UIControlEventValueChanged];
-        [_mapModeBackgroundView addSubview:_mapModeControl];
+        [mapModeBackgroundView addSubview:_mapModeControl];
         
         _mapModeButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 45.0f, 45.0f)];
         _mapModeButton.adjustsImageWhenHighlighted = false;
@@ -115,7 +118,7 @@
 
 - (void)layoutSubviews
 {
-    _backgroundView.frame = self.bounds;
+    _backgroundView.frame = CGRectMake(-5.0f, -5.0f, 45.0f + 10.0f, 90.0f + 5.0f + 6.0f);
     _mapModeButton.frame = CGRectMake(0.0f, 0.0f, 45.0f, 45.0f);
     _trackButton.frame = CGRectMake(0.0f, 45.0f, 45.0f, 45.0f);
     _separatorView.frame = CGRectMake(0.0f, 45.0f, 45.0f, TGScreenPixel);

@@ -50,10 +50,6 @@
 
 @end
 
-@interface TGMusicPlayerContainerView : UIView
-
-@end
-
 static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
 
 @interface TGNavigationBar () <UIGestureRecognizerDelegate>
@@ -61,7 +57,7 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     bool _shouldAddBackgdropBackgroundInitialized;
     bool _shouldAddBackgdropBackground;
     
-    TGMusicPlayerContainerView *_musicPlayerContainer;
+    UIView *_musicPlayerContainer;
     
     bool _showMusicPlayerView;
 }
@@ -367,9 +363,20 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     }
 }
 
+- (void)pushNavigationItem:(UINavigationItem *)item animated:(BOOL)animated
+{
+    [super pushNavigationItem:item animated:animated];
+}
+
+- (UINavigationItem *)popNavigationItemAnimated:(BOOL)animated
+{
+    return [super popNavigationItemAnimated:animated];
+}
+
 - (void)addSubview:(UIView *)view {
     if ([self isBackgroundView:view]) {
         view.hidden = true;
+        return;
     }
     [super addSubview:view];
 }
@@ -378,6 +385,7 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
 {
     if ([self isBackgroundView:view]) {
         view.hidden = true;
+        return;
     }
     if (view != self.additionalView)
         [super insertSubview:view atIndex:MIN((int)self.subviews.count, MAX(index, 2))];
@@ -466,8 +474,9 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     {
         if (_musicPlayerContainer == nil)
         {
-            _musicPlayerContainer = [[TGMusicPlayerContainerView alloc] init];
+            _musicPlayerContainer = [[UIView alloc] init];
             _musicPlayerContainer.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+            _musicPlayerContainer.clipsToBounds = true;
             _musicPlayerContainer.frame = CGRectMake(0.0f, self.frame.size.height + self.musicPlayerOffset, self.frame.size.width, 37.0f);
             
             _musicPlayerView = [_musicPlayerProvider makeMusicPlayerView:_navigationController];
@@ -478,7 +487,6 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
                 [self addSubview:_musicPlayerContainer];
             }
         }
-        _musicPlayerContainer.clipsToBounds = true;
         _musicPlayerContainer.userInteractionEnabled = true;
         [UIView animateWithDuration:0.3 delay:0.0 options:7 << 16 animations:^
         {
@@ -486,14 +494,10 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
             
             if (animation)
                 animation();
-        } completion:^(BOOL finished){
-            if (finished)
-                _musicPlayerContainer.clipsToBounds = false;
-        }];
+        } completion:nil];
     }
     else if (_musicPlayerView != nil)
     {
-        _musicPlayerContainer.clipsToBounds = true;
         _musicPlayerContainer.userInteractionEnabled = false;
         [UIView animateWithDuration:0.3 delay:0.0 options:7 << 16 animations:^
         {
@@ -531,6 +535,16 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     if (result != nil && self.alpha > FLT_EPSILON)
         return result;
     
+    if (self.topItem.titleView != nil)
+    {
+        if (CGRectContainsPoint(self.bounds, point))
+        {
+            UIView *result = [self.topItem.titleView hitTest:[self convertPoint:point toView:self.topItem.titleView] withEvent:event];
+            if (result != nil)
+                return result;
+        }
+    }
+    
     if (self.additionalView != nil)
     {
         UIView *result = [self.additionalView hitTest:CGPointMake(point.x - self.additionalView.frame.origin.x, point.y - self.additionalView.frame.origin.y) withEvent:event];
@@ -545,16 +559,6 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     if (!_keepAlpha) {
         [super setAlpha:alpha];
     }
-}
-
-@end
-
-
-@implementation TGMusicPlayerContainerView
-
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
-{
-    return [self.subviews.firstObject pointInside:[self convertPoint:point toView:self.subviews.firstObject] withEvent:event];
 }
 
 @end

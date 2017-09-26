@@ -41,6 +41,7 @@ typedef enum {
     TGMessageActionGameScore = 27,
     TGMessageActionPhoneCall = 28,
     TGMessageActionPaymentSent = 29,
+    TGMessageActionText = 30,
     TGMessageActionCustom = 1000
 } TGMessageAction;
 

@@ -533,4 +533,47 @@ static inline NSString *dialogTimeFormat()
     return nil;
 }
 
++ (NSString *)stringForRelativeUpdate:(int)date
+{
+    time_t t = date;
+    struct tm timeinfo;
+    localtime_r(&t, &timeinfo);
+    
+    time_t t_now;
+    time(&t_now);
+    struct tm timeinfo_now;
+    localtime_r(&t_now, &timeinfo_now);
+    
+    if (timeinfo.tm_year != timeinfo_now.tm_year)
+        return [self stringForPreciseDate:date];
+    else
+    {
+        int dayDiff = timeinfo.tm_yday - timeinfo_now.tm_yday;
+        
+        int minutesDiff = (int)((t_now - date) / 60);
+        int hoursDiff = (int)((t_now - date) / (60 * 60));
+        
+        if (dayDiff == 0 && hoursDiff < 1)
+        {
+            if (minutesDiff < 1)
+                return TGLocalized(@"LiveLocationUpdated.JustNow");
+            else if (minutesDiff < 60)
+            {
+                return [legacyEffectiveLocalization() getPluralized:@"LiveLocationUpdated.MinutesAgo" count:(int32_t)minutesDiff];
+            }
+        }
+        else if (dayDiff == 0)
+        {
+            NSString *timeString = [self stringForShortTimeWithHours:timeinfo.tm_hour minutes:timeinfo.tm_min];
+            return [[NSString alloc] initWithFormat:TGLocalized(@"LiveLocationUpdated.TodayAt"), timeString];
+        }
+        else
+        {
+            return [self stringForPreciseDate:date];
+        }
+    }
+    
+    return nil;
+}
+
 @end

@@ -348,6 +348,8 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)takePhotoWithCompletion:(void (^)(UIImage *result, PGCameraShotMetadata *metadata))completion
 {
+    bool videoMirrored = _previewView.captureConnection.videoMirrored;
+    
     [[PGCamera cameraQueue] dispatch:^
     {
         if (!self.captureSession.isRunning || self.captureSession.imageOutput.isCapturingStillImage || _invalidated)
@@ -355,10 +357,8 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
         
         void (^takePhoto)(void) = ^
         {
-            TGCameraPreviewView *previewView = _previewView;
-            AVCaptureConnection *previewConnection = previewView.captureConnection;
             AVCaptureConnection *imageConnection = [self.captureSession.imageOutput connectionWithMediaType:AVMediaTypeVideo];
-            [imageConnection setVideoMirrored:previewConnection.videoMirrored];
+            [imageConnection setVideoMirrored:videoMirrored];
             
             UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
             if (self.requestedCurrentInterfaceOrientation != nil)

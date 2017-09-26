@@ -1,6 +1,8 @@
 #import "TGMenuSheetDimView.h"
 #import "TGMenuSheetView.h"
 
+#import "LegacyComponentsInternal.h"
+
 @interface TGMenuSheetCutoutView : UIImageView
 
 @end
@@ -108,6 +110,9 @@
             [self addSubview:_topView];
             setupView(_topView);
         }
+        
+        if (iosMajorVersion() >= 11)
+            self.accessibilityIgnoresInvertColors = true;
     }
     return self;
 }

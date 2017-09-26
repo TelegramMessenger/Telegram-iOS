@@ -6,6 +6,8 @@
 
 - (void)configureWithVenue:(TGLocationVenue *)venue;
 
++ (UIImage *)circleImage;
+
 @end
 
 extern NSString *const TGLocationVenueCellKind;

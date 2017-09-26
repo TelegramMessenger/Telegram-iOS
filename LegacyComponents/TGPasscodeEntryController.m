@@ -5,6 +5,7 @@
 #import "TGStringUtils.h"
 
 #import "TGTimerTarget.h"
+#import "TGObserverProxy.h"
 
 #import <AudioToolbox/AudioToolbox.h>
 #import <LocalAuthentication/LocalAuthentication.h>
@@ -246,6 +247,8 @@ typedef enum {
     _keepStatusBarStyle = true;
     if (iosMajorVersion() >= 7)
         [self setNeedsStatusBarAppearanceUpdate];
+    
+    [_view becomeFirstResponder];
 }
 
 - (void)prepareForDisappear

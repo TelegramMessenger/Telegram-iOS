@@ -777,6 +777,9 @@ const NSInteger PGCameraFrameRate = 30;
     NSDictionary *videoSettings = [_videoOutput recommendedVideoSettingsForAssetWriterWithOutputFileType:AVFileTypeMPEG4];
     NSDictionary *audioSettings = [_audioOutput recommendedAudioSettingsForAssetWriterWithOutputFileType:AVFileTypeMPEG4];
     
+//    if (iosMajorVersion() >= 11 && [videoSettings[AVVideoCodecKey] isEqualToString:@"hvc1"])
+//        videoSettings = [_videoOutput recommendedVideoSettingsForVideoCodecType:AVVideoCodecH264 assetWriterOutputFileType:AVFileTypeMPEG4];
+    
     if (self.compressVideo)
     {
         videoSettings = [TGMediaVideoConversionPresetSettings videoSettingsForPreset:TGMediaVideoConversionPresetCompressedMedium dimensions:CGSizeMake(848, 480)];
