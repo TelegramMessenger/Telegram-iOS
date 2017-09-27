@@ -36,6 +36,7 @@ public final class CachedGroupData: CachedPeerData {
     public let reportStatus: PeerReportStatus
     
     public let peerIds: Set<PeerId>
+    public let messageIds = Set<MessageId>()
     
     init() {
         self.participants = nil

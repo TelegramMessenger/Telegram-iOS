@@ -13,6 +13,7 @@ public final class CachedUserData: CachedPeerData {
     public let commonGroupCount: Int32
     
     public let peerIds = Set<PeerId>()
+    public let messageIds = Set<MessageId>()
     
     init() {
         self.about = nil

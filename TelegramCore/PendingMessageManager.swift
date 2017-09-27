@@ -8,10 +8,11 @@ import Foundation
 #endif
 
 public struct PendingMessageStatus: Equatable {
+    public let isRunning: Bool
     public let progress: Float
     
     public static func ==(lhs: PendingMessageStatus, rhs: PendingMessageStatus) -> Bool {
-        return lhs.progress.isEqual(to: rhs.progress)
+        return lhs.isRunning == rhs.isRunning && lhs.progress.isEqual(to: rhs.progress)
     }
 }
 
@@ -173,7 +174,7 @@ public final class PendingMessageManager {
                 self.messageContexts[id] = messageContext
             }
             
-            let status = PendingMessageStatus(progress: 0.0)
+            let status = PendingMessageStatus(isRunning: false, progress: 0.0)
             if status != messageContext.status {
                 messageContext.status = status
                 for subscriber in messageContext.statusSubscribers.copyItems() {
@@ -245,14 +246,14 @@ public final class PendingMessageManager {
                 assert(strongSelf.queue.isCurrent())
                 
                 switch next {
-                case let .progress(progress):
-                    if let current = strongSelf.messageContexts[messageId] {
-                        let status = PendingMessageStatus(progress: progress)
-                        current.status = status
-                        for subscriber in current.statusSubscribers.copyItems() {
-                            subscriber(status)
+                    case let .progress(progress):
+                        if let current = strongSelf.messageContexts[messageId] {
+                            let status = PendingMessageStatus(isRunning: true, progress: progress)
+                            current.status = status
+                            for subscriber in current.statusSubscribers.copyItems() {
+                                subscriber(status)
+                            }
                         }
-                    }
                 }
             }
         }))
@@ -261,6 +262,12 @@ public final class PendingMessageManager {
     private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
         messageContext.state = .uploading
         
+        let status = PendingMessageStatus(isRunning: true, progress: 0.0)
+        messageContext.status = status
+        for subscriber in messageContext.statusSubscribers.copyItems() {
+            subscriber(status)
+        }
+        
         messageContext.disposable.set((uploadSignal |> deliverOn(self.queue)).start(next: { [weak self] next in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
@@ -268,7 +275,7 @@ public final class PendingMessageManager {
                 switch next {
                     case let .progress(progress):
                         if let current = strongSelf.messageContexts[id] {
-                            let status = PendingMessageStatus(progress: progress)
+                            let status = PendingMessageStatus(isRunning: true, progress: progress)
                             current.status = status
                             for subscriber in current.statusSubscribers.copyItems() {
                                 subscriber(status)
@@ -293,6 +300,12 @@ public final class PendingMessageManager {
             if case let .waitingForUploadToStart(uploadSignal) = context.state {
                 if self.canBeginUploadingMessage(id: contextId) {
                     context.state = .uploading
+                    let status = PendingMessageStatus(isRunning: true, progress: 0.0)
+                    context.status = status
+                    for subscriber in context.statusSubscribers.copyItems() {
+                        subscriber(status)
+                    }
+                    
                     context.disposable.set((uploadSignal |> deliverOn(self.queue)).start(next: { [weak self] next in
                         if let strongSelf = self {
                             assert(strongSelf.queue.isCurrent())
@@ -300,7 +313,7 @@ public final class PendingMessageManager {
                             switch next {
                                 case let .progress(progress):
                                     if let current = strongSelf.messageContexts[contextId] {
-                                        let status = PendingMessageStatus(progress: progress)
+                                        let status = PendingMessageStatus(isRunning: true, progress: progress)
                                         current.status = status
                                         for subscriber in current.statusSubscribers.copyItems() {
                                             subscriber(status)
@@ -320,7 +333,7 @@ public final class PendingMessageManager {
                                                     switch next {
                                                         case let .progress(progress):
                                                             if let current = strongSelf.messageContexts[contextId] {
-                                                                let status = PendingMessageStatus(progress: progress)
+                                                                let status = PendingMessageStatus(isRunning: true, progress: progress)
                                                                 current.status = status
                                                                 for subscriber in current.statusSubscribers.copyItems() {
                                                                     subscriber(status)

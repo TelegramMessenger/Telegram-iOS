@@ -681,6 +681,11 @@ public final class AccountStateManager {
 }
 
 public func messageForNotification(modifier: Modifier, id: MessageId, alwaysReturnMessage: Bool) -> (message: Message?, notify: Bool, sound: PeerMessageSound, displayContents: Bool) {
+    guard let message = modifier.getMessage(id) else {
+        Logger.shared.log("AccountStateManager", "notification message doesn't exist")
+        return (nil, false, .bundledModern(id: 0), false)
+    }
+        
     var notify = true
     var sound: PeerMessageSound = .bundledModern(id: 0)
     var displayContents = true
@@ -690,6 +695,9 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
     var notificationPeerId = id.peerId
     if let peer = modifier.getPeer(id.peerId), let associatedPeerId = peer.associatedPeerId {
         notificationPeerId = associatedPeerId
+    }
+    if message.personal, let author = message.author {
+        notificationPeerId = author.id
     }
     
     if let notificationSettings = modifier.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings {
@@ -702,14 +710,18 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
                 break
         }
         var defaultSound: PeerMessageSound = .bundledModern(id: 0)
+        var defaultNotify: Bool = true
         if let globalNotificationSettings = modifier.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings {
             if id.peerId.namespace == Namespaces.Peer.CloudUser {
+                defaultNotify = globalNotificationSettings.effective.privateChats.enabled
                 defaultSound = globalNotificationSettings.effective.privateChats.sound
                 displayContents = globalNotificationSettings.effective.privateChats.displayPreviews
             } else if id.peerId.namespace == Namespaces.Peer.SecretChat {
+                defaultNotify = globalNotificationSettings.effective.privateChats.enabled
                 defaultSound = globalNotificationSettings.effective.privateChats.sound
                 displayContents = false
             } else {
+                defaultNotify = globalNotificationSettings.effective.groupChats.enabled
                 defaultSound = globalNotificationSettings.effective.groupChats.sound
                 displayContents = globalNotificationSettings.effective.groupChats.displayPreviews
             }
@@ -719,41 +731,38 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
         } else {
             sound = notificationSettings.messageSound
         }
+        if !defaultNotify {
+            notify = false
+        }
     } else {
         Logger.shared.log("AccountStateManager", "notification settings for \(notificationPeerId) are undefined")
     }
     
-    let message = modifier.getMessage(id)
-    if let message = message {
-        if let channel = message.peers[message.id.peerId] as? TelegramChannel {
-            switch channel.participationStatus {
-                case .kicked, .left:
-                    return (nil, false, sound, false)
-                case .member:
-                    break
-            }
+    if let channel = message.peers[message.id.peerId] as? TelegramChannel {
+        switch channel.participationStatus {
+            case .kicked, .left:
+                return (nil, false, sound, false)
+            case .member:
+                break
         }
-        
-        var foundReadState = false
-        var isUnread = true
-        if let readState = modifier.getCombinedPeerReadState(id.peerId) {
-            if readState.isIncomingMessageIndexRead(MessageIndex(message)) {
-                isUnread = false
-            }
-            foundReadState = true
+    }
+    
+    var foundReadState = false
+    var isUnread = true
+    if let readState = modifier.getCombinedPeerReadState(id.peerId) {
+        if readState.isIncomingMessageIndexRead(MessageIndex(message)) {
+            isUnread = false
         }
-        
-        if !foundReadState {
-            Logger.shared.log("AccountStateManager", "read state for \(id.peerId) is undefined")
-        }
-        
-        if notify || message.personal {
-            return (message, isUnread, sound, displayContents)
-        } else {
-            return (alwaysReturnMessage ? message : nil, false, sound, displayContents)
-        }
+        foundReadState = true
+    }
+    
+    if !foundReadState {
+        Logger.shared.log("AccountStateManager", "read state for \(id.peerId) is undefined")
+    }
+    
+    if notify {
+        return (message, isUnread, sound, displayContents)
     } else {
-        Logger.shared.log("AccountStateManager", "notification message doesn't exist")
-        return (nil, false, .bundledModern(id: 0), false)
+        return (alwaysReturnMessage ? message : nil, false, sound, displayContents)
     }
 }

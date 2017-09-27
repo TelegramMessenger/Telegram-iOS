@@ -25,7 +25,14 @@ public func peerSpecificStickerPack(postbox: Postbox, network: Network, peerId: 
             |> distinctUntilChanged
             |> mapToSignal { info -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> in
                 if let info = info.info {
-                    return cachedStickerPack(postbox: postbox, network: network, info: info)
+                    return cachedStickerPack(postbox: postbox, network: network, reference: .id(id: info.id.id, accessHash: info.accessHash))
+                        |> map { result -> (StickerPackCollectionInfo, [ItemCollectionItem])? in
+                            if let result = result {
+                                return (result.0, result.1)
+                            } else {
+                                return nil
+                            }
+                        }
                 } else {
                     return .single(nil)
                 }
