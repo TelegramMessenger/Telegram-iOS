@@ -94,6 +94,7 @@ private struct CachedMediaResourceRepresentationKey: Hashable {
 }
 
 private final class CachedMediaResourceRepresentationContext {
+    var currentData: MediaResourceData?
     let dataSubscribers = Bag<(MediaResourceData) -> Void>()
     var disposable: Disposable?
 }
@@ -909,6 +910,14 @@ public final class MediaBox {
                                 subscriber.putCompletion()
                             }
                         })
+                        if let currentData = context.currentData {
+                            if !complete || currentData.complete {
+                                subscriber.putNext(currentData)
+                            }
+                            if currentData.complete {
+                                subscriber.putCompletion()
+                            }
+                        }
                         
                         disposable.set(ActionDisposable {
                             self.dataQueue.async {
@@ -944,15 +953,19 @@ public final class MediaBox {
                                     if let strongSelf = self, let context = strongSelf.cachedRepresentationContexts[key] {
                                         strongSelf.cachedRepresentationContexts.removeValue(forKey: key)
                                         if let size = fileSize(path) {
+                                            let data = MediaResourceData(path: path, size: size, complete: true)
+                                            context.currentData = data
                                             for subscriber in context.dataSubscribers.copyItems() {
-                                                subscriber(MediaResourceData(path: path, size: size, complete: true))
+                                                subscriber(data)
                                             }
                                         }
                                     }
                                 } else {
                                     if let strongSelf = self, let context = strongSelf.cachedRepresentationContexts[key] {
+                                        let data = MediaResourceData(path: path, size: 0, complete: false)
+                                        context.currentData = data
                                         for subscriber in context.dataSubscribers.copyItems() {
-                                            subscriber(MediaResourceData(path: path, size: 0, complete: false))
+                                            subscriber(data)
                                         }
                                     }
                                 }
