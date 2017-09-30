@@ -1,9 +1,5 @@
 #import <UIKit/UIKit.h>
 
-@interface TGLocationPinWrapperView : UIView
-
-@end
-
 @interface TGLocationPinView : UIView
 
 @property (nonatomic, assign, getter=isPinRaised) bool pinRaised;

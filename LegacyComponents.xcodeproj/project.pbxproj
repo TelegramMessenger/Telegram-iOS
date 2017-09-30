@@ -18,6 +18,8 @@
 		09750FC61F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */; };
 		09750FCD1F30E53A001B9886 /* TGClipboardGalleryMixin.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09750FCE1F30E53A001B9886 /* TGClipboardGalleryMixin.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */; };
+		09870A151F7AB3650042CCE3 /* TGLocationPulseView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09870A131F7AB3650042CCE3 /* TGLocationPulseView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09870A161F7AB3650042CCE3 /* TGLocationPulseView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09870A141F7AB3650042CCE3 /* TGLocationPulseView.m */; };
 		09A8BD761F6B4C390043A393 /* TGLocationInfoCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */; };
 		09A8BD771F6B4C390043A393 /* TGLocationInfoCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */; };
 		09A8BD7A1F6B4C6E0043A393 /* TGLocationLiveCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09A8BD781F6B4C6E0043A393 /* TGLocationLiveCell.h */; };
@@ -1168,6 +1170,8 @@
 		09750FC41F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryPhotoItem.m; sourceTree = "<group>"; };
 		09750FCB1F30E53A001B9886 /* TGClipboardGalleryMixin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryMixin.h; sourceTree = "<group>"; };
 		09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryMixin.m; sourceTree = "<group>"; };
+		09870A131F7AB3650042CCE3 /* TGLocationPulseView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGLocationPulseView.h; sourceTree = "<group>"; };
+		09870A141F7AB3650042CCE3 /* TGLocationPulseView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGLocationPulseView.m; sourceTree = "<group>"; };
 		09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationInfoCell.h; sourceTree = "<group>"; };
 		09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationInfoCell.m; sourceTree = "<group>"; };
 		09A8BD781F6B4C6E0043A393 /* TGLocationLiveCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveCell.h; sourceTree = "<group>"; };
@@ -3314,6 +3318,8 @@
 				09F36E551F748E040022A5FE /* TGLocationLiveSessionItemView.m */,
 				09F36E581F74FB130022A5FE /* TGLocationLiveElapsedView.h */,
 				09F36E591F74FB130022A5FE /* TGLocationLiveElapsedView.m */,
+				09870A131F7AB3650042CCE3 /* TGLocationPulseView.h */,
+				09870A141F7AB3650042CCE3 /* TGLocationPulseView.m */,
 			);
 			name = Location;
 			sourceTree = "<group>";
@@ -3958,6 +3964,7 @@
 				D07BC7A31F2A2B8900ED97AA /* GPUImage.h in Headers */,
 				D07BCA0B1F2A9A2B00ED97AA /* TGMediaPickerGalleryVideoScrubberThumbnailView.h in Headers */,
 				D0177A021F2139980044446D /* POPMath.h in Headers */,
+				09870A151F7AB3650042CCE3 /* TGLocationPulseView.h in Headers */,
 				D07BCABF1F2B4E3900ED97AA /* UICollectionView+TGTransitioning.h in Headers */,
 				D01777FF1F1F961D0044446D /* TGMessageHole.h in Headers */,
 				D07BC78E1F2A2B3700ED97AA /* TGPhotoEditorToolView.h in Headers */,
@@ -4957,6 +4964,7 @@
 				D017783A1F1F961D0044446D /* TGAudioWaveform.m in Sources */,
 				D07BCAA71F2B445E00ED97AA /* TGMediaGroupsController.m in Sources */,
 				D07BC9041F2A380D00ED97AA /* TGPaintBuffers.m in Sources */,
+				09870A161F7AB3650042CCE3 /* TGLocationPulseView.m in Sources */,
 				D07BCA141F2A9A2B00ED97AA /* TGMediaPickerPhotoCounterButton.m in Sources */,
 				D01777631F1F8FE60044446D /* TGLocalization.m in Sources */,
 				D07BCBCA1F2B6F6300ED97AA /* CBPlayerView.m in Sources */,

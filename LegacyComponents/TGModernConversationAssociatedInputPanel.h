@@ -29,6 +29,7 @@ typedef enum
 
 - (instancetype)initWithStyle:(TGModernConversationAssociatedInputPanelStyle)style;
 
+- (bool)hasSelectedItem;
 - (void)selectPreviousItem;
 - (void)selectNextItem;
 - (void)commitSelectedItem;

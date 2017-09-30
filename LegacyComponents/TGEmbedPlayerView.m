@@ -169,6 +169,14 @@
         [_errorLabel sizeToFit];
         [_dimWrapperView addSubview:_errorLabel];
         
+        if (iosMajorVersion() >= 11)
+        {
+            _coverView.accessibilityIgnoresInvertColors = true;
+            _dimView.accessibilityIgnoresInvertColors = true;
+            _overlayView.accessibilityIgnoresInvertColors = true;
+            _errorLabel.accessibilityIgnoresInvertColors = true;
+        }
+        
         _interactionView = [[UIView alloc] initWithFrame:self.bounds];
         _interactionView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         _interactionView.hidden = true;
@@ -574,6 +582,9 @@
 {
     CGFloat horEdge = [self _compensationEdges];
     CGFloat verEdge =  horEdge * _embedSize.width / _embedSize.height;
+    
+    if (iosMajorVersion() >= 11)
+        webView.accessibilityIgnoresInvertColors = true;
     
     webView.backgroundColor = [UIColor blackColor];
     webView.frame = CGRectMake(0, 0, _maxPlayerSize.width, _maxPlayerSize.height);

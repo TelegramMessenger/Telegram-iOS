@@ -1,6 +1,7 @@
 #import "TGLocationUtils.h"
 
 #import "LegacyComponentsInternal.h"
+#import "TGLocalization.h"
 
 #import <MapKit/MapKit.h>
 
@@ -34,17 +35,34 @@
 + (NSString *)stringFromDistance:(CLLocationDistance)distance
 {
     if (iosMajorVersion() >= 7)
+    {
+        MKDistanceFormatter *formatter = [self sharedDistanceFormatter];
+        formatter.locale = [NSLocale localeWithLocaleIdentifier:legacyEffectiveLocalization().code];
+        if ([[formatter.locale objectForKey:NSLocaleUsesMetricSystem] boolValue])
+            formatter.unitStyle = MKDistanceFormatterUnitStyleAbbreviated;
+        else
+            formatter.unitStyle = MKDistanceFormatterUnitStyleDefault;
+        
         return [[self sharedDistanceFormatter] stringFromDistance:distance];
+    }
     else
+    {
         return [self _customStringFromDistance:distance];
+    }
 }
 
 + (NSString *)stringFromAccuracy:(CLLocationAccuracy)accuracy
 {
     if (iosMajorVersion() >= 7)
+    {
+        MKDistanceFormatter *formatter = [self sharedAccuracyFormatter];
+        formatter.locale = [NSLocale localeWithLocaleIdentifier:legacyEffectiveLocalization().code];
         return [[self sharedAccuracyFormatter] stringFromDistance:accuracy];
+    }
     else
+    {
         return [self _customStringFromDistance:accuracy];
+    }
 }
 
 + (NSString *)stringForCoordinate:(CLLocationCoordinate2D)coordinate
@@ -68,14 +86,8 @@
 
 + (NSString *)_customStringFromDistance:(CLLocationDistance)distance
 {
-    static bool metricUnits = true;
-    
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
-    {
-        NSLocale *locale = [NSLocale currentLocale];
-        metricUnits = [[locale objectForKey:NSLocaleUsesMetricSystem] boolValue];
-    });
+    NSLocale *locale = [NSLocale localeWithLocaleIdentifier:legacyEffectiveLocalization().code];
+    bool metricUnits = [[locale objectForKey:NSLocaleUsesMetricSystem] boolValue];
     
     NSString *distanceString = nil;
     
@@ -126,12 +138,6 @@
     dispatch_once(&once, ^
     {
         distanceFormatter = [[MKDistanceFormatter alloc] init];
-        
-        NSLocale *locale = [NSLocale currentLocale];
-        if ([[locale objectForKey:NSLocaleUsesMetricSystem] boolValue])
-            distanceFormatter.unitStyle = MKDistanceFormatterUnitStyleAbbreviated;
-        else
-            distanceFormatter.unitStyle = MKDistanceFormatterUnitStyleDefault;
     });
     
     return distanceFormatter;

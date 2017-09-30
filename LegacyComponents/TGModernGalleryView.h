@@ -38,5 +38,6 @@
 
 - (void)setPreviewMode:(bool)previewMode;
 - (void)enableInstantDismiss;
+- (void)disableInstantDismiss;
 
 @end

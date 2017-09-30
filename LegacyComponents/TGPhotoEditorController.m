@@ -151,6 +151,9 @@
     self.view.frame = (CGRect){ CGPointZero, [self referenceViewSize]};
     self.view.clipsToBounds = true;
     
+    if (iosMajorVersion() >= 11)
+        self.view.accessibilityIgnoresInvertColors = true;
+    
     if ([self presentedForAvatarCreation] && ![self presentedFromCamera])
         self.view.backgroundColor = [UIColor blackColor];
     

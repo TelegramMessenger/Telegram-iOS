@@ -1,6 +1,8 @@
 #import "TGModernGalleryVideoView.h"
 #import <AVFoundation/AVFoundation.h>
 
+#import "LegacyComponentsInternal.h"
+
 /*@interface AVPlayerLayer ()
 
 - (id)_sublayersForPIP;
@@ -50,6 +52,9 @@
     {
         _key = key;
         self.playerLayer.player = player;
+        
+        if (iosMajorVersion() >= 11)
+            self.accessibilityIgnoresInvertColors = true;
     }
     return self;
 }

@@ -389,6 +389,11 @@
     return _tableViewBackground.frame;
 }
 
+- (bool)hasSelectedItem
+{
+    return _tableView.indexPathForSelectedRow != nil;
+}
+
 - (void)selectPreviousItem
 {
     if ([self tableView:_tableView numberOfRowsInSection:0] == 0)

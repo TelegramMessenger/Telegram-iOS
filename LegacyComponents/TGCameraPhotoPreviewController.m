@@ -121,6 +121,9 @@
     [super loadView];
     object_setClass(self.view, [TGFullscreenContainerView class]);
     
+    if (iosMajorVersion() >= 11)
+        self.view.accessibilityIgnoresInvertColors = true;
+    
     self.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.view.backgroundColor = [UIColor clearColor];
     

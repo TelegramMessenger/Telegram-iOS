@@ -126,6 +126,11 @@
     //    freedomSetBitfield((__bridge void *)self, tableFlagsOffset, 1);
 }
 
+- (void)scrollToTop
+{
+    [self setContentOffset:CGPointMake(0.0f, -self.contentInset.top) animated:true];
+}
+
 - (void)setContentOffset:(CGPoint)contentOffset
 {
     if (_blockContentOffset)

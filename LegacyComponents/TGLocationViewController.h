@@ -14,9 +14,9 @@
 @property (nonatomic, strong, readonly) TGMessage *message;
 @property (nonatomic, strong, readonly) id peer;
 @property (nonatomic, readonly) bool isOwn;
-@property (nonatomic, readonly) bool expired;
+@property (nonatomic, readonly) bool isExpired;
 
-- (instancetype)initWithMessage:(TGMessage *)message peer:(id)peer isOwn:(bool)isOwn expired:(bool)expired;
+- (instancetype)initWithMessage:(TGMessage *)message peer:(id)peer isOwn:(bool)isOwn isExpired:(bool)isExpired;
 - (instancetype)initWithMessage:(TGMessage *)message peer:(id)peer;
 
 - (int64_t)peerId;
@@ -28,12 +28,15 @@
 @property (nonatomic, assign) bool modalMode;
 @property (nonatomic, assign) bool previewMode;
 
+@property (nonatomic, assign) bool allowLiveLocationSharing;
 @property (nonatomic, assign) bool zoomToFitAllLocationsOnScreen;
 
 @property (nonatomic, copy) bool (^presentShareMenu)(TGMenuSheetController *, CLLocationCoordinate2D);
 @property (nonatomic, copy) bool (^presentOpenInMenu)(TGLocationViewController *, TGLocationMediaAttachment *, bool, void (^)(TGMenuSheetController *));
 @property (nonatomic, copy) void (^shareAction)(NSArray *peerIds, NSString *caption);
 @property (nonatomic, copy) void (^calloutPressed)(void);
+
+@property (nonatomic, readonly) UIButton *directionsButton;
 
 @property (nonatomic, copy) SSignal *(^remainingTimeForMessage)(TGMessage *message);
 

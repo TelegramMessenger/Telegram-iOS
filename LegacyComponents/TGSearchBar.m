@@ -606,7 +606,7 @@
     }
     
     CGSize placeholderSize = [_placeholderLabel.text sizeWithFont:_placeholderLabel.font];
-    placeholderSize.width = MIN(placeholderSize.width, self.frame.size.width - rightPadding - 40.0f - prefixOffset);
+    placeholderSize.width = MIN(placeholderSize.width, self.frame.size.width - rightPadding - 50.0f - prefixOffset);
     
     _customSearchIcon.frame = CGRectMake(_showsCustomCancelButton ? (_textFieldBackground.frame.origin.x + 8.0f) : ((CGFloor((self.frame.size.width - placeholderSize.width) / 2) + 10 + TGRetinaPixel) - 20), [self searchIconOffset] + [self inputContentOffset] + 16 + retinaPixel + [self topPadding], _customSearchIcon.frame.size.width, _customSearchIcon.frame.size.height);
     

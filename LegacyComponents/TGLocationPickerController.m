@@ -22,7 +22,6 @@
 #import "TGLocationReverseGeocodeResult.h"
 
 #import "TGLocationMapView.h"
-#import "TGLocationPinView.h"
 
 #import "TGLocationVenue.h"
 #import "TGLocationAnnotation.h"
@@ -84,13 +83,14 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     SMetaDisposable *_reverseGeocodeDisposable;
     
     UIView *_pickerPinWrapper;
-    TGLocationPinView *_pickerPinView;
+    TGLocationPinAnnotationView *_pickerPinView;
     
     NSValue *_fullScreenMapSpan;
     
     bool _mapInFullScreenMode;
     bool _pinMovedFromUserLocation;
     bool _updatePinAnnotation;
+    NSString *_customAddress;
     
     UIView *_searchBarOverlay;
     UIBarButtonItem *_searchButtonItem;
@@ -170,7 +170,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         if (strongSelf == nil)
             return;
         
-        [strongSelf switchToFullscreenMapAnimated:true];
+        [strongSelf switchToFullscreen];
     };
     
     CGFloat pinWrapperWidth = self.view.frame.size.width;
@@ -179,8 +179,9 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     _pickerPinWrapper.hidden = true;
     [_mapViewWrapper addSubview:_pickerPinWrapper];
     
-    _pickerPinView = [[TGLocationPinView alloc] init];
-    _pickerPinView.frame = CGRectMake((_pickerPinWrapper.frame.size.width - _pickerPinView.frame.size.width) / 2, (_pickerPinWrapper.frame.size.height - _pickerPinView.frame.size.height) / 2 - 15, _pickerPinView.frame.size.width, _pickerPinView.frame.size.height);
+    _pickerPinView = [[TGLocationPinAnnotationView alloc] initWithAnnotation:[[TGLocationAnnotation alloc] init]];
+    _pickerPinView.center = CGPointMake(_pickerPinWrapper.frame.size.width / 2.0f, _pickerPinWrapper.frame.size.width / 2.0f + 16.0f);
+    //_pickerPinView.frame = CGRectMake((_pickerPinWrapper.frame.size.width - _pickerPinView.frame.size.width) / 2, (_pickerPinWrapper.frame.size.height - _pickerPinView.frame.size.height) / 2 - 15, _pickerPinView.frame.size.width, _pickerPinView.frame.size.height);
     [_pickerPinWrapper addSubview:_pickerPinView];
     
     _searchBarOverlay = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.navigationController.view.frame.size.width, 64)];
@@ -236,9 +237,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     [super viewWillAppear:animated];
     
     if (_intent == TGLocationPickerControllerCustomLocationIntent)
-    {
-        [self switchToFullscreenMapAnimated:true];
-    }
+        [self switchToFullscreen];
     
     __weak TGLocationPickerController *weakSelf = self;
     [_locationUpdateDisposable setDisposable:[[self pickerUserLocationSignal] startWithNext:^(TGLocationPair *locationPair)
@@ -298,9 +297,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         [[[LegacyComponentsGlobals provider] accessChecker] checkLocationAuthorizationStatusForIntent:TGLocationAccessIntentSend alertDismissComlpetion:^
         {
             if ([CLLocationManager authorizationStatus] != kCLAuthorizationStatusAuthorizedWhenInUse)
-            {
-                [self switchToFullscreenMapAnimated:true];
-            }
+                [self switchToFullscreen];
         }];
     }
 }
@@ -374,7 +371,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
             }
             else
             {
-                [self switchToFullscreenMapAnimated:true];
+                [self switchToFullscreen];
             }
             
             [_pickerPinView setPinRaised:true animated:true completion:nil];
@@ -475,6 +472,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         if (result != nil)
             address = result.displayAddress;
         
+        strongSelf->_customAddress = address;
         [strongSelf updateCurrentLocationCell];
     } error:^(__unused id error)
     {
@@ -482,6 +480,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         if (strongSelf == nil)
             return;
         
+        strongSelf->_customAddress = @"";
         [strongSelf updateCurrentLocationCell];
     } completed:nil]];
 }
@@ -602,17 +601,14 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
 
 #pragma mark - Appearance
 
-- (void)switchToFullscreenMapAnimated:(bool)__unused animated
+- (void)switchToFullscreen
 {
     _mapInFullScreenMode = true;
     
     _searchButtonItem.enabled = true;
     
-//    MKAnnotationView *annotationView = [_mapView viewForAnnotation:_annotation];
-//    annotationView.hidden = true;
-//    _pickerPinWrapper.hidden = false;
-//
-//    [self showPickerAnnotationAnimated:true];
+    _ownLocationView.hidden = true;
+    _pickerPinWrapper.hidden = false;
     
     _mapView.tapEnabled = false;
     _mapView.longPressAsTapEnabled = false;
@@ -623,47 +619,36 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
 
     void (^changeBlock)(void) = ^
     {
-        CGFloat toolbarHeight = 0.0f;
-        
         _tableView.contentOffset = CGPointMake(0, -_tableView.contentInset.top);
-        _tableView.frame = CGRectMake(_tableView.frame.origin.x, self.view.frame.size.height - [self mapHeight] - TGLocationCurrentLocationCellHeight - self.controllerInset.top - toolbarHeight, _tableView.frame.size.width, _tableView.frame.size.height);
+        _tableView.frame = CGRectMake(_tableView.frame.origin.x, self.view.frame.size.height - [self mapHeight] - TGLocationCurrentLocationCellHeight - self.controllerInset.top, _tableView.frame.size.width, _tableView.frame.size.height);
         
-        _mapViewWrapper.frame = CGRectMake(0, TGLocationMapClipHeight - self.view.frame.size.height + self.controllerInset.top + toolbarHeight + 20, _mapViewWrapper.frame.size.width, self.view.frame.size.height - TGLocationCurrentLocationCellHeight - self.controllerInset.top - 7);
+        _mapViewWrapper.frame = CGRectMake(0, TGLocationMapClipHeight - self.view.frame.size.height + self.controllerInset.top + 20, _mapViewWrapper.frame.size.width, self.view.frame.size.height - self.controllerInset.top - 10.0f);
         _mapView.center = CGPointMake(_mapView.center.x, _mapViewWrapper.frame.size.height / 2);
+        _edgeView.frame = CGRectMake(0.0f, _mapViewWrapper.frame.size.height - _edgeView.frame.size.height, _edgeView.frame.size.width, _edgeView.frame.size.height);
     };
     
     void (^completionBlock)(BOOL) = ^(BOOL finished)
     {
         if (finished)
         {
-            _tableView.clipsToBounds = true;
+            //_tableView.clipsToBounds = true;
             _mapView.manipulationEnabled = true;
             
-            _mapViewWrapper.frame = [self.view convertRect:_mapViewWrapper.frame fromView:_mapViewWrapper.superview];
-            //[self.view insertSubview:_mapViewWrapper belowSubview:_toolbarWrapperView];
             _mapViewWrapper.clipsToBounds = true;
-            
-            //if (_annotation != nil)
-            //    _fullScreenMapSpan = [NSValue valueWithMKCoordinateSpan:_mapView.region.span];
+            _fullScreenMapSpan = [NSValue valueWithMKCoordinateSpan:_mapView.region.span];
         }
     };
     
-    if (animated)
+    if (iosMajorVersion() >= 7)
     {
-        if (iosMajorVersion() >= 7)
-        {
-            [UIView animateWithDuration:0.5f delay:0.0f usingSpringWithDamping:0.75f initialSpringVelocity:0.5f options:UIViewAnimationOptionCurveLinear animations:changeBlock completion:completionBlock];
-        }
-        else
-        {
-            [UIView animateWithDuration:0.4f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut animations:changeBlock completion:completionBlock];
-        }
+        [UIView animateWithDuration:0.5f delay:0.0f usingSpringWithDamping:0.75f initialSpringVelocity:0.5f options:UIViewAnimationOptionCurveLinear animations:changeBlock completion:completionBlock];
     }
     else
     {
-        changeBlock();
-        completionBlock(true);
+        [UIView animateWithDuration:0.4f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut animations:changeBlock completion:completionBlock];
     }
+    
+    [self updateCurrentLocationCell];
 }
 
 - (UIBarButtonItem *)controllerRightBarButtonItem
@@ -823,7 +808,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         [super scrollViewDidScroll:scrollView];
         [self _layoutTableProgressViews];
         
-        TGLocationSectionHeaderCell *cell = [_tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:_allowLiveLocations ? 2 : 1  inSection:0]];
+        TGLocationSectionHeaderCell *cell = [_tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:_allowLiveLocationSharing ? 2 : 1  inSection:0]];
         if (cell == nil || ![cell isKindOfClass:[TGLocationSectionHeaderCell class]])
             return;
         
@@ -878,13 +863,11 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     {
         TGLocationCurrentLocationCell *locationCell = (TGLocationCurrentLocationCell *)cell;
         
-        //if (_mapInFullScreenMode)
-        //    [locationCell configureForCustomLocationWithAddress:_customAnnotation.subtitle];
-        //else
-        [locationCell configureForCurrentLocationWithAccuracy:_currentUserLocation.horizontalAccuracy];
+        if (_mapInFullScreenMode)
+            [locationCell configureForCustomLocationWithAddress:_customAddress];
+        else
+            [locationCell configureForCurrentLocationWithAccuracy:_currentUserLocation.horizontalAccuracy];
     }
-    
-    //[cell.superview bringSubviewToFront:cell];
     
     cell = [_tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:1 inSection:0]];
     if ([cell isKindOfClass:[TGLocationCurrentLocationCell class]])
@@ -954,7 +937,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         {
             [self _sendLocation];
         }
-        else if (_allowLiveLocations && indexPath.row == 1)
+        else if (_allowLiveLocationSharing && indexPath.row == 1)
         {
             if (_sharingLiveLocation)
             {
@@ -970,7 +953,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
             
             [tableView deselectRowAtIndexPath:tableView.indexPathForSelectedRow animated:true];
         }
-        else if ((_allowLiveLocations && indexPath.row == 2) || (!_allowLiveLocations && indexPath.row == 1))
+        else if ((_allowLiveLocationSharing && indexPath.row == 2) || (!_allowLiveLocationSharing && indexPath.row == 1))
         {
             [self _presentVenuesList];
         }
@@ -997,7 +980,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
 {
     if (tableView == _tableView)
     {
-        if (indexPath.row == 0 || (_allowLiveLocations && indexPath.row == 1))
+        if (indexPath.row == 0 || (_allowLiveLocationSharing && indexPath.row == 1))
             return (_mapInFullScreenMode || _currentUserLocation != nil);
     }
     
@@ -1017,14 +1000,13 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         locationCell.edgeView = _edgeHighlightView;
         
         if (_mapInFullScreenMode)
-            true;
-            //[locationCell configureForCustomLocationWithAddress:_customAnnotation.subtitle];
+            [locationCell configureForCustomLocationWithAddress:_customAddress];
         else
             [locationCell configureForCurrentLocationWithAccuracy:_currentUserLocation.horizontalAccuracy];
         
         cell = locationCell;
     }
-    else if (tableView == _tableView && _allowLiveLocations && indexPath.row == 1)
+    else if (tableView == _tableView && _allowLiveLocationSharing && indexPath.row == 1)
     {
         TGLocationCurrentLocationCell *locationCell = [tableView dequeueReusableCellWithIdentifier:TGLocationCurrentLocationCellKind];
         if (locationCell == nil)
@@ -1039,7 +1021,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         
         cell = locationCell;
     }
-    else if (tableView == _tableView && ((_allowLiveLocations && indexPath.row == 2) || (!_allowLiveLocations && indexPath.row == 1)))
+    else if (tableView == _tableView && ((_allowLiveLocationSharing && indexPath.row == 2) || (!_allowLiveLocationSharing && indexPath.row == 1)))
     {
         TGLocationSectionHeaderCell *sectionCell = [tableView dequeueReusableCellWithIdentifier:TGLocationSectionHeaderKind];
         if (sectionCell == nil)
@@ -1074,13 +1056,13 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
              
 - (NSInteger)venueEntriesOffset
 {
-    return _allowLiveLocations ? 3 : 2;
+    return _allowLiveLocationSharing ? 3 : 2;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)__unused section
 {
     if (tableView == _tableView)
-        return _nearbyVenues.count + 2 + (_allowLiveLocations ? 1 : 0);
+        return _nearbyVenues.count + 2 + (_allowLiveLocationSharing ? 1 : 0);
     else if (tableView == _searchMixin.searchResultsTableView)
         return _searchResults.count;
     
@@ -1091,9 +1073,9 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
 {
     if (tableView == _tableView)
     {
-        if (indexPath.row == 0 || (_allowLiveLocations && indexPath.row == 1))
+        if (indexPath.row == 0 || (_allowLiveLocationSharing && indexPath.row == 1))
             return TGLocationCurrentLocationCellHeight;
-        else if ((_allowLiveLocations && indexPath.row == 2) || (!_allowLiveLocations && indexPath.row == 1))
+        else if ((_allowLiveLocationSharing && indexPath.row == 2) || (!_allowLiveLocationSharing && indexPath.row == 1))
             return TGLocationSectionHeaderHeight;
     }
     
@@ -1154,7 +1136,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
 
 - (void)_layoutTableProgressViews
 {
-    _activityIndicator.center = CGPointMake(_tableView.frame.size.width / 2, TGLocationCurrentLocationCellHeight * (_allowLiveLocations ? 2 : 1) + TGLocationSectionHeaderHeight + (_tableView.contentInset.top + _tableView.contentOffset.y) / 2);
+    _activityIndicator.center = CGPointMake(_tableView.frame.size.width / 2, TGLocationCurrentLocationCellHeight * (_allowLiveLocationSharing ? 2 : 1) + TGLocationSectionHeaderHeight + (_tableView.contentInset.top + _tableView.contentOffset.y) / 2);
 
     _messageLabel.frame = CGRectMake(0, _activityIndicator.center.y - _messageLabel.frame.size.height / 2.0f, _messageLabel.frame.size.width, _messageLabel.frame.size.height);
 }
@@ -1163,7 +1145,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
 
 - (CGFloat)visibleContentHeight
 {
-    return _allowLiveLocations ? 165.0f : 97.0f;
+    return _allowLiveLocationSharing ? 165.0f : 97.0f;
 }
 
 @end

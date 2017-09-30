@@ -43,6 +43,11 @@
 - (void)setContentAreaHeight:(CGFloat)__unused contentAreaHeight {
 }
 
+- (bool)hasSelectedItem
+{
+    return false;
+}
+
 - (void)selectPreviousItem
 {
 }

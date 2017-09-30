@@ -7,5 +7,6 @@
 @property (nonatomic, copy) void (^onHitTest)(CGPoint);
 
 - (void)adjustBehaviour;
+- (void)scrollToTop;
 
 @end
