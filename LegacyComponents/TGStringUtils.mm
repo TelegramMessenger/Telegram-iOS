@@ -913,28 +913,16 @@ static bool isEmojiCharacter(NSString *singleChar)
 {
     value = MAX(1 * 60, value);
     
-    if (value < 1 * 60 * 60)
-    {
-        value /= 60;
-        NSString *format = TGLocalized([self integerValueFormat:@"MuteFor.Minutes_" value:value]);
-        return [[NSString alloc] initWithFormat:format, [[NSString alloc] initWithFormat:@"%d", value]];
-    }
-    else if (value < 24 * 60 * 60)
+    if (value < 24 * 60 * 60)
     {
         value /= 60 * 60;
         NSString *format = TGLocalized([self integerValueFormat:@"MuteFor.Hours_" value:value]);
         return [[NSString alloc] initWithFormat:format, [[NSString alloc] initWithFormat:@"%d", value]];
     }
-    else if (value < 7 * 24 * 60 * 60)
+    else
     {
         value /= 24 * 60 * 60;
         NSString *format = TGLocalized([self integerValueFormat:@"MuteFor.Days_" value:value]);
-        return [[NSString alloc] initWithFormat:format, [[NSString alloc] initWithFormat:@"%d", value]];
-    }
-    else
-    {
-        value /= 7 * 24 * 60 * 60;
-        NSString *format = TGLocalized([self integerValueFormat:@"MuteFor.Weeks_" value:value]);
         return [[NSString alloc] initWithFormat:format, [[NSString alloc] initWithFormat:@"%d", value]];
     }
     
