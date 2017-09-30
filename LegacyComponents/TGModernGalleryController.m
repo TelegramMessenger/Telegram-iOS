@@ -1662,6 +1662,9 @@ static CGFloat transformRotation(CGAffineTransform transform)
     
     if (previousMode)
     {
+        _view.userInteractionEnabled = true;
+        [_view disableInstantDismiss];
+        
         self.showInterface = true;
         if (_itemFocused != nil)
             _itemFocused(self.currentItem);

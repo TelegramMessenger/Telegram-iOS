@@ -66,6 +66,9 @@
         [_closeButton addTarget:self action:@selector(closeButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         _closeButton.frame = [self closeButtonFrameForSize:frame.size];
         [_navigationBarView addSubview:_closeButton];
+        
+        if (iosMajorVersion() >= 11)
+            self.accessibilityIgnoresInvertColors = true;
     }
     return self;
 }

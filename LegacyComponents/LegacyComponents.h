@@ -299,6 +299,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGVideoMessageCaptureController.h>
 #import <LegacyComponents/TGModernConversationInputMicButton.h>
 
+#import <LegacyComponents/TGLocationPulseView.h>
 #import <LegacyComponents/TGLocationWavesView.h>
 #import <LegacyComponents/TGLocationLiveElapsedView.h>
 #import <LegacyComponents/TGLocationLiveSessionItemView.h>

@@ -259,7 +259,7 @@ const CGFloat TGLocationLiveCellHeight = 68;
     [self setCircleColor:UIColorRGB(0xff6464)];
     
     _titleLabel.textColor = UIColorRGB(0xff3b2f);
-    _titleLabel.text = TGLocalized(@"Map.StopLiveLocation");
+    _titleLabel.text = TGLocalized(@"Map.StopLiveLocationShort");
     _subtitleLabel.text = [TGDateUtils stringForRelativeUpdate:[message actualDate]];
     
     _wavesView.hidden = false;
@@ -317,7 +317,7 @@ const CGFloat TGLocationLiveCellHeight = 68;
     CGFloat separatorThickness = TGScreenPixel;
     
     _titleLabel.frame = CGRectMake(padding, 14, self.frame.size.width - padding - 14, 20);
-    _subtitleLabel.frame = CGRectMake(padding, 36, self.frame.size.width - padding - 14, 20);
+    _subtitleLabel.frame = CGRectMake(padding, 36, self.frame.size.width - padding - 14 - 38.0f, 20);
     _separatorView.frame = CGRectMake(padding, self.frame.size.height - separatorThickness, self.frame.size.width - padding, separatorThickness);
     _elapsedView.frame = CGRectMake(self.frame.size.width - 30.0f - 15.0f, floor((self.frame.size.height - 30.0f) / 2.0f), 30.0f, 30.0f);
 }

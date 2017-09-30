@@ -124,6 +124,11 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
         self.directionsPressed();
 }
 
+- (UIButton *)directionsButton
+{
+    return _directionsButton;
+}
+
 - (void)setLocation:(TGLocationMediaAttachment *)location messageId:(int32_t)messageId userLocationSignal:(SSignal *)userLocationSignal
 {
     if (_messageId == messageId)

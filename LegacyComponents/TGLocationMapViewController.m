@@ -122,12 +122,21 @@ const CGFloat TGLocationMapInset = 280.0f;
     _edgeHighlightView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     _edgeHighlightView.frame = _edgeView.bounds;
     _edgeHighlightView.alpha = 0.0f;
+    _edgeHighlightView.image =  [TGTintedImage(TGComponentsImageNamed(@"LocationPanelEdge"), TGSelectionColor()) resizableImageWithCapInsets:UIEdgeInsetsMake(0.0f, 10.0f, 0.0f, 10.0f)];
     [_edgeView addSubview:_edgeHighlightView];
     
     self.scrollViewsForAutomaticInsetsAdjustment = @[ _tableView ];
     
     if (![self _updateControllerInset:false])
         [self controllerInsetUpdated:UIEdgeInsetsZero];
+}
+
+- (void)layoutControllerForSize:(CGSize)size duration:(NSTimeInterval)duration
+{
+    [super layoutControllerForSize:size duration:duration];
+    if (TGIsPad())
+        [self updateMapHeightAnimated:false];
+    _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f, self.controllerInset.top + 6.0f, 45.0f, 90.0f);
 }
 
 - (void)setOptionsViewHidden:(bool)hidden
@@ -232,18 +241,27 @@ const CGFloat TGLocationMapInset = 280.0f;
 
 - (void)updateMapHeightAnimated:(bool)animated
 {
-    _tableViewTopInset = [self mapHeight];
+    void (^changeBlock)(void) = ^
+    {
+        _tableViewTopInset = [self mapHeight];
+        
+        _mapViewWrapper.frame = CGRectMake(0, TGLocationMapClipHeight - _tableViewTopInset, self.view.frame.size.width, _tableViewTopInset + 10.0f);
+        _mapView.frame = CGRectMake(0, -TGLocationMapInset, self.view.frame.size.width, _tableViewTopInset + 2 * TGLocationMapInset + 10.0f);
+        _edgeView.frame = CGRectMake(0.0f, _tableViewTopInset - 10.0f, _mapViewWrapper.frame.size.width, _edgeView.frame.size.height);
+        
+        [self updateInsets];
+    };
     
     if (animated)
     {
         [UIView animateWithDuration:0.3 delay:0.0 options:7 << 16 animations:^
         {
-            [self updateInsets];
+            changeBlock();
         } completion:nil];
     }
     else
     {
-        [self updateInsets];
+        changeBlock();
     }
 }
 

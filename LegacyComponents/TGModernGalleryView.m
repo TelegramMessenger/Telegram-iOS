@@ -50,6 +50,9 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
         _context = context;
         _itemPadding = itemPadding;
         
+        if (iosMajorVersion() >= 11)
+            self.accessibilityIgnoresInvertColors = true;
+        
         self.opaque = false;
         self.backgroundColor = UIColorRGBA(0x000000, 1.0f);
         
@@ -383,6 +386,12 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
     _instantDismissView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self addSubview:_instantDismissView];
     [_instantDismissView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(instantDismissViewTap:)]];
+}
+
+- (void)disableInstantDismiss
+{
+    [_instantDismissView removeFromSuperview];
+    _instantDismissView = nil;
 }
 
 - (void)instantDismissViewTap:(UITapGestureRecognizer *)recognizer {

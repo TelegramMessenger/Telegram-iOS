@@ -10,13 +10,13 @@
 
 #import "TGImageView.h"
 #import "TGLetteredAvatarView.h"
+#import "TGLocationPulseView.h"
 
 NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
 
-NSString *const TGLocationETAKey = @"eta";
-
 @interface TGLocationPinAnnotationView ()
 {
+    TGLocationPulseView *_pulseView;
     UIImageView *_smallView;
     UIImageView *_shadowView;
     UIImageView *_backgroundView;
@@ -28,6 +28,8 @@ NSString *const TGLocationETAKey = @"eta";
     SMetaDisposable *_userDisposable;
     
     bool _animating;
+    
+    bool _observingExpiration;
 }
 @end
 
@@ -38,6 +40,9 @@ NSString *const TGLocationETAKey = @"eta";
     self = [super initWithAnnotation:annotation reuseIdentifier:TGLocationPinAnnotationKind];
     if (self != nil)
     {
+        _pulseView = [[TGLocationPulseView alloc] init];
+        [self addSubview:_pulseView];
+        
         _shadowView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"LocationPinShadow")];
         [self addSubview:_shadowView];
         
@@ -73,18 +78,34 @@ NSString *const TGLocationETAKey = @"eta";
     return self;
 }
 
+- (void)dealloc
+{
+    [self unsubscribeFromExpiration];
+}
+
 - (void)prepareForReuse
 {
+    [_pulseView stop];
     [_iconView reset];
     _smallView.hidden = true;
     _backgroundView.hidden = false;
 }
 
-- (void)setSelected:(BOOL)selected
+- (void)subscribeForExpiration
 {
-    [super setSelected:selected];
+    if (_observingExpiration)
+        return;
+    _observingExpiration = true;
+    [self addObserver:self forKeyPath:@"annotation.isExpired" options:NSKeyValueObservingOptionNew context:NULL];
 }
 
+- (void)unsubscribeFromExpiration
+{
+    if (!_observingExpiration)
+        return;
+    _observingExpiration = false;
+    [self removeObserver:self forKeyPath:@"annotation.isExpired"];
+}
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated
 {
     if (iosMajorVersion() < 7)
@@ -170,12 +191,12 @@ NSString *const TGLocationETAKey = @"eta";
              }];
          
             [UIView animateWithDuration:0.1 animations:^
-             {
-                 _dotView.alpha = 0.0f;
-             } completion:^(BOOL finished) {
-                 _dotView.alpha = 1.0f;
-                 _dotView.hidden = true;
-             }];
+            {
+                _dotView.alpha = 0.0f;
+            } completion:^(BOOL finished) {
+                _dotView.alpha = 1.0f;
+                _dotView.hidden = true;
+            }];
         }
     }
     else
@@ -202,12 +223,15 @@ NSString *const TGLocationETAKey = @"eta";
         
         _liveLocation = false;
         [self setPeer:((TGLocationPickerAnnotation *)annotation).peer];
+        
+        [self unsubscribeFromExpiration];
     }
     else if ([annotation isKindOfClass:[TGLocationAnnotation class]])
     {
         _dotView.hidden = false;
         
-        TGLocationMediaAttachment *location = ((TGLocationAnnotation *)annotation).location;
+        TGLocationAnnotation *locationAnnotation = ((TGLocationAnnotation *)annotation);
+        TGLocationMediaAttachment *location = locationAnnotation.location;
         if (location.period == 0)
         {
             _avatarView.hidden = true;
@@ -225,6 +249,8 @@ NSString *const TGLocationETAKey = @"eta";
             }
             
             _liveLocation = false;
+            
+            [self unsubscribeFromExpiration];
         }
         else
         {
@@ -233,7 +259,17 @@ NSString *const TGLocationETAKey = @"eta";
             
             _backgroundView.image = TGComponentsImageNamed(@"LocationPinBackground");
             
-            [self setPeer:((TGLocationAnnotation *)annotation).peer];
+            [self setPeer:locationAnnotation.peer];
+            if (!locationAnnotation.isOwn && !locationAnnotation.isExpired)
+            {
+                [_pulseView start];
+                
+                [self subscribeForExpiration];
+            }
+            else
+            {
+                [self unsubscribeFromExpiration];
+            }
             
             ignoreInvertColors = true;
             
@@ -246,12 +282,18 @@ NSString *const TGLocationETAKey = @"eta";
             }
         }
     }
-    
-    if (iosMajorVersion() >= 11)
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
+{
+    if ([keyPath isEqualToString:@"annotation.isExpired"])
     {
-        _shadowView.accessibilityIgnoresInvertColors = ignoreInvertColors;
-        _backgroundView.accessibilityIgnoresInvertColors = ignoreInvertColors;
-        _dotView.accessibilityIgnoresInvertColors = ignoreInvertColors;
+        if (((TGLocationAnnotation *)self.annotation).isExpired)
+            [_pulseView stop];
+    }
+    else
+    {
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
     }
 }
 
@@ -342,6 +384,63 @@ NSString *const TGLocationETAKey = @"eta";
         _avatarView.center = CGPointMake(TGScreenPixel, -41.0f);
         _avatarView.transform = CGAffineTransformIdentity;
     }
+}
+
+- (void)setPinRaised:(bool)raised
+{
+    [self setPinRaised:raised animated:false completion:nil];
+}
+
+- (void)setPinRaised:(bool)raised animated:(bool)animated completion:(void (^)(void))completion
+{
+    _pinRaised = raised;
+    
+    [_shadowView.layer removeAllAnimations];
+    
+    if (animated)
+    {
+        if (raised)
+        {
+            [UIView animateWithDuration:0.2 delay:0.0 options:7 << 16 animations:^
+            {
+                _shadowView.center = CGPointMake(TGScreenPixel, -66.0f);
+            } completion:^(BOOL finished) {
+                if (finished && completion != nil)
+                    completion();
+            }];
+        }
+        else
+        {
+            [UIView animateWithDuration:0.2 delay:0.0 usingSpringWithDamping:0.6 initialSpringVelocity:0.0 options:kNilOptions animations:^
+            {
+                _shadowView.center = CGPointMake(TGScreenPixel, -36.0f);
+            } completion:^(BOOL finished)
+            {
+                if (finished && completion != nil)
+                    completion();
+            }];
+        }
+    }
+    else
+    {
+        _shadowView.center = CGPointMake(TGScreenPixel, raised ? -66.0f : -36.0f);
+        
+        if (completion != nil)
+            completion();
+    }
+}
+
+@end
+
+@implementation TGLocationPinWrapperView
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
+{
+    UIView *view = [super hitTest:point withEvent:event];
+    if (view == self)
+        return nil;
+    
+    return view;
 }
 
 @end

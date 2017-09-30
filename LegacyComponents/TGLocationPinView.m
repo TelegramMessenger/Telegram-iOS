@@ -9,19 +9,6 @@ const CGFloat TGLocationPinRaisedOrigin = 7;
 const CGPoint TGLocationPinShadowPinnedOrigin = { 43, 47 };
 const CGPoint TGLocationPinShadowRaisedOrigin = { 87, -33 };
 
-@implementation TGLocationPinWrapperView
-
-- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
-{
-    UIView *view = [super hitTest:point withEvent:event];
-    if (view == self)
-        return nil;
-    
-    return view;
-}
-
-@end
-
 @interface TGLocationPinView ()
 {
     UIImageView *_pinView;

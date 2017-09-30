@@ -66,6 +66,16 @@
     }
 }
 
+- (void)setIsExpired:(bool)isExpired
+{
+    if (isExpired != _isExpired)
+    {
+        [self willChangeValueForKey:@"isExpired"];
+        _isExpired = isExpired;
+        [self didChangeValueForKey:@"isExpired"];
+    }
+}
+
 @end
 
 

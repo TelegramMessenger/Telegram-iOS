@@ -12,6 +12,7 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 @interface TGMenuSheetButtonItemView ()
 {
     bool _dark;
+    bool _requiresDivider;
 }
 @end
 
@@ -24,6 +25,7 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
     {
         self.action = action;
         _buttonType = type;
+        _requiresDivider = true;
         
         _button = [[TGModernButton alloc] init];
         _button.exclusiveTouch = true;
@@ -107,7 +109,12 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 
 - (bool)requiresDivider
 {
-    return true;
+    return _requiresDivider;
+}
+
+- (void)setRequiresDivider:(bool)requiresDivider
+{
+    _requiresDivider = requiresDivider;
 }
 
 - (void)layoutSubviews

@@ -18,7 +18,7 @@ typedef enum {
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context intent:(TGLocationPickerControllerIntent)intent;
 
 @property (nonatomic, strong) id peer;
-@property (nonatomic, assign) bool allowLiveLocations;
+@property (nonatomic, assign) bool allowLiveLocationSharing;
 @property (nonatomic, assign) bool sharingLiveLocation;
 
 @end

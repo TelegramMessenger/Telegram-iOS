@@ -194,6 +194,11 @@
     _bottomView.frame = CGRectMake(0.0f, self.frame.size.height, self.frame.size.width, 4.0f);
 }
 
+- (bool)hasSelectedItem
+{
+    return _tableView.indexPathForSelectedRow != nil;
+}
+
 - (void)selectPreviousItem
 {
     if ([self tableView:_tableView numberOfRowsInSection:0] == 0)

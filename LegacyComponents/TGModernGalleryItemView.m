@@ -1,9 +1,20 @@
 #import "TGModernGalleryItemView.h"
 
+#import "LegacyComponentsInternal.h"
+
 #import "TGModernGalleryDefaultFooterView.h"
 #import "TGModernGalleryDefaultFooterAccessoryView.h"
 
 @implementation TGModernGalleryItemView
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self != nil)
+    {
+    }
+    return self;
+}
 
 - (SSignal *)readyForTransitionIn {
     return [SSignal single:@true];

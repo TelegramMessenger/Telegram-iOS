@@ -216,6 +216,7 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 @property (nonatomic) bool containsUnseenMention;
 
 @property (nonatomic, strong) TGActionMediaAttachment *actionInfo;
+@property (nonatomic, readonly) TGLocationMediaAttachment *locationAttachment;
 
 @property (nonatomic, strong) NSArray *textCheckingResults;
 

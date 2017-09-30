@@ -1183,6 +1183,16 @@ typedef enum {
     return self.editDate > 0 ? self.editDate : self.date;
 }
 
+- (TGLocationMediaAttachment *)locationAttachment
+{
+    for (TGMediaAttachment *attachment in _mediaAttachments)
+    {
+        if (attachment.type == TGLocationMediaAttachmentType)
+            return attachment;
+    }
+    return nil;
+}
+
 @end
 
 @interface TGMediaId ()
