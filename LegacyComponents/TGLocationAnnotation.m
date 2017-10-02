@@ -76,6 +76,11 @@
     }
 }
 
+- (bool)isLiveLocation
+{
+    return _location.period > 0;
+}
+
 @end
 
 

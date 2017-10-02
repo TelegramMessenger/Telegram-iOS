@@ -229,6 +229,25 @@
                         fileName = asset.fileName;
                 }
                 
+                if (iosMajorVersion() >= 10 && [dataUTI rangeOfString:@"heic"].location != NSNotFound)
+                {
+                    CIContext *context = [[CIContext alloc] init];
+                    CIImage *image = [[CIImage alloc] initWithData:imageData];
+                    NSURL *tmpURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%x.jpg", (int)arc4random()]]];
+                    
+                    if ([context writeJPEGRepresentationOfImage:image toURL:tmpURL colorSpace:image.colorSpace options:@{} error:nil])
+                    {
+                        fileUrl = tmpURL;
+                        dataUTI = @"public.jpeg";
+                        imageData = [[NSData alloc] initWithContentsOfMappedFile:fileUrl.path];
+                        
+                        NSString *lowcaseString = [fileName lowercaseString];
+                        NSRange range = [lowcaseString rangeOfString:@".heic"];
+                        if (range.location != NSNotFound)
+                            fileName = [fileName stringByReplacingCharactersInRange:range withString:@".JPG"];
+                    }
+                }
+                
                 TGMediaAssetImageData *data = [[TGMediaAssetImageData alloc] init];
                 data.fileURL = fileUrl;
                 data.fileName = fileName;

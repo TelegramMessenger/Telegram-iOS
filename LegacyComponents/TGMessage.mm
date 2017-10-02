@@ -1188,7 +1188,7 @@ typedef enum {
     for (TGMediaAttachment *attachment in _mediaAttachments)
     {
         if (attachment.type == TGLocationMediaAttachmentType)
-            return attachment;
+            return (TGLocationMediaAttachment *)attachment;
     }
     return nil;
 }

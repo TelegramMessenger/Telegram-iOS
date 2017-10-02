@@ -121,6 +121,7 @@
             if (strongSelf == nil)
                 return;
             
+            [strongSelf.window endEditing:true];
             strongSelf->_donePressed(strongSelf->_currentItem);
         };
         

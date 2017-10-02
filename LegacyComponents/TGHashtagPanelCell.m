@@ -68,7 +68,7 @@ NSString *const TGHashtagPanelCellKind = @"TGHashtagPanelCell";
             separatorColor = UIColorRGB(0x292929);
         
         _separatorView = [[UIView alloc] init];
-        _separatorView.backgroundColor = TGSeparatorColor();
+        _separatorView.backgroundColor = separatorColor;
         [self insertSubview:_separatorView belowSubview:self.contentView];
         [self setNeedsLayout];
     }

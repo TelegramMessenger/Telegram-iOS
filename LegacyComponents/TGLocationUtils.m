@@ -25,10 +25,35 @@
     
     if ([locationManager respondsToSelector:@selector(requestWhenInUseAuthorization)])
     {
+        if (authorizationStatus == kCLAuthorizationStatusNotDetermined)
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"TG_askedForAlwaysAuthorization_v0"];
+        
         [locationManager requestWhenInUseAuthorization];
         return true;
     }
 
+    return false;
+}
+
++ (bool)requestAlwaysUserLocationAuthorizationWithLocationManager:(CLLocationManager *)locationManager
+{
+    CLAuthorizationStatus authorizationStatus = [CLLocationManager authorizationStatus];
+    if (authorizationStatus == kCLAuthorizationStatusDenied || authorizationStatus == kCLAuthorizationStatusRestricted)
+        return false;
+    
+    if ([locationManager respondsToSelector:@selector(requestAlwaysAuthorization)])
+    {
+        NSString *key = @"TG_askedForAlwaysAuthorization_v0";
+        bool askedForAlwaysAuthorization = [[[NSUserDefaults standardUserDefaults] objectForKey:key] boolValue];
+        if (authorizationStatus == kCLAuthorizationStatusAuthorizedWhenInUse && askedForAlwaysAuthorization)
+            return false;
+        
+        [locationManager requestAlwaysAuthorization];
+        [[NSUserDefaults standardUserDefaults] setObject:@true forKey:key];
+        
+        return true;
+    }
+    
     return false;
 }
 

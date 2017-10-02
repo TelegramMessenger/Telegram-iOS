@@ -1,5 +1,8 @@
 #import <UIKit/UIKit.h>
 #import <CoreLocation/CoreLocation.h>
+#import <SSignalKit/SSignalKit.h>
+
+@class TGMessage;
 
 @interface TGLocationCurrentLocationCell : UITableViewCell
 
@@ -8,7 +11,7 @@
 - (void)configureForCurrentLocationWithAccuracy:(CLLocationAccuracy)accuracy;
 - (void)configureForCustomLocationWithAddress:(NSString *)address;
 - (void)configureForLiveLocationWithAccuracy:(CLLocationAccuracy)accuracy;
-- (void)configureForStopLiveLocation;
+- (void)configureForStopWithMessage:(TGMessage *)message remaining:(SSignal *)remaining;
 
 @end
 

@@ -349,7 +349,7 @@ const NSInteger PGCameraFrameRate = 30;
     if (videoConnection.supportsVideoStabilization)
     {
         if ([videoConnection respondsToSelector:@selector(setPreferredVideoStabilizationMode:)])
-            videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeAuto;
+            videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeStandard;
         else
             videoConnection.enablesVideoStabilizationWhenAvailable = true;
     }
@@ -776,9 +776,6 @@ const NSInteger PGCameraFrameRate = 30;
     
     NSDictionary *videoSettings = [_videoOutput recommendedVideoSettingsForAssetWriterWithOutputFileType:AVFileTypeMPEG4];
     NSDictionary *audioSettings = [_audioOutput recommendedAudioSettingsForAssetWriterWithOutputFileType:AVFileTypeMPEG4];
-    
-//    if (iosMajorVersion() >= 11 && [videoSettings[AVVideoCodecKey] isEqualToString:@"hvc1"])
-//        videoSettings = [_videoOutput recommendedVideoSettingsForVideoCodecType:AVVideoCodecH264 assetWriterOutputFileType:AVFileTypeMPEG4];
     
     if (self.compressVideo)
     {

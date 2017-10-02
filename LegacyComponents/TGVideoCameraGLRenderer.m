@@ -306,7 +306,7 @@ bail:
 		CFRelease(srcTexture);
     
     if (prevTexture)
-        CFRetain(prevTexture);
+        CFRelease(prevTexture);
 	
 	if (dstTexture)
 		CFRelease(dstTexture);

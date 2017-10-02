@@ -7,6 +7,8 @@
 @property (nonatomic, assign, getter=isPinRaised) bool pinRaised;
 - (void)setPinRaised:(bool)raised animated:(bool)animated completion:(void (^)(void))completion;
 
+- (void)setCustomPin:(bool)customPin animated:(bool)animated;
+
 @end
 
 extern NSString * const TGLocationPinAnnotationKind;

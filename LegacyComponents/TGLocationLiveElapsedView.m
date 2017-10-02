@@ -50,11 +50,6 @@
         _progress = 0.999f;
     _string = string;
     [self setNeedsDisplay];
-    
-    if ([string isEqualToString:@"0"])
-    {
-        TGLegacyLog(@"");
-    }
 }
 
 - (void)drawRect:(CGRect)rect

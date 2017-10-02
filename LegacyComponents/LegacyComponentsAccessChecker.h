@@ -21,6 +21,7 @@ typedef enum {
 typedef enum {
     TGLocationAccessIntentSend,
     TGLocationAccessIntentTracking,
+    TGLocationAccessIntentLiveLocation
 } TGLocationAccessIntent;
 
 @protocol LegacyComponentsAccessChecker <NSObject>

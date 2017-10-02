@@ -903,7 +903,7 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
     if (videoConnection.supportsVideoStabilization)
     {
         if ([videoConnection respondsToSelector:@selector(setPreferredVideoStabilizationMode:)])
-            videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeAuto;
+            videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeStandard;
         else
             videoConnection.enablesVideoStabilizationWhenAvailable = true;
     }

@@ -2,6 +2,7 @@
 
 #import "LegacyComponentsInternal.h"
 #import "TGImageUtils.h"
+#import "TGPhotoEditorUtils.h"
 
 @interface TGLocationWavesView ()
 {
@@ -23,14 +24,14 @@
         self.backgroundColor = [UIColor clearColor];
         _image = TGComponentsImageNamed(@"LocationWave");
         self.userInteractionEnabled = false;
+        _color = [UIColor whiteColor];
     }
     return self;
 }
 
-- (void)dealloc
+- (void)invalidate
 {
-    _displayLink.paused = true;
-    [_displayLink removeFromRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+    [_displayLink invalidate];
 }
 
 - (CADisplayLink *)displayLink {
@@ -61,44 +62,47 @@
 - (void)drawRect:(CGRect)rect
 {
     CGPoint center = CGPointMake(rect.size.width / 2.0f, rect.size.height / 2.0f);
-    UIImage *wave = _image;
-    UIImage *mirroredWave = [UIImage imageWithCGImage:wave.CGImage scale:wave.scale orientation:UIImageOrientationUpMirrored];
+    CGFloat length = 9.0f;
     
-    CGFloat scale = _progress;
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, _color.CGColor);
+    
+    void (^draw)(CGFloat, bool) = ^(CGFloat pos, bool right)
+    {
+        CGMutablePathRef path = CGPathCreateMutable();
+        CGPathAddArc(path, NULL, center.x, center.y, length * pos + 7.0f, right ? TGDegreesToRadians(-26) : TGDegreesToRadians(154), right ? TGDegreesToRadians(26) : TGDegreesToRadians(206), false);
+        
+        CGPathRef strokedArc = CGPathCreateCopyByStrokingPath(path, NULL, 1.65f, kCGLineCapRound, kCGLineJoinMiter, 10);
+        
+        CGContextAddPath(context, strokedArc);
+        
+        CGPathRelease(strokedArc);
+        CGPathRelease(path);
+        
+        CGContextFillPath(context);
+    };
+    
     CGFloat position = _progress;
     CGFloat alpha = position / 0.5f;
     if (alpha > 1.0f)
         alpha = 2.0f - alpha;
+    CGContextSetAlpha(context, alpha * 0.7f);
+
+    draw(position, false);
+    draw(position, true);
     
-    CGFloat length = 13.0f;
-    
-    CGSize size = CGSizeMake(4.5f * scale, 15.5f * scale);
-    CGPoint p = CGPointMake(center.x - 3.0f - length * position, center.y);
-    CGRect r = CGRectMake(p.x - size.width / 2.0f, p.y - size.height / 2.0f, size.width, size.height);
-    [wave drawInRect:r blendMode:kCGBlendModeNormal alpha:alpha];
-    
-    p = CGPointMake(center.x + 3.0f + length * position, center.y);
-    r = CGRectMake(p.x - size.width / 2.0f, p.y - size.height / 2.0f, size.width, size.height);
-    [mirroredWave drawInRect:r blendMode:kCGBlendModeNormal alpha:alpha];
-    
-    CGFloat progress =  _progress + 0.32f;
+    CGFloat progress =  _progress + 0.5f;
     if (progress > 1.0f)
         progress = progress - 1.0f;
-    
-    CGFloat largerScale = progress;
-    CGFloat largerPosition = progress;
-    CGFloat largerAlpha = largerPosition / 0.5f;
+
+    CGFloat largerPos = progress;
+    CGFloat largerAlpha = largerPos / 0.5f;
     if (largerAlpha > 1.0f)
         largerAlpha = 2.0f - largerAlpha;
+    CGContextSetAlpha(context, largerAlpha * 0.7f);
     
-    size = CGSizeMake(4.5f * largerScale, 15.5f * largerScale);
-    p = CGPointMake(center.x - 3.0f - length * largerPosition, center.y);
-    r = CGRectMake(p.x - size.width / 2.0f, p.y - size.height / 2.0f, size.width, size.height);
-    [wave drawInRect:r blendMode:kCGBlendModeNormal alpha:largerAlpha];
-    
-    p = CGPointMake(center.x + 3.0f + length * largerPosition, center.y);
-    r = CGRectMake(p.x - size.width / 2.0f, p.y - size.height / 2.0f, size.width, size.height);
-    [mirroredWave drawInRect:r blendMode:kCGBlendModeNormal alpha:largerAlpha];
+    draw(largerPos, false);
+    draw(largerPos, true);
 }
 
 - (void)displayLinkUpdate
@@ -111,7 +115,7 @@
     if (delta < DBL_EPSILON)
         return;
     
-    _progress += delta * 0.65;
+    _progress += delta * 0.52;
     if (_progress > 1.0f)
         _progress = 1.0f - _progress;
     

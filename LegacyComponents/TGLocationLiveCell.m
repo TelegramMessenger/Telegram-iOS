@@ -146,13 +146,6 @@ const CGFloat TGLocationLiveCellHeight = 68;
         UIGraphicsEndImageContext();
     });
     
-    if (_avatarView == nil)
-    {
-        _avatarView = [[TGLetteredAvatarView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 55.0f, 55.0f)];
-        [_avatarView setSingleFontSize:24.0f doubleFontSize:24.0f useBoldFont:false];
-        [self addSubview:_avatarView];
-    }
-    
     bool isUser = [peer isKindOfClass:[TGUser class]];
     NSString *avatarUrl = isUser ? ((TGUser *)peer).photoUrlSmall : ((TGConversation *)peer).chatPhotoSmall;
     if (avatarUrl.length != 0)
@@ -179,16 +172,7 @@ const CGFloat TGLocationLiveCellHeight = 68;
     NSString *subtitle = [TGDateUtils stringForRelativeUpdate:[message actualDate]];
     _subtitleLabel.text = subtitle;
     
-    TGLocationMediaAttachment *locationAttachment = nil;
-    for (TGMediaAttachment *attachment in message.mediaAttachments)
-    {
-        if (attachment.type == TGLocationMediaAttachmentType)
-        {
-            locationAttachment = (TGLocationMediaAttachment *)attachment;
-            break;
-        }
-    }
-    
+    TGLocationMediaAttachment *locationAttachment = message.locationAttachment;
     CLLocation *location = [[CLLocation alloc] initWithLatitude:locationAttachment.latitude longitude:locationAttachment.longitude];
     __weak TGLocationLiveCell *weakSelf = self;
     if (_locationDisposable == nil)
@@ -207,6 +191,8 @@ const CGFloat TGLocationLiveCellHeight = 68;
     if (changed)
     {
         _elapsedView.hidden = false;
+        _avatarView.alpha = 1.0f;
+        [self setNeedsLayout];
         
         if (_remainingDisposable == nil)
             _remainingDisposable = [[SMetaDisposable alloc] init];
@@ -220,7 +206,11 @@ const CGFloat TGLocationLiveCellHeight = 68;
         {
             __strong TGLocationLiveCell *strongSelf = weakSelf;
             if (strongSelf != nil)
+            {
                 strongSelf->_elapsedView.hidden = true;
+                strongSelf->_avatarView.alpha = 0.5f;
+                [strongSelf setNeedsLayout];
+            }
         }]];
     }
 }
@@ -245,6 +235,8 @@ const CGFloat TGLocationLiveCellHeight = 68;
 
     [_locationDisposable setDisposable:nil];
     [_remainingDisposable setDisposable:nil];
+    
+    [self setNeedsLayout];
 }
 
 - (void)configureForStopWithMessage:(TGMessage *)message remaining:(SSignal *)remaining
@@ -259,7 +251,7 @@ const CGFloat TGLocationLiveCellHeight = 68;
     [self setCircleColor:UIColorRGB(0xff6464)];
     
     _titleLabel.textColor = UIColorRGB(0xff3b2f);
-    _titleLabel.text = TGLocalized(@"Map.StopLiveLocationShort");
+    _titleLabel.text = TGLocalized(@"Map.StopLiveLocation");
     _subtitleLabel.text = [TGDateUtils stringForRelativeUpdate:[message actualDate]];
     
     _wavesView.hidden = false;
@@ -270,17 +262,9 @@ const CGFloat TGLocationLiveCellHeight = 68;
     if (changed)
     {
         _elapsedView.hidden = false;
+        [self setNeedsLayout];
         
-        TGLocationMediaAttachment *locationAttachment = nil;
-        for (TGMediaAttachment *attachment in message.mediaAttachments)
-        {
-            if (attachment.type == TGLocationMediaAttachmentType)
-            {
-                locationAttachment = (TGLocationMediaAttachment *)attachment;
-                break;
-            }
-        }
-        
+        TGLocationMediaAttachment *locationAttachment = message.locationAttachment;
         if (_remainingDisposable == nil)
             _remainingDisposable = [[SMetaDisposable alloc] init];
         
@@ -294,7 +278,10 @@ const CGFloat TGLocationLiveCellHeight = 68;
         {
             __strong TGLocationLiveCell *strongSelf = weakSelf;
             if (strongSelf != nil)
+            {
                 strongSelf->_elapsedView.hidden = true;
+                [strongSelf setNeedsLayout];
+            }
         }]];
     }
 }
@@ -316,8 +303,8 @@ const CGFloat TGLocationLiveCellHeight = 68;
     CGFloat padding = 76.0f;
     CGFloat separatorThickness = TGScreenPixel;
     
-    _titleLabel.frame = CGRectMake(padding, 14, self.frame.size.width - padding - 14, 20);
-    _subtitleLabel.frame = CGRectMake(padding, 36, self.frame.size.width - padding - 14 - 38.0f, 20);
+    _titleLabel.frame = CGRectMake(padding, 14, self.frame.size.width - padding - 14 - (_elapsedView.hidden ? 0.0f : 38.0f), 20);
+    _subtitleLabel.frame = CGRectMake(padding, 36, self.frame.size.width - padding - 14 - (_elapsedView.hidden ? 0.0f : 38.0f), 20);
     _separatorView.frame = CGRectMake(padding, self.frame.size.height - separatorThickness, self.frame.size.width - padding, separatorThickness);
     _elapsedView.frame = CGRectMake(self.frame.size.width - 30.0f - 15.0f, floor((self.frame.size.height - 30.0f) / 2.0f), 30.0f, 30.0f);
 }

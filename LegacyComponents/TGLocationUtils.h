@@ -6,6 +6,7 @@
 + (MKMapRect)MKMapRectForCoordinateRegion:(MKCoordinateRegion)region;
 
 + (bool)requestWhenInUserLocationAuthorizationWithLocationManager:(CLLocationManager *)locationManager;
++ (bool)requestAlwaysUserLocationAuthorizationWithLocationManager:(CLLocationManager *)locationManager;
 
 + (NSString *)stringFromDistance:(CLLocationDistance)distance;
 + (NSString *)stringFromAccuracy:(CLLocationAccuracy)accuracy;

@@ -17,6 +17,7 @@
 @interface TGLocationAnnotation : NSObject <MKAnnotation>
 
 @property (nonatomic, readonly) TGLocationMediaAttachment *location;
+@property (nonatomic, readonly) bool isLiveLocation;
 @property (nonatomic, strong) id peer;
 @property (nonatomic, assign) CLLocationCoordinate2D coordinate;
 @property (nonatomic, assign) int32_t messageId;

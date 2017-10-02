@@ -4,6 +4,7 @@
 
 @property (nonatomic, strong) UIColor *color;
 
+- (void)invalidate;
 - (void)start;
 - (void)stop;
 

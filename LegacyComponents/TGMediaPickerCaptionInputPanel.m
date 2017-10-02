@@ -527,7 +527,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     [_inputField refreshHeight:false];
 }
 
--(void)growingTextViewDidEndEditing:(HPGrowingTextView *)__unused growingTextView
+- (void)growingTextViewDidEndEditing:(HPGrowingTextView *)__unused growingTextView
 {
     _caption = _inputField.text;
     _inputFieldOnelineLabel.text = [self oneLinedCaptionForText:_caption];
@@ -553,6 +553,8 @@ static void setViewFrame(UIView *view, CGRect frame)
     }];
     
     [self setAssociatedPanel:nil animated:true];
+    
+    [self setButtonPressed];
 }
 
 - (void)growingTextView:(HPGrowingTextView *)__unused growingTextView willChangeHeight:(CGFloat)height duration:(NSTimeInterval)duration animationCurve:(int)animationCurve

@@ -13,13 +13,13 @@
 
 const MKCoordinateSpan TGLocationDefaultSpan = { 0.008, 0.008 };
 const CGFloat TGLocationMapClipHeight = 1600.0f;
-const CGFloat TGLocationMapInset = 280.0f;
+const CGFloat TGLocationMapInset = 100.0f;
 
 @interface TGLocationTableView : UITableView
 
 @end
 
-@interface TGLocationMapViewController ()
+@interface TGLocationMapViewController () <CLLocationManagerDelegate>
 {
     id<LegacyComponentsContext> _context;
     
@@ -27,6 +27,8 @@ const CGFloat TGLocationMapInset = 280.0f;
     
     SVariable *_userLocation;
     SPipe *_userLocationPipe;
+    
+    void (^_openLiveLocationMenuBlock)(void);
 }
 @end
 
@@ -40,6 +42,9 @@ const CGFloat TGLocationMapInset = 280.0f;
         _context = context;
         _userLocationPipe = [[SPipe alloc] init];
         
+        _locationManager = [[CLLocationManager alloc] init];
+        _locationManager.delegate = self;
+        
         _userLocation = [[SVariable alloc] init];
         [_userLocation set:[[SSignal single:nil] then:_userLocationPipe.signalProducer()]];
     }
@@ -48,6 +53,7 @@ const CGFloat TGLocationMapInset = 280.0f;
 
 - (void)dealloc
 {
+    _locationManager.delegate = nil;
     _mapView.delegate = nil;
     _tableView.dataSource = nil;
     _tableView.delegate = nil;
@@ -57,6 +63,10 @@ const CGFloat TGLocationMapInset = 280.0f;
 {
     [super loadView];
     self.view.backgroundColor = [UIColor whiteColor];
+    
+    UIScrollView *dummy = [[UIScrollView alloc] init];
+    dummy.scrollsToTop = true;
+    [self.view addSubview:dummy];
     
     _tableView = [[TGLocationTableView alloc] initWithFrame:self.view.bounds];
     if (iosMajorVersion() >= 11)
@@ -134,8 +144,8 @@ const CGFloat TGLocationMapInset = 280.0f;
 - (void)layoutControllerForSize:(CGSize)size duration:(NSTimeInterval)duration
 {
     [super layoutControllerForSize:size duration:duration];
-    if (TGIsPad())
-        [self updateMapHeightAnimated:false];
+    
+    [self updateMapHeightAnimated:false];
     _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f, self.controllerInset.top + 6.0f, 45.0f, 90.0f);
 }
 
@@ -154,6 +164,17 @@ const CGFloat TGLocationMapInset = 280.0f;
 - (void)userLocationButtonPressed
 {
     
+}
+
+- (bool)hasUserLocation
+{
+    return (_mapView.userLocation != nil && _mapView.userLocation.location != nil);
+}
+
+- (void)updateLocationAvailability
+{
+    bool locationAvailable = [self hasUserLocation] || _locationServicesDisabled;
+    [_optionsView setLocationAvailable:locationAvailable animated:true];
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
@@ -309,8 +330,12 @@ const CGFloat TGLocationMapInset = 280.0f;
 {
     userLocation.title = @"";
     
+    _locationServicesDisabled = false;
+    
     if (userLocation.location != nil)
         _userLocationPipe.sink(userLocation.location);
+    
+    [self updateLocationAvailability];
 }
 
 - (void)mapView:(MKMapView *)__unused mapView didFailToLocateUserWithError:(NSError *)__unused error
@@ -318,9 +343,14 @@ const CGFloat TGLocationMapInset = 280.0f;
     if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusDenied || [CLLocationManager authorizationStatus] == kCLAuthorizationStatusRestricted)
     {
         _userLocationPipe.sink(nil);
-        //_locationServicesDisabled = true;
-        //[self updateLocationAvailability];
+        _locationServicesDisabled = true;
+        [self updateLocationAvailability];
     }
+}
+
+- (bool)locationServicesDisabled
+{
+    return _locationServicesDisabled;
 }
 
 - (SSignal *)userLocationSignal
@@ -341,106 +371,153 @@ const CGFloat TGLocationMapInset = 280.0f;
     }
 }
 
+- (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
+{
+    if (_openLiveLocationMenuBlock != nil)
+    {
+        if (status == kCLAuthorizationStatusAuthorizedAlways)
+            _openLiveLocationMenuBlock();
+        
+        _openLiveLocationMenuBlock = nil;
+    }
+}
+
+- (CGRect)_liveLocationMenuSourceRect
+{
+    return CGRectZero;
+}
+
 - (void)_presentLiveLocationMenu:(CLLocationCoordinate2D)coordinate dismissOnCompletion:(bool)dismissOnCompletion
 {
-    __weak TGLocationMapViewController *weakSelf = self;
-    CGRect (^sourceRect)(void) = ^CGRect
+    void (^block)(void) = ^
     {
-        return CGRectZero;
+        __weak TGLocationMapViewController *weakSelf = self;
+        CGRect (^sourceRect)(void) = ^CGRect
+        {
+            __strong TGLocationMapViewController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return CGRectZero;
+            
+            return [strongSelf _liveLocationMenuSourceRect];
+        };
+        
+        TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
+        controller.dismissesByOutsideTap = true;
+        controller.hasSwipeGesture = true;
+        controller.narrowInLandscape = true;
+        controller.sourceRect = sourceRect;
+        
+        NSMutableArray *itemViews = [[NSMutableArray alloc] init];
+        
+        TGMenuSheetTitleItemView *titleItem = [[TGMenuSheetTitleItemView alloc] initWithTitle:nil subtitle:TGLocalized(@"Map.LiveLocationDescription")];
+        [itemViews addObject:titleItem];
+        
+        __weak TGMenuSheetController *weakController = controller;
+        TGMenuSheetButtonItemView *for15MinutesItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.LiveLocationFor15Minutes") type:TGMenuSheetButtonTypeDefault action:^
+        {
+            __strong TGLocationMapViewController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            if (strongSelf.liveLocationStarted != nil)
+                strongSelf.liveLocationStarted(coordinate, 15 * 60);
+            
+            [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
+        }];
+        [itemViews addObject:for15MinutesItem];
+        
+        TGMenuSheetButtonItemView *for1HourItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.LiveLocationFor1Hour") type:TGMenuSheetButtonTypeDefault action:^
+        {
+            __strong TGLocationMapViewController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            if (strongSelf.liveLocationStarted != nil)
+                strongSelf.liveLocationStarted(coordinate, 60 * 60);
+            
+            [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
+        }];
+        [itemViews addObject:for1HourItem];
+        
+        TGMenuSheetButtonItemView *for8HoursItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.LiveLocationFor8Hours") type:TGMenuSheetButtonTypeDefault action:^
+        {
+            __strong TGLocationMapViewController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            if (strongSelf.liveLocationStarted != nil)
+                strongSelf.liveLocationStarted(coordinate, 8 * 60 * 60);
+            
+            [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
+        }];
+        [itemViews addObject:for8HoursItem];
+        
+        TGMenuSheetButtonItemView *testItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:@"TEST 10 seconds" type:TGMenuSheetButtonTypeDefault action:^
+        {
+            __strong TGLocationMapViewController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            if (strongSelf.liveLocationStarted != nil)
+                strongSelf.liveLocationStarted(coordinate, 10);
+            
+            [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
+        }];
+        //[itemViews addObject:testItem];
+        
+        TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
+        {
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            [strongController dismissAnimated:true manual:true];
+        }];
+        [itemViews addObject:cancelItem];
+        
+        [controller setItemViews:itemViews];
+        [controller presentInViewController:self sourceView:self.view animated:true];
     };
     
-    TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
-    controller.dismissesByOutsideTap = true;
-    controller.hasSwipeGesture = true;
-    controller.narrowInLandscape = true;
-    controller.sourceRect = sourceRect;
-    
-    NSMutableArray *itemViews = [[NSMutableArray alloc] init];
-    
-    TGMenuSheetTitleItemView *titleItem = [[TGMenuSheetTitleItemView alloc] initWithTitle:nil subtitle:TGLocalized(@"Map.LiveLocationDescription")];
-    [itemViews addObject:titleItem];
-    
-    __weak TGMenuSheetController *weakController = controller;
-    TGMenuSheetButtonItemView *for15MinutesItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.LiveLocationFor15Minutes") type:TGMenuSheetButtonTypeDefault action:^
+    void (^errorBlock)(void) = ^
     {
-        __strong TGLocationMapViewController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        __strong TGMenuSheetController *strongController = weakController;
-        if (strongController == nil)
-            return;
-        
-        if (strongSelf.liveLocationStarted != nil)
-            strongSelf.liveLocationStarted(coordinate, 15 * 60);
-        
-        [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
-    }];
-    [itemViews addObject:for15MinutesItem];
+        [[[LegacyComponentsGlobals provider] accessChecker] checkLocationAuthorizationStatusForIntent:TGLocationAccessIntentLiveLocation alertDismissComlpetion:nil];
+    };
     
-    TGMenuSheetButtonItemView *for1HourItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.LiveLocationFor1Hour") type:TGMenuSheetButtonTypeDefault action:^
+    if ([CLLocationManager authorizationStatus] != kCLAuthorizationStatusAuthorizedAlways && [CLLocationManager authorizationStatus] != kCLAuthorizationStatusAuthorizedWhenInUse)
     {
-        __strong TGLocationMapViewController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        __strong TGMenuSheetController *strongController = weakController;
-        if (strongController == nil)
-            return;
-        
-        if (strongSelf.liveLocationStarted != nil)
-            strongSelf.liveLocationStarted(coordinate, 60 * 60);
-        
-        [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
-    }];
-    [itemViews addObject:for1HourItem];
-    
-    TGMenuSheetButtonItemView *for8HoursItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.LiveLocationFor8Hours") type:TGMenuSheetButtonTypeDefault action:^
+        errorBlock();
+    }
+    else
     {
-        __strong TGLocationMapViewController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        __strong TGMenuSheetController *strongController = weakController;
-        if (strongController == nil)
-            return;
-        
-        if (strongSelf.liveLocationStarted != nil)
-            strongSelf.liveLocationStarted(coordinate, 8 * 60 * 60);
-        
-        [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
-    }];
-    [itemViews addObject:for8HoursItem];
-    
-    TGMenuSheetButtonItemView *testItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:@"TEST 10 seconds" type:TGMenuSheetButtonTypeDefault action:^
-    {
-        __strong TGLocationMapViewController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        __strong TGMenuSheetController *strongController = weakController;
-        if (strongController == nil)
-            return;
-        
-        if (strongSelf.liveLocationStarted != nil)
-            strongSelf.liveLocationStarted(coordinate, 10);
-        
-        [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
-    }];
-    //[itemViews addObject:testItem];
-    
-    TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
-    {
-        __strong TGMenuSheetController *strongController = weakController;
-        if (strongController == nil)
-            return;
-        
-        [strongController dismissAnimated:true manual:true];
-    }];
-    [itemViews addObject:cancelItem];
-    
-    [controller setItemViews:itemViews];
-    [controller presentInViewController:self sourceView:self.view animated:true];
+        if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusAuthorizedAlways)
+        {
+            block();
+        }
+        else
+        {
+            if (![TGLocationUtils requestAlwaysUserLocationAuthorizationWithLocationManager:_locationManager])
+                errorBlock();
+            else
+                _openLiveLocationMenuBlock = [block copy];
+        }
+    }
 }
 
 @end
@@ -451,6 +528,11 @@ const CGFloat TGLocationMapInset = 280.0f;
 - (BOOL)touchesShouldCancelInContentView:(UIView *)__unused view
 {
     return true;
+}
+
+- (void)_adjustContentOffsetIfNecessary
+{
+    
 }
 
 @end
