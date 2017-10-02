@@ -1,6 +1,6 @@
 #import "TGLocationMapView.h"
 
-@interface TGLocationMapView ()
+@interface TGLocationMapView () <UIGestureRecognizerDelegate>
 {
     UITapGestureRecognizer *_tapGestureRecognizer;
     UILongPressGestureRecognizer *_longPressGestureRecognizer;
@@ -15,6 +15,7 @@
     if (self != nil)
     {
         _manipulationEnabled = true;
+        _allowAnnotationSelectionChanges = true;
         
         _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tg_handleTap:)];
         _tapGestureRecognizer.numberOfTapsRequired = 1;
@@ -27,6 +28,18 @@
         [self addGestureRecognizer:_longPressGestureRecognizer];
     }
     return self;
+}
+
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
+{
+    NSString *viewClass = NSStringFromClass([gestureRecognizer.view class]);
+    if ([viewClass rangeOfString:@"Compass"].location != NSNotFound)
+        return true;
+    
+    if (self.customAnnotationTap && self.customAnnotationTap([gestureRecognizer locationInView:self]))
+        return false;
+    
+    return self.allowAnnotationSelectionChanges;
 }
 
 - (bool)tapEnabled

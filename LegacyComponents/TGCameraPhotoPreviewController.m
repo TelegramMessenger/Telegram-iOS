@@ -235,6 +235,8 @@
         if (strongSelf == nil || strongSelf->_dismissing)
             return;
         
+        [strongSelf.view.window endEditing:true];
+        
         strongSelf->_dismissing = true;
         strongSelf.view.userInteractionEnabled = false;
         

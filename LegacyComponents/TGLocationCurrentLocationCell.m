@@ -6,14 +6,21 @@
 #import "TGImageUtils.h"
 #import "TGFont.h"
 #import "TGLocationUtils.h"
+#import "TGDateUtils.h"
+
+#import "TGMessage.h"
 
 #import "TGLocationWavesView.h"
+#import "TGLocationLiveElapsedView.h"
 
 NSString *const TGLocationCurrentLocationCellKind = @"TGLocationCurrentLocationCellKind";
 const CGFloat TGLocationCurrentLocationCellHeight = 68;
 
 @interface TGLocationCurrentLocationCell ()
 {
+    int32_t _messageId;
+    bool _isCurrentLocation;
+    
     UIView *_highlightView;
     
     UIImageView *_circleView;
@@ -22,10 +29,10 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     
     UILabel *_titleLabel;
     UILabel *_subtitleLabel;
-    
-    bool _isCurrentLocation;
-    
+    TGLocationLiveElapsedView *_elapsedView;
     UIView *_separatorView;
+    
+    SMetaDisposable *_remainingDisposable;
 }
 @end
 
@@ -67,6 +74,9 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
         _subtitleLabel.textColor = UIColorRGB(0xa6a6a6);
         [self.contentView addSubview:_subtitleLabel];
         
+        _elapsedView = [[TGLocationLiveElapsedView alloc] init];
+        [self.contentView addSubview:_elapsedView];
+        
         _separatorView = [[UIView alloc] init];
         _separatorView.backgroundColor = TGSeparatorColor();
         [self addSubview:_separatorView];
@@ -77,6 +87,11 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
         _isCurrentLocation = true;
     }
     return self;
+}
+
+- (void)dealloc
+{
+    [_wavesView invalidate];
 }
 
 - (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated
@@ -104,7 +119,11 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
 
 - (void)configureForCurrentLocationWithAccuracy:(CLLocationAccuracy)accuracy
 {
+    _messageId = 0;
+    
     _iconView.image = TGComponentsImageNamed(@"LocationMessagePinIcon");
+    _titleLabel.textColor = TGAccentColor();
+    _elapsedView.hidden = true;
     
     if (!_isCurrentLocation)
     {
@@ -162,11 +181,17 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     _separatorView.hidden = false;
     [_wavesView stop];
     _wavesView.hidden = true;
+    
+    [self setNeedsLayout];
 }
 
 - (void)configureForLiveLocationWithAccuracy:(CLLocationAccuracy)accuracy
 {
+    _messageId = 0;
+    
     _iconView.image = TGComponentsImageNamed(@"LocationMessageLiveIcon");
+    _titleLabel.textColor = TGAccentColor();
+    _elapsedView.hidden = true;
     
     [UIView transitionWithView:self duration:0.2f options:UIViewAnimationOptionTransitionCrossDissolve animations:^
     {
@@ -192,14 +217,20 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     _separatorView.hidden = true;
     [_wavesView stop];
     _wavesView.hidden = true;
+    
+    [self setNeedsLayout];
 }
 
-- (void)configureForStopLiveLocation
+- (void)configureForStopWithMessage:(TGMessage *)message remaining:(SSignal *)remaining
 {
+    bool changed = message.mid != _messageId;
+    _messageId = message.mid;
+    
     _iconView.image = TGComponentsImageNamed(@"LocationMessagePinIcon");
     
+    _titleLabel.textColor = UIColorRGB(0xff3b2f);
     _titleLabel.text = TGLocalized(@"Map.StopLiveLocation");
-    _subtitleLabel.text = TGLocalized(@"Map.ShareLiveLocationHelp");
+    _subtitleLabel.text = [TGDateUtils stringForRelativeUpdate:[message actualDate]];
     
     _circleView.alpha = 1.0f;
     _titleLabel.alpha = 1.0f;
@@ -210,11 +241,41 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     _separatorView.hidden = true;
     _wavesView.hidden = false;
     [_wavesView start];
+    
+    if (changed)
+    {
+        _elapsedView.hidden = false;
+        [self setNeedsLayout];
+        
+        TGLocationMediaAttachment *locationAttachment = message.locationAttachment;
+        if (_remainingDisposable == nil)
+            _remainingDisposable = [[SMetaDisposable alloc] init];
+        
+        __weak TGLocationCurrentLocationCell *weakSelf = self;
+        [_remainingDisposable setDisposable:[remaining startWithNext:^(NSNumber *next)
+        {
+            __strong TGLocationCurrentLocationCell *strongSelf = weakSelf;
+            if (strongSelf != nil)
+                [strongSelf->_elapsedView setRemaining:next.intValue period:locationAttachment.period];
+        } completed:^
+        {
+            __strong TGLocationCurrentLocationCell *strongSelf = weakSelf;
+            if (strongSelf != nil)
+            {
+                strongSelf->_elapsedView.hidden = true;
+                [strongSelf setNeedsLayout];
+            }
+        }]];
+    }
 }
 
 - (void)configureForCustomLocationWithAddress:(NSString *)address
 {
+    _messageId = 0;
+    
     _iconView.image = TGComponentsImageNamed(@"LocationMessagePinIcon");
+    _titleLabel.textColor = TGAccentColor();
+    _elapsedView.hidden = true;
     
     if (_isCurrentLocation)
     {
@@ -243,18 +304,16 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     _separatorView.hidden = false;
     [_wavesView stop];
     _wavesView.hidden = true;
+    
+    [self setNeedsLayout];
 }
 
 - (NSString *)_subtitleForAddress:(NSString *)address
 {
     if (address != nil && address.length == 0)
-    {
         return TGLocalized(@"Map.Unknown");
-    }
     else if (address == nil)
-    {
         return TGLocalized(@"Map.Locating");
-    }
 
     return address;
 }
@@ -266,9 +325,10 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     CGFloat padding = 76.0f;
     CGFloat separatorThickness = TGScreenPixel;
     
-    _titleLabel.frame = CGRectMake(padding, 14, self.frame.size.width - padding - 14, 20);
-    _subtitleLabel.frame = CGRectMake(padding, 36, self.frame.size.width - padding - 14, 20);
+    _titleLabel.frame = CGRectMake(padding, 14, self.frame.size.width - padding - 14 - (_elapsedView.hidden ? 0.0f : 38.0f), 20);
+    _subtitleLabel.frame = CGRectMake(padding, 36, self.frame.size.width - padding - 14 - (_elapsedView.hidden ? 0.0f : 38.0f), 20);
     _separatorView.frame = CGRectMake(padding, self.frame.size.height - separatorThickness, self.frame.size.width - padding, separatorThickness);
+    _elapsedView.frame = CGRectMake(self.frame.size.width - 30.0f - 15.0f, floor((self.frame.size.height - 30.0f) / 2.0f), 30.0f, 30.0f);
 }
 
 @end

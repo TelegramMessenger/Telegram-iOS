@@ -469,6 +469,12 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     }];
 }
 
+- (void)dismiss
+{
+    [_presentation dismiss];
+    _presentation = nil;
+}
+
 - (void)animateLock {
     _lockView.lockness = 1.0f;
     

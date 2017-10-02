@@ -106,6 +106,7 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     _observingExpiration = false;
     [self removeObserver:self forKeyPath:@"annotation.isExpired"];
 }
+
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated
 {
     if (iosMajorVersion() < 7)
@@ -131,7 +132,6 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             _avatarView.center = CGPointMake(_backgroundView.frame.size.width / 2.0f, _backgroundView.frame.size.height / 2.0f - 5.0f);
             
             _dotView.alpha = 0.0f;
-            _dotView.hidden = false;
             
             _shadowView.center = CGPointMake(_shadowView.center.x, _shadowView.center.y + _shadowView.frame.size.height / 2.0f);
             _shadowView.layer.anchorPoint = CGPointMake(0.5f, 1.0f);
@@ -193,17 +193,14 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             [UIView animateWithDuration:0.1 animations:^
             {
                 _dotView.alpha = 0.0f;
-            } completion:^(BOOL finished) {
-                _dotView.alpha = 1.0f;
-                _dotView.hidden = true;
-            }];
+            } completion:nil];
         }
     }
     else
     {
         _smallView.hidden = selected;
         _shadowView.hidden = !selected;
-        _dotView.hidden = !selected;
+        _dotView.alpha = selected ? 1.0f : 0.0f;
         [self layoutSubviews];
     }
 }
@@ -212,10 +209,10 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
 {
     [super setAnnotation:annotation];
     
-    bool ignoreInvertColors = false;
     if ([annotation isKindOfClass:[TGLocationPickerAnnotation class]])
     {
         _avatarView.hidden = false;
+        _avatarView.alpha = 1.0f;
         _iconView.hidden = true;
         _dotView.hidden = true;
         
@@ -235,6 +232,7 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         if (location.period == 0)
         {
             _avatarView.hidden = true;
+            _avatarView.alpha = 1.0f;
             _iconView.hidden = false;
             
             _backgroundView.image = TGTintedImage(TGComponentsImageNamed(@"LocationPinBackground"), UIColorRGB(0x008df2));
@@ -255,6 +253,7 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         else
         {
             _avatarView.hidden = false;
+            _avatarView.alpha = locationAnnotation.isExpired ? 0.5f : 1.0f;
             _iconView.hidden = true;
             
             _backgroundView.image = TGComponentsImageNamed(@"LocationPinBackground");
@@ -270,8 +269,6 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             {
                 [self unsubscribeFromExpiration];
             }
-            
-            ignoreInvertColors = true;
             
             _liveLocation = true;
             
@@ -289,7 +286,10 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     if ([keyPath isEqualToString:@"annotation.isExpired"])
     {
         if (((TGLocationAnnotation *)self.annotation).isExpired)
+        {
             [_pulseView stop];
+            _avatarView.alpha = 0.5f;
+        }
     }
     else
     {
@@ -396,12 +396,14 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     _pinRaised = raised;
     
     [_shadowView.layer removeAllAnimations];
+    if (iosMajorVersion() < 7)
+        animated = false;
     
     if (animated)
     {
         if (raised)
         {
-            [UIView animateWithDuration:0.2 delay:0.0 options:7 << 16 animations:^
+            [UIView animateWithDuration:0.2 delay:0.0 options:7 << 16 | UIViewAnimationOptionAllowAnimatedContent animations:^
             {
                 _shadowView.center = CGPointMake(TGScreenPixel, -66.0f);
             } completion:^(BOOL finished) {
@@ -411,7 +413,7 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         }
         else
         {
-            [UIView animateWithDuration:0.2 delay:0.0 usingSpringWithDamping:0.6 initialSpringVelocity:0.0 options:kNilOptions animations:^
+            [UIView animateWithDuration:0.2 delay:0.0 usingSpringWithDamping:0.6 initialSpringVelocity:0.0 options:UIViewAnimationOptionAllowAnimatedContent animations:^
             {
                 _shadowView.center = CGPointMake(TGScreenPixel, -36.0f);
             } completion:^(BOOL finished)
@@ -428,6 +430,38 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         if (completion != nil)
             completion();
     }
+}
+
+- (void)setCustomPin:(bool)customPin animated:(bool)animated
+{
+    if (animated)
+    {
+        _animating = true;
+        _iconView.image = TGComponentsImageNamed(@"LocationPinIcon");
+        [_backgroundView addSubview:_avatarView];
+        _avatarView.center = CGPointMake(_backgroundView.frame.size.width / 2.0f, _backgroundView.frame.size.height / 2.0f - 5.0f);
+        
+        TGDispatchAfter(0.01, dispatch_get_main_queue(), ^
+        {
+            [UIView transitionWithView:_backgroundView duration:0.2 options:UIViewAnimationOptionTransitionCrossDissolve | UIViewAnimationOptionAllowAnimatedContent animations:^
+             {
+                 _backgroundView.image = customPin ? TGTintedImage(TGComponentsImageNamed(@"LocationPinBackground"), UIColorRGB(0x008df2)) : TGComponentsImageNamed(@"LocationPinBackground");
+                 _avatarView.hidden = customPin;
+                 _iconView.hidden = !customPin;
+             } completion:^(BOOL finished)
+             {
+                 if (!customPin)
+                     [self addSubview:_avatarView];
+                 _animating = false;
+             }];
+        });
+    }
+    else
+    {
+        
+    }
+    
+    _dotView.hidden = !customPin;
 }
 
 @end

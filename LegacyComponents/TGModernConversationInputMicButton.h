@@ -43,6 +43,7 @@
 - (void)animateIn;
 - (void)animateOut;
 - (void)addMicLevel:(CGFloat)level;
+- (void)dismiss;
 
 - (void)updateOverlay;
 

@@ -5,6 +5,7 @@
 
 @class TGVenueAttachment;
 @class TGUser;
+@class TGMessage;
 
 typedef enum {
     TGLocationPickerControllerDefaultIntent,
@@ -17,8 +18,10 @@ typedef enum {
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context intent:(TGLocationPickerControllerIntent)intent;
 
+- (void)setLiveLocationsSignal:(SSignal *)signal;
+@property (nonatomic, copy) SSignal *(^remainingTimeForMessage)(TGMessage *message);
+
 @property (nonatomic, strong) id peer;
 @property (nonatomic, assign) bool allowLiveLocationSharing;
-@property (nonatomic, assign) bool sharingLiveLocation;
 
 @end

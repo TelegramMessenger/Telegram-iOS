@@ -10,6 +10,9 @@
 
 @interface TGLocationMapViewController : TGViewController <UITableViewDataSource, UITableViewDelegate, UIScrollViewDelegate, MKMapViewDelegate>
 {
+    CLLocationManager *_locationManager;
+    bool _locationServicesDisabled;
+    
     CGFloat _tableViewTopInset;
     CGFloat _tableViewBottomInset;
     UITableView *_tableView;
@@ -31,16 +34,21 @@
 - (void)setMapCenterCoordinate:(CLLocationCoordinate2D)coordinate offset:(CGPoint)offset animated:(bool)animated;
 - (void)setMapCenterCoordinate:(CLLocationCoordinate2D)coordinate span:(MKCoordinateSpan)span offset:(CGPoint)offset animated:(bool)animated;
 
-
 - (void)updateInsets;
 - (void)updateMapHeightAnimated:(bool)animated;
 
 - (CGFloat)visibleContentHeight;
 - (CGFloat)mapHeight;
 
+- (bool)hasUserLocation;
 - (SSignal *)userLocationSignal;
+- (bool)locationServicesDisabled;
+- (void)updateLocationAvailability;
 
 - (void)_presentLiveLocationMenu:(CLLocationCoordinate2D)coordinate dismissOnCompletion:(bool)dismissOnCompletion;
+- (CGRect)_liveLocationMenuSourceRect;
+
+
 
 @end
 
