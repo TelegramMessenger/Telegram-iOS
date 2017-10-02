@@ -1154,6 +1154,9 @@
     
     [self addChildViewController:_currentTabController];
     [_containerView addSubview:_currentTabController.view];
+    
+    if ([currentController isKindOfClass:[TGPhotoAvatarCropController class]])
+        [_currentTabController viewDidAppear:true];
 
     _currentTabController.view.frame = _containerView.bounds;
     

@@ -32,6 +32,7 @@
 - (void)invalidate
 {
     [_displayLink invalidate];
+    _displayLink = nil;
 }
 
 - (CADisplayLink *)displayLink {
@@ -56,7 +57,7 @@
 
 - (void)stop
 {
-    [self displayLink].paused = true;
+    _displayLink.paused = true;
 }
 
 - (void)drawRect:(CGRect)rect

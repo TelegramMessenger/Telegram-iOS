@@ -45,5 +45,6 @@
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context message:(TGMessage *)message peer:(id)peer;
 
 - (void)setLiveLocationsSignal:(SSignal *)signal;
+- (void)setFrequentUpdatesHandle:(id<SDisposable>)disposable;
 
 @end

@@ -1,5 +1,6 @@
 #import "TGLocationMapViewController.h"
 
+#import "Freedom.h"
 #import "LegacyComponentsInternal.h"
 #import "TGColor.h"
 #import "TGImageUtils.h"
@@ -63,11 +64,7 @@ const CGFloat TGLocationMapInset = 100.0f;
 {
     [super loadView];
     self.view.backgroundColor = [UIColor whiteColor];
-    
-    UIScrollView *dummy = [[UIScrollView alloc] init];
-    dummy.scrollsToTop = true;
-    [self.view addSubview:dummy];
-    
+        
     _tableView = [[TGLocationTableView alloc] initWithFrame:self.view.bounds];
     if (iosMajorVersion() >= 11)
         _tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
@@ -147,6 +144,7 @@ const CGFloat TGLocationMapInset = 100.0f;
     
     [self updateMapHeightAnimated:false];
     _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f, self.controllerInset.top + 6.0f, 45.0f, 90.0f);
+    _tableView.contentOffset = CGPointMake(0.0f, -_tableViewTopInset);
 }
 
 - (void)setOptionsViewHidden:(bool)hidden
@@ -464,21 +462,21 @@ const CGFloat TGLocationMapInset = 100.0f;
         }];
         [itemViews addObject:for8HoursItem];
         
-        TGMenuSheetButtonItemView *testItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:@"TEST 10 seconds" type:TGMenuSheetButtonTypeDefault action:^
-        {
-            __strong TGLocationMapViewController *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            __strong TGMenuSheetController *strongController = weakController;
-            if (strongController == nil)
-                return;
-            
-            if (strongSelf.liveLocationStarted != nil)
-                strongSelf.liveLocationStarted(coordinate, 10);
-            
-            [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
-        }];
+//        TGMenuSheetButtonItemView *testItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:@"TEST 10 seconds" type:TGMenuSheetButtonTypeDefault action:^
+//        {
+//            __strong TGLocationMapViewController *strongSelf = weakSelf;
+//            if (strongSelf == nil)
+//                return;
+//            
+//            __strong TGMenuSheetController *strongController = weakController;
+//            if (strongController == nil)
+//                return;
+//            
+//            if (strongSelf.liveLocationStarted != nil)
+//                strongSelf.liveLocationStarted(coordinate, 10);
+//            
+//            [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
+//        }];
         //[itemViews addObject:testItem];
         
         TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
@@ -530,9 +528,28 @@ const CGFloat TGLocationMapInset = 100.0f;
     return true;
 }
 
-- (void)_adjustContentOffsetIfNecessary
+static void TGLocationTableViewAdjustContentOffsetIfNecessary(__unused id self, __unused SEL _cmd)
 {
-    
+}
+
++ (void)initialize
+{
+    static bool initialized = false;
+    if (!initialized)
+    {
+        initialized = true;
+        
+        FreedomDecoration instanceDecorations[] =
+        {
+            { .name = 0x584ab24eU,
+                .imp = (IMP)&TGLocationTableViewAdjustContentOffsetIfNecessary,
+                .newIdentifier = FreedomIdentifierEmpty,
+                .newEncoding = FreedomIdentifierEmpty
+            }
+        };
+        
+        freedomClassAutoDecorate(0x5bfec194, NULL, 0, instanceDecorations, sizeof(instanceDecorations) / sizeof(instanceDecorations[0]));
+    }
 }
 
 @end

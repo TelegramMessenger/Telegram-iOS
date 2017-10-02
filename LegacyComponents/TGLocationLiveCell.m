@@ -99,6 +99,7 @@ const CGFloat TGLocationLiveCellHeight = 68;
 - (void)dealloc
 {
     [_locationDisposable dispose];
+    [_wavesView invalidate];
 }
 
 - (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated

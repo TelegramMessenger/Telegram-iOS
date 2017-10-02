@@ -50,6 +50,8 @@
     SVariable *_reloadReady;
     SMetaDisposable *_reloadDisposable;
     
+    id<SDisposable> _frequentUpdatesDisposable;
+    
     SSignal *_signal;
     TGLiveLocationEntry *_currentLiveLocation;
     SMetaDisposable *_liveLocationsDisposable;
@@ -153,6 +155,12 @@
     _mapView.delegate = nil;
     [_liveLocationsDisposable dispose];
     [_reloadDisposable dispose];
+    [_frequentUpdatesDisposable dispose];
+}
+
+- (void)setFrequentUpdatesHandle:(id<SDisposable>)disposable
+{
+    _frequentUpdatesDisposable = disposable;
 }
 
 - (void)setLiveLocationsSignal:(SSignal *)signal
@@ -192,7 +200,7 @@
             [_userLocationView addSubview:_ownLiveLocationView];
             
             if (_currentLiveLocation.isOwn)
-                [_ownLiveLocationView setSelected:true animated:false];
+                [self selectOwnAnnotationAnimated:false];
         }
         else
         {
@@ -209,20 +217,28 @@
     _liveLocations = liveLocations;
     [self reloadData];
     
-    if (actual && !_presentedLiveLocations && previousLocationsCount < liveLocations.count > 0)
+    if (!_presentedLiveLocations && actual)
     {
         _presentedLiveLocations = true;
-        CGFloat updatedHeight = [self possibleContentHeight] - [self visibleContentHeight];
-        if (fabs(-_tableView.contentInset.top + updatedHeight - _tableView.contentOffset.y) > FLT_EPSILON)
+        if (previousLocationsCount < liveLocations.count > 0)
         {
-            TGDispatchAfter(0.3, dispatch_get_main_queue(), ^
+            CGFloat updatedHeight = [self possibleContentHeight] - [self visibleContentHeight];
+            if (fabs(-_tableView.contentInset.top + updatedHeight - _tableView.contentOffset.y) > FLT_EPSILON)
             {
-                [self setReloadReady:false];
-                [_tableView setContentOffset:CGPointMake(0.0f, -_tableView.contentInset.top + updatedHeight) animated:true];
-            });
+                TGDispatchAfter(0.3, dispatch_get_main_queue(), ^
+                {
+                    [self setReloadReady:false];
+                    [_tableView setContentOffset:CGPointMake(0.0f, -_tableView.contentInset.top + updatedHeight) animated:true];
+                });
+            }
+        }
+        
+        if (_currentLiveLocation.isOwn && !_ownLocationExpired && !self.zoomToFitAllLocationsOnScreen)
+        {
+            [_mapView setUserTrackingMode:[TGLocationTrackingButton userTrackingModeWithLocationTrackingMode:TGLocationTrackingModeFollow] animated:true];
+            [_optionsView setTrackingMode:TGLocationTrackingModeFollow animated:true];
         }
     }
-    
     [self updateAnnotations];
     
     if ([self isLiveLocation])
@@ -250,8 +266,7 @@
     {
         if (_ownLiveLocationView != nil && !_ownLiveLocationView.isSelected)
         {
-            [_ownLiveLocationView setSelected:true animated:true];
-            [_mapView deselectAnnotation:_mapView.selectedAnnotations.firstObject animated:true];
+            [self selectOwnAnnotation];
             _focusOnOwnLocation = false;
             
             dispatch_async(dispatch_get_main_queue(), ^
@@ -269,11 +284,7 @@
     
     if (CGRectContainsPoint([_ownLiveLocationView.superview convertRect:CGRectInset(_ownLiveLocationView.frame, -16.0f, - 16.0f) toView:_mapView], location))
     {
-        if (!_ownLiveLocationView.isSelected)
-        {
-            [_ownLiveLocationView setSelected:true animated:true];
-            [_mapView deselectAnnotation:_mapView.selectedAnnotations.firstObject animated:true];
-        }
+        [self selectOwnAnnotation];
         [self setMapCenterCoordinate:_ownLiveLocationView.annotation.coordinate offset:CGPointZero animated:true];
         return true;
     }
@@ -703,8 +714,21 @@
     [_mapView setUserTrackingMode:[TGLocationTrackingButton userTrackingModeWithLocationTrackingMode:newMode] animated:true];
     [_optionsView setTrackingMode:newMode animated:true];
     
-    if (newMode != TGLocationTrackingModeNone && _ownLiveLocationView != nil && !_ownLiveLocationView.isSelected)
-        [_ownLiveLocationView setSelected:true animated:true];
+    if (newMode != TGLocationTrackingModeNone && _ownLiveLocationView != nil)
+        [self selectOwnAnnotation];
+}
+
+- (void)selectOwnAnnotation
+{
+    [self selectOwnAnnotationAnimated:true];
+}
+
+- (void)selectOwnAnnotationAnimated:(bool)animated
+{
+    if (!_ownLiveLocationView.isSelected)
+        [_ownLiveLocationView setSelected:true animated:animated];
+    [_mapView deselectAnnotation:_mapView.selectedAnnotations.firstObject animated:animated];
+    [_ownLiveLocationView.superview.superview bringSubviewToFront:_ownLiveLocationView.superview];
 }
 
 - (void)getDirectionsPressed
@@ -795,6 +819,12 @@
     [_optionsView setTrackingMode:TGLocationTrackingModeNone animated:true];
 }
 
+- (void)mapView:(MKMapView *)mapView didChangeUserTrackingMode:(MKUserTrackingMode)mode animated:(BOOL)animated
+{
+    if (mode == MKUserTrackingModeNone)
+        [_optionsView setTrackingMode:TGLocationTrackingModeNone animated:true];
+}
+
 - (CLLocationCoordinate2D)locationCoordinate
 {
     return CLLocationCoordinate2DMake(_locationAttachment.latitude, _locationAttachment.longitude);
@@ -831,7 +861,10 @@
         {
             __strong TGLocationViewController *strongSelf = weakSelf;
             if (strongSelf != nil)
+            {
+                [strongSelf->_mapView deselectAnnotation:strongSelf->_mapView.selectedAnnotations.firstObject animated:true];
                 [strongSelf setMapCenterCoordinate:[strongSelf locationCoordinate] offset:CGPointZero animated:true];
+            }
         };
         cell.directionsPressed = ^
         {
@@ -984,22 +1017,20 @@
         CGFloat height = TGLocationInfoCellHeight;
         if (_liveLocations.count > 0)
         {
-            CGFloat count = 1.0f;
-            if ((_liveLocations.count == 1 && !_hasOwnLiveLocation && self.allowLiveLocationSharing) || (_liveLocations.count == 2 && _hasOwnLiveLocation))
-                count = 2.0f;
-            else
-                count = MIN(2.5f, _liveLocations.count);
+            CGFloat count = _liveLocations.count;
+            if (self.allowLiveLocationSharing && !_hasOwnLiveLocation)
+                count += 1;
+            count = MIN(1.5f, count);
             height += count * TGLocationLiveCellHeight;
         }
         return height;
     }
     else
     {
-        CGFloat count = 1.0f;
-        if ((_liveLocations.count == 1 && !_hasOwnLiveLocation && self.allowLiveLocationSharing) || (_liveLocations.count == 2 && _hasOwnLiveLocation))
-            count = 2.0f;
-        else
-            count = MIN(2.5f, _liveLocations.count + 1);
+        CGFloat count = _liveLocations.count;
+        if (self.allowLiveLocationSharing && !_hasOwnLiveLocation)
+            count += 1;
+        count = MIN(2.5f, count);
         CGFloat height = count * TGLocationLiveCellHeight;
         return height;
     }

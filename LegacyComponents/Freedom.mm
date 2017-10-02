@@ -137,6 +137,7 @@ Class freedomClass(uint32_t name)
             {
                 const char *className = freedom_class_getName(classList[i]);
                 uint32_t hashName = (uint32_t)murMurHashBytes32((void *)className, (int)strlen(className));
+                //NSLog(@"0x%" PRIx32 " -> %s", hashName, className);
                 classMap[hashName] = classList[i];
             }
             
