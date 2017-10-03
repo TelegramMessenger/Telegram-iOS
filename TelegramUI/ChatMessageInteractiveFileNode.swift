@@ -140,17 +140,18 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 }
                 
                 if mediaUpdated {
+                    let messageId = message.id
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(chatMessageFileInteractiveFetched(account: account, file: file).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: file).start())
                         }
                     }, cancel: {
-                        chatMessageFileCancelInteractiveFetch(account: account, file: file)
+                        messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: file)
                     })
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = fileMediaResourceStatus(account: account, file: file, message: message)
+                    updatedStatusSignal = messageFileMediaResourceStatus(account: account, file: file, message: message)
                 }
                 
                 var statusSize: CGSize?
@@ -397,8 +398,12 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                             switch status {
                                                 case let .fetchStatus(fetchStatus):
                                                     switch fetchStatus {
-                                                        case let .Fetching(progress):
-                                                            state = .progress(color: statusForegroundColor, value: CGFloat(progress), cancelEnabled: true)
+                                                        case let .Fetching(isActive, progress):
+                                                            var adjustedProgress = progress
+                                                            if isActive {
+                                                                adjustedProgress = max(adjustedProgress, 0.027)
+                                                            }
+                                                            state = .progress(color: statusForegroundColor, value: CGFloat(adjustedProgress), cancelEnabled: true)
                                                         case .Local:
                                                             if isAudio {
                                                                 state = .play(statusForegroundColor)

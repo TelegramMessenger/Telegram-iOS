@@ -22,7 +22,7 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     legacyLocation.latitude = mapMedia.latitude
     legacyLocation.longitude = mapMedia.longitude
     if let venue = mapMedia.venue {
-        legacyLocation.venue = TGVenueAttachment(title: venue.title, address: venue.address, provider: venue.provider, venueId: venue.id)
+        legacyLocation.venue = TGVenueAttachment(title: venue.title, address: venue.address, provider: venue.provider, venueId: venue.id, type: venue.type)
     }
     
     let legacyController = LegacyController(presentation: .modal(animateIn: true))

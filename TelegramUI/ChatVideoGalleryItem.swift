@@ -154,7 +154,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let strongSelf = self {
                     strongSelf.resourceStatus = status
                     switch status {
-                        case let .Fetching(progress):
+                        case let .Fetching(_, progress):
                             strongSelf.progressNode.state = .Fetching(progress: progress)
                             strongSelf.progressButtonNode.isHidden = false
                         case .Local:
@@ -201,7 +201,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let strongSelf = self {
                         strongSelf.resourceStatus = status
                         switch status {
-                        case let .Fetching(progress):
+                        case let .Fetching(_, progress):
                             strongSelf.progressNode.state = .Fetching(progress: progress)
                             strongSelf.progressButtonNode.isHidden = false
                         case .Local:
@@ -243,7 +243,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateIn(from node: ASDisplayNode) {
+    override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
         guard let videoNode = self.videoNode else {
             return
         }
@@ -273,7 +273,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateOut(to node: ASDisplayNode, completion: @escaping () -> Void) {
+    override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         guard let videoNode = self.videoNode else {
             completion()
             return
@@ -465,7 +465,8 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { _, _ in
                         if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
-                            return GalleryTransitionArguments(transitionNode: overlayNode, transitionContainerNode: overlaySupernode, transitionBackgroundNode: ASDisplayNode())
+                            return GalleryTransitionArguments(transitionNode: overlayNode, addToTransitionSurface: { _ in
+                            })
                         }
                         return nil
                     }))

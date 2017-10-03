@@ -158,7 +158,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
         return self._title.get()
     }
     
-    override func animateIn(from node: ASDisplayNode) {
+    override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
         var transformedFrame = node.view.convert(node.view.bounds, to: self.webView)
         let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.webView.superview)
         
@@ -170,7 +170,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
         self.webView.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.webView.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
     }
     
-    override func animateOut(to node: ASDisplayNode, completion: @escaping () -> Void) {
+    override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.view.convert(node.view.bounds, to: self.webView)
         let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.webView.superview)
         let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)

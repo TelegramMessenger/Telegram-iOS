@@ -485,7 +485,7 @@ final class ChatListNode: ListView {
             }
             
             return EmptyDisposable
-            } |> runOn(Queue.mainQueue())
+        } |> runOn(Queue.mainQueue())
     }
     
     private func dequeueTransition() {
@@ -523,7 +523,12 @@ final class ChatListNode: ListView {
                 }
             }
             
-            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatListOpaqueTransactionState(chatListView: transition.chatListView), completion: completion)
+            var options = transition.options
+            if options.contains(.AnimateCrossfade) && !self.isDeceleratingAfterTracking {
+                options.insert(.PreferSynchronousDrawing)
+            }
+            
+            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatListOpaqueTransactionState(chatListView: transition.chatListView), completion: completion)
         }
     }
     

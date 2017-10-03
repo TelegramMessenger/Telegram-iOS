@@ -129,6 +129,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                 //options.insert(.LowLatency)
             } else {
                 //options.insert(.AnimateTopItemPosition)
+                //options.insert(.AnimateCrossfade)
             }
             
             self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in

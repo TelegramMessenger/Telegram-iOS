@@ -6,7 +6,6 @@ import SwiftSignalKit
 import Photos
 
 final class ChatDateSelectionSheet: ActionSheetController {
-    private let theme: PresentationTheme
     private let strings: PresentationStrings
     
     private let _ready = Promise<Bool>()
@@ -15,17 +14,16 @@ final class ChatDateSelectionSheet: ActionSheetController {
     }
     
     init(theme: PresentationTheme, strings: PresentationStrings, completion: @escaping (Int32) -> Void) {
-        self.theme = theme
         self.strings = strings
         
-        super.init()
+        super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
         
         self._ready.set(.single(true))
         
         var updatedValue: Int32?
         self.setItemGroups([
             ActionSheetItemGroup(items: [
-                ChatDateSelectorItem(theme: theme, strings: strings, valueChanged: { value in
+                ChatDateSelectorItem(strings: strings, valueChanged: { value in
                     updatedValue = value
                 }),
                 ActionSheetButtonItem(title: strings.Common_Search, action: { [weak self] in
@@ -49,19 +47,17 @@ final class ChatDateSelectionSheet: ActionSheetController {
 }
 
 private final class ChatDateSelectorItem: ActionSheetItem {
-    let theme: PresentationTheme
     let strings: PresentationStrings
     
     let valueChanged: (Int32) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, valueChanged: @escaping (Int32) -> Void) {
-        self.theme = theme
+    init(strings: PresentationStrings, valueChanged: @escaping (Int32) -> Void) {
         self.strings = strings
         self.valueChanged = valueChanged
     }
     
-    func node() -> ActionSheetItemNode {
-        return ChatDateSelectorItemNode(theme: self.theme, strings: self.strings, valueChanged: self.valueChanged)
+    func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
+        return ChatDateSelectorItemNode(theme: theme, strings: self.strings, valueChanged: self.valueChanged)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
@@ -69,7 +65,7 @@ private final class ChatDateSelectorItem: ActionSheetItem {
 }
 
 private final class ChatDateSelectorItemNode: ActionSheetItemNode {
-    private let theme: PresentationTheme
+    private let theme: ActionSheetControllerTheme
     private let strings: PresentationStrings
     
     private let pickerView: UIDatePicker
@@ -80,7 +76,7 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         return Int32(self.pickerView.date.timeIntervalSince1970)
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, valueChanged: @escaping (Int32) -> Void) {
+    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, valueChanged: @escaping (Int32) -> Void) {
         self.theme = theme
         self.strings = strings
         self.valueChanged = valueChanged
@@ -88,11 +84,12 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         self.pickerView = UIDatePicker()
         self.pickerView.datePickerMode = .date
         self.pickerView.locale = Locale(identifier: strings.languageCode)
+        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         
         self.pickerView.maximumDate = Date(timeIntervalSinceNow: 2.0)
         self.pickerView.minimumDate = Date(timeIntervalSinceNow: 1376438400.0)
         
-        super.init()
+        super.init(theme: theme)
         
         self.view.addSubview(self.pickerView)
         self.pickerView.addTarget(self, action: #selector(self.pickerChanged), for: .valueChanged)

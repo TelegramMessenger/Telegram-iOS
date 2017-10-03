@@ -89,7 +89,8 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
     legacyController.bind(controller: baseController)
     legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
         if let legacyController = legacyController, let baseController = baseController {
-            let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel:PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
+            let controllerTheme = TGVideoMessageCaptureControllerTheme(darkBackground: theme.rootController.statusBar.style.style == .White, panelSeparatorColor: theme.chat.inputPanel.panelStrokeColor, panelTime: theme.chat.inputPanel.primaryTextColor, panelDotColor: theme.chat.inputPanel.mediaRecordingDotColor, panelAccentColor: theme.chat.inputPanel.panelControlAccentColor)
+            let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel:PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), theme: controllerTheme)!, transitionInView: {
                 return nil
             }, parentController: baseController, controlsFrame: panelFrame, isAlreadyLocked: {
                 return false

@@ -72,7 +72,7 @@ final class InstantPageController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InstantPageControllerNode(account: self.account, settings: self.settings, strings: self.presentationData.strings, statusBar: self.statusBar, present: { [weak self] c, a in
+        self.displayNode = InstantPageControllerNode(account: self.account, settings: self.settings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, statusBar: self.statusBar, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, openPeer: { [weak self] peerId in
             if let strongSelf = self {

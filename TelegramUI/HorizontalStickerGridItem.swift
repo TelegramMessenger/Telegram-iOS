@@ -66,7 +66,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1.id != file.id {
             if let dimensions = file.dimensions {
                 self.imageNode.setSignal(account: account, signal: chatMessageSticker(account: account, file: file, small: true))
-                self.stickerFetchedDisposable.set(fileInteractiveFetched(account: account, file: file).start())
+                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: file).start())
                 
                 self.currentState = (account, file, dimensions)
                 self.setNeedsLayout()

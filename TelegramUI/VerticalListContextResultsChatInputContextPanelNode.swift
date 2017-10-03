@@ -184,6 +184,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
                 //options.insert(.LowLatency)
             } else {
                 options.insert(.AnimateTopItemPosition)
+                options.insert(.AnimateCrossfade)
             }
             
             var insets = UIEdgeInsets()

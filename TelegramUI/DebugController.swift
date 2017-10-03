@@ -80,7 +80,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     func item(_ arguments: DebugControllerArguments) -> ListViewItem {
         switch self {
             case let .sendLogs(theme):
-                return ItemListDisclosureItem(theme: theme, title: "Seng Logs", label: "", sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(theme: theme, title: "Send Logs", label: "", sectionId: self.section, style: .blocks, action: {
                     let _ = (Logger.shared.collectLogs()
                         |> deliverOnMainQueue).start(next: { logs in
                             let controller = PeerSelectionController(account: arguments.account)

@@ -7,14 +7,6 @@ import SwiftSignalKit
 
 import TelegramUIPrivateModule
 
-private func generateBackArrowImage(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 13.0, height: 22.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(color.cgColor)
-        let _ = try? drawSvgPath(context, path: "M10.6569398,0.0 L0.0,11 L10.6569398,22 L13,19.1782395 L5.07681762,11 L13,2.82176047 Z ")
-    })
-}
-
 final class CallControllerNode: ASDisplayNode {
     private let account: Account
     
@@ -72,7 +64,7 @@ final class CallControllerNode: ASDisplayNode {
         self.backButtonArrowNode = ASImageNode()
         self.backButtonArrowNode.displayWithoutProcessing = true
         self.backButtonArrowNode.displaysAsynchronously = false
-        self.backButtonArrowNode.image = generateBackArrowImage(color: .white)
+        self.backButtonArrowNode.image = NavigationBarTheme.generateBackArrowImage(color: .white)
         self.backButtonNode = HighlightableButtonNode()
         
         self.statusNode = CallControllerStatusNode()

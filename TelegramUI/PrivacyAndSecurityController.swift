@@ -418,7 +418,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
         updateAccountTimeoutDisposable.set(signal.start(next: { [weak updateAccountTimeoutDisposable] privacySettingsValue in
             if let _ = privacySettingsValue {
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                let controller = ActionSheetController()
+                let controller = ActionSheetController(presentationTheme: presentationData.theme)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
                 }

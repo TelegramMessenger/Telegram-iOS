@@ -104,7 +104,8 @@ public class PeerMediaCollectionController: ViewController {
                                 strongSelf.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak self] messageId, media in
                                     if let strongSelf = self {
                                         if let transitionNode = strongSelf.mediaCollectionDisplayNode.transitionNodeForGallery(messageId: messageId, media: media) {
-                                            return GalleryTransitionArguments(transitionNode: transitionNode, transitionContainerNode: strongSelf.mediaCollectionDisplayNode, transitionBackgroundNode: strongSelf.mediaCollectionDisplayNode.historyNode as! ASDisplayNode)
+                                            return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: { _ in
+                                            })
                                         }
                                     }
                                     return nil
@@ -195,7 +196,7 @@ public class PeerMediaCollectionController: ViewController {
                 if let messageIds = strongSelf.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
                     strongSelf.messageContextDisposable.set((combineLatest(chatDeleteMessagesOptions(account: strongSelf.account, messageIds: messageIds), strongSelf.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { options, peer in
                         if let strongSelf = self, let peer = peer, !options.isEmpty {
-                            let actionSheet = ActionSheetController()
+                            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                             var items: [ActionSheetItem] = []
                             var personalPeerName: String?
                             var isChannel = false

@@ -7,13 +7,13 @@ import TelegramCore
 import SwiftSignalKit
 
 private class AvatarNodeParameters: NSObject {
-    let account: Account
-    let peerId: PeerId
+    let accountPeerId: PeerId?
+    let peerId: PeerId?
     let letters: [String]
     let font: UIFont
     
-    init(account: Account, peerId: PeerId, letters: [String], font: UIFont) {
-        self.account = account
+    init(accountPeerId: PeerId?, peerId: PeerId?, letters: [String], font: UIFont) {
+        self.accountPeerId = accountPeerId
         self.peerId = peerId
         self.letters = letters
         self.font = font
@@ -36,16 +36,19 @@ private let grayscaleColors: NSArray = [
 ]
 
 private enum AvatarNodeState: Equatable {
-    case Empty
-    case PeerAvatar(PeerId, [String], TelegramMediaImageRepresentation?)
+    case empty
+    case peerAvatar(PeerId, [String], TelegramMediaImageRepresentation?)
+    case custom([String])
 }
 
 private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
     switch (lhs, rhs) {
-        case (.Empty, .Empty):
+        case (.empty, .empty):
             return true
-        case let (.PeerAvatar(lhsPeerId, lhsLetters, lhsPhotoRepresentations), .PeerAvatar(rhsPeerId, rhsLetters, rhsPhotoRepresentations)):
+        case let (.peerAvatar(lhsPeerId, lhsLetters, lhsPhotoRepresentations), .peerAvatar(rhsPeerId, rhsLetters, rhsPhotoRepresentations)):
             return lhsPeerId == rhsPeerId && lhsLetters == rhsLetters && lhsPhotoRepresentations == rhsPhotoRepresentations
+        case let (.custom(lhsLetters), .custom(rhsLetters)):
+            return lhsLetters == rhsLetters
         default:
             return false
     }
@@ -56,7 +59,7 @@ public final class AvatarNode: ASDisplayNode {
         didSet {
             if oldValue !== font {
                 if let parameters = self.parameters {
-                    self.parameters = AvatarNodeParameters(account: parameters.account, peerId: parameters.peerId, letters: parameters.letters, font: self.font)
+                    self.parameters = AvatarNodeParameters(accountPeerId: parameters.accountPeerId, peerId: parameters.peerId, letters: parameters.letters, font: self.font)
                 }
                 
                 if !self.displaySuspended {
@@ -68,7 +71,7 @@ public final class AvatarNode: ASDisplayNode {
     private var parameters: AvatarNodeParameters?
     let imageNode: ImageNode
     
-    private var state: AvatarNodeState = .Empty
+    private var state: AvatarNodeState = .empty
     
     private let imageReady = Promise<Bool>(false)
     public var ready: Signal<Void, NoError> {
@@ -115,11 +118,11 @@ public final class AvatarNode: ASDisplayNode {
         } else {
             representation = peer.smallProfileImage
         }
-        let updatedState = AvatarNodeState.PeerAvatar(peer.id, peer.displayLetters, representation)
+        let updatedState: AvatarNodeState = .peerAvatar(peer.id, peer.displayLetters, representation)
         if updatedState != self.state {
             self.state = updatedState
             
-            let parameters = AvatarNodeParameters(account: account, peerId: peer.id, letters: peer.displayLetters, font: self.font)
+            let parameters = AvatarNodeParameters(accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font)
             
             self.displaySuspended = true
             self.contents = nil
@@ -131,6 +134,26 @@ public final class AvatarNode: ASDisplayNode {
                 self.imageReady.set(.single(true))
                 self.displaySuspended = false
             }
+            if self.parameters == nil || self.parameters != parameters {
+                self.parameters = parameters
+                self.setNeedsDisplay()
+            }
+        }
+    }
+    
+    public func setCustomLetters(_ letters: [String]) {
+        let updatedState: AvatarNodeState = .custom(letters)
+        if updatedState != self.state {
+            self.state = updatedState
+            
+            let parameters = AvatarNodeParameters(accountPeerId: nil, peerId: nil, letters: letters, font: self.font)
+            
+            self.displaySuspended = true
+            self.contents = nil
+        
+            self.imageReady.set(.single(true))
+            self.displaySuspended = false
+            
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters
                 self.setNeedsDisplay()
@@ -160,10 +183,10 @@ public final class AvatarNode: ASDisplayNode {
         
         let colorIndex: Int
         if let parameters = parameters as? AvatarNodeParameters {
-            if parameters.peerId.id == 0 {
-                colorIndex = -1
+            if let accountPeerId = parameters.accountPeerId, let peerId = parameters.peerId {
+                colorIndex = abs(Int(accountPeerId.id + peerId.id))
             } else {
-                colorIndex = abs(Int(parameters.account.peerId.id + parameters.peerId.id))
+                colorIndex = -1
             }
         } else {
             colorIndex = -1
@@ -176,7 +199,7 @@ public final class AvatarNode: ASDisplayNode {
             colorsArray = gradientColors[colorIndex % gradientColors.count]
         }
         
-        var locations: [CGFloat] = [1.0, 0.2];
+        var locations: [CGFloat] = [1.0, 0.0]
         
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colorsArray, locations: &locations)!
@@ -210,7 +233,7 @@ public final class AvatarNode: ASDisplayNode {
         let currentState = node?.state
         let createNode = node == nil
         return { [weak node] account, peer, font in
-            let state: AvatarNodeState = .PeerAvatar(peer.id, peer.displayLetters, peer.smallProfileImage)
+            let state: AvatarNodeState = .peerAvatar(peer.id, peer.displayLetters, peer.smallProfileImage)
             if currentState != state {
                 
             }

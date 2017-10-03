@@ -32,8 +32,24 @@ final class SelectablePeerNode: ASDisplayNode {
     private var peer: Peer?
     private var chatPeer: Peer?
     
-    var textColor: UIColor = .black
-    var selectedColor: UIColor = UIColor(rgb: 0x007ee5)
+    var textColor: UIColor = .black {
+        didSet {
+            if !self.textColor.isEqual(oldValue) {
+                if let peer = self.peer {
+                    self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: self.currentSelected ? self.selectedColor : self.textColor, paragraphAlignment: .center)
+                }
+            }
+        }
+    }
+    var selectedColor: UIColor = UIColor(rgb: 0x007ee5) {
+        didSet {
+            if !self.selectedColor.isEqual(oldValue) {
+                if let peer = self.peer {
+                    self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: self.currentSelected ? self.selectedColor : self.textColor, paragraphAlignment: .center)
+                }
+            }
+        }
+    }
     
     override init() {
         self.avatarNodeContainer = ASDisplayNode()
@@ -66,14 +82,14 @@ final class SelectablePeerNode: ASDisplayNode {
         self.peer = peer
         self.chatPeer = chatPeer
         
-        var defaultColor: UIColor = .black
+        var defaultColor: UIColor = self.textColor
         if let chatPeer = chatPeer, chatPeer.id.namespace == Namespaces.Peer.SecretChat {
             defaultColor = UIColor(rgb: 0x149a1f)
         }
         
         let text = peer.displayTitle
         self.textNode.maximumNumberOfLines = UInt(numberOfLines)
-        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? UIColor(rgb: 0x007ee5) : defaultColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.selectedColor : defaultColor, paragraphAlignment: .center)
         self.avatarNode.setPeer(account: account, peer: peer)
         self.setNeedsLayout()
     }
@@ -83,7 +99,7 @@ final class SelectablePeerNode: ASDisplayNode {
             self.currentSelected = selected
             
             if let peer = self.peer {
-                self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: selected ? self.selectedColor : textColor, paragraphAlignment: .center)
+                self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: selected ? self.selectedColor : self.textColor, paragraphAlignment: .center)
             }
             
             if selected {

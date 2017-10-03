@@ -33,6 +33,7 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
     var activate: (() -> Void)?
     
     let backgroundNode: ASImageNode
+    private var fillBackgroundColor: UIColor
     private var foregroundColor: UIColor
     private var iconColor: UIColor
     let iconNode: ASImageNode
@@ -46,10 +47,11 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
         
+        self.fillBackgroundColor = UIColor.white
         self.foregroundColor = UIColor(rgb: 0xededed)
         self.iconColor = UIColor(rgb: 0x000000, alpha: 0.0)
         
-        self.backgroundNode.image = generateBackground(backgroundColor: UIColor.white, foregroundColor: self.foregroundColor)
+        self.backgroundNode.image = generateBackground(backgroundColor: self.fillBackgroundColor, foregroundColor: self.foregroundColor)
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -78,6 +80,7 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
     
     func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor) -> (() -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
+        let currentFillBackgroundColor = self.fillBackgroundColor
         let currentForegroundColor = self.foregroundColor
         let currentIconColor = self.iconColor
         
@@ -86,7 +89,7 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
             
             var updatedBackgroundImage: UIImage?
             var updatedIconImage: UIImage?
-            if !currentForegroundColor.isEqual(foregroundColor) {
+            if !currentFillBackgroundColor.isEqual(backgroundColor) || !currentForegroundColor.isEqual(foregroundColor) {
                 updatedBackgroundImage = generateBackground(backgroundColor: backgroundColor, foregroundColor: foregroundColor)
             }
             if !currentIconColor.isEqual(iconColor) {
@@ -97,6 +100,7 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
                 if let strongSelf = self {
                     let _ = labelApply()
                     
+                    strongSelf.fillBackgroundColor = backgroundColor
                     strongSelf.foregroundColor = foregroundColor
                     strongSelf.iconColor = iconColor
                     if let updatedBackgroundImage = updatedBackgroundImage {

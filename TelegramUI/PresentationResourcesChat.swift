@@ -347,13 +347,13 @@ struct PresentationResourcesChat {
     
     static func chatInputPanelVoiceActiveButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelVoiceActiveButtonImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: .white)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: theme.chat.inputPanel.mediaRecordingControl.activeIconColor)
         })
     }
     
     static func chatInputPanelVideoActiveButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelVideoActiveButtonImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconVideo"), color: .white)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconVideo"), color: theme.chat.inputPanel.mediaRecordingControl.activeIconColor)
         })
     }
     
@@ -591,9 +591,65 @@ struct PresentationResourcesChat {
         })
     }
     
+    static func chatMessageAttachedContentButtonIconInstantIncoming(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonIconInstantIncoming.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: theme.chat.bubble.incomingAccentColor)
+        })
+    }
+    
+    static func chatMessageAttachedContentHighlightedButtonIconInstantIncoming(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantIncoming.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: theme.chat.bubble.incomingFillColor)
+        })
+    }
+    
+    static func chatMessageAttachedContentButtonIconInstantOutgoing(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonIconInstantOutgoing.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: theme.chat.bubble.outgoingAccentColor)
+        })
+    }
+    
+    static func chatMessageAttachedContentHighlightedButtonIconInstantOutgoing(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantOutgoing.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: theme.chat.bubble.outgoingFillColor)
+        })
+    }
+    
     static func chatLoadingIndicatorBackgroundImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatLoadingIndicatorBackgroundImage.rawValue, { theme in
             return generateStretchableFilledCircleImage(diameter: 30.0, color: theme.chat.serviceMessage.serviceMessageFillColor)
+        })
+    }
+    
+    static func chatBubbleReplyThumbnailPlayImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleReplyThumbnailPlayImage.rawValue, { theme in
+            return generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                
+                let diameter = size.width
+                
+                context.setFillColor(UIColor(white: 1.0, alpha: 1.0).cgColor)
+                
+                context.translateBy(x: -2.0, y: -1.0)
+                
+                let size = CGSize(width: 10.0, height: 13.0)
+                context.translateBy(x: (diameter - size.width) / 2.0 + 1.5, y: (diameter - size.height) / 2.0)
+                
+                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                context.scaleBy(x: 0.4, y: 0.4)
+                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                
+                let _ = try? drawSvgPath(context, path: "M1.71891969,0.209353049 C0.769586558,-0.350676705 0,0.0908839327 0,1.18800046 L0,16.8564753 C0,17.9569971 0.750549162,18.357187 1.67393713,17.7519379 L14.1073836,9.60224049 C15.0318735,8.99626906 15.0094718,8.04970371 14.062401,7.49100858 L1.71891969,0.209353049 ")
+                context.fillPath()
+                
+                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                context.scaleBy(x: 1.0 / 0.4, y: 1.0 / 0.4)
+                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                
+                context.translateBy(x: -(diameter - size.width) / 2.0 - 1.5, y: -(diameter - size.height) / 2.0)
+            })
         })
     }
 }

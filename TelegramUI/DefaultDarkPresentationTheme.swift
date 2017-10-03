@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-private let accentColor: UIColor = UIColor(rgb: 0xb2b2b2)
+private let accentColor: UIColor = UIColor(rgb: 0xffffff)
 private let destructiveColor: UIColor = .red
 
 private let rootStatusBar = PresentationThemeRootNavigationStatusBar(
@@ -9,25 +9,26 @@ private let rootStatusBar = PresentationThemeRootNavigationStatusBar(
 )
 
 private let rootTabBar = PresentationThemeRootTabBar(
-    backgroundColor: UIColor(rgb: 0x121212),
-    separatorColor: UIColor(rgb: 0x1f1f1f),
-    iconColor: UIColor(rgb: 0x5e5e5e),
+    backgroundColor: UIColor(rgb: 0x1c1c1d),
+    separatorColor: UIColor(rgb: 0x000000),
+    iconColor: UIColor(rgb: 0x808080),
     selectedIconColor: accentColor,
-    textColor: UIColor(rgb: 0x5e5e5e),
+    textColor: UIColor(rgb: 0x929292),
     selectedTextColor: accentColor,
-    badgeBackgroundColor: UIColor(rgb: 0xff3600),
-    badgeTextColor: .white)
+    badgeBackgroundColor: .red, //!!!
+    badgeTextColor: .white //!!!
+)
 
 private let rootNavigationBar = PresentationThemeRootNavigationBar(
     buttonColor: accentColor,
     primaryTextColor: accentColor,
     secondaryTextColor: UIColor(rgb: 0x5e5e5e),
-    controlColor: UIColor(rgb: 0x5e5e5e),
+    controlColor: accentColor,
     accentTextColor: accentColor,
-    backgroundColor: UIColor(rgb: 0x121212),
-    separatorColor: UIColor(rgb: 0x1a1a1a),
-    badgeBackgroundColor: UIColor(rgb: 0xff3600),
-    badgeTextColor: .white
+    backgroundColor: UIColor(rgb: 0x1c1c1d),
+    separatorColor: UIColor(rgb: 0x000000),
+    badgeBackgroundColor: UIColor(rgb: 0xffffff),
+    badgeTextColor: UIColor(rgb: 0x1c1c1d)
 )
 
 private let activeNavigationSearchBar = PresentationThemeActiveNavigationSearchBar(
@@ -55,122 +56,133 @@ private let switchColors = PresentationThemeSwitch(
 )
 
 private let list = PresentationThemeList(
-    blocksBackgroundColor: UIColor(rgb: 0x121212),
-    plainBackgroundColor: UIColor(rgb: 0x121212),
-    itemPrimaryTextColor: UIColor(rgb: 0xb2b2b2),
-    itemSecondaryTextColor: UIColor(rgb: 0x545454),
-    itemDisabledTextColor: UIColor(rgb: 0x4d4d4d),
+    blocksBackgroundColor: UIColor(rgb: 0x000000),
+    plainBackgroundColor: UIColor(rgb: 0x000000),
+    itemPrimaryTextColor: UIColor(rgb: 0xffffff),
+    itemSecondaryTextColor: UIColor(rgb: 0x545454), //!!!
+    itemDisabledTextColor: UIColor(rgb: 0x4d4d4d), //!!!
     itemAccentColor: accentColor,
     itemDestructiveColor: destructiveColor,
-    itemPlaceholderTextColor: UIColor(rgb: 0x4d4d4d),
-    itemBackgroundColor: UIColor(rgb: 0x121212),
-    itemHighlightedBackgroundColor: UIColor(rgb: 0x1b1b1b),
-    itemSeparatorColor: UIColor(rgb: 0x1a1a1a),
-    disclosureArrowColor: UIColor(rgb: 0x545454),
-    sectionHeaderTextColor: UIColor(rgb: 0x545454),
-    freeTextColor: UIColor(rgb: 0x545454),
-    freeTextErrorColor: UIColor(rgb: 0xcf3030),
-    freeTextSuccessColor: UIColor(rgb: 0x30cf30),
+    itemPlaceholderTextColor: UIColor(rgb: 0x4d4d4d), //!!!
+    itemBackgroundColor: UIColor(rgb: 0x1c1c1d),
+    itemHighlightedBackgroundColor: UIColor(rgb: 0x1b1b1b), //!!!
+    itemSeparatorColor: UIColor(rgb: 0x000000),
+    disclosureArrowColor: UIColor(rgb: 0x545454), //!!!
+    sectionHeaderTextColor: UIColor(rgb: 0x8d8e93),
+    freeTextColor: UIColor(rgb: 0x8d8e93),
+    freeTextErrorColor: UIColor(rgb: 0xcf3030), //!!!
+    freeTextSuccessColor: UIColor(rgb: 0x30cf30), //!!!
     itemSwitchColors: switchColors
 )
 
 private let chatList = PresentationThemeChatList(
-    backgroundColor: UIColor(rgb: 0x121212),
-    itemSeparatorColor: UIColor(rgb: 0x1a1a1a),
-    itemBackgroundColor: UIColor(rgb: 0x121212),
-    pinnedItemBackgroundColor: UIColor(rgb: 0x121212),
-    itemHighlightedBackgroundColor: UIColor(rgb: 0x1b1b1b),
-    titleColor: UIColor(rgb: 0xb2b2b2),
-    secretTitleColor: UIColor(rgb: 0xb2b2b2),
-    dateTextColor: UIColor(rgb: 0x545454),
-    authorNameColor: UIColor(rgb: 0xb2b2b2),
-    messageTextColor: UIColor(rgb: 0x545454),
-    messageDraftTextColor: UIColor(rgb: 0xdd4b39),
-    checkmarkColor: UIColor(rgb: 0x545454),
-    pendingIndicatorColor: UIColor(rgb: 0x545454),
-    muteIconColor: UIColor(rgb: 0x626262),
-    unreadBadgeActiveBackgroundColor: UIColor(rgb: 0xb2b2b2),
-    unreadBadgeActiveTextColor: UIColor(rgb: 0x121212),
-    unreadBadgeInactiveBackgroundColor: UIColor(rgb: 0x626262),
-    unreadBadgeInactiveTextColor:UIColor(rgb: 0x121212),
-    pinnedBadgeColor: UIColor(rgb: 0x121212),
-    pinnedSearchBarColor: UIColor(rgb: 0x545454),
-    regularSearchBarColor: UIColor(rgb: 0x545454),
-    sectionHeaderFillColor: UIColor(rgb: 0x000000),
-    sectionHeaderTextColor: UIColor(rgb: 0x545454),
+    backgroundColor: UIColor(rgb: 0x000000),
+    itemSeparatorColor: UIColor(rgb: 0x252525),
+    itemBackgroundColor: UIColor(rgb: 0x000000),
+    pinnedItemBackgroundColor: UIColor(rgb: 0x1c1c1d),
+    itemHighlightedBackgroundColor: UIColor(rgb: 0x1b1b1b), //!!!
+    titleColor: UIColor(rgb: 0xffffff),
+    secretTitleColor: UIColor(rgb: 0xb2b2b2), //!!!
+    dateTextColor: UIColor(rgb: 0x8e8e93),
+    authorNameColor: UIColor(rgb: 0xffffff),
+    messageTextColor: UIColor(rgb: 0x8e8e93),
+    messageDraftTextColor: UIColor(rgb: 0xdd4b39), //!!!
+    checkmarkColor: UIColor(rgb: 0xffffff),
+    pendingIndicatorColor: UIColor(rgb: 0xffffff), //!!!
+    muteIconColor: UIColor(rgb: 0x8e8e93), //!!!
+    unreadBadgeActiveBackgroundColor: UIColor(rgb: 0xffffff),
+    unreadBadgeActiveTextColor: UIColor(rgb: 0x000000),
+    unreadBadgeInactiveBackgroundColor: UIColor(rgb: 0x666666),
+    unreadBadgeInactiveTextColor:UIColor(rgb: 0x000000),
+    pinnedBadgeColor: UIColor(rgb: 0x767677),
+    pinnedSearchBarColor: UIColor(rgb: 0x272728),
+    regularSearchBarColor: UIColor(rgb: 0x272728), //!!!
+    sectionHeaderFillColor: UIColor(rgb: 0x000000), //!!!
+    sectionHeaderTextColor: UIColor(rgb: 0x545454), //!!!
     searchBarKeyboardColor: .dark
 )
 
 private let bubble = PresentationThemeChatBubble(
-    incomingFillColor: UIColor(rgb: 0x1b1b1b),
-    incomingFillHighlightedColor: UIColor(rgb: 0x4b4b4b),
-    incomingStrokeColor: UIColor(rgb: 0x000000),
-    outgoingFillColor: UIColor(rgb: 0x1b1b1b),
-    outgoingFillHighlightedColor: UIColor(rgb: 0x4b4b4b),
+    incomingFillColor: UIColor(rgb: 0x1f1f1f),
+    incomingFillHighlightedColor: UIColor(rgb: 0x4b4b4b), //!!!
+    incomingStrokeColor: UIColor(rgb: 0x000000), //!!!
+    outgoingFillColor: UIColor(rgb: 0x313131),
+    outgoingFillHighlightedColor: UIColor(rgb: 0x4b4b4b), //!!!
     outgoingStrokeColor: UIColor(rgb: 0x000000),
-    freeformFillColor: UIColor(rgb: 0x1b1b1b),
-    freeformFillHighlightedColor: UIColor(rgb: 0x4b4b4b),
+    freeformFillColor: UIColor(rgb: 0x1f1f1f),
+    freeformFillHighlightedColor: UIColor(rgb: 0x4b4b4b), //!!!
     freeformStrokeColor: UIColor(rgb: 0x000000),
-    infoFillColor: UIColor(rgb: 0x1b1b1b),
+    infoFillColor: UIColor(rgb: 0x1f1f1f),
     infoStrokeColor: UIColor(rgb: 0x000000),
-    incomingPrimaryTextColor: UIColor(rgb: 0xb2b2b2),
-    incomingSecondaryTextColor: UIColor(rgb: 0x545454),
-    incomingLinkTextColor: accentColor,
-    incomingLinkHighlightColor: accentColor.withAlphaComponent(0.5),
-    outgoingPrimaryTextColor: UIColor(rgb: 0xb2b2b2),
-    outgoingSecondaryTextColor: UIColor(rgb: 0x545454),
-    outgoingLinkTextColor: accentColor,
-    outgoingLinkHighlightColor: accentColor.withAlphaComponent(0.5),
-    infoPrimaryTextColor: UIColor(rgb: 0xb2b2b2),
-    infoLinkTextColor: accentColor,
-    incomingAccentColor: accentColor,
-    outgoingAccentColor: accentColor,
-    outgoingCheckColor: UIColor(rgb: 0x545454),
-    incomingPendingActivityColor: UIColor(rgb: 0x545454),
-    outgoingPendingActivityColor: UIColor(rgb: 0x545454),
-    mediaDateAndStatusFillColor: UIColor(white: 0.0, alpha: 0.5),
+    incomingPrimaryTextColor: UIColor(rgb: 0xffffff),
+    incomingSecondaryTextColor: UIColor(rgb: 0xacacac), //!!!
+    incomingLinkTextColor: accentColor, //!!!
+    incomingLinkHighlightColor: accentColor.withAlphaComponent(0.5), //!!!
+    outgoingPrimaryTextColor: UIColor(rgb: 0xffffff), //!!!
+    outgoingSecondaryTextColor: UIColor(rgb: 0xacacac), //!!!
+    outgoingLinkTextColor: accentColor, //!!!
+    outgoingLinkHighlightColor: accentColor.withAlphaComponent(0.5), //!!!
+    infoPrimaryTextColor: UIColor(rgb: 0xffffff),
+    infoLinkTextColor: accentColor, //!!!
+    incomingAccentColor: UIColor(rgb: 0xacacac), //!!!
+    outgoingAccentColor: UIColor(rgb: 0xacacac),
+    outgoingCheckColor: UIColor(rgb: 0xacacac),
+    incomingPendingActivityColor: UIColor(rgb: 0xacacac), //!!!
+    outgoingPendingActivityColor: UIColor(rgb: 0xacacac),
+    mediaDateAndStatusFillColor: UIColor(white: 0.0, alpha: 0.5), //!!!
     mediaDateAndStatusTextColor: .white,
-    incomingFileTitleColor: UIColor(rgb: 0xb2b2b2),
-    outgoingFileTitleColor: UIColor(rgb: 0xb2b2b2),
-    incomingFileDescriptionColor: UIColor(rgb: 0x545454),
-    outgoingFileDescriptionColor: UIColor(rgb: 0x545454),
-    incomingFileDurationColor: UIColor(rgb: 0x545454),
-    outgoingFileDurationColor: UIColor(rgb: 0x545454),
-    shareButtonFillColor: UIColor(rgb: 0xffffff, alpha: 0.2),
-    shareButtonForegroundColor: UIColor(rgb: 0xb2b2b2),
-    mediaOverlayControlBackgroundColor: UIColor(white: 0.0, alpha: 0.6),
-    mediaOverlayControlForegroundColor: UIColor(white: 1.0, alpha: 0.6),
-    actionButtonsFillColor: UIColor(rgb: 0x1b1b1b),
-    actionButtonsTextColor: UIColor(rgb: 0xb2b2b2)
+    incomingFileTitleColor: UIColor(rgb: 0xffffff),
+    outgoingFileTitleColor: UIColor(rgb: 0xffffff),
+    incomingFileDescriptionColor: UIColor(rgb: 0xacacac), //!!!
+    outgoingFileDescriptionColor: UIColor(rgb: 0xacacac),
+    incomingFileDurationColor: UIColor(rgb: 0xacacac),
+    outgoingFileDurationColor: UIColor(rgb: 0xacacac),
+    shareButtonFillColor: UIColor(rgb: 0xffffff, alpha: 0.2), //!!!
+    shareButtonForegroundColor: UIColor(rgb: 0xb2b2b2), //!!!
+    mediaOverlayControlBackgroundColor: UIColor(white: 0.0, alpha: 0.6), //!!!
+    mediaOverlayControlForegroundColor: UIColor(white: 1.0, alpha: 0.6), //!!!
+    actionButtonsFillColor: UIColor(rgb: 0x1b1b1b), //!!!
+    actionButtonsTextColor: UIColor(rgb: 0xb2b2b2) //!!!
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(
-    serviceMessageFillColor: UIColor(rgb: 0xffffff, alpha: 0.2),
-    serviceMessagePrimaryTextColor: UIColor(rgb: 0xb2b2b2),
-    serviceMessageLinkHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.2),
-    unreadBarFillColor: UIColor(rgb: 0x1b1b1b),
+    serviceMessageFillColor: UIColor(rgb: 0x1f1f1f, alpha: 1.0),
+    serviceMessagePrimaryTextColor: UIColor(rgb: 0xffffff),
+    serviceMessageLinkHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.12), //!!!
+    unreadBarFillColor: UIColor(rgb: 0x1b1b1b), //!!!
     unreadBarStrokeColor: UIColor(rgb: 0x000000),
-    unreadBarTextColor: UIColor(rgb: 0xb2b2b2),
-    dateFillStaticColor: UIColor(rgb: 0xffffff, alpha: 0.2),
+    unreadBarTextColor: UIColor(rgb: 0xb2b2b2), //!!!
+    dateFillStaticColor: UIColor(rgb: 0x1f1f1f, alpha: 1.0),
     dateFillFloatingColor: UIColor(rgb: 0xffffff, alpha: 0.2),
     dateTextColor: UIColor(rgb: 0xb2b2b2)
 )
 
+private let inputPanelMediaRecordingControl = PresentationThemeChatInputPanelMediaRecordingControl(
+    buttonColor: accentColor,
+    micLevelColor: accentColor.withAlphaComponent(0.2),
+    activeIconColor: .black,
+    panelControlFillColor: UIColor(rgb: 0x1C1C1D),
+    panelControlStrokeColor: UIColor(rgb: 0x1C1C1D),
+    panelControlContentPrimaryColor: UIColor(rgb: 0x9597a0), //!!!
+    panelControlContentAccentColor: accentColor
+)
+
 private let inputPanel = PresentationThemeChatInputPanel(
-    panelBackgroundColor: UIColor(rgb: 0x1b1b1b),
+    panelBackgroundColor: UIColor(rgb: 0x1c1c1d),
     panelStrokeColor: UIColor(rgb: 0x000000),
     panelControlAccentColor: accentColor,
-    panelControlColor: UIColor(rgb: 0x545454),
-    panelControlDisabledColor: UIColor(rgb: 0x545454, alpha: 0.5),
-    panelControlDestructiveColor: UIColor(rgb: 0xff3b30),
-    inputBackgroundColor: UIColor(rgb: 0x121212),
-    inputStrokeColor: UIColor(rgb: 0x000000),
-    inputPlaceholderColor: UIColor(rgb: 0xb2b2b2, alpha: 0.5),
-    inputTextColor: UIColor(rgb: 0xb2b2b2),
-    inputControlColor: UIColor(rgb: 0xb2b2b2, alpha: 0.5),
-    primaryTextColor: UIColor(rgb: 0xb2b2b2),
+    panelControlColor: UIColor(rgb: 0x808080),
+    panelControlDisabledColor: UIColor(rgb: 0x808080, alpha: 0.5), //!!!
+    panelControlDestructiveColor: UIColor(rgb: 0xff3b30), //!!!
+    inputBackgroundColor: UIColor(rgb: 0x060606),
+    inputStrokeColor: UIColor(rgb: 0x060606),
+    inputPlaceholderColor: UIColor(rgb: 0x7b7b7b),
+    inputTextColor: UIColor(rgb: 0xffffff),
+    inputControlColor: UIColor(rgb: 0xb2b2b2, alpha: 0.5), //!!!
+    primaryTextColor: UIColor(rgb: 0xffffff),
     mediaRecordingDotColor: .white,
-    keyboardColor: .dark
+    keyboardColor: .dark,
+    mediaRecordingControl: inputPanelMediaRecordingControl
 )
 
 private let inputMediaPanel = PresentationThemeInputMediaPanel(
@@ -209,9 +221,23 @@ private let chat = PresentationThemeChat(
     historyNavigation: historyNavigation
 )
 
+private let actionSheet = PresentationThemeActionSheet(
+    dimColor: UIColor(white: 0.0, alpha: 0.5),
+    backgroundType: .dark,
+    itemBackgroundColor: UIColor(rgb: 0x1c1c1d, alpha: 0.8), //!!!
+    itemHighlightedBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.5), //!!!
+    standardActionTextColor: accentColor,
+    destructiveActionTextColor: destructiveColor,
+    disabledActionTextColor: UIColor(rgb: 0x4d4d4d), //!!!
+    primaryTextColor: .white,
+    secondaryTextColor: UIColor(rgb: 0x5e5e5e), //!!!
+    controlAccentColor: accentColor
+)
+
 let defaultDarkPresentationTheme = PresentationTheme(
     rootController: rootController,
     list: list,
     chatList: chatList,
-    chat: chat
+    chat: chat,
+    actionSheet: actionSheet
 )

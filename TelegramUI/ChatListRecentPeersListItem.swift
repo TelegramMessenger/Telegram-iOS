@@ -111,7 +111,7 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                             peersNode = currentPeersNode
                             peersNode.updateThemeAndStrings(theme: item.theme, strings: item.strings)
                         } else {
-                            peersNode = ChatListSearchRecentPeersNode(account: item.account, theme: item.theme, strings: item.strings, peerSelected: { peer in
+                            peersNode = ChatListSearchRecentPeersNode(account: item.account, theme: item.theme, mode: .list, strings: item.strings, peerSelected: { peer in
                                 self?.item?.peerSelected(peer)
                             }, isPeerSelected: { _ in
                                 return false

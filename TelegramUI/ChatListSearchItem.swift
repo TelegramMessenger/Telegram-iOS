@@ -100,7 +100,9 @@ class ChatListSearchItemNode: ListViewItemNode {
         let placeholder = self.placeholder
         
         return { item, width, nextIsPinned in
-            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: UIColor(rgb: 0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude), UIColor(rgb: 0x8e8e93), nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, nextIsPinned ? item.theme.chatList.itemBackgroundColor : item.theme.chatList.pinnedItemBackgroundColor)
+            let backgroundColor = nextIsPinned ? item.theme.chatList.pinnedItemBackgroundColor : item.theme.chatList.itemBackgroundColor
+            
+            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: UIColor(rgb: 0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude), UIColor(rgb: 0x8e8e93), nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, backgroundColor)
             
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 44.0 + 4.0), insets: UIEdgeInsets())
             
@@ -118,7 +120,7 @@ class ChatListSearchItemNode: ListViewItemNode {
                     
                     strongSelf.searchBarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: width - 16.0, height: 28.0))
                     
-                    transition.updateBackgroundColor(node: strongSelf, color: nextIsPinned ? item.theme.chatList.pinnedItemBackgroundColor : item.theme.chatList.itemBackgroundColor)
+                    transition.updateBackgroundColor(node: strongSelf, color: backgroundColor)
                 }
             })
         }

@@ -23,6 +23,7 @@ final class PeerMediaCollectionSectionsNode: ASDisplayNode {
             strings.SharedMedia_CategoryOther
         ])
         self.segmentedControl.selectedSegmentIndex = 0
+        self.segmentedControl.tintColor = theme.rootController.navigationBar.accentTextColor
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true

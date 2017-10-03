@@ -28,6 +28,8 @@ private func contentNodeClassesForItem(_ item: ChatMessageItem) -> [AnyClass] {
             skipText = true
             result.append(ChatMessageInvoiceBubbleContentNode.self)
             break
+        } else if let _ = media as? TelegramMediaContact {
+            result.append(ChatMessageContactBubbleContentNode.self)
         }
     }
     

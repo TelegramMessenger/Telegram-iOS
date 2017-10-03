@@ -37,7 +37,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
         
         if let file = media.media as? TelegramMediaFile {
             self.imageNode.setSignal(account: account, signal: chatMessageVideo(account: account, video: file))
-            self.fetchedDisposable.set(chatMessageFileInteractiveFetched(account: account, file: file).start())
+            self.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: file).start())
         }
     }
     

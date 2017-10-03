@@ -51,7 +51,7 @@ public final class ShareController: ViewController {
     
     public var dismissed: (() -> Void)?
     
-    public init(account: Account, subject: ShareControllerSubject, saveToCameraRoll: Bool = false ,externalShare: Bool = true) {
+    public init(account: Account, subject: ShareControllerSubject, saveToCameraRoll: Bool = false, externalShare: Bool = true) {
         self.account = account
         self.externalShare = externalShare
         self.subject = subject

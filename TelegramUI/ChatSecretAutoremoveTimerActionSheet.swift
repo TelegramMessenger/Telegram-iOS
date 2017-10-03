@@ -18,14 +18,14 @@ final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetControlle
         self.theme = theme
         self.strings = strings
         
-        super.init()
+        super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
         
         self._ready.set(.single(true))
         
         var updatedValue = currentValue
         self.setItemGroups([
             ActionSheetItemGroup(items: [
-                AutoremoveTimeoutSelectorItem(theme: theme, strings: strings, currentValue: currentValue, valueChanged: { value in
+                AutoremoveTimeoutSelectorItem(strings: strings, currentValue: currentValue, valueChanged: { value in
                     updatedValue = value
                 }),
                 ActionSheetButtonItem(title: strings.Wallpaper_Set, action: { [weak self] in
@@ -47,21 +47,19 @@ final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetControlle
 }
 
 private final class AutoremoveTimeoutSelectorItem: ActionSheetItem {
-    let theme: PresentationTheme
     let strings: PresentationStrings
     
     let currentValue: Int32
     let valueChanged: (Int32) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
-        self.theme = theme
+    init(strings: PresentationStrings, currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
         self.strings = strings
         self.currentValue = currentValue
         self.valueChanged = valueChanged
     }
     
-    func node() -> ActionSheetItemNode {
-        return AutoremoveTimeoutSelectorItemNode(theme: self.theme, strings: self.strings, currentValue: self.currentValue, valueChanged: self.valueChanged)
+    func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
+        return AutoremoveTimeoutSelectorItemNode(theme: theme, strings: self.strings, currentValue: self.currentValue, valueChanged: self.valueChanged)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
@@ -93,20 +91,20 @@ private let timeoutValues: [Int32] = [
 ]
 
 private final class AutoremoveTimeoutSelectorItemNode: ActionSheetItemNode, UIPickerViewDelegate, UIPickerViewDataSource {
-    private let theme: PresentationTheme
+    private let theme: ActionSheetControllerTheme
     private let strings: PresentationStrings
     
     private let valueChanged: (Int32) -> Void
     private let pickerView: UIPickerView
     
-    init(theme: PresentationTheme, strings: PresentationStrings, currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
+    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, currentValue: Int32, valueChanged: @escaping (Int32) -> Void) {
         self.theme = theme
         self.strings = strings
         self.valueChanged = valueChanged
         
         self.pickerView = UIPickerView()
         
-        super.init()
+        super.init(theme: theme)
         
         self.pickerView.delegate = self
         self.pickerView.dataSource = self

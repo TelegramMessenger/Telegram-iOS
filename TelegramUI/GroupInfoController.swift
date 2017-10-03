@@ -1003,7 +1003,8 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     }, presentController: { controller, presentationArguments in
         presentControllerImpl?(controller, presentationArguments)
     }, changeNotificationMuteSettings: {
-        let controller = ActionSheetController()
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
@@ -1020,28 +1021,28 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Enable", action: {
+                ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsEnable, action: {
                     dismissAction()
                     notificationAction(0)
                 }),
-                ActionSheetButtonItem(title: "Mute for 1 hour", action: {
+                ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: 1 * 60 * 60), action: {
                     dismissAction()
                     notificationAction(1 * 60 * 60)
                 }),
-                ActionSheetButtonItem(title: "Mute for 8 hours", action: {
+                ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: 8 * 60 * 60), action: {
                     dismissAction()
                     notificationAction(8 * 60 * 60)
                 }),
-                ActionSheetButtonItem(title: "Mute for 2 days", action: {
+                ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: 2 * 24 * 60 * 60), action: {
                     dismissAction()
                     notificationAction(2 * 24 * 60 * 60)
                 }),
-                ActionSheetButtonItem(title: "Disable", action: {
+                ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsDisable, action: {
                     dismissAction()
                     notificationAction(Int32.max)
                 })
                 ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, changeNotificationSoundSettings: {
@@ -1182,7 +1183,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 
-                let actionSheet = ActionSheetController()
+                let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: "Remove \(peer.displayTitle)?", color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
@@ -1236,7 +1237,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         pushControllerImpl?(convertToSupergroupController(account: account, peerId: peerId))
     }, leave: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController()
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
@@ -1379,7 +1380,8 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 }
             }
             if let (node, _) = result {
-                return GalleryTransitionArguments(transitionNode: node, transitionContainerNode: controller.displayNode, transitionBackgroundNode: controller.displayNode)
+                return GalleryTransitionArguments(transitionNode: node, addToTransitionSurface: { _ in
+                })
             }
         }
         return nil

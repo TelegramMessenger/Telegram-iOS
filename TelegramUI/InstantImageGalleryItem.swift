@@ -118,7 +118,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.accountAndMedia = (account, file)
     }
     
-    override func animateIn(from node: ASDisplayNode) {
+    override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
         var transformedFrame = node.view.convert(node.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
@@ -144,7 +144,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.imageNode.layer.animateBounds(from: transformedFrame, to: self.imageNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
-    override func animateOut(to node: ASDisplayNode, completion: @escaping () -> Void) {
+    override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.view.convert(node.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)

@@ -74,6 +74,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             var subtitle: String?
             var text: String?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
+            var actionIcon: ChatMessageAttachedContentActionIcon?
             var actionTitle: String?
             
             if let webpage = webPageContent {
@@ -110,6 +111,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 if let _ = webpage.instantPage {
+                    actionIcon = .instant
                     actionTitle = item.strings.Conversation_InstantPagePreview
                 } else if let type = webpage.type {
                     switch type {
@@ -123,7 +125,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, actionTitle, true, layoutConstants, position, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.message, item.read, title, subtitle, text, nil, mediaAndFlags, actionIcon, actionTitle, true, layoutConstants, position, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (refinedWidth, finalizeLayout) = continueLayout(constrainedSize)

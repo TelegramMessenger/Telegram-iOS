@@ -55,7 +55,7 @@ final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
         self.theme = theme
         self.strings = strings
         
-        super.init()
+        super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
         
         var items: [ActionSheetItem] = []
         
@@ -123,8 +123,8 @@ public class BotCheckoutPaymentMethodItem: ActionSheetItem {
         self.action = action
     }
     
-    public func node() -> ActionSheetItemNode {
-        let node = BotCheckoutPaymentMethodItemNode()
+    public func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
+        let node = BotCheckoutPaymentMethodItemNode(theme: theme)
         node.setItem(self)
         return node
     }
@@ -139,18 +139,10 @@ public class BotCheckoutPaymentMethodItem: ActionSheetItem {
     }
 }
 
-private let checkIcon = generateImage(CGSize(width: 14.0, height: 11.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(rgb: 0x007ee5).cgColor)
-    context.setLineWidth(2.0)
-    context.move(to: CGPoint(x: 12.0, y: 1.0))
-    context.addLine(to: CGPoint(x: 4.16482734, y: 9.0))
-    context.addLine(to: CGPoint(x: 1.0, y: 5.81145833))
-    context.strokePath()
-})
-
 public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
     public static let defaultFont: UIFont = Font.regular(20.0)
+    
+    private let theme: ActionSheetControllerTheme
     
     private var item: BotCheckoutPaymentMethodItem?
     
@@ -159,7 +151,9 @@ public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
     private let iconNode: ASImageNode
     private let checkNode: ASImageNode
     
-    public override init() {
+    public override init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        
         self.button = HighlightTrackingButton()
         
         self.titleNode = ASTextNode()
@@ -175,9 +169,17 @@ public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
         self.checkNode.isUserInteractionEnabled = false
         self.checkNode.displayWithoutProcessing = true
         self.checkNode.displaysAsynchronously = false
-        self.checkNode.image = checkIcon
+        self.checkNode.image = generateImage(CGSize(width: 14.0, height: 11.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setStrokeColor(theme.controlAccentColor.cgColor)
+            context.setLineWidth(2.0)
+            context.move(to: CGPoint(x: 12.0, y: 1.0))
+            context.addLine(to: CGPoint(x: 4.16482734, y: 9.0))
+            context.addLine(to: CGPoint(x: 1.0, y: 5.81145833))
+            context.strokePath()
+        })
         
-        super.init()
+        super.init(theme: theme)
         
         self.view.addSubview(self.button)
         self.addSubnode(self.titleNode)
@@ -187,10 +189,10 @@ public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
         self.button.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.backgroundNode.backgroundColor = ActionSheetItemNode.highlightedBackgroundColor
+                    strongSelf.backgroundNode.backgroundColor = theme.itemHighlightedBackgroundColor
                 } else {
                     UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.backgroundNode.backgroundColor = ActionSheetItemNode.defaultBackgroundColor
+                        strongSelf.backgroundNode.backgroundColor = theme.itemBackgroundColor
                     })
                 }
             }
@@ -202,7 +204,7 @@ public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
     func setItem(_ item: BotCheckoutPaymentMethodItem) {
         self.item = item
         
-        self.titleNode.attributedText = NSAttributedString(string: item.title, font: BotCheckoutPaymentMethodItemNode.defaultFont, textColor: .black)
+        self.titleNode.attributedText = NSAttributedString(string: item.title, font: BotCheckoutPaymentMethodItemNode.defaultFont, textColor: self.theme.primaryTextColor)
         self.iconNode.image = item.icon
         if let value = item.value {
             self.checkNode.isHidden = !value

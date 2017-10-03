@@ -16,6 +16,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     private let fetchDisposable = MetaDisposable()
     
+    private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
     private var replyBackgroundNode: ASImageNode?
     
@@ -23,11 +24,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     required init() {
         self.imageNode = TransformImageNode()
+        self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init(layerBacked: false)
         
         self.imageNode.displaysAsynchronously = false
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.dateAndStatusNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -58,7 +61,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     let signal = chatMessageSticker(account: item.account, file: telegramFile, small: false)
                     self.imageNode.setSignal(account: item.account, signal: signal)
-                    self.fetchDisposable.set(fileInteractiveFetched(account: item.account, file: telegramFile).start())
+                    self.fetchDisposable.set(freeMediaFileInteractiveFetched(account: item.account, file: telegramFile).start())
                 }
                 
                 break
@@ -71,6 +74,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         let telegramFile = self.telegramFile
         let layoutConstants = self.layoutConstants
         let imageLayout = self.imageNode.asyncLayout()
+        let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentReplyBackgroundNode = self.replyBackgroundNode
@@ -111,11 +115,56 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
             }
             
+            let displayLeftInset = layoutConstants.bubble.edgeInset + avatarInset
+            
             let imageFrame = CGRect(origin: CGPoint(x: (incoming ? (layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (width - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: 0.0), size: imageSize)
             
             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageFrame.size, boundingSize: imageFrame.size, intrinsicInsets: UIEdgeInsets())
             
             let imageApply = imageLayout(arguments)
+            
+            let statusType: ChatMessageDateAndStatusType
+            if item.message.effectivelyIncoming {
+                statusType = .FreeIncoming
+            } else {
+                if item.message.flags.contains(.Failed) {
+                    statusType = .FreeOutgoing(.Failed)
+                } else if item.message.flags.isSending {
+                    statusType = .FreeOutgoing(.Sending)
+                } else {
+                    statusType = .FreeOutgoing(.Sent(read: item.read))
+                }
+            }
+            
+            var t = Int(item.message.timestamp)
+            var timeinfo = tm()
+            localtime_r(&t, &timeinfo)
+            
+            var edited = false
+            var sentViaBot = false
+            var viewCount: Int?
+            for attribute in item.message.attributes {
+                if let _ = attribute as? EditedMessageAttribute {
+                    edited = true
+                } else if let attribute = attribute as? ViewCountMessageAttribute {
+                    viewCount = attribute.count
+                } else if let _ = attribute as? InlineBotMessageAttribute {
+                    sentViaBot = true
+                }
+            }
+            
+            var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+            
+            if let author = item.message.author as? TelegramUser {
+                if author.botInfo != nil {
+                    sentViaBot = true
+                }
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                    dateText = "\(author.displayTitle), \(dateText)"
+                }
+            }
+            
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.theme, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
             
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
             var updatedReplyBackgroundNode: ASImageNode?
@@ -140,6 +189,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     strongSelf.imageNode.frame = imageFrame
                     strongSelf.progressNode?.position = strongSelf.imageNode.position
                     imageApply()
+                    
+                    dateAndStatusApply(false)
+                    strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: max(displayLeftInset, imageFrame.maxX - dateAndStatusSize.width - 4.0), y: imageFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
                     
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                         if strongSelf.replyBackgroundNode == nil {

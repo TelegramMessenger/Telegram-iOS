@@ -79,7 +79,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.openCalendarSearch()
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             let themeUpdated = self.presentationInterfaceState?.theme !== interfaceState.theme
             

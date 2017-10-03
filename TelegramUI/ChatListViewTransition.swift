@@ -72,14 +72,31 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                 let _ = options.insert(.LowLatency)
                 let _ = options.insert(.Synchronous)
             case .interactiveChanges:
-                let _ = options.insert(.AnimateAlpha)
-                let _ = options.insert(.AnimateInsertion)
-                
                 for (index, _, _) in indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
                     let adjustedIndex = updatedCount - 1 - index
                     if adjustedIndex == maxAnimatedInsertionIndex + 1 {
                         maxAnimatedInsertionIndex += 1
                     }
+                }
+            
+                var minTimestamp: Int32 = Int32.max
+                var maxTimestamp: Int32 = 0
+                for (_, item, _) in indicesAndItems {
+                    let timestamp = item.index.messageIndex.timestamp
+                    
+                    if timestamp < minTimestamp {
+                        minTimestamp = timestamp
+                    }
+                    if timestamp > maxTimestamp {
+                        maxTimestamp = timestamp
+                    }
+                }
+            
+                if abs(maxTimestamp - minTimestamp) > 60 * 60 {
+                    let _ = options.insert(.AnimateCrossfade)
+                } else {
+                    let _ = options.insert(.AnimateAlpha)
+                    let _ = options.insert(.AnimateInsertion)
                 }
             case .reload:
                 break

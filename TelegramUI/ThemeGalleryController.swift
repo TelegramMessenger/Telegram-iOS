@@ -161,7 +161,7 @@ class ThemeGalleryController: ViewController {
             if !self.entries.isEmpty {
                 if centralItemNode.index == 0, let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]), !forceAway {
                     animatedOutNode = false
-                    centralItemNode.animateOut(to: transitionArguments.transitionNode, completion: {
+                    centralItemNode.animateOut(to: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {
                         animatedOutNode = true
                         completion()
                     })
@@ -193,11 +193,11 @@ class ThemeGalleryController: ViewController {
         //self.galleryNode.statusBar = self.statusBar
         self.galleryNode.navigationBar = self.navigationBar
         
-        self.galleryNode.transitionNodeForCentralItem = { [weak self] in
+        self.galleryNode.transitionDataForCentralItem = { [weak self] in
             if let strongSelf = self {
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? ThemePreviewControllerPresentationArguments {
                     if let transitionArguments = presentationArguments.transitionArguments(strongSelf.entries[centralItemNode.index]) {
-                        return transitionArguments.transitionNode
+                        return (transitionArguments.transitionNode, transitionArguments.addToTransitionSurface)
                     }
                 }
             }
@@ -248,7 +248,7 @@ class ThemeGalleryController: ViewController {
                                 wallpaper = value
                         }
                         let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in                            
-                            if case .color(0x121212) = wallpaper {
+                            if case .color(0x000000) = wallpaper {
                                 return PresentationThemeSettings(chatWallpaper: wallpaper, theme: .builtin(.dark))
                             }
                             
@@ -280,7 +280,7 @@ class ThemeGalleryController: ViewController {
             
             if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]) {
                 nodeAnimatesItself = true
-                centralItemNode.animateIn(from: transitionArguments.transitionNode)
+                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
                 
                 self._hiddenMedia.set(.single(self.entries[centralItemNode.index]))
             }

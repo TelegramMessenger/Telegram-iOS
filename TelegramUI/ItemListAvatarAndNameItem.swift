@@ -160,6 +160,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     }
 }
 
+private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 28.0)!
 private let nameFont = Font.medium(19.0)
 private let statusFont = Font.regular(15.0)
 
@@ -198,7 +199,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode {
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
-        self.avatarNode = AvatarNode(font: Font.regular(28.0))
+        self.avatarNode = AvatarNode(font: avatarFont)
         
         self.updatingAvatarOverlay = ASImageNode()
         self.updatingAvatarOverlay.displayWithoutProcessing = true

@@ -231,6 +231,64 @@ public final class PresentationThemeRootController {
     }
 }
 
+public enum PresentationThemeActionSheetBackgroundType: Int32 {
+    case light
+    case dark
+}
+
+public final class PresentationThemeActionSheet {
+    public let dimColor: UIColor
+    public let backgroundType: PresentationThemeActionSheetBackgroundType
+    public let itemBackgroundColor: UIColor
+    public let itemHighlightedBackgroundColor: UIColor
+    public let standardActionTextColor: UIColor
+    public let destructiveActionTextColor: UIColor
+    public let disabledActionTextColor: UIColor
+    public let primaryTextColor: UIColor
+    public let secondaryTextColor: UIColor
+    public let controlAccentColor: UIColor
+    
+    init(dimColor: UIColor, backgroundType: PresentationThemeActionSheetBackgroundType, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor) {
+        self.dimColor = dimColor
+        self.backgroundType = backgroundType
+        self.itemBackgroundColor = itemBackgroundColor
+        self.itemHighlightedBackgroundColor = itemHighlightedBackgroundColor
+        self.standardActionTextColor = standardActionTextColor
+        self.destructiveActionTextColor = destructiveActionTextColor
+        self.disabledActionTextColor = disabledActionTextColor
+        self.primaryTextColor = primaryTextColor
+        self.secondaryTextColor = secondaryTextColor
+        self.controlAccentColor = controlAccentColor
+    }
+    
+    public init(decoder: PostboxDecoder) throws {
+        self.dimColor = try parseColor(decoder, "dimColor")
+        self.backgroundType = PresentationThemeActionSheetBackgroundType(rawValue: decoder.decodeInt32ForKey("backgroundType", orElse: 0)) ?? .light
+        self.itemBackgroundColor = try parseColor(decoder, "itemBackgroundColor")
+        self.itemHighlightedBackgroundColor = try parseColor(decoder, "itemHighlightedBackgroundColor")
+        self.standardActionTextColor = try parseColor(decoder, "standardActionTextColor")
+        self.destructiveActionTextColor = try parseColor(decoder, "destructiveActionTextColor")
+        self.disabledActionTextColor = try parseColor(decoder, "disabledActionTextColor")
+        self.primaryTextColor = try parseColor(decoder, "primaryTextColor")
+        self.secondaryTextColor = try parseColor(decoder, "secondaryTextColor")
+        self.controlAccentColor = try parseColor(decoder, "controlAccentColor")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        for child in Mirror(reflecting: self).children {
+            if let label = child.label {
+                if let value = child.value as? UIColor {
+                    encoder.encodeInt32(Int32(bitPattern: value.argb), forKey: label)
+                } else if let value = child.value as? PresentationThemeActionSheetBackgroundType {
+                    encoder.encodeInt32(value.rawValue, forKey: label)
+                } else {
+                    assertionFailure()
+                }
+            }
+        }
+    }
+}
+
 public final class PresentationThemeSwitch {
     public let frameColor: UIColor
     public let handleColor: UIColor
@@ -674,6 +732,48 @@ public enum PresentationThemeKeyboardColor: Int32 {
     }
 }
 
+public final class PresentationThemeChatInputPanelMediaRecordingControl {
+    public let buttonColor: UIColor
+    public let micLevelColor: UIColor
+    public let activeIconColor: UIColor
+    public let panelControlFillColor: UIColor
+    public let panelControlStrokeColor: UIColor
+    public let panelControlContentPrimaryColor: UIColor
+    public let panelControlContentAccentColor: UIColor
+    
+    init(buttonColor: UIColor, micLevelColor: UIColor, activeIconColor: UIColor, panelControlFillColor: UIColor, panelControlStrokeColor: UIColor, panelControlContentPrimaryColor: UIColor, panelControlContentAccentColor: UIColor) {
+        self.buttonColor = buttonColor
+        self.micLevelColor = micLevelColor
+        self.activeIconColor = activeIconColor
+        self.panelControlFillColor = panelControlFillColor
+        self.panelControlStrokeColor = panelControlStrokeColor
+        self.panelControlContentPrimaryColor = panelControlContentPrimaryColor
+        self.panelControlContentAccentColor = panelControlContentAccentColor
+    }
+    
+    public init(decoder: PostboxDecoder) throws {
+        self.buttonColor = try parseColor(decoder, "buttonColor")
+        self.micLevelColor = try parseColor(decoder, "micLevelColor")
+        self.activeIconColor = try parseColor(decoder, "activeIconColor")
+        self.panelControlFillColor = try parseColor(decoder, "panelControlFillColor")
+        self.panelControlStrokeColor = try parseColor(decoder, "panelControlStrokeColor")
+        self.panelControlContentPrimaryColor = try parseColor(decoder, "panelControlContentPrimaryColor")
+        self.panelControlContentAccentColor = try parseColor(decoder, "panelControlContentAccentColor")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        for child in Mirror(reflecting: self).children {
+            if let label = child.label {
+                if let value = child.value as? UIColor {
+                    encoder.encodeInt32(Int32(bitPattern: value.argb), forKey: label)
+                } else {
+                    assertionFailure()
+                }
+            }
+        }
+    }
+}
+
 public final class PresentationThemeChatInputPanel {
     public let panelBackgroundColor: UIColor
     public let panelStrokeColor: UIColor
@@ -689,8 +789,9 @@ public final class PresentationThemeChatInputPanel {
     public let primaryTextColor: UIColor
     public let mediaRecordingDotColor: UIColor
     public let keyboardColor: PresentationThemeKeyboardColor
+    public let mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl
     
-    public init(panelBackgroundColor: UIColor, panelStrokeColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, primaryTextColor: UIColor, mediaRecordingDotColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
+    public init(panelBackgroundColor: UIColor, panelStrokeColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, primaryTextColor: UIColor, mediaRecordingDotColor: UIColor, keyboardColor: PresentationThemeKeyboardColor, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl) {
         self.panelBackgroundColor = panelBackgroundColor
         self.panelStrokeColor = panelStrokeColor
         self.panelControlAccentColor = panelControlAccentColor
@@ -705,6 +806,7 @@ public final class PresentationThemeChatInputPanel {
         self.primaryTextColor = primaryTextColor
         self.mediaRecordingDotColor = mediaRecordingDotColor
         self.keyboardColor = keyboardColor
+        self.mediaRecordingControl = mediaRecordingControl
     }
     
     public init(decoder: PostboxDecoder) throws {
@@ -726,6 +828,11 @@ public final class PresentationThemeChatInputPanel {
         } else {
             throw PresentationThemeParsingError.generic
         }
+        if let mediaRecordingControl = (try? decoder.decodeObjectForKeyThrowing("mediaRecordingControl", decoder: { try PresentationThemeChatInputPanelMediaRecordingControl(decoder: $0) })) as? PresentationThemeChatInputPanelMediaRecordingControl {
+            self.mediaRecordingControl = mediaRecordingControl
+        } else {
+            throw PresentationThemeParsingError.generic
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -737,6 +844,8 @@ public final class PresentationThemeChatInputPanel {
                     encoder.encodeObjectWithEncoder(value, encoder: { value.encode($0) }, forKey: label)
                 } else if let value = child.value as? PresentationThemeKeyboardColor {
                     encoder.encodeInt32(value.rawValue, forKey: label)
+                } else if let value = child.value as? PresentationThemeChatInputPanelMediaRecordingControl {
+                    encoder.encodeObjectWithEncoder(value, encoder: { value.encode($0) }, forKey: label)
                 } else {
                     assertionFailure()
                 }
@@ -935,14 +1044,16 @@ public final class PresentationTheme: Equatable {
     public let list: PresentationThemeList
     public let chatList: PresentationThemeChatList
     public let chat: PresentationThemeChat
+    public let actionSheet: PresentationThemeActionSheet
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat) {
+    public init(rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet) {
         self.rootController = rootController
         self.list = list
         self.chatList = chatList
         self.chat = chat
+        self.actionSheet = actionSheet
     }
     
     public init(decoder: PostboxDecoder) throws {
@@ -966,6 +1077,11 @@ public final class PresentationTheme: Equatable {
         } else {
             throw PresentationThemeParsingError.generic
         }
+        if let actionSheet = (try? decoder.decodeObjectForKeyThrowing("actionSheet", decoder: { try PresentationThemeActionSheet(decoder: $0) })) as? PresentationThemeActionSheet {
+            self.actionSheet = actionSheet
+        } else {
+            throw PresentationThemeParsingError.generic
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -973,6 +1089,7 @@ public final class PresentationTheme: Equatable {
         encoder.encodeObjectWithEncoder(self.list, encoder: { self.list.encode($0) }, forKey: "list")
         encoder.encodeObjectWithEncoder(self.chatList, encoder: { self.chatList.encode($0) }, forKey: "chatList")
         encoder.encodeObjectWithEncoder(self.chat, encoder: { self.chat.encode($0) }, forKey: "chat")
+        encoder.encodeObjectWithEncoder(self.actionSheet, encoder: { self.actionSheet.encode($0) }, forKey: "actionSheet")
     }
     
     public static func ==(lhs: PresentationTheme, rhs: PresentationTheme) -> Bool {

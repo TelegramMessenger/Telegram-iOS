@@ -24,6 +24,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
         let updatedCount = toView.filteredEntries.count
         
         var options: ListViewDeleteAndInsertOptions = []
+        var animateIn = false
         var maxAnimatedInsertionIndex = -1
         var stationaryItemRange: (Int, Int)?
         var scrollToItem: ListViewScrollToItem?
@@ -31,7 +32,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
         switch reason {
             case let .Initial(fadeIn):
                 if fadeIn {
-                    let _ = options.insert(.AnimateAlpha)
+                    animateIn = true
                 } else {
                     let _ = options.insert(.LowLatency)
                     let _ = options.insert(.Synchronous)
@@ -183,7 +184,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
             }
         }
         
-        subscriber.putNext(ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex))
+        subscriber.putNext(ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex, animateIn: animateIn))
         subscriber.putCompletion()
         
         return EmptyDisposable

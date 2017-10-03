@@ -14,6 +14,8 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
         return fetchCachedScaledImageRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
     } else if let representation = representation as? CachedVideoFirstFrameRepresentation {
         return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
+    } else if let representation = representation as? CachedScaledVideoFirstFrameRepresentation {
+        return fetchCachedScaledVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
     }
     return .never()
 }
@@ -172,4 +174,42 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
         }
         return EmptyDisposable
     } |> runOn(account.graphicsThreadPool)
+}
+
+private func fetchCachedScaledVideoFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedScaledVideoFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedVideoFirstFrameRepresentation(), complete: true) |> mapToSignal { firstFrame -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            return Signal({ subscriber in
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: firstFrame.path), options: [.mappedIfSafe]) {
+                    if let image = UIImage(data: data) {
+                        var randomId: Int64 = 0
+                        arc4random_buf(&randomId, 8)
+                        let path = NSTemporaryDirectory() + "\(randomId)"
+                        let url = URL(fileURLWithPath: path)
+                        
+                        let size = representation.size
+                        
+                        let colorImage = generateImage(size, contextGenerator: { size, context in
+                            context.setBlendMode(.copy)
+                            context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                        }, scale: 1.0)!
+                        
+                        if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
+                            CGImageDestinationSetProperties(colorDestination, nil)
+                            
+                            let colorQuality: Float = 0.5
+                            
+                            let options = NSMutableDictionary()
+                            options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
+                            
+                            CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
+                            if CGImageDestinationFinalize(colorDestination) {
+                                subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                                subscriber.putCompletion()
+                            }
+                        }
+                    }
+                }
+                return EmptyDisposable
+            }) |> runOn(account.graphicsThreadPool)
+    }
 }

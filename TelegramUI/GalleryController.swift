@@ -101,13 +101,11 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
 
 final class GalleryTransitionArguments {
     let transitionNode: ASDisplayNode
-    let transitionContainerNode: ASDisplayNode
-    let transitionBackgroundNode: ASDisplayNode
+    let addToTransitionSurface: (UIView) -> Void
     
-    init(transitionNode: ASDisplayNode, transitionContainerNode: ASDisplayNode, transitionBackgroundNode: ASDisplayNode) {
+    init(transitionNode: ASDisplayNode, addToTransitionSurface: @escaping (UIView) -> Void) {
         self.transitionNode = transitionNode
-        self.transitionContainerNode = transitionContainerNode
-        self.transitionBackgroundNode = transitionBackgroundNode
+        self.addToTransitionSurface = addToTransitionSurface
     }
 }
 
@@ -292,7 +290,7 @@ class GalleryController: ViewController {
             if case let .MessageEntry(message, _, _, _) = self.entries[centralItemNode.index] {
                 if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {
                     animatedOutNode = false
-                    centralItemNode.animateOut(to: transitionArguments.transitionNode, completion: {
+                    centralItemNode.animateOut(to: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {
                         animatedOutNode = true
                         completion()
                     })
@@ -324,12 +322,12 @@ class GalleryController: ViewController {
         self.galleryNode.statusBar = self.statusBar
         self.galleryNode.navigationBar = self.navigationBar
         
-        self.galleryNode.transitionNodeForCentralItem = { [weak self] in
+        self.galleryNode.transitionDataForCentralItem = { [weak self] in
             if let strongSelf = self {
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? GalleryControllerPresentationArguments {
                     if case let .MessageEntry(message, _, _, _) = strongSelf.entries[centralItemNode.index] {
                         if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
-                            return transitionArguments.transitionNode
+                            return (transitionArguments.transitionNode, transitionArguments.addToTransitionSurface)
                         }
                     }
                 }
@@ -424,7 +422,7 @@ class GalleryController: ViewController {
                 if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                     nodeAnimatesItself = true
                     centralItemNode.activateAsInitial()
-                    centralItemNode.animateIn(from: transitionArguments.transitionNode)
+                    centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
                     
                     self._hiddenMedia.set(.single((message.id, media)))
                 }

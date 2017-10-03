@@ -65,6 +65,8 @@ class ContactsVCardItem: ListViewItem {
 
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
+private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 15.0)!
+
 class ContactsVCardItemNode: ListViewItemNode {
     private let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -85,7 +87,7 @@ class ContactsVCardItemNode: ListViewItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        self.avatarNode = AvatarNode(font: Font.regular(15.0))
+        self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = true
         
         self.titleNode = TextNode()

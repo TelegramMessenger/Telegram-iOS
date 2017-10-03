@@ -14,3 +14,16 @@ extension NavigationBarTheme {
         self.init(buttonColor: theme.buttonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: theme.backgroundColor, separatorColor: theme.separatorColor)
     }
 }
+
+extension ActionSheetControllerTheme {
+    convenience init(presentationTheme: PresentationTheme) {
+        let actionSheet = presentationTheme.actionSheet
+        self.init(dimColor: actionSheet.dimColor, backgroundType: actionSheet.backgroundType == .light ? .light : .dark, itemBackgroundColor: actionSheet.itemBackgroundColor, itemHighlightedBackgroundColor: actionSheet.itemHighlightedBackgroundColor, standardActionTextColor: actionSheet.standardActionTextColor, destructiveActionTextColor: actionSheet.destructiveActionTextColor, disabledActionTextColor: actionSheet.disabledActionTextColor, primaryTextColor: actionSheet.primaryTextColor, secondaryTextColor: actionSheet.secondaryTextColor, controlAccentColor: actionSheet.controlAccentColor)
+    }
+}
+
+extension ActionSheetController {
+    convenience init(presentationTheme: PresentationTheme) {
+        self.init(theme: ActionSheetControllerTheme(presentationTheme: presentationTheme))
+    }
+}

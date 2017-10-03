@@ -203,7 +203,7 @@ class AvatarGalleryController: ViewController {
             if !self.entries.isEmpty {
                 if centralItemNode.index == 0, let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]), !forceAway {
                     animatedOutNode = false
-                    centralItemNode.animateOut(to: transitionArguments.transitionNode, completion: {
+                    centralItemNode.animateOut(to: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {
                         animatedOutNode = true
                         completion()
                     })
@@ -235,14 +235,14 @@ class AvatarGalleryController: ViewController {
         self.galleryNode.statusBar = self.statusBar
         self.galleryNode.navigationBar = self.navigationBar
         
-        self.galleryNode.transitionNodeForCentralItem = { [weak self] in
+        self.galleryNode.transitionDataForCentralItem = { [weak self] in
             if let strongSelf = self {
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? AvatarGalleryControllerPresentationArguments {
                     if centralItemNode.index != 0 {
                         return nil
                     }
                     if let transitionArguments = presentationArguments.transitionArguments(strongSelf.entries[centralItemNode.index]) {
-                        return transitionArguments.transitionNode
+                        return (transitionArguments.transitionNode, transitionArguments.addToTransitionSurface)
                     }
                 }
             }
@@ -294,7 +294,7 @@ class AvatarGalleryController: ViewController {
             
             if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]) {
                 nodeAnimatesItself = true
-                centralItemNode.animateIn(from: transitionArguments.transitionNode)
+                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
                 
                 self._hiddenMedia.set(.single(self.entries[centralItemNode.index]))
             }

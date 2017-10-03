@@ -184,7 +184,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.chatListDisplayNode.chatListNode.deletePeerChat = { [weak self] peerId in
             if let strongSelf = self {
-                let actionSheet = ActionSheetController()
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()

@@ -8,7 +8,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var navigationBar: NavigationBar?
     let footerNode: GalleryFooterNode
     var toolbarNode: ASDisplayNode?
-    var transitionNodeForCentralItem: (() -> ASDisplayNode?)?
+    var transitionDataForCentralItem: (() -> (ASDisplayNode?, (UIView) -> Void)?)?
     var dismiss: (() -> Void)?
     
     var containerLayout: (CGFloat, ContainerViewLayout)?
@@ -208,9 +208,9 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             
-            if let centralItemNode = self.pager.centralItemNode(), let transitionNodeForCentralItem = self.transitionNodeForCentralItem, let node = transitionNodeForCentralItem() {
+            if let centralItemNode = self.pager.centralItemNode(), let (transitionNodeForCentralItem, addToTransitionSurface) = self.transitionDataForCentralItem?(), let node = transitionNodeForCentralItem {
                 contentAnimationCompleted = false
-                centralItemNode.animateOut(to: node, completion: {
+                centralItemNode.animateOut(to: node, addToTransitionSurface: addToTransitionSurface, completion: {
                     contentAnimationCompleted = true
                     completion()
                 })

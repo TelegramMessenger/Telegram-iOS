@@ -194,14 +194,14 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             
             if let selectionPanel = self.selectionPanel {
                 selectionPanel.selectedMessageCount = selectionState.selectedIds.count
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, transition: transition, interfaceState: interfaceState)
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, maxHeight: 0.0, transition: transition, interfaceState: interfaceState)
                 transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
             } else {
                 let selectionPanel = ChatMessageSelectionInputPanelNode(theme: self.chatPresentationInterfaceState.theme)
                 selectionPanel.interfaceInteraction = self.interfaceInteraction
                 selectionPanel.selectedMessageCount = selectionState.selectedIds.count
                 selectionPanel.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: interfaceState)
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, maxHeight: 0.0, transition: .immediate, interfaceState: interfaceState)
                 self.selectionPanel = selectionPanel
                 self.addSubnode(selectionPanel)
                 selectionPanel.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom), size: CGSize(width: layout.size.width, height: panelHeight))

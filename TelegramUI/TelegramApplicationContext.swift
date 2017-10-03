@@ -23,6 +23,7 @@ public final class TelegramApplicationBindings {
 public final class TelegramApplicationContext {
     public let applicationBindings: TelegramApplicationBindings
     public let accountManager: AccountManager
+    let fetchManager: FetchManager
     public var callManager: PresentationCallManager?
     
     public let mediaManager = MediaManager()
@@ -47,9 +48,10 @@ public final class TelegramApplicationContext {
     public var navigateToCurrentCall: (() -> Void)?
     public var hasOngoingCall: Signal<Bool, NoError>?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>) {
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>, postbox: Postbox) {
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
+        self.fetchManager = FetchManager(postbox: postbox)
         self.currentPresentationData = Atomic(value: currentPresentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: currentMediaDownloadSettings)
         self._presentationData.set(.single(currentPresentationData) |> then(presentationData))

@@ -5,18 +5,25 @@ import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 
+enum HorizontalPeerItemMode {
+    case list
+    case actionSheet
+}
+
 final class HorizontalPeerItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let mode: HorizontalPeerItemMode
     let account: Account
     let peer: Peer
     let action: (Peer) -> Void
     let isPeerSelected: (PeerId) -> Bool
     let customWidth: CGFloat?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, action: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
+    init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, account: Account, peer: Peer, action: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
         self.theme = theme
         self.strings = strings
+        self.mode = mode
         self.account = account
         self.peer = peer
         self.action = action
@@ -87,9 +94,17 @@ final class HorizontalPeerItemNode: ListViewItemNode {
         return { [weak self] item, width in
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 92.0, height: item.customWidth ?? 80.0), insets: UIEdgeInsets())
             return (itemLayout, { animated in
+                let textColor: UIColor
+                switch item.mode {
+                    case .list:
+                        textColor = item.theme.list.itemPrimaryTextColor
+                    case .actionSheet:
+                        textColor = .black
+                }
+                
                 if let strongSelf = self {
                     strongSelf.item = item
-                    
+                    strongSelf.peerNode.textColor = textColor
                     strongSelf.peerNode.setup(account: item.account, peer: item.peer, chatPeer: nil, numberOfLines: 1)
                     strongSelf.peerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.size)
                     strongSelf.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: false)

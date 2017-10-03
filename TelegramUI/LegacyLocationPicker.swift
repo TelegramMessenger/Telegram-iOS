@@ -13,7 +13,7 @@ func legacyLocationPickerController(sendLocation: @escaping (CLLocationCoordinat
     legacyController.bind(controller: navigationController)
     controller.locationPicked = { [weak legacyController] coordinate, venue in
         sendLocation(coordinate, venue.flatMap { venue in
-            return MapVenue(title: venue.title, address: venue.address, provider: venue.provider, id: venue.venueId)
+            return MapVenue(title: venue.title, address: venue.address, provider: venue.provider, id: venue.venueId, type: venue.type)
         })
         legacyController?.dismiss()
     }

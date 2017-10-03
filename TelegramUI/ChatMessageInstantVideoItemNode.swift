@@ -117,14 +117,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             var updatedPlaybackStatus: Signal<FileMediaResourceStatus, NoError>?
             if let updatedFile = updatedFile, updatedMedia {
-                updatedPlaybackStatus = combineLatest(fileMediaResourceStatus(account: item.account, file: updatedFile, message: item.message), item.account.pendingMessageManager.pendingMessageStatus(item.message.id))
+                updatedPlaybackStatus = combineLatest(messageFileMediaResourceStatus(account: item.account, file: updatedFile, message: item.message), item.account.pendingMessageManager.pendingMessageStatus(item.message.id))
                     |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
                         if let pendingStatus = pendingStatus {
                             var progress = pendingStatus.progress
                             if pendingStatus.isRunning {
                                 progress = max(progress, 0.27)
                             }
-                            return .fetchStatus(.Fetching(progress: progress))
+                            return .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: progress))
                         } else {
                             return resourceStatus
                         }
@@ -300,8 +300,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 switch status {
                                     case let .fetchStatus(fetchStatus):
                                         switch fetchStatus {
-                                            case let .Fetching(progress):
-                                                state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(progress), cancelEnabled: true)
+                                            case let .Fetching(isActive, progress):
+                                                var adjustedProgress = progress
+                                                if isActive {
+                                                    adjustedProgress = max(adjustedProgress, 0.027)
+                                                }
+                                                state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(adjustedProgress), cancelEnabled: true)
                                             case .Local:
                                                 state = .none
                                                 /*if isSecretMedia && secretProgressIcon != nil {

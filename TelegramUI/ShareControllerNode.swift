@@ -5,27 +5,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private let defaultBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 1.0)
-private let highlightedBackgroundColor: UIColor = UIColor(white: 0.9, alpha: 1.0)
-private let separatorColor: UIColor = UIColor(rgb: 0xbcbbc1)
-
-private let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: .white)
-private let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: highlightedBackgroundColor)
-
-private let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor.white.cgColor)
-    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
-})?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
-
-private let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(highlightedBackgroundColor.cgColor)
-    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
-})?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
-
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let account: Account
     private var presentationData: PresentationData
@@ -78,6 +57,23 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.defaultAction = defaultAction
         self.requestLayout = requestLayout
         
+        let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: .white)
+        let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: UIColor(white: 0.9, alpha: 1.0))
+        
+        let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor.white.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
+        let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor(white: 0.9, alpha: 1.0).cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
         self.wrappingScrollNode.view.delaysContentTouches = false
@@ -117,7 +113,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.actionSeparatorNode = ASDisplayNode()
         self.actionSeparatorNode.isLayerBacked = true
         self.actionSeparatorNode.displaysAsynchronously = false
-        self.actionSeparatorNode.backgroundColor = separatorColor
+        self.actionSeparatorNode.backgroundColor = UIColor(white: 0.9, alpha: 1.0)
         
         super.init()
         

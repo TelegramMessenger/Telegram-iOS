@@ -217,7 +217,7 @@ func storageUsageController(account: Account) -> ViewController {
     
     let arguments = StorageUsageControllerArguments(account: account, updateKeepMedia: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController()
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
@@ -247,7 +247,7 @@ func storageUsageController(account: Account) -> ViewController {
             if let result = result, case let .result(stats) = result {
                 if let categories = stats.media[peerId] {
                     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                    let controller = ActionSheetController()
+                    let controller = ActionSheetController(presentationTheme: presentationData.theme)
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
                     }

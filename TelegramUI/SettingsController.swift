@@ -602,7 +602,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 }
             }
             if let (node, _) = result {
-                return GalleryTransitionArguments(transitionNode: node, transitionContainerNode: controller.displayNode, transitionBackgroundNode: controller.displayNode)
+                return GalleryTransitionArguments(transitionNode: node, addToTransitionSurface: { _ in
+                })
             }
         }
         return nil

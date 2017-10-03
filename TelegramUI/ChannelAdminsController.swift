@@ -451,7 +451,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     
     let arguments = ChannelAdminsControllerArguments(account: account, updateCurrentAdministrationType: {
         let _ = (presentationDataSignal |> take(1) |> deliverOnMainQueue).start(next: { presentationData in
-            let actionSheet = ActionSheetController()
+            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             let result = ValuePromise<Bool>()
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.ChannelMembers_WhoCanAddMembers_AllMembers, color: .accent, action: { [weak actionSheet] in

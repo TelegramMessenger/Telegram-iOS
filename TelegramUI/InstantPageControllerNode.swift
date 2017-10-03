@@ -9,6 +9,7 @@ import SafariServices
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let account: Account
     private var settings: InstantPagePresentationSettings?
+    private var presentationTheme: PresentationTheme
     private var strings: PresentationStrings
     private var theme: InstantPageTheme?
     private let present: (ViewController, Any?) -> Void
@@ -43,8 +44,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let hiddenMediaDisposable = MetaDisposable()
     private let resolveUrlDisposable = MetaDisposable()
     
-    init(account: Account, settings: InstantPagePresentationSettings?, strings: PresentationStrings, statusBar: StatusBar, present: @escaping (ViewController, Any?) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(account: Account, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, statusBar: StatusBar, present: @escaping (ViewController, Any?) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.account = account
+        self.presentationTheme = presentationTheme
         self.strings = strings
         self.settings = settings
         self.theme = settings.flatMap(instantPageThemeForSettings)
@@ -545,7 +547,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         case .longTap:
                             if let url = self.urlForTapLocation(location) {
-                                let actionSheet = ActionSheetController()
+                                let actionSheet = ActionSheetController(presentationTheme: self.presentationTheme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                                     ActionSheetTextItem(title: url.url),
                                     ActionSheetButtonItem(title: self.self.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak self, weak actionSheet] in
@@ -726,7 +728,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     for (_, itemNode) in strongSelf.visibleItemsWithViews {
                         if let itemNode = itemNode as? InstantPageNode {
                             if let transitionNode = itemNode.transitionNode(media: entry.media) {
-                                return GalleryTransitionArguments(transitionNode: transitionNode, transitionContainerNode: strongSelf, transitionBackgroundNode: strongSelf)
+                                return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: { _ in
+                                })
                             }
                         }
                     }

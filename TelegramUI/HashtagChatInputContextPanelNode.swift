@@ -138,6 +138,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                 //options.insert(.LowLatency)
             } else {
                 options.insert(.AnimateTopItemPosition)
+                options.insert(.AnimateCrossfade)
             }
             
             var insets = UIEdgeInsets()

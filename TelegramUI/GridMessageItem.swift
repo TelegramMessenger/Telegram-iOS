@@ -196,8 +196,12 @@ final class GridMessageItemNode: GridItemNode {
                     if let strongSelf = self {
                         strongSelf.resourceStatus = status
                         switch status {
-                            case let .Fetching(progress):
-                                strongSelf.progressNode.state = .Fetching(progress: progress)
+                            case let .Fetching(isActive, progress):
+                                var adjustedProgress = progress
+                                if isActive {
+                                    adjustedProgress = max(adjustedProgress, 0.027)
+                                }
+                                strongSelf.progressNode.state = .Fetching(progress: adjustedProgress)
                                 strongSelf.progressNode.isHidden = false
                             case .Local:
                                 strongSelf.progressNode.state = .None
@@ -303,11 +307,11 @@ final class GridMessageItemNode: GridItemNode {
                     if let resourceStatus = self.resourceStatus {
                         switch resourceStatus {
                             case .Fetching:
-                                account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
+                                messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: file)
                             case .Local:
                                 controllerInteraction.openMessage(messageId)
                             case .Remote:
-                                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .file)).start())
+                                self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: file).start())
                         }
                     }
                 } else {

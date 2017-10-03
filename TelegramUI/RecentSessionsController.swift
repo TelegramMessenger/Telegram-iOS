@@ -327,13 +327,14 @@ public func recentSessionsController(account: Account) -> ViewController {
             }
         }))
     }, terminateOtherSessions: {
-        let controller = ActionSheetController()
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Terminate all other sessions", color: .destructive, action: {
+                ActionSheetButtonItem(title: presentationData.strings.AuthSessions_TerminateOtherSessions, color: .destructive, action: {
                     dismissAction()
                     
                     updateState {
@@ -364,7 +365,7 @@ public func recentSessionsController(account: Account) -> ViewController {
                     }))
                 })
             ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })

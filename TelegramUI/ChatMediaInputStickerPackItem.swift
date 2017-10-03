@@ -108,7 +108,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
                 imageApply()
                 self.imageNode.setSignal(account: account, signal: chatMessageSticker(account: account, file: item.file, small: true))
-                self.stickerFetchedDisposable.set(fileInteractiveFetched(account: account, file: item.file).start())
+                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: item.file).start())
                 self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
             }
             

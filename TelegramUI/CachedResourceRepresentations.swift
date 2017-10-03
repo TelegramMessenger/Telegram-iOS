@@ -59,3 +59,23 @@ final class CachedVideoFirstFrameRepresentation: CachedMediaResourceRepresentati
         }
     }
 }
+
+final class CachedScaledVideoFirstFrameRepresentation: CachedMediaResourceRepresentation {
+    let size: CGSize
+    
+    var uniqueId: String {
+        return "scaled-frame-\(Int(self.size.width))x\(Int(self.size.height))"
+    }
+    
+    init(size: CGSize) {
+        self.size = size
+    }
+    
+    func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let to = to as? CachedScaledVideoFirstFrameRepresentation {
+            return self.size == to.size
+        } else {
+            return false
+        }
+    }
+}

@@ -157,6 +157,16 @@ private let serviceMessage = PresentationThemeServiceMessage(
     dateTextColor: .white
 )
 
+private let inputPanelMediaRecordingControl = PresentationThemeChatInputPanelMediaRecordingControl(
+    buttonColor: accentColor,
+    micLevelColor: accentColor.withAlphaComponent(0.2),
+    activeIconColor: .white,
+    panelControlFillColor: UIColor(rgb: 0xf7f7f7),
+    panelControlStrokeColor: UIColor(rgb: 0xb2b2b2),
+    panelControlContentPrimaryColor: UIColor(rgb: 0x9597a0),
+    panelControlContentAccentColor: accentColor
+)
+
 private let inputPanel = PresentationThemeChatInputPanel(
     panelBackgroundColor: UIColor(rgb: 0xf2f4f6),
     panelStrokeColor: UIColor(rgb: 0xbdc2c7),
@@ -171,7 +181,8 @@ private let inputPanel = PresentationThemeChatInputPanel(
     inputControlColor: UIColor(rgb: 0x9099A2, alpha: 0.6),
     primaryTextColor: .black,
     mediaRecordingDotColor: UIColor(rgb: 0xed2521),
-    keyboardColor: .light
+    keyboardColor: .light,
+    mediaRecordingControl: inputPanelMediaRecordingControl
 )
 
 private let inputMediaPanel = PresentationThemeInputMediaPanel(
@@ -210,9 +221,23 @@ private let chat = PresentationThemeChat(
     historyNavigation: historyNavigation
 )
 
+private let actionSheet = PresentationThemeActionSheet(
+    dimColor: UIColor(white: 0.0, alpha: 0.4),
+    backgroundType: .light,
+    itemBackgroundColor: UIColor(white: 1.0, alpha: 0.8),
+    itemHighlightedBackgroundColor: UIColor(white: 0.9, alpha: 0.7),
+    standardActionTextColor: accentColor,
+    destructiveActionTextColor: destructiveColor,
+    disabledActionTextColor: UIColor(rgb: 0x4d4d4d),
+    primaryTextColor: .black,
+    secondaryTextColor: UIColor(rgb: 0x5e5e5e),
+    controlAccentColor: accentColor
+)
+
 let defaultPresentationTheme = PresentationTheme(
     rootController: rootController,
     list: list,
     chatList: chatList,
-    chat: chat
+    chat: chat,
+    actionSheet: actionSheet
 )

@@ -90,7 +90,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                                 }
                             }
                         }
-                    } else if let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState {
+                    } else if let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState, tagMask == nil {
                         scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
                     } else {
                         var messageCount = 0

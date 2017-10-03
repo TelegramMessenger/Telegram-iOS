@@ -292,32 +292,6 @@ class ChatControllerNode: ASDisplayNode {
             self.titleAccessoryPanelNode = nil
         }
         
-        var dismissedInputPanelNode: ASDisplayNode?
-        var dismissedAccessoryPanelNode: ASDisplayNode?
-        var dismissedInputContextPanelNode: ChatInputContextPanelNode?
-        
-        var inputPanelSize: CGSize?
-        var immediatelyLayoutInputPanelAndAnimateAppearance = false
-        if let inputPanelNode = inputPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.inputPanelNode, textInputPanelNode: self.textInputPanelNode, interfaceInteraction: self.interfaceInteraction) {
-            if inputPanelNode !== self.inputPanelNode {
-                if let inputTextPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
-                    inputTextPanelNode.ensureUnfocused()
-                }
-                dismissedInputPanelNode = self.inputPanelNode
-                immediatelyLayoutInputPanelAndAnimateAppearance = true
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
-                inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
-                self.inputPanelNode = inputPanelNode
-                self.insertSubnode(inputPanelNode, aboveSubnode: self.navigateButtons)
-            } else {
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, transition: transition, interfaceState: self.chatPresentationInterfaceState)
-                inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
-            }
-        } else {
-            dismissedInputPanelNode = self.inputPanelNode
-            self.inputPanelNode = nil
-        }
-        
         var dismissedInputNode: ChatInputNode?
         var immediatelyLayoutInputNodeAndAnimateAppearance = false
         var inputNodeHeight: CGFloat?
@@ -340,10 +314,6 @@ class ChatControllerNode: ASDisplayNode {
             self.inputNode = nil
         }
         
-        if let inputMediaNode = self.inputMediaNode, inputMediaNode != self.inputNode {
-            let _ = inputMediaNode.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
-        }
-        
         var insets: UIEdgeInsets
         if let inputNodeHeight = inputNodeHeight {
             insets = layout.insets(options: [])
@@ -352,6 +322,36 @@ class ChatControllerNode: ASDisplayNode {
             insets = layout.insets(options: [.input])
         }
         insets.top += navigationBarHeight
+        
+        var dismissedInputPanelNode: ASDisplayNode?
+        var dismissedAccessoryPanelNode: ASDisplayNode?
+        var dismissedInputContextPanelNode: ChatInputContextPanelNode?
+        
+        var inputPanelSize: CGSize?
+        var immediatelyLayoutInputPanelAndAnimateAppearance = false
+        if let inputPanelNode = inputPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.inputPanelNode, textInputPanelNode: self.textInputPanelNode, interfaceInteraction: self.interfaceInteraction) {
+            if inputPanelNode !== self.inputPanelNode {
+                if let inputTextPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
+                    inputTextPanelNode.ensureUnfocused()
+                }
+                dismissedInputPanelNode = self.inputPanelNode
+                immediatelyLayoutInputPanelAndAnimateAppearance = true
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, maxHeight: layout.size.height - insets.top - insets.bottom, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
+                self.inputPanelNode = inputPanelNode
+                self.insertSubnode(inputPanelNode, aboveSubnode: self.navigateButtons)
+            } else {
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, maxHeight: layout.size.height - insets.top - insets.bottom, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
+            }
+        } else {
+            dismissedInputPanelNode = self.inputPanelNode
+            self.inputPanelNode = nil
+        }
+        
+        if let inputMediaNode = self.inputMediaNode, inputMediaNode != self.inputNode {
+            let _ = inputMediaNode.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+        }
         
         transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 56.0)))
         

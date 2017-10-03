@@ -376,7 +376,7 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
         }).start()
     }, resetNotifications: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController()
+        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Notifications_Reset, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()

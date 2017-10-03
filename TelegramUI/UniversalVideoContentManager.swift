@@ -188,7 +188,7 @@ final class UniversalVideoContentManager {
             if let current = self.holders[content.id] {
                 subscriber.putNext(current.statusValue)
             } else {
-                subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(content.duration), timestamp: 0.0, status: .paused))
+                subscriber.putNext(nil)
             }
             
             return ActionDisposable {

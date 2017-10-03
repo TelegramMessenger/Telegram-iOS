@@ -4,13 +4,19 @@ import UIKit
 import TelegramCore
 import SwiftSignalKit
 import MtProtoKitDynamic
+import Display
 
 var legacyComponentsApplication: UIApplication!
+private var legacyComponentsAccount: Account?
 
 private var legacyLocalization = TGLocalization(version: 0, code: "en", dict: [:], isActive: true)
 
 func updateLegacyLocalization(strings: PresentationStrings) {
     legacyLocalization = TGLocalization(version: 0, code: strings.languageCode, dict: strings.dict, isActive: true)
+}
+
+public func updateLegacyComponentsAccount(_ account: Account?) {
+    legacyComponentsAccount = account
 }
 
 private var legacyDocumentsStorePath: String?
@@ -184,11 +190,46 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func currentWallpaperInfo() -> TGWallpaperInfo! {
-        return nil
+        if let account = legacyComponentsAccount {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            switch presentationData.chatWallpaper {
+                case .builtin:
+                    return TGBuiltinWallpaperInfo()
+                case let .color(color):
+                    return TGColorWallpaperInfo(color: UInt32(bitPattern: color))
+                case let .image(representations):
+                    if let resource = largestImageRepresentation(representations)?.resource, let path = account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
+                        return TGCustomImageWallpaperInfo(image: image)
+                    } else {
+                        return TGBuiltinWallpaperInfo()
+                    }
+            }
+        } else {
+            return TGBuiltinWallpaperInfo()
+        }
     }
     
     public func currentWallpaperImage() -> UIImage! {
-        return nil
+        if let account = legacyComponentsAccount {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            switch presentationData.chatWallpaper {
+                case .builtin:
+                    return nil
+                case let .color(color):
+                    return generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+                        context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
+                    })
+                case let .image(representations):
+                    if let resource = largestImageRepresentation(representations)?.resource, let path = account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
+                        return image
+                    } else {
+                        return nil
+                    }
+            }
+        } else {
+            return nil
+        }
     }
     
     public func sharedMediaImageProcessingThreadPool() -> SThreadPool! {

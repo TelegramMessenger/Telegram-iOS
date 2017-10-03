@@ -216,10 +216,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             
             self.scrubberView.setStatusSignal(videoNode.status |> map { value -> MediaPlayerStatus in
-                if let value = value {
+                if let value = value, !value.duration.isZero {
                     return value
                 } else {
-                    return MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: Double(item.content.duration), timestamp: 0.0, status: .paused)
+                    return MediaPlayerStatus(generationTimestamp: 0.0, duration: max(Double(item.content.duration), 0.01), timestamp: 0.0, status: .paused)
                 }
             })
             
@@ -299,7 +299,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateIn(from node: ASDisplayNode) {
+    override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
         guard let videoNode = self.videoNode else {
             return
         }
@@ -319,7 +319,47 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         } else {
             var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
             let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
+            let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+            let transformedCopyViewFinalFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
             
+            let surfaceCopyView = node.view.snapshotContentTree()!
+            let copyView = node.view.snapshotContentTree()!
+            
+            addToTransitionSurface(surfaceCopyView)
+            
+            var transformedSurfaceFrame: CGRect?
+            var transformedSurfaceFinalFrame: CGRect?
+            if let contentSurface = surfaceCopyView.superview {
+                transformedSurfaceFrame = node.view.convert(node.view.bounds, to: contentSurface)
+                transformedSurfaceFinalFrame = videoNode.view.convert(videoNode.view.bounds, to: contentSurface)
+            }
+            
+            if let transformedSurfaceFrame = transformedSurfaceFrame {
+                surfaceCopyView.frame = transformedSurfaceFrame
+            }
+            
+            self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
+            copyView.frame = transformedSelfFrame
+            
+            copyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
+            
+            surfaceCopyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+            
+            copyView.layer.animatePosition(from: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak copyView] _ in
+                copyView?.removeFromSuperview()
+            })
+            let scale = CGSize(width: transformedCopyViewFinalFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewFinalFrame.size.height / transformedSelfFrame.size.height)
+            copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
+            
+            if let transformedSurfaceFrame = transformedSurfaceFrame, let transformedSurfaceFinalFrame = transformedSurfaceFinalFrame {
+                surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak surfaceCopyView] _ in
+                    surfaceCopyView?.removeFromSuperview()
+                })
+                let scale = CGSize(width: transformedSurfaceFinalFrame.size.width / transformedSurfaceFrame.size.width, height: transformedSurfaceFinalFrame.size.height / transformedSurfaceFrame.size.height)
+                surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
+            }
+            
+            videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             videoNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: videoNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
             
             transformedFrame.origin = CGPoint()
@@ -332,12 +372,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 let transform = CATransform3DScale(pictureInPictureNode.layer.transform, transformedPlaceholderFrame.size.width / pictureInPictureNode.layer.bounds.size.width, transformedPlaceholderFrame.size.height / pictureInPictureNode.layer.bounds.size.height, 1.0)
                 pictureInPictureNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: pictureInPictureNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
                 
+                pictureInPictureNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                 pictureInPictureNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: pictureInPictureNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
             }
         }
     }
     
-    override func animateOut(to node: ASDisplayNode, completion: @escaping () -> Void) {
+    override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         guard let videoNode = self.videoNode else {
             completion()
             return
@@ -353,18 +394,30 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         var copyCompleted = false
         
         let copyView = node.view.snapshotContentTree()!
+        let surfaceCopyView = node.view.snapshotContentTree()!
+        
+        addToTransitionSurface(surfaceCopyView)
+        
+        var transformedSurfaceFrame: CGRect?
+        var transformedSurfaceCopyViewInitialFrame: CGRect?
+        if let contentSurface = surfaceCopyView.superview {
+            transformedSurfaceFrame = node.view.convert(node.view.bounds, to: contentSurface)
+            transformedSurfaceCopyViewInitialFrame = videoNode.view.convert(videoNode.view.bounds, to: contentSurface)
+        }
         
         self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
-        let intermediateCompletion = { [weak copyView] in
+        let intermediateCompletion = { [weak copyView, weak surfaceCopyView] in
             if positionCompleted && boundsCompleted && copyCompleted {
                 copyView?.removeFromSuperview()
+                surfaceCopyView?.removeFromSuperview()
                 completion()
             }
         }
         
-        copyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, removeOnCompletion: false)
+        copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false)
+        surfaceCopyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
         
         copyView.layer.animatePosition(from: CGPoint(x: transformedCopyViewInitialFrame.midX, y: transformedCopyViewInitialFrame.midY), to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
         let scale = CGSize(width: transformedCopyViewInitialFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewInitialFrame.size.height / transformedSelfFrame.size.height)
@@ -373,12 +426,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             intermediateCompletion()
         })
         
+        if let transformedSurfaceFrame = transformedSurfaceFrame, let transformedCopyViewInitialFrame = transformedSurfaceCopyViewInitialFrame {
+            surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedCopyViewInitialFrame.midX, y: transformedCopyViewInitialFrame.midY), to: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            let scale = CGSize(width: transformedCopyViewInitialFrame.size.width / transformedSurfaceFrame.size.width, height: transformedCopyViewInitialFrame.size.height / transformedSurfaceFrame.size.height)
+            surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), to: NSValue(caTransform3D: CATransform3DIdentity), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
+        }
+        
         videoNode.layer.animatePosition(from: videoNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             positionCompleted = true
             intermediateCompletion()
         })
         
-        videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         
         self.statusButtonNode.layer.animatePosition(from: self.statusButtonNode.layer.position, to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             //positionCompleted = true

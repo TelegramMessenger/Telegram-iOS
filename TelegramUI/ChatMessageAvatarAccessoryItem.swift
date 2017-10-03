@@ -3,6 +3,8 @@ import Postbox
 import Display
 import TelegramCore
 
+private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 15.0)!
+
 final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
     private let account: Account
     private let peerId: PeerId
@@ -38,7 +40,7 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
     let avatarNode: AvatarNode
     
     override init() {
-        self.avatarNode = AvatarNode(font: Font.regular(14.0))
+        self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = true
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         

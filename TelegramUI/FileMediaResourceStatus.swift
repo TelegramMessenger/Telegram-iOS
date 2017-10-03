@@ -13,7 +13,7 @@ enum FileMediaResourceStatus {
     case playbackStatus(FileMediaResourcePlaybackStatus)
 }
 
-func fileMediaResourceStatus(account: Account, file: TelegramMediaFile, message: Message) -> Signal<FileMediaResourceStatus, NoError> {
+func messageFileMediaResourceStatus(account: Account, file: TelegramMediaFile, message: Message) -> Signal<FileMediaResourceStatus, NoError> {
     let playbackStatus: Signal<MediaPlayerPlaybackStatus?, NoError>
     if let applicationContext = account.applicationContext as? TelegramApplicationContext, let (playlistId, itemId) = peerMessageAudioPlaylistAndItemIds(message) {
         playbackStatus = applicationContext.mediaManager.filteredPlaylistPlayerStateAndStatus(playlistId: playlistId, itemId: itemId)
@@ -35,7 +35,7 @@ func fileMediaResourceStatus(account: Account, file: TelegramMediaFile, message:
     }
     
     if message.flags.isSending {
-        return combineLatest(chatMessageFileStatus(account: account, file: file), account.pendingMessageManager.pendingMessageStatus(message.id), playbackStatus)
+        return combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id), playbackStatus)
             |> map { resourceStatus, pendingStatus, playbackStatus -> FileMediaResourceStatus in
                 if let playbackStatus = playbackStatus {
                     switch playbackStatus {
@@ -51,13 +51,13 @@ func fileMediaResourceStatus(account: Account, file: TelegramMediaFile, message:
                         }
                     }
                 } else if let pendingStatus = pendingStatus {
-                    return .fetchStatus(.Fetching(progress: pendingStatus.progress))
+                    return .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
                 } else {
                     return .fetchStatus(resourceStatus)
                 }
         }
     } else {
-        return combineLatest(chatMessageFileStatus(account: account, file: file), playbackStatus)
+        return combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), playbackStatus)
             |> map { resourceStatus, playbackStatus -> FileMediaResourceStatus in
                 if let playbackStatus = playbackStatus {
                     switch playbackStatus {

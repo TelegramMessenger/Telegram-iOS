@@ -330,17 +330,18 @@ final class ListMessageFileItemNode: ListMessageNode {
             if let selectedMedia = selectedMedia {
                 if mediaUpdated {
                     let account = item.account
+                    let messageId = message.id
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(chatMessageFileInteractiveFetched(account: account, file: selectedMedia).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: selectedMedia).start())
                         }
                     }, cancel: {
-                        chatMessageFileCancelInteractiveFetch(account: account, file: selectedMedia)
+                        messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: selectedMedia)
                     })
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = fileMediaResourceStatus(account: item.account, file: selectedMedia, message: message)
+                    updatedStatusSignal = messageFileMediaResourceStatus(account: item.account, file: selectedMedia, message: message)
                     
                     if isAudio {
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
@@ -481,8 +482,12 @@ final class ListMessageFileItemNode: ListMessageNode {
                                         switch status {
                                             case let .fetchStatus(fetchStatus):
                                                 switch fetchStatus {
-                                                    case let .Fetching(progress):
-                                                        strongSelf.progressNode.state = .Fetching(progress: progress)
+                                                    case let .Fetching(isActive, progress):
+                                                        var adjustedProgress = progress
+                                                        if isActive {
+                                                            adjustedProgress = max(adjustedProgress, 0.027)
+                                                        }
+                                                        strongSelf.progressNode.state = .Fetching(progress: adjustedProgress)
                                                     case .Local:
                                                         if isAudio {
                                                             strongSelf.progressNode.state = .Play
@@ -584,7 +589,7 @@ final class ListMessageFileItemNode: ListMessageNode {
             }
             
             switch maybeFetchStatus {
-                case let .Fetching(progress):
+                case let .Fetching(_, progress):
                     let progressFrame = CGRect(x: 65.0, y: size.height - 2.0, width: floor((size.width - 65.0) * CGFloat(progress)), height: 2.0)
                     if self.linearProgressNode.supernode == nil {
                         self.addSubnode(self.linearProgressNode)

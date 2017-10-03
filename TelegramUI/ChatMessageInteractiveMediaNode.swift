@@ -265,12 +265,13 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 }
                             }
                             
+                            let messageId = message.id
                             updatedFetchControls = FetchControls(fetch: {
                                 if let strongSelf = self {
-                                    strongSelf.fetchDisposable.set(chatMessageFileInteractiveFetched(account: account, file: file).start())
+                                    strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: file).start())
                                 }
                             }, cancel: {
-                                    chatMessageFileCancelInteractiveFetch(account: account, file: file)
+                                messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: file)
                             })
                         }
                     }
@@ -285,7 +286,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                             if pendingStatus.isRunning {
                                                 progress = max(progress, 0.027)
                                             }
-                                            return .Fetching(progress: progress)
+                                            return .Fetching(isActive: pendingStatus.isRunning, progress: progress)
                                         } else {
                                             return resourceStatus
                                         }
@@ -294,14 +295,14 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 updatedStatusSignal = chatMessagePhotoStatus(account: account, photo: image)
                             }
                         } else if let file = media as? TelegramMediaFile {
-                            updatedStatusSignal = combineLatest(chatMessageFileStatus(account: account, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
+                            updatedStatusSignal = combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
                                 |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                     if let pendingStatus = pendingStatus {
                                         var progress = pendingStatus.progress
                                         if pendingStatus.isRunning {
                                             progress = max(progress, 0.027)
                                         }
-                                        return .Fetching(progress: progress)
+                                        return .Fetching(isActive: pendingStatus.isRunning, progress: progress)
                                     } else {
                                         return resourceStatus
                                     }
@@ -420,8 +421,12 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                             var state: RadialStatusNodeState
                                             let bubbleTheme = theme.chat.bubble
                                             switch status {
-                                                case let .Fetching(progress):
-                                                    state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(progress), cancelEnabled: true)
+                                                case let .Fetching(isActive, progress):
+                                                    var adjustedProgress = progress
+                                                    if isActive {
+                                                        adjustedProgress = max(adjustedProgress, 0.027)
+                                                    }
+                                                    state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, value: CGFloat(adjustedProgress), cancelEnabled: true)
                                                 case .Local:
                                                     state = .none
                                                     if isSecretMedia && secretProgressIcon != nil {

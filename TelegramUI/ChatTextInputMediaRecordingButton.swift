@@ -217,8 +217,9 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.theme = theme
         self.innerIconView = UIImageView()
         self.presentController = presentController
-        
-        super.init(frame: CGRect())
+         
+        let mediaRecordingControl = theme.chat.inputPanel.mediaRecordingControl
+        super.init(theme: TGModernConversationInputMicButtonTheme(buttonColor: mediaRecordingControl.buttonColor, micLevel: mediaRecordingControl.micLevelColor, buttonControlColor: mediaRecordingControl.activeIconColor, panelControlFill: mediaRecordingControl.panelControlFillColor, panelControlStroke: mediaRecordingControl.panelControlStrokeColor, panelControlContentPrimaryColor: mediaRecordingControl.panelControlContentPrimaryColor, panelControlContentAccentColor: mediaRecordingControl.panelControlContentAccentColor))
         
         self.insertSubview(self.innerIconView, at: 0)
         

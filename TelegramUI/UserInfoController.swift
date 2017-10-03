@@ -523,7 +523,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         openChatImpl?()
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController()
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
@@ -595,7 +595,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             return modifier.getPeer(peerId)
         } |> deliverOnMainQueue).start(next: { peer in
             if let peer = peer as? TelegramUser, let peerPhoneNumber = peer.phone, formatPhoneNumber(number) == formatPhoneNumber(peerPhoneNumber) {
-                let controller = ActionSheetController()
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let controller = ActionSheetController(presentationTheme: presentationData.theme)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
                 }
@@ -758,7 +759,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 }
             }
             if let (node, _) = result {
-                return GalleryTransitionArguments(transitionNode: node, transitionContainerNode: controller.displayNode, transitionBackgroundNode: controller.displayNode)
+                return GalleryTransitionArguments(transitionNode: node, addToTransitionSurface: { _ in
+                })
             }
         }
         return nil

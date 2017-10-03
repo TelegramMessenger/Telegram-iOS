@@ -144,6 +144,7 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
         basicAnimation.toValue = NSNumber(value: Float.pi * 2.0)
         basicAnimation.repeatCount = Float.infinity
         basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        basicAnimation.beginTime = 1.0
         
         self.layer.add(basicAnimation, forKey: "progressRotation")
     }

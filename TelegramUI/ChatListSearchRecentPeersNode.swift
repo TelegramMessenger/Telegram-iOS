@@ -26,6 +26,7 @@ private func calculateItemCustomWidth(width: CGFloat) -> CGFloat {
 final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private let mode: HorizontalPeerItemMode
     private let sectionHeaderNode: ListSectionHeaderNode
     private let listView: ListView
     private let share: Bool
@@ -38,9 +39,10 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private var items: [ListViewItem] = []
     private var itemCustomWidth: CGFloat?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false) {
+    init(account: Account, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false) {
         self.theme = theme
         self.strings = strings
+        self.mode = mode
         self.share = share
         self.peerSelected = peerSelected
         self.isPeerSelected = isPeerSelected
@@ -60,7 +62,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
             if let strongSelf = self {
                 var items: [ListViewItem] = []
                 for peer in peers {
-                    items.append(HorizontalPeerItem(theme: strongSelf.theme, strings: strongSelf.strings, account: account, peer: peer, action: peerSelected, isPeerSelected: isPeerSelected, customWidth: strongSelf.itemCustomWidth))
+                    items.append(HorizontalPeerItem(theme: strongSelf.theme, strings: strongSelf.strings, mode: mode, account: account, peer: peer, action: peerSelected, isPeerSelected: isPeerSelected, customWidth: strongSelf.itemCustomWidth))
                 }
                 strongSelf.items = items
                 strongSelf.listView.transaction(deleteIndices: [], insertIndicesAndItems: (0 ..< items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [], updateOpaqueState: nil)
@@ -110,7 +112,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
             
             for i in 0 ..< self.items.count {
                 if let item = self.items[i] as? HorizontalPeerItem {
-                    self.items[i] = HorizontalPeerItem(theme: self.theme, strings: self.strings, account: item.account, peer: item.peer, action: self.peerSelected, isPeerSelected: self.isPeerSelected, customWidth: itemCustomWidth)
+                    self.items[i] = HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: self.mode, account: item.account, peer: item.peer, action: self.peerSelected, isPeerSelected: self.isPeerSelected, customWidth: itemCustomWidth)
                     updateItems.append(ListViewUpdateItem(index: i, previousIndex: i, item: self.items[i], directionHint: nil))
                 }
             }

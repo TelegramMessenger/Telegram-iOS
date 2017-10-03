@@ -239,12 +239,6 @@ final class TelegramVideoNode: OverlayMediaItemNode {
         }
         
         self.imageNode.setSignal(account: account, signal: chatMessageVideo(account: account, video: source.file))
-        
-        self.statusDisposable = (chatMessageFileStatus(account: account, file: source.file) |> deliverOnMainQueue).start(next: { [weak self] status in
-            if let strongSelf = self {
-                
-            }
-        })
     }
     
     deinit {

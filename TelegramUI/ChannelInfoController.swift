@@ -605,7 +605,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .generic), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController()
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
@@ -671,7 +671,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         
     }, leaveChannel: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController()
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
@@ -847,7 +847,8 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 }
             }
             if let (node, _) = result {
-                return GalleryTransitionArguments(transitionNode: node, transitionContainerNode: controller.displayNode, transitionBackgroundNode: controller.displayNode)
+                return GalleryTransitionArguments(transitionNode: node, addToTransitionSurface: { _ in
+                })
             }
         }
         return nil

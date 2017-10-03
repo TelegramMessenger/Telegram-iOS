@@ -238,9 +238,10 @@ func passcodeOptionsController(account: Account) -> ViewController {
             legacyController?.dismiss()
         }
     }, turnPasscodeOff: {
-        let actionSheet = ActionSheetController()
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: "Turn Passcode Off", color: .destructive, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_TurnPasscodeOff, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
                 let challenge = PostboxAccessChallengeData.none
@@ -253,7 +254,7 @@ func passcodeOptionsController(account: Account) -> ViewController {
                 })
             })
             ]), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])
@@ -286,7 +287,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
             legacyController?.dismiss()
         }
     }, changePasscodeTimeout: {
-        let actionSheet = ActionSheetController()
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         var items: [ActionSheetItem] = []
         let setAction: (Int32?) -> Void = { value in
             let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
@@ -317,7 +319,7 @@ func passcodeOptionsController(account: Account) -> ViewController {
         }
         
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])

@@ -68,7 +68,7 @@ final class CommandChatInputPanelItem: ListViewItem {
     }
 }
 
-private let avatarFont = Font.regular(16.0)
+private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 16.0)!
 private let textFont = Font.medium(14.0)
 private let descriptionFont = Font.regular(14.0)
 private let descriptionColor = UIColor(rgb: 0x9099A2)

@@ -83,6 +83,8 @@ enum PresentationResourceKey: Int32 {
     case chatBubbleActionButtonBottomRightImage
     case chatBubbleActionButtonBottomSingleImage
     
+    case chatBubbleReplyThumbnailPlayImage
+    
     case chatInfoItemBackgroundImage
     case chatEmptyItemBackgroundImage
     case chatEmptyItemIconImage
@@ -134,6 +136,11 @@ enum PresentationResourceKey: Int32 {
     case chatMessageAttachedContentHighlightedButtonIncoming
     case chatMessageAttachedContentButtonOutgoing
     case chatMessageAttachedContentHighlightedButtonOutgoing
+    
+    case chatMessageAttachedContentButtonIconInstantIncoming
+    case chatMessageAttachedContentHighlightedButtonIconInstantIncoming
+    case chatMessageAttachedContentButtonIconInstantOutgoing
+    case chatMessageAttachedContentHighlightedButtonIconInstantOutgoing
     
     case sharedMediaFileDownloadStartIcon
     case sharedMediaFileDownloadPauseIcon

@@ -82,6 +82,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
     private var titleNode: TextNode?
     private var textNode: TextNode?
     private var imageNode: TransformImageNode?
+    private var overlayIconNode: ASImageNode?
     private var previousMedia: Media?
     
     override init() {
@@ -129,6 +130,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             var leftInset: CGFloat = 10.0
             
+            var overlayIcon: UIImage?
+            
             var updatedMedia: Media?
             var imageDimensions: CGSize?
             for media in message.media {
@@ -138,11 +141,14 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         imageDimensions = representation.dimensions
                     }
                     break
-                } else if let file = media as? TelegramMediaFile {
+                } else if let file = media as? TelegramMediaFile, file.isVideo {
                     updatedMedia = file
-                    if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                    if let dimensions = file.dimensions {
+                        imageDimensions = dimensions
+                    } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
                         imageDimensions = representation.dimensions
                     }
+                    overlayIcon = PresentationResourcesChat.chatBubbleReplyThumbnailPlayImage(theme)
                     break
                 }
             }
@@ -166,7 +172,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 if let image = updatedMedia as? TelegramMediaImage {
                     updateImageSignal = chatMessagePhotoThumbnail(account: account, photo: image)
                 } else if let file = updatedMedia as? TelegramMediaFile {
-                    
+                    updateImageSignal = chatMessageVideoThumbnail(account: account, file: file)
                 }
             }
             
@@ -204,6 +210,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     node.contentNode.addSubnode(textNode)
                 }
                 
+                var imageFrame: CGRect?
                 if let applyImage = applyImage {
                     let imageNode = applyImage()
                     if node.imageNode == nil {
@@ -211,6 +218,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.addSubnode(imageNode)
                         node.imageNode = imageNode
                     }
+                    imageFrame = CGRect(origin: CGPoint(x: 8.0, y: 3.0), size: CGSize(width: 30.0, height: 30.0))
                     imageNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 3.0), size: CGSize(width: 30.0, height: 30.0))
                     
                     if let updateImageSignal = updateImageSignal {
@@ -219,6 +227,25 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 } else if let imageNode = node.imageNode {
                     imageNode.removeFromSupernode()
                     node.imageNode = nil
+                }
+                
+                if let overlayIcon = overlayIcon, let imageFrame = imageFrame {
+                    let overlayIconNode: ASImageNode
+                    if let current = node.overlayIconNode {
+                        overlayIconNode = current
+                    } else {
+                        overlayIconNode = ASImageNode()
+                        overlayIconNode.isLayerBacked = true
+                        overlayIconNode.displayWithoutProcessing = true
+                        overlayIconNode.displaysAsynchronously = false
+                        node.overlayIconNode = overlayIconNode
+                        node.addSubnode(overlayIconNode)
+                    }
+                    overlayIconNode.image = overlayIcon
+                    overlayIconNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floor((imageFrame.size.width - overlayIcon.size.width) / 2.0), y: imageFrame.minY + floor((imageFrame.size.height - overlayIcon.size.height) / 2.0)), size: overlayIcon.size)
+                } else if let overlayIconNode = node.overlayIconNode {
+                    overlayIconNode.removeFromSupernode()
+                    node.overlayIconNode = nil
                 }
                 
                 titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: titleLayout.size)

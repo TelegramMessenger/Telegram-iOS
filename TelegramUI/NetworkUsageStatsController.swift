@@ -382,7 +382,7 @@ func networkUsageStatsController(account: Account) -> ViewController {
     
     let arguments = NetworkUsageStatsControllerArguments(resetStatistics: { [weak stats] section in
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController()
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }

@@ -194,7 +194,7 @@ final class EmbedVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateIn(from node: ASDisplayNode) {
+    override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
         guard let videoNode = self.videoNode else {
             return
         }
@@ -224,7 +224,7 @@ final class EmbedVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateOut(to node: ASDisplayNode, completion: @escaping () -> Void) {
+    override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         guard let videoNode = self.videoNode else {
             completion()
             return
@@ -398,7 +398,8 @@ final class EmbedVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { _, _ in
                         if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
-                            return GalleryTransitionArguments(transitionNode: overlayNode, transitionContainerNode: overlaySupernode, transitionBackgroundNode: ASDisplayNode())
+                            return GalleryTransitionArguments(transitionNode: overlayNode, addToTransitionSurface: { _ in
+                            })
                         }
                         return nil
                     }))

@@ -132,6 +132,7 @@ public class ChatController: TelegramController {
         let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] id in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) {
                 var galleryMedia: Media?
+                var otherMedia: Media?
                 for media in message.media {
                     if let file = media as? TelegramMediaFile {
                         if !file.isAnimated {
@@ -147,6 +148,8 @@ public class ChatController: TelegramController {
                         }
                     } else if let mapMedia = media as? TelegramMediaMap {
                         galleryMedia = mapMedia
+                    } else if let contactMedia = media as? TelegramMediaContact {
+                        otherMedia = contactMedia
                     }
                 }
                 
@@ -210,12 +213,66 @@ public class ChatController: TelegramController {
                                     }
                                 }
                                 if let transitionNode = transitionNode {
-                                    return GalleryTransitionArguments(transitionNode: transitionNode, transitionContainerNode: strongSelf.chatDisplayNode, transitionBackgroundNode: strongSelf.chatDisplayNode.historyNode)
+                                    return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: { view in
+                                        if let strongSelf = self {
+                                            strongSelf.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.chatDisplayNode.historyNode.view)
+                                        }
+                                    })
                                 }
                             }
                             return nil
                         }))
                     }
+                } else if let contact = otherMedia as? TelegramMediaContact {
+                    let _ = (strongSelf.account.postbox.modify { modifier -> Bool? in
+                        if let peerId = contact.peerId {
+                            return modifier.isPeerContact(peerId: peerId)
+                        } else {
+                            return nil
+                        }
+                    } |> deliverOnMainQueue).start(next: { isContact in
+                        if let strongSelf = self {
+                            let controller = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                            let dismissAction: () -> Void = { [weak controller] in
+                                controller?.dismissAnimated()
+                            }
+                            var items: [ActionSheetItem] = []
+                            
+                            if let peerId = contact.peerId {
+                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_SendMessage, action: {
+                                    dismissAction()
+                                    if let strongSelf = self {
+                                        strongSelf.controllerInteraction?.openPeer(peerId, .chat(textInputState: nil), nil)
+                                    }
+                                }))
+                                if let isContact = isContact, !isContact {
+                                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddContact, action: {
+                                        dismissAction()
+                                        if let strongSelf = self {
+                                            let _ = addContactPeerInteractively(account: strongSelf.account, peerId: peerId, phone: contact.phoneNumber).start()
+                                        }
+                                    }))
+                                }
+                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.UserInfo_TelegramCall, action: {
+                                    dismissAction()
+                                    if let strongSelf = self {
+                                        strongSelf.controllerInteraction?.callPeer(peerId)
+                                    }
+                                }))
+                            }
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.UserInfo_PhoneCall, action: {
+                                dismissAction()
+                                if let strongSelf = self {
+                                    strongSelf.account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(contact.phoneNumber).replacingOccurrences(of: " ", with: ""))")
+                                }
+                            }))
+                            controller.setItemGroups([
+                                ActionSheetItemGroup(items: items),
+                                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                                ])
+                            strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        }
+                    })
                 }
             }
         }, openSecretMessagePreview: { [weak self] messageId in
@@ -523,7 +580,7 @@ public class ChatController: TelegramController {
             if let strongSelf = self {
                 switch action {
                     case let .url(url):
-                        let actionSheet = ActionSheetController()
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: url),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -550,7 +607,7 @@ public class ChatController: TelegramController {
                         strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .peerMention(peerId, mention):
-                        let actionSheet = ActionSheetController()
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                         var items: [ActionSheetItem] = []
                         if !mention.isEmpty {
                             items.append(ActionSheetTextItem(title: mention))
@@ -575,7 +632,7 @@ public class ChatController: TelegramController {
                         strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .mention(mention):
-                        let actionSheet = ActionSheetController()
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: mention),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -596,7 +653,7 @@ public class ChatController: TelegramController {
                         strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .command(command):
-                        let actionSheet = ActionSheetController()
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: command),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, action: { [weak actionSheet] in
@@ -617,7 +674,7 @@ public class ChatController: TelegramController {
                         strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .hashtag(hashtag):
-                        let actionSheet = ActionSheetController()
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: hashtag),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -1179,7 +1236,7 @@ public class ChatController: TelegramController {
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, animateIn: false), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -1343,7 +1400,7 @@ public class ChatController: TelegramController {
                 if let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
                     strongSelf.messageContextDisposable.set((chatDeleteMessagesOptions(account: strongSelf.account, messageIds: messageIds) |> deliverOnMainQueue).start(next: { options in
                         if let strongSelf = self, !options.isEmpty {
-                            let actionSheet = ActionSheetController()
+                            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                             var items: [ActionSheetItem] = []
                             var personalPeerName: String?
                             var isChannel = false
@@ -1391,9 +1448,6 @@ public class ChatController: TelegramController {
             }
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
-                //let controller = ShareRecipientsActionSheetController()
-                //strongSelf.present(controller, in: .window(.root))
-                
                 if let forwardMessageIdsSet = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds {
                     let forwardMessageIds = Array(forwardMessageIdsSet).sorted()
                     
@@ -2098,7 +2152,7 @@ public class ChatController: TelegramController {
             case .cancelMessageSelection:
                 self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             case .clearHistory:
-                let actionSheet = ActionSheetController()
+                let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ClearAll, color: .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()
@@ -2169,7 +2223,7 @@ public class ChatController: TelegramController {
                         })
                     }
                 })
-                let message: EnqueueMessage = .message(text: "", attributes: [], media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: venue), replyToMessageId: replyMessageId)
+                let message: EnqueueMessage = .message(text: "", attributes: [], media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: venue, liveBroadcastingTimeout: nil), replyToMessageId: replyMessageId)
                 strongSelf.sendMessages([message])
             }
         }), in: .window(.root))
@@ -2511,7 +2565,7 @@ public class ChatController: TelegramController {
             } else {
                 title = self.presentationData.strings.Conversation_ReportSpamAndLeave
             }
-            let actionSheet = ActionSheetController()
+            let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: title, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()

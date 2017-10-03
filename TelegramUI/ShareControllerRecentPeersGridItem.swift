@@ -56,7 +56,7 @@ final class ShareControllerRecentPeersGridItemNode: GridItemNode {
                 peersNode = currentPeersNode
                 peersNode.updateThemeAndStrings(theme: theme, strings: strings)
             } else {
-                peersNode = ChatListSearchRecentPeersNode(account: account, theme: theme, strings: strings, peerSelected: { [weak self] peer in
+                peersNode = ChatListSearchRecentPeersNode(account: account, theme: theme, mode: .actionSheet, strings: strings, peerSelected: { [weak self] peer in
                     self?.controllerInteraction?.togglePeer(peer)
                 }, isPeerSelected: { [weak self] peerId in
                     return self?.controllerInteraction?.selectedPeerIds.contains(peerId) ?? false

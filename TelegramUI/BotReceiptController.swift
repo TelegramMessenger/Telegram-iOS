@@ -32,6 +32,8 @@ final class BotReceiptController: ViewController {
         
         super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
         
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        
         var title = self.presentationData.strings.Checkout_Receipt_Title
         if invoice.flags.contains(.isTest) {
             title += " (Test)"

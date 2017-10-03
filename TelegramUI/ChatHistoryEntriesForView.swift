@@ -8,7 +8,9 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
     for entry in view.entries {
         switch entry {
             case let .HoleEntry(hole, _):
-                entries.append(.HoleEntry(hole, theme, strings))
+                if view.tagMask == nil {
+                    entries.append(.HoleEntry(hole, theme, strings))
+                }
             case let .MessageEntry(message, read, _, monthLocation):
                 var isClearHistory = false
                 if !message.media.isEmpty {

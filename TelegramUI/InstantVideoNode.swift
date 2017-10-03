@@ -163,12 +163,6 @@ final class InstantVideoNode: OverlayMediaItemNode {
         
         self.imageNode.setSignal(account: account, signal: chatMessageVideo(account: account, video: source.file))
         
-        self.statusDisposable = (chatMessageFileStatus(account: account, file: source.file) |> deliverOnMainQueue).start(next: { [weak self] status in
-            if let strongSelf = self {
-                
-            }
-        })
-        
         self.manager.sharedVideoContextManager.withSharedVideoContext(id: self.source.id, { [weak self] context in
             if let strongSelf = self, let context = context as? SharedInstantVideoContext {
                 context.addPlaybackCompleted {

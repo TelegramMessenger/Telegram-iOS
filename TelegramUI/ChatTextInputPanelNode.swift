@@ -98,6 +98,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
     
+    private var validLayout: (CGFloat, CGFloat)?
+    
     var displayAttachmentMenu: () -> Void = { }
     var sendMessage: () -> Void = { }
     var updateHeight: () -> Void = { }
@@ -216,7 +218,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         self.micButton.offsetRecordingControls = { [weak self] in
             if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState {
-                let _ = strongSelf.updateLayout(width: strongSelf.bounds.size.width, transition: .immediate, interfaceState: presentationInterfaceState)
+                if let (width, maxHeight) = strongSelf.validLayout {
+                    let _ = strongSelf.updateLayout(width: width, maxHeight: maxHeight, transition: .immediate, interfaceState: presentationInterfaceState)
+                }
             }
         }
         self.micButton.stopRecording = { [weak self] in
@@ -279,7 +283,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     keyboardAppearance = .dark
             }
         }
-        textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
+        
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 1.0
+        paragraphStyle.lineHeightMultiple = 1.0
+        paragraphStyle.paragraphSpacing = 1.0
+        paragraphStyle.maximumLineHeight = 20.0
+        paragraphStyle.minimumLineHeight = 20.0
+        
+        textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor, NSAttributedStringKey.paragraphStyle.rawValue: paragraphStyle]
         textInputNode.clipsToBounds = true
         textInputNode.delegate = self
         textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
@@ -302,9 +314,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.view.addGestureRecognizer(recognizer)
     }
     
-    private func calculateTextFieldMetrics(width: CGFloat) -> (accessoryButtonsWidth: CGFloat, textFieldHeight: CGFloat) {
+    private func textFieldMaxHeight(_ maxHeight: CGFloat) -> CGFloat {
+        return max(33.0, maxHeight - (self.textFieldInsets.top + self.textFieldInsets.bottom + self.textInputViewInternalInsets.top + self.textInputViewInternalInsets.bottom))
+    }
+    
+    private func calculateTextFieldMetrics(width: CGFloat, maxHeight: CGFloat) -> (accessoryButtonsWidth: CGFloat, textFieldHeight: CGFloat) {
         let accessoryButtonInset = self.accessoryButtonInset
         let accessoryButtonSpacing = self.accessoryButtonSpacing
+        
+        let fieldMaxHeight = textFieldMaxHeight(maxHeight)
         
         var accessoryButtonsWidth: CGFloat = 0.0
         var firstButton = true
@@ -322,7 +340,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         if let textInputNode = self.textInputNode {
             let unboundTextFieldHeight = max(33.0, ceil(textInputNode.measure(CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height))
             
-            textFieldHeight = min(114.0, unboundTextFieldHeight)
+            let maxNumberOfLines = min(12, (Int(fieldMaxHeight - 11.0) - 33) / 22)
+            
+            //let numberOfLines = Int((unboundTextFieldHeight - 11.0) + 11.0) / 22
+            //unboundTextFieldHeight = CGFloat(numberOfLines) * 22.0 + 11.0
+            
+            let updatedMaxHeight = (CGFloat(maxNumberOfLines) * 22.0 + 10.0)
+            
+            textFieldHeight = min(updatedMaxHeight, unboundTextFieldHeight)
         } else {
             textFieldHeight = 33.0
         }
@@ -334,7 +359,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         return textFieldHeight + self.textFieldInsets.top + self.textFieldInsets.bottom + self.textInputViewInternalInsets.top + self.textInputViewInternalInsets.bottom
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {        
+    override func updateLayout(width: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        self.validLayout = (width, maxHeight)
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
@@ -460,7 +486,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.accessoryItemButtons = updatedButtons
         }
         
-        let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: width)
+        let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: width, maxHeight: maxHeight)
         let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
         
         self.micButton.updateMode(mode: interfaceState.interfaceState.mediaRecordingMode, animated: transition.isAnimated)
@@ -661,13 +687,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             let _ = placeholderApply()
             
-            contextPlaceholderNode.frame = CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + UIScreenPixel + audioRecordingItemsVerticalOffset), size: placeholderSize.size)
+            contextPlaceholderNode.frame = CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + audioRecordingItemsVerticalOffset), size: placeholderSize.size)
         } else if let contextPlaceholderNode = self.contextPlaceholderNode {
             self.contextPlaceholderNode = nil
             contextPlaceholderNode.removeFromSupernode()
         }
         
-        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + UIScreenPixel + audioRecordingItemsVerticalOffset), size: self.textPlaceholderNode.frame.size))
+        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + audioRecordingItemsVerticalOffset), size: self.textPlaceholderNode.frame.size))
         
         transition.updateFrame(layer: self.textInputBackgroundView.layer, frame: CGRect(x: self.textFieldInsets.left, y: self.textFieldInsets.top + audioRecordingItemsVerticalOffset, width: width - self.textFieldInsets.left - self.textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom))
         
@@ -820,10 +846,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
-        let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: self.bounds.size.width)
-        let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
-        if !self.bounds.size.height.isEqual(to: panelHeight) {
-            self.updateHeight()
+        if let (width, maxHeight) = self.validLayout {
+            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width, maxHeight: maxHeight)
+            let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
+            if !self.bounds.size.height.isEqual(to: panelHeight) {
+                self.updateHeight()
+            }
         }
     }
     

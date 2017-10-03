@@ -63,7 +63,7 @@ func telegramWallpapers(account: Account) -> Signal<[TelegramWallpaper], NoError
     return account.postbox.modify { modifier -> [TelegramWallpaper] in
         let items = modifier.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers)
         if items.count == 0 {
-            return [.builtin, .color(0x121212)]
+            return [.color(0x000000), .builtin]
         } else {
             return items.map { $0.contents as! TelegramWallpaper }
         }
@@ -81,8 +81,8 @@ func telegramWallpapers(account: Account) -> Signal<[TelegramWallpaper], NoError
                     }
                 }
                 items.removeFirst()
-                items.insert(.builtin, at: 0)
-                items.insert(.color(0x121212), at: 1)
+                items.insert(.color(0x000000), at: 0)
+                items.insert(.builtin, at: 1)
                 
                 if items == list {
                     return .complete()

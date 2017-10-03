@@ -367,7 +367,8 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             }
         }
     }, removePack: { id in
-        let controller = ActionSheetController()
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
