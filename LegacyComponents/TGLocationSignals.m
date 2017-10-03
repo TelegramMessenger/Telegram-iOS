@@ -112,6 +112,9 @@ NSString *const TGLocationGoogleGeocodeLocale = @"en";
 
 + (SSignal *)driveEta:(CLLocationCoordinate2D)destinationCoordinate
 {
+    if (iosMajorVersion() < 7)
+        return [SSignal single:@0];
+    
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
         MKPlacemark *destinationPlacemark = [[MKPlacemark alloc] initWithCoordinate:destinationCoordinate addressDictionary:nil];

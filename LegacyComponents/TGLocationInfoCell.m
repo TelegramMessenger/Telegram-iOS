@@ -88,6 +88,7 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
         [self.contentView addSubview:_directionsButton];
         
         _directionsButtonLabel = [[UILabel alloc] init];
+        _directionsButtonLabel.backgroundColor = [UIColor clearColor];
         _directionsButtonLabel.font = TGBoldSystemFontOfSize(17.0f);
         _directionsButtonLabel.text = TGLocalized(@"Map.Directions");
         _directionsButtonLabel.textAlignment = NSTextAlignmentCenter;

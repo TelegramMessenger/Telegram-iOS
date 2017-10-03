@@ -14,6 +14,18 @@
 
 #import <LegacyComponents/PSLMDBKeyValueStore.h>
 
+@interface TGEmbedCoubURLTaskAdapter : NSObject <NSURLSessionTaskDelegate>
+{
+    NSURLSession *_session;
+}
+
+@property (nonatomic, copy) void (^redirectUrl)(NSString *);
+
+- (instancetype)initWithURL:(NSString *)url;
+- (void)invalidate;
+
+@end
+
 @interface TGEmbedCoubPlayerView () <CBCoubPlayerDelegate>
 {
     NSString *_permalink;
@@ -181,6 +193,23 @@
     return false;
 }
 
++ (SSignal *)webHeadersRequestSignal:(NSString *)url
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        TGEmbedCoubURLTaskAdapter *adapter = [[TGEmbedCoubURLTaskAdapter alloc] initWithURL:url];
+        adapter.redirectUrl = ^(NSString *redirectUrl)
+        {
+            [subscriber putNext:redirectUrl];
+            [subscriber putCompletion];
+        };
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [adapter invalidate];
+        }];
+    }];
+}
+
 - (void)initializePlayer
 {
     NSString *url = [NSString stringWithFormat:@"http://coub.com/api/v2/coubs/%@", _permalink];
@@ -220,13 +249,41 @@
         }];
     }];
     
-    [_disposables add:[[dataSignal deliverOn:[SQueue mainQueue]] startWithNext:^(NSDictionary *data)
+    SSignal *locationSignal = [dataSignal mapToSignal:^SSignal *(NSDictionary *data)
+    {
+        NSDictionary *attributes = data[@"json"];
+        NSString *remoteVideoLocation = nil;
+        NSDictionary *fileVersions = attributes[@"file_versions"];
+        
+        if (fileVersions != nil)
+            remoteVideoLocation = fileVersions[@"iphone"][@"url"];
+        if (!remoteVideoLocation || [remoteVideoLocation isKindOfClass:[NSNull class]])
+            remoteVideoLocation = attributes[@"file"];
+        if (!remoteVideoLocation || [remoteVideoLocation isKindOfClass:[NSNull class]])
+            remoteVideoLocation = fileVersions[@"html5"][@"video"][@"med"][@"url"];
+        
+        if ([remoteVideoLocation rangeOfString:@"getvideo?"].location != NSNotFound)
+        {
+            NSString *location = [remoteVideoLocation stringByReplacingOccurrencesOfString:@"//coub" withString:@"https://coub"];
+            return [[TGEmbedCoubPlayerView webHeadersRequestSignal:location] map:^id(id result) {
+                NSMutableDictionary *updatedJson = [attributes mutableCopy];
+                updatedJson[@"explicitVideoLocation"] = result;
+                return updatedJson;
+            }];
+        }
+        else
+        {
+            return [SSignal single:attributes];
+        }
+    }];
+    
+    [_disposables add:[[locationSignal deliverOn:[SQueue mainQueue]] startWithNext:^(NSDictionary *data)
     {
         __strong TGEmbedCoubPlayerView *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
-        id<CBCoubAsset> coub = [CBCoubNew coubWithAttributes:data[@"json"]];
+        id<CBCoubAsset> coub = [CBCoubNew coubWithAttributes:data];
         strongSelf->_asset = coub;
         
         if ([coub isKindOfClass:[CBCoubNew class]])
@@ -408,6 +465,35 @@
         PSData value = {.data = (uint8_t *)data.bytes, .length = data.length};
         [writer writeValueForRawKey:key.data keyLength:key.length value:value.data valueLength:value.length];
     }];
+}
+
+@end
+
+
+@implementation TGEmbedCoubURLTaskAdapter
+
+- (instancetype)initWithURL:(NSString *)url
+{
+    self = [super init];
+    if (self != nil)
+    {
+        NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+        _session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
+        
+        [[_session dataTaskWithURL:[NSURL URLWithString:url] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {}] resume];
+    }
+    return self;
+}
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
+{
+    if (self.redirectUrl != nil)
+        self.redirectUrl(response.allHeaderFields[@"Location"]);
+}
+
+- (void)invalidate
+{
+    [_session invalidateAndCancel];
 }
 
 @end

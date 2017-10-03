@@ -91,47 +91,52 @@
 	if(attributes[@"is_done"])
 		coub.isDone = [attributes[@"is_done"] boolValue];
 
-	NSString *remoteVideoLocation = nil;
-	NSDictionary *fileVersions = attributes[@"file_versions"];
-	if(fileVersions)
-	{
-		remoteVideoLocation = fileVersions[@"iphone"][@"url"];
-	}
-	if(!remoteVideoLocation)
-		remoteVideoLocation = attributes[@"file"];
-    if(!remoteVideoLocation || [remoteVideoLocation isEqual:[NSNull null]])
-        remoteVideoLocation = fileVersions[@"mobile"][@"gifv"];
-    
-	if(remoteVideoLocation)
-	{
-		//
-		NSRange r1 = [remoteVideoLocation rangeOfString:@"iphone_"];
-		NSRange r2 = [remoteVideoLocation rangeOfString:@"_iphone"];
+    NSDictionary *fileVersions = attributes[@"file_versions"];
+    NSString *remoteVideoLocation = attributes[@"explicitVideoLocation"];
+    if (remoteVideoLocation)
+    {
+        remoteVideoLocation = [remoteVideoLocation stringByReplacingOccurrencesOfString:@"muted_mp4_med_" withString:@"mp4_med_"];
+        remoteVideoLocation = [remoteVideoLocation stringByReplacingOccurrencesOfString:@"_muted_med" withString:@"_med"];
+        coub.remoteVideoLocation = remoteVideoLocation;
+    }
+    else
+    {
+        if (fileVersions)
+            remoteVideoLocation = fileVersions[@"iphone"][@"url"];
+        if(!remoteVideoLocation)
+            remoteVideoLocation = attributes[@"file"];
+        if(!remoteVideoLocation || [remoteVideoLocation isEqual:[NSNull null]])
+            remoteVideoLocation = fileVersions[@"mobile"][@"gifv"];
         
-        if (r1.location == NSNotFound)
+        if (remoteVideoLocation)
         {
-            r1 = [remoteVideoLocation rangeOfString:@"gifv_"];
-            r2 = [remoteVideoLocation rangeOfString:@"_gifv"];
-        }
-        
-        if (r1.location != NSNotFound)
-        {
-            NSInteger loc = r1.length+r1.location;
-            NSString *someVideoMetadataString = [remoteVideoLocation substringWithRange:NSMakeRange(loc, r2.location - loc)];
+            NSRange r1 = [remoteVideoLocation rangeOfString:@"iphone_"];
+            NSRange r2 = [remoteVideoLocation rangeOfString:@"_iphone"];
+            
+            if (r1.location == NSNotFound)
+            {
+                r1 = [remoteVideoLocation rangeOfString:@"gifv_"];
+                r2 = [remoteVideoLocation rangeOfString:@"_gifv"];
+            }
+            
+            if (r1.location != NSNotFound)
+            {
+                NSInteger loc = r1.length+r1.location;
+                NSString *someVideoMetadataString = [remoteVideoLocation substringWithRange:NSMakeRange(loc, r2.location - loc)];
 
-            remoteVideoLocation = fileVersions[@"web"][@"template"];
-            NSRange r3 = [remoteVideoLocation rangeOfString:@"%{"];
+                remoteVideoLocation = fileVersions[@"web"][@"template"];
+                NSRange r3 = [remoteVideoLocation rangeOfString:@"%{"];
 
-            remoteVideoLocation = [remoteVideoLocation substringToIndex:r3.location];
-            remoteVideoLocation = [NSString stringWithFormat:@"%@mp4_med_size_%@_med.mp4", remoteVideoLocation, someVideoMetadataString];
-            coub.remoteVideoLocation = remoteVideoLocation;
+                remoteVideoLocation = [remoteVideoLocation substringToIndex:r3.location];
+                remoteVideoLocation = [NSString stringWithFormat:@"%@mp4_med_size_%@_med.mp4", remoteVideoLocation, someVideoMetadataString];
+                coub.remoteVideoLocation = remoteVideoLocation;
+            }
+            else if ([remoteVideoLocation rangeOfString:@"mp4_med_size_"].location != NSNotFound)
+            {
+                coub.remoteVideoLocation = remoteVideoLocation;
+            }
         }
-        else if ([remoteVideoLocation rangeOfString:@"mp4_med_size_"].location != NSNotFound)
-        {
-            coub.remoteVideoLocation = remoteVideoLocation;
-        }
-	}
-
+    }
 
 	NSString *remoteAudioLocation = [attributes[@"audio_versions"] coubURIFromVersionTemplateWithPreferredSubstitutions:@[@"low", @"mid", @"high"]];
 	if(!remoteAudioLocation)
@@ -150,8 +155,6 @@
 		audioTemplate = [audioTemplate stringByReplacingOccurrencesOfString:@"%{chunk}" withString:@"%i"];
 		coub.remoteAudioLocationPattern = audioTemplate;
 	}
-
-//	coub.remoteAudioLocationPattern = @"http://cdn1.akamai.coub.com/coub/simple/cw_audio/da1afb3df6f/734ed138b3577134af8bb/mp3_low_c%i_1400747442_out.mp3";
 
 	// big, med, small, ios_large
 	//KALog(@"ff=%@", [attributes[@"first_frame_versions"][@"versions"] componentsJoinedByString: @", "]);

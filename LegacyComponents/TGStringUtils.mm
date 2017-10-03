@@ -641,17 +641,11 @@ static bool isEmojiCharacter(NSString *singleChar)
 
         return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Weeks" count:(int32_t)number];
     }
-    else if (seconds < 60 * 60 * 24 * 365)
+    else
     {
         int number = MAX(1, (int)ceilf((int)(seconds / (60 * 60 * 24 * 29))));
         
         return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Months" count:(int32_t)number];
-    }
-    else
-    {
-        int number = (int)seconds / (60 * 60 * 24 * 365);
-        
-        return [legacyEffectiveLocalization() getPluralized:@"MessageTimer.Years" count:(int32_t)number];
     }
     
     return @"";
@@ -778,21 +772,6 @@ static bool isEmojiCharacter(NSString *singleChar)
         int number = (int)ceilf((seconds / (60 * 60 * 24 * 30.5f)));
         
         NSString *format = TGLocalized([self integerValueFormat:@"MessageTimer.Months_" value:number]);
-        
-        NSRange range = [format rangeOfString:@"%@"];
-        if (range.location != NSNotFound)
-        {
-            first = [[NSString alloc] initWithFormat:@"%d", number];
-            second = [[format substringFromIndex:range.location + range.length] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-        } else {
-            first = format;
-        }
-    }
-    else
-    {
-        int number = (int)seconds / (60 * 60 * 24 * 365);
-        
-        NSString *format = TGLocalized([self integerValueFormat:@"MessageTimer.Years_" value:number]);
         
         NSRange range = [format rangeOfString:@"%@"];
         if (range.location != NSNotFound)
@@ -934,28 +913,16 @@ static bool isEmojiCharacter(NSString *singleChar)
 {
     value = MAX(1 * 60, value);
     
-    if (value < 1 * 60 * 60)
-    {
-        value /= 60;
-        NSString *format = TGLocalized([self integerValueFormat:@"MuteFor.Minutes_" value:value]);
-        return [[NSString alloc] initWithFormat:format, [[NSString alloc] initWithFormat:@"%d", value]];
-    }
-    else if (value < 24 * 60 * 60)
+    if (value < 24 * 60 * 60)
     {
         value /= 60 * 60;
         NSString *format = TGLocalized([self integerValueFormat:@"MuteFor.Hours_" value:value]);
         return [[NSString alloc] initWithFormat:format, [[NSString alloc] initWithFormat:@"%d", value]];
     }
-    else if (value < 7 * 24 * 60 * 60)
+    else
     {
         value /= 24 * 60 * 60;
         NSString *format = TGLocalized([self integerValueFormat:@"MuteFor.Days_" value:value]);
-        return [[NSString alloc] initWithFormat:format, [[NSString alloc] initWithFormat:@"%d", value]];
-    }
-    else
-    {
-        value /= 7 * 24 * 60 * 60;
-        NSString *format = TGLocalized([self integerValueFormat:@"MuteFor.Weeks_" value:value]);
         return [[NSString alloc] initWithFormat:format, [[NSString alloc] initWithFormat:@"%d", value]];
     }
     

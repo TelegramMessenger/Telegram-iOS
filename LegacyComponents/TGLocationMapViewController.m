@@ -7,6 +7,7 @@
 #import "TGFont.h"
 #import "TGLocationUtils.h"
 
+#import "TGUser.h"
 #import "TGLocationMapView.h"
 #import "TGLocationOptionsView.h"
 
@@ -407,7 +408,11 @@ const CGFloat TGLocationMapInset = 100.0f;
         
         NSMutableArray *itemViews = [[NSMutableArray alloc] init];
         
-        TGMenuSheetTitleItemView *titleItem = [[TGMenuSheetTitleItemView alloc] initWithTitle:nil subtitle:TGLocalized(@"Map.LiveLocationDescription")];
+        NSString *title = TGLocalized(@"Map.LiveLocationGroupDescription");
+        if ([self.receivingPeer isKindOfClass:[TGUser class]])
+            title = [NSString stringWithFormat:TGLocalized(@"Map.LiveLocationPrivateDescription"), [(TGUser *)self.receivingPeer displayFirstName]];
+        
+        TGMenuSheetTitleItemView *titleItem = [[TGMenuSheetTitleItemView alloc] initWithTitle:nil subtitle:title];
         [itemViews addObject:titleItem];
         
         __weak TGMenuSheetController *weakController = controller;

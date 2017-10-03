@@ -62,7 +62,7 @@
     if (iosMajorVersion() >= 7)
     {
         MKDistanceFormatter *formatter = [self sharedDistanceFormatter];
-        formatter.locale = [NSLocale localeWithLocaleIdentifier:legacyEffectiveLocalization().code];
+        //formatter.locale = [NSLocale localeWithLocaleIdentifier:legacyEffectiveLocalization().code];
         if ([[formatter.locale objectForKey:NSLocaleUsesMetricSystem] boolValue])
             formatter.unitStyle = MKDistanceFormatterUnitStyleAbbreviated;
         else
@@ -81,7 +81,7 @@
     if (iosMajorVersion() >= 7)
     {
         MKDistanceFormatter *formatter = [self sharedAccuracyFormatter];
-        formatter.locale = [NSLocale localeWithLocaleIdentifier:legacyEffectiveLocalization().code];
+        //formatter.locale = [NSLocale localeWithLocaleIdentifier:legacyEffectiveLocalization().code];
         return [[self sharedAccuracyFormatter] stringFromDistance:accuracy];
     }
     else

@@ -45,10 +45,9 @@
 - (bool)locationServicesDisabled;
 - (void)updateLocationAvailability;
 
+@property (nonatomic, strong) id receivingPeer;
 - (void)_presentLiveLocationMenu:(CLLocationCoordinate2D)coordinate dismissOnCompletion:(bool)dismissOnCompletion;
 - (CGRect)_liveLocationMenuSourceRect;
-
-
 
 @end
 

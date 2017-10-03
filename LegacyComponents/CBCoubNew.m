@@ -161,15 +161,8 @@
 
 + (CBCoubNew *)coubWithAttributes:(NSDictionary *)attributes
 {
-	CBCoubNew *coub = [CBJSONCoubMapper coubFromJSONObject:attributes];
-
-	return coub;
+	return [CBJSONCoubMapper coubFromJSONObject:attributes];
 }
-
-//- (NSURL *)coubWebViewURL
-//{
-//	return [NSURL URLWithString:[NSString stringWithFormat:@"%@/view/%@", kCBServerURL, self.permalink]];
-//}
 
 - (NSURL *)remoteAudioChunkWithIdx:(NSInteger)idx
 {
