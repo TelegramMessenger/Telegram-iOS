@@ -31,6 +31,9 @@
 {
     _circleLayer.hidden = false;
     
+    if (_circleLayer.animationKeys.count > 0)
+        return;
+    
     CAKeyframeAnimation *scaleAnimation = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale"];
     scaleAnimation.values = @[@0.0f, @0.72f, @1.0f, @1.0f];
     scaleAnimation.keyTimes = @[@0.0, @0.49f, @0.88f, @1.0f];
