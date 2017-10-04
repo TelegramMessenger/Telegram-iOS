@@ -925,7 +925,7 @@
             if (self.allowLiveLocationSharing && !_hasOwnLiveLocation)
                 index -= 1;
             
-            TGLiveLocation *liveLocation = _liveLocations[index];
+            TGLiveLocation *liveLocation = index >= 0 && index < _liveLocations.count ? _liveLocations[index] : nil;
             [cell configureWithPeer:liveLocation.peer message:liveLocation.message remaining:self.remainingTimeForMessage(liveLocation.message) userLocationSignal:[self userLocationSignal]];
         }
         return cell;
