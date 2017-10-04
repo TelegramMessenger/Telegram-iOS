@@ -1,6 +1,7 @@
 #import "TGListsTableView.h"
 
 #import "LegacyComponentsInternal.h"
+#import "POPBasicAnimation.h"
 #import "Freedom.h"
 
 #import "TGSearchBar.h"
@@ -128,7 +129,52 @@
 
 - (void)scrollToTop
 {
-    [self setContentOffset:CGPointMake(0.0f, -self.contentInset.top) animated:true];
+    if (iosMajorVersion() >= 11)
+        [self performCustomScrollToTop];
+    else
+        [self setContentOffset:CGPointMake(0.0f, -self.contentInset.top) animated:true];
+}
+
+- (void)performCustomScrollToTop
+{
+    POPBasicAnimation *animation = [self pop_animationForKey:@"contentOffset"];
+    if (animation != nil)
+        return;
+    
+    [self setContentOffset:self.contentOffset animated:false];
+    self.blockContentOffset = true;
+    
+    animation = [POPBasicAnimation animation];
+    animation.property = [POPAnimatableProperty propertyWithName:@"contentOffset" initializer:^(POPMutableAnimatableProperty *prop)
+    {
+        prop.readBlock = ^(TGListsTableView *tableView, CGFloat values[])
+        {
+            values[0] = tableView.contentOffset.y;
+        };
+        
+        prop.writeBlock = ^(TGListsTableView *tableView, const CGFloat values[])
+        {
+            tableView.forcedContentOffset = CGPointMake(tableView.contentOffset.x, values[0]);
+        };
+        
+        prop.threshold = 1.0f;
+    }];
+    animation.fromValue = @(self.contentOffset.y);
+    animation.toValue = @(-self.contentInset.top);
+    animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    animation.duration = 0.25;
+    
+    __weak TGListsTableView *weakSelf = self;
+    animation.completionBlock = ^(POPAnimation *anim, BOOL finished)
+    {
+        __strong TGListsTableView *strongSelf = weakSelf;
+        if (strongSelf != nil)
+        {
+            strongSelf.blockContentOffset = false;
+            strongSelf.forcedContentOffset = CGPointMake(strongSelf.contentOffset.x, -strongSelf.contentInset.top);
+        }
+    };
+    [self pop_addAnimation:animation forKey:@"contentOffset"];
 }
 
 - (void)setContentOffset:(CGPoint)contentOffset
@@ -136,6 +182,11 @@
     if (_blockContentOffset)
         return;
     
+    [super setContentOffset:contentOffset];
+}
+
+- (void)setForcedContentOffset:(CGPoint)contentOffset
+{
     [super setContentOffset:contentOffset];
 }
 

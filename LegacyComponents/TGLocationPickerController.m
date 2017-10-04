@@ -102,7 +102,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     bool _placesListVisible;
     
     id<SDisposable> _liveLocationsDisposable;
-    TGLiveLocationEntry *_liveLocationEntry;
+    TGLiveLocation *_liveLocation;
 }
 @end
 
@@ -261,27 +261,14 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
 - (void)setLiveLocationsSignal:(SSignal *)signal
 {
     __weak TGLocationPickerController *weakSelf = self;
-    _liveLocationsDisposable = [signal startWithNext:^(NSArray *liveLocations)
+    _liveLocationsDisposable = [[signal deliverOn:[SQueue mainQueue]] startWithNext:^(TGLiveLocation *liveLocation)
     {
         __strong TGLocationPickerController *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
-        
-        TGLiveLocationEntry *currentOwnLiveLocation = nil;
-        for (TGLiveLocationEntry *entry in liveLocations)
-        {
-            if (!entry.isExpired && entry.isOwn)
-            {
-                currentOwnLiveLocation = entry;
-                break;
-            }
-        }
-        
-        TGDispatchOnMainThread(^
-        {
-            strongSelf->_liveLocationEntry = currentOwnLiveLocation;
-            [strongSelf updateCurrentLocationCell];
-        });
+    
+        strongSelf->_liveLocation = liveLocation;
+        [strongSelf updateCurrentLocationCell];
     }];
 }
 
@@ -978,8 +965,8 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     if ([cell isKindOfClass:[TGLocationCurrentLocationCell class]])
     {
         TGLocationCurrentLocationCell *locationCell = (TGLocationCurrentLocationCell *)cell;
-        if (_liveLocationEntry != nil)
-            [locationCell configureForStopWithMessage:_liveLocationEntry.message remaining:self.remainingTimeForMessage(_liveLocationEntry.message)];
+        if (_liveLocation != nil)
+            [locationCell configureForStopWithMessage:_liveLocation.message remaining:self.remainingTimeForMessage(_liveLocation.message)];
         else
             [locationCell configureForLiveLocationWithAccuracy:_currentUserLocation.horizontalAccuracy];
     }
@@ -1044,7 +1031,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         }
         else if (_allowLiveLocationSharing && indexPath.row == 1)
         {
-            if (_liveLocationEntry != nil)
+            if (_liveLocation != nil)
             {
                 if (self.liveLocationStopped != nil)
                     self.liveLocationStopped();
@@ -1119,8 +1106,8 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         
         locationCell.edgeView = nil;
         
-        if (_liveLocationEntry != nil)
-            [locationCell configureForStopWithMessage:_liveLocationEntry.message remaining:self.remainingTimeForMessage(_liveLocationEntry.message)];
+        if (_liveLocation != nil)
+            [locationCell configureForStopWithMessage:_liveLocation.message remaining:self.remainingTimeForMessage(_liveLocation.message)];
         else
             [locationCell configureForLiveLocationWithAccuracy:_currentUserLocation.horizontalAccuracy];
         

@@ -9,7 +9,7 @@
 @class TGMessage;
 @class TGUser;
 
-@interface TGLiveLocationEntry : NSObject
+@interface TGLiveLocation : NSObject
 
 @property (nonatomic, strong, readonly) TGMessage *message;
 @property (nonatomic, strong, readonly) id peer;
@@ -40,7 +40,7 @@
 
 @property (nonatomic, copy) SSignal *(^remainingTimeForMessage)(TGMessage *message);
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context liveLocation:(TGLiveLocationEntry *)liveLocation;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context liveLocation:(TGLiveLocation *)liveLocation;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context locationAttachment:(TGLocationMediaAttachment *)locationAttachment peer:(id)peer;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context message:(TGMessage *)message peer:(id)peer;
 
