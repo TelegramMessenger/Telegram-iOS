@@ -46,6 +46,7 @@
     TGLocationAnnotation *_annotation;
     
     UIBarButtonItem *_actionsBarItem;
+    bool _didSetRightBarButton;
     
     SVariable *_reloadReady;
     SMetaDisposable *_reloadDisposable;
@@ -64,7 +65,6 @@
     bool _selectedCurrentLiveLocation;
     
     bool _focusOnOwnLocation;
-    
     TGLocationPinAnnotationView *_ownLiveLocationView;
     __weak MKAnnotationView *_userLocationView;
 }
@@ -245,7 +245,11 @@
     {
         if ([self hasMoreThanOneLocation])
         {
-            [self setRightBarButtonItem:_actionsBarItem animated:true];
+            if (!_didSetRightBarButton)
+            {
+                _didSetRightBarButton = true;
+                [self setRightBarButtonItem:_actionsBarItem animated:true];
+            }
             
             if (actual && self.zoomToFitAllLocationsOnScreen)
             {
@@ -263,7 +267,11 @@
         }
         else
         {
-            [self setRightBarButtonItem:nil animated:true];
+            if (_didSetRightBarButton)
+            {
+                _didSetRightBarButton = false;
+                [self setRightBarButtonItem:nil animated:true];
+            }
         }
     }
     
