@@ -445,6 +445,13 @@ static inline NSString *dialogTimeFormat()
     return [[NSString alloc] initWithFormat:today ? TGLocalized(@"Time.TodayAt") : TGLocalized(@"Time.YesterdayAt"), timeString];
 }
 
++ (NSString *)stringForLastSeenYesterday:(bool)today hours:(int)hours minutes:(int)minutes
+{
+    NSString *timeString = [self stringForShortTimeWithHours:hours minutes:minutes];
+    
+    return [[NSString alloc] initWithFormat:TGLocalized(@"LastSeen.YesterdayAt"), timeString];
+}
+
 + (NSString *)stringForRelativeLastSeen:(int)date
 {
     if (date == -1)
@@ -491,6 +498,8 @@ static inline NSString *dialogTimeFormat()
                 return [legacyEffectiveLocalization() getPluralized:@"LastSeen.HoursAgo" count:(int32_t)hoursDiff];
             }
         }
+        else if (dayDiff == -1)
+            return [self stringForLastSeenYesterday:dayDiff == 0 hours:timeinfo.tm_hour minutes:timeinfo.tm_min];
         else
             return [[NSString alloc] initWithFormat:TGLocalized(@"LastSeen.AtDate"), [self stringForFullDateWithDay:timeinfo.tm_mday month:timeinfo.tm_mon + 1 year:timeinfo.tm_year]];
     }
