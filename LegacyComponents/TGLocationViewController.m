@@ -29,7 +29,7 @@
 
 #import <LegacyComponents/TGMenuSheetController.h>
 
-@interface TGLiveLocationEntry ()
+@interface TGLiveLocation ()
 
 - (CLLocation *)location;
 
@@ -53,7 +53,7 @@
     id<SDisposable> _frequentUpdatesDisposable;
     
     SSignal *_signal;
-    TGLiveLocationEntry *_currentLiveLocation;
+    TGLiveLocation *_currentLiveLocation;
     SMetaDisposable *_liveLocationsDisposable;
     NSArray *_initialLiveLocations;
     NSArray *_liveLocations;
@@ -96,7 +96,7 @@
     return self;
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context liveLocation:(TGLiveLocationEntry *)liveLocation
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context liveLocation:(TGLiveLocation *)liveLocation
 {
     self = [self initWithContext:context];
     if (self != nil)
@@ -174,12 +174,12 @@
     if (liveLocations.count == 0 && _currentLiveLocation != nil)
         liveLocations = @[ _currentLiveLocation ];
     
-    TGLiveLocationEntry *ownLiveLocation = nil;
-    for (TGLiveLocationEntry *entry in liveLocations)
+    TGLiveLocation *ownLiveLocation = nil;
+    for (TGLiveLocation *liveLocation in liveLocations)
     {
-        if (entry.isOwn)
+        if (liveLocation.isOwn)
         {
-            ownLiveLocation = entry;
+            ownLiveLocation = liveLocation;
             break;
         }
     }
@@ -235,7 +235,7 @@
         
         if (_currentLiveLocation.isOwn && !_ownLocationExpired && !self.zoomToFitAllLocationsOnScreen)
         {
-            [_mapView setUserTrackingMode:[TGLocationTrackingButton userTrackingModeWithLocationTrackingMode:TGLocationTrackingModeFollow] animated:true];
+            [_mapView setUserTrackingMode:[TGLocationTrackingButton userTrackingModeWithLocationTrackingMode:TGLocationTrackingModeFollow] animated:false];
             [_optionsView setTrackingMode:TGLocationTrackingModeFollow animated:true];
         }
     }
@@ -245,20 +245,25 @@
     {
         if ([self hasMoreThanOneLocation])
         {
-            [self setRightBarButtonItem:_actionsBarItem];
+            [self setRightBarButtonItem:_actionsBarItem animated:true];
             
             if (actual && self.zoomToFitAllLocationsOnScreen)
             {
                 _zoomToFitAllLocationsOnScreen = false;
                 dispatch_async(dispatch_get_main_queue(), ^
                 {
+                    MKMapRect visibleMapRect = _mapView.visibleMapRect;
+                    NSSet *visibleAnnotations = [_mapView annotationsInMapRect:visibleMapRect];
+                    if (visibleAnnotations.count == _mapView.annotations.count)
+                        return;
+                    
                     [self showAllPressed];
                 });
             }
         }
         else
         {
-            [self setRightBarButtonItem:nil];
+            [self setRightBarButtonItem:nil animated:true];
         }
     }
     
@@ -266,11 +271,16 @@
     {
         if (_ownLiveLocationView != nil && !_ownLiveLocationView.isSelected)
         {
-            [self selectOwnAnnotation];
+            [self selectOwnAnnotationAnimated:false];
             _focusOnOwnLocation = false;
             
             dispatch_async(dispatch_get_main_queue(), ^
             {
+                MKMapRect visibleMapRect = _mapView.visibleMapRect;
+                NSSet *visibleAnnotations = [_mapView annotationsInMapRect:visibleMapRect];
+                if (visibleAnnotations.count == _mapView.annotations.count)
+                    return;
+                
                 [self showAllPressed];
             });
         }
@@ -303,11 +313,11 @@
 
 - (void)updateAnnotations
 {
-    NSMutableDictionary *entries = [[NSMutableDictionary alloc] init];
-    for (TGLiveLocationEntry *entry in _liveLocations)
+    NSMutableDictionary *liveLocations = [[NSMutableDictionary alloc] init];
+    for (TGLiveLocation *liveLocation in _liveLocations)
     {
-        if (!entry.isOwn || entry.isExpired)
-            entries[@(entry.message.mid)] = entry;
+        if (!liveLocation.isOwn || liveLocation.isExpired)
+            liveLocations[@(liveLocation.message.mid)] = liveLocation;
     }
     
     TGLocationAnnotation *currentAnnotation = nil;
@@ -317,11 +327,11 @@
         if (![annotation isKindOfClass:[TGLocationAnnotation class]] || annotation == _annotation)
             continue;
         
-        if (entries[@(annotation.messageId)] != nil)
+        if (liveLocations[@(annotation.messageId)] != nil)
         {
-            annotation.coordinate = [(TGLiveLocationEntry *)entries[@(annotation.messageId)] location].coordinate;
-            annotation.isExpired = [(TGLiveLocationEntry *)entries[@(annotation.messageId)] isExpired];
-            [entries removeObjectForKey:@(annotation.messageId)];
+            annotation.coordinate = [(TGLiveLocation *)liveLocations[@(annotation.messageId)] location].coordinate;
+            annotation.isExpired = [(TGLiveLocation *)liveLocations[@(annotation.messageId)] isExpired];
+            [liveLocations removeObjectForKey:@(annotation.messageId)];
             
             if (annotation.messageId == _currentLiveLocation.message.mid)
                 currentAnnotation = annotation;
@@ -335,12 +345,12 @@
     [_mapView removeAnnotations:annotationsToRemove.allObjects];
     
     NSMutableArray *newAnnotations = [[NSMutableArray alloc] init];
-    for (TGLiveLocationEntry *entry in entries.allValues)
+    for (TGLiveLocation *liveLocation in liveLocations.allValues)
     {
-        TGLocationAnnotation *annotation = [[TGLocationAnnotation alloc] initWithLocation:entry.message.locationAttachment];
-        annotation.peer = entry.peer;
-        annotation.messageId = entry.message.mid;
-        annotation.isExpired = entry.isExpired;
+        TGLocationAnnotation *annotation = [[TGLocationAnnotation alloc] initWithLocation:liveLocation.message.locationAttachment];
+        annotation.peer = liveLocation.peer;
+        annotation.messageId = liveLocation.message.mid;
+        annotation.isExpired = liveLocation.isExpired;
         
         [newAnnotations addObject:annotation];
         
@@ -483,24 +493,26 @@
         
         NSMutableArray *filteredLiveLocations = [[NSMutableArray alloc] init];
         bool hasCurrentLocation = false;
-        for (TGLiveLocationEntry *entry in liveLocations)
+        for (TGLiveLocation *liveLocation in liveLocations)
         {
-            if (!entry.isExpired)
-                [filteredLiveLocations addObject:entry];
-            if (entry.message.mid == strongSelf->_currentLiveLocation.message.mid)
+            if (!liveLocation.isExpired)
+                [filteredLiveLocations addObject:liveLocation];
+            if (liveLocation.message.mid == strongSelf->_currentLiveLocation.message.mid)
                 hasCurrentLocation = true;
         }
         if (!hasCurrentLocation && strongSelf->_currentLiveLocation != nil)
         {
-            TGLiveLocationEntry *currentExpiredEntry = [[TGLiveLocationEntry alloc] initWithMessage:strongSelf->_currentLiveLocation.message peer:strongSelf->_currentLiveLocation.peer isOwn:strongSelf->_currentLiveLocation.isOwn isExpired:true];
-            [filteredLiveLocations addObject:currentExpiredEntry];
+            bool isChannel = [strongSelf->_currentLiveLocation.peer isKindOfClass:[TGConversation class]] && !((TGConversation *)strongSelf->_currentLiveLocation.peer).isChannelGroup;
+            
+            TGLiveLocation *currentExpiredLiveLocation = [[TGLiveLocation alloc] initWithMessage:strongSelf->_currentLiveLocation.message peer:strongSelf->_currentLiveLocation.peer isOwn:strongSelf->_currentLiveLocation.isOwn isExpired:isChannel ? strongSelf->_currentLiveLocation.isExpired : true];
+            [filteredLiveLocations addObject:currentExpiredLiveLocation];
         }
         liveLocations = filteredLiveLocations;
         
         NSMutableArray *sortedLiveLocations = [liveLocations mutableCopy];
         if (currentLocation != nil)
         {
-            [sortedLiveLocations sortUsingComparator:^NSComparisonResult(TGLiveLocationEntry *obj1, TGLiveLocationEntry *obj2)
+            [sortedLiveLocations sortUsingComparator:^NSComparisonResult(TGLiveLocation *obj1, TGLiveLocation *obj2)
             {
                 if (obj1.isOwn)
                     return NSOrderedAscending;
@@ -525,7 +537,7 @@
         }
         else
         {
-            [sortedLiveLocations sortUsingComparator:^NSComparisonResult(TGLiveLocationEntry *obj1, TGLiveLocationEntry *obj2)
+            [sortedLiveLocations sortUsingComparator:^NSComparisonResult(TGLiveLocation *obj1, TGLiveLocation *obj2)
             {
                 if (obj1.isOwn)
                     return NSOrderedAscending;
@@ -727,7 +739,7 @@
 {
     if (!_ownLiveLocationView.isSelected)
         [_ownLiveLocationView setSelected:true animated:animated];
-    [_mapView deselectAnnotation:_mapView.selectedAnnotations.firstObject animated:animated];
+    [_mapView deselectAnnotation:_mapView.selectedAnnotations.firstObject animated:true];
     [_ownLiveLocationView.superview.superview bringSubviewToFront:_ownLiveLocationView.superview];
 }
 
@@ -886,11 +898,11 @@
         {
             if (_hasOwnLiveLocation)
             {
-                TGLiveLocationEntry *entry = _liveLocations.firstObject;
-                if (entry.isExpired)
+                TGLiveLocation *liveLocation = _liveLocations.firstObject;
+                if (liveLocation.isExpired)
                     [cell configureForStart];
                 else
-                    [cell configureForStopWithMessage:entry.message remaining:self.remainingTimeForMessage(entry.message)];
+                    [cell configureForStopWithMessage:liveLocation.message remaining:self.remainingTimeForMessage(liveLocation.message)];
             }
             else
             {
@@ -905,8 +917,8 @@
             if (self.allowLiveLocationSharing && !_hasOwnLiveLocation)
                 index -= 1;
             
-            TGLiveLocationEntry *entry = _liveLocations[index];
-            [cell configureWithPeer:entry.peer message:entry.message remaining:self.remainingTimeForMessage(entry.message) userLocationSignal:[self userLocationSignal]];
+            TGLiveLocation *liveLocation = _liveLocations[index];
+            [cell configureWithPeer:liveLocation.peer message:liveLocation.message remaining:self.remainingTimeForMessage(liveLocation.message) userLocationSignal:[self userLocationSignal]];
         }
         return cell;
     }
@@ -972,13 +984,13 @@
             if (self.allowLiveLocationSharing && !_hasOwnLiveLocation)
                 index -= 1;
             
-            TGLiveLocationEntry *entry = _liveLocations[index];
+            TGLiveLocation *liveLocation = _liveLocations[index];
             for (TGLocationAnnotation *annotation in _mapView.annotations)
             {
                 if (![annotation isKindOfClass:[TGLocationAnnotation class]])
                     continue;
                 
-                if (annotation.messageId == entry.message.mid)
+                if (annotation.messageId == liveLocation.message.mid)
                 {
                     if ([_mapView.selectedAnnotations containsObject:annotation])
                         [self setMapCenterCoordinate:annotation.coordinate offset:CGPointZero animated:true];
@@ -1091,7 +1103,7 @@
 @end
 
 
-@implementation TGLiveLocationEntry
+@implementation TGLiveLocation
 
 - (instancetype)initWithMessage:(TGMessage *)message peer:(id)peer isOwn:(bool)isOwn isExpired:(bool)isExpired
 {

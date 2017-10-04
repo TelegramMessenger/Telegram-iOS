@@ -444,7 +444,7 @@ const CGFloat TGLocationMapInset = 100.0f;
                 return;
             
             if (strongSelf.liveLocationStarted != nil)
-                strongSelf.liveLocationStarted(coordinate, 60 * 60);
+                strongSelf.liveLocationStarted(coordinate, 60 * 60 - 1);
             
             [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
         }];
@@ -466,23 +466,6 @@ const CGFloat TGLocationMapInset = 100.0f;
             [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
         }];
         [itemViews addObject:for8HoursItem];
-        
-//        TGMenuSheetButtonItemView *testItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:@"TEST 10 seconds" type:TGMenuSheetButtonTypeDefault action:^
-//        {
-//            __strong TGLocationMapViewController *strongSelf = weakSelf;
-//            if (strongSelf == nil)
-//                return;
-//            
-//            __strong TGMenuSheetController *strongController = weakController;
-//            if (strongController == nil)
-//                return;
-//            
-//            if (strongSelf.liveLocationStarted != nil)
-//                strongSelf.liveLocationStarted(coordinate, 10);
-//            
-//            [strongSelf dismissLiveLocationMenu:strongController doNotRemove:!dismissOnCompletion];
-//        }];
-        //[itemViews addObject:testItem];
         
         TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
         {

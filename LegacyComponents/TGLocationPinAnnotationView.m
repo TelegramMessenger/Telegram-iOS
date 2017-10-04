@@ -290,6 +290,11 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             [_pulseView stop];
             _avatarView.alpha = 0.5f;
         }
+        else
+        {
+            [_pulseView start];
+            _avatarView.alpha = 1.0f;
+        }
     }
     else
     {
