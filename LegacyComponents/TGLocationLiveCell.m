@@ -37,6 +37,8 @@ const CGFloat TGLocationLiveCellHeight = 68;
     
     SMetaDisposable *_locationDisposable;
     SMetaDisposable *_remainingDisposable;
+    
+    UILongPressGestureRecognizer *_longPressGestureRecognizer;
 }
 @end
 
@@ -92,6 +94,9 @@ const CGFloat TGLocationLiveCellHeight = 68;
         
         _wavesView = [[TGLocationWavesView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 48.0f, 48.0f)];
         [_circleView addSubview:_wavesView];
+        
+        _longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handlePress:)];
+        [self addGestureRecognizer:_longPressGestureRecognizer];
     }
     return self;
 }
@@ -100,6 +105,15 @@ const CGFloat TGLocationLiveCellHeight = 68;
 {
     [_locationDisposable dispose];
     [_wavesView invalidate];
+}
+
+- (void)handlePress:(UILongPressGestureRecognizer *)gestureRecognizer
+{
+    if (gestureRecognizer.state == UIGestureRecognizerStateBegan)
+    {
+        if (self.longPressed != nil)
+            self.longPressed();
+    }
 }
 
 - (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated

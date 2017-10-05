@@ -357,19 +357,6 @@ const CGFloat TGLocationMapInset = 100.0f;
     return [_userLocation signal];
 }
 
-- (void)dismissLiveLocationMenu:(TGMenuSheetController *)controller doNotRemove:(bool)doNotRemove
-{
-    if (!doNotRemove)
-    {
-        [controller dismissAnimated:true];
-    }
-    else
-    {
-        [controller setDimViewHidden:true animated:true];
-        [controller removeFromParentViewController];
-    }
-}
-
 - (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
 {
     if (_openLiveLocationMenuBlock != nil)
@@ -384,6 +371,26 @@ const CGFloat TGLocationMapInset = 100.0f;
 - (CGRect)_liveLocationMenuSourceRect
 {
     return CGRectZero;
+}
+
+- (void)_willStartOwnLiveLocation
+{
+    
+}
+
+- (void)dismissLiveLocationMenu:(TGMenuSheetController *)controller doNotRemove:(bool)doNotRemove
+{
+    [self _willStartOwnLiveLocation];
+    
+    if (!doNotRemove)
+    {
+        [controller dismissAnimated:true];
+    }
+    else
+    {
+        [controller setDimViewHidden:true animated:true];
+        [controller removeFromParentViewController];
+    }
 }
 
 - (void)_presentLiveLocationMenu:(CLLocationCoordinate2D)coordinate dismissOnCompletion:(bool)dismissOnCompletion

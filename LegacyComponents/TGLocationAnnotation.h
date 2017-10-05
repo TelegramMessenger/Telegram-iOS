@@ -22,6 +22,7 @@
 @property (nonatomic, assign) CLLocationCoordinate2D coordinate;
 @property (nonatomic, assign) int32_t messageId;
 @property (nonatomic, assign) bool isOwn;
+@property (nonatomic, assign) bool hasSession;
 @property (nonatomic, assign) bool isExpired;
 
 - (instancetype)initWithLocation:(TGLocationMediaAttachment *)location;

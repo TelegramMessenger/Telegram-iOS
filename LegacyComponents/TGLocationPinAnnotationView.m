@@ -119,44 +119,50 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     
     if (animated)
     {
+        [self layoutSubviews];
         _animating = true;
         if (selected)
         {
-            UIView *avatarSnapshot = [_avatarView snapshotViewAfterScreenUpdates:false];
-            [_smallView addSubview:avatarSnapshot];
-            avatarSnapshot.transform = _avatarView.transform;
-            avatarSnapshot.center = CGPointMake(_smallView.frame.size.width / 2.0f, _smallView.frame.size.height / 2.0f);
-            
-            _avatarView.transform = CGAffineTransformIdentity;
-            [_backgroundView addSubview:_avatarView];
-            _avatarView.center = CGPointMake(_backgroundView.frame.size.width / 2.0f, _backgroundView.frame.size.height / 2.0f - 5.0f);
-            
-            _dotView.alpha = 0.0f;
-            
-            _shadowView.center = CGPointMake(_shadowView.center.x, _shadowView.center.y + _shadowView.frame.size.height / 2.0f);
-            _shadowView.layer.anchorPoint = CGPointMake(0.5f, 1.0f);
-            _shadowView.hidden = false;
-            _shadowView.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
-            [UIView animateWithDuration:0.35 delay:0.0 usingSpringWithDamping:0.6f initialSpringVelocity:0.5f options:kNilOptions animations:^
-            {
-                _smallView.transform = CGAffineTransformMakeScale(0.001f, 0.001f);
-                _shadowView.transform = CGAffineTransformIdentity;
-            } completion:^(BOOL finished)
-            {
-                _animating = false;
-                _shadowView.layer.anchorPoint = CGPointMake(0.5f, 0.5f);
+            //dispatch_async(dispatch_get_main_queue(), ^
+            //{
+                UIView *avatarSnapshot = [_avatarView snapshotViewAfterScreenUpdates:false];
+                [_smallView addSubview:avatarSnapshot];
+                avatarSnapshot.transform = _avatarView.transform;
+                avatarSnapshot.center = CGPointMake(_smallView.frame.size.width / 2.0f, _smallView.frame.size.height / 2.0f);
                 
-                _smallView.hidden = true;
-                _smallView.transform = CGAffineTransformIdentity;
-                [avatarSnapshot removeFromSuperview];
+                _avatarView.transform = CGAffineTransformIdentity;
+                [_backgroundView addSubview:_avatarView];
+                _avatarView.center = CGPointMake(_backgroundView.frame.size.width / 2.0f, _backgroundView.frame.size.height / 2.0f - 5.0f);
                 
-                [self addSubview:_avatarView];
-            }];
-            
-            [UIView animateWithDuration:0.2 animations:^
-            {
-                _dotView.alpha = 1.0f;
-            }];
+                _dotView.alpha = 0.0f;
+                
+                _shadowView.center = CGPointMake(_shadowView.center.x, _shadowView.center.y + _shadowView.frame.size.height / 2.0f);
+                _shadowView.layer.anchorPoint = CGPointMake(0.5f, 1.0f);
+                _shadowView.hidden = false;
+                _shadowView.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+                [UIView animateWithDuration:0.35 delay:0.0 usingSpringWithDamping:0.6f initialSpringVelocity:0.5f options:kNilOptions animations:^
+                {
+                    _smallView.transform = CGAffineTransformMakeScale(0.001f, 0.001f);
+                    _shadowView.transform = CGAffineTransformIdentity;
+                    if (_dotView.hidden)
+                        _smallView.alpha = 0.0f;
+                } completion:^(BOOL finished)
+                {
+                    _animating = false;
+                    _shadowView.layer.anchorPoint = CGPointMake(0.5f, 0.5f);
+                    
+                    _smallView.hidden = true;
+                    _smallView.transform = CGAffineTransformIdentity;
+                    [avatarSnapshot removeFromSuperview];
+                    
+                    [self addSubview:_avatarView];
+                }];
+                
+                [UIView animateWithDuration:0.2 animations:^
+                {
+                    _dotView.alpha = 1.0f;
+                }];
+            //});
         }
         else
         {
@@ -178,6 +184,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
              {
                  _smallView.transform = CGAffineTransformIdentity;
                  _shadowView.transform = CGAffineTransformMakeScale(0.1f, 0.1f);
+                 if (_dotView.hidden)
+                     _smallView.alpha = 1.0f;
              } completion:^(BOOL finished)
              {
                  _animating = false;
@@ -201,6 +209,7 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         _smallView.hidden = selected;
         _shadowView.hidden = !selected;
         _dotView.alpha = selected ? 1.0f : 0.0f;
+        _smallView.alpha = 1.0f;
         [self layoutSubviews];
     }
 }
@@ -225,12 +234,11 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     }
     else if ([annotation isKindOfClass:[TGLocationAnnotation class]])
     {
-        _dotView.hidden = false;
-        
         TGLocationAnnotation *locationAnnotation = ((TGLocationAnnotation *)annotation);
         TGLocationMediaAttachment *location = locationAnnotation.location;
         if (location.period == 0)
         {
+            _dotView.hidden = false;
             _avatarView.hidden = true;
             _avatarView.alpha = 1.0f;
             _iconView.hidden = false;
@@ -259,16 +267,18 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             _backgroundView.image = TGComponentsImageNamed(@"LocationPinBackground");
             
             [self setPeer:locationAnnotation.peer];
-            if (!locationAnnotation.isOwn && !locationAnnotation.isExpired)
+            if (!locationAnnotation.isOwn)
             {
-                [_pulseView start];
-                
-                [self subscribeForExpiration];
+                if (!locationAnnotation.isExpired)
+                    [_pulseView start];
+                _dotView.hidden = false;
             }
             else
             {
-                [self unsubscribeFromExpiration];
+                _dotView.hidden = true;
             }
+            
+            [self subscribeForExpiration];
             
             _liveLocation = true;
             

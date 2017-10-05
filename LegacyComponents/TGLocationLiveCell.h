@@ -6,6 +6,8 @@
 
 @interface TGLocationLiveCell : UITableViewCell
 
+@property (nonatomic, copy) void (^longPressed)(void);
+
 @property (nonatomic, readonly) int32_t messageId;
 @property (nonatomic, weak) UIImageView *edgeView;
 

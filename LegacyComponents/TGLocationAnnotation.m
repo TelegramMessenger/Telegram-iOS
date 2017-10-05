@@ -76,6 +76,16 @@
     }
 }
 
+- (void)setHasSession:(bool)hasSession
+{
+    if (hasSession != _hasSession)
+    {
+        [self willChangeValueForKey:@"hasSession"];
+        _hasSession = hasSession;
+        [self didChangeValueForKey:@"hasSession"];
+    }
+}
+
 - (bool)isLiveLocation
 {
     return _location.period > 0;
