@@ -67,6 +67,7 @@
     
     bool _ignoreNextUpdates;
     bool _focusOnOwnLocation;
+    bool _throttle;
     TGLocationPinAnnotationView *_ownLiveLocationView;
     __weak MKAnnotationView *_userLocationView;
 }
@@ -185,7 +186,18 @@
     }
     else
     {
-        _signal = signal;
+        __weak TGLocationViewController *weakSelf = self;
+        _signal = [signal mapToSignal:^SSignal *(id value)
+        {
+            __strong TGLocationViewController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return nil;
+            
+            if (strongSelf->_throttle)
+                return [[SSignal single:value] delay:0.25 onQueue:[SQueue concurrentDefaultQueue]];
+            else
+                return [SSignal single:value];
+        }];
     }
     
     [self setupSignals];
@@ -303,6 +315,7 @@
         {
             [self selectOwnAnnotationAnimated:false];
             _focusOnOwnLocation = false;
+            _throttle = false;
             
             dispatch_async(dispatch_get_main_queue(), ^
             {
@@ -1214,6 +1227,8 @@
     
     if (_currentLiveLocation.isOwnLocation)
         _ignoreNextUpdates = true;
+    else
+        _throttle = true;
 }
 
 @end
