@@ -160,6 +160,7 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                                             }
                                         }
                                         
+                                        
                                         var isKicked = false
                                         var isBanned = false
                                         if rights.flags.contains(.banReadMessages) {

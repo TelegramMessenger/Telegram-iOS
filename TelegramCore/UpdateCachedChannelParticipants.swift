@@ -16,7 +16,7 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
                     |> mapToSignal { result -> Signal<Void, NoError> in
                         return postbox.modify { modifier -> Void in
                             switch result {
-                                case let .channelParticipants(_, participants, users):
+                                case let .channelParticipants(count, participants, users):
                                     var peers: [Peer] = []
                                     var peerPresences: [PeerId: PeerPresence] = [:]
                                     for user in users {
@@ -37,7 +37,7 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
 
                                     modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, currentData in
                                         if let currentData = currentData as? CachedChannelData {
-                                            return currentData.withUpdatedTopParticipants(parsedParticipants)
+                                            return currentData.withUpdatedTopParticipants(parsedParticipants).withUpdatedParticipantsSummary(currentData.participantsSummary.withUpdatedMemberCount(count))
                                         } else {
                                             return currentData
                                         }

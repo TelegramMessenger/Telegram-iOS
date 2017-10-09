@@ -4,6 +4,8 @@ public enum PeerInputActivity: Comparable {
     case typingText
     case uploadingFile(progress: Int32)
     case recordingVoice
+    case uploadingPhoto(progress: Int32)
+    case uploadingVideo(progress: Int32)
     case playingGame
     case recordingInstantVideo
     case uploadingInstantVideo
@@ -34,6 +36,18 @@ public enum PeerInputActivity: Comparable {
                 } else {
                     return false
                 }
+            case .uploadingPhoto(let progress):
+                if case .uploadingPhoto(progress) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .uploadingVideo(let progress):
+                if case .uploadingVideo(progress) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case .recordingInstantVideo:
                 if case .recordingInstantVideo = rhs {
                     return true
@@ -57,12 +71,16 @@ public enum PeerInputActivity: Comparable {
                 return 1
             case .recordingVoice:
                 return 2
-            case .recordingInstantVideo:
+            case .uploadingPhoto:
                 return 3
-            case .uploadingInstantVideo:
+            case .uploadingVideo:
                 return 4
-            case .playingGame:
+            case .recordingInstantVideo:
                 return 5
+            case .uploadingInstantVideo:
+                return 6
+            case .playingGame:
+                return 7
         }
     }
     
@@ -85,9 +103,9 @@ extension PeerInputActivity {
             case let .sendMessageUploadDocumentAction(progress):
                 self = .uploadingFile(progress: progress)
             case let .sendMessageUploadPhotoAction(progress):
-                self = .uploadingFile(progress: progress)
+                self = .uploadingPhoto(progress: progress)
             case let .sendMessageUploadVideoAction(progress):
-                self = .uploadingFile(progress: progress)
+                self = .uploadingVideo(progress: progress)
             case .sendMessageRecordRoundAction:
                 self = .recordingInstantVideo
             case .sendMessageUploadRoundAction:

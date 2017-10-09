@@ -38,6 +38,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as AutoremoveTimeoutMessageAttribute:
                 return true
+            case _ as NotificationInfoMessageAttribute:
+                return true
             default:
                 return false
         }
@@ -276,6 +278,13 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
 
                         }
                         
+                        let authorId:PeerId?
+                        if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info, !info.flags.contains(.messagesShouldHaveSignatures) {
+                            authorId = peer.id
+                        }  else {
+                            authorId = account.peerId
+                        }
+                        
                         var entitiesAttribute: TextEntitiesMessageAttribute?
                         for attribute in attributes {
                             if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -286,7 +295,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         
                         let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: sourceMessage.media, textEntities: entitiesAttribute?.entities)
                         
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: account.peerId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
                     }
             }
         }
