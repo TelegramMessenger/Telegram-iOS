@@ -81,9 +81,9 @@ public final class Database {
             preconditionFailure("sqlite3_open_v2: \(res)")
             return nil
         } else {
-            if !execute("PRAGMA integrity_check;") {
-                return nil
-            }
+//            if !execute("PRAGMA integrity_check;") {
+//                return nil
+//            }
         }
     }
 
