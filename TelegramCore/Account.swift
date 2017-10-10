@@ -749,7 +749,7 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     account.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     
-    account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox, accountPeerId: account.peerId).start())
+    account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox).start())
     account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
     
     /*account.network.request(Api.functions.help.getScheme(version: 0)).start(next: { result in

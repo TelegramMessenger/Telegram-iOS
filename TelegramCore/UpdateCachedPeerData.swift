@@ -228,6 +228,9 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             if (flags & (1 << 6)) != 0 {
                                                 channelFlags.insert(.canChangeUsername)
                                             }
+                                            if (flags & (1 << 10)) == 0 {
+                                                channelFlags.insert(.preHistoryEnabled)
+                                            }
                                             if (flags & (1 << 7)) != 0 {
                                                 channelFlags.insert(.canSetStickerSet)
                                             }
