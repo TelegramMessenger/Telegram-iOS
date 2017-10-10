@@ -20169,7 +20169,7 @@ public struct Api {
                         return result
                     })
                 }
-            
+                
                 public static func sendPaymentForm(flags: Int32, msgId: Int32, requestedInfoId: String?, shippingOptionId: String?, credentials: Api.InputPaymentCredentials) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.payments.PaymentResult?) {
                     let buffer = Buffer()
                     buffer.appendInt32(730364339)

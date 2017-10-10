@@ -109,8 +109,14 @@ func cloudChatAddRemoveChatOperation(modifier: Modifier, peerId: PeerId, reportC
     modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveChatOperation(peerId: peerId, reportChatSpam: reportChatSpam, topMessageId: modifier.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)))
 }
 
-func cloudChatAddClearHistoryOperation(modifier: Modifier, peerId: PeerId) {
-    if let topMessageId = modifier.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+func cloudChatAddClearHistoryOperation(modifier: Modifier, peerId: PeerId, explicitTopMessageId: MessageId?) {
+    let topMessageId: MessageId?
+    if let explicitTopMessageId = explicitTopMessageId {
+        topMessageId = explicitTopMessageId
+    } else {
+        topMessageId = modifier.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)
+    }
+    if let topMessageId = topMessageId {
         modifier.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId))
     }
 }

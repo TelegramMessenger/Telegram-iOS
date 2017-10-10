@@ -258,6 +258,11 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                 }
                                             }
                                             
+                                            var migrationReference: ChannelMigrationReference?
+                                            if let migratedFromChatId = migratedFromChatId, let migratedFromMaxId = migratedFromMaxId {
+                                                migrationReference = ChannelMigrationReference(maxMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: migratedFromChatId), namespace: Namespaces.Message.Cloud, id: migratedFromMaxId))
+                                            }
+                                            
                                             var peers: [Peer] = []
                                             var peerPresences: [PeerId: PeerPresence] = [:]
                                             for chat in chats {
@@ -312,6 +317,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                     .withUpdatedPinnedMessageId(pinnedMessageId)
                                                     .withUpdatedStickerPack(stickerPack)
                                                     .withUpdatedMinAvailableMessageId(minAvailableMessageId)
+                                                    .withUpdatedMigrationReference(migrationReference)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
