@@ -42,7 +42,7 @@ public extension Peer {
         switch self {
             case let user as TelegramUser:
                 return user.username
-            case let _ as TelegramGroup:
+            case _ as TelegramGroup:
                 return nil
             case let channel as TelegramChannel:
                 return channel.username

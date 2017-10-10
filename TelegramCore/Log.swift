@@ -82,6 +82,7 @@ public final class Logger {
     
     public init(basePath: String) {
         self.basePath = basePath
+        //self.logToConsole = false
     }
     
     public func collectLogs() -> Signal<[(String, String)], NoError> {

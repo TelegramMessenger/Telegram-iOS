@@ -201,7 +201,7 @@ extension Api.Message {
                 }
                 
                 switch action {
-                    case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken:
+                    case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction:
                         break
                     case let .messageActionChannelMigrateFrom(_, chatId):
                         result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
@@ -278,10 +278,13 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId)
                 return (nil, mediaContact, nil)
             case let .messageMediaGeo(geo):
-                let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil)
+                let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: nil)
                 return (nil, mediaMap, nil)
-            case let .messageMediaVenue(geo, title, address, provider, venueId):
-                let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId)
+            case let .messageMediaVenue(geo, title, address, provider, venueId, venueType):
+                let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil)
+                return (nil, mediaMap, nil)
+            case let .messageMediaGeoLive(geo, period):
+                let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period)
                 return (nil, mediaMap, nil)
             case let .messageMediaDocument(_, document, caption, ttlSeconds):
                 if let document = document {
@@ -505,6 +508,9 @@ extension StoreMessage {
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
+                if case .messageActionHistoryClear = action {
+                    return nil
+                }
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {

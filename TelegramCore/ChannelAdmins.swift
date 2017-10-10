@@ -12,7 +12,7 @@ import Foundation
 public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedChannelParticipant], NoError> {
     return account.postbox.modify { modifier -> Signal<[RenderedChannelParticipant], NoError> in
         if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 100))
+            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 100, hash: 0))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<[RenderedChannelParticipant], NoError> in
                     switch result {
@@ -46,6 +46,8 @@ public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedC
                                 })
                                 return items
                             }
+                        case .channelParticipantsNotModified:
+                            return .single([])
                     }
                 }
         } else {

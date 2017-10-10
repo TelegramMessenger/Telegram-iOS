@@ -18,7 +18,7 @@ private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
         acc = (acc &* 20261) &+ high
         acc = (acc &* 20261) &+ low
     }
-    return Int32(bitPattern: acc % UInt32(0x7FFFFFFF))
+    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
 }
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {

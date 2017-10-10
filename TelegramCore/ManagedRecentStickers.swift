@@ -17,7 +17,7 @@ private func hashForIds(_ ids: [Int64]) -> Int32 {
         acc = (acc &* 20261) &+ high
         acc = (acc &* 20261) &+ low
     }
-    return Int32(bitPattern: acc % UInt32(0x7FFFFFFF))
+    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
 }
 
 private func managedRecentMedia(postbox: Postbox, network: Network, collectionId: Int32, reverseHashOrder: Bool, fetch: @escaping (Int32) -> Signal<[OrderedItemListEntry]?, NoError>) -> Signal<Void, NoError> {

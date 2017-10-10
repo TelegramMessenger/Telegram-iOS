@@ -11,7 +11,7 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
     return postbox.loadedPeerWithId(peerId)
         |> mapToSignal { peer -> Signal<Void, NoError> in
             if let inputChannel = apiInputChannel(peer) {
-                return network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsRecent, offset: 0, limit: 200))
+                return network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsRecent, offset: 0, limit: 200, hash: 0))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
                         return postbox.modify { modifier -> Void in
@@ -42,6 +42,8 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
                                             return currentData
                                         }
                                     })
+                                case .channelParticipantsNotModified:
+                                    break
                             }
                         }
                 }

@@ -50,17 +50,18 @@ private func hashForCountAndIds(count: Int32, ids: [Int32]) -> Int32 {
         let low = UInt32(bitPattern: id)
         acc = (acc &* 20261) &+ low
     }
-    return Int32(bitPattern: acc % UInt32(0x7FFFFFFF))
+    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
 }
 
-func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+func manageContacts(network: Network, postbox: Postbox, accountPeerId: PeerId) -> Signal<Void, NoError> {
     #if DEBUG
         return .never()
     #endif
     let initialContactPeerIdsHash = postbox.contactPeerIdsView()
         |> take(1)
         |> map { view -> Int32 in
-            let sortedUserIds = Set(view.peerIds.filter({ $0.namespace == Namespaces.Peer.CloudUser }).map({ $0.id })).sorted()
+            let peerIds = Set(view.peerIds.filter({ $0.namespace == Namespaces.Peer.CloudUser }))
+            let sortedUserIds = peerIds.map({ $0.id }).sorted()
             
             return hashForCountAndIds(count: view.remoteTotalCount, ids: sortedUserIds)
         }
@@ -87,9 +88,9 @@ func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError>
     return appliedUpdatedPeers
 }
 
-public func addContactPeerInteractively(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+public func addContactPeerInteractively(account: Account, peerId: PeerId, phone: String?) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
-        if let peer = modifier.getPeer(peerId) as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
+        if let peer = modifier.getPeer(peerId) as? TelegramUser, let phone = phone ?? peer.phone, !phone.isEmpty {
             return account.network.request(Api.functions.contacts.importContacts(contacts: [Api.InputContact.inputPhoneContact(clientId: 1, phone: phone, firstName: peer.firstName ?? "", lastName: peer.lastName ?? "")]))
                 |> map { Optional($0) }
                 |> `catch` { _ -> Signal<Api.contacts.ImportedContacts?, NoError> in

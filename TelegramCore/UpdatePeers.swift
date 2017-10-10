@@ -5,6 +5,20 @@ import Foundation
     import Postbox
 #endif
 
+func updatePeerChatInclusionWithMinTimestamp(modifier: Modifier, id: PeerId, minTimestamp: Int32) {
+    let currentInclusion = modifier.getPeerChatListInclusion(id)
+    var updatedInclusion: PeerChatListInclusion?
+    switch currentInclusion {
+        case .ifHasMessages, .ifHasMessagesOrOneOf:
+            updatedInclusion = currentInclusion.withSetIfHasMessagesOrMaxMinTimestamp(minTimestamp)
+        default:
+            break
+    }
+    if let updatedInclusion = updatedInclusion {
+        modifier.updatePeerChatListInclusion(id, inclusion: updatedInclusion)
+    }
+}
+
 public func updatePeers(modifier: Modifier, peers: [Peer], update: (Peer?, Peer) -> Peer?) {
     modifier.updatePeersInternal(peers, update: { previous, updated in
         let peerId = updated.id

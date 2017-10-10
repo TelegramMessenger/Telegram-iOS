@@ -335,7 +335,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
                             
                             if apiTopMessage != 0 {
-                                mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: 0, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
+                                mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
                             }
                             
                             notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)

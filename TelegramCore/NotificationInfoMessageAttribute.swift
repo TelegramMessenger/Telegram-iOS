@@ -5,9 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-
-
-public struct NotificationInfoMessageAttributeFlags : OptionSet {
+public struct NotificationInfoMessageAttributeFlags: OptionSet {
     public var rawValue: Int32
     
     public init(rawValue: Int32) {
@@ -24,8 +22,8 @@ public struct NotificationInfoMessageAttributeFlags : OptionSet {
 }
 
 public class NotificationInfoMessageAttribute: MessageAttribute {
-
-    public let flags:NotificationInfoMessageAttributeFlags
+    public let flags: NotificationInfoMessageAttributeFlags
+    
     public init(flags: NotificationInfoMessageAttributeFlags) {
         self.flags = flags
     }

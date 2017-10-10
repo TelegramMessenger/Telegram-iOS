@@ -213,14 +213,14 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                             switch result {
                                 case let .chatFull(fullChat, chats, users):
                                     switch fullChat {
-                                        case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _, _):
+                                        case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _, _, _):
                                             modifier.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                         case .chatFull:
                                             break
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet):
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
@@ -244,6 +244,15 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                             var pinnedMessageId: MessageId?
                                             if let pinnedMsgId = pinnedMsgId {
                                                 pinnedMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: pinnedMsgId)
+                                            }
+                                            
+                                            var minAvailableMessageId: MessageId?
+                                            if let minAvailableMsgId = minAvailableMsgId {
+                                                minAvailableMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minAvailableMsgId)
+                                                
+                                                if let pinnedMsgId = pinnedMsgId, pinnedMsgId < minAvailableMsgId {
+                                                    pinnedMessageId = nil
+                                                }
                                             }
                                             
                                             var peers: [Peer] = []
@@ -281,6 +290,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                 return StickerPackCollectionInfo(apiSet: apiSet, namespace: namespace)
                                             }
                                             
+                                            var minAvailableMessageIdUpdated = false
                                             modifier.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                                 let previous: CachedChannelData
                                                 if let current = current as? CachedChannelData {
@@ -289,6 +299,8 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                     previous = CachedChannelData()
                                                 }
                                                 
+                                                minAvailableMessageIdUpdated = previous.minAvailableMessageId != minAvailableMessageId
+                                                
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
                                                     .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: bannedCount, kickedCount: kickedCount))
@@ -296,7 +308,12 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                     .withUpdatedBotInfos(botInfos)
                                                     .withUpdatedPinnedMessageId(pinnedMessageId)
                                                     .withUpdatedStickerPack(stickerPack)
+                                                    .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                             })
+                                        
+                                            if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
+                                                modifier.deleteMessagesInRange(peerId: peerId, namespace: minAvailableMessageId.namespace, minId: 1, maxId: minAvailableMessageId.id)
+                                            }
                                         case .chatFull:
                                             break
                                     }

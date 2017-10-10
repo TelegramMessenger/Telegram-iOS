@@ -24,28 +24,30 @@ public func channelMembers(account: Account, peerId: PeerId, filter: ChannelMemb
                 case let .search(query):
                     apiFilter = .channelParticipantsSearch(q: query)
             }
-            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: apiFilter, offset: 0, limit: 100))
+            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: apiFilter, offset: 0, limit: 100, hash: 0))
                 |> retryRequest
                 |> map { result -> [RenderedChannelParticipant] in
                     var items: [RenderedChannelParticipant] = []
                     switch result {
-                    case let .channelParticipants(_, participants, users):
-                        var peers: [PeerId: Peer] = [:]
-                        var presences:[PeerId: PeerPresence] = [:]
-                        for user in users {
-                            let peer = TelegramUser(user: user)
-                            peers[peer.id] = peer
-                            if let presence = TelegramUserPresence(apiUser: user) {
-                                presences[peer.id] = presence
-                            }
-                        }
-                        
-                        for participant in CachedChannelParticipants(apiParticipants: participants).participants {
-                            if let peer = peers[participant.peerId] {
-                                items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presences: presences))
+                        case let .channelParticipants(_, participants, users):
+                            var peers: [PeerId: Peer] = [:]
+                            var presences:[PeerId: PeerPresence] = [:]
+                            for user in users {
+                                let peer = TelegramUser(user: user)
+                                peers[peer.id] = peer
+                                if let presence = TelegramUserPresence(apiUser: user) {
+                                    presences[peer.id] = presence
+                                }
                             }
                             
-                        }
+                            for participant in CachedChannelParticipants(apiParticipants: participants).participants {
+                                if let peer = peers[participant.peerId] {
+                                    items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presences: presences))
+                                }
+                                
+                            }
+                        case .channelParticipantsNotModified:
+                            break
                     }
                     return items
             }

@@ -29,6 +29,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case gameScore(gameId: Int64, score: Int32)
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
     case paymentSent(currency: String, totalAmount: Int64)
+    case customText(text: String)
+    
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
         switch rawValue {
@@ -66,7 +68,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 self = .phoneCall(callId: decoder.decodeInt64ForKey("i", orElse: 0), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d", orElse: 0))
             case 15:
                 self = .paymentSent(currency: decoder.decodeStringForKey("currency", orElse: ""), totalAmount: decoder.decodeInt64ForKey("ta", orElse: 0))
-
+            case 16:
+                self = .customText(text: decoder.decodeStringForKey("text", orElse: ""))
             default:
                 self = .unknown
         }
@@ -137,6 +140,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "d")
                 }
+            case let .customText(text):
+                encoder.encodeInt32(16, forKey: "_rawValue")
+                encoder.encodeString(text, forKey: "text")
         }
     }
     
@@ -256,6 +262,12 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
             } else {
                 return false
             }
+        case let .customText(text):
+            if case .customText(text) = rhs {
+                return true
+            } else {
+                return false
+            }
     }
     return false
 }
@@ -330,6 +342,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return nil
         case .messageActionScreenshotTaken:
             return TelegramMediaAction(action: .historyScreenshot)
+        case let .messageActionCustomAction(message):
+            return TelegramMediaAction(action: .customText(text: message))
     }
 }
 

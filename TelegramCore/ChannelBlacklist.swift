@@ -24,7 +24,7 @@ private func fetchChannelBlacklist(account: Account, peerId: PeerId, filter: Cha
                 case .banned:
                     apiFilter = .channelParticipantsKicked(q: "")
             }
-            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: apiFilter, offset: 0, limit: 100))
+            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: apiFilter, offset: 0, limit: 100, hash: 0))
                 |> retryRequest
                 |> map { result -> [RenderedChannelParticipant] in
                     var items: [RenderedChannelParticipant] = []
@@ -40,12 +40,15 @@ private func fetchChannelBlacklist(account: Account, peerId: PeerId, filter: Cha
                                 }
                             }
                             
-                        for participant in CachedChannelParticipants(apiParticipants: participants).participants {
-                                if let peer = peers[participant.peerId] {
-                                    items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presences: presences))
-                                }
+                            for participant in CachedChannelParticipants(apiParticipants: participants).participants {
+                                    if let peer = peers[participant.peerId] {
+                                        items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presences: presences))
+                                    }
                                 
-                            }
+                                }
+                        case .channelParticipantsNotModified:
+                            assertionFailure()
+                            break
                     }
                     return items
             }

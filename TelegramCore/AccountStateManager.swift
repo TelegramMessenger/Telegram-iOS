@@ -247,30 +247,37 @@ public final class AccountStateManager {
                     |> take(1)
                     |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                         if let authorizedState = state.state {
-                            let request = account.network.request(Api.functions.updates.getDifference(flags: 0, pts: authorizedState.pts, ptsTotalLimit: nil, date: authorizedState.date, qts: authorizedState.qts))
+                            let request = account.network.request(Api.functions.updates.getDifference(flags: 0 << 0, pts: authorizedState.pts, ptsTotalLimit: 1000, date: authorizedState.date, qts: authorizedState.qts))
                                 |> retryRequest
                             return request |> mapToSignal { difference -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
-                                return initialStateWithDifference(account, difference: difference)
-                                    |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
-                                        if state.initialState.state != authorizedState {
-                                            Logger.shared.log("State", "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
-                                            return .single((nil, nil))
-                                        } else {
-                                            return finalStateWithDifference(account: account, state: state, difference: difference)
-                                                |> mapToSignal { finalState -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
-                                                    if !finalState.state.preCachedResources.isEmpty {
-                                                        for (resource, data) in finalState.state.preCachedResources {
-                                                            account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                                                        }
+                                switch difference {
+                                    case .differenceTooLong:
+                                        return accountStateReset(postbox: account.postbox, network: account.network) |> mapToSignal { _ -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                                            return .complete()
+                                        } |> then(.single((nil, nil)))
+                                    default:
+                                        return initialStateWithDifference(account, difference: difference)
+                                            |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                                                if state.initialState.state != authorizedState {
+                                                    Logger.shared.log("State", "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
+                                                    return .single((nil, nil))
+                                                } else {
+                                                    return finalStateWithDifference(account: account, state: state, difference: difference)
+                                                        |> mapToSignal { finalState -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                                                            if !finalState.state.preCachedResources.isEmpty {
+                                                                for (resource, data) in finalState.state.preCachedResources {
+                                                                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                                                                }
+                                                            }
+                                                            return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountReplayedFinalState?) in
+                                                                if let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, auxiliaryMethods: auxiliaryMethods, finalState: finalState) {
+                                                                    return (difference, replayedState)
+                                                                } else {
+                                                                    return (nil, nil)
+                                                                }
+                                                            }
                                                     }
-                                                    return account.postbox.modify { modifier -> (Api.updates.Difference?, AccountReplayedFinalState?) in
-                                                        if let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, modifier: modifier, auxiliaryMethods: auxiliaryMethods, finalState: finalState) {
-                                                            return (difference, replayedState)
-                                                        } else {
-                                                            return (nil, nil)
-                                                        }
-                                                    }
-                                            }
+                                                }
                                         }
                                 }
                             }
@@ -685,10 +692,19 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
         Logger.shared.log("AccountStateManager", "notification message doesn't exist")
         return (nil, false, .bundledModern(id: 0), false)
     }
-        
+
     var notify = true
     var sound: PeerMessageSound = .bundledModern(id: 0)
+    var muted = false
     var displayContents = true
+    
+    for attribute in message.attributes {
+        if let attribute = attribute as? NotificationInfoMessageAttribute {
+            if attribute.flags.contains(.muted) {
+                muted = true
+            }
+        }
+    }
     
     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
     
@@ -731,11 +747,15 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
         } else {
             sound = notificationSettings.messageSound
         }
-        if !defaultNotify {
+        /*if !defaultNotify {
             notify = false
-        }
+        }*/
     } else {
         Logger.shared.log("AccountStateManager", "notification settings for \(notificationPeerId) are undefined")
+    }
+    
+    if muted {
+        sound = .none
     }
     
     if let channel = message.peers[message.id.peerId] as? TelegramChannel {

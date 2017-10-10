@@ -37,6 +37,7 @@ public enum AdminLogEventAction {
     case participantToggleBan(prev: RenderedChannelParticipant, new: RenderedChannelParticipant)
     case participantToggleAdmin(prev: RenderedChannelParticipant, new: RenderedChannelParticipant)
     case changeStickerPack(prev: StickerPackReference?, new: StickerPackReference?)
+    case togglePreHistoryHidden(Bool)
 }
 
 public enum ChannelAdminLogEventError {
@@ -176,6 +177,8 @@ public func channelAdminLogEvents(_ account:Account, peerId:PeerId, maxId:AdminL
                                                 }
                                     case let .channelAdminLogEventActionChangeStickerSet(prevStickerset, newStickerset):
                                         action = .changeStickerPack(prev: StickerPackReference(apiInputSet: prevStickerset), new: StickerPackReference(apiInputSet: newStickerset))
+                                    case let .channelAdminLogEventActionTogglePreHistoryHidden(value):
+                                            action = .togglePreHistoryHidden(value == .boolTrue)
                                     }
                                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                     if let action = action {

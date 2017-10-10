@@ -173,6 +173,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaFileAttribute.self, f: { TelegramMediaFileAttribute(decoder: $0) })
     declareEncodable(CloudFileMediaResource.self, f: { CloudFileMediaResource(decoder: $0) })
     declareEncodable(ChannelState.self, f: { ChannelState(decoder: $0) })
+    declareEncodable(RegularChatState.self, f: { RegularChatState(decoder: $0) })
     declareEncodable(InlineBotMessageAttribute.self, f: { InlineBotMessageAttribute(decoder: $0) })
     declareEncodable(TextEntitiesMessageAttribute.self, f: { TextEntitiesMessageAttribute(decoder: $0) })
     declareEncodable(ReplyMessageAttribute.self, f: { ReplyMessageAttribute(decoder: $0) })
@@ -748,7 +749,7 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     account.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     
-    account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox).start())
+    account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox, accountPeerId: account.peerId).start())
     account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
     
     /*account.network.request(Api.functions.help.getScheme(version: 0)).start(next: { result in

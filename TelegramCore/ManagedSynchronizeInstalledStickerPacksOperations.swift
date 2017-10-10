@@ -128,7 +128,7 @@ private func hashForStickerPackInfos(_ infos: [StickerPackCollectionInfo]) -> In
         acc = UInt32(bitPattern: Int32(bitPattern: acc &* UInt32(20261)) &+ info.hash)
     }
     
-    return Int32(bitPattern: acc % 0x7FFFFFFF)
+    return Int32(bitPattern: acc & 0x7FFFFFFF)
 }
 
 private enum SynchronizeInstalledStickerPacksError {

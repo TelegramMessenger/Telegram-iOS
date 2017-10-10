@@ -59,9 +59,16 @@ public func deleteMessagesInteractively(postbox: Postbox, messageIds: [MessageId
 
 public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
-        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
+            var topTimestamp: Int32?
+            if let topIndex = modifier.getTopMesssageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+                topTimestamp = topIndex.timestamp
+            }
             cloudChatAddClearHistoryOperation(modifier: modifier, peerId: peerId)
             modifier.clearHistory(peerId)
+            if let topTimestamp = topTimestamp {
+                updatePeerChatInclusionWithMinTimestamp(modifier: modifier, id: peerId, minTimestamp: topTimestamp)
+            }
         } else if peerId.namespace == Namespaces.Peer.SecretChat {
             modifier.clearHistory(peerId)
             
@@ -87,9 +94,8 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId) -> Signa
     }
 }
 
-public func clearAuthorHistory(account: Account, peerId: PeerId, memberId:PeerId) -> Signal<Void, NoError> {
+public func clearAuthorHistory(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, Void> in
-        
         if let peer = modifier.getPeer(peerId), let memberPeer = modifier.getPeer(memberId), let inputChannel = apiInputChannel(peer), let inputUser = apiInputUser(memberPeer) {
             
             let signal = account.network.request(Api.functions.channels.deleteUserHistory(channel: inputChannel, userId: inputUser))

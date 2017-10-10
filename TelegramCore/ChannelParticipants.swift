@@ -29,10 +29,10 @@ public struct RenderedChannelParticipant: Equatable {
 func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-            let admins = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 0))
-            let members = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsRecent, offset: 0, limit: 0))
-            let banned = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsBanned(q: ""), offset: 0, limit: 0))
-            let kicked = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsKicked(q: ""), offset: 0, limit: 0))
+            let admins = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 0, hash: 0))
+            let members = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsRecent, offset: 0, limit: 0, hash: 0))
+            let banned = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsBanned(q: ""), offset: 0, limit: 0, hash: 0))
+            let kicked = account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: .channelParticipantsKicked(q: ""), offset: 0, limit: 0, hash: 0))
             return combineLatest(admins, members, banned, kicked)
                 |> mapToSignal { admins, members, banned, kicked -> Signal<Void, MTRpcError> in
                     return account.postbox.modify { modifier -> Void in
@@ -42,21 +42,33 @@ func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signa
                                 switch admins {
                                     case let .channelParticipants(count, _, _):
                                         adminCount = count
+                                    case .channelParticipantsNotModified:
+                                        assertionFailure()
+                                        adminCount = 0
                                 }
                                 let memberCount: Int32
                                 switch members {
                                     case let .channelParticipants(count, _, _):
                                         memberCount = count
+                                    case .channelParticipantsNotModified:
+                                        assertionFailure()
+                                        memberCount = 0
                                 }
                                 let bannedCount: Int32
                                 switch banned {
                                     case let .channelParticipants(count, _, _):
                                         bannedCount = count
+                                    case .channelParticipantsNotModified:
+                                        assertionFailure()
+                                        bannedCount = 0
                                 }
                                 let kickedCount: Int32
                                 switch kicked {
                                     case let .channelParticipants(count, _, _):
                                         kickedCount = count
+                                    case .channelParticipantsNotModified:
+                                        assertionFailure()
+                                        kickedCount = 0
                                 }
                                 return current.withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: memberCount, adminCount: adminCount, bannedCount: bannedCount, kickedCount: kickedCount))
                             }
