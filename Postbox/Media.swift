@@ -78,6 +78,10 @@ public func ==(lhs: MediaId, rhs: MediaId) -> Bool {
     return lhs.id == rhs.id && lhs.namespace == rhs.namespace
 }
 
+public protocol AssociatedMediaData: class, PostboxCoding {
+    func isEqual(to: AssociatedMediaData) -> Bool
+}
+
 public protocol Media: class, PostboxCoding {
     var id: MediaId? { get }
     var peerIds: [PeerId] { get }

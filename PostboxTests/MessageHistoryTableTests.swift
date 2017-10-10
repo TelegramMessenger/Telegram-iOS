@@ -373,6 +373,18 @@ class MessageHistoryTableTests: XCTestCase {
         self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
     }
     
+    private func removeMessagesInRange(minId: Int32, maxId: Int32) {
+        var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
+        var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
+        var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var updatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32] = [:]
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
+        self.historyTable!.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
+    }
+    
     private func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
@@ -1422,7 +1434,116 @@ class MessageHistoryTableTests: XCTestCase {
         expectPeerMessageActions(pendingAction1, [(200, PendingMessageAction1())])
     }
     
-    func testPendingMessageActions2() {
-        
+    func testRemoveRangeEmpty() {
+        removeMessagesInRange(minId: 0, maxId: Int32.max)
+        expectEntries([], tagMask: nil)
+    }
+    
+    func testRemoveRangeOneMessage1() {
+        addMessage(100, 100)
+        expectEntries([.Message(100, 100, "", [], [])], tagMask: nil)
+        removeMessagesInRange(minId: 0, maxId: 99)
+        expectEntries([.Message(100, 100, "", [], [])], tagMask: nil)
+        removeMessagesInRange(minId: 101, maxId: Int32.max)
+        expectEntries([.Message(100, 100, "", [], [])], tagMask: nil)
+        removeMessagesInRange(minId: 0, maxId: Int32.max)
+        expectEntries([], tagMask: nil)
+    }
+    
+    func testRemoveRangeOneMessage2() {
+        addMessage(100, 100)
+        expectEntries([.Message(100, 100, "", [], [])], tagMask: nil)
+        removeMessagesInRange(minId: 100, maxId: Int32.max)
+        expectEntries([], tagMask: nil)
+        addMessage(100, 100)
+        removeMessagesInRange(minId: 0, maxId: 100)
+        expectEntries([], tagMask: nil)
+    }
+    
+    func testRemoveRangeHole1() {
+        addHole(1)
+        removeMessagesInRange(minId: 0, maxId: Int32.max)
+        expectEntries([], tagMask: nil)
+    }
+    
+    func testRemoveRangeHole2() {
+        addHole(1)
+        removeMessagesInRange(minId: 0, maxId: 100)
+        expectEntries([.Hole(101, Int32.max, Int32.max)], tagMask: nil)
+    }
+    
+    func testRemoveRangeHole3() {
+        addHole(1)
+        removeMessagesInRange(minId: 100, maxId: Int32.max)
+        expectEntries([.Hole(1, Int32.max, Int32.max)], tagMask: nil)
+    }
+    
+    func testRemoveRangeHole4() {
+        addMessage(100, 100)
+        addMessage(200, 200)
+        addHole(101)
+        addHole(1)
+        addHole(201)
+        removeMessagesInRange(minId: 0, maxId: Int32.max)
+        expectEntries([], tagMask: nil)
+    }
+    
+    func testRemoveRangeHole5() {
+        addMessage(100, 100)
+        addMessage(200, 200)
+        addHole(101)
+        addHole(1)
+        addHole(201)
+        removeMessagesInRange(minId: 0, maxId: 99)
+        expectEntries([.Message(100, 100, "", [], []),
+                       .Hole(101, 199, 200),
+                       .Message(200, 200, "", [], []),
+                       .Hole(201, Int32.max, Int32.max)], tagMask: nil)
+    }
+    
+    func testRemoveRangeHole6() {
+        addMessage(100, 100)
+        addMessage(200, 200)
+        addHole(101)
+        addHole(1)
+        addHole(201)
+        removeMessagesInRange(minId: 0, maxId: 50)
+        expectEntries([.Hole(51, 99, 100),
+                       .Message(100, 100, "", [], []),
+                       .Hole(101, 199, 200),
+                       .Message(200, 200, "", [], []),
+                       .Hole(201, Int32.max, Int32.max)], tagMask: nil)
+    }
+    
+    func testRemoveRangeHole7() {
+        addMessage(100, 100)
+        addMessage(200, 200)
+        addHole(101)
+        addHole(1)
+        addHole(201)
+        removeMessagesInRange(minId: 50, maxId: 150)
+        expectEntries([.Hole(1, 199, 200),
+                       .Message(200, 200, "", [], []),
+                       .Hole(201, Int32.max, Int32.max)], tagMask: nil)
+    }
+    
+    func testRemoveRangeHole8() {
+        addMessage(100, 100)
+        addMessage(200, 200)
+        addHole(101)
+        addHole(1)
+        addHole(201)
+        removeMessagesInRange(minId: 0, maxId: 200)
+        expectEntries([.Hole(1, Int32.max, Int32.max)], tagMask: nil)
+    }
+    
+    func testRemoveRangeHole9() {
+        addMessage(100, 100)
+        addMessage(200, 200)
+        addHole(101)
+        addHole(1)
+        addHole(201)
+        removeMessagesInRange(minId: 0, maxId: 300)
+        expectEntries([.Hole(301, Int32.max, Int32.max)], tagMask: nil)
     }
 }

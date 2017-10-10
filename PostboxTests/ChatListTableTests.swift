@@ -73,6 +73,7 @@ class ChatListTableTests: XCTestCase {
     var invalidatedMessageHistoryTagsSummaryTable: InvalidatedMessageHistoryTagsSummaryTable?
     var pendingMessageActionsTable: PendingMessageActionsTable?
     var pendingMessageActionsMetadataTable: PendingMessageActionsMetadataTable?
+    var pendingPeerNotificationSettingsIndexTable: PendingPeerNotificationSettingsIndexTable?
     
     override class func setUp() {
         super.setUp()
@@ -109,7 +110,8 @@ class ChatListTableTests: XCTestCase {
         self.peerTable = PeerTable(valueBox: self.valueBox!, table: PeerTable.tableSpec(20), reverseAssociatedTable: self.reverseAssociatedTable!)
         self.peerNameTokenIndexTable = ReverseIndexReferenceTable<PeerIdReverseIndexReference>(valueBox: self.valueBox!, table: ReverseIndexReferenceTable<PeerIdReverseIndexReference>.tableSpec(21))
         self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox!, table: PeerNameIndexTable.tableSpec(22), peerTable: self.peerTable!, peerNameTokenIndexTable: self.peerNameTokenIndexTable!)
-        self.notificationSettingsTable = PeerNotificationSettingsTable(valueBox: self.valueBox!, table: PeerNotificationSettingsTable.tableSpec(23))
+        self.pendingPeerNotificationSettingsIndexTable = PendingPeerNotificationSettingsIndexTable(valueBox: self.valueBox!, table: PeerNotificationSettingsTable.tableSpec(32))
+        self.notificationSettingsTable = PeerNotificationSettingsTable(valueBox: self.valueBox!, table: PeerNotificationSettingsTable.tableSpec(23), pendingIndexTable: self.pendingPeerNotificationSettingsIndexTable!)
         self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox!, table: ChatListIndexTable.tableSpec(5), peerNameIndexTable: self.peerNameIndexTable!, metadataTable: self.historyMetadataTable!, readStateTable: self.readStateTable!, notificationSettingsTable: self.notificationSettingsTable!)
         self.chatListTable = ChatListTable(valueBox: self.valueBox!, table: ChatListTable.tableSpec(6), indexTable: self.chatListIndexTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
         self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox!, table: PeerChatInterfaceStateTable.tableSpec(20))

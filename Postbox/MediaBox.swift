@@ -223,9 +223,9 @@ public final class MediaBox {
                                         let currentSize = fileSize(paths.partial) ?? 0
                                         
                                         if let resourceSize = resource.size {
-                                            status = .Fetching(progress: Float(currentSize) / Float(resourceSize))
+                                            status = .Fetching(isActive: true, progress: Float(currentSize) / Float(resourceSize))
                                         } else {
-                                            status = .Fetching(progress: 0.0)
+                                            status = .Fetching(isActive: true, progress: 0.0)
                                         }
 
                                     } else {
@@ -557,9 +557,9 @@ public final class MediaBox {
                     if dataContext.fetchDisposable == nil {
                         let status: MediaResourceStatus
                         if let resourceSize = resource.size {
-                            status = .Fetching(progress: Float(currentSize) / Float(resourceSize))
+                            status = .Fetching(isActive: true, progress: Float(currentSize) / Float(resourceSize))
                         } else {
-                            status = .Fetching(progress: 0.0)
+                            status = .Fetching(isActive: true, progress: 0.0)
                         }
                         self.statusQueue.async {
                             if let statusContext = self.statusContexts[resourceId] {
@@ -651,9 +651,9 @@ public final class MediaBox {
                                                 subscriber.putCompletion()
                                             } else {
                                                 if let resourceSize = resource.size {
-                                                    status = .Fetching(progress: Float(updatedSize) / Float(resourceSize))
+                                                    status = .Fetching(isActive: true, progress: Float(updatedSize) / Float(resourceSize))
                                                 } else {
-                                                    status = .Fetching(progress: 0.0)
+                                                    status = .Fetching(isActive: true, progress: 0.0)
                                                 }
                                             }
                                             
@@ -736,9 +736,9 @@ public final class MediaBox {
                                             status = .Local
                                         } else {
                                             if let resourceSize = resource.size {
-                                                status = .Fetching(progress: Float(updatedSize) / Float(resourceSize))
+                                                status = .Fetching(isActive: true, progress: Float(updatedSize) / Float(resourceSize))
                                             } else {
-                                                status = .Fetching(progress: 0.0)
+                                                status = .Fetching(isActive: true, progress: 0.0)
                                             }
                                         }
                                         
@@ -799,9 +799,9 @@ public final class MediaBox {
                                             status = .Local
                                         } else {
                                             if let resourceSize = resource.size {
-                                                status = .Fetching(progress: Float(updatedSize) / Float(resourceSize))
+                                                status = .Fetching(isActive: true, progress: Float(updatedSize) / Float(resourceSize))
                                             } else {
-                                                status = .Fetching(progress: 0.0)
+                                                status = .Fetching(isActive: true, progress: 0.0)
                                             }
                                         }
                                         

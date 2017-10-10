@@ -8,7 +8,7 @@ import Foundation
 public enum MediaResourceStatus: Equatable {
     case Remote
     case Local
-    case Fetching(progress: Float)
+    case Fetching(isActive: Bool, progress: Float)
 }
 
 public func ==(lhs: MediaResourceStatus, rhs: MediaResourceStatus) -> Bool {
@@ -27,10 +27,10 @@ public func ==(lhs: MediaResourceStatus, rhs: MediaResourceStatus) -> Bool {
                 default:
                     return false
             }
-        case let .Fetching(lhsProgress):
+        case let .Fetching(lhsIsActive, lhsProgress):
             switch rhs {
-                case let .Fetching(rhsProgress):
-                    return lhsProgress.isEqual(to: rhsProgress)
+                case let .Fetching(rhsIsActive, rhsProgress):
+                    return lhsIsActive == rhsIsActive && lhsProgress.isEqual(to: rhsProgress)
                 default:
                     return false
             }
