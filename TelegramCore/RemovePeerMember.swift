@@ -10,6 +10,11 @@ import Foundation
 #endif
 
 public func removePeerMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
+    
+    if peerId.namespace == Namespaces.Peer.CloudChannel {
+        return updateChannelMemberBannedRights(account: account, peerId: peerId, memberId: memberId, rights: TelegramChannelBannedRights(flags: [.banReadMessages], untilDate: 0))
+    }
+    
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId), let memberPeer = modifier.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
             if let group = peer as? TelegramGroup {
@@ -41,39 +46,6 @@ public func removePeerMember(account: Account, peerId: PeerId, memberId: PeerId)
                             })
                         }
                 }
-            } else if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-                return account.network.request(Api.functions.channels.kickFromChannel(channel: inputChannel, userId: inputUser, kicked: .boolTrue))
-                    |> mapError { error -> Void in
-                        return Void()
-                    }
-                    |> `catch` { _ -> Signal<Api.Updates, NoError> in
-                        return .complete()
-                    }
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        account.stateManager.addUpdates(result)
-                        
-                        return account.postbox.modify { modifier -> Void in
-                            modifier.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                                if let cachedData = cachedData as? CachedChannelData, let participants = cachedData.topParticipants {
-                                    var updatedParticipants = participants.participants
-                                    for i in 0 ..< participants.participants.count {
-                                        if participants.participants[i].peerId == memberId {
-                                            updatedParticipants.remove(at: i)
-                                            break
-                                        }
-                                    }
-                                    let updatedData = cachedData.withUpdatedTopParticipants(CachedChannelParticipants(participants: updatedParticipants))
-                                    if let bannedCount = cachedData.participantsSummary.bannedCount {
-                                        return updatedData.withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedBannedCount(bannedCount + 1))
-                                    } else {
-                                        return updatedData
-                                    }
-                                } else {
-                                    return cachedData
-                                }
-                            })
-                        } |> then(updateChannelParticipantsSummary(account: account, peerId: peerId))
-                    }
             } else {
                 return .complete()
             }

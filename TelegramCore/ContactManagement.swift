@@ -53,10 +53,10 @@ private func hashForCountAndIds(count: Int32, ids: [Int32]) -> Int32 {
     return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
 }
 
-func manageContacts(network: Network, postbox: Postbox, accountPeerId: PeerId) -> Signal<Void, NoError> {
-    #if DEBUG
-        return .never()
-    #endif
+func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+    //#if DEBUG
+      //  return .never()
+    //#endif
     let initialContactPeerIdsHash = postbox.contactPeerIdsView()
         |> take(1)
         |> map { view -> Int32 in
