@@ -281,7 +281,7 @@
                   },
                   'include_dirs': [
                     '/usr/local/macold/include/c++/v1',
-                    '<(DEPTH)/../../../Libraries/macold/openssl-1.0.1h/include',
+                    '<(DEPTH)/../../../Libraries/macold/openssl/include',
                   ],
                 }, {
                   'xcode_settings': {
@@ -289,7 +289,7 @@
                     'CLANG_CXX_LIBRARY': 'libc++',
                   },
                   'include_dirs': [
-                    '<(DEPTH)/../../../Libraries/openssl-xcode/include',
+                    '<(DEPTH)/../../../Libraries/openssl/include',
                   ],
                 }]
               ]
