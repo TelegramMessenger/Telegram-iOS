@@ -156,6 +156,30 @@
     transform = CGAffineTransformScale(transform, alpha, alpha);
 }
 
+- (void)setHidden:(bool)hidden animated:(bool)animated
+{
+    if (!hidden && animated && _collectionView.visibleCells.count == 0)
+        [_collectionView layoutSubviews];
+    
+    for (UICollectionViewCell *cell in _collectionView.visibleCells)
+    {
+        if (animated)
+        {
+            if (!hidden)
+                cell.alpha = 0.0f;
+            
+            [UIView animateWithDuration:0.3 animations:^
+            {
+                cell.alpha = hidden ? 0.0f : 1.0f;
+            }];
+        }
+        else
+        {
+            cell.alpha = hidden ? 0.0f : 1.0f;
+        }
+    }
+}
+
 - (void)setBounds:(CGRect)bounds
 {
     bool sizeUpdated = !CGSizeEqualToSize(bounds.size, self.bounds.size);

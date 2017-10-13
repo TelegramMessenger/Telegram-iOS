@@ -51,6 +51,7 @@ typedef enum {
 + (bool)isWidescreen;
 + (bool)hasLargeScreen;
 + (bool)hasVeryLargeScreen;
++ (bool)hasTallScreen;
 
 + (void)disableAutorotation;
 + (void)enableAutorotation;
@@ -80,6 +81,7 @@ typedef enum {
 @property (nonatomic, readonly) UIEdgeInsets controllerCleanInset;
 @property (nonatomic, readonly) UIEdgeInsets controllerInset;
 @property (nonatomic, readonly) UIEdgeInsets controllerScrollInset;
+@property (nonatomic, readonly) UIEdgeInsets controllerSafeAreaInset;
 @property (nonatomic) UIEdgeInsets parentInsets;
 @property (nonatomic) UIEdgeInsets explicitTableInset;
 @property (nonatomic) UIEdgeInsets explicitScrollIndicatorInset;

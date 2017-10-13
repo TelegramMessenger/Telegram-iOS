@@ -34,4 +34,6 @@ typedef enum
 - (void)setExpanded:(bool)expanded;
 - (void)updateExpanded:(bool)expanded;
 
+- (void)setHidden:(bool)hidden animated:(bool)animated;
+
 @end

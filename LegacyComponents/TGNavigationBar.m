@@ -184,6 +184,9 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     if (_backgroundContainerView != nil)
     {
         CGFloat backgroundOverflow = iosMajorVersion() >= 7 ? 20.0f : 0.0f;
+        if (iosMajorVersion() >= 11 && self.superview.safeAreaInsets.top > 0)
+            backgroundOverflow = self.superview.safeAreaInsets.top;
+        
         _backgroundContainerView.frame = CGRectMake(0, -backgroundOverflow, self.bounds.size.width, backgroundOverflow + self.bounds.size.height);
         
         if (_barBackgroundView != nil)

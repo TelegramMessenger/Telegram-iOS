@@ -249,8 +249,6 @@
     if (contentOffset.y < -contentInset.top)
         contentOffset.y = -contentInset.top;
     [_collectionView setContentOffset:contentOffset animated:false];
-    
-    return;
 }
 
 - (void)layoutControllerForSize:(CGSize)size duration:(NSTimeInterval)duration

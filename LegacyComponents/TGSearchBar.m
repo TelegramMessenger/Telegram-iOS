@@ -583,7 +583,8 @@
     
     CGFloat rightPadding = _showsCustomCancelButton && !_hidesCancelButton ? ((_customScopeButtonContainer != nil && landscapeMode ? scopeBarHorizontalWidth : 0) + _cancelButtonWidth) : 0.0f;
     
-    _customBackgroundView.frame = CGRectMake(0, ((_showsCustomCancelButton || _alwaysExtended) ? -20.0f : 0.0f), self.frame.size.width, self.frame.size.height + (_showsCustomCancelButton || _alwaysExtended ? 20.0f : 0.0f));
+    CGFloat safeInsetHeight = self.safeAreaInset.top > FLT_EPSILON ? self.safeAreaInset.top : 20.0f;
+    _customBackgroundView.frame = CGRectMake(0, ((_showsCustomCancelButton || _alwaysExtended) ? -safeInsetHeight : 0.0f), self.frame.size.width, self.frame.size.height + (_showsCustomCancelButton || _alwaysExtended ? safeInsetHeight : 0.0f));
     _customActiveBackgroundView.frame = _customBackgroundView.frame;
     
     _textFieldBackground.frame = CGRectMake(8, 9 + [self topPadding], self.frame.size.width - 16 - rightPadding, [self inputHeight]);

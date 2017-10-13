@@ -289,6 +289,20 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     return value;
 }
 
++ (bool)hasTallScreen {
+    static bool value = false;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^
+    {
+        CGSize screenSize = [TGViewController screenSizeForInterfaceOrientation:UIInterfaceOrientationPortrait];
+        CGFloat side = MAX(screenSize.width, screenSize.height);
+        value = side >= 812 - FLT_EPSILON;
+    });
+    
+    return value;
+}
+
 + (void)disableAutorotation
 {
     autorotationDisabled = true;
@@ -692,7 +706,8 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (UIEdgeInsets)controllerInsetForInterfaceOrientation:(UIInterfaceOrientation)orientation
 {
-    CGFloat statusBarHeight = [TGHacks statusBarHeightForOrientation:orientation];
+    UIEdgeInsets safeAreaInset = _context.safeAreaInset;
+    CGFloat statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : [TGHacks statusBarHeightForOrientation:orientation];
     CGFloat keyboardHeight = [self _currentKeyboardHeight:orientation];
     
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];
@@ -708,6 +723,8 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     
     if (!_ignoreKeyboardWhenAdjustingScrollViewInsets)
         edgeInset.bottom = MAX(edgeInset.bottom, keyboardHeight);
+    
+    edgeInset.bottom += safeAreaInset.bottom;
     
     edgeInset.left += _explicitTableInset.left;
     edgeInset.right += _explicitTableInset.right;
@@ -780,6 +797,9 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (CGFloat)_currentStatusBarHeight
 {
+    if (_context.safeAreaInset.top > FLT_EPSILON)
+        return _context.safeAreaInset.top;
+    
     CGRect statusBarFrame = [[LegacyComponentsGlobals provider] statusBarFrame];
     CGFloat minStatusBarHeight = [self prefersStatusBarHidden] ? 0.0f : 20.0f;
     CGFloat statusBarHeight = MAX(minStatusBarHeight, MIN(statusBarFrame.size.width, statusBarFrame.size.height));
@@ -1053,13 +1073,16 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     if (!_ignoreKeyboardWhenAdjustingScrollViewInsets)
         edgeInset.bottom = MAX(edgeInset.bottom, keyboardHeight);
     
+    UIEdgeInsets safeAreaInset = _context.safeAreaInset;
+    edgeInset.bottom += safeAreaInset.bottom;
+    
     UIEdgeInsets previousInset = _controllerInset;
     UIEdgeInsets previousCleanInset = _controllerCleanInset;
     UIEdgeInsets previousIndicatorInset = _controllerScrollInset;
     
     UIEdgeInsets scrollEdgeInset = edgeInset;
     scrollEdgeInset.left += _explicitScrollIndicatorInset.left;
-    scrollEdgeInset.right += _explicitScrollIndicatorInset.right;
+    scrollEdgeInset.right += _explicitScrollIndicatorInset.right + safeAreaInset.right;
     scrollEdgeInset.top += _explicitScrollIndicatorInset.top;
     scrollEdgeInset.bottom += _explicitScrollIndicatorInset.bottom;
     
@@ -1075,6 +1098,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         _controllerInset = edgeInset;
         _controllerCleanInset = cleanInset;
         _controllerScrollInset = scrollEdgeInset;
+        _controllerSafeAreaInset = safeAreaInset;
         _controllerStatusBarHeight = statusBarHeight;
         
         if (notify)

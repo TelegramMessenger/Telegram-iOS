@@ -25,6 +25,8 @@ typedef enum {
 
 @property (nonatomic, copy) void (^clearPrefix)(bool);
 
+@property (nonatomic, assign) UIEdgeInsets safeAreaInset;
+
 @property (nonatomic, weak) id<TGSearchBarDelegate> delegate;
 @property (nonatomic) bool highContrast;
 
