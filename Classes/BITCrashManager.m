@@ -545,17 +545,30 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
   }
   
   if (nil == self.appDidReceiveLowMemoryWarningObserver) {
-    self.appDidReceiveLowMemoryWarningObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification
-                                                                                                   object:nil
-                                                                                                    queue:NSOperationQueue.mainQueue
-                                                                                               usingBlock:^(NSNotification __unused *note) {
-                                                                                                 // we only need to log this once
-                                                                                                 if (!self.didLogLowMemoryWarning) {
-                                                                                                   [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
-                                                                                                   self.didLogLowMemoryWarning = YES;
-                                                                                                   
-                                                                                                 }
-                                                                                               }];
+    if (bit_isRunningInAppExtension()) {
+      static dispatch_once_t onceToken;
+      dispatch_once(&onceToken, ^{
+        dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE, 0, DISPATCH_MEMORYPRESSURE_WARN|DISPATCH_MEMORYPRESSURE_CRITICAL, dispatch_get_main_queue());
+        dispatch_source_set_event_handler(source, ^{
+          if (!self.didLogLowMemoryWarning) {
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
+            self.didLogLowMemoryWarning = YES;
+          }
+        });
+      });
+    } else {
+      self.appDidReceiveLowMemoryWarningObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification
+                                                                                                     object:nil
+                                                                                                      queue:NSOperationQueue.mainQueue
+                                                                                                 usingBlock:^(NSNotification __unused *note) {
+                                                                                                   // we only need to log this once
+                                                                                                   if (!self.didLogLowMemoryWarning) {
+                                                                                                     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
+                                                                                                     self.didLogLowMemoryWarning = YES;
+
+                                                                                                   }
+                                                                                                 }];
+    }
   }
 }
 
