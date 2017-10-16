@@ -474,7 +474,14 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
   __weak typeof(self) weakSelf = self;
   
   if(nil == self.appDidBecomeActiveObserver) {
-    self.appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+    NSNotificationName name = UIApplicationDidBecomeActiveNotification;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+    if (bit_isRunningInAppExtension() && &NSExtensionHostDidBecomeActiveNotification != NULL) {
+      name = NSExtensionHostDidBecomeActiveNotification;
+    }
+#pragma clang diagnostic pop
+    self.appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:name
                                                                                         object:nil
                                                                                          queue:NSOperationQueue.mainQueue
                                                                                     usingBlock:^(NSNotification __unused *note) {
@@ -504,7 +511,14 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
   }
   
   if (nil ==  self.appDidEnterBackgroundObserver) {
-    self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+    NSNotificationName name = UIApplicationDidEnterBackgroundNotification;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+    if (bit_isRunningInAppExtension() && &NSExtensionHostDidEnterBackgroundNotification != NULL) {
+      name = NSExtensionHostDidEnterBackgroundNotification;
+    }
+#pragma clang diagnostic pop
+    self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:name
                                                                                            object:nil
                                                                                             queue:NSOperationQueue.mainQueue
                                                                                        usingBlock:^(NSNotification __unused *note) {
@@ -514,7 +528,14 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
   }
   
   if (nil == self.appWillEnterForegroundObserver) {
-    self.appWillEnterForegroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillEnterForegroundNotification
+    NSNotificationName name = UIApplicationWillEnterForegroundNotification;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+    if (bit_isRunningInAppExtension() && &NSExtensionHostWillEnterForegroundNotification != NULL) {
+      name = NSExtensionHostWillEnterForegroundNotification;
+    }
+#pragma clang diagnostic pop
+    self.appWillEnterForegroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:name
                                                                                             object:nil
                                                                                              queue:NSOperationQueue.mainQueue
                                                                                         usingBlock:^(NSNotification __unused *note) {
