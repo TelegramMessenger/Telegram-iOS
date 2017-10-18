@@ -133,12 +133,14 @@ NS_ASSUME_NONNULL_BEGIN
   char* jsonStream = NULL;
   char *newEmptyString = NULL;
   do {
-    jsonStream = *string;
     newEmptyString = strdup("");
+    jsonStream = *string;
     
     // Reset both, the async-signal-safe buffer and item counter. Swaps jsonStream and BITSafeJsonEventsString.
     if (OSAtomicCompareAndSwapPtr(jsonStream, newEmptyString, (void*)string)) {
-      self.dataItemCount = 0;
+      @synchronized(self) {
+        self.dataItemCount = 0;
+      }
       break;
     }
   } while(true);
@@ -192,17 +194,19 @@ NS_ASSUME_NONNULL_BEGIN
     }
     
     // Enqueue item.
-    NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
-    [strongSelf appendDictionaryToEventBuffer:dict];
-    if (strongSelf.dataItemCount >= strongSelf.maxBatchSize) {
-      
-      // Case 3: Max batch count has been reached, so write queue to disk and delete all items.
-      [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
-    } else if (strongSelf.dataItemCount > 0) {
-      
-      // Case 4: It is the first item, let's start the timer.
-      if (![strongSelf timerIsRunning]) {
-        [strongSelf startTimer];
+    @synchronized(self) {
+      NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
+      [strongSelf appendDictionaryToEventBuffer:dict];
+      if (strongSelf.dataItemCount >= strongSelf.maxBatchSize) {
+        
+        // Case 3: Max batch count has been reached, so write queue to disk and delete all items.
+        [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
+      } else if (strongSelf.dataItemCount > 0) {
+        
+        // Case 4: It is the first item, let's start the timer.
+        if (![strongSelf timerIsRunning]) {
+          [strongSelf startTimer];
+        }
       }
     }
   });
@@ -285,15 +289,16 @@ void bit_appendStringToEventBuffer(NSString *string, char **eventBuffer) {
   do {
     previousBuffer = *eventBuffer;
     
-    // Concatenate old string with new JSON string and add a comma.
-    asprintf(&newBuffer, "%s%.*s\n", previousBuffer, (int)MIN(string.length, (NSUInteger)INT_MAX), string.UTF8String);
-    
     // Compare newBuffer and previousBuffer. If they point to the same address, we are safe to use them.
     if (OSAtomicCompareAndSwapPtr(previousBuffer, newBuffer, (void*)eventBuffer)) {
       
+      // Concatenate old string with new JSON string and add a comma.
+      asprintf(&newBuffer, "%s%.*s\n", previousBuffer, (int)MIN(string.length, (NSUInteger)INT_MAX), string.UTF8String);
+      
+      
+      
       // *jsonString has not been changed, we remove a previous value.
       free(previousBuffer);
-      // TODO should we increase the counter here?
       return;
     } else {
       
