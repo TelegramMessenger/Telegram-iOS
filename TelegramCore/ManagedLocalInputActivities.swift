@@ -112,7 +112,7 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
 private func requestActivity(postbox: Postbox, network: Network, peerId: PeerId, activity: PeerInputActivity?) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId) {
-            if let channel = peer as? TelegramChannel, case .group = channel.info {
+            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                 return .complete()
             }
             
