@@ -107,7 +107,7 @@ static BITCrashManagerCallbacks bitCrashCallbacks = {
 static void bit_save_events_callback(siginfo_t __unused *info, ucontext_t __unused *uap, void __unused *context) {
   
   // Do not flush metrics queue if queue is empty (metrics module disabled) to not freeze the app
-  if (!BITSafeJsonEventsString) {
+  if (!BITTelemetryEventBuffer) {
     return;
   }
   
@@ -117,10 +117,10 @@ static void bit_save_events_callback(siginfo_t __unused *info, ucontext_t __unus
     return;
   }
   
-  size_t len = strlen(BITSafeJsonEventsString);
+  size_t len = strlen(BITTelemetryEventBuffer);
   if (len > 0) {
     // Simply write the whole string to disk
-    write(fd, BITSafeJsonEventsString, len);
+    write(fd, BITTelemetryEventBuffer, len);
   }
   close(fd);
 }

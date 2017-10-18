@@ -27,7 +27,7 @@
   BITTelemetryContext *mockContext = mock(BITTelemetryContext.class);
   
   self.sut = [[BITChannel alloc]initWithTelemetryContext:mockContext persistence:self.mockPersistence];
-  bit_resetSafeJsonStream(&BITSafeJsonEventsString);
+  bit_resetEventBuffer(&BITTelemetryEventBuffer);
 }
 
 #pragma mark - Setup Tests
@@ -48,7 +48,7 @@
   
   dispatch_sync(self.sut.dataItemsOperations, ^{
     assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(1));
-    XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
+    XCTAssertTrue(strlen(BITTelemetryEventBuffer) > 0);
   });
 }
 
@@ -63,19 +63,19 @@
   [self.sut enqueueTelemetryItem:testData];
   dispatch_sync(self.sut.dataItemsOperations, ^{
     assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(1));
-    XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
+    XCTAssertTrue(strlen(BITTelemetryEventBuffer) > 0);
   });
   
   [self.sut enqueueTelemetryItem:testData];
   dispatch_sync(self.sut.dataItemsOperations, ^{
     assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(2));
-    XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
+    XCTAssertTrue(strlen(BITTelemetryEventBuffer) > 0);
   });
   
   [self.sut enqueueTelemetryItem:testData];
   dispatch_sync(self.sut.dataItemsOperations, ^{
     assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(0));
-    XCTAssertTrue(strcmp(BITSafeJsonEventsString, "") == 0);
+    XCTAssertTrue(strcmp(BITTelemetryEventBuffer, "") == 0);
   });
 }
 
@@ -84,42 +84,40 @@
 - (void)testAppendStringToSafeJsonStream {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonnull"
-  bit_appendStringToSafeJsonStream(nil, 0);
+  bit_appendStringToEventBuffer(nil, 0);
 #pragma clang diagnostic pop
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
+  XCTAssertEqual(strcmp(BITTelemetryEventBuffer,""), 0);
   
-//  BITSafeJsonEventsString = NULL;
-  bit_resetSafeJsonStream(&BITSafeJsonEventsString);
+  bit_resetEventBuffer(&BITTelemetryEventBuffer);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonnull"
-  bit_appendStringToSafeJsonStream(nil, &BITSafeJsonEventsString);
+  bit_appendStringToEventBuffer(nil, &BITTelemetryEventBuffer);
 #pragma clang diagnostic pop
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
+  XCTAssertEqual(strcmp(BITTelemetryEventBuffer,""), 0);
   
-  bit_appendStringToSafeJsonStream(@"", &BITSafeJsonEventsString);
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
+  bit_appendStringToEventBuffer(@"", &BITTelemetryEventBuffer);
+  XCTAssertEqual(strcmp(BITTelemetryEventBuffer,""), 0);
   
-  bit_appendStringToSafeJsonStream(@"{\"Key1\":\"Value1\"}", &BITSafeJsonEventsString);
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString,"{\"Key1\":\"Value1\"}\n"), 0);
+  bit_appendStringToEventBuffer(@"{\"Key1\":\"Value1\"}", &BITTelemetryEventBuffer);
+  XCTAssertEqual(strcmp(BITTelemetryEventBuffer,"{\"Key1\":\"Value1\"}\n"), 0);
 }
 
 - (void)testResetSafeJsonStream {
-  bit_resetSafeJsonStream(&BITSafeJsonEventsString);
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
+  bit_resetEventBuffer(&BITTelemetryEventBuffer);
+  XCTAssertEqual(strcmp(BITTelemetryEventBuffer,""), 0);
   
-//  BITSafeJsonEventsString = NULL;
-  bit_resetSafeJsonStream(&BITSafeJsonEventsString);
+  bit_resetEventBuffer(&BITTelemetryEventBuffer);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonnull"
-  bit_resetSafeJsonStream(nil);
+  bit_resetEventBuffer(nil);
 #pragma clang diagnostic pop
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
+  XCTAssertEqual(strcmp(BITTelemetryEventBuffer,""), 0);
   
-  BITSafeJsonEventsString = strdup("test string");
-  bit_resetSafeJsonStream(&BITSafeJsonEventsString);
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
+  BITTelemetryEventBuffer = strdup("test string");
+  bit_resetEventBuffer(&BITTelemetryEventBuffer);
+  XCTAssertEqual(strcmp(BITTelemetryEventBuffer,""), 0);
 }
 
 @end
