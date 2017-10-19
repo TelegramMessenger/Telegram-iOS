@@ -132,7 +132,7 @@ NS_ASSUME_NONNULL_BEGIN
   [self invalidateTimer];
   
   // Make sure string (which points to BITTelemetryEventBuffer) is not changed.
-  char* previousBuffer = NULL;
+  char *previousBuffer = NULL;
   char *newEmptyString = NULL;
   do {
     newEmptyString = strdup("");
