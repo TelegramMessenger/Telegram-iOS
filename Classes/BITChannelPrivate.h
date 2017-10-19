@@ -70,7 +70,7 @@ FOUNDATION_EXPORT NSString *const BITChannelBlockedNotification;
 /**
  *  Manually trigger the BITChannel to persist all items currently in its data item queue.
  */
-- (void)persistDataItemQueue:(char *_Nullable*_Nullable)string;
+- (void)persistDataItemQueue:(char *_Nullable*_Nullable)eventBuffer;
 
 /**
  *  Adds the specified dictionary to the JSON Stream string.

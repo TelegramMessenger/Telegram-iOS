@@ -81,7 +81,7 @@
 
 #pragma mark - Safe JSON Stream Tests
 
-- (void)testAppendStringToSafeJsonStream {
+- (void)testAppendStringToEventBuffer {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonnull"
   bit_appendStringToEventBuffer(nil, 0);

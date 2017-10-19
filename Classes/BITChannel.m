@@ -128,16 +128,18 @@ NS_ASSUME_NONNULL_BEGIN
   return self.channelBlocked;
 }
 
-- (void)persistDataItemQueue:(char **)string {
+- (void)persistDataItemQueue:(char **)eventBuffer {
   [self invalidateTimer];
-  char* jsonStream = NULL;
+  
+  // Make sure string (which points to BITTelemetryEventBuffer) is not changed.
+  char* previousBuffer = NULL;
   char *newEmptyString = NULL;
   do {
     newEmptyString = strdup("");
-    jsonStream = *string;
+    previousBuffer = *eventBuffer;
     
-    // Reset both, the async-signal-safe buffer and item counter. Swaps jsonStream and BITSafeJsonEventsString.
-    if (OSAtomicCompareAndSwapPtr(jsonStream, newEmptyString, (void*)string)) {
+    // This swaps pointers and makes sure eventBuffer now has the balue of newEmptyString.
+    if (OSAtomicCompareAndSwapPtr(previousBuffer, newEmptyString, (void*)eventBuffer)) {
       @synchronized(self) {
         self.dataItemCount = 0;
       }
@@ -145,20 +147,22 @@ NS_ASSUME_NONNULL_BEGIN
     }
   } while(true);
   
-  if (!jsonStream || strlen(jsonStream) == 0) {
-    free(jsonStream);
+  // Nothing to persist, freeing memory and existing.
+  if (!previousBuffer || strlen(previousBuffer) == 0) {
+    free(previousBuffer);
     return;
   }
   
-  NSData *bundle = [NSData dataWithBytes:jsonStream length:strlen(jsonStream)];
+  // Persist the data
+  NSData *bundle = [NSData dataWithBytes:previousBuffer length:strlen(previousBuffer)];
   [self.persistence persistBundle:bundle];
-  
-  free(jsonStream);
+  free(previousBuffer);
   
   // Reset both, the async-signal-safe and item counter.
   [self resetQueue];
 }
 
+// Resets the event buffer and count of events in the queue.
 - (void)resetQueue {
   @synchronized (self) {
     bit_resetEventBuffer(&BITTelemetryEventBuffer);
@@ -172,12 +176,12 @@ NS_ASSUME_NONNULL_BEGIN
   
   if (!item) {
     
-    // Case 1: Item is nil: Do not enqueue item and abort operation.
+    // Item is nil: Do not enqueue item and abort operation.
     BITHockeyLogWarning(@"WARNING: TelemetryItem was nil.");
     return;
   }
   
-  // first assigning self to weakSelf and then assigning this to strongSelf in the block is not very intuitive, this
+  // First assigning self to weakSelf and then assigning this to strongSelf in the block is not very intuitive, this
   // blog post explains it very well: https://dhoerl.wordpress.com/2013/04/23/i-finally-figured-out-weakself-and-strongself/
   __weak typeof(self) weakSelf = self;
   dispatch_async(self.dataItemsOperations, ^{
@@ -185,7 +189,7 @@ NS_ASSUME_NONNULL_BEGIN
     typeof(self) strongSelf = weakSelf;
     if (strongSelf.isQueueBusy) {
       
-      // Case 2: Channel is in blocked state: Trigger sender, start timer to check after again after a while and abort operation.
+      // Case 1: Channel is in blocked state: Trigger sender, start timer to check after again after a while and abort operation.
       BITHockeyLogDebug(@"INFO: The channel is saturated. %@ was dropped.", item.debugDescription);
       if (![strongSelf timerIsRunning]) {
         [strongSelf startTimer];
@@ -199,11 +203,11 @@ NS_ASSUME_NONNULL_BEGIN
       [strongSelf appendDictionaryToEventBuffer:dict];
       if (strongSelf.dataItemCount >= strongSelf.maxBatchSize) {
         
-        // Case 3: Max batch count has been reached, so write queue to disk and delete all items.
+        // Case 2: Max batch count has been reached, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
       } else if (strongSelf.dataItemCount > 0) {
         
-        // Case 4: It is the first item, let's start the timer.
+        // Case 3: It is the first item, let's start the timer.
         if (![strongSelf timerIsRunning]) {
           [strongSelf startTimer];
         }
@@ -284,25 +288,22 @@ void bit_appendStringToEventBuffer(NSString *string, char **eventBuffer) {
     return;
   }
   
-  char *newBuffer = NULL;
-  char *previousBuffer = NULL;
   do {
-    previousBuffer = *eventBuffer;
+    char *newBuffer = NULL;
+    char *previousBuffer = *eventBuffer;
+    
+    // Concatenate old string with new JSON string and add a comma.
+    asprintf(&newBuffer, "%s%.*s\n", previousBuffer, (int)MIN(string.length, (NSUInteger)INT_MAX), string.UTF8String);
     
     // Compare newBuffer and previousBuffer. If they point to the same address, we are safe to use them.
     if (OSAtomicCompareAndSwapPtr(previousBuffer, newBuffer, (void*)eventBuffer)) {
-      
-      // Concatenate old string with new JSON string and add a comma.
-      asprintf(&newBuffer, "%s%.*s\n", previousBuffer, (int)MIN(string.length, (NSUInteger)INT_MAX), string.UTF8String);
-      
-      
-      
-      // *jsonString has not been changed, we remove a previous value.
+ 
+      // Free the intermediate pointer.
       free(previousBuffer);
       return;
     } else {
       
-      // newBuffer has been changed by anothe thread.
+      // newBuffer has been changed by another thread.
       free(newBuffer);
     }
   } while (true);
