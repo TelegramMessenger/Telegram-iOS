@@ -120,24 +120,4 @@
   XCTAssertEqual(strcmp(BITTelemetryEventBuffer,""), 0);
 }
 
-- (void) testBITEventBufferThreadSafety {
-  int count = 1000;
-  XCTestExpectation *expectation1 = [[XCTestExpectation alloc] initWithDescription:@"append"];
-  XCTestExpectation *expectation2 = [[XCTestExpectation alloc] initWithDescription:@"reset"];
-  dispatch_async(dispatch_queue_create("queue1", DISPATCH_QUEUE_SERIAL), ^{
-    for(int i = 0; i < count; i++) {
-      bit_appendStringToEventBuffer([NSString stringWithFormat:@"%d", i], &BITTelemetryEventBuffer);
-    }
-    [expectation1 fulfill];
-  });
-  dispatch_async(dispatch_queue_create("queue2", DISPATCH_QUEUE_SERIAL), ^{
-    for(int i = 0; i < count; i++) {
-      bit_resetEventBuffer(&BITTelemetryEventBuffer);
-    }
-    [expectation2 fulfill];
-  });
-  [self waitForExpectations:@[expectation1, expectation2] timeout: 10];
-  XCTAssertTrue(true);
-}
-
 @end
