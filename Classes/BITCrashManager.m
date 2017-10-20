@@ -474,7 +474,14 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
   __weak typeof(self) weakSelf = self;
   
   if(nil == self.appDidBecomeActiveObserver) {
-    self.appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+    NSNotificationName name = UIApplicationDidBecomeActiveNotification;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+    if (bit_isRunningInAppExtension() && &NSExtensionHostDidBecomeActiveNotification != NULL) {
+      name = NSExtensionHostDidBecomeActiveNotification;
+    }
+#pragma clang diagnostic pop
+    self.appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:name
                                                                                         object:nil
                                                                                          queue:NSOperationQueue.mainQueue
                                                                                     usingBlock:^(NSNotification __unused *note) {
@@ -504,7 +511,14 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
   }
   
   if (nil ==  self.appDidEnterBackgroundObserver) {
-    self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+    NSNotificationName name = UIApplicationDidEnterBackgroundNotification;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+    if (bit_isRunningInAppExtension() && &NSExtensionHostDidEnterBackgroundNotification != NULL) {
+      name = NSExtensionHostDidEnterBackgroundNotification;
+    }
+#pragma clang diagnostic pop
+    self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:name
                                                                                            object:nil
                                                                                             queue:NSOperationQueue.mainQueue
                                                                                        usingBlock:^(NSNotification __unused *note) {
@@ -514,7 +528,14 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
   }
   
   if (nil == self.appWillEnterForegroundObserver) {
-    self.appWillEnterForegroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillEnterForegroundNotification
+    NSNotificationName name = UIApplicationWillEnterForegroundNotification;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+    if (bit_isRunningInAppExtension() && &NSExtensionHostWillEnterForegroundNotification != NULL) {
+      name = NSExtensionHostWillEnterForegroundNotification;
+    }
+#pragma clang diagnostic pop
+    self.appWillEnterForegroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:name
                                                                                             object:nil
                                                                                              queue:NSOperationQueue.mainQueue
                                                                                         usingBlock:^(NSNotification __unused *note) {
@@ -524,17 +545,30 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
   }
   
   if (nil == self.appDidReceiveLowMemoryWarningObserver) {
-    self.appDidReceiveLowMemoryWarningObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification
-                                                                                                   object:nil
-                                                                                                    queue:NSOperationQueue.mainQueue
-                                                                                               usingBlock:^(NSNotification __unused *note) {
-                                                                                                 // we only need to log this once
-                                                                                                 if (!self.didLogLowMemoryWarning) {
-                                                                                                   [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
-                                                                                                   self.didLogLowMemoryWarning = YES;
-                                                                                                   
-                                                                                                 }
-                                                                                               }];
+    if (bit_isRunningInAppExtension()) {
+      static dispatch_once_t onceToken;
+      dispatch_once(&onceToken, ^{
+        dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE, 0, DISPATCH_MEMORYPRESSURE_WARN|DISPATCH_MEMORYPRESSURE_CRITICAL, dispatch_get_main_queue());
+        dispatch_source_set_event_handler(source, ^{
+          if (!self.didLogLowMemoryWarning) {
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
+            self.didLogLowMemoryWarning = YES;
+          }
+        });
+      });
+    } else {
+      self.appDidReceiveLowMemoryWarningObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification
+                                                                                                     object:nil
+                                                                                                      queue:NSOperationQueue.mainQueue
+                                                                                                 usingBlock:^(NSNotification __unused *note) {
+                                                                                                   // we only need to log this once
+                                                                                                   if (!self.didLogLowMemoryWarning) {
+                                                                                                     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
+                                                                                                     self.didLogLowMemoryWarning = YES;
+
+                                                                                                   }
+                                                                                                 }];
+    }
   }
 }
 
