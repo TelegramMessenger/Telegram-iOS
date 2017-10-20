@@ -3,6 +3,7 @@
 #if HOCKEYSDK_FEATURE_METRICS
 
 #import "HockeySDKPrivate.h"
+#import "BITHockeyManager.h"
 #import "BITChannelPrivate.h"
 #import "BITHockeyHelper.h"
 #import "BITTelemetryContext.h"
@@ -12,9 +13,11 @@
 #import "BITData.h"
 #import "BITDevice.h"
 #import "BITPersistencePrivate.h"
+#import <libkern/OSAtomic.h>
+
 
 static char *const BITDataItemsOperationsQueue = "net.hockeyapp.senderQueue";
-char *BITSafeJsonEventsString;
+char *BITTelemetryEventBuffer;
 
 NSString *const BITChannelBlockedNotification = @"BITChannelBlockedNotification";
 
@@ -42,7 +45,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)init {
   if ((self = [super init])) {
-    bit_resetSafeJsonStream(&BITSafeJsonEventsString);
+    bit_resetEventBuffer(&BITTelemetryEventBuffer);
     _dataItemCount = 0;
     if (bit_isDebuggerAttached()) {
       _maxBatchSize = BITDebugMaxBatchSize;
@@ -80,7 +83,6 @@ NS_ASSUME_NONNULL_BEGIN
     void (^notificationBlock)(NSNotification *note) = ^(NSNotification __unused *note) {
       typeof(self) strongSelf = weakSelf;
       if ([strongSelf timerIsRunning]) {
-        [strongSelf persistDataItemQueue];
         
         /**
          * From the documentation for applicationDidEnterBackground:
@@ -93,12 +95,15 @@ NS_ASSUME_NONNULL_BEGIN
           [sharedApplication endBackgroundTask:_backgroundTask];
           _backgroundTask = UIBackgroundTaskInvalid;
         }];
+        
+        // Do background work that will be done in it's own async queue.
+        [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
       }
     };
     self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
-                                                                                       object:nil
-                                                                                        queue:NSOperationQueue.mainQueue
-                                                                                   usingBlock:notificationBlock];
+                                                                                           object:nil
+                                                                                            queue:NSOperationQueue.mainQueue
+                                                                                       usingBlock:notificationBlock];
   }
 }
 
@@ -123,22 +128,46 @@ NS_ASSUME_NONNULL_BEGIN
   return self.channelBlocked;
 }
 
-- (void)persistDataItemQueue {
+- (void)persistDataItemQueue:(char **)eventBuffer {
   [self invalidateTimer];
-  if (!BITSafeJsonEventsString || strlen(BITSafeJsonEventsString) == 0) {
+  
+  // Make sure string (which points to BITTelemetryEventBuffer) is not changed.
+  char *previousBuffer = NULL;
+  char *newEmptyString = NULL;
+  do {
+    newEmptyString = strdup("");
+    previousBuffer = *eventBuffer;
+    
+    // This swaps pointers and makes sure eventBuffer now has the balue of newEmptyString.
+    if (OSAtomicCompareAndSwapPtr(previousBuffer, newEmptyString, (void*)eventBuffer)) {
+      @synchronized(self) {
+        self.dataItemCount = 0;
+      }
+      break;
+    }
+  } while(true);
+  
+  // Nothing to persist, freeing memory and existing.
+  if (!previousBuffer || strlen(previousBuffer) == 0) {
+    free(previousBuffer);
     return;
   }
   
-  NSData *bundle = [NSData dataWithBytes:BITSafeJsonEventsString length:strlen(BITSafeJsonEventsString)];
+  // Persist the data
+  NSData *bundle = [NSData dataWithBytes:previousBuffer length:strlen(previousBuffer)];
   [self.persistence persistBundle:bundle];
+  free(previousBuffer);
   
   // Reset both, the async-signal-safe and item counter.
   [self resetQueue];
 }
 
+// Resets the event buffer and count of events in the queue.
 - (void)resetQueue {
-  bit_resetSafeJsonStream(&BITSafeJsonEventsString);
-  self.dataItemCount = 0;
+  @synchronized (self) {
+    bit_resetEventBuffer(&BITTelemetryEventBuffer);
+    self.dataItemCount = 0;
+  }
 }
 
 #pragma mark - Adding to queue
@@ -146,17 +175,21 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)enqueueTelemetryItem:(BITTelemetryData *)item {
   
   if (!item) {
-    // Case 1: Item is nil: Do not enqueue item and abort operation
+    
+    // Item is nil: Do not enqueue item and abort operation.
     BITHockeyLogWarning(@"WARNING: TelemetryItem was nil.");
     return;
   }
   
+  // First assigning self to weakSelf and then assigning this to strongSelf in the block is not very intuitive, this
+  // blog post explains it very well: https://dhoerl.wordpress.com/2013/04/23/i-finally-figured-out-weakself-and-strongself/
   __weak typeof(self) weakSelf = self;
   dispatch_async(self.dataItemsOperations, ^{
-    typeof(self) strongSelf = weakSelf;
     
+    typeof(self) strongSelf = weakSelf;
     if (strongSelf.isQueueBusy) {
-      // Case 2: Channel is in blocked state: Trigger sender, start timer to check after again after a while and abort operation.
+      
+      // Case 1: Channel is in blocked state: Trigger sender, start timer to check after again after a while and abort operation.
       BITHockeyLogDebug(@"INFO: The channel is saturated. %@ was dropped.", item.debugDescription);
       if (![strongSelf timerIsRunning]) {
         [strongSelf startTimer];
@@ -164,18 +197,20 @@ NS_ASSUME_NONNULL_BEGIN
       return;
     }
     
-    // Enqueue item
-    NSDictionary *dict = [self dictionaryForTelemetryData:item];
-    [strongSelf appendDictionaryToJsonStream:dict];
-    
-    if (strongSelf.dataItemCount >= self.maxBatchSize) {
-      // Case 3: Max batch count has been reached, so write queue to disk and delete all items.
-      [strongSelf persistDataItemQueue];
-      
-    } else if (strongSelf.dataItemCount == 1) {
-      // Case 4: It is the first item, let's start the timer.
-      if (![strongSelf timerIsRunning]) {
-        [strongSelf startTimer];
+    // Enqueue item.
+    @synchronized(self) {
+      NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
+      [strongSelf appendDictionaryToEventBuffer:dict];
+      if (strongSelf.dataItemCount >= strongSelf.maxBatchSize) {
+        
+        // Case 2: Max batch count has been reached, so write queue to disk and delete all items.
+        [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
+      } else if (strongSelf.dataItemCount > 0) {
+        
+        // Case 3: It is the first item, let's start the timer.
+        if (![strongSelf timerIsRunning]) {
+          [strongSelf startTimer];
+        }
       }
     }
   });
@@ -223,39 +258,72 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark JSON Stream
 
-- (void)appendDictionaryToJsonStream:(NSDictionary *)dictionary {
+- (void)appendDictionaryToEventBuffer:(NSDictionary *)dictionary {
   if (dictionary) {
     NSString *string = [self serializeDictionaryToJSONString:dictionary];
     
     // Since we can't persist every event right away, we write it to a simple C string.
     // This can then be written to disk by a signal handler in case of a crash.
-    bit_appendStringToSafeJsonStream(string, &(BITSafeJsonEventsString));
-    self.dataItemCount += 1;
+    @synchronized (self) {
+      bit_appendStringToEventBuffer(string, &BITTelemetryEventBuffer);
+      self.dataItemCount += 1;
+    }
   }
 }
 
-void bit_appendStringToSafeJsonStream(NSString *string, char **jsonString) {
-  if (jsonString == NULL) { return; }
-  
-  if (!string) { return; }
-  
-  if (*jsonString == NULL || strlen(*jsonString) == 0) {
-    bit_resetSafeJsonStream(jsonString);
+void bit_appendStringToEventBuffer(NSString *string, char **eventBuffer) {
+  if (eventBuffer == NULL) {
+    return;
   }
   
-  if (string.length == 0) { return; }
+  if (!string) {
+    return;
+  }
   
-  char *new_string = NULL;
-  // Concatenate old string with new JSON string and add a comma.
-  asprintf(&new_string, "%s%.*s\n", *jsonString, (int)MIN(string.length, (NSUInteger)INT_MAX), string.UTF8String);
-  free(*jsonString);
-  *jsonString = new_string;
+  if (*eventBuffer == NULL || strlen(*eventBuffer) == 0) {
+    bit_resetEventBuffer(eventBuffer);
+  }
+  
+  if (string.length == 0) {
+    return;
+  }
+  
+  do {
+    char *newBuffer = NULL;
+    char *previousBuffer = *eventBuffer;
+    
+    // Concatenate old string with new JSON string and add a comma.
+    asprintf(&newBuffer, "%s%.*s\n", previousBuffer, (int)MIN(string.length, (NSUInteger)INT_MAX), string.UTF8String);
+    
+    // Compare newBuffer and previousBuffer. If they point to the same address, we are safe to use them.
+    if (OSAtomicCompareAndSwapPtr(previousBuffer, newBuffer, (void*)eventBuffer)) {
+ 
+      // Free the intermediate pointer.
+      free(previousBuffer);
+      return;
+    } else {
+      
+      // newBuffer has been changed by another thread.
+      free(newBuffer);
+    }
+  } while (true);
 }
 
-void bit_resetSafeJsonStream(char **string) {
-  if (!string) { return; }
-  free(*string);
-  *string = strdup("");
+void bit_resetEventBuffer(char **eventBuffer) {
+  if (!eventBuffer) { return; }
+  
+  char *newEmptyString = NULL;
+  char *prevString = NULL;
+  do {
+    prevString = *eventBuffer;
+    newEmptyString = strdup("");
+    
+    // Compare pointers to strings to make sure we are still threadsafe!
+    if (OSAtomicCompareAndSwapPtr(prevString, newEmptyString, (void*)eventBuffer)) {
+      free(prevString);
+      return;
+    }
+  } while(true);
 }
 
 #pragma mark - Batching
@@ -279,28 +347,26 @@ void bit_resetSafeJsonStream(char **string) {
 }
 
 - (void)startTimer {
-  // Reset timer, if it is already running
+  
+  // Reset timer, if it is already running.
   if ([self timerIsRunning]) {
     [self invalidateTimer];
   }
   
   self.timerSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.dataItemsOperations);
   dispatch_source_set_timer((dispatch_source_t)self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * self.batchInterval), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
-  
   __weak typeof(self) weakSelf = self;
   dispatch_source_set_event_handler((dispatch_source_t)self.timerSource, ^{
     typeof(self) strongSelf = weakSelf;
-    
-    if(strongSelf) {
+    if (strongSelf) {
       if (strongSelf.dataItemCount > 0) {
-        [strongSelf persistDataItemQueue];
+        [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
       } else {
         strongSelf.channelBlocked = NO;
       }
       [strongSelf invalidateTimer];
     }
   });
-  
   dispatch_resume((dispatch_source_t)self.timerSource);
 }
 
