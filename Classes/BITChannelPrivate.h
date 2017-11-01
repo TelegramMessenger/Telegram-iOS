@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 #import "HockeySDKFeatureConfig.h"
 
 #if HOCKEYSDK_FEATURE_METRICS
@@ -71,6 +72,11 @@ FOUNDATION_EXPORT NSString *const BITChannelBlockedNotification;
  *  Manually trigger the BITChannel to persist all items currently in its data item queue.
  */
 - (void)persistDataItemQueue:(char *_Nullable*_Nullable)eventBuffer;
+
+/**
+ *  Create background task for queues and group.
+ */
+- (void)createBackgroundTask:(UIApplication *)application forQueues:(NSArray *)queues andGroup:(nullable dispatch_group_t)group;
 
 /**
  *  Adds the specified dictionary to the JSON Stream string.

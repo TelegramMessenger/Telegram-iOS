@@ -7,12 +7,12 @@
 #import "BITMetricsManagerPrivate.h"
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
-#import "BITChannel.h"
+#import "BITChannelPrivate.h"
 #import "BITEventData.h"
 #import "BITSession.h"
 #import "BITSessionState.h"
 #import "BITSessionStateData.h"
-#import "BITPersistence.h"
+#import "BITPersistencePrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITSender.h"
 
@@ -178,12 +178,21 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   }
   
   __weak typeof(self) weakSelf = self;
-  dispatch_async(self.metricsEventQueue, ^{
+  dispatch_group_t group = dispatch_group_create();
+  dispatch_group_async(group, self.metricsEventQueue, ^{
     typeof(self) strongSelf = weakSelf;
     BITEventData *eventData = [BITEventData new];
     [eventData setName:eventName];
     [strongSelf trackDataItem:eventData];
   });
+  
+  // If the app is running in the background.
+  UIApplication *application = [UIApplication sharedApplication];
+  if (application.applicationState == UIApplicationStateBackground) {
+    [self.channel createBackgroundTask:application
+                             forQueues:@[ self.channel.dataItemsOperations, self.persistence.persistenceQueue ]
+                              andGroup:group];
+  }
 }
 
 - (void)trackEventWithName:(nonnull NSString *)eventName properties:(nullable NSDictionary<NSString *, NSString *> *)properties measurements:(nullable NSDictionary<NSString *, NSNumber *> *)measurements {
@@ -194,7 +203,8 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   }
 
   __weak typeof(self) weakSelf = self;
-  dispatch_async(self.metricsEventQueue, ^{
+  dispatch_group_t group = dispatch_group_create();
+  dispatch_group_async(group, self.metricsEventQueue, ^{
     typeof(self) strongSelf = weakSelf;
     BITEventData *eventData = [BITEventData new];
     [eventData setName:eventName];
@@ -202,6 +212,14 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
     [eventData setMeasurements:measurements];
     [strongSelf trackDataItem:eventData];
   });
+  
+  // If the app is running in the background.
+  UIApplication *application = [UIApplication sharedApplication];
+  if (application.applicationState == UIApplicationStateBackground) {
+    [self.channel createBackgroundTask:application
+                             forQueues:@[ self.channel.dataItemsOperations, self.persistence.persistenceQueue ]
+                              andGroup:group];
+  }
 }
 
 #pragma mark Track DataItem

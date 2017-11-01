@@ -8,7 +8,6 @@
 #import "BITHockeyHelper.h"
 #import "BITTelemetryContext.h"
 #import "BITTelemetryData.h"
-#import "HockeySDKPrivate.h"
 #import "BITEnvelope.h"
 #import "BITData.h"
 #import "BITDevice.h"
@@ -78,39 +77,28 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Observers
 
 - (void) registerObservers {
+  NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
   __weak typeof(self) weakSelf = self;
   if(nil == self.appDidEnterBackgroundObserver) {
     void (^notificationBlock)(NSNotification *note) = ^(NSNotification __unused *note) {
       typeof(self) strongSelf = weakSelf;
       if ([strongSelf timerIsRunning]) {
-        
-        /**
-         * From the documentation for applicationDidEnterBackground:
-         * It's likely any background tasks you start in applicationDidEnterBackground: will not run until after that method exits,
-         * you should request additional background execution time before starting those tasks. In other words,
-         * first call beginBackgroundTaskWithExpirationHandler: and then run the task on a dispatch queue or secondary thread.
-         */
-        UIApplication *sharedApplication = [UIApplication sharedApplication];
-        __block UIBackgroundTaskIdentifier _backgroundTask = [sharedApplication beginBackgroundTaskWithExpirationHandler:^{
-          [sharedApplication endBackgroundTask:_backgroundTask];
-          _backgroundTask = UIBackgroundTaskInvalid;
-        }];
-        
-        // Do background work that will be done in it's own async queue.
-        [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
+        UIApplication *application = [UIApplication sharedApplication];
+        [self persistDataItemQueueWithBackgroundTask: application];
       }
     };
-    self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
-                                                                                           object:nil
-                                                                                            queue:NSOperationQueue.mainQueue
-                                                                                       usingBlock:notificationBlock];
+    self.appDidEnterBackgroundObserver = [center addObserverForName:UIApplicationDidEnterBackgroundNotification
+                                                             object:nil
+                                                              queue:NSOperationQueue.mainQueue
+                                                         usingBlock:notificationBlock];
   }
 }
 
 - (void) unregisterObservers {
+  NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
   id strongObserver = self.appDidEnterBackgroundObserver;
   if(strongObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:strongObserver];
+    [center removeObserver:strongObserver];
     self.appDidEnterBackgroundObserver = nil;
   }
 }
@@ -162,6 +150,48 @@ NS_ASSUME_NONNULL_BEGIN
   [self resetQueue];
 }
 
+- (void)persistDataItemQueueWithBackgroundTask:(UIApplication *)application {
+  __weak typeof(self) weakSelf = self;
+  dispatch_async(self.dataItemsOperations, ^{
+    typeof(self) strongSelf = weakSelf;
+    [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
+  });
+  [self createBackgroundTask:application
+                   forQueues:@[ self.dataItemsOperations, self.persistence.persistenceQueue ]
+                    andGroup:nil];
+}
+
+- (void)createBackgroundTask:(UIApplication *)application forQueues:(NSArray *)queues andGroup:(nullable dispatch_group_t)group {
+  BITHockeyLogVerbose(@"BITChannel: Start background task");
+  __block UIBackgroundTaskIdentifier backgroundTask = [application beginBackgroundTaskWithExpirationHandler:^{
+    BITHockeyLogVerbose(@"BITChannel: Background task is expired");
+    [application endBackgroundTask:backgroundTask];
+    backgroundTask = UIBackgroundTaskInvalid;
+  }];
+  __block NSUInteger i = 0;
+  __block __weak void (^weakWaitBlock)();
+  void (^waitBlock)();
+  weakWaitBlock = waitBlock = ^{
+    if (i < queues.count) {
+      dispatch_queue_t queue = [queues objectAtIndex:i++];
+      BITHockeyLogVerbose(@"BITChannel: Waiting queue: %@", [[NSString alloc] initWithUTF8String:dispatch_queue_get_label(queue)]);
+      dispatch_async(queue, weakWaitBlock);
+    } else {
+      if (backgroundTask != UIBackgroundTaskInvalid) {
+        BITHockeyLogVerbose(@"BITChannel: Cancel background task");
+        [application endBackgroundTask:backgroundTask];
+        backgroundTask = UIBackgroundTaskInvalid;
+      }
+    }
+  };
+  if (group != nil) {
+    BITHockeyLogVerbose(@"BITChannel: Waiting group");
+    dispatch_group_notify((dispatch_group_t)group, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), waitBlock);
+  } else {
+    waitBlock();
+  }
+}
+
 // Resets the event buffer and count of events in the queue.
 - (void)resetQueue {
   @synchronized (self) {
@@ -201,9 +231,11 @@ NS_ASSUME_NONNULL_BEGIN
     @synchronized(self) {
       NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
       [strongSelf appendDictionaryToEventBuffer:dict];
-      if (strongSelf.dataItemCount >= strongSelf.maxBatchSize) {
+      UIApplication *application = [UIApplication sharedApplication];
+      if (strongSelf.dataItemCount >= strongSelf.maxBatchSize ||
+          application.applicationState == UIApplicationStateBackground) {
         
-        // Case 2: Max batch count has been reached, so write queue to disk and delete all items.
+        // Case 2: Max batch count has been reached or the app is running in the background, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
       } else if (strongSelf.dataItemCount > 0) {
         
