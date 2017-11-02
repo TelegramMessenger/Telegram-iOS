@@ -310,6 +310,8 @@ NS_ASSUME_NONNULL_BEGIN
       bit_appendStringToEventBuffer(string, &BITTelemetryEventBuffer);
       self.dataItemCount += 1;
     }
+    
+    BITHockeyLogVerbose(@"VERBOSE: Appended data to buffer:\n%@", string);
   }
 }
 
@@ -418,6 +420,7 @@ void bit_resetEventBuffer(char **eventBuffer) {
  */
 - (void)sendBlockingChannelNotification {
   dispatch_async(dispatch_get_main_queue(), ^{
+    BITHockeyLogDebug(@"Sending notification: %@", BITChannelBlockedNotification);
     [[NSNotificationCenter defaultCenter] postNotificationName:BITChannelBlockedNotification
                                                         object:nil
                                                       userInfo:nil];

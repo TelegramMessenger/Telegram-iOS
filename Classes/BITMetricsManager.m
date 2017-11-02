@@ -239,6 +239,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
     return;
   }
   
+  BITHockeyLogDebug(@"INFO: Enqueue telemetry item: %@", dataItem.name);
   [self.channel enqueueTelemetryItem:dataItem];
 }
 

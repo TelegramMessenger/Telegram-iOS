@@ -114,6 +114,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
     NSData *gzippedData = [data bit_gzippedData];
     NSURLRequest *request = [self requestForData:gzippedData];
 
+    BITHockeyLogVerbose(@"VERBOSE: Sending data:\n%@", [[NSString alloc] initWithData:data encoding:kCFStringEncodingUTF8]);
     [self sendRequest:request filePath:filePath];
   } else {
     self.runningRequestsCount--;
@@ -158,6 +159,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)sendSenderFinishSendingDataNotification {
   dispatch_async(dispatch_get_main_queue(), ^{
+    BITHockeyLogDebug(@"Sending notification: %@", BITSenderFinishSendingDataNotification);
     [[NSNotificationCenter defaultCenter] postNotificationName:BITSenderFinishSendingDataNotification
                                                         object:nil
                                                       userInfo:nil];
