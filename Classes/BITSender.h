@@ -13,6 +13,11 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @interface BITSender : NSObject
 
+/**
+ * Notification that will be send on the main thread to notifiy observers of finish sending data.
+ */
+FOUNDATION_EXPORT NSString *const BITSenderFinishSendingDataNotification;
+
 ///-----------------------------------------------------------------------------
 /// @name Initialize instance
 ///-----------------------------------------------------------------------------
@@ -27,19 +32,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithPersistence:(BITPersistence *)persistence serverURL:(NSURL *)serverURL;
 
 /**
- * We use this queue to keep track of the number of currently running requests
- */
-@property (nonatomic, strong) dispatch_queue_t requestsCountQueue;
-
-/**
  *  A queue which is used to handle completion blocks.
  */
 @property (nonatomic, strong) dispatch_queue_t senderTasksQueue;
-
-/**
- *  A queue for processing http operations (iOS < 7)
- */
-@property (nonatomic, strong) NSOperationQueue *operationQueue;
 
 /**
  *  The endpoint url of the telemetry server.
@@ -54,7 +49,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  *  The number of requests that are currently running.
  */
-@property (nonatomic, assign) NSUInteger runningRequestsCount;
+@property (atomic, assign) NSUInteger runningRequestsCount;
 
 /**
  *	BaseURL to which relative paths are appended.
@@ -95,22 +90,6 @@ NS_ASSUME_NONNULL_BEGIN
  *  @param path path to the file which should be sent
  */
 - (void)sendRequest:(NSURLRequest *)request filePath:(NSString *)path;
-
-/**
- * Helper method that checks whether the current OS supports NSURLSession
- *
- * @returns YES if NSURLSession is available
- */
-- (BOOL)isURLSessionSupported;
-
-- (void)sendUsingURLSessionWithRequest:(NSURLRequest *)request filePath:(NSString *)filePath;
-
-/**
- *  Resumes the given NSURLSessionDataTask instance.
- *
- *  @param sessionDataTask the task which should be resumed
- */
-- (void)resumeSessionDataTask:(NSURLSessionDataTask *)sessionDataTask;
 
 /**
  *  Deletes or unblocks sent file according to the given response code.

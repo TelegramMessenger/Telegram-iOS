@@ -8,8 +8,9 @@
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 
+NSString *const BITSenderFinishSendingDataNotification = @"BITSenderFinishSendingDataNotification";
+
 static char const *kBITSenderTasksQueueString = "net.hockeyapp.sender.tasksQueue";
-static char const *kBITSenderRequestsCountQueueString = "net.hockeyapp.sender.requestsCount";
 static NSUInteger const BITDefaultRequestLimit = 10;
 
 @interface BITSender ()
@@ -27,7 +28,6 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (instancetype)initWithPersistence:(nonnull BITPersistence *)persistence serverURL:(nonnull NSURL *)serverURL {
   if ((self = [super init])) {
-    _requestsCountQueue = dispatch_queue_create(kBITSenderRequestsCountQueueString, DISPATCH_QUEUE_CONCURRENT);
     _senderTasksQueue = dispatch_queue_create(kBITSenderTasksQueueString, DISPATCH_QUEUE_CONCURRENT);
     _maxRequestCount = BITDefaultRequestLimit;
     _serverURL = serverURL;
@@ -69,11 +69,11 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 }
 
 - (void)sendSavedData {
-  @synchronized(self){
-    if(self.runningRequestsCount < self.maxRequestCount){
+  @synchronized(self) {
+    if (self.runningRequestsCount < self.maxRequestCount) {
       self.runningRequestsCount++;
       BITHockeyLogDebug(@"INFO: Create new sender thread. Current count is %ld", (long) self.runningRequestsCount);
-    }else{
+    } else {
       return;
     }
   }
@@ -81,7 +81,6 @@ static NSUInteger const BITDefaultRequestLimit = 10;
   NSString *filePath = [self.persistence requestNextFilePath];
   NSData *data = [self.persistence dataAtFilePath:filePath];
   [self sendData:data withFilePath:filePath];
- 
 }
 
 - (void)sendData:(nonnull NSData *)data withFilePath:(nonnull NSString *)filePath {
@@ -91,40 +90,27 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
     [self sendRequest:request filePath:filePath];
   } else {
-    self.runningRequestsCount -= 1;
+    self.runningRequestsCount--;
     BITHockeyLogDebug(@"INFO: Close sender thread due empty package. Current count is %ld", (long) self.runningRequestsCount);
-    // TODO: Delete data and send next file
   }
 }
 
-- (void)sendRequest:(nonnull NSURLRequest *) request filePath:(nonnull NSString *) path {
-  if (!path || !request) {return;}
-  [self sendUsingURLSessionWithRequest:request filePath:path];
-}
-
-- (BOOL)isURLSessionSupported {
-  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
-  BOOL isUrlSessionSupported = (nsurlsessionClass && !bit_isRunningInAppExtension());
-  return isUrlSessionSupported;
-}
-
-- (void)sendUsingURLSessionWithRequest:(nonnull NSURLRequest *)request filePath:(nonnull NSString *)filePath {
+- (void)sendRequest:(nonnull NSURLRequest *)request filePath:(nonnull NSString *)path {
+  if (!path || !request) {
+    return;
+  }
   NSURLSession *session = self.session;
   NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                           completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
                                             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
                                             NSInteger statusCode = httpResponse.statusCode;
-                                            [self handleResponseWithStatusCode:statusCode responseData:data filePath:filePath error:error];
+                                            [self handleResponseWithStatusCode:statusCode responseData:data filePath:path error:error];
                                           }];
-  [self resumeSessionDataTask:task];
-}
-
-- (void)resumeSessionDataTask:(nonnull NSURLSessionDataTask *)sessionDataTask {
-  [sessionDataTask resume];
+  [task resume];
 }
 
 - (void)handleResponseWithStatusCode:(NSInteger)statusCode responseData:(nonnull NSData *)responseData filePath:(nonnull NSString *)filePath error:(nonnull NSError *)error {
-  self.runningRequestsCount -= 1;
+  self.runningRequestsCount--;
   BITHockeyLogDebug(@"INFO: Close sender thread due incoming response. Current count is %ld", (long) self.runningRequestsCount);
 
   if (responseData && (responseData.length > 0) && [self shouldDeleteDataWithStatusCode:statusCode]) {
@@ -138,6 +124,18 @@ static NSUInteger const BITDefaultRequestLimit = 10;
     BITHockeyLogError(@"Error description: %@", error.localizedDescription);
     [self.persistence giveBackRequestedFilePath:filePath];
   }
+  
+  if (self.runningRequestsCount == 0) {
+    [self sendSenderFinishSendingDataNotification];
+  }
+}
+
+- (void)sendSenderFinishSendingDataNotification {
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [[NSNotificationCenter defaultCenter] postNotificationName:BITSenderFinishSendingDataNotification
+                                                        object:nil
+                                                      userInfo:nil];
+  });
 }
 
 #pragma mark - Helper
@@ -175,28 +173,6 @@ static NSUInteger const BITDefaultRequestLimit = 10;
     _session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
   }
   return _session;
-}
-
-- (NSOperationQueue *)operationQueue {
-  if (nil == _operationQueue) {
-    _operationQueue = [[NSOperationQueue alloc] init];
-    _operationQueue.maxConcurrentOperationCount = BITDefaultRequestLimit;
-  }
-  return _operationQueue;
-}
-
-- (NSUInteger)runningRequestsCount {
-  __block NSUInteger count;
-  dispatch_sync(self.requestsCountQueue, ^{
-    count = self->_runningRequestsCount;
-  });
-  return count;
-}
-
-- (void)setRunningRequestsCount:(NSUInteger)runningRequestsCount {
-  dispatch_sync(self.requestsCountQueue, ^{
-    self->_runningRequestsCount = runningRequestsCount;
-  });
 }
 
 @end
