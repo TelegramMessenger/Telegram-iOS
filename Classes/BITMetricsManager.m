@@ -188,7 +188,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   
   // If the app is running in the background.
   UIApplication *application = [UIApplication sharedApplication];
-  if (application.applicationState == UIApplicationStateBackground) {
+  if (application && application.applicationState == UIApplicationStateBackground) {
     [self.channel createBackgroundTask:application
                              forQueues:@[ self.channel.dataItemsOperations, self.persistence.persistenceQueue ]
                               andGroup:group];
@@ -215,7 +215,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   
   // If the app is running in the background.
   UIApplication *application = [UIApplication sharedApplication];
-  if (application.applicationState == UIApplicationStateBackground) {
+  if (application && application.applicationState == UIApplicationStateBackground) {
     [self.channel createBackgroundTask:application
                              forQueues:@[ self.channel.dataItemsOperations, self.persistence.persistenceQueue ]
                               andGroup:group];

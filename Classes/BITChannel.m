@@ -83,6 +83,13 @@ NS_ASSUME_NONNULL_BEGIN
     void (^notificationBlock)(NSNotification *note) = ^(NSNotification __unused *note) {
       typeof(self) strongSelf = weakSelf;
       if ([strongSelf timerIsRunning]) {
+        
+        /**
+         * From the documentation for applicationDidEnterBackground:
+         * It's likely any background tasks you start in applicationDidEnterBackground: will not run until after that method exits,
+         * you should request additional background execution time before starting those tasks. In other words,
+         * first call beginBackgroundTaskWithExpirationHandler: and then run the task on a dispatch queue or secondary thread.
+         */
         UIApplication *application = [UIApplication sharedApplication];
         [self persistDataItemQueueWithBackgroundTask: application];
       }
@@ -162,6 +169,9 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (void)createBackgroundTask:(UIApplication *)application forQueues:(NSArray *)queues andGroup:(nullable dispatch_group_t)group {
+  if (application == nil) {
+    return;
+  }
   BITHockeyLogVerbose(@"BITChannel: Start background task");
   __block UIBackgroundTaskIdentifier backgroundTask = [application beginBackgroundTaskWithExpirationHandler:^{
     BITHockeyLogVerbose(@"BITChannel: Background task is expired");
