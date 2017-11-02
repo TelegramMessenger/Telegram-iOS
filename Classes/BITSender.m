@@ -17,8 +17,8 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 @property (nonatomic, strong) NSURLSession *session;
 
-@property (nonatomic, weak, nullable) id persistenceSuccessNotification;
-@property (nonatomic, weak, nullable) id channelBlockedNotification;
+@property (nonatomic, weak, nullable) id persistenceSuccessObserver;
+@property (nonatomic, weak, nullable) id channelBlockedObserver;
 
 @end
 
@@ -50,8 +50,8 @@ static NSUInteger const BITDefaultRequestLimit = 10;
   NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
   __weak typeof(self) weakSelf = self;
 
-  if (nil == self.persistenceSuccessNotification) {
-    self.persistenceSuccessNotification =
+  if (nil == self.persistenceSuccessObserver) {
+    self.persistenceSuccessObserver =
         [center addObserverForName:BITPersistenceSuccessNotification
                             object:nil
                              queue:nil
@@ -60,8 +60,8 @@ static NSUInteger const BITDefaultRequestLimit = 10;
                           [strongSelf sendSavedDataAsync];
                         }];
   }
-  if (nil == self.channelBlockedNotification) {
-    self.channelBlockedNotification =
+  if (nil == self.channelBlockedObserver) {
+    self.channelBlockedObserver =
         [center addObserverForName:BITChannelBlockedNotification
                             object:nil
                              queue:nil
@@ -74,15 +74,15 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)unregisterObservers {
   NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-  id persistenceSuccessNotification = self.persistenceSuccessNotification;
-  if(persistenceSuccessNotification) {
-    [center removeObserver:persistenceSuccessNotification];
-    self.persistenceSuccessNotification = nil;
+  id persistenceSuccessObserver = self.persistenceSuccessObserver;
+  if(persistenceSuccessObserver) {
+    [center removeObserver:persistenceSuccessObserver];
+    self.persistenceSuccessObserver = nil;
   }
-  id channelBlockedNotification = self.channelBlockedNotification;
-  if(channelBlockedNotification) {
-    [center removeObserver:channelBlockedNotification];
-    self.channelBlockedNotification = nil;
+  id channelBlockedObserver = self.channelBlockedObserver;
+  if(channelBlockedObserver) {
+    [center removeObserver:channelBlockedObserver];
+    self.channelBlockedObserver = nil;
   }
 }
 

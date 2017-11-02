@@ -12,6 +12,7 @@
 #import "BITData.h"
 #import "BITDevice.h"
 #import "BITPersistencePrivate.h"
+#import "BITSender.h"
 #import <libkern/OSAtomic.h>
 
 
@@ -31,7 +32,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface BITChannel ()
 
-@property (nonatomic, weak, nullable)  id appDidEnterBackgroundObserver;
+@property (nonatomic, weak, nullable) id appDidEnterBackgroundObserver;
+@property (nonatomic, weak, nullable) id persistenceSuccessObserver;
+@property (nonatomic, weak, nullable) id senderFinishSendingDataObserver;
+
+@property (nonatomic, nonnull) dispatch_group_t senderGroup;
 
 @end
 
@@ -56,6 +61,8 @@ NS_ASSUME_NONNULL_BEGIN
     dispatch_queue_t serialQueue = dispatch_queue_create(BITDataItemsOperationsQueue, DISPATCH_QUEUE_SERIAL);
     _dataItemsOperations = serialQueue;
     
+    _senderGroup = dispatch_group_create();
+    
     [self registerObservers];
   }
   return self;
@@ -79,7 +86,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void) registerObservers {
   NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
   __weak typeof(self) weakSelf = self;
-  if(nil == self.appDidEnterBackgroundObserver) {
+  
+  if (nil == self.appDidEnterBackgroundObserver) {
     void (^notificationBlock)(NSNotification *note) = ^(NSNotification __unused *note) {
       typeof(self) strongSelf = weakSelf;
       if ([strongSelf timerIsRunning]) {
@@ -91,7 +99,7 @@ NS_ASSUME_NONNULL_BEGIN
          * first call beginBackgroundTaskWithExpirationHandler: and then run the task on a dispatch queue or secondary thread.
          */
         UIApplication *application = [UIApplication sharedApplication];
-        [self persistDataItemQueueWithBackgroundTask: application];
+        [strongSelf persistDataItemQueueWithBackgroundTask: application];
       }
     };
     self.appDidEnterBackgroundObserver = [center addObserverForName:UIApplicationDidEnterBackgroundNotification
@@ -99,14 +107,44 @@ NS_ASSUME_NONNULL_BEGIN
                                                               queue:NSOperationQueue.mainQueue
                                                          usingBlock:notificationBlock];
   }
+  if (nil == self.persistenceSuccessObserver) {
+    self.persistenceSuccessObserver =
+        [center addObserverForName:BITPersistenceSuccessNotification
+                            object:nil
+                             queue:nil
+                        usingBlock:^(NSNotification __unused *notification) {
+                          typeof(self) strongSelf = weakSelf;
+                          dispatch_group_enter(strongSelf.senderGroup);
+                        }];
+  }
+  if (nil == self.senderFinishSendingDataObserver) {
+    self.senderFinishSendingDataObserver =
+        [center addObserverForName:BITSenderFinishSendingDataNotification
+                            object:nil
+                             queue:nil
+                        usingBlock:^(NSNotification __unused *notification) {
+                          typeof(self) strongSelf = weakSelf;
+                          dispatch_group_leave(strongSelf.senderGroup);
+                        }];
+  }
 }
 
 - (void) unregisterObservers {
   NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-  id strongObserver = self.appDidEnterBackgroundObserver;
-  if(strongObserver) {
-    [center removeObserver:strongObserver];
+  id appDidEnterBackgroundObserver = self.appDidEnterBackgroundObserver;
+  if (appDidEnterBackgroundObserver) {
+    [center removeObserver:appDidEnterBackgroundObserver];
     self.appDidEnterBackgroundObserver = nil;
+  }
+  id persistenceSuccessObserver = self.persistenceSuccessObserver;
+  if (persistenceSuccessObserver) {
+    [center removeObserver:persistenceSuccessObserver];
+    self.persistenceSuccessObserver = nil;
+  }
+  id senderFinishSendingDataObserver = self.senderFinishSendingDataObserver;
+  if (senderFinishSendingDataObserver) {
+    [center removeObserver:senderFinishSendingDataObserver];
+    self.senderFinishSendingDataObserver = nil;
   }
 }
 
@@ -163,15 +201,18 @@ NS_ASSUME_NONNULL_BEGIN
     typeof(self) strongSelf = weakSelf;
     [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
   });
-  [self createBackgroundTask:application
-                   forQueues:@[ self.dataItemsOperations, self.persistence.persistenceQueue ]
-                    andGroup:nil];
+  [self createBackgroundTask:application withWaitingGroup:nil];
 }
 
-- (void)createBackgroundTask:(UIApplication *)application forQueues:(NSArray *)queues andGroup:(nullable dispatch_group_t)group {
+- (void)createBackgroundTask:(UIApplication *)application withWaitingGroup:(nullable dispatch_group_t)group {
   if (application == nil) {
     return;
   }
+  NSArray *queues = @[
+                      self.dataItemsOperations,           // For enqueue
+                      self.persistence.persistenceQueue,  // For persist
+                      dispatch_get_main_queue()           // For notification
+                      ];
   BITHockeyLogVerbose(@"BITChannel: Start background task");
   __block UIBackgroundTaskIdentifier backgroundTask = [application beginBackgroundTaskWithExpirationHandler:^{
     BITHockeyLogVerbose(@"BITChannel: Background task is expired");
@@ -179,19 +220,24 @@ NS_ASSUME_NONNULL_BEGIN
     backgroundTask = UIBackgroundTaskInvalid;
   }];
   __block NSUInteger i = 0;
+  __weak typeof(self) weakSelf = self;
   __block __weak void (^weakWaitBlock)();
   void (^waitBlock)();
   weakWaitBlock = waitBlock = ^{
+    typeof(self) strongSelf = weakSelf;
     if (i < queues.count) {
       dispatch_queue_t queue = [queues objectAtIndex:i++];
       BITHockeyLogVerbose(@"BITChannel: Waiting queue: %@", [[NSString alloc] initWithUTF8String:dispatch_queue_get_label(queue)]);
       dispatch_async(queue, weakWaitBlock);
     } else {
-      if (backgroundTask != UIBackgroundTaskInvalid) {
-        BITHockeyLogVerbose(@"BITChannel: Cancel background task");
-        [application endBackgroundTask:backgroundTask];
-        backgroundTask = UIBackgroundTaskInvalid;
-      }
+      BITHockeyLogVerbose(@"BITChannel: Waiting sender");
+      dispatch_group_notify(strongSelf.senderGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        if (backgroundTask != UIBackgroundTaskInvalid) {
+          BITHockeyLogVerbose(@"BITChannel: Cancel background task");
+          [application endBackgroundTask:backgroundTask];
+          backgroundTask = UIBackgroundTaskInvalid;
+        }
+      });
     }
   };
   if (group != nil) {
@@ -243,7 +289,7 @@ NS_ASSUME_NONNULL_BEGIN
       [strongSelf appendDictionaryToEventBuffer:dict];
       UIApplication *application = [UIApplication sharedApplication];
       if (strongSelf.dataItemCount >= strongSelf.maxBatchSize ||
-          application.applicationState == UIApplicationStateBackground) {
+         (application && application.applicationState == UIApplicationStateBackground)) {
         
         // Case 2: Max batch count has been reached or the app is running in the background, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
@@ -432,3 +478,4 @@ void bit_resetEventBuffer(char **eventBuffer) {
 NS_ASSUME_NONNULL_END
 
 #endif /* HOCKEYSDK_FEATURE_METRICS */
+
