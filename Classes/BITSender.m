@@ -17,6 +17,9 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 @property (nonatomic, strong) NSURLSession *session;
 
+@property (nonatomic, weak, nullable) id persistenceSuccessNotification;
+@property (nonatomic, weak, nullable) id channelBlockedNotification;
+
 @end
 
 @implementation BITSender
@@ -37,27 +40,50 @@ static NSUInteger const BITDefaultRequestLimit = 10;
   return self;
 }
 
+- (void)dealloc {
+  [self unregisterObservers];
+}
+
 #pragma mark - Handle persistence events
 
 - (void)registerObservers {
   NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
   __weak typeof(self) weakSelf = self;
-  
-  [center addObserverForName:BITPersistenceSuccessNotification
-                      object:nil
-                       queue:nil
-                  usingBlock:^(NSNotification __unused *notification) {
-                    typeof(self) strongSelf = weakSelf;
-                    [strongSelf sendSavedDataAsync];
-                  }];
-  
-  [center addObserverForName:BITChannelBlockedNotification
-                      object:nil
-                       queue:nil
-                  usingBlock:^(NSNotification __unused *notification) {
-                    typeof(self) strongSelf = weakSelf;
-                    [strongSelf sendSavedDataAsync];
-                  }];
+
+  if (nil == self.persistenceSuccessNotification) {
+    self.persistenceSuccessNotification =
+        [center addObserverForName:BITPersistenceSuccessNotification
+                            object:nil
+                             queue:nil
+                        usingBlock:^(NSNotification __unused *notification) {
+                          typeof(self) strongSelf = weakSelf;
+                          [strongSelf sendSavedDataAsync];
+                        }];
+  }
+  if (nil == self.channelBlockedNotification) {
+    self.channelBlockedNotification =
+        [center addObserverForName:BITChannelBlockedNotification
+                            object:nil
+                             queue:nil
+                        usingBlock:^(NSNotification __unused *notification) {
+                          typeof(self) strongSelf = weakSelf;
+                          [strongSelf sendSavedDataAsync];
+                        }];
+  }
+}
+
+- (void)unregisterObservers {
+  NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+  id persistenceSuccessNotification = self.persistenceSuccessNotification;
+  if(persistenceSuccessNotification) {
+    [center removeObserver:persistenceSuccessNotification];
+    self.persistenceSuccessNotification = nil;
+  }
+  id channelBlockedNotification = self.channelBlockedNotification;
+  if(channelBlockedNotification) {
+    [center removeObserver:channelBlockedNotification];
+    self.channelBlockedNotification = nil;
+  }
 }
 
 #pragma mark - Sending

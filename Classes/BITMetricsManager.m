@@ -85,34 +85,43 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 #pragma mark - Sessions
 
 - (void)registerObservers {
-  NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-
+  NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
   __weak typeof(self) weakSelf = self;
 
   if (nil == self.appDidEnterBackgroundObserver) {
-    self.appDidEnterBackgroundObserver = [nc addObserverForName:UIApplicationDidEnterBackgroundNotification
-                                                     object:nil
-                                                      queue:NSOperationQueue.mainQueue
-                                                 usingBlock:^(NSNotification __unused *note) {
-                                                   typeof(self) strongSelf = weakSelf;
-                                                   [strongSelf updateDidEnterBackgroundTime];
-                                                 }];
+    self.appDidEnterBackgroundObserver =
+        [center addObserverForName:UIApplicationDidEnterBackgroundNotification
+                            object:nil
+                             queue:NSOperationQueue.mainQueue
+                        usingBlock:^(NSNotification __unused *note) {
+                          typeof(self) strongSelf = weakSelf;
+                          [strongSelf updateDidEnterBackgroundTime];
+                        }];
   }
   if (nil == self.appWillEnterForegroundObserver) {
-    self.appWillEnterForegroundObserver = [nc addObserverForName:UIApplicationWillEnterForegroundNotification
-                                                      object:nil
-                                                       queue:NSOperationQueue.mainQueue
-                                                  usingBlock:^(NSNotification __unused *note) {
-                                                    typeof(self) strongSelf = weakSelf;
-                                                    [strongSelf startNewSessionIfNeeded];
-                                                  }];
+    self.appWillEnterForegroundObserver =
+        [center addObserverForName:UIApplicationWillEnterForegroundNotification
+                            object:nil
+                             queue:NSOperationQueue.mainQueue
+                        usingBlock:^(NSNotification __unused *note) {
+                          typeof(self) strongSelf = weakSelf;
+                          [strongSelf startNewSessionIfNeeded];
+                        }];
   }
 }
 
 - (void)unregisterObservers {
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-  self.appDidEnterBackgroundObserver = nil;
-  self.appWillEnterForegroundObserver = nil;
+  NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+  id appDidEnterBackgroundObserver = self.appDidEnterBackgroundObserver;
+  if(appDidEnterBackgroundObserver) {
+    [center removeObserver:appDidEnterBackgroundObserver];
+    self.appDidEnterBackgroundObserver = nil;
+  }
+  id appWillEnterForegroundObserver = self.appWillEnterForegroundObserver;
+  if(appWillEnterForegroundObserver) {
+    [center removeObserver:appWillEnterForegroundObserver];
+    self.appWillEnterForegroundObserver = nil;
+  }
 }
 
 - (void)updateDidEnterBackgroundTime {
