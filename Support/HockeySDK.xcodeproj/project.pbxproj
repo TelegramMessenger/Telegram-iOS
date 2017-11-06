@@ -1784,7 +1784,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "#cd -> https://github.com/realm/jazzy/issues/772\n#--no-download-badge -> https://github.com/realm/jazzy/issues/824\ncd ../Documentation/HockeySDK\njazzy --no-download-badge\n";
+			shellScript = "#cd -> https://github.com/realm/jazzy/issues/772\ncd ../Documentation/HockeySDK\njazzy\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
