@@ -282,6 +282,7 @@ static NSUInteger const BITDefaultFileCount = 50;
  */
 - (void)sendBundleSavedNotification {
   dispatch_async(dispatch_get_main_queue(), ^{
+    BITHockeyLogDebug(@"Sending notification: %@", BITPersistenceSuccessNotification);
     [[NSNotificationCenter defaultCenter] postNotificationName:BITPersistenceSuccessNotification
                                                         object:nil
                                                       userInfo:nil];
