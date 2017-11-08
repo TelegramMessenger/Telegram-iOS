@@ -32,6 +32,7 @@
 @property (nonatomic, weak) id<TGModernGalleryItemViewDelegate> delegate;
 
 @property (nonatomic) NSUInteger index;
+@property (nonatomic) UIEdgeInsets safeAreaInset;
 @property (nonatomic, strong) id<TGModernGalleryItem> item;
 @property (nonatomic, strong) UIView<TGModernGalleryDefaultFooterView> *defaultFooterView;
 @property (nonatomic, strong) UIView<TGModernGalleryDefaultFooterAccessoryView> *defaultFooterAccessoryLeftView;
@@ -41,6 +42,7 @@
 
 - (SSignal *)readyForTransitionIn;
 
+- (void)reset;
 - (void)prepareForRecycle;
 - (void)prepareForReuse;
 - (void)setIsVisible:(bool)isVisible;

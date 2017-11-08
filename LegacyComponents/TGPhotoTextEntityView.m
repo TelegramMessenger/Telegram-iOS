@@ -113,6 +113,8 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
     
     _textView.editable = true;
     _textView.selectable = true;
+    
+    [_textView.window makeKeyWindow];
     [_textView becomeFirstResponder];
 }
 

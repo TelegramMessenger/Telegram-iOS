@@ -14,12 +14,19 @@
     
     SPipe *_pipe;
     SMetaDisposable *_itemSourceUpdatedDisposable;
+    
+    SPipe *_groupingChangedPipe;
 }
 @end
 
 @implementation TGMediaSelectionContext
 
 - (instancetype)init
+{
+    return [self initWithGroupingAllowed:false];
+}
+
+- (instancetype)initWithGroupingAllowed:(bool)allowGrouping
 {
     self = [super init];
     if (self != nil)
@@ -29,6 +36,10 @@
         
         _pipe = [[SPipe alloc] init];
         _itemSourceUpdatedDisposable = [[SMetaDisposable alloc] init];
+        
+        _groupingChangedPipe = [[SPipe alloc] init];
+        
+        _allowGrouping = allowGrouping;
     }
     return self;
 }
@@ -36,6 +47,17 @@
 - (void)dealloc
 {
     [_itemSourceUpdatedDisposable dispose];
+}
+
+- (void)toggleGrouping
+{
+    _grouping = !_grouping;
+    _groupingChangedPipe.sink(@(_grouping));
+}
+
+- (SSignal *)groupingChangedSignal
+{
+    return _groupingChangedPipe.signalProducer();
 }
 
 - (void)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected
@@ -67,6 +89,22 @@
     }
     
     _pipe.sink([TGMediaSelectionChange changeWithItem:item selected:selected animated:animated sender:sender]);
+}
+
+- (NSUInteger)indexOfItem:(id<TGMediaSelectableItem>)item
+{
+    if (![(id)item conformsToProtocol:@protocol(TGMediaSelectableItem)])
+        return NSNotFound;
+    
+    NSString *identifier = item.uniqueIdentifier;
+    if (_selectionMap[identifier] == nil)
+        return NSNotFound;
+    
+    NSUInteger index = [_selectedIdentifiers indexOfObject:identifier];
+    if (index == NSNotFound)
+        return index;
+    
+    return index + 1;
 }
 
 - (void)clear

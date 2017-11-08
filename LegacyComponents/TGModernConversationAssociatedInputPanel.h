@@ -8,6 +8,9 @@ typedef enum
 } TGModernConversationAssociatedInputPanelStyle;
 
 @interface TGModernConversationAssociatedInputPanel : UIView
+{
+    UIEdgeInsets _safeAreaInset;
+}
 
 @property (nonatomic, readonly) TGModernConversationAssociatedInputPanelStyle style;
 @property (nonatomic, copy) void (^preferredHeightUpdated)();
@@ -15,6 +18,7 @@ typedef enum
 @property (nonatomic, copy) void (^resultPreviewAppeared)(void);
 @property (nonatomic, copy) void (^resultPreviewDisappeared)(bool restoreFocus);
 
+@property (nonatomic) UIEdgeInsets safeAreaInset;
 @property (nonatomic) CGFloat overlayBarOffset;
 @property (nonatomic) CGFloat barInset;
 @property (nonatomic, copy) void (^updateOverlayBarOffset)(CGFloat);

@@ -20,6 +20,7 @@
 {
     TGViewController *_parentController;
     bool _hasDeleteButton;
+    bool _hasViewButton;
     bool _personalPhoto;
     id<LegacyComponentsContext> _context;
     bool _saveCapturedMedia;
@@ -36,6 +37,11 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
 {
+    return [self initWithContext:context parentController:parentController hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia];
+}
+
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
+{
     self = [super init];
     if (self != nil)
     {
@@ -44,6 +50,7 @@
         _saveEditedPhotos = saveEditedPhotos;
         _parentController = parentController;
         _hasDeleteButton = hasDeleteButton;
+        _hasViewButton = hasViewButton;
         _personalPhoto = ![TGCameraController useLegacyCamera] ? personalPhoto : false;
     }
     return self;
@@ -82,7 +89,7 @@
     
     NSMutableArray *itemViews = [[NSMutableArray alloc] init];
     
-    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:TGMediaAssetPhotoType saveEditedPhotos:_saveEditedPhotos];
+    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:TGMediaAssetPhotoType saveEditedPhotos:_saveEditedPhotos allowGrouping:false];
     carouselItem.parentController = _parentController;
     carouselItem.openEditor = true;
     carouselItem.cameraPressed = ^(TGAttachmentCameraView *cameraView)
@@ -128,6 +135,24 @@
         [strongSelf _displayMediaPicker];
     }];
     [itemViews addObject:galleryItem];
+    
+    if (_hasViewButton)
+    {
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Settings.ViewPhoto") type:TGMenuSheetButtonTypeDefault action:^
+        {
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            [strongController dismissAnimated:true];
+            [strongSelf _performView];
+        }];
+        [itemViews addObject:viewItem];
+    }
         
     if (_hasDeleteButton)
     {
@@ -387,7 +412,7 @@
         if (strongSelf == nil)
             return;
         
-        TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:strongSelf->_context assetGroup:group intent:TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos];
+        TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:strongSelf->_context assetGroup:group intent:TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false];
         __weak TGMediaAssetsController *weakController = controller;
         controller.avatarCompletionBlock = ^(UIImage *resultImage)
         {
@@ -536,6 +561,12 @@
 {
     if (self.didFinishWithDelete != nil)
         self.didFinishWithDelete();
+}
+
+- (void)_performView
+{
+    if (self.didFinishWithView != nil)
+        self.didFinishWithView();
 }
 
 @end

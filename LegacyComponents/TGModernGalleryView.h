@@ -7,6 +7,7 @@
 
 @interface TGModernGalleryView : UIView
 
+@property (nonatomic, copy) void (^transitionProgress)(CGFloat progress, bool manual);
 @property (nonatomic, copy) bool (^transitionOut)(CGFloat velocity);
 @property (nonatomic, copy) void (^instantDismiss)();
 

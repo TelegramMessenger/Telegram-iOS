@@ -121,6 +121,7 @@ typedef enum {
 - (void)controllerInsetUpdated:(UIEdgeInsets)previousInset;
 - (bool)shouldAdjustScrollViewInsetsForInversedLayout;
 - (bool)shouldIgnoreNavigationBar;
+- (bool)shouldIgnoreStatusBar;
 
 - (void)setNavigationBarHidden:(bool)navigationBarHidden animated:(BOOL)animated;
 - (void)setNavigationBarHidden:(bool)navigationBarHidden withAnimation:(TGViewControllerNavigationBarAnimation)animation;
@@ -150,6 +151,8 @@ typedef enum {
 
 - (void)localizationUpdated;
 
+- (UIEdgeInsets)calculatedSafeAreaInset;
++ (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation;
 + (int)preferredAnimationCurve;
 
 - (CGSize)referenceViewSizeForOrientation:(UIInterfaceOrientation)orientation;

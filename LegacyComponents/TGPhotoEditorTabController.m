@@ -411,17 +411,18 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
 {
     CGFloat panelToolbarPortraitSize = TGPhotoEditorToolbarSize + panelSize;
     CGFloat panelToolbarLandscapeSize = toolbarLandscapeSize + panelSize;
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
     
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
-            return CGRectMake(panelToolbarLandscapeSize, 0, parentViewFrame.size.width - panelToolbarLandscapeSize, parentViewFrame.size.height);
+            return CGRectMake(panelToolbarLandscapeSize + safeAreaInset.left, 0, parentViewFrame.size.width - panelToolbarLandscapeSize - safeAreaInset.left - safeAreaInset.right, parentViewFrame.size.height - safeAreaInset.bottom);
             
         case UIInterfaceOrientationLandscapeRight:
-            return CGRectMake(0, 0, parentViewFrame.size.width - panelToolbarLandscapeSize, parentViewFrame.size.height);
+            return CGRectMake(safeAreaInset.left, 0, parentViewFrame.size.width - panelToolbarLandscapeSize - safeAreaInset.left - safeAreaInset.right, parentViewFrame.size.height - safeAreaInset.bottom);
             
         default:
-            return CGRectMake(0, 0, parentViewFrame.size.width, parentViewFrame.size.height - panelToolbarPortraitSize);
+            return CGRectMake(0, safeAreaInset.top, parentViewFrame.size.width, parentViewFrame.size.height - panelToolbarPortraitSize - safeAreaInset.top - safeAreaInset.bottom);
     }
 }
 

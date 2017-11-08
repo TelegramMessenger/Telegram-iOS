@@ -13,6 +13,7 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
 {
     TGModernButton *_leftButton;
     TGModernButton *_rightButton;
+    TGModernButton *_centerButton;
     UIImageView *_countBadge;
     UILabel *_countLabel;
 }
@@ -56,7 +57,6 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
         _rightButton.frame = CGRectMake(self.frame.size.width - doneButtonWidth, 0, doneButtonWidth, 44);
         _rightButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight;
         [_rightButton addTarget:self action:@selector(rightButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-        _rightButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
         _rightButton.enabled = false;
         [self addSubview:_rightButton];
         
@@ -78,7 +78,7 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
         _countLabel = [[UILabel alloc] init];
         _countLabel.backgroundColor = [UIColor clearColor];
         _countLabel.textColor = [UIColor whiteColor];
-        _countLabel.font = TGLightSystemFontOfSize(14);
+        _countLabel.font = [TGFont roundedFontOfSize:17];
         [_countBadge addSubview:_countLabel];
         
         [_rightButton addSubview:_countBadge];
@@ -96,6 +96,12 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
 {
     if (self.rightPressed != nil)
         self.rightPressed();
+}
+
+- (void)centerButtonPressed
+{
+    if (self.centerPressed != nil)
+        self.centerPressed();
 }
 
 #pragma mark - Properties
@@ -182,10 +188,10 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
         [_countLabel sizeToFit];
     }
     
-    CGFloat badgeWidth = MAX(22, _countLabel.frame.size.width + 14);
+    CGFloat badgeWidth = MAX(22, _countLabel.frame.size.width + 12);
     _countBadge.transform = CGAffineTransformIdentity;
     _countBadge.frame = CGRectMake(-badgeWidth + 22, 11, badgeWidth, 22);
-    _countLabel.frame = CGRectMake(TGRetinaFloor((badgeWidth - _countLabel.frame.size.width) / 2), 2 + TGRetinaPixel, _countLabel.frame.size.width, _countLabel.frame.size.height);
+    _countLabel.frame = CGRectMake(TGRetinaFloor((badgeWidth - _countLabel.frame.size.width) / 2), TGScreenPixel, _countLabel.frame.size.width, _countLabel.frame.size.height);
     
     if (animated)
     {
@@ -241,6 +247,65 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
         _countBadge.transform = CGAffineTransformIdentity;
         _countBadge.alpha = alpha;
     }
+}
+
+- (void)setCenterButtonImage:(UIImage *)centerButtonImage
+{
+    if (_centerButton == nil)
+    {
+        _centerButton = [[TGModernButton alloc] initWithFrame:CGRectMake((self.frame.size.width - 60.0f) / 2.0f, 0, 60, 44)];
+        _centerButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+        _centerButton.adjustsImageWhenHighlighted = false;
+        _centerButton.exclusiveTouch = true;
+        [_centerButton addTarget:self action:@selector(centerButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+        [self addSubview:_centerButton];
+    }
+    [_centerButton setImage:centerButtonImage forState:UIControlStateNormal];
+}
+
+- (void)setCenterButtonSelectedImage:(UIImage *)centerButtonSelectedImage
+{
+    [_centerButton setImage:centerButtonSelectedImage forState:UIControlStateSelected];
+    [_centerButton setImage:centerButtonSelectedImage forState:UIControlStateSelected | UIControlStateHighlighted];
+}
+
+- (void)setCenterButtonSelected:(bool)selected
+{
+    _centerButton.selected = selected;
+}
+
+- (void)setCenterButtonHidden:(bool)hidden animated:(bool)animated
+{
+    if (animated)
+    {
+        _centerButton.userInteractionEnabled = !hidden;
+        [UIView animateWithDuration:0.2 animations:^
+        {
+            _centerButton.alpha = hidden ? 0.0f : 1.0f;
+        } completion:nil];
+    }
+    else
+    {
+        _centerButton.alpha = hidden ? 0.0f : 1.0f;
+        _centerButton.userInteractionEnabled = !hidden;
+    }
+}
+
+- (UIButton *)centerButton
+{
+    return _centerButton;
+}
+
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
+{
+    _safeAreaInset = safeAreaInset;
+    [self setNeedsLayout];
+}
+
+- (void)layoutSubviews
+{
+    _leftButton.frame = CGRectMake(self.safeAreaInset.left, 0.0f, _leftButton.frame.size.width, 44);
+    _rightButton.frame = CGRectMake(self.frame.size.width - _rightButton.frame.size.width - self.safeAreaInset.right, 0, _rightButton.frame.size.width, 44);
 }
 
 @end

@@ -4,6 +4,8 @@
 #import "TGNavigationController.h"
 #import "TGOverlayController.h"
 #import "TGOverlayControllerWindow.h"
+#import "TGImageUtils.h"
+#import "TGHacks.h"
 
 #import <SSignalKit/SSignalKit.h>
 
@@ -38,12 +40,17 @@ typedef enum
 
 @end
 
+@interface TGMenuSheetContainerView : UIView
+
+@end
+
 @interface TGMenuSheetController () <UIGestureRecognizerDelegate, UIPopoverPresentationControllerDelegate, UIPopoverControllerDelegate, UIViewControllerPreviewingDelegate>
 {
     bool _dark;
     
     UIView *_containerView;
     TGMenuSheetDimView *_dimView;
+    UIImageView *_shadowView;
     TGMenuSheetView *_sheetView;
     bool _presented;
     
@@ -85,6 +92,9 @@ typedef enum
         _dark = dark;
         _disposables = [[SDisposableSet alloc] init];
         _permittedArrowDirections = UIPopoverArrowDirectionDown;
+        _requiuresDimView = true;
+        
+        self.wantsFullScreenLayout = true;
     }
     return self;
 }
@@ -101,12 +111,14 @@ typedef enum
 
 - (void)dealloc
 {
+    [_disposables dispose];
     [_sizeClassDisposable dispose];
 }
 
 - (void)loadView
 {
     [super loadView];
+    self.view = [[TGMenuSheetContainerView alloc] initWithFrame:self.view.frame];
     
     if ([_context currentSizeClass] == UIUserInterfaceSizeClassCompact)
     {
@@ -126,18 +138,58 @@ typedef enum
         [strongSelf updateTraitsWithSizeClass:sizeClass];
     }]];
     
-    _containerView = [[UIView alloc] initWithFrame:CGRectZero];
+    _containerView = [[TGMenuSheetContainerView alloc] initWithFrame:CGRectZero];
     [self.view addSubview:_containerView];
     
-    _dimView = [[TGMenuSheetDimView alloc] initWithActionMenuView:_sheetView];
-    _dimView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [_dimView addTarget:self action:@selector(dimViewPressed) forControlEvents:UIControlEventTouchUpInside];
-    [_dimView setTheaterMode:_hasDistractableItems animated:false];
-    [_containerView addSubview:_dimView];
+    if (self.requiuresDimView)
+    {
+        _dimView = [[TGMenuSheetDimView alloc] initWithActionMenuView:_sheetView];
+        _dimView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [_dimView addTarget:self action:@selector(dimViewPressed) forControlEvents:UIControlEventTouchUpInside];
+        [_dimView setTheaterMode:_hasDistractableItems animated:false];
+        [_containerView addSubview:_dimView];
+    }
+    
+    if (self.requiresShadow)
+    {
+        _shadowView = [[UIImageView alloc] init];
+        _shadowView.image = [TGComponentsImageNamed(@"PreviewSheetShadow") resizableImageWithCapInsets:UIEdgeInsetsMake(42.0f, 42.0f, 42.0f, 42.0f)];
+        [_containerView addSubview:_shadowView];
+    }
     
     [_containerView addSubview:_sheetView];
     
     _keyboardWillChangeFrameProxy = [[TGObserverProxy alloc] initWithTarget:self targetSelector:@selector(keyboardWillChangeFrame:) name:UIKeyboardWillChangeFrameNotification];
+}
+
+- (void)setRequiresShadow:(bool)requiresShadow
+{
+    _requiresShadow = requiresShadow;
+    if (!_requiresShadow && _shadowView != nil)
+    {
+        [_shadowView removeFromSuperview];
+        _shadowView = nil;
+    }
+}
+
+- (void)setRequiuresDimView:(bool)requiuresDimView
+{
+    _requiuresDimView = requiuresDimView;
+    
+    if (_requiuresDimView && _itemViews.count > 0 && _containerView != nil)
+    {
+        _dimView = [[TGMenuSheetDimView alloc] initWithActionMenuView:_sheetView];
+        _dimView.alpha = 0.0f;
+        _dimView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [_dimView addTarget:self action:@selector(dimViewPressed) forControlEvents:UIControlEventTouchUpInside];
+        [_dimView setTheaterMode:_hasDistractableItems animated:false];
+        [_containerView insertSubview:_dimView atIndex:0];
+        
+        [UIView animateWithDuration:0.2 animations:^
+        {
+            _dimView.alpha = 1.0f;
+        }];
+    }
 }
 
 - (void)setItemViews:(NSArray *)itemViews
@@ -387,7 +439,7 @@ typedef enum
     else
         self.modalPresentationStyle = UIModalPresentationPopover;
     
-    if (viewController.navigationController != nil)
+    if (!self.stickWithSpecifiedParentController && viewController.navigationController != nil)
         viewController = viewController.navigationController.parentViewController ?: viewController.navigationController;
     
     _parentController = viewController;
@@ -407,8 +459,9 @@ typedef enum
     }
     else
     {
-        CGSize referenceSize = [_context fullscreenBounds].size;
+        CGSize referenceSize = TGIsPad() ? viewController.view.bounds.size : [_context fullscreenBounds].size;
         CGFloat minSide = MIN(referenceSize.width, referenceSize.height);
+        _sheetView.narrowInLandscape = self.narrowInLandscape;
         if (self.narrowInLandscape)
             _sheetView.menuWidth = minSide;
         else
@@ -419,6 +472,9 @@ typedef enum
     {
         [viewController addChildViewController:self];
         [viewController.view addSubview:self.view];
+     
+        if (TGIsPad())
+            self.view.frame = viewController.view.bounds;
         
         _dimView.alpha = 0.0f;
         [self setDimViewHidden:false animated:animated];
@@ -500,7 +556,7 @@ typedef enum
         if (animated)
         {
             self.view.userInteractionEnabled = false;
-            [self animateSheetViewToPosition:_sheetView.menuHeight velocity:0 type:TGMenuSheetAnimationDismiss completion:^
+            [self animateSheetViewToPosition:_sheetView.menuHeight + [self safeAreaInsetForOrientation:self.interfaceOrientation].bottom velocity:0 type:TGMenuSheetAnimationDismiss completion:^
             {
                 [self.view removeFromSuperview];
                 [self removeFromParentViewController];
@@ -842,12 +898,15 @@ typedef enum
     }
     else
     {
-        CGSize referenceSize = [_context fullscreenBounds].size;
+        CGSize referenceSize = TGIsPad() ? _parentController.view.bounds.size : [_context fullscreenBounds].size;
     
         _containerView.frame = CGRectMake(_containerView.frame.origin.x, _containerView.frame.origin.y, self.view.frame.size.width, self.view.frame.size.height);
         _dimView.frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
 
+        _sheetView.safeAreaInset = [self safeAreaInsetForOrientation:self.interfaceOrientation];
+        
         CGFloat minSide = MIN(referenceSize.width, referenceSize.height);
+        _sheetView.narrowInLandscape = self.narrowInLandscape;
         if (self.narrowInLandscape)
             _sheetView.menuWidth = minSide;
         else
@@ -861,15 +920,50 @@ typedef enum
     [_sheetView didChangeAbsoluteFrame];
 }
 
+- (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation
+{
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    if (safeAreaInset.bottom > FLT_EPSILON)
+        safeAreaInset.bottom -= 12.0f;
+    
+    return safeAreaInset;
+}
+
+- (UIEdgeInsets)safeAreaInset
+{
+    return [self safeAreaInsetForOrientation:self.interfaceOrientation];
+}
+
 - (void)repositionMenuWithReferenceSize:(CGSize)referenceSize
 {
     if ([self sizeClass] == UIUserInterfaceSizeClassRegular)
         return;
     
-    referenceSize.height = referenceSize.height + TGMenuSheetDefaultStatusBarHeight - [self statusBarHeight];
+    UIEdgeInsets safeAreaInset = [self safeAreaInsetForOrientation:self.interfaceOrientation];
+    if (_keyboardOffset > FLT_EPSILON)
+        safeAreaInset.bottom = 0.0f;
+    
+    CGFloat defaultStatusBarHeight = TGMenuSheetDefaultStatusBarHeight;
+    if (!TGIsPad() && iosMajorVersion() >= 11 && UIInterfaceOrientationIsLandscape(self.interfaceOrientation))
+        defaultStatusBarHeight = 0.0;
+    
+    CGFloat statusBarHeight = !UIEdgeInsetsEqualToEdgeInsets(safeAreaInset, UIEdgeInsetsZero) ? safeAreaInset.top : defaultStatusBarHeight;
+    referenceSize.height = referenceSize.height + statusBarHeight - [self statusBarHeight];
     
     CGSize menuSize = _sheetView.menuSize;
-    _sheetView.frame = CGRectMake((_containerView.frame.size.width - menuSize.width) / 2.0f, referenceSize.height - menuSize.height, menuSize.width, menuSize.height);
+    _sheetView.frame = CGRectMake((_containerView.frame.size.width - menuSize.width) / 2.0f, referenceSize.height - menuSize.height - safeAreaInset.bottom, menuSize.width, menuSize.height);
+    
+    _shadowView.frame = CGRectInset([self _shadowFrame], safeAreaInset.left, 0.0f);
+}
+
+- (CGRect)_shadowFrame
+{
+    CGRect frame = _sheetView.frame;
+    frame.origin.x -= 6.5f;
+    frame.size.width += 13.0f;
+    frame.origin.y -= 6.0f;
+    frame.size.height += 13.0f;
+    return frame;
 }
 
 - (CGFloat)statusBarHeight
@@ -878,7 +972,22 @@ typedef enum
     CGFloat statusBarHeight = MIN(statusBarSize.width, statusBarSize.height);
     statusBarHeight = MAX(TGMenuSheetDefaultStatusBarHeight, statusBarHeight);
     
+    if (!TGIsPad() && iosMajorVersion() >= 11 && UIInterfaceOrientationIsLandscape(self.interfaceOrientation))
+    {
+        return 0.0f;
+    }
+    else
+    {
+        UIEdgeInsets safeAreaInset = [self safeAreaInsetForOrientation:self.interfaceOrientation];
+        if (!UIEdgeInsetsEqualToEdgeInsets(safeAreaInset, UIEdgeInsetsZero))
+            statusBarHeight = 44.0f;
+    }
     return statusBarHeight;
+}
+
+- (CGFloat)menuHeight
+{
+    return _sheetView.menuHeight;
 }
 
 - (void)setDimViewHidden:(bool)hidden animated:(bool)animated
@@ -982,6 +1091,8 @@ typedef enum
 
 - (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration
 {
+    _sheetView.safeAreaInset = [self safeAreaInsetForOrientation:toInterfaceOrientation];
+    
     for (TGMenuSheetItemView *itemView in _sheetView.itemViews)
     {
         [itemView _willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
@@ -1028,3 +1139,16 @@ typedef enum
 
 @end
 
+
+@implementation TGMenuSheetContainerView
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
+{
+    UIView *view = [super hitTest:point withEvent:event];
+    if (view == self)
+        return nil;
+    
+    return view;
+}
+
+@end

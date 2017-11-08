@@ -734,7 +734,7 @@ static UIImage *pagerLeftButtonHighlightedImage() {
         if (frame.origin.y < 2)
         {
             frame.origin.y = rect.origin.y + rect.size.height + 17;
-            if (frame.origin.y + frame.size.height > view.frame.size.height - 14)
+            if (self.forceCenter || frame.origin.y + frame.size.height > view.frame.size.height - 14)
             {
                 frame.origin.y = CGFloor((view.frame.size.height - frame.size.height) / 2);
                 _arrowOnTop = false;
@@ -773,25 +773,16 @@ static UIImage *pagerLeftButtonHighlightedImage() {
             self.transform = CGAffineTransformMakeScale(1.07f, 1.07f);
         } completion:^(BOOL finished)
         {
-            if(finished)
+            if (finished)
             {
-                [UIView animateWithDuration:0.08 delay:0 options:UIViewAnimationOptionBeginFromCurrentState animations:^
+                [UIView animateWithDuration:0.06 delay:0 options:UIViewAnimationOptionCurveEaseOut | UIViewAnimationOptionBeginFromCurrentState animations:^
                 {
-                    self.transform = CGAffineTransformMakeScale(0.967f, 0.967f);
+                    self.transform = CGAffineTransformIdentity;
                 } completion:^(BOOL finished)
                 {
                     if (finished)
                     {
-                        [UIView animateWithDuration:0.06 delay:0 options:UIViewAnimationOptionCurveEaseOut | UIViewAnimationOptionBeginFromCurrentState animations:^
-                        {
-                            self.transform = CGAffineTransformIdentity;
-                        } completion:^(BOOL finished)
-                        {
-                            if (finished)
-                            {
-                                self.layer.shouldRasterize = false;
-                            }
-                        }];
+                        self.layer.shouldRasterize = false;
                     }
                 }];
             }

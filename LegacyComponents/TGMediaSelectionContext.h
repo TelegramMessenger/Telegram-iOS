@@ -8,11 +8,20 @@
 
 @interface TGMediaSelectionContext : NSObject
 
+- (instancetype)initWithGroupingAllowed:(bool)allowGrouping;
+@property (nonatomic, readonly) bool allowGrouping;
+
+@property (nonatomic, assign) bool grouping;
+- (SSignal *)groupingChangedSignal;
+- (void)toggleGrouping;
+
 @property (nonatomic, copy) SSignal *(^updatedItemsSignal)(NSArray *items);
 - (void)setItemSourceUpdatedSignal:(SSignal *)signal;
 
 - (void)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected;
 - (void)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected animated:(bool)animated sender:(id)sender;
+
+- (NSUInteger)indexOfItem:(id<TGMediaSelectableItem>)item;
 
 - (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item;
 - (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item animated:(bool)animated sender:(id)sender;

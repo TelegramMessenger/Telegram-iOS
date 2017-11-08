@@ -22,11 +22,13 @@
 
 - (void)animateTransitionInWithDuration:(NSTimeInterval)dutation;
 - (void)animateTransitionOutWithDuration:(NSTimeInterval)dutation;
-- (void)setTransitionOutProgress:(CGFloat)transitionOutProgress;
+- (void)setTransitionOutProgress:(CGFloat)transitionOutProgress manual:(bool)manual;
 
 - (bool)allowsDismissalWithSwipeGesture;
 - (bool)prefersStatusBarHidden;
 - (bool)allowsHide;
+
+@property (nonatomic, assign) UIEdgeInsets safeAreaInset;
 
 @optional
 

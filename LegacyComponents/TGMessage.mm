@@ -286,6 +286,21 @@ typedef enum {
     return 0;
 }
 
+- (int64_t)groupedId {
+    TGMessageGroupedIdContentProperty *property = _contentProperties[@"groupedId"];
+    return property.groupedId;
+}
+
+- (void)setGroupedId:(int64_t)groupedId {
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithDictionary:_contentProperties];
+    if (groupedId != 0) {
+        dict[@"groupedId"] = [[TGMessageGroupedIdContentProperty alloc] initWithGroupedId:groupedId];
+    } else {
+        [dict removeObjectForKey:@"groupedId"];
+    }
+    _contentProperties = dict;
+}
+
 - (NSTimeInterval)editDate {
     TGMessageEditDateContentProperty *property = _contentProperties[@"editDate"];
     return property.editDate;

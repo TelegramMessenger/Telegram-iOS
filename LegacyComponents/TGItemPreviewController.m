@@ -23,6 +23,7 @@
     {
         _context = context;
         _previewView = previewView;
+        _previewView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:[LegacyComponentsGlobals provider].applicationStatusBarOrientation];
         
         TGOverlayControllerWindow *window = [[TGOverlayControllerWindow alloc] initWithManager:[context makeOverlayWindowManager] parentController:parentController contentController:self keepKeyboard:true];
         window.windowLevel = UIWindowLevelStatusBar;

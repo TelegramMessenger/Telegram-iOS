@@ -517,7 +517,14 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     CGFloat screenSide = MAX(referenceSize.width, referenceSize.height) + 2 * TGPhotoEditorPanelSize;
     _wrapperView.frame = CGRectMake((referenceSize.width - screenSide) / 2, (referenceSize.height - screenSide) / 2, screenSide, screenSide);
     
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - self.view.frame.size.height) / 2, (screenSide - self.view.frame.size.width) / 2, (screenSide + self.view.frame.size.height) / 2, (screenSide + self.view.frame.size.width) / 2);
+    
+    UIEdgeInsets initialScreenEdges = screenEdges;
+    screenEdges.top += safeAreaInset.top;
+    screenEdges.left += safeAreaInset.left;
+    screenEdges.bottom -= safeAreaInset.bottom;
+    screenEdges.right -= safeAreaInset.right;
     
     switch (orientation)
     {
@@ -609,7 +616,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         return;
     
     CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:0.0f];
-    containerFrame = CGRectOffset(containerFrame, screenEdges.left, screenEdges.top);
+    containerFrame = CGRectOffset(containerFrame, initialScreenEdges.left, initialScreenEdges.top);
     
     CGFloat shortSide = MIN(referenceSize.width, referenceSize.height);
     CGFloat diameter = shortSide - [TGPhotoAvatarCropView areaInsetSize].width * 2;

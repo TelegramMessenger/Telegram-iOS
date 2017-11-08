@@ -17,3 +17,12 @@
 - (instancetype)initWithEditDate:(NSTimeInterval)editDate;
 
 @end
+
+
+@interface TGMessageGroupedIdContentProperty : NSObject <PSCoding>
+
+@property (nonatomic, readonly) int64_t groupedId;
+
+- (instancetype)initWithGroupedId:(int64_t)groupedId;
+
+@end

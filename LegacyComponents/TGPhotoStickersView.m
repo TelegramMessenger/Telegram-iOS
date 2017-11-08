@@ -831,6 +831,14 @@ typedef enum {
 
 #pragma mark -
 
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
+{
+    _safeAreaInset = safeAreaInset;
+    _tabPanel.safeAreaInset = safeAreaInset;
+    _collectionView.contentInset = UIEdgeInsetsMake(TGPhotoStickersPreloadInset - TGPhotoStickersSectionHeaderHeight, 0.0f, TGPhotoStickersPreloadInset + _safeAreaInset.bottom, 0.0f);
+    [self setNeedsLayout];
+}
+
 - (void)layoutSubviews
 {
     CGRect bounds = self.bounds;
@@ -843,7 +851,7 @@ typedef enum {
         if (!CGRectEqualToRect(previousRect, _blurView.frame))
             [_collectionLayout invalidateLayout];
         
-        _segmentedControl.frame = CGRectMake(12.0f, 12.0f, self.frame.size.width - 17.0f * 2 - _cancelButton.frame.size.width, _segmentedControl.frame.size.height);
+        _segmentedControl.frame = CGRectMake(12.0f + _safeAreaInset.left, 12.0f + _safeAreaInset.top, self.frame.size.width - _safeAreaInset.left - _safeAreaInset.right - 17.0f * 2 - _cancelButton.frame.size.width, _segmentedControl.frame.size.height);
     }
     else
     {
@@ -857,12 +865,12 @@ typedef enum {
     
     if (compact)
     {
-        _cancelButton.frame = CGRectMake(bounds.origin.x + bounds.size.width - _cancelButton.frame.size.width - 11.0f, bounds.origin.y + 4.0f, _cancelButton.frame.size.width, 44.0f);
+        _cancelButton.frame = CGRectMake(bounds.origin.x + bounds.size.width - _cancelButton.frame.size.width - 11.0f - _safeAreaInset.right, bounds.origin.y + 4.0f + _safeAreaInset.top, _cancelButton.frame.size.width, 44.0f);
     }
     
-    _tabPanel.frame = CGRectMake(bounds.origin.x, bounds.origin.y + 50.0f, bounds.size.width, _tabPanel.frame.size.height);
+    _tabPanel.frame = CGRectMake(bounds.origin.x, bounds.origin.y + 50.0f + _safeAreaInset.top, bounds.size.width, _tabPanel.frame.size.height);
     
-    _collectionWrapperView.frame = CGRectMake(bounds.origin.x, CGRectGetMaxY(_tabPanel.frame) + TGPhotoStickersSectionHeaderHeight - 8.0f, bounds.size.width, bounds.size.height - CGRectGetMaxY(_tabPanel.frame) + bounds.origin.y - TGPhotoStickersSectionHeaderHeight + 8.0f);
+    _collectionWrapperView.frame = CGRectMake(bounds.origin.x + _safeAreaInset.left, CGRectGetMaxY(_tabPanel.frame) + TGPhotoStickersSectionHeaderHeight - 8.0f, bounds.size.width - _safeAreaInset.left - _safeAreaInset.right, bounds.size.height - CGRectGetMaxY(_tabPanel.frame) + bounds.origin.y - TGPhotoStickersSectionHeaderHeight + 8.0f);
     _collectionView.frame = CGRectMake(0.0f, -TGPhotoStickersPreloadInset + 8.0f, _collectionWrapperView.frame.size.width, _collectionWrapperView.frame.size.height + 2 * TGPhotoStickersPreloadInset);
     _headersView.frame = [_collectionWrapperView convertRect:_collectionView.frame toView:_wrapperView];
     

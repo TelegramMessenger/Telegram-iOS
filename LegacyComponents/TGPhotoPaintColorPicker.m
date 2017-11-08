@@ -93,7 +93,7 @@ const CGFloat TGPhotoPaintDefaultColorLocation = 1.0f;
         [self addGestureRecognizer:_pressGestureRecognizer];
         
         _location = [self restoreLastColorLocation];
-        _weight = 0.22f;
+        _weight = 0.08f;
     }
     return self;
 }

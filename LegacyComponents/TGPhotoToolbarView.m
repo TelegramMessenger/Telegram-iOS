@@ -29,6 +29,8 @@
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
     {
+        _interfaceOrientation = [[LegacyComponentsGlobals provider] applicationStatusBarOrientation];
+        
         _backgroundView = [[UIView alloc] initWithFrame:CGRectZero];
         _backgroundView.backgroundColor = (solidBackground ? [TGPhotoEditorInterfaceAssets toolbarBackgroundColor] : [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor]);
         [self addSubview:_backgroundView];
@@ -394,20 +396,21 @@
     
     NSArray *buttons = _buttonsWrapperView.subviews;
     
+    CGFloat offset = 8.0f;
     if (self.frame.size.width > self.frame.size.height)
     {
         if (buttons.count == 1)
         {
             UIView *button = buttons.firstObject;
-            button.frame = CGRectMake(CGFloor(self.frame.size.width / 2 - button.frame.size.width / 2), (self.frame.size.height - button.frame.size.height) / 2, button.frame.size.width, button.frame.size.height);
+            button.frame = CGRectMake(CGFloor(self.frame.size.width / 2 - button.frame.size.width / 2), offset, button.frame.size.width, button.frame.size.height);
         }
         else if (buttons.count == 2)
         {
             UIView *leftButton = buttons.firstObject;
             UIView *rightButton = buttons.lastObject;
             
-            leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 5 * 2 - 5 - leftButton.frame.size.width / 2), (self.frame.size.height - leftButton.frame.size.height) / 2, leftButton.frame.size.width, leftButton.frame.size.height);
-            rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - rightButton.frame.size.width), (self.frame.size.height - rightButton.frame.size.height) / 2, rightButton.frame.size.width, rightButton.frame.size.height);
+            leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 5 * 2 - 5 - leftButton.frame.size.width / 2), offset, leftButton.frame.size.width, leftButton.frame.size.height);
+            rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - rightButton.frame.size.width), offset, rightButton.frame.size.width, rightButton.frame.size.height);
         }
         else if (buttons.count == 3)
         {
@@ -415,11 +418,11 @@
             UIView *centerButton = [buttons objectAtIndex:1];
             UIView *rightButton = buttons.lastObject;
             
-            centerButton.frame = CGRectMake(CGFloor(self.frame.size.width / 2 - centerButton.frame.size.width / 2), (self.frame.size.height - centerButton.frame.size.height) / 2, centerButton.frame.size.width, centerButton.frame.size.height);
+            centerButton.frame = CGRectMake(CGFloor(self.frame.size.width / 2 - centerButton.frame.size.width / 2), offset, centerButton.frame.size.width, centerButton.frame.size.height);
 
-            leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 6 * 2 - 10 - leftButton.frame.size.width / 2), (self.frame.size.height - leftButton.frame.size.height) / 2, leftButton.frame.size.width, leftButton.frame.size.height);
+            leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 6 * 2 - 10 - leftButton.frame.size.width / 2), offset, leftButton.frame.size.width, leftButton.frame.size.height);
             
-            rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - rightButton.frame.size.width), (self.frame.size.height - rightButton.frame.size.height) / 2, rightButton.frame.size.width, rightButton.frame.size.height);
+            rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - rightButton.frame.size.width), offset, rightButton.frame.size.width, rightButton.frame.size.height);
         }
         else if (buttons.count == 4)
         {
@@ -428,13 +431,13 @@
             UIView *centerRightButton = [buttons objectAtIndex:2];
             UIView *rightButton = buttons.lastObject;
             
-            leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 8 * 2 - 3 - leftButton.frame.size.width / 2), (self.frame.size.height - leftButton.frame.size.height) / 2, leftButton.frame.size.width, leftButton.frame.size.height);
+            leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 8 * 2 - 3 - leftButton.frame.size.width / 2), offset, leftButton.frame.size.width, leftButton.frame.size.height);
             
-            centerLeftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 10 * 4 + 5 - centerLeftButton.frame.size.width / 2), (self.frame.size.height - centerLeftButton.frame.size.height) / 2, centerLeftButton.frame.size.width, centerLeftButton.frame.size.height);
+            centerLeftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 10 * 4 + 5 - centerLeftButton.frame.size.width / 2), offset, centerLeftButton.frame.size.width, centerLeftButton.frame.size.height);
             
-            centerRightButton.frame = CGRectMake(CGCeil(self.frame.size.width - centerLeftButton.frame.origin.x - centerRightButton.frame.size.width), (self.frame.size.height - centerRightButton.frame.size.height) / 2, centerRightButton.frame.size.width, centerRightButton.frame.size.height);
+            centerRightButton.frame = CGRectMake(CGCeil(self.frame.size.width - centerLeftButton.frame.origin.x - centerRightButton.frame.size.width), offset, centerRightButton.frame.size.width, centerRightButton.frame.size.height);
             
-            rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - rightButton.frame.size.width), (self.frame.size.height - rightButton.frame.size.height) / 2, rightButton.frame.size.width, rightButton.frame.size.height);
+            rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - rightButton.frame.size.width), offset, rightButton.frame.size.width, rightButton.frame.size.height);
         }
         
         _cancelButton.frame = CGRectMake(0, 0, 49, 49);
@@ -444,22 +447,25 @@
         
         _doneButton.frame = CGRectMake(self.frame.size.width - offset, 49.0f - offset, _doneButton.frame.size.width, _doneButton.frame.size.height);
         
-        _infoLabel.frame = CGRectMake(49.0f + 10.0f, 0.0f, self.frame.size.width - (49.0f + 10.0f) * 2.0f, self.frame.size.height);
+        _infoLabel.frame = CGRectMake(49.0f + 10.0f, 0.0f, self.frame.size.width - (49.0f + 10.0f) * 2.0f, 49.0f);
     }
     else
     {
+        if (self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft)
+            offset = self.frame.size.width - [buttons.firstObject frame].size.width - offset;
+        
         if (buttons.count == 1)
         {
             UIView *button = buttons.firstObject;
-            button.frame = CGRectMake((self.frame.size.width - button.frame.size.width) / 2, CGFloor((self.frame.size.height - button.frame.size.height) / 2), button.frame.size.width, button.frame.size.height);
+            button.frame = CGRectMake(offset, CGFloor((self.frame.size.height - button.frame.size.height) / 2), button.frame.size.width, button.frame.size.height);
         }
         else if (buttons.count == 2)
         {
             UIView *topButton = buttons.firstObject;
             UIView *bottomButton = buttons.lastObject;
             
-            topButton.frame = CGRectMake((self.frame.size.width - topButton.frame.size.width) / 2, CGFloor(self.frame.size.height / 5 * 2 - 10 - topButton.frame.size.height / 2), topButton.frame.size.width, topButton.frame.size.height);
-            bottomButton.frame = CGRectMake((self.frame.size.width - bottomButton.frame.size.width) / 2, CGCeil(self.frame.size.height - topButton.frame.origin.y - bottomButton.frame.size.height), bottomButton.frame.size.width, bottomButton.frame.size.height);
+            topButton.frame = CGRectMake(offset, CGFloor(self.frame.size.height / 5 * 2 - 10 - topButton.frame.size.height / 2), topButton.frame.size.width, topButton.frame.size.height);
+            bottomButton.frame = CGRectMake(offset, CGCeil(self.frame.size.height - topButton.frame.origin.y - bottomButton.frame.size.height), bottomButton.frame.size.width, bottomButton.frame.size.height);
         }
         else if (buttons.count == 3)
         {
@@ -467,9 +473,9 @@
             UIView *centerButton = [buttons objectAtIndex:1];
             UIView *bottomButton = buttons.lastObject;
             
-            topButton.frame = CGRectMake((self.frame.size.width - topButton.frame.size.width) / 2, CGFloor(self.frame.size.height / 6 * 2 - 10 - topButton.frame.size.height / 2), topButton.frame.size.width, topButton.frame.size.height);
-            centerButton.frame = CGRectMake((self.frame.size.width - centerButton.frame.size.width) / 2, CGFloor((self.frame.size.height - centerButton.frame.size.height) / 2), centerButton.frame.size.width, centerButton.frame.size.height);
-            bottomButton.frame = CGRectMake((self.frame.size.width - bottomButton.frame.size.width) / 2, CGCeil(self.frame.size.height - topButton.frame.origin.y - bottomButton.frame.size.height), bottomButton.frame.size.width, bottomButton.frame.size.height);
+            topButton.frame = CGRectMake(offset, CGFloor(self.frame.size.height / 6 * 2 - 10 - topButton.frame.size.height / 2), topButton.frame.size.width, topButton.frame.size.height);
+            centerButton.frame = CGRectMake(offset, CGFloor((self.frame.size.height - centerButton.frame.size.height) / 2), centerButton.frame.size.width, centerButton.frame.size.height);
+            bottomButton.frame = CGRectMake(offset, CGCeil(self.frame.size.height - topButton.frame.origin.y - bottomButton.frame.size.height), bottomButton.frame.size.width, bottomButton.frame.size.height);
         }
         else if (buttons.count == 4)
         {
@@ -478,19 +484,20 @@
             UIView *centerBottonButton = [buttons objectAtIndex:2];
             UIView *bottomButton = buttons.lastObject;
             
-            topButton.frame = CGRectMake((self.frame.size.width - topButton.frame.size.width) / 2, CGFloor(self.frame.size.height / 8 * 2 - 3 - topButton.frame.size.height / 2), topButton.frame.size.width, topButton.frame.size.height);
+            topButton.frame = CGRectMake(offset, CGFloor(self.frame.size.height / 8 * 2 - 3 - topButton.frame.size.height / 2), topButton.frame.size.width, topButton.frame.size.height);
             
-            centerTopButton.frame = CGRectMake((self.frame.size.width - centerTopButton.frame.size.width) / 2, CGFloor(self.frame.size.height / 10 * 4 + 5 - centerTopButton.frame.size.height / 2), centerTopButton.frame.size.width, centerTopButton.frame.size.height);
+            centerTopButton.frame = CGRectMake(offset, CGFloor(self.frame.size.height / 10 * 4 + 5 - centerTopButton.frame.size.height / 2), centerTopButton.frame.size.width, centerTopButton.frame.size.height);
             
-            centerBottonButton.frame = CGRectMake((self.frame.size.width - centerBottonButton.frame.size.width) / 2, CGCeil(self.frame.size.height - centerTopButton.frame.origin.y - centerBottonButton.frame.size.height), centerBottonButton.frame.size.width, centerBottonButton.frame.size.height);
+            centerBottonButton.frame = CGRectMake(offset, CGCeil(self.frame.size.height - centerTopButton.frame.origin.y - centerBottonButton.frame.size.height), centerBottonButton.frame.size.width, centerBottonButton.frame.size.height);
             
-            bottomButton.frame = CGRectMake((self.frame.size.width - bottomButton.frame.size.width) / 2, CGCeil(self.frame.size.height - topButton.frame.origin.y - bottomButton.frame.size.height), bottomButton.frame.size.width, bottomButton.frame.size.height);
+            bottomButton.frame = CGRectMake(offset, CGCeil(self.frame.size.height - topButton.frame.origin.y - bottomButton.frame.size.height), bottomButton.frame.size.width, bottomButton.frame.size.height);
         }
     
-        _cancelButton.frame = CGRectMake(0, self.frame.size.height - 49, 49, 49);
+        CGFloat offset = self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft ? self.frame.size.width - 49.0f : 0.0f;
+        _cancelButton.frame = CGRectMake(offset, self.frame.size.height - 49, 49, 49);
         _cancelButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
         
-        _doneButton.frame = CGRectMake(0, 0, 49, 49);
+        _doneButton.frame = CGRectMake(offset, 0.0f, 49.0f, 49.0f);
         _doneButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
         
         _infoLabel.center = CGPointMake(self.frame.size.width / 2.0f, self.frame.size.height / 2.0f);

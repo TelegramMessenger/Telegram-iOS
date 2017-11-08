@@ -198,4 +198,9 @@
     return [[UIView alloc] init];
 }
 
+- (BOOL)prefersStatusBarHidden
+{
+    return self.navigationController.prefersStatusBarHidden;
+}
+
 @end

@@ -113,13 +113,17 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     return true;
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping
 {
     self = [super initWithType:TGMenuSheetItemTypeDefault];
     if (self != nil)
     {
         _context = context;
         _saveEditedPhotos = saveEditedPhotos;
+        
+#if TARGET_IPHONE_SIMULATOR
+        hasCamera = true;
+#endif
         
         __weak TGAttachmentCarouselItemView *weakSelf = self;
         _forProfilePhoto = forProfilePhoto;
@@ -129,7 +133,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         
         if (!forProfilePhoto)
         {
-            _selectionContext = [[TGMediaSelectionContext alloc] init];
+            _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping];
+            if (allowGrouping)
+                _selectionContext.grouping = ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_mediaGroupingDisabled_v0"] boolValue];
             [_selectionContext setItemSourceUpdatedSignal:[_assetsLibrary libraryChanged]];
             _selectionContext.updatedItemsSignal = ^SSignal *(NSArray *items)
             {
@@ -156,6 +162,8 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                 
                 NSInteger index = [strongSelf->_fetchResult indexOfAsset:(TGMediaAsset *)change.item];
                 [strongSelf updateSendButtonsFromIndex:index];
+                
+                [strongSelf updateSelectionIndexes];
             }]];
             
             _editingContext = [[TGMediaEditingContext alloc] init];
@@ -230,7 +238,10 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         {
             __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
             if (strongSelf != nil && strongSelf.sendPressed != nil)
+            {
+                [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
                 strongSelf.sendPressed(nil, false);
+            }
         }];
         [_sendMediaItemView setHidden:true animated:false];
         [self addSubview:_sendMediaItemView];
@@ -306,6 +317,15 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 {
     _remainingHeight = remainingHeight;
     [self setCondensed:_condensed];
+}
+
+- (void)updateSelectionIndexes
+{
+    for (TGAttachmentAssetCell *cell in _collectionView.visibleCells)
+    {
+        NSUInteger index = [self.selectionContext indexOfItem:cell.asset];
+        [cell.checkButton setNumber:index];
+    }
 }
 
 - (void)setCondensed:(bool)condensed
@@ -708,7 +728,10 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     {
         __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
         if (strongSelf != nil && strongSelf.sendPressed != nil)
+        {
+            [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
             strongSelf.sendPressed(item.asset, false);
+        }
     };
     
     mixin.editorOpened = self.editorOpened;
@@ -952,6 +975,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             [cell setAsset:asset signal:[self _signalForItem:asset refresh:[cell.asset isEqual:asset] onlyThumbnail:false]];
         }
     }
+    
+    if (self.selectionContext != nil)
+        [cell.checkButton setNumber:[self.selectionContext indexOfItem:asset]];
     
     return cell;
 }

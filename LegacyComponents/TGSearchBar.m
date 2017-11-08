@@ -562,6 +562,12 @@
     }
 }
 
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
+{
+    _safeAreaInset = safeAreaInset;
+    [self setNeedsLayout];
+}
+
 - (void)layoutSubviews
 {
     [super layoutSubviews];
@@ -587,7 +593,7 @@
     _customBackgroundView.frame = CGRectMake(0, ((_showsCustomCancelButton || _alwaysExtended) ? -safeInsetHeight : 0.0f), self.frame.size.width, self.frame.size.height + (_showsCustomCancelButton || _alwaysExtended ? safeInsetHeight : 0.0f));
     _customActiveBackgroundView.frame = _customBackgroundView.frame;
     
-    _textFieldBackground.frame = CGRectMake(8, 9 + [self topPadding], self.frame.size.width - 16 - rightPadding, [self inputHeight]);
+    _textFieldBackground.frame = CGRectMake(8 + _safeAreaInset.left, 9 + [self topPadding], self.frame.size.width - 16 - rightPadding - _safeAreaInset.left - _safeAreaInset.right, [self inputHeight]);
     
     CGFloat prefixOffset = 0.0f;
     {
@@ -613,7 +619,7 @@
     
     _customSearchActivityIndicator.frame = (CGRect){{CGFloor(_customSearchIcon.frame.origin.x + (_customSearchIcon.frame.size.width - _customSearchActivityIndicator.frame.size.width) / 2.0f), CGFloor(_customSearchIcon.frame.origin.y + (_customSearchIcon.frame.size.height - _customSearchActivityIndicator.frame.size.height) / 2.0f) + 1.0f + TGRetinaPixel}, _customSearchActivityIndicator.frame.size};
     
-    _placeholderLabel.frame = CGRectMake(_showsCustomCancelButton ? ((TGIsRTL() ? (CGRectGetMaxX(_textFieldBackground.frame) - placeholderSize.width - 32.0f) : 36) + prefixOffset) : (CGFloor((self.frame.size.width - placeholderSize.width) / 2) + 10 + TGRetinaPixel), [self inputContentOffset] + 14 + [self topPadding], placeholderSize.width, placeholderSize.height);
+    _placeholderLabel.frame = CGRectMake(_showsCustomCancelButton ? ((TGIsRTL() ? (CGRectGetMaxX(_textFieldBackground.frame) - placeholderSize.width - 32.0f) : 36 + _safeAreaInset.left) + prefixOffset) : (CGFloor((self.frame.size.width - placeholderSize.width) / 2) + 10 + TGRetinaPixel), [self inputContentOffset] + 14 + [self topPadding], placeholderSize.width, placeholderSize.height);
     
     if (_customTextField != nil)
     {
@@ -632,7 +638,7 @@
     
     if (_customCancelButton != nil)
     {
-        _customCancelButton.frame = CGRectMake(self.frame.size.width + (_showsCustomCancelButton ? (-_customCancelButton.frame.size.width - 9) : 9), [self topPadding] + 2.0f, _cancelButtonWidth, [self baseHeight]);
+        _customCancelButton.frame = CGRectMake(self.frame.size.width + (_showsCustomCancelButton ? (-_customCancelButton.frame.size.width - 9 - self.safeAreaInset.right) : 9), [self topPadding] + 2.0f, _cancelButtonWidth, [self baseHeight]);
     }
     
     if (_customScopeButtonContainer != nil)
@@ -642,7 +648,7 @@
             if (!landscapeMode)
                 _customScopeButtonContainer.frame = CGRectMake(7.0f, self.frame.size.height - 29.0f - 9.0f + [self topPadding], self.frame.size.width - 14.0f, 29.0f);
             else
-                _customScopeButtonContainer.frame = CGRectMake(self.frame.size.width - scopeBarHorizontalWidth - _customCancelButton.frame.size.width, 5.0f + [self topPadding], scopeBarHorizontalWidth - 14.0f, 32.0f);
+                _customScopeButtonContainer.frame = CGRectMake(self.frame.size.width - scopeBarHorizontalWidth - _customCancelButton.frame.size.width - self.safeAreaInset.right, 5.0f + [self topPadding], scopeBarHorizontalWidth - 14.0f, 32.0f);
         }
         else
         {

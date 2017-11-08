@@ -303,3 +303,5 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGLocationWavesView.h>
 #import <LegacyComponents/TGLocationLiveElapsedView.h>
 #import <LegacyComponents/TGLocationLiveSessionItemView.h>
+
+#import <LegacyComponents/TGTooltipView.h>

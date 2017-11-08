@@ -8,13 +8,12 @@
 
 @interface TGAttachmentAssetCell : TGAttachmentMenuCell
 {
-    TGCheckButtonView *_checkButton;
-    
     UIImageView *_iconView;
     UIImageView *_gradientView;
 }
 
 @property (nonatomic, readonly) TGImageView *imageView;
+@property (nonatomic, readonly) TGCheckButtonView *checkButton;
 - (void)setHidden:(bool)hidden animated:(bool)animated;
 
 @property (nonatomic, readonly) TGMediaAsset *asset;

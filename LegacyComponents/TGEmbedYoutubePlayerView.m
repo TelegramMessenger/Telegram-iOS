@@ -217,6 +217,19 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
             _playOnReady = false;
             [self playVideo];
         }
+        
+        if (!self.disallowAutoplay)
+        {
+            dispatch_async(dispatch_get_main_queue(), ^
+            {
+                [self playVideo];
+                
+                TGDispatchAfter(2.0, dispatch_get_main_queue(), ^{
+                    if (!_started)
+                        [self playVideo];
+                });
+            });
+        }
     }
 }
 

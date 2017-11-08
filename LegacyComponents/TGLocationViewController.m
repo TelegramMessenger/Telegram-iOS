@@ -1138,9 +1138,9 @@
 - (CGFloat)visibleContentHeight
 {
     if (![self isLiveLocation])
-        return TGLocationInfoCellHeight;
+        return TGLocationInfoCellHeight + self.controllerSafeAreaInset.bottom;
     else
-        return TGLocationLiveCellHeight;
+        return TGLocationLiveCellHeight + self.controllerSafeAreaInset.bottom;
 }
 
 - (CGFloat)possibleContentHeight
@@ -1156,7 +1156,7 @@
             count = MIN(1.5f, count);
             height += count * TGLocationLiveCellHeight;
         }
-        return height;
+        return height + self.controllerSafeAreaInset.bottom;
     }
     else
     {
@@ -1165,7 +1165,7 @@
             count += 1;
         count = MIN(2.5f, count);
         CGFloat height = count * TGLocationLiveCellHeight;
-        return height;
+        return height + self.controllerSafeAreaInset.bottom;
     }
 }
 

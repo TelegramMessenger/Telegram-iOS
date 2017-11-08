@@ -3,6 +3,7 @@
 @interface TGListsTableView : UITableView
 
 @property (nonatomic, assign) bool blockContentOffset;
+@property (nonatomic, assign) CGFloat indexOffset;
 
 @property (nonatomic, copy) void (^onHitTest)(CGPoint);
 

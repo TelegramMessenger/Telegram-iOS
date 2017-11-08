@@ -567,6 +567,24 @@
     [self updateExpanded:expanded];
 }
 
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
+{
+    _safeAreaInset = safeAreaInset;
+    UIEdgeInsets initialInset = UIEdgeInsetsZero;
+    if (_style == TGStickerKeyboardViewPaintStyle || _style == TGStickerKeyboardViewPaintDarkStyle)
+        initialInset = UIEdgeInsetsMake(0.0f, 12.0f, 0.0f, 12.0f);
+    
+    if (_expanded)
+        initialInset = UIEdgeInsetsMake(0.0f, -48.0f, 0.0f, 0.0f);
+    
+    _collectionView.contentInset = UIEdgeInsetsMake(initialInset.top, initialInset.left + _safeAreaInset.left, initialInset.bottom, initialInset.right + _safeAreaInset.right);
+    
+    if (!_expanded && _collectionView.contentOffset.x <= -_safeAreaInset.left + 60.0f)
+        [_collectionView setContentOffset:CGPointMake(-_safeAreaInset.left - initialInset.left, 0.0f)];
+    else if (_expanded && _collectionView.contentOffset.x <= 60.0f)
+        [_collectionView setContentOffset:CGPointMake(-_safeAreaInset.left + 48.0f, 0.0f)];
+}
+
 - (void)updateExpanded:(bool)expanded
 {
     if (iosMajorVersion() < 8)
@@ -577,10 +595,10 @@
     
     [UIView animateWithDuration:0.2 animations:^
     {
-        _collectionView.contentInset = expanded ? UIEdgeInsetsMake(0.0f, -48.0f, 0.0f, 0.0f) : UIEdgeInsetsZero;
+        _collectionView.contentInset = expanded ? UIEdgeInsetsMake(0.0f, -48.0f + _safeAreaInset.left, 0.0f, _safeAreaInset.right) : UIEdgeInsetsMake(0.0f, _safeAreaInset.left, 0.0f, _safeAreaInset.right);
         
-        if (!expanded && _collectionView.contentOffset.x <= 60.0f)
-            [_collectionView setContentOffset:CGPointZero];
+        if (!expanded && _collectionView.contentOffset.x <= -_safeAreaInset.left + 60.0f)
+            [_collectionView setContentOffset:CGPointMake(-_safeAreaInset.left, 0.0f)];
         
         TGStickerKeyboardTabSettingsCell *cell = (TGStickerKeyboardTabSettingsCell *)[_collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
         if ([cell isKindOfClass:[TGStickerKeyboardTabSettingsCell class]] && _showGifs && !expanded)

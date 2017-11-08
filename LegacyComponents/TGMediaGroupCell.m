@@ -105,21 +105,21 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         imageView2.clipsToBounds = true;
         imageView2.contentMode = UIViewContentModeScaleAspectFill;
         imageView2.tag = 102;
-        [self addSubview:imageView2];
+        [self.contentView addSubview:imageView2];
         
         TGImageView *imageView1 = [[TGMediaGroupImageView alloc] initWithFrame:CGRectMake(10.0f, 9.0f, 65.0f, 65.0f)];
         imageView1.backgroundColor = UIColorRGB(0xefeff4);
         imageView1.clipsToBounds = true;
         imageView1.contentMode = UIViewContentModeScaleAspectFill;
         imageView1.tag = 101;
-        [self addSubview:imageView1];
+        [self.contentView addSubview:imageView1];
         
         TGImageView *imageView0 = [[TGMediaGroupImageView alloc] initWithFrame:CGRectMake(8.0f, 11.0f, 69.0f, 69.0f)];
         imageView0.backgroundColor = UIColorRGB(0xefeff4);
         imageView0.clipsToBounds = true;
         imageView0.contentMode = UIViewContentModeScaleAspectFill;
         imageView0.tag = 100;
-        [self addSubview:imageView0];
+        [self.contentView addSubview:imageView0];
         
         _imageViews = @[ imageView0, imageView1, imageView2 ];
         for (TGImageView *view in _imageViews)
@@ -127,11 +127,11 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         
         _shadowView = [[UIImageView alloc] initWithFrame:CGRectMake(imageView0.frame.origin.x, imageView0.frame.origin.y + imageView0.frame.size.height - 20, imageView0.frame.size.width, 20)];
         _shadowView.image = shadowImage;
-        [self addSubview:_shadowView];
+        [self.contentView addSubview:_shadowView];
         
         _iconView = [[UIImageView alloc] initWithFrame:CGRectMake(10, 59, 19, 19)];
         _iconView.contentMode = UIViewContentModeCenter;
-        [self addSubview:_iconView];
+        [self.contentView addSubview:_iconView];
         
         if (iosMajorVersion() >= 11)
         {
@@ -144,7 +144,7 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         _nameLabel.contentMode = UIViewContentModeLeft;
         _nameLabel.font = TGSystemFontOfSize(17);
         _nameLabel.textColor = [UIColor blackColor];
-        [self addSubview:_nameLabel];
+        [self.contentView addSubview:_nameLabel];
         
         _countLabel = [[UILabel alloc] initWithFrame:CGRectMake(96, 49, 0, 0)];
         _countLabel.backgroundColor = [UIColor whiteColor];
@@ -156,7 +156,7 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         UIImageView *disclosureIndicator = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"ModernListsDisclosureIndicator")];
         disclosureIndicator.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
         disclosureIndicator.frame = CGRectOffset(disclosureIndicator.frame, self.contentView.frame.size.width - disclosureIndicator.frame.size.width - 15, 37);
-        [self addSubview:disclosureIndicator];
+        [self.contentView addSubview:disclosureIndicator];
     }
     return self;
 }
@@ -325,7 +325,7 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
     if (_countLabel.text.length == 0)
         y = 33;
         
-    CGSize titleSize = [_nameLabel sizeThatFits:CGSizeMake(self.frame.size.width - _nameLabel.frame.origin.x - 20, _nameLabel.frame.size.height)];
+    CGSize titleSize = [_nameLabel sizeThatFits:CGSizeMake(self.contentView.frame.size.width - _nameLabel.frame.origin.x - 20, _nameLabel.frame.size.height)];
     _nameLabel.frame = CGRectMake(_nameLabel.frame.origin.x, y, ceil(titleSize.width), ceil(titleSize.height));
     
     CGSize countSize = [_countLabel.text sizeWithFont:_countLabel.font];

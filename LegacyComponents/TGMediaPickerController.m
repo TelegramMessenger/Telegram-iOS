@@ -94,8 +94,13 @@
 {
     [super viewDidLoad];
     
+    UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
+    if (self.view.frame.size.width > self.view.frame.size.height)
+        orientation = UIInterfaceOrientationLandscapeLeft;
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    
     CGSize frameSize = self.view.frame.size;
-    CGRect collectionViewFrame = CGRectMake(0.0f, 0.0f, frameSize.width, frameSize.height);
+    CGRect collectionViewFrame = CGRectMake(safeAreaInset.left, 0.0f, frameSize.width - safeAreaInset.left - safeAreaInset.right, frameSize.height);
     _collectionViewWidth = collectionViewFrame.size.width;
     _collectionView.frame = collectionViewFrame;
 }
@@ -211,6 +216,9 @@
     [cell setItem:item signal:[self _signalForItem:item]];
     [cell setHidden:([cell.item isEqual:_hiddenItem]) animated:false];
     
+    if (self.selectionContext != nil)
+        [cell.checkButton setNumber:[self.selectionContext indexOfItem:(id<TGMediaSelectableItem>)cell.item]];
+    
     return cell;
 }
 
@@ -269,7 +277,12 @@
     CGFloat lastInverseOffset = MAX(0, _collectionView.contentSize.height - (_collectionView.contentOffset.y + _collectionView.frame.size.height - _collectionView.contentInset.bottom));
     CGFloat lastOffset = _collectionView.contentOffset.y;
     
-    CGRect frame = CGRectMake(0, 0, size.width, size.height);
+    UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
+    if (size.width > size.height)
+        orientation = UIInterfaceOrientationLandscapeLeft;
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    
+    CGRect frame = CGRectMake(safeAreaInset.left, 0, size.width - safeAreaInset.left - safeAreaInset.right, size.height);
     _collectionViewWidth = frame.size.width;
     _collectionView.frame = frame;
     
@@ -325,6 +338,11 @@
         id item = [strongSelf _itemAtIndexPath:indexPath];
         [strongSelf->_selectionContext toggleItemSelection:item animated:true sender:nil];
     };
+}
+
+- (BOOL)prefersStatusBarHidden
+{
+    return self.navigationController.prefersStatusBarHidden;
 }
 
 @end

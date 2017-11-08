@@ -17,8 +17,10 @@
 @property (nonatomic, readonly) CGFloat menuHeight;
 @property (nonatomic, readonly) CGSize menuSize;
 @property (nonatomic, assign) CGFloat maxHeight;
+@property (nonatomic, assign) UIEdgeInsets safeAreaInset;
 
 @property (nonatomic, assign) CGFloat keyboardOffset;
+@property (nonatomic, assign) bool narrowInLandscape;
 
 @property (nonatomic, readonly) NSValue *mainFrame;
 @property (nonatomic, readonly) NSValue *headerFrame;

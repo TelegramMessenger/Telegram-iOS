@@ -811,7 +811,12 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     CGFloat panelToolbarPortraitSize = panelSize + TGPhotoEditorToolbarSize;
     CGFloat panelToolbarLandscapeSize = panelSize + TGPhotoEditorToolbarSize;
     
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2, (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
+    screenEdges.top += safeAreaInset.top;
+    screenEdges.left += safeAreaInset.left;
+    screenEdges.bottom -= safeAreaInset.bottom;
+    screenEdges.right -= safeAreaInset.right;
     
     switch (orientation)
     {
@@ -889,7 +894,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
             
             _portraitToolControlView.frame = CGRectMake(0, 0, _portraitToolsWrapperView.frame.size.width, TGPhotoEditorPanelSize);
             
-            _hudView.frame = CGRectMake(0.0f, 0.0f, referenceSize.width, referenceSize.height - panelToolbarPortraitSize);
+            _hudView.frame = CGRectMake(0.0f, safeAreaInset.top, referenceSize.width, referenceSize.height - panelToolbarPortraitSize);
         }
             break;
     }

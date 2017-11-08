@@ -12,6 +12,7 @@
 @property (nonatomic, strong) NSDictionary *userInfo;
 @property (nonatomic, assign) bool multiline;
 @property (nonatomic, assign) bool forceArrowOnTop;
+@property (nonatomic, assign) bool forceCenter;
 @property (nonatomic, assign) CGFloat maxWidth;
 
 - (void)setButtonsAndActions:(NSArray *)buttonsAndActions watcherHandle:(ASHandle *)watcherHandle;

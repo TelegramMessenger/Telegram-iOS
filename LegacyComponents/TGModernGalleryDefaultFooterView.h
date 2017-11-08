@@ -5,8 +5,12 @@
 @protocol TGModernGalleryDefaultFooterView <NSObject>
 
 @optional
-- (void)setTransitionOutProgress:(CGFloat)transitionOutProgress;
+- (void)setTransitionOutProgress:(CGFloat)transitionOutProgress manual:(bool)manual;
 - (void)setContentHidden:(bool)contentHidden;
+
+- (void)setInterItemTransitionProgress:(CGFloat)progress;
+
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset;
 
 @required
 

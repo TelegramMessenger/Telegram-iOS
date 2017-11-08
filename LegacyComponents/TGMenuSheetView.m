@@ -202,6 +202,8 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
                 [self insertSubview:_mainBackgroundView atIndex:0];
                 
                 _scrollView = [[TGMenuSheetScrollView alloc] initWithFrame:CGRectZero];
+                if (iosMajorVersion() >= 11)
+                    _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
                 _scrollView.delegate = self;
                 [_mainBackgroundView addSubview:_scrollView];
             }
@@ -402,7 +404,11 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
     if (self.maxHeight > FLT_EPSILON)
         maxHeight = MIN(self.maxHeight, maxHeight);
     
-    return MIN(maxHeight, [self menuHeightForWidth:self.menuWidth - self.edgeInsets.left - self.edgeInsets.right]);
+    CGFloat edgeInsetLeft = _narrowInLandscape ? self.edgeInsets.left :  MAX(self.edgeInsets.left, self.safeAreaInset.left);
+    CGFloat edgeInsetRight = _narrowInLandscape ? self.edgeInsets.right : MAX(self.edgeInsets.right, self.safeAreaInset.right);
+    
+    CGFloat width = self.menuWidth - edgeInsetLeft - edgeInsetRight;
+    return MIN(maxHeight, [self menuHeightForWidth:width]);
 }
 
 - (CGFloat)menuHeightForWidth:(CGFloat)width
@@ -683,9 +689,18 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
         [itemView menuView:self didDisappearAnimated:animated];
 }
 
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
+{
+    _safeAreaInset = safeAreaInset;
+    [self setNeedsLayout];
+}
+
 - (void)layoutSubviews
 {
-    CGFloat width = self.menuWidth - self.edgeInsets.left - self.edgeInsets.right;
+    CGFloat edgeInsetLeft = _narrowInLandscape ? self.edgeInsets.left :  MAX(self.edgeInsets.left, self.safeAreaInset.left);
+    CGFloat edgeInsetRight = _narrowInLandscape ? self.edgeInsets.right : MAX(self.edgeInsets.right, self.safeAreaInset.right);
+    
+    CGFloat width = self.menuWidth - edgeInsetLeft - edgeInsetRight;
     CGFloat maxHeight = _sizeClass == UIUserInterfaceSizeClassCompact ? [_context fullscreenBounds].size.height : self.frame.size.height;
     
     if (_sizeClass == UIUserInterfaceSizeClassCompact && self.maxHeight > FLT_EPSILON)
@@ -740,6 +755,8 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
     CGSize statusBarSize = [[LegacyComponentsGlobals provider] statusBarFrame].size;
     CGFloat statusBarHeight = MIN(statusBarSize.width, statusBarSize.height);
     statusBarHeight = MAX(statusBarHeight, 20.0f);
+    if (_safeAreaInset.top > FLT_EPSILON)
+        statusBarHeight = _safeAreaInset.top;
     
     if (fullscreen)
     {
@@ -804,7 +821,7 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
     CGFloat topInset = edgeInsets.top;
     if (self.headerItemView != nil)
     {
-        _headerBackgroundView.frame = CGRectMake(edgeInsets.left, topInset, width, [self.headerItemView preferredHeightForWidth:width screenHeight:screenHeight]);
+        _headerBackgroundView.frame = CGRectMake(edgeInsetLeft, topInset, width, [self.headerItemView preferredHeightForWidth:width screenHeight:screenHeight]);
         self.headerItemView.frame = _headerBackgroundView.bounds;
         
         topInset = CGRectGetMaxY(_headerBackgroundView.frame) + TGMenuSheetInterSectionSpacing;
@@ -812,7 +829,7 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
     
     if (hasRegularItems)
     {
-        _mainBackgroundView.frame = CGRectMake(edgeInsets.left, topInset, width, MIN(contentHeight, maxHeight));
+        _mainBackgroundView.frame = CGRectMake(edgeInsetLeft, topInset, width, MIN(contentHeight, maxHeight));
         _scrollView.frame = _mainBackgroundView.bounds;
         _scrollView.contentSize = CGSizeMake(width, contentHeight);
     }
@@ -824,7 +841,7 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
         if (hasRegularItems && self.keyboardOffset < FLT_EPSILON)
             top = CGRectGetMaxY(_mainBackgroundView.frame) + TGMenuSheetInterSectionSpacing;
     
-        _footerBackgroundView.frame = CGRectMake(edgeInsets.left, top, width, height);
+        _footerBackgroundView.frame = CGRectMake(edgeInsetLeft, top, width, height);
         self.footerItemView.frame = _footerBackgroundView.bounds;
     }
 }

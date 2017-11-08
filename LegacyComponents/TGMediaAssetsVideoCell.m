@@ -230,7 +230,7 @@ NSString *const TGMediaAssetsVideoCellKind = @"TGMediaAssetsVideoCellKind";
 
 - (void)layoutSubviews
 {
-    _checkButton.frame = (CGRect){ { self.frame.size.width - _checkButton.frame.size.width - 2, 2 }, _checkButton.frame.size };
+    self.checkButton.frame = (CGRect){ { self.frame.size.width - self.checkButton.frame.size.width - 2, 2 }, self.checkButton.frame.size };
     _shadowView.frame = (CGRect){ { 0, self.frame.size.height - _shadowView.frame.size.height }, {self.frame.size.width, _shadowView.frame.size.height } };
     _iconView.frame = CGRectMake(0, self.frame.size.height - 19, 19, 19);
     _durationLabel.frame = (CGRect){ { 5, _shadowView.frame.origin.y }, {self.frame.size.width - 5 - 4, _shadowView.frame.size.height } };

@@ -42,3 +42,23 @@
 }
 
 @end
+
+@implementation TGMessageGroupedIdContentProperty
+
+- (instancetype)initWithGroupedId:(int64_t)groupedId {
+    self = [super init];
+    if (self != nil) {
+        _groupedId = groupedId;
+    }
+    return self;
+}
+
+- (instancetype)initWithKeyValueCoder:(PSKeyValueCoder *)coder {
+    return [self initWithGroupedId:[coder decodeInt64ForCKey:"gi"]];
+}
+
+- (void)encodeWithKeyValueCoder:(PSKeyValueCoder *)coder {
+    [coder encodeInt64:_groupedId forCKey:"gi"];
+}
+
+@end
