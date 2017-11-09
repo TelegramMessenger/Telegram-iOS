@@ -556,7 +556,7 @@ typedef enum
     CGRect rect = CGRectMake((_containerView.frame.size.width - menuSize.width) / 2.0f, _containerView.frame.size.height, menuSize.width, menuSize.height);
     
     if (expanded)
-        rect.origin.y = _containerView.frame.size.height - rect.size.height;
+        rect.origin.y = _containerView.frame.size.height - rect.size.height - self.safeAreaInset.bottom;
     
     return rect;
 }

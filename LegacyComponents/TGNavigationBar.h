@@ -30,6 +30,8 @@
 
 - (void)setHiddenState:(bool)hidden animated:(bool)animated;
 
+- (SSignal *)hiddenSignal;
+
 - (bool)shouldAddBackdropBackground;
 - (unsigned int)indexAboveBackdropBackground;
 

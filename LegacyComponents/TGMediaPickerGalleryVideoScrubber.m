@@ -740,6 +740,9 @@ typedef enum
 
 - (CGSize)_thumbnailSizeWithAspectRatio:(CGFloat)aspectRatio orientation:(UIImageOrientation)orientation
 {
+    if (aspectRatio < FLT_EPSILON || isnan(aspectRatio))
+        aspectRatio = 1.0f;
+    
     if (orientation == UIImageOrientationLeft || orientation == UIImageOrientationRight)
         aspectRatio = 1.0f / aspectRatio;
     return CGSizeMake(CGCeil(36.0f * aspectRatio), 36.0f);

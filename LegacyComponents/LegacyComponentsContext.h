@@ -36,6 +36,7 @@ typedef enum {
 
 @protocol LegacyComponentsContext <NSObject>
 
+- (UIEdgeInsets)safeAreaInset;
 - (CGRect)fullscreenBounds;
 - (TGKeyCommandController *)keyCommandController;
 - (CGRect)statusBarFrame;

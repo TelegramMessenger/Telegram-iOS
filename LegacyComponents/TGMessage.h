@@ -202,6 +202,7 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 @property (nonatomic) int64_t fromUid;
 @property (nonatomic) int64_t toUid;
 @property (nonatomic) int64_t cid;
+@property (nonatomic) int64_t groupedId;
 @property (nonatomic, copy) NSString *text;
 @property (nonatomic) NSTimeInterval date;
 @property (nonatomic) NSTimeInterval editDate;

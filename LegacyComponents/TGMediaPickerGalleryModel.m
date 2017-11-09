@@ -119,8 +119,6 @@
                 else
                     [[NSUserDefaults standardUserDefaults] setObject:value forKey:lastValueKey];
                 
-                [strongSelf->_editingContext setTimer:value forItem:editableMediaItem];
-                
                 if (value.integerValue != 0)
                 {
                     __strong TGModernGalleryController *controller = strongSelf.controller;
@@ -133,6 +131,8 @@
                             [strongSelf->_selectionContext setItem:selectableItem selected:true animated:false sender:nil];
                     }
                 }
+                
+                [strongSelf->_editingContext setTimer:value forItem:editableMediaItem];
             } dismissed:^
             {
                 __strong TGMediaPickerGalleryModel *strongSelf = weakSelf;
@@ -192,7 +192,7 @@
     }];
     
     TGModernGalleryController *galleryController = self.controller;
-    [galleryController setCurrentItemIndex:newIndex direction:direction animated:true];
+    [galleryController setCurrentItemIndex:newIndex direction:direction animated:false];
 }
 
 - (void)setCurrentItemWithIndex:(NSUInteger)index

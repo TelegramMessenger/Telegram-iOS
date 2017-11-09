@@ -76,6 +76,10 @@
         
         if (iosMajorVersion() >= 11)
             _fadeView.accessibilityIgnoresInvertColors = true;
+        
+#if TARGET_IPHONE_SIMULATOR
+        _fadeView.backgroundColor = [UIColor redColor];
+#endif
     }
     return self;
 }

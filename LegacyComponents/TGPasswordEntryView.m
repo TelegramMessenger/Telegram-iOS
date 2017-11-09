@@ -149,6 +149,11 @@
             simpleButtonInsetHorizontal = 26.0f;
             simpleButtonInsetVertical = 21.0f;
         }
+        else if ((int)screenSize.height == 812)
+        {
+            simpleButtonInsetHorizontal = 54.0f;
+            simpleButtonInsetVertical = 67.0f;
+        }
         else if ((int)screenSize.height == 736)
         {
             simpleButtonInsetHorizontal = 26.0f;
@@ -228,7 +233,7 @@
         return 21.0f;
     else if ((int)screenSize.height == 736)
         return 19.0f;
-    else if ((int)screenSize.height == 667)
+    else if ((int)screenSize.height == 667 || (int)screenSize.height == 812)
         return 19.0f;
     else if ((int)screenSize.height == 568)
         return 18.0f;
@@ -509,6 +514,8 @@
     CGFloat titleOffset = 0.0f;
     CGFloat pinOffset = 0.0f;
     CGFloat infoOffset = 0.0f;
+    CGFloat topOffset = 20.0f;
+    CGFloat bottomOffset = 0.0f;
     
     CGSize screenSize = [UIScreen mainScreen].bounds.size;
     if (screenSize.width > screenSize.height)
@@ -524,6 +531,15 @@
         titleOffset = 122.0f;
         pinOffset = 89.0f;
         infoOffset = 7.0f;
+    }
+    else if ((int)screenSize.height == 812)
+    {
+        keyboardOffset = 300.0f;
+        titleOffset = 116.0f;
+        pinOffset = 79.0f + TGRetinaPixel;
+        infoOffset = 6.0f - TGRetinaPixel;
+        topOffset = 44.0f;
+        bottomOffset = 34.0f;
     }
     else if ((int)screenSize.height == 736)
     {
@@ -556,12 +572,12 @@
     
     if (_complexNextButton.hidden)
     {
-        _complexCancelButton.frame = CGRectMake(self.frame.size.width - _complexCancelButton.frame.size.width, 20.0f, _complexCancelButton.frame.size.width, _complexCancelButton.frame.size.height);
+        _complexCancelButton.frame = CGRectMake(self.frame.size.width - _complexCancelButton.frame.size.width, topOffset, _complexCancelButton.frame.size.width, _complexCancelButton.frame.size.height);
     }
     else
     {
-        _complexNextButton.frame = CGRectMake(self.frame.size.width - _complexNextButton.frame.size.width, 20.0f, _complexNextButton.frame.size.width, _complexNextButton.frame.size.height);
-        _complexCancelButton.frame = CGRectMake(0.0f, 20.0f, _complexCancelButton.frame.size.width, _complexCancelButton.frame.size.height);
+        _complexNextButton.frame = CGRectMake(self.frame.size.width - _complexNextButton.frame.size.width, topOffset, _complexNextButton.frame.size.width, _complexNextButton.frame.size.height);
+        _complexCancelButton.frame = CGRectMake(0.0f, topOffset, _complexCancelButton.frame.size.width, _complexCancelButton.frame.size.height);
     }
     
     _simpleKeyboardView.frame = CGRectMake(CGFloor((self.frame.size.width - _simpleKeyboardView.frame.size.width) / 2.0f), keyboardOffset, _simpleKeyboardView.frame.size.width, _simpleKeyboardView.frame.size.height);
@@ -584,8 +600,8 @@
         _simpleKeyboardDeleteButton.frame = CGRectMake(self.frame.size.width - _simpleKeyboardDeleteButton.frame.size.width, self.frame.size.height - _simpleKeyboardDeleteButton.frame.size.height, _simpleKeyboardDeleteButton.frame.size.width, _simpleKeyboardDeleteButton.frame.size.height);
     }
     
-    CGFloat topInset = 20.0f + 44.0f;
-    CGFloat bottomInset = self.frame.size.width > self.frame.size.height ? 162.0f : 216.0f;
+    CGFloat topInset = topOffset + 44.0f;
+    CGFloat bottomInset = self.frame.size.width > self.frame.size.height ? 162.0f : 216.0f + bottomOffset;
     CGFloat areaHeight = self.bounds.size.height - topInset - bottomInset;
     
     CGSize titleSize = _titleLabel.frame.size;

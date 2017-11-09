@@ -13,6 +13,8 @@
 @property (nonatomic, strong) id item;
 @property (nonatomic, assign) bool isLocked;
 
+@property (nonatomic, assign) UIEdgeInsets safeAreaInset;
+
 - (void)animateAppear;
 - (void)animateDismiss:(void (^)())completion;
 

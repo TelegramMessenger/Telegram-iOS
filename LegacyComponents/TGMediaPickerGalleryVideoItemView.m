@@ -84,6 +84,8 @@
     SMetaDisposable *_downloadDisposable;
     SMetaDisposable *_currentAudioSession;
     
+    UIEdgeInsets _safeAreaInset;
+    
     bool _requestingThumbnails;
     bool _downloadRequired;
     bool _downloading;
@@ -179,12 +181,16 @@
         
         _scrubberPanelView = [[UIView alloc] initWithFrame:CGRectMake(0, -64, _headerView.frame.size.width, 64)];
         _scrubberPanelView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        _scrubberPanelView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
         _scrubberPanelView.hidden = true;
         headerView.panelView = _scrubberPanelView;
         [_headerView addSubview:_scrubberPanelView];
         
-        _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:_scrubberPanelView.bounds];
+        UIView *scrubberBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, -100.0f, _headerView.frame.size.width, 164.0f)];
+        scrubberBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        scrubberBackgroundView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
+        [_scrubberPanelView addSubview:scrubberBackgroundView];
+        
+        _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, _headerView.frame.size.height - 44.0f, _headerView.frame.size.width, 44.0f)];
         _scrubberView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
         _scrubberView.dataSource = self;
         _scrubberView.delegate = self;
@@ -215,6 +221,12 @@
     [self stopPlayer];
     
     [self releaseVolumeOverlay];
+}
+
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
+{
+    _safeAreaInset = safeAreaInset;
+    [(TGMediaPickerScrubberHeaderView *)_headerView setSafeAreaInset:safeAreaInset];
 }
 
 - (void)inhibitVolumeOverlay
@@ -536,7 +548,7 @@
         
         void (^changeBlock)(void) = ^
         {
-            _scrubberPanelView.frame = CGRectMake(_scrubberPanelView.frame.origin.x, -64, _scrubberPanelView.frame.size.width, _scrubberPanelView.frame.size.height);
+            _scrubberPanelView.frame = CGRectMake(0.0f, -64.0f, _scrubberPanelView.frame.size.width, _scrubberPanelView.frame.size.height);
         };
         void (^completionBlock)(BOOL) = ^(BOOL finished)
         {
@@ -567,7 +579,7 @@
         
         void (^changeBlock)(void) = ^
         {
-             _scrubberPanelView.frame = CGRectMake(_scrubberPanelView.frame.origin.x, 0, _scrubberPanelView.frame.size.width, _scrubberPanelView.frame.size.height);
+             _scrubberPanelView.frame = CGRectMake(0.0f, 0.0f, _scrubberPanelView.frame.size.width, _scrubberPanelView.frame.size.height);
         };
         
         if (animated)
@@ -1255,7 +1267,7 @@
             _tooltipContainerView.menuView.buttonHighlightDisabled = true;
             [_tooltipContainerView.menuView sizeToFit];
         
-            CGRect iconViewFrame = CGRectMake(12, 188, 40, 40);
+            CGRect iconViewFrame = CGRectMake(12, 188 + _safeAreaInset.top, 40, 40);
             [_tooltipContainerView showMenuFromRect:iconViewFrame animated:false];
         }
         

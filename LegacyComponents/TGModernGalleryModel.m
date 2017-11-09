@@ -20,15 +20,20 @@
     });
 }
 
-- (void)_focusOnItem:(id<TGModernGalleryItem>)item
+- (void)_focusOnItem:(id<TGModernGalleryItem>)item synchronously:(bool)synchronously
 {
     TGDispatchOnMainThread(^
     {
         _focusItem = item;
         
         if (_focusOnItem)
-            _focusOnItem(item);
+            _focusOnItem(item, synchronously);
     });
+}
+
+- (void)_interItemTransitionProgressChanged:(CGFloat)__unused progress
+{
+
 }
 
 - (bool)_shouldAutorotate

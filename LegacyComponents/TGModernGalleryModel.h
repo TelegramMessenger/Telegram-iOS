@@ -15,7 +15,7 @@
 @property (nonatomic, strong, readonly) id<TGModernGalleryItem> focusItem;
 
 @property (nonatomic, copy) void (^itemsUpdated)(id<TGModernGalleryItem>);
-@property (nonatomic, copy) void (^focusOnItem)(id<TGModernGalleryItem>);
+@property (nonatomic, copy) void (^focusOnItem)(id<TGModernGalleryItem>, bool);
 @property (nonatomic, copy) UIView *(^actionSheetView)();
 @property (nonatomic, copy) UIViewController *(^viewControllerForModalPresentation)();
 @property (nonatomic, copy) void (^dismiss)(bool, bool);
@@ -24,7 +24,8 @@
 
 - (void)_transitionCompleted;
 - (void)_replaceItems:(NSArray *)items focusingOnItem:(id<TGModernGalleryItem>)item;
-- (void)_focusOnItem:(id<TGModernGalleryItem>)item;
+- (void)_focusOnItem:(id<TGModernGalleryItem>)item synchronously:(bool)synchronously;
+- (void)_interItemTransitionProgressChanged:(CGFloat)progress;
 
 - (bool)_shouldAutorotate;
 

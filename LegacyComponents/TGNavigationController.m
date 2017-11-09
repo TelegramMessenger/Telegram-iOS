@@ -2,6 +2,7 @@
 
 #import "LegacyComponentsInternal.h"
 #import "TGImageUtils.h"
+#import "TGStringUtils.h"
 #import "Freedom.h"
 
 #import "TGNavigationBar.h"
@@ -99,7 +100,7 @@
         self.navigationBar.prefersLargeTitles = false;
     }
     
-    if (false && iosMajorVersion() >= 8) {
+    if (iosMajorVersion() >= 8) {
         SEL selector = NSSelectorFromString(TGEncodeText(@"`tdsffoFehfQboHftuvsfSfdphoj{fs", -1));
         if ([self respondsToSelector:selector])
         {
@@ -124,7 +125,6 @@
                 
                 _panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:target action:action];
                 _panGestureRecognizer.delegate = self;
-                _panGestureRecognizer.delaysTouchesBegan = true;
                 [screenPanRecognizer.view addGestureRecognizer:_panGestureRecognizer];
                 
                 break;
@@ -133,28 +133,53 @@
     }
 }
 
-//- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)__unused gestureRecognizer
-//{
-//    SEL selector = NSSelectorFromString(TGEncodeText(@"`tdsffoFehfQboHftuvsfSfdphoj{fs", -1));
-//    if ([self respondsToSelector:selector])
-//    {
-//#pragma clang diagnostic push
-//#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-//        UIScreenEdgePanGestureRecognizer *screenPanRecognizer = [self performSelector:selector];
-//        
-//        bool shouldBegin = [screenPanRecognizer.delegate gestureRecognizerShouldBegin:screenPanRecognizer];
-//        if (self.viewControllers.count == 1)
-//            shouldBegin = false;
-//        
-//        return shouldBegin;
-//    }
-//    return true;
-//}
+- (BOOL)gestureRecognizerShouldBegin:(UIPanGestureRecognizer *)gestureRecognizer
+{
+    CGPoint velocity = [gestureRecognizer velocityInView:gestureRecognizer.view];
+    if ((!TGIsRTL() && velocity.x < FLT_EPSILON) || (TGIsRTL() && velocity.x > FLT_EPSILON))
+        return false;
+    
+    CGPoint location = [gestureRecognizer locationInView:gestureRecognizer.view];
+    if (location.y < CGRectGetMaxY([self.navigationBar convertRect:self.navigationBar.bounds toView:gestureRecognizer.view]))
+        return false;
+    
+    UIView *view = [gestureRecognizer.view hitTest:location withEvent:nil];
+    if ([view isKindOfClass:[UIControl class]] && ![view isKindOfClass:[UIButton class]])
+        return false;
+    
+    return self.viewControllers.count > 1;
+}
 
-//- (UIGestureRecognizer *)interactivePopGestureRecognizer
-//{
-//    return _panGestureRecognizer;
-//}
+- (BOOL)gestureRecognizer:(UIPanGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{
+    CGPoint location = [gestureRecognizer locationInView:gestureRecognizer.view];
+    CGPoint velocity = [gestureRecognizer velocityInView:gestureRecognizer.view];
+    if ((!TGIsRTL() && velocity.x < FLT_EPSILON) || (TGIsRTL() && velocity.x > FLT_EPSILON))
+        return false;
+    
+    if ((!TGIsRTL() && location.x < 44.0f) || (TGIsRTL() && location.x > gestureRecognizer.view.frame.size.width - 44.0f))
+    {
+        otherGestureRecognizer.enabled = false;
+        otherGestureRecognizer.enabled = true;
+        return true;
+    }
+    else if ([otherGestureRecognizer.view isKindOfClass:[UIScrollView class]])
+    {
+        UIScrollView *scrollView = (UIScrollView *)otherGestureRecognizer.view;
+        if (!TGIsRTL() && scrollView.contentSize.width > scrollView.contentSize.height && fabs(scrollView.contentOffset.x + scrollView.contentInset.left) < FLT_EPSILON)
+        {
+            otherGestureRecognizer.enabled = false;
+            otherGestureRecognizer.enabled = true;
+            return true;
+        }
+    }
+    return false;
+}
+
+- (UIGestureRecognizer *)interactivePopGestureRecognizer
+{
+    return _panGestureRecognizer;
+}
 
 - (void)setDisplayPlayer:(bool)displayPlayer
 {
@@ -177,7 +202,7 @@
                     [(TGNavigationBar *)self.navigationBar setMinimizedMusicPlayer:_minimizePlayer];
                 }
                 
-                CGFloat currentAdditionalNavigationBarHeight = !isActive ? 0.0f : (strongSelf->_minimizePlayer ? 2.0f : 36.0f);
+                CGFloat currentAdditionalNavigationBarHeight = !isActive ? 0.0f : (strongSelf->_minimizePlayer ? 2.0f : 37.0f);
                 if (ABS(strongSelf->_currentAdditionalNavigationBarHeight - currentAdditionalNavigationBarHeight) > FLT_EPSILON)
                 {
                     strongSelf->_currentAdditionalNavigationBarHeight = currentAdditionalNavigationBarHeight;
@@ -202,7 +227,7 @@
         _minimizePlayer = minimizePlayer;
         
         if (_currentAdditionalNavigationBarHeight > FLT_EPSILON)
-            _currentAdditionalNavigationBarHeight = _minimizePlayer ? 2.0f : 36.0f;
+            _currentAdditionalNavigationBarHeight = _minimizePlayer ? 2.0f : 37.0f;
         [(TGNavigationBar *)self.navigationBar setMinimizedMusicPlayer:_minimizePlayer];
         
         [UIView animateWithDuration:0.25 animations:^
@@ -219,7 +244,10 @@
     
     _showCallStatusBar = showCallStatusBar;
     
-    _currentAdditionalStatusBarHeight = _showCallStatusBar ? 20.0f : 0.0f;
+    
+    CGFloat statusBarHeight = (int)TGScreenSize().height == 812 ? 0.0f : 20.0f;
+    
+    _currentAdditionalStatusBarHeight = _showCallStatusBar ? statusBarHeight : 0.0f;
     [(TGNavigationBar *)self.navigationBar setVerticalOffset:_currentAdditionalStatusBarHeight];
     
     [UIView animateWithDuration:0.25 animations:^

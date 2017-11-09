@@ -417,27 +417,101 @@ static inline uint32_t premultipliedPixel(uint32_t rgb, uint32_t alpha)
     return (alpha << 24) | (r << 16) | (g << 8) | b;
 }
 
-static void addAttachmentImageCorners(void *memory, const unsigned int width, const unsigned int height, const unsigned int stride)
+typedef enum {
+    TGAttachmentPositionNone = 0,
+    TGAttachmentPositionTop = 1 << 0,
+    TGAttachmentPositionBottom = 1 << 1,
+    TGAttachmentPositionLeft = 1 << 2,
+    TGAttachmentPositionRight = 1 << 3,
+    TGAttachmentPositionInside = 1 << 4
+} TGAttachmentPosition;
+
+static void addAttachmentImageCorners(void *memory, const unsigned int width, const unsigned int height, const unsigned int stride, int position, float fract)
 {
     const int scale = (int)TGScreenScaling(); //TGIsRetina() ? 2 : 1;
     
     const int shadowSize = 1;
-    const int strokeWidth = 1 + scale;
-    const int radius = 13 * scale;
+    const int strokeWidth = scale;
+    const int smallRadius = floor(3 * scale * fract);
+    const int bigRadius = floor(16 * scale * fract);
     
-    const int contextWidth = radius * 2 + shadowSize * 2 + strokeWidth * 2;
-    const int contextHeight = radius * 2 + shadowSize * 2 + strokeWidth * 2;
+    int topLeftRadius = smallRadius;
+    int topRightRadius = smallRadius;
+    int bottomLeftRadius = smallRadius;
+    int bottomRightRadius = smallRadius;
+    
+    if (position == TGAttachmentPositionNone)
+        topLeftRadius = topRightRadius = bottomLeftRadius = bottomRightRadius = bigRadius;
+    else if (position == TGAttachmentPositionInside)
+        topLeftRadius = topRightRadius = bottomLeftRadius = bottomRightRadius = smallRadius;
+    
+    if (position & TGAttachmentPositionTop && position & TGAttachmentPositionLeft)
+        topLeftRadius = bigRadius;
+    if (position & TGAttachmentPositionTop && position & TGAttachmentPositionRight)
+        topRightRadius = bigRadius;
+    if (position & TGAttachmentPositionBottom && position & TGAttachmentPositionLeft)
+        bottomLeftRadius = bigRadius;
+    if (position & TGAttachmentPositionBottom && position & TGAttachmentPositionRight)
+        bottomRightRadius = bigRadius;
+    
+    const int contextWidth = MAX(topLeftRadius, bottomLeftRadius) + MAX(topRightRadius, bottomRightRadius) + shadowSize * 2 + strokeWidth * 2;
+    const int contextHeight = MAX(topLeftRadius, topRightRadius) + MAX(bottomLeftRadius, bottomRightRadius) + shadowSize * 2 + strokeWidth * 2;
     const int contextStride = (4 * contextWidth + 15) & (~15);
     
-    static uint8_t *contextMemory = NULL;
-    static uint8_t *alphaMemory = NULL;
-
     const uint32_t shadowColorRaw = 0x7f86a9c9;
     const uint32_t shadowColorArgb = premultipliedPixel(shadowColorRaw & 0xffffff, ((shadowColorRaw >> 24) & 0xff) - 20);
     static uint32_t strokeColorArgb = 0xffffffff;
     
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
+    static uint8_t *defaultContextMemory = NULL;
+    static uint8_t *defaultAlphaMemory = NULL;
+    
+    uint8_t *contextMemory = NULL;
+    uint8_t *alphaMemory = NULL;
+
+    if (position == TGAttachmentPositionNone)
+    {
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^
+        {
+            defaultContextMemory = malloc(contextStride * contextHeight);
+            memset(defaultContextMemory, 0, contextStride * contextHeight);
+            
+            defaultAlphaMemory = malloc(contextStride * contextHeight);
+            
+            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+            CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+            CGContextRef targetContext = CGBitmapContextCreate(defaultContextMemory, contextWidth, contextHeight, 8, contextStride, colorSpace, bitmapInfo);
+            CFRelease(colorSpace);
+            
+            CGContextSetFillColorWithColor(targetContext, [UIColor blackColor].CGColor);
+            CGContextFillEllipseInRect(targetContext, CGRectMake(shadowSize + strokeWidth / 2.0f, shadowSize + strokeWidth / 2.0f, contextWidth - (shadowSize + strokeWidth / 2.0f) * 2.0f, contextHeight - (shadowSize + strokeWidth / 2.0f) * 2.0f));
+            
+            memcpy(defaultAlphaMemory, defaultContextMemory, contextStride * contextHeight);
+            
+            memset(defaultContextMemory, 0, contextStride * contextHeight);
+            
+            CGContextSetStrokeColorWithColor(targetContext, UIColorRGBA(shadowColorRaw, ((shadowColorRaw >> 24) & 0xff) / 255.0f).CGColor);
+            CGContextSetLineWidth(targetContext, shadowSize);
+            CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize / 2.0f, shadowSize / 2.0f, contextWidth - shadowSize, contextHeight - shadowSize));
+            CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize / 2.0f + 0.5f, shadowSize / 2.0f - 0.5f, contextWidth - shadowSize, contextHeight - shadowSize));
+            
+            CGContextSetStrokeColorWithColor(targetContext, UIColorRGBA(shadowColorRaw, (((shadowColorRaw >> 24) & 0xff) / 255.0f) * 0.5f).CGColor);
+            CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize / 2.0f - 0.2f, shadowSize / 2.0f + 0.2f, contextWidth - shadowSize, contextHeight - shadowSize));
+            
+            CGContextSetStrokeColorWithColor(targetContext, UIColorRGB(strokeColorArgb).CGColor);
+            CGContextSetLineWidth(targetContext, strokeWidth);
+            CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize + strokeWidth / 2.0f, shadowSize + strokeWidth / 2.0f, contextWidth - (shadowSize + strokeWidth / 2.0f) * 2.0f, contextHeight - (shadowSize + strokeWidth / 2.0f) * 2.0f));
+            
+            CGContextSetStrokeColorWithColor(targetContext, UIColorRGBA(strokeColorArgb, 0.4f).CGColor);
+            CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize + strokeWidth / 2.0f + 0.5f, shadowSize + strokeWidth / 2.0f - 0.5f, contextWidth - (shadowSize + strokeWidth / 2.0f) * 2.0f, contextHeight - (shadowSize + strokeWidth / 2.0f) * 2.0f));
+            
+            CFRelease(targetContext);
+        });
+        
+        contextMemory = defaultContextMemory;
+        alphaMemory = defaultAlphaMemory;
+    }
+    else
     {
         contextMemory = malloc(contextStride * contextHeight);
         memset(contextMemory, 0, contextStride * contextHeight);
@@ -449,37 +523,76 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
         CGContextRef targetContext = CGBitmapContextCreate(contextMemory, contextWidth, contextHeight, 8, contextStride, colorSpace, bitmapInfo);
         CFRelease(colorSpace);
         
+        void (^drawPie)(CGPoint, CGFloat, CGFloat, CGFloat, bool) = ^(CGPoint center, CGFloat radius, CGFloat start, CGFloat end, bool fill)
+        {
+            if (fill)
+                CGContextMoveToPoint(targetContext, center.x, contextHeight - center.y);
+            CGContextAddArc(targetContext, center.x, contextHeight - center.y, radius, start, end, false);
+            
+            if (fill)
+            {
+                CGContextFillPath(targetContext);
+            }
+            else
+            {
+                CGContextReplacePathWithStrokedPath(targetContext);
+                CGContextFillPath(targetContext);
+            }
+        };
+        
+        CGFloat (^calcRadius)(CGFloat, CGFloat) = ^CGFloat(CGFloat initialRadius, CGFloat offset)
+        {
+            return initialRadius + shadowSize + strokeWidth - offset;
+        };
+        
+        void (^draw)(CGFloat, bool) = ^(CGFloat offset, bool fill)
+        {
+            CGFloat radius = calcRadius(topLeftRadius, offset);
+            CGPoint point = CGPointMake(offset + radius, offset + radius);
+            drawPie(point, radius, M_PI_2, M_PI, fill);
+            
+            radius = calcRadius(topRightRadius, offset);
+            point = CGPointMake(contextWidth - offset - radius, offset + radius);
+            drawPie(point, radius, 0, M_PI_2, fill);
+
+            radius = calcRadius(bottomLeftRadius, offset);
+            point = CGPointMake(offset + radius, contextHeight - offset - radius);
+            drawPie(point, radius, M_PI, 3 * M_PI_2, fill);
+
+            radius = calcRadius(bottomRightRadius, offset);
+            point = CGPointMake(contextWidth - offset - radius, contextHeight - offset - radius);
+            drawPie(point, radius, 3 * M_PI_2, 2 * M_PI, fill);
+        };
+        
         CGContextSetFillColorWithColor(targetContext, [UIColor blackColor].CGColor);
-        CGContextFillEllipseInRect(targetContext, CGRectMake(shadowSize + strokeWidth / 2.0f, shadowSize + strokeWidth / 2.0f, contextWidth - (shadowSize + strokeWidth / 2.0f) * 2.0f, contextHeight - (shadowSize + strokeWidth / 2.0f) * 2.0f));
+        draw(shadowSize + strokeWidth / 2.0, true);
         
         memcpy(alphaMemory, contextMemory, contextStride * contextHeight);
         
         memset(contextMemory, 0, contextStride * contextHeight);
-        
-        CGContextSetStrokeColorWithColor(targetContext, UIColorRGBA(shadowColorRaw, ((shadowColorRaw >> 24) & 0xff) / 255.0f).CGColor);
+
+        CGContextSetFillColorWithColor(targetContext, UIColorRGBA(shadowColorRaw, ((shadowColorRaw >> 24) & 0xff) / 255.0f).CGColor);
         CGContextSetLineWidth(targetContext, shadowSize);
-        CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize / 2.0f, shadowSize / 2.0f, contextWidth - shadowSize, contextHeight - shadowSize));
-        CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize / 2.0f + 0.5f, shadowSize / 2.0f - 0.5f, contextWidth - shadowSize, contextHeight - shadowSize));
-        
-        CGContextSetStrokeColorWithColor(targetContext, UIColorRGBA(shadowColorRaw, (((shadowColorRaw >> 24) & 0xff) / 255.0f) * 0.5f).CGColor);
-        CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize / 2.0f - 0.2f, shadowSize / 2.0f + 0.2f, contextWidth - shadowSize, contextHeight - shadowSize));
-        
-        CGContextSetStrokeColorWithColor(targetContext, UIColorRGB(strokeColorArgb).CGColor);
+        draw(shadowSize / 2.0f, false);
+        draw(shadowSize / 2.0f + 0.5f, false);
+
+        CGContextSetFillColorWithColor(targetContext, UIColorRGBA(shadowColorRaw, (((shadowColorRaw >> 24) & 0xff) / 255.0f) * 0.5f).CGColor);
+        draw(shadowSize / 2.0f, false);
+
+        CGContextSetFillColorWithColor(targetContext, UIColorRGB(strokeColorArgb).CGColor);
         CGContextSetLineWidth(targetContext, strokeWidth);
-        CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize + strokeWidth / 2.0f, shadowSize + strokeWidth / 2.0f, contextWidth - (shadowSize + strokeWidth / 2.0f) * 2.0f, contextHeight - (shadowSize + strokeWidth / 2.0f) * 2.0f));
-        
-        CGContextSetStrokeColorWithColor(targetContext, UIColorRGBA(strokeColorArgb, 0.4f).CGColor);
-        CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize + strokeWidth / 2.0f + 0.5f, shadowSize + strokeWidth / 2.0f - 0.5f, contextWidth - (shadowSize + strokeWidth / 2.0f) * 2.0f, contextHeight - (shadowSize + strokeWidth / 2.0f) * 2.0f));
+        draw(shadowSize + strokeWidth / 2.0f, false);
+
+        CGContextSetFillColorWithColor(targetContext, UIColorRGBA(strokeColorArgb, 0.4f).CGColor);
+        draw(shadowSize + strokeWidth / 2.0f + 0.5f, false);
         
         CFRelease(targetContext);
-    });
+    }
     
-    const unsigned int radiusWithPadding = contextWidth / 2;
-    const unsigned int rightRadius = width - radiusWithPadding;
-    
-    for (unsigned int y = 0; y < radiusWithPadding; y++)
+    const unsigned int topLeftRadiusWithPadding = topLeftRadius + shadowSize + strokeWidth;
+    for (unsigned int y = 0; y < topLeftRadiusWithPadding; y++)
     {
-        for (unsigned int x = 0; x < radiusWithPadding; x++)
+        for (unsigned int x = 0; x < topLeftRadiusWithPadding; x++)
         {
             uint32_t alpha = alphaMemory[y * contextStride + x * 4 + 3];
             uint32_t pixel = *((uint32_t *)(&memory[y * stride + x * 4]));
@@ -490,9 +603,11 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
         }
     }
     
+    const unsigned int topRightRadiusWithPadding = topRightRadius + shadowSize + strokeWidth;
+    const unsigned int topRightRadiusOrigin = width - topRightRadiusWithPadding;
     for (int y = 0; y < shadowSize; y++)
     {
-        for (unsigned int x = radiusWithPadding; x < rightRadius; x++)
+        for (unsigned int x = topLeftRadiusWithPadding; x < topRightRadiusOrigin; x++)
         {
             *((uint32_t *)(&memory[y * stride + x * 4])) = shadowColorArgb;
         }
@@ -500,37 +615,59 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
     
     for (int y = shadowSize; y < shadowSize + strokeWidth; y++)
     {
-        for (unsigned int x = radiusWithPadding; x < rightRadius; x++)
+        for (unsigned int x = topLeftRadiusWithPadding; x < topRightRadiusOrigin; x++)
         {
             *((uint32_t *)(&memory[y * stride + x * 4])) = strokeColorArgb;
         }
     }
     
-    for (unsigned int y = 0; y < radiusWithPadding; y++)
+    for (unsigned int y = 0; y < topRightRadiusWithPadding; y++)
     {
-        for (unsigned int x = rightRadius; x < width; x++)
+        for (unsigned int x = topRightRadiusOrigin; x < width; x++)
         {
-            uint32_t alpha = alphaMemory[y * contextStride + (width - 1 - x) * 4 + 3];
+            uint32_t alpha = alphaMemory[y * contextStride + ((contextWidth - topRightRadiusWithPadding) + (x - topRightRadiusOrigin)) * 4 + 3];
             uint32_t pixel = *((uint32_t *)(&memory[y * stride + x * 4]));
 
             pixel = (alpha << 24) | (((((pixel >> 16) & 0xff) * alpha) >> 8) << 16) | (((((pixel >> 8) & 0xff) * alpha) >> 8) << 8) | (((((pixel >> 0) & 0xff) * alpha) >> 8) << 0);
-            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[y * contextStride + (width - 1 - x) * 4]), pixel);
+            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[y * contextStride + ((contextWidth - topRightRadiusWithPadding) + (x - topRightRadiusOrigin)) * 4]), pixel);
             *((uint32_t *)(&memory[y * stride + x * 4])) = pixel;
         }
     }
     
-    for (unsigned int y = radiusWithPadding; y < height - radiusWithPadding; y++)
+    const unsigned int bottomLeftRadiusWithPadding = bottomLeftRadius + shadowSize + strokeWidth;
+    const unsigned int bottomLeftRadiusOriginY = height - bottomLeftRadiusWithPadding;
+    for (unsigned int y = bottomLeftRadiusOriginY; y < height; y++)
+    {
+        for (unsigned int x = 0; x < bottomLeftRadiusWithPadding; x++)
+        {
+            uint32_t alpha = alphaMemory[((contextHeight - bottomLeftRadiusWithPadding) + (y - bottomLeftRadiusOriginY)) * contextStride + x * 4 + 3];
+            uint32_t pixel = *((uint32_t *)(&memory[y * stride + x * 4]));
+            
+            pixel = (alpha << 24) | (((((pixel >> 16) & 0xff) * alpha) >> 8) << 16) | (((((pixel >> 8) & 0xff) * alpha) >> 8) << 8) | (((((pixel >> 0) & 0xff) * alpha) >> 8) << 0);
+            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[((contextHeight - bottomLeftRadiusWithPadding) + (y - bottomLeftRadiusOriginY)) * contextStride + x * 4]), pixel);
+            *((uint32_t *)(&memory[y * stride + x * 4])) = pixel;
+        }
+    }
+    
+    const unsigned int bottomRightRadiusWithPadding = bottomRightRadius + shadowSize + strokeWidth;
+    const unsigned int bottomRightRadiusOriginX = width - bottomRightRadiusWithPadding;
+    const unsigned int bottomRightRadiusOriginY = height - bottomRightRadiusWithPadding;
+    
+    for (unsigned int y = topLeftRadiusWithPadding; y < height - bottomLeftRadiusWithPadding; y++)
     {
         for (int x = 0; x < shadowSize; x++)
         {
             *((uint32_t *)(&memory[y * stride + x * 4])) = shadowColorArgb;
         }
-
+        
         for (int x = shadowSize; x < shadowSize + strokeWidth; x++)
         {
             *((uint32_t *)(&memory[y * stride + x * 4])) = strokeColorArgb;
         }
-        
+    }
+    
+    for (unsigned int y = topRightRadiusWithPadding; y < height - bottomRightRadiusWithPadding; y++)
+    {
         for (unsigned int x = width - shadowSize - strokeWidth; x < width - shadowSize; x++)
         {
             *((uint32_t *)(&memory[y * stride + x * 4])) = strokeColorArgb;
@@ -542,22 +679,9 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
         }
     }
     
-    for (unsigned int y = height - radiusWithPadding; y < height; y++)
-    {
-        for (unsigned int x = 0; x < radiusWithPadding; x++)
-        {
-            uint32_t alpha = alphaMemory[(height - 1 - y) * contextStride + x * 4 + 3];
-            uint32_t pixel = *((uint32_t *)(&memory[y * stride + x * 4]));
-            
-            pixel = (alpha << 24) | (((((pixel >> 16) & 0xff) * alpha) >> 8) << 16) | (((((pixel >> 8) & 0xff) * alpha) >> 8) << 8) | (((((pixel >> 0) & 0xff) * alpha) >> 8) << 0);
-            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[(height - 1 - y) * contextStride + x * 4]), pixel);
-            *((uint32_t *)(&memory[y * stride + x * 4])) = pixel;
-        }
-    }
-    
     for (unsigned int y = height - shadowSize - strokeWidth; y < height - shadowSize; y++)
     {
-        for (unsigned int x = radiusWithPadding; x < rightRadius; x++)
+        for (unsigned int x = bottomLeftRadiusWithPadding; x < bottomRightRadiusOriginX; x++)
         {
             *((uint32_t *)(&memory[y * stride + x * 4])) = strokeColorArgb;
         }
@@ -565,42 +689,70 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
     
     for (unsigned int y = height - shadowSize; y < height; y++)
     {
-        for (unsigned int x = radiusWithPadding; x < rightRadius; x++)
+        for (unsigned int x = bottomLeftRadiusWithPadding; x < bottomRightRadiusOriginX; x++)
         {
             *((uint32_t *)(&memory[y * stride + x * 4])) = shadowColorArgb;
         }
     }
     
-    for (unsigned int y = height - radiusWithPadding; y < height; y++)
+    for (unsigned int y = bottomRightRadiusOriginY; y < height; y++)
     {
-        for (unsigned int x = width - radiusWithPadding; x < width; x++)
+        for (unsigned int x = bottomRightRadiusOriginX; x < width; x++)
         {
-            uint32_t alpha = alphaMemory[(height - 1 - y) * contextStride + (width - 1 - x) * 4 + 3];
+            uint32_t alpha = alphaMemory[((contextHeight - bottomRightRadiusWithPadding) + (y - bottomRightRadiusOriginY)) * contextStride + ((contextWidth - bottomRightRadiusWithPadding) + (x - bottomRightRadiusOriginX)) * 4 + 3];
             uint32_t pixel = *((uint32_t *)(&memory[y * stride + x * 4]));
 
             pixel = (alpha << 24) | (((((pixel >> 16) & 0xff) * alpha) >> 8) << 16) | (((((pixel >> 8) & 0xff) * alpha) >> 8) << 8) | (((((pixel >> 0) & 0xff) * alpha) >> 8) << 0);
-            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[(height - 1 - y) * contextStride + (width - 1 - x) * 4]), pixel);
+            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[((contextHeight - bottomRightRadiusWithPadding) + (y - bottomRightRadiusOriginY)) * contextStride + ((contextWidth - bottomRightRadiusWithPadding) + (x - bottomRightRadiusOriginX)) * 4]), pixel);
             *((uint32_t *)(&memory[y * stride + x * 4])) = pixel;
         }
     }
+    
+    if (contextMemory != defaultContextMemory)
+    {
+        free(contextMemory);
+        free(alphaMemory);
+    }
 }
 
-void TGAddImageCorners(void *memory, const unsigned int width, const unsigned int height, const unsigned int stride, int radius)
+void TGAddImageCorners(void *memory, const unsigned int width, const unsigned int height, const unsigned int stride, int radius, int position)
 {
-    if (radius <= 0 || radius > width || radius > height) {
+    const int scale = TGScreenScaling();
+    
+    const int smallRadius = 3 * scale;
+    const int bigRadius = radius * scale;
+    
+    int topLeftRadius = smallRadius;
+    int topRightRadius = smallRadius;
+    int bottomLeftRadius = smallRadius;
+    int bottomRightRadius = smallRadius;
+    
+    if (position == TGAttachmentPositionNone)
+        topLeftRadius = topRightRadius = bottomLeftRadius = bottomRightRadius = bigRadius;
+    else if (position == TGAttachmentPositionInside)
+        topLeftRadius = topRightRadius = bottomLeftRadius = bottomRightRadius = smallRadius;
+    
+    if (position & TGAttachmentPositionTop && position & TGAttachmentPositionLeft)
+        topLeftRadius = bigRadius;
+    if (position & TGAttachmentPositionTop && position & TGAttachmentPositionRight)
+        topRightRadius = bigRadius;
+    if (position & TGAttachmentPositionBottom && position & TGAttachmentPositionLeft)
+        bottomLeftRadius = bigRadius;
+    if (position & TGAttachmentPositionBottom && position & TGAttachmentPositionRight)
+        bottomRightRadius = bigRadius;
+    
+    const int contextWidth = MAX(topLeftRadius, bottomLeftRadius) + MAX(topRightRadius, bottomRightRadius);
+    const int contextHeight = MAX(topLeftRadius, topRightRadius) + MAX(bottomLeftRadius, bottomRightRadius);
+    const int contextStride = (4 * contextWidth + 15) & (~15);
+    
+    if (radius <= 0 || contextWidth > width || contextHeight > height) {
         return;
     }
-    
-    const int scale = 2; //TGIsRetina() ? 2 : 1;
-    
-    const int contextWidth = radius * scale;
-    const int contextHeight = radius * scale;
-    const int contextStride = (4 * contextWidth + 15) & (~15);
     
     uint8_t *contextMemory = NULL;
     uint8_t *alphaMemory = NULL;
     
-    {
+    {        
         contextMemory = malloc(contextStride * contextHeight);
         memset(contextMemory, 0, contextStride * contextHeight);
         
@@ -611,22 +763,61 @@ void TGAddImageCorners(void *memory, const unsigned int width, const unsigned in
         CGContextRef targetContext = CGBitmapContextCreate(contextMemory, contextWidth, contextHeight, 8, contextStride, colorSpace, bitmapInfo);
         CFRelease(colorSpace);
         
+        void (^drawPie)(CGPoint, CGFloat, CGFloat, CGFloat, bool) = ^(CGPoint center, CGFloat radius, CGFloat start, CGFloat end, bool fill)
+        {
+            if (fill)
+                CGContextMoveToPoint(targetContext, center.x, contextHeight - center.y);
+            CGContextAddArc(targetContext, center.x, contextHeight - center.y, radius, start, end, false);
+            
+            if (fill)
+            {
+                CGContextFillPath(targetContext);
+            }
+            else
+            {
+                CGContextReplacePathWithStrokedPath(targetContext);
+                CGContextFillPath(targetContext);
+            }
+        };
+        
+        CGFloat (^calcRadius)(CGFloat, CGFloat) = ^CGFloat(CGFloat initialRadius, CGFloat offset)
+        {
+            return initialRadius - offset;
+        };
+        
+        void (^draw)(CGFloat, bool) = ^(CGFloat offset, bool fill)
+        {
+            CGFloat radius = calcRadius(topLeftRadius, offset);
+            CGPoint point = CGPointMake(offset + radius, offset + radius);
+            drawPie(point, radius, M_PI_2, M_PI, fill);
+            
+            radius = calcRadius(topRightRadius, offset);
+            point = CGPointMake(contextWidth - offset - radius, offset + radius);
+            drawPie(point, radius, 0, M_PI_2, fill);
+            
+            radius = calcRadius(bottomLeftRadius, offset);
+            point = CGPointMake(offset + radius, contextHeight - offset - radius);
+            drawPie(point, radius, M_PI, 3 * M_PI_2, fill);
+            
+            radius = calcRadius(bottomRightRadius, offset);
+            point = CGPointMake(contextWidth - offset - radius, contextHeight - offset - radius);
+            drawPie(point, radius, 3 * M_PI_2, 2 * M_PI, fill);
+        };
+        
         CGContextSetFillColorWithColor(targetContext, [UIColor blackColor].CGColor);
-        CGContextFillEllipseInRect(targetContext, CGRectMake(0.0f, 0.0f, contextWidth, contextHeight));
+        draw(0.0f, true);
         
         memcpy(alphaMemory, contextMemory, contextStride * contextHeight);
         
         memset(contextMemory, 0, contextStride * contextHeight);
-        
+
         CFRelease(targetContext);
     }
     
-    const unsigned int radiusWithPadding = contextWidth / 2;
-    const unsigned int rightRadius = width - radiusWithPadding;
-    
-    for (unsigned int y = 0; y < radiusWithPadding; y++)
+    const unsigned int topLeftRadiusWithPadding = topLeftRadius;
+    for (unsigned int y = 0; y < topLeftRadiusWithPadding; y++)
     {
-        for (unsigned int x = 0; x < radiusWithPadding; x++)
+        for (unsigned int x = 0; x < topLeftRadiusWithPadding; x++)
         {
             uint32_t alpha = alphaMemory[y * contextStride + x * 4 + 3];
             uint32_t pixel = *((uint32_t *)(&memory[y * stride + x * 4]));
@@ -637,41 +828,49 @@ void TGAddImageCorners(void *memory, const unsigned int width, const unsigned in
         }
     }
     
-    for (unsigned int y = 0; y < radiusWithPadding; y++)
+    const unsigned int topRightRadiusWithPadding = topRightRadius;
+    const unsigned int topRightRadiusOrigin = width - topRightRadiusWithPadding;
+    
+    for (unsigned int y = 0; y < topRightRadiusWithPadding; y++)
     {
-        for (unsigned int x = rightRadius; x < width; x++)
+        for (unsigned int x = topRightRadiusOrigin; x < width; x++)
         {
-            uint32_t alpha = alphaMemory[y * contextStride + (width - 1 - x) * 4 + 3];
+            uint32_t alpha = alphaMemory[y * contextStride + ((contextWidth - topRightRadiusWithPadding) + (x - topRightRadiusOrigin)) * 4 + 3];
             uint32_t pixel = *((uint32_t *)(&memory[y * stride + x * 4]));
             
             pixel = (alpha << 24) | (((((pixel >> 16) & 0xff) * alpha) >> 8) << 16) | (((((pixel >> 8) & 0xff) * alpha) >> 8) << 8) | (((((pixel >> 0) & 0xff) * alpha) >> 8) << 0);
-            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[y * contextStride + (width - 1 - x) * 4]), pixel);
+            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[y * contextStride + ((contextWidth - topRightRadiusWithPadding) + (x - topRightRadiusOrigin)) * 4]), pixel);
             *((uint32_t *)(&memory[y * stride + x * 4])) = pixel;
         }
     }
     
-    for (unsigned int y = height - radiusWithPadding; y < height; y++)
+    const unsigned int bottomLeftRadiusWithPadding = bottomLeftRadius;
+    const unsigned int bottomLeftRadiusOriginY = height - bottomLeftRadiusWithPadding;
+    for (unsigned int y = bottomLeftRadiusOriginY; y < height; y++)
     {
-        for (unsigned int x = 0; x < radiusWithPadding; x++)
+        for (unsigned int x = 0; x < bottomLeftRadiusWithPadding; x++)
         {
-            uint32_t alpha = alphaMemory[(height - 1 - y) * contextStride + x * 4 + 3];
+            uint32_t alpha = alphaMemory[((contextHeight - bottomLeftRadiusWithPadding) + (y - bottomLeftRadiusOriginY)) * contextStride + x * 4 + 3];
             uint32_t pixel = *((uint32_t *)(&memory[y * stride + x * 4]));
             
             pixel = (alpha << 24) | (((((pixel >> 16) & 0xff) * alpha) >> 8) << 16) | (((((pixel >> 8) & 0xff) * alpha) >> 8) << 8) | (((((pixel >> 0) & 0xff) * alpha) >> 8) << 0);
-            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[(height - 1 - y) * contextStride + x * 4]), pixel);
+            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[((contextHeight - bottomLeftRadiusWithPadding) + (y - bottomLeftRadiusOriginY)) * contextStride + x * 4]), pixel);
             *((uint32_t *)(&memory[y * stride + x * 4])) = pixel;
         }
     }
     
-    for (unsigned int y = height - radiusWithPadding; y < height; y++)
+    const unsigned int bottomRightRadiusWithPadding = bottomRightRadius;
+    const unsigned int bottomRightRadiusOriginX = width - bottomRightRadiusWithPadding;
+    const unsigned int bottomRightRadiusOriginY = height - bottomRightRadiusWithPadding;
+    for (unsigned int y = bottomRightRadiusOriginY; y < height; y++)
     {
-        for (unsigned int x = width - radiusWithPadding; x < width; x++)
+        for (unsigned int x = bottomRightRadiusOriginX; x < width; x++)
         {
-            uint32_t alpha = alphaMemory[(height - 1 - y) * contextStride + (width - 1 - x) * 4 + 3];
+            uint32_t alpha = alphaMemory[((contextHeight - bottomRightRadiusWithPadding) + (y - bottomRightRadiusOriginY)) * contextStride + ((contextWidth - bottomRightRadiusWithPadding) + (x - bottomRightRadiusOriginX)) * 4 + 3];
             uint32_t pixel = *((uint32_t *)(&memory[y * stride + x * 4]));
             
             pixel = (alpha << 24) | (((((pixel >> 16) & 0xff) * alpha) >> 8) << 16) | (((((pixel >> 8) & 0xff) * alpha) >> 8) << 8) | (((((pixel >> 0) & 0xff) * alpha) >> 8) << 0);
-            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[(height - 1 - y) * contextStride + (width - 1 - x) * 4]), pixel);
+            pixel = alphaComposePremultipliedPixels(*((uint32_t *)&contextMemory[((contextHeight - bottomRightRadiusWithPadding) + (y - bottomRightRadiusOriginY)) * contextStride + ((contextWidth - bottomRightRadiusWithPadding) + (x - bottomRightRadiusOriginX)) * 4]), pixel);
             *((uint32_t *)(&memory[y * stride + x * 4])) = pixel;
         }
     }
@@ -819,12 +1018,12 @@ UIImage *TGAverageColorRoundImage(UIColor *color, CGSize size)
     return image;
 }
 
-UIImage *TGAverageColorAttachmentImage(UIColor *color, bool attachmentBorder)
+UIImage *TGAverageColorAttachmentImage(UIColor *color, bool attachmentBorder, int position)
 {
-    return TGAverageColorAttachmentWithCornerRadiusImage(color, attachmentBorder, 13);
+    return TGAverageColorAttachmentWithCornerRadiusImage(color, attachmentBorder, 13, position);
 }
 
-UIImage *TGAverageColorAttachmentWithCornerRadiusImage(UIColor *color, bool attachmentBorder, int cornerRadius)
+UIImage *TGAverageColorAttachmentWithCornerRadiusImage(UIColor *color, bool attachmentBorder, int cornerRadius, int position)
 {
     CGFloat scale = TGScreenScaling();
     
@@ -857,10 +1056,10 @@ UIImage *TGAverageColorAttachmentWithCornerRadiusImage(UIColor *color, bool atta
     CGContextFillRect(targetContext, CGRectMake(0.0f, 0.0f, targetContextSize.width, targetContextSize.height));
     
     if (attachmentBorder) {
-        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (unsigned int)targetBytesPerRow);
+        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (unsigned int)targetBytesPerRow, position, 1.0f);
     }
     else if (cornerRadius > 0) {
-        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, (int)(cornerRadius * scale));
+        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, cornerRadius, position);
     }
     
     UIGraphicsPopContext();
@@ -1044,12 +1243,12 @@ TGStaticBackdropAreaData *createAdditionalDataBackdropArea(uint8_t *sourceImageM
     return createImageBackdropArea(sourceImageMemory, sourceImageWidth, sourceImageHeight, sourceImageStride, originalSize, CGRectMake(padding.left, padding.top, unscaledSize.width, unscaledSize.height));
 }
 
-UIImage *TGBlurredAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder)
+UIImage *TGBlurredAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int position)
 {
-    return TGBlurredAttachmentWithCornerRadiusImage(source, size, averageColor, attachmentBorder, attachmentBorder ? 14 : 13);
+    return TGBlurredAttachmentWithCornerRadiusImage(source, size, averageColor, attachmentBorder, attachmentBorder ? 14 : 15, position);
 }
 
-UIImage *TGBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int cornerRadius)
+UIImage *TGBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int cornerRadius, int position)
 {
     CGFloat scale = TGScreenScaling(); // //TGIsRetina() ? 2.0f : 1.0f;
     
@@ -1143,11 +1342,11 @@ UIImage *TGBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, 
     
     if (attachmentBorder)
     {
-        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow);
+        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, position, 1.0f);
     }
     else
     {
-        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, (int)(cornerRadius * scale));
+        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, cornerRadius, position);
     }
     
     CGImageRef bitmapImage = CGBitmapContextCreateImage(targetContext);
@@ -1170,10 +1369,10 @@ UIImage *TGBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, 
 
 UIImage *TGSecretBlurredAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder)
 {
-    return TGSecretBlurredAttachmentWithCornerRadiusImage(source, size, averageColor, attachmentBorder, 13);
+    return TGSecretBlurredAttachmentWithCornerRadiusImage(source, size, averageColor, attachmentBorder, 13, 0);
 }
 
-UIImage *TGSecretBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, CGFloat cornerRadius)
+UIImage *TGSecretBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, CGFloat cornerRadius, int position)
 {
     CGFloat scale = TGScreenScaling(); //TGIsRetina() ? 2.0f : 1.0f;
     
@@ -1276,9 +1475,9 @@ UIImage *TGSecretBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize 
     TGStaticBackdropAreaData *additionalDataBackdropArea = createAdditionalDataBackdropArea(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, CGSizeMake(size.width, size.height));
     
     if (attachmentBorder) {
-        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow);
+        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, position, 1.0f);
     } else {
-        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, (int)(cornerRadius * scale));
+        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, cornerRadius, position);
     }
     
     CGImageRef bitmapImage = CGBitmapContextCreateImage(targetContext);
@@ -1393,7 +1592,7 @@ UIImage *TGBlurredFileImage(UIImage *source, CGSize size, uint32_t *averageColor
     
     if (borderRadius != 0)
     {
-        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, (int)(borderRadius * scale));
+        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, (int)(borderRadius), 0);
     }
     
     CGImageRef bitmapImage = CGBitmapContextCreateImage(targetContext);
@@ -1558,12 +1757,12 @@ UIImage *TGBlurredRectangularImage(UIImage *source, CGSize size, CGSize renderSi
     return image;
 }
 
-UIImage *TGLoadedAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder)
+UIImage *TGLoadedAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int position)
 {
-    return TGLoadedAttachmentWithCornerRadiusImage(source, size, averageColor, attachmentBorder, attachmentBorder ? 14 : 13, 0);
+    return TGLoadedAttachmentWithCornerRadiusImage(source, size, averageColor, attachmentBorder, attachmentBorder ? 14 : 15, 0, position);
 }
 
-UIImage *TGLoadedAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int cornerRadius, int inset)
+UIImage *TGLoadedAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int cornerRadius, int inset, int position)
 {
     CGFloat scale = TGScreenScaling(); //TGIsRetina() ? 2.0f : 1.0f;
     
@@ -1630,12 +1829,12 @@ UIImage *TGLoadedAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, u
     
     if (attachmentBorder)
     {
-        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow);
+        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, position, 1.0f);
     }
     else
     {
         if (cornerRadius > 0) {
-            TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, (int)(cornerRadius * scale));
+            TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, cornerRadius, position);
         }
     }
     
@@ -1688,7 +1887,7 @@ UIImage *TGAnimationFrameAttachmentImage(UIImage *source, CGSize size, CGSize re
     [source drawInRect:imageRect blendMode:kCGBlendModeNormal alpha:1.0f];
     UIGraphicsPopContext();
     
-    addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow);
+    addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, 0, 1.0f);
     
     CGImageRef bitmapImage = CGBitmapContextCreateImage(targetContext);
     UIImage *image = [[UIImage alloc] initWithCGImage:bitmapImage scale:scale orientation:UIImageOrientationUp];
@@ -1764,7 +1963,7 @@ UIImage *TGLoadedFileImage(UIImage *source, CGSize size, uint32_t *averageColor,
     
     if (borderRadius != 0)
     {
-        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, (int)(borderRadius * scale));
+        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, (int)(borderRadius), 0);
     }
     
     TGStaticBackdropAreaData *timestampBackdropArea = createTimestampBackdropArea(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, CGSizeMake(size.width, size.height));
@@ -1788,16 +1987,17 @@ UIImage *TGLoadedFileImage(UIImage *source, CGSize size, uint32_t *averageColor,
     return image;
 }
 
-UIImage *TGReducedAttachmentImage(UIImage *source, CGSize originalSize, bool attachmentBorder)
+UIImage *TGReducedAttachmentImage(UIImage *source, CGSize originalSize, bool attachmentBorder, int position)
 {
-    return TGReducedAttachmentWithCornerRadiusImage(source, originalSize, attachmentBorder, attachmentBorder ? 14 : 13);
+    return TGReducedAttachmentWithCornerRadiusImage(source, originalSize, attachmentBorder, attachmentBorder ? 14 : 15, position);
 }
 
-UIImage *TGReducedAttachmentWithCornerRadiusImage(UIImage *source, CGSize originalSize, bool attachmentBorder, int cornerRadius)
+UIImage *TGReducedAttachmentWithCornerRadiusImage(UIImage *source, CGSize originalSize, bool attachmentBorder, int cornerRadius, int position)
 {
     CGFloat scale = TGScreenScaling(); //TGIsRetina() ? 2.0f : 1.0f;
     
     CGSize size = CGSizeMake(CGFloor(originalSize.width * 0.4f), CGFloor(originalSize.height * 0.4f));
+    cornerRadius = CGFloor(cornerRadius * 0.4f);
     
     const struct { int width, height; } targetContextSize = { (int)(size.width * scale), (int)(size.height * scale) };
     const struct { int width, height; } targetContextOriginalSize = { (int)(originalSize.width * scale), (int)(originalSize.height * scale) };
@@ -1871,12 +2071,12 @@ UIImage *TGReducedAttachmentWithCornerRadiusImage(UIImage *source, CGSize origin
     
     UIGraphicsPopContext();
     
-    if (attachmentBorder)
-        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow);
-    else
-    {
-        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)(int)targetBytesPerRow, (int)(cornerRadius * scale));
-    }
+//    if (attachmentBorder)
+//        addAttachmentImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, position, 0.4f);
+//    else
+//    {
+//        TGAddImageCorners(targetMemory, targetContextSize.width, targetContextSize.height, (int)(int)targetBytesPerRow, cornerRadius, position);
+//    }
     
     CGImageRef bitmapImage = CGBitmapContextCreateImage(targetContext);
     UIImage *image = [[UIImage alloc] initWithCGImage:bitmapImage scale:scale orientation:UIImageOrientationUp];

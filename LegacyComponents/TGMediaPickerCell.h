@@ -5,11 +5,9 @@
 @class TGMediaEditingContext;
 
 @interface TGMediaPickerCell : UICollectionViewCell
-{
-    TGCheckButtonView *_checkButton;
-}
 
 @property (nonatomic, readonly) TGImageView *imageView;
+@property (nonatomic, readonly) TGCheckButtonView *checkButton;
 - (void)setHidden:(bool)hidden animated:(bool)animated;
 
 @property (nonatomic, strong) TGMediaSelectionContext *selectionContext;

@@ -60,6 +60,8 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     UIView *_musicPlayerContainer;
     
     bool _showMusicPlayerView;
+    
+    SPipe *_hiddenPipe;
 }
 
 @property (nonatomic, strong) UIView *backgroundContainerView;
@@ -119,8 +121,15 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     return self;
 }
 
+- (SSignal *)hiddenSignal
+{
+    return _hiddenPipe.signalProducer();
+}
+
 - (void)commonInit:(UIBarStyle)barStyle
 {
+    _hiddenPipe = [[SPipe alloc] init];
+    
     if (iosMajorVersion() >= 7 && [TGViewController isWidescreen] && [CMMotionActivityManager isActivityAvailable])
     {
         TGFixView *activityIndicator = [[TGFixView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
@@ -181,9 +190,19 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
 
 - (void)layoutSubviews
 {
+    [self updateLayout];
+    
+    [super layoutSubviews];
+}
+
+- (void)updateLayout
+{
     if (_backgroundContainerView != nil)
     {
         CGFloat backgroundOverflow = iosMajorVersion() >= 7 ? 20.0f : 0.0f;
+        if (iosMajorVersion() >= 11 && self.superview.safeAreaInsets.top > 0)
+            backgroundOverflow = self.superview.safeAreaInsets.top;
+        
         _backgroundContainerView.frame = CGRectMake(0, -backgroundOverflow, self.bounds.size.width, backgroundOverflow + self.bounds.size.height);
         
         if (_barBackgroundView != nil)
@@ -195,8 +214,6 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
         CGFloat stripeHeight = TGScreenPixel;
         _stripeView.frame = CGRectMake(0, _backgroundContainerView.bounds.size.height - stripeHeight, _backgroundContainerView.bounds.size.width, stripeHeight);
     }
-    
-    [super layoutSubviews];
 }
 
 - (void)setBarStyle:(UIBarStyle)barStyle
@@ -244,6 +261,10 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
                 shouldFix = [[[[self superview] superview] superview] isKindOfClass:[fixClassName class]];
             }
         }
+        else if (iosMajorVersion() >= 11)
+        {
+            shouldFix = false;
+        }
     }
     
     if (shouldFix && center.y <= self.frame.size.height / 2)
@@ -272,6 +293,8 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     
     _musicPlayerContainer.alpha = frame.origin.y < 0.0f ? 0.0f : 1.0f;
     _musicPlayerContainer.frame = CGRectMake(0.0f, frame.size.height + self.musicPlayerOffset, frame.size.width, 37.0f);
+    
+    [self updateLayout];
 }
 
 - (void)setBounds:(CGRect)bounds
@@ -283,6 +306,8 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
 
 - (void)setHiddenState:(bool)hidden animated:(bool)animated
 {
+    _hiddenPipe.sink(@(hidden));
+    
     if (animated)
     {
         if (_hiddenState != hidden)
@@ -361,16 +386,6 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
         backgroundView.hidden = true;
         [backgroundView removeFromSuperview];
     }
-}
-
-- (void)pushNavigationItem:(UINavigationItem *)item animated:(BOOL)animated
-{
-    [super pushNavigationItem:item animated:animated];
-}
-
-- (UINavigationItem *)popNavigationItemAnimated:(BOOL)animated
-{
-    return [super popNavigationItemAnimated:animated];
 }
 
 - (void)addSubview:(UIView *)view {

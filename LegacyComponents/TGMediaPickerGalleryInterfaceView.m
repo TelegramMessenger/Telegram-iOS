@@ -34,6 +34,7 @@
 #import "TGMediaPickerScrubberHeaderView.h"
 
 #import <LegacyComponents/TGMenuView.h>
+#import <LegacyComponents/TGTooltipView.h>
 
 #import <LegacyComponents/TGPhotoCaptionInputMixin.h>
 
@@ -61,6 +62,7 @@
     TGModernButton *_muteButton;
     TGCheckButtonView *_checkButton;
     TGMediaPickerPhotoCounterButton *_photoCounterButton;
+    TGModernButton *_groupButton;
     
     TGMediaPickerPhotoStripView *_selectedPhotosView;
     
@@ -68,9 +70,16 @@
     SMetaDisposable *_captionDisposable;
     SMetaDisposable *_itemAvailabilityDisposable;
     SMetaDisposable *_itemSelectedDisposable;
+    id<SDisposable> _selectionChangedDisposable;
+    id<SDisposable> _groupingChangedDisposable;
+    id<SDisposable> _timersChangedDisposable;
+    id<SDisposable> _adjustmentsChangedDisposable;
     
     NSTimer *_tooltipTimer;
     TGMenuContainerView *_tooltipContainerView;
+    
+    TGTooltipContainerView *_groupingTooltipContainerView;
+    SMetaDisposable *_tooltipDismissDisposable;
     
     void (^_closePressed)();
     void (^_scrollViewOffsetRequested)(CGFloat offset);
@@ -83,6 +92,8 @@
 @end
 
 @implementation TGMediaPickerGalleryInterfaceView
+
+@synthesize safeAreaInset = _safeAreaInset;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasSelectionPanel:(bool)hasSelectionPanel recipientName:(NSString *)recipientName
 {
@@ -194,6 +205,116 @@
             [_photoCounterButton addTarget:self action:@selector(photoCounterButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             _photoCounterButton.userInteractionEnabled = false;
             [_wrapperView addSubview:_photoCounterButton];
+            
+            bool (^updateGroupingButtonVisibility)(void) = ^bool
+            {
+                __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return false;
+                
+                bool onlyGroupableMedia = true;
+                for (id item in strongSelf->_selectionContext.selectedItems)
+                {
+                    if ([item isKindOfClass:[TGMediaAsset class]])
+                    {
+                        if (((TGMediaAsset *)item).type == TGMediaAssetGifType)
+                        {
+                            onlyGroupableMedia = false;
+                            break;
+                        }
+                        else
+                        {
+                            if ([[strongSelf->_editingContext timerForItem:item] integerValue] > 0)
+                            {
+                                onlyGroupableMedia = false;
+                                break;
+                            }
+                            
+                            id<TGMediaEditAdjustments> adjustments = [strongSelf->_editingContext adjustmentsForItem:item];
+                            if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]] && ((TGMediaVideoEditAdjustments *)adjustments).sendAsGif)
+                            {
+                                onlyGroupableMedia = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                bool groupingButtonVisible = strongSelf->_groupButton != nil && onlyGroupableMedia && strongSelf->_selectionContext.count > 1;
+                dispatch_async(dispatch_get_main_queue(), ^
+                {
+                    if (groupingButtonVisible)
+                        strongSelf->_groupButton.hidden = false;
+                    [strongSelf->_groupButton.layer removeAllAnimations];
+                    [UIView animateWithDuration:0.2 animations:^
+                     {
+                         strongSelf->_groupButton.alpha = groupingButtonVisible ? 1.0f : 0.0f;
+                     } completion:^(BOOL finished)
+                     {
+                         if (finished)
+                             strongSelf->_groupButton.hidden = !groupingButtonVisible;
+                     }];
+                });
+                
+                return groupingButtonVisible;
+            };
+            
+            _selectionChangedDisposable = [[_selectionContext selectionChangedSignal] startWithNext:^(id next)
+            {
+                __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                id<TGMediaSelectableItem> selectableItem = nil;
+                if ([strongSelf->_currentItem conformsToProtocol:@protocol(TGModernGallerySelectableItem)])
+                    selectableItem = ((id<TGModernGallerySelectableItem>)strongSelf->_currentItem).selectableMediaItem;
+                
+                if (selectableItem != nil)
+                    [strongSelf->_checkButton setNumber:[strongSelf->_selectionContext indexOfItem:selectableItem]];
+                
+                bool groupingButtonVisible = updateGroupingButtonVisibility();
+                if (groupingButtonVisible && [strongSelf shouldDisplayGroupingTooltip] && strongSelf->_selectionContext.grouping)
+                    [strongSelf setupGroupingTooltip:[strongSelf->_groupButton.superview convertRect:strongSelf->_groupButton.frame toView:strongSelf]];
+            }];
+            
+            if (_selectionContext.allowGrouping)
+            {
+                _groupButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 44.0f, 44.0f)];
+                _groupButton.adjustsImageWhenHighlighted = false;
+                if (_selectionContext.count < 2)
+                {
+                    _groupButton.alpha = 0.0f;
+                    _groupButton.hidden = true;
+                }
+                _groupButton.selected = _selectionContext.grouping;
+                [_groupButton setImage:[TGPhotoEditorInterfaceAssets ungroupIcon] forState:UIControlStateNormal];
+                [_groupButton setImage:[TGPhotoEditorInterfaceAssets groupIcon] forState:UIControlStateSelected];
+                [_groupButton setImage:[TGPhotoEditorInterfaceAssets groupIcon]  forState:UIControlStateSelected | UIControlStateHighlighted];
+                [_groupButton addTarget:self action:@selector(toggleGrouping) forControlEvents:UIControlEventTouchUpInside];
+                [_wrapperView addSubview:_groupButton];
+                
+                _groupingChangedDisposable = [[_selectionContext groupingChangedSignal] startWithNext:^(NSNumber *next)
+                {
+                    __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+                    if (strongSelf != nil)
+                        [strongSelf->_groupButton setSelected:next.boolValue];
+                }];
+                
+                if (_editingContext != nil)
+                {
+                    _timersChangedDisposable = [_editingContext.timersUpdatedSignal startWithNext:^(__unused NSNumber *next)
+                    {
+                        updateGroupingButtonVisibility();
+                    }];
+                    
+                    _adjustmentsChangedDisposable = [_editingContext.adjustmentsUpdatedSignal startWithNext:^(__unused NSNumber *next)
+                    {
+                        updateGroupingButtonVisibility();
+                    }];
+                }
+                
+                updateGroupingButtonVisibility();
+            }
         }
         
         [self updateEditorButtonsForItem:focusItem animated:false];
@@ -282,6 +403,8 @@
     [_captionDisposable dispose];
     [_itemSelectedDisposable dispose];
     [_itemAvailabilityDisposable dispose];
+    [_selectionChangedDisposable dispose];
+    [_timersChangedDisposable dispose];
 }
 
 - (void)setHasCaptions:(bool)hasCaptions
@@ -364,6 +487,8 @@
     _currentItem = item;
     _currentItemView = itemView;
     
+    [_currentItemView setSafeAreaInset:[self localSafeAreaInset]];
+    
     CGFloat screenSide = MAX(TGScreenSize().width, TGScreenSize().height);
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - self.frame.size.height) / 2, (screenSide - self.frame.size.width) / 2, (screenSide + self.frame.size.height) / 2, (screenSide + self.frame.size.width) / 2);
   
@@ -372,6 +497,7 @@
     if (_selectionContext != nil)
     {
         _checkButton.frame = [self _checkButtonFrameForOrientation:[self interfaceOrientation] screenEdges:screenEdges hasHeaderView:(itemView.headerView != nil)];
+        _groupButton.frame = [self _groupButtonFrameForOrientation:[self interfaceOrientation] screenEdges:screenEdges hasHeaderView:(itemView.headerView != nil)];
         
         if ([itemView.headerView isKindOfClass:[TGMediaPickerScrubberHeaderView class]])
         {
@@ -387,6 +513,7 @@
             selectableItem = ((id<TGModernGallerySelectableItem>)_currentItem).selectableMediaItem;
         
         [_checkButton setSelected:[_selectionContext isItemSelected:selectableItem] animated:false];
+        [_checkButton setNumber:[_selectionContext indexOfItem:selectableItem]];
         signal = [_selectionContext itemInformativeSelectedSignal:selectableItem];
         [_itemSelectedDisposable setDisposable:[signal startWithNext:^(TGMediaSelectionChange *next)
         {
@@ -617,6 +744,7 @@
         qualityButton.iconImage = icon;
     }
     
+    bool willShowTimerTooltip = false;
     TGPhotoEditorButton *timerButton = [_portraitToolbarView buttonForTab:TGPhotoEditorTimerTab];
     if (timerButton != nil)
     {
@@ -630,9 +758,10 @@
         
         if ([self shouldDisplayTooltip])
         {
+            willShowTimerTooltip = true;
             TGDispatchAfter(0.5, dispatch_get_main_queue(), ^
             {
-                if (self.frame.size.width > self.frame.size.height)
+                if (!TGIsPad() && self.frame.size.width > self.frame.size.height)
                     [self setupTooltip:[_landscapeToolbarView convertRect:landscapeTimerButton.frame toView:self]];
                 else
                     [self setupTooltip:[_portraitToolbarView convertRect:timerButton.frame toView:self]];
@@ -645,6 +774,13 @@
         if (value > 0)
             highlightedButtons |= TGPhotoEditorTimerTab;
     }
+    if (_groupButton != nil && _groupButton.alpha > FLT_EPSILON && _selectionContext.grouping && !willShowTimerTooltip && [self shouldDisplayGroupingTooltip])
+    {
+        TGDispatchAfter(0.5, dispatch_get_main_queue(), ^
+        {
+            [self setupGroupingTooltip:[_groupButton.superview convertRect:_groupButton.frame toView:self]];
+        });
+    }
     
     [_portraitToolbarView setEditButtonsHighlighted:highlightedButtons];
     [_landscapeToolbarView setEditButtonsHighlighted:highlightedButtons];
@@ -652,6 +788,8 @@
     [_portraitToolbarView setEditButtonsDisabled:disabledButtons];
     [_landscapeToolbarView setEditButtonsDisabled:disabledButtons];
 }
+
+#pragma mark - Timer Tooltip
 
 - (bool)shouldDisplayTooltip
 {
@@ -688,6 +826,39 @@
     [_tooltipContainerView hideMenu];
 }
 
+#pragma mark - Grouping Tooltip
+
+- (bool)shouldDisplayGroupingTooltip
+{
+    return true;
+    return ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedGroupTooltip_v0"] boolValue];
+}
+
+- (void)setupGroupingTooltip:(CGRect)rect
+{
+    if (_tooltipContainerView != nil)
+        return;
+    
+    rect = CGRectOffset(rect, 0.0f, 97.0f);
+    
+    _tooltipTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(tooltipTimerTick) interval:3.0 repeat:false];
+    
+    _tooltipContainerView = [[TGMenuContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, self.frame.size.height)];
+    [self addSubview:_tooltipContainerView];
+    
+    NSMutableArray *actions = [[NSMutableArray alloc] init];
+    [actions addObject:[[NSDictionary alloc] initWithObjectsAndKeys:TGLocalized(@"MediaPicker.TapToUngroupDescription"), @"title", nil]];
+    
+    _tooltipContainerView.menuView.forceArrowOnTop = true;
+    [_tooltipContainerView.menuView setButtonsAndActions:actions watcherHandle:_actionHandle];
+    [_tooltipContainerView.menuView sizeToFit];
+    _tooltipContainerView.menuView.buttonHighlightDisabled = true;
+    
+    [_tooltipContainerView showMenuFromRect:rect animated:false];
+    
+    [[NSUserDefaults standardUserDefaults] setObject:@true forKey:@"TG_displayedGroupTooltip_v0"];
+}
+
 - (void)actionStageActionRequested:(NSString *)action options:(id)__unused options
 {
     if ([action isEqualToString:@"menuAction"])
@@ -698,6 +869,44 @@
         [_tooltipContainerView hideMenu];
     }
 }
+
+- (void)showGroupingTooltip:(bool)grouped duration:(NSTimeInterval)duration
+{
+    NSString *tooltipText = TGLocalized(grouped ? @"MediaPicker.GroupDescription" : @"MediaPicker.UngroupDescription");
+    
+    if (_groupingTooltipContainerView.isShowingTooltip && _groupingTooltipContainerView.tooltipView.sourceView == _groupButton)
+    {
+        [_groupingTooltipContainerView.tooltipView setText:tooltipText animated:true];
+    }
+    else
+    {
+        [_tooltipContainerView removeFromSuperview];
+        [_groupingTooltipContainerView removeFromSuperview];
+        
+        _groupingTooltipContainerView = [[TGTooltipContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, self.frame.size.height)];
+        [self addSubview:_groupingTooltipContainerView];
+        
+        [_groupingTooltipContainerView.tooltipView setText:tooltipText animated:false];
+        _groupingTooltipContainerView.tooltipView.sourceView = _groupButton;
+        _groupingTooltipContainerView.tooltipView.forceArrowOnTop = true;
+        
+        CGRect recordButtonFrame = [_groupButton.superview convertRect:_groupButton.frame toView:_groupingTooltipContainerView];
+        recordButtonFrame.origin.y += 15.0f;
+        [_groupingTooltipContainerView showTooltipFromRect:recordButtonFrame animated:false];
+    }
+    
+    if (_tooltipDismissDisposable == nil)
+        _tooltipDismissDisposable = [[SMetaDisposable alloc] init];
+    
+    __weak TGTooltipContainerView *weakContainerView = _groupingTooltipContainerView;
+    [_tooltipDismissDisposable setDisposable:[[[SSignal complete] delay:duration onQueue:[SQueue mainQueue]] startWithNext:nil completed:^{
+        __strong TGTooltipContainerView *strongContainerView = weakContainerView;
+        if (strongContainerView != nil)
+            [strongContainerView hideTooltip];
+    }]];
+}
+
+#pragma mark -
 
 - (void)updateSelectionInterface:(NSUInteger)selectedCount counterVisible:(bool)counterVisible animated:(bool)animated
 {
@@ -760,12 +969,17 @@
             _muteButton.alpha = alpha;
             _arrowView.alpha = alpha * 0.45f;
             _recipientLabel.alpha = alpha;
+            
+            if (!_groupButton.hidden)
+                _groupButton.alpha = alpha;
         } completion:^(BOOL finished)
         {
             if (finished)
             {
                 _checkButton.userInteractionEnabled = !hidden;
                 _muteButton.userInteractionEnabled = !hidden;
+                if (!_groupButton.hidden)
+                    _groupButton.userInteractionEnabled = !hidden;
             }
         }];
     }
@@ -779,6 +993,12 @@
         
         _arrowView.alpha = alpha * 0.45f;
         _recipientLabel.alpha = alpha;
+        
+        if (!_groupButton.hidden)
+        {
+            _groupButton.alpha = alpha;
+            _groupButton.userInteractionEnabled = !hidden;
+        }
     }
     
     if (hidden)
@@ -804,6 +1024,9 @@
             _portraitToolbarView.alpha = alpha;
             _landscapeToolbarView.alpha = alpha;
             _captionMixin.inputPanel.alpha = alpha;
+            
+            if (!_groupButton.hidden)
+                _groupButton.alpha = alpha;
         } completion:^(BOOL finished)
         {
             if (finished)
@@ -813,6 +1036,9 @@
                 _portraitToolbarView.userInteractionEnabled = !hidden;
                 _landscapeToolbarView.userInteractionEnabled = !hidden;
                 _captionMixin.inputPanel.userInteractionEnabled = !hidden;
+                
+                if (!_groupButton.hidden)
+                    _groupButton.userInteractionEnabled = !hidden;
             }
         }];
     }
@@ -835,6 +1061,12 @@
         
         _captionMixin.inputPanel.alpha = alpha;
         _captionMixin.inputPanel.userInteractionEnabled = !hidden;
+        
+        if (!_groupButton.hidden)
+        {
+            _groupButton.alpha = alpha;
+            _groupButton.userInteractionEnabled = !hidden;
+        }
     }
     
     if (hidden)
@@ -894,6 +1126,13 @@
     TGModernGalleryItemView *currentItemView = _currentItemView;
     if ([currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]])
         [(TGMediaPickerGalleryVideoItemView *)currentItemView toggleSendAsGif];
+}
+
+- (void)toggleGrouping
+{
+    [_selectionContext toggleGrouping];
+    
+    [self showGroupingTooltip:_selectionContext.grouping duration:2.5];
 }
 
 - (CGRect)itemFooterViewFrameForSize:(CGSize)size
@@ -965,14 +1204,17 @@
     
 }
 
-- (void)animateTransitionOutWithDuration:(NSTimeInterval)__unused dutation
+- (void)animateTransitionOutWithDuration:(NSTimeInterval)__unused duration
 {
     
 }
 
-- (void)setTransitionOutProgress:(CGFloat)transitionOutProgress
+- (void)setTransitionOutProgress:(CGFloat)transitionOutProgress manual:(bool)manual
 {
-    [self setAllInterfaceHidden:(transitionOutProgress > FLT_EPSILON) delay:0.0 animated:true];
+    if (transitionOutProgress > FLT_EPSILON)
+        [self setAllInterfaceHidden:true delay:0.0 animated:true];
+    else if (!manual)
+        [self setAllInterfaceHidden:false delay:0.0 animated:true];
 }
 
 - (void)setToolbarsHidden:(bool)hidden animated:(bool)animated
@@ -1022,6 +1264,7 @@
     if (view == _photoCounterButton
         || view == _checkButton
         || view == _muteButton
+        || view == _groupButton
         || [view isDescendantOfView:_headerWrapperView]
         || [view isDescendantOfView:_portraitToolbarView]
         || [view isDescendantOfView:_landscapeToolbarView]
@@ -1065,6 +1308,11 @@
 - (CGRect)_muteButtonFrameForOrientation:(UIInterfaceOrientation)orientation screenEdges:(UIEdgeInsets)screenEdges hasHeaderView:(bool)hasHeaderView
 {
     CGRect frame = CGRectZero;
+    if (_safeAreaInset.top > 20.0f)
+        screenEdges.top += _safeAreaInset.top;
+    screenEdges.left += _safeAreaInset.left;
+    screenEdges.right -= _safeAreaInset.right;
+    
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
@@ -1086,9 +1334,43 @@
     return frame;
 }
 
+- (CGRect)_groupButtonFrameForOrientation:(UIInterfaceOrientation)orientation screenEdges:(UIEdgeInsets)screenEdges hasHeaderView:(bool)hasHeaderView
+{
+    CGRect frame = CGRectZero;
+    if (_safeAreaInset.top > 20.0f)
+        screenEdges.top += _safeAreaInset.top;
+    screenEdges.left += _safeAreaInset.left;
+    screenEdges.right -= _safeAreaInset.right;
+    
+    switch (orientation)
+    {
+        case UIInterfaceOrientationLandscapeLeft:
+            frame = CGRectMake(screenEdges.right - 44, screenEdges.top + 5 + _groupButton.frame.size.height + 7.0f, _groupButton.frame.size.width, _groupButton.frame.size.height);
+            break;
+            
+        case UIInterfaceOrientationLandscapeRight:
+            frame = CGRectMake(screenEdges.left + 4, screenEdges.top + 5 + _groupButton.frame.size.height + 7.0f, _groupButton.frame.size.width, _groupButton.frame.size.height);
+            break;
+            
+        default:
+            frame = CGRectMake(screenEdges.right - 44 - _groupButton.frame.size.width - 7.0f, screenEdges.top + 3 - TGScreenPixel, _groupButton.frame.size.width, _groupButton.frame.size.height);
+            break;
+    }
+    
+    if (hasHeaderView)
+        frame.origin.y += 64;
+    
+    return frame;
+}
+
 - (CGRect)_checkButtonFrameForOrientation:(UIInterfaceOrientation)orientation screenEdges:(UIEdgeInsets)screenEdges hasHeaderView:(bool)hasHeaderView
 {
     CGRect frame = CGRectZero;
+    if (_safeAreaInset.top > 20.0f)
+        screenEdges.top += _safeAreaInset.top;
+    screenEdges.left += _safeAreaInset.left;
+    screenEdges.right -= _safeAreaInset.right;
+    
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
@@ -1113,9 +1395,14 @@
 - (void)_layoutRecipientLabelForOrientation:(UIInterfaceOrientation)orientation screenEdges:(UIEdgeInsets)screenEdges hasHeaderView:(bool)hasHeaderView
 {
     CGFloat screenWidth = MIN(self.frame.size.width, self.frame.size.height);
-    CGFloat recipientWidth = MIN(_recipientLabel.frame.size.width, screenWidth - 100.0f);
+    CGFloat recipientWidth = MIN(_recipientLabel.frame.size.width, screenWidth - 150.0f);
     
     CGRect frame = CGRectZero;
+    if (_safeAreaInset.top > 20.0f + FLT_EPSILON)
+        screenEdges.top += _safeAreaInset.top;
+    screenEdges.left += _safeAreaInset.left;
+    screenEdges.right -= _safeAreaInset.right;
+    
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
@@ -1158,6 +1445,28 @@
     return [_context fullscreenBounds].size;
 }
 
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
+{
+    _safeAreaInset = safeAreaInset;
+    [_currentItemView setSafeAreaInset:[self localSafeAreaInset]];
+    [self setNeedsLayout];
+}
+
+- (UIEdgeInsets)localSafeAreaInset
+{
+    UIEdgeInsets safeAreaInset = _safeAreaInset;
+    if (self.usesSimpleLayout || TGIsPad())
+        return safeAreaInset;
+    
+    UIInterfaceOrientation orientation = [self interfaceOrientation];
+    if (orientation == UIInterfaceOrientationLandscapeLeft)
+        safeAreaInset.left = 0.0f;
+    else if (orientation == UIInterfaceOrientationLandscapeRight)
+        safeAreaInset.right = 0.0f;
+    
+    return safeAreaInset;
+}
+
 - (void)layoutSubviews
 {
     [super layoutSubviews];
@@ -1194,7 +1503,7 @@
     CGFloat portraitToolbarViewBottomEdge = screenSide;
     if (self.usesSimpleLayout || TGIsPad())
         portraitToolbarViewBottomEdge = screenEdges.bottom;
-    _portraitToolbarView.frame = CGRectMake(screenEdges.left, portraitToolbarViewBottomEdge - TGPhotoEditorToolbarSize, self.frame.size.width, TGPhotoEditorToolbarSize);
+    _portraitToolbarView.frame = CGRectMake(screenEdges.left, portraitToolbarViewBottomEdge - TGPhotoEditorToolbarSize - _safeAreaInset.bottom, self.frame.size.width, TGPhotoEditorToolbarSize + _safeAreaInset.bottom);
     
     UIEdgeInsets captionEdgeInsets = screenEdges;
     captionEdgeInsets.bottom = _portraitToolbarView.frame.size.height;
@@ -1206,14 +1515,14 @@
         {
             [UIView performWithoutAnimation:^
             {
-                _photoCounterButton.frame = CGRectMake(screenEdges.left + TGPhotoEditorToolbarSize + 1, screenEdges.top + 6 + headerInset, 64, 38);
+                _photoCounterButton.frame = CGRectMake(screenEdges.left + TGPhotoEditorToolbarSize + 1 + _safeAreaInset.left, screenEdges.top + 6 + headerInset, 64, 38);
                 
-                _selectedPhotosView.frame = CGRectMake(screenEdges.left + TGPhotoEditorToolbarSize + 66, screenEdges.top + 4 + headerInset, photosViewSize, self.frame.size.height - 4 * 2 - headerInset);
+                _selectedPhotosView.frame = CGRectMake(screenEdges.left + TGPhotoEditorToolbarSize + 66 + _safeAreaInset.left, screenEdges.top + 4 + headerInset, photosViewSize, self.frame.size.height - 4 * 2 - headerInset);
                 
-                _landscapeToolbarView.frame = CGRectMake(screenEdges.left, screenEdges.top, TGPhotoEditorToolbarSize, self.frame.size.height);
+                _landscapeToolbarView.frame = CGRectMake(screenEdges.left, screenEdges.top, TGPhotoEditorToolbarSize + _safeAreaInset.left, self.frame.size.height);
             }];
             
-            _headerWrapperView.frame = CGRectMake(TGPhotoEditorToolbarSize + screenEdges.left, screenEdges.top, self.frame.size.width - TGPhotoEditorToolbarSize, 64);
+            _headerWrapperView.frame = CGRectMake(screenEdges.left + TGPhotoEditorToolbarSize + _safeAreaInset.left, screenEdges.top, self.frame.size.width - TGPhotoEditorToolbarSize - _safeAreaInset.left, 64);
         }
             break;
             
@@ -1221,14 +1530,14 @@
         {
             [UIView performWithoutAnimation:^
             {
-                _photoCounterButton.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - 64 - 1, screenEdges.top + 6 + headerInset, 64, 38);
+                _photoCounterButton.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - 64 - 1 - _safeAreaInset.right, screenEdges.top + 6 + headerInset, 64, 38);
                 
-                _selectedPhotosView.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - photosViewSize - 66, screenEdges.top + 4 + headerInset, photosViewSize, self.frame.size.height - 4 * 2 - headerInset);
+                _selectedPhotosView.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - photosViewSize - 66 - _safeAreaInset.right, screenEdges.top + 4 + headerInset, photosViewSize, self.frame.size.height - 4 * 2 - headerInset);
                 
-                _landscapeToolbarView.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize, screenEdges.top, TGPhotoEditorToolbarSize, self.frame.size.height);
+                _landscapeToolbarView.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - _safeAreaInset.right, screenEdges.top, TGPhotoEditorToolbarSize + _safeAreaInset.right, self.frame.size.height);
             }];
             
-            _headerWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.top, self.frame.size.width - TGPhotoEditorToolbarSize, 64);
+            _headerWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.top, self.frame.size.width - TGPhotoEditorToolbarSize - _safeAreaInset.right, 64);
         }
             break;
             
@@ -1236,20 +1545,22 @@
         {
             [UIView performWithoutAnimation:^
             {
-                _photoCounterButton.frame = CGRectMake(screenEdges.right - 56, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 40, 64, 38);
+                _photoCounterButton.frame = CGRectMake(screenEdges.right - 56 - _safeAreaInset.right, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 40 - _safeAreaInset.bottom, 64, 38);
                 
-                _selectedPhotosView.frame = CGRectMake(screenEdges.left + 4, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - photosViewSize - 54, self.frame.size.width - 4 * 2, photosViewSize);
+                _selectedPhotosView.frame = CGRectMake(screenEdges.left + 4, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - photosViewSize - 54 - _safeAreaInset.bottom, self.frame.size.width - 4 * 2 - _safeAreaInset.right, photosViewSize);
             }];
             
             _landscapeToolbarView.frame = CGRectMake(_landscapeToolbarView.frame.origin.x, screenEdges.top, TGPhotoEditorToolbarSize, self.frame.size.height);
             
-            _headerWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.top, self.frame.size.width, 64);
+            CGFloat topInset = _safeAreaInset.top > FLT_EPSILON ? _safeAreaInset.top - 14.0 : 0.0f;
+            _headerWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.top + topInset, self.frame.size.width, 44);
         }
             break;
     }
     
     _muteButton.frame = [self _muteButtonFrameForOrientation:orientation screenEdges:screenEdges hasHeaderView:true];
     _checkButton.frame = [self _checkButtonFrameForOrientation:orientation screenEdges:screenEdges hasHeaderView:hasHeaderView];
+    _groupButton.frame = [self _groupButtonFrameForOrientation:orientation screenEdges:screenEdges hasHeaderView:hasHeaderView];
     [self _layoutRecipientLabelForOrientation:orientation screenEdges:screenEdges hasHeaderView:hasHeaderView];
     
     for (UIView *itemHeaderView in _itemHeaderViews)

@@ -156,6 +156,30 @@
     transform = CGAffineTransformScale(transform, alpha, alpha);
 }
 
+- (void)setHidden:(bool)hidden animated:(bool)animated
+{
+    if (!hidden && animated && _collectionView.visibleCells.count == 0)
+        [_collectionView layoutSubviews];
+    
+    for (UICollectionViewCell *cell in _collectionView.visibleCells)
+    {
+        if (animated)
+        {
+            if (!hidden)
+                cell.alpha = 0.0f;
+            
+            [UIView animateWithDuration:0.3 animations:^
+            {
+                cell.alpha = hidden ? 0.0f : 1.0f;
+            }];
+        }
+        else
+        {
+            cell.alpha = hidden ? 0.0f : 1.0f;
+        }
+    }
+}
+
 - (void)setBounds:(CGRect)bounds
 {
     bool sizeUpdated = !CGSizeEqualToSize(bounds.size, self.bounds.size);
@@ -543,6 +567,24 @@
     [self updateExpanded:expanded];
 }
 
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
+{
+    _safeAreaInset = safeAreaInset;
+    UIEdgeInsets initialInset = UIEdgeInsetsZero;
+    if (_style == TGStickerKeyboardViewPaintStyle || _style == TGStickerKeyboardViewPaintDarkStyle)
+        initialInset = UIEdgeInsetsMake(0.0f, 12.0f, 0.0f, 12.0f);
+    
+    if (_expanded)
+        initialInset = UIEdgeInsetsMake(0.0f, -48.0f, 0.0f, 0.0f);
+    
+    _collectionView.contentInset = UIEdgeInsetsMake(initialInset.top, initialInset.left + _safeAreaInset.left, initialInset.bottom, initialInset.right + _safeAreaInset.right);
+    
+    if (!_expanded && _collectionView.contentOffset.x <= -_safeAreaInset.left + 60.0f)
+        [_collectionView setContentOffset:CGPointMake(-_safeAreaInset.left - initialInset.left, 0.0f)];
+    else if (_expanded && _collectionView.contentOffset.x <= 60.0f)
+        [_collectionView setContentOffset:CGPointMake(-_safeAreaInset.left + 48.0f, 0.0f)];
+}
+
 - (void)updateExpanded:(bool)expanded
 {
     if (iosMajorVersion() < 8)
@@ -553,10 +595,10 @@
     
     [UIView animateWithDuration:0.2 animations:^
     {
-        _collectionView.contentInset = expanded ? UIEdgeInsetsMake(0.0f, -48.0f, 0.0f, 0.0f) : UIEdgeInsetsZero;
+        _collectionView.contentInset = expanded ? UIEdgeInsetsMake(0.0f, -48.0f + _safeAreaInset.left, 0.0f, _safeAreaInset.right) : UIEdgeInsetsMake(0.0f, _safeAreaInset.left, 0.0f, _safeAreaInset.right);
         
-        if (!expanded && _collectionView.contentOffset.x <= 60.0f)
-            [_collectionView setContentOffset:CGPointZero];
+        if (!expanded && _collectionView.contentOffset.x <= -_safeAreaInset.left + 60.0f)
+            [_collectionView setContentOffset:CGPointMake(-_safeAreaInset.left, 0.0f)];
         
         TGStickerKeyboardTabSettingsCell *cell = (TGStickerKeyboardTabSettingsCell *)[_collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
         if ([cell isKindOfClass:[TGStickerKeyboardTabSettingsCell class]] && _showGifs && !expanded)

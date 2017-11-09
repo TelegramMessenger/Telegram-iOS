@@ -34,6 +34,9 @@
 + (UIImage *)blurIcon;
 + (UIImage *)curvesIcon;
 
++ (UIImage *)groupIcon;
++ (UIImage *)ungroupIcon;
+
 + (UIImage *)mirrorIcon;
 + (UIImage *)aspectRatioIcon;
 + (UIImage *)aspectRatioActiveIcon;

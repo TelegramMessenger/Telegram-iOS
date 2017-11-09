@@ -106,34 +106,43 @@
         if(!remoteVideoLocation)
             remoteVideoLocation = attributes[@"file"];
         if(!remoteVideoLocation || [remoteVideoLocation isEqual:[NSNull null]])
-            remoteVideoLocation = fileVersions[@"mobile"][@"gifv"];
+            remoteVideoLocation = fileVersions[@"html5"][@"video"][@"med"][@"url"];
         
         if (remoteVideoLocation)
         {
-            NSRange r1 = [remoteVideoLocation rangeOfString:@"iphone_"];
-            NSRange r2 = [remoteVideoLocation rangeOfString:@"_iphone"];
-            
-            if (r1.location == NSNotFound)
+            if ([remoteVideoLocation rangeOfString:@"muted_mp4"].location != NSNotFound)
             {
-                r1 = [remoteVideoLocation rangeOfString:@"gifv_"];
-                r2 = [remoteVideoLocation rangeOfString:@"_gifv"];
-            }
-            
-            if (r1.location != NSNotFound)
-            {
-                NSInteger loc = r1.length+r1.location;
-                NSString *someVideoMetadataString = [remoteVideoLocation substringWithRange:NSMakeRange(loc, r2.location - loc)];
-
-                remoteVideoLocation = fileVersions[@"web"][@"template"];
-                NSRange r3 = [remoteVideoLocation rangeOfString:@"%{"];
-
-                remoteVideoLocation = [remoteVideoLocation substringToIndex:r3.location];
-                remoteVideoLocation = [NSString stringWithFormat:@"%@mp4_med_size_%@_med.mp4", remoteVideoLocation, someVideoMetadataString];
+                remoteVideoLocation = [remoteVideoLocation stringByReplacingOccurrencesOfString:@"muted_mp4_med_" withString:@"mp4_med_"];
+                remoteVideoLocation = [remoteVideoLocation stringByReplacingOccurrencesOfString:@"_muted_med" withString:@"_med"];
                 coub.remoteVideoLocation = remoteVideoLocation;
             }
-            else if ([remoteVideoLocation rangeOfString:@"mp4_med_size_"].location != NSNotFound)
+            else
             {
-                coub.remoteVideoLocation = remoteVideoLocation;
+                NSRange r1 = [remoteVideoLocation rangeOfString:@"iphone_"];
+                NSRange r2 = [remoteVideoLocation rangeOfString:@"_iphone"];
+                
+                if (r1.location == NSNotFound)
+                {
+                    r1 = [remoteVideoLocation rangeOfString:@"gifv_"];
+                    r2 = [remoteVideoLocation rangeOfString:@"_gifv"];
+                }
+                
+                if (r1.location != NSNotFound)
+                {
+                    NSInteger loc = r1.length+r1.location;
+                    NSString *someVideoMetadataString = [remoteVideoLocation substringWithRange:NSMakeRange(loc, r2.location - loc)];
+
+                    remoteVideoLocation = fileVersions[@"web"][@"template"];
+                    NSRange r3 = [remoteVideoLocation rangeOfString:@"%{"];
+
+                    remoteVideoLocation = [remoteVideoLocation substringToIndex:r3.location];
+                    remoteVideoLocation = [NSString stringWithFormat:@"%@mp4_med_size_%@_med.mp4", remoteVideoLocation, someVideoMetadataString];
+                    coub.remoteVideoLocation = remoteVideoLocation;
+                }
+                else if ([remoteVideoLocation rangeOfString:@"mp4_med_size_"].location != NSNotFound)
+                {
+                    coub.remoteVideoLocation = remoteVideoLocation;
+                }
             }
         }
     }

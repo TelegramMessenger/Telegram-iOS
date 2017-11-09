@@ -62,6 +62,8 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
         [self addSubview:_scrollViewContainer];
         
         _scrollView = [[TGModernGalleryScrollView alloc] initWithFrame:CGRectMake(-_itemPadding, 0.0f, frame.size.width + itemPadding * 2.0f, frame.size.height)];
+        if (iosMajorVersion() >= 11)
+            _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
         [_scrollViewContainer addSubview:_scrollView];
         
         _interfaceView = interfaceView;
@@ -250,7 +252,7 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
     if (recognizer.state == UIGestureRecognizerStateChanged)
     {
         _dismissProgress = [self dismissProgressForSwipeDistance:[recognizer swipeDistance]];
-        [self _updateDismissTransitionWithProgress:_dismissProgress animated:false];
+        [self _updateDismissTransitionWithProgress:_dismissProgress manual:true animated:false];
         [self _updateDismissTransitionMovementWithDistance:[recognizer swipeDistance] animated:false];
     }
     else if (recognizer.state == UIGestureRecognizerStateEnded)
@@ -262,14 +264,14 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
         if ((ABS(swipeVelocity) < swipeVelocityThreshold && ABS([recognizer swipeDistance]) < swipeDistanceThreshold) ||  !_transitionOut || !_transitionOut(swipeVelocity))
         {
             _dismissProgress = 0.0f;
-            [self _updateDismissTransitionWithProgress:0.0f animated:true];
+            [self _updateDismissTransitionWithProgress:0.0f manual:false animated:true];
             [self _updateDismissTransitionMovementWithDistance:0.0f animated:true];
         }
     }
     else if (recognizer.state == UIGestureRecognizerStateCancelled)
     {
         _dismissProgress = 0.0f;
-        [self _updateDismissTransitionWithProgress:0.0f animated:true];
+        [self _updateDismissTransitionWithProgress:0.0f manual:false animated:true];
         [self _updateDismissTransitionMovementWithDistance:0.0f animated:true];
     }
 }
@@ -290,6 +292,11 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
 
 - (void)_updateDismissTransitionWithProgress:(CGFloat)progress animated:(bool)animated
 {
+    [self _updateDismissTransitionWithProgress:progress manual:false animated:animated];
+}
+
+- (void)_updateDismissTransitionWithProgress:(CGFloat)progress manual:(bool)manual animated:(bool)animated
+{
     CGFloat alpha = 1.0f - MAX(0.0f, MIN(1.0f, progress * 4.0f));
     CGFloat transitionProgress = MAX(0.0f, MIN(1.0f, progress * 2.0f));
     UIColor *backgroundColor = UIColorRGBA(0x000000, alpha);
@@ -299,14 +306,17 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
         [UIView animateWithDuration:0.3 animations:^
         {
             self.backgroundColor = backgroundColor;
-            [_interfaceView setTransitionOutProgress:transitionProgress];
+            [_interfaceView setTransitionOutProgress:transitionProgress manual:manual];
         }];
     }
     else
     {
         self.backgroundColor = backgroundColor;
-        [_interfaceView setTransitionOutProgress:transitionProgress];
+        [_interfaceView setTransitionOutProgress:transitionProgress manual:manual];
     }
+    
+    if (self.transitionProgress != nil)
+        self.transitionProgress(transitionProgress, manual);
 }
 
 - (void)simpleTransitionOutWithVelocity:(CGFloat)velocity completion:(void (^)())completion

@@ -748,16 +748,17 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
         panelToolbarLandscapeSize += TGPhotoEditorPanelSize - 55;
     }
     
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
-            return CGRectMake(panelToolbarLandscapeSize, 0, parentViewFrame.size.width - panelToolbarLandscapeSize, parentViewFrame.size.height);
+            return CGRectMake(panelToolbarLandscapeSize + safeAreaInset.left, 0, parentViewFrame.size.width - panelToolbarLandscapeSize - safeAreaInset.left - safeAreaInset.right, parentViewFrame.size.height - safeAreaInset.bottom);
             
         case UIInterfaceOrientationLandscapeRight:
-            return CGRectMake(0, 0, parentViewFrame.size.width - panelToolbarLandscapeSize, parentViewFrame.size.height);
+            return CGRectMake(safeAreaInset.left, 0, parentViewFrame.size.width - panelToolbarLandscapeSize - safeAreaInset.left - safeAreaInset.right, parentViewFrame.size.height - safeAreaInset.bottom);
             
         default:
-            return CGRectMake(0, 0, parentViewFrame.size.width, parentViewFrame.size.height - panelToolbarPortraitSize);
+            return CGRectMake(0, safeAreaInset.top, parentViewFrame.size.width, parentViewFrame.size.height - panelToolbarPortraitSize - safeAreaInset.top - safeAreaInset.bottom);
     }
 }
 
@@ -799,7 +800,14 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     CGFloat screenSide = MAX(referenceSize.width, referenceSize.height) + 2 * TGPhotoEditorPanelSize;
     _wrapperView.frame = CGRectMake((referenceSize.width - screenSide) / 2, (referenceSize.height - screenSide) / 2, screenSide, screenSide);
     
-    UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2, (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2 , (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
+    
+    UIEdgeInsets initialScreenEdges = screenEdges;
+    screenEdges.top += safeAreaInset.top;
+    screenEdges.left += safeAreaInset.left;
+    screenEdges.bottom -= safeAreaInset.bottom;
+    screenEdges.right -= safeAreaInset.right;
     
     [UIView performWithoutAnimation:^
     {
@@ -886,7 +894,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     }];
     
     CGRect containerFrame = [TGPhotoCropController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation hasArbitraryRotation:_cropView.hasArbitraryRotation];
-    containerFrame = CGRectOffset(containerFrame, screenEdges.left, screenEdges.top);
+    containerFrame = CGRectOffset(containerFrame, initialScreenEdges.left, initialScreenEdges.top);
     _cropView.interfaceOrientation = orientation;
     _cropView.frame = CGRectInset(containerFrame, TGPhotoCropAreaInsetSize.width, TGPhotoCropAreaInsetSize.height);
     

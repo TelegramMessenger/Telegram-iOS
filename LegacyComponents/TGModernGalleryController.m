@@ -90,6 +90,9 @@
 
 - (BOOL)prefersStatusBarHidden
 {
+    if (!TGIsPad() && iosMajorVersion() >= 11 && UIInterfaceOrientationIsLandscape([[LegacyComponentsGlobals provider] applicationStatusBarOrientation]))
+        return true;
+    
     if (self.childViewControllers.count > 0)
         return [self.childViewControllers.lastObject prefersStatusBarHidden];
     
@@ -188,11 +191,11 @@
                 [strongSelf reloadDataAtItem:item synchronously:false];
         };
         
-        _model.focusOnItem = ^(id<TGModernGalleryItem> item)
+        _model.focusOnItem = ^(id<TGModernGalleryItem> item, bool synchronously)
         {
             __strong TGModernGalleryController *strongSelf = weakSelf;
             NSUInteger index = [strongSelf.model.items indexOfObject:item];
-            [strongSelf setCurrentItemIndex:index == NSNotFound ? 0 : index synchronously:false];
+            [strongSelf setCurrentItemIndex:index == NSNotFound ? 0 : index synchronously:synchronously];
         };
         
         _model.actionSheetView = ^
@@ -422,6 +425,7 @@
     UIView<TGModernGalleryInterfaceView> *interfaceView = [_model createInterfaceView];
     if (interfaceView == nil)
         interfaceView = [[TGModernGalleryDefaultInterfaceView alloc] initWithFrame:CGRectZero];
+    interfaceView.safeAreaInset = [self calculatedSafeAreaInset];
     
     CGSize previewSize = CGSizeZero;
     if (_previewMode)
@@ -438,7 +442,11 @@
     
     _defaultFooterView = [_model createDefaultFooterView];
     if (_defaultFooterView != nil)
+    {
+        if ([_defaultFooterView respondsToSelector:@selector(setSafeAreaInset:)])
+            [_defaultFooterView setSafeAreaInset:[self calculatedSafeAreaInset]];
         [_view addItemFooterView:_defaultFooterView];
+    }
     
     _view.scrollView.scrollDelegate = self;
     _view.scrollView.delegate = self;
@@ -522,6 +530,32 @@
             }
         }
         return true;
+    };
+    
+    _view.transitionProgress = ^(CGFloat progress, bool manual)
+    {
+        __strong TGModernGalleryController *strongSelf = weakSelf;
+        if (strongSelf != nil)
+        {
+            if (iosMajorVersion() >= 7 && strongSelf.shouldAnimateStatusBarStyleTransition)
+            {
+                if (progress > FLT_EPSILON)
+                {
+                    if (strongSelf->_statusBarStyle != strongSelf->_defaultStatusBarStyle)
+                    {
+                        [strongSelf animateStatusBarTransition:0.2];
+                        strongSelf->_statusBarStyle = strongSelf->_defaultStatusBarStyle;
+                        [strongSelf setNeedsStatusBarAppearanceUpdate];
+                    }
+                }
+                else if (!manual)
+                {
+                    [strongSelf animateStatusBarTransition:0.2];
+                    strongSelf->_statusBarStyle = UIStatusBarStyleLightContent;
+                    [strongSelf setNeedsStatusBarAppearanceUpdate];
+                }
+            }
+        }
     };
     
     [self reloadDataAtItem:_model.focusItem synchronously:!_asyncTransitionIn];
@@ -654,6 +688,13 @@
             }
         };
     }
+}
+
+- (void)controllerInsetUpdated:(UIEdgeInsets)previousInset
+{
+    [super controllerInsetUpdated:previousInset];
+    
+    _view.interfaceView.safeAreaInset = self.controllerSafeAreaInset;
 }
 
 - (UIView *)findScrollView:(UIView *)view
@@ -962,10 +1003,9 @@ static CGFloat transformRotation(CGAffineTransform transform)
     
     if ([toView conformsToProtocol:@protocol(TGModernGalleryTransitionView)])
     {
-        if ([toView respondsToSelector:@selector(hasComplexTransition)])
+        if ([toView respondsToSelector:@selector(hasComplexTransition)] && [(id<TGModernGalleryTransitionView>)toView hasComplexTransition])
         {
-            if ([(id<TGModernGalleryTransitionView>)toView hasComplexTransition])
-                transitionDesc = [(id<TGModernGalleryTransitionView>)toView complexTransitionDescription];
+            transitionDesc = [(id<TGModernGalleryTransitionView>)toView complexTransitionDescription];
         }
         else
         {
@@ -1229,9 +1269,17 @@ static CGFloat transformRotation(CGAffineTransform transform)
 
 - (void)setCurrentItemIndex:(NSUInteger)currentItemIndex synchronously:(bool)synchronously
 {
+    NSUInteger previousItemIndex = [self currentItemIndex];
+    
     _synchronousBoundsChange = synchronously;
     _view.scrollView.bounds = CGRectMake(_view.scrollView.bounds.size.width * currentItemIndex, 0.0f, _view.scrollView.bounds.size.width, _view.scrollView.bounds.size.height);
     _synchronousBoundsChange = false;
+    
+    if (ABS((NSInteger)previousItemIndex - (NSInteger)currentItemIndex) == 1)
+    {
+        TGModernGalleryItemView *previousItemView = [self itemViewForItem:_model.items[previousItemIndex]];
+        [previousItemView reset];
+    }
 }
 
 - (NSUInteger)currentItemIndex
@@ -1580,6 +1628,9 @@ static CGFloat transformRotation(CGAffineTransform transform)
             [[self itemViewForItem:_model.items[_lastReportedFocusedIndex]] setFocused:true];
         }
     }
+    
+    CGFloat transitionProgress = fuzzyIndex - [self currentItemIndex];
+    [_model _interItemTransitionProgressChanged:transitionProgress];
 }
 
 - (void)_updateItemViewsCurrent

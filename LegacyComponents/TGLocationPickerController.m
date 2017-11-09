@@ -97,6 +97,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     TGSearchBar *_searchBar;
     TGSearchDisplayMixin *_searchMixin;
     
+    UIView *_safeAreaCurtainView;
     UIImageView *_attributionView;
     
     bool _placesListVisible;
@@ -182,13 +183,14 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     _searchBarOverlay.userInteractionEnabled = false;
     [self.navigationController.view addSubview:_searchBarOverlay];
     
-    _searchBarWrapper = [[UIView alloc] initWithFrame:CGRectMake(0, -64, self.navigationController.view.frame.size.width, 64)];
+    CGFloat safeAreaInset = self.controllerSafeAreaInset.top > FLT_EPSILON ? self.controllerSafeAreaInset.top : 20;
+    _searchBarWrapper = [[UIView alloc] initWithFrame:CGRectMake(0, -44 - safeAreaInset, self.navigationController.view.frame.size.width, 44 + safeAreaInset)];
     _searchBarWrapper.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _searchBarWrapper.backgroundColor = [UIColor whiteColor];
     _searchBarWrapper.hidden = true;
     [self.navigationController.view addSubview:_searchBarWrapper];
     
-    _searchBar = [[TGSearchBar alloc] initWithFrame:CGRectMake(0.0f, 20, _searchBarWrapper.frame.size.width, [TGSearchBar searchBarBaseHeight]) style:TGSearchBarStyleHeader];
+    _searchBar = [[TGSearchBar alloc] initWithFrame:CGRectMake(0.0f, safeAreaInset, _searchBarWrapper.frame.size.width, [TGSearchBar searchBarBaseHeight]) style:TGSearchBarStyleHeader];
     _searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _searchBar.customBackgroundView.image = nil;
     _searchBar.customActiveBackgroundView.image = nil;
@@ -212,6 +214,12 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     
     _activityIndicator.alpha = 0.0f;
     [self setIsLoading:true];
+    
+    if (self.controllerSafeAreaInset.bottom > FLT_EPSILON)
+    {
+        _safeAreaCurtainView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, _tableView.frame.size.width, self.controllerSafeAreaInset.bottom)];
+        _safeAreaCurtainView.backgroundColor = UIColorRGB(0xf7f7f7);
+    }
     
     if (![self _updateControllerInset:false])
         [self controllerInsetUpdated:UIEdgeInsetsZero];
@@ -765,7 +773,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         CGRect frame = _searchBarWrapper.frame;
         if (hidden)
         {
-            frame.origin.y = -64;
+            frame.origin.y = -frame.size.height;
             _searchBarOverlay.alpha = 0.0f;
         }
         else
@@ -931,11 +939,28 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
                     _activityIndicator.alpha = 0.0f;
                 }];
             }
+            
+            if (_safeAreaCurtainView != nil)
+            {
+                [UIView animateWithDuration:0.25 animations:^
+                 {
+                     _safeAreaCurtainView.alpha = 0.0f;
+                 }];
+            }
         }
         else
         {
             _activityIndicator.alpha = 0.0f;
             [cell configureWithTitle:TGLocalized(@"Map.PullUpForPlaces")];
+            
+            if (_safeAreaCurtainView != nil)
+            {
+                [_safeAreaCurtainView.superview bringSubviewToFront:_safeAreaCurtainView];
+                [UIView animateWithDuration:0.25 animations:^
+                {
+                    _safeAreaCurtainView.alpha = 1.0f;
+                }];
+            }
         }
     }
 }
@@ -1077,6 +1102,16 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     }
     
     return true;
+}
+
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if ([cell isKindOfClass:[TGLocationSectionHeaderCell class]])
+    {
+        if (_safeAreaCurtainView.superview == nil)
+            [_tableView addSubview:_safeAreaCurtainView];
+        _safeAreaCurtainView.frame = CGRectMake(0.0f, CGRectGetMaxY(cell.frame), _safeAreaCurtainView.frame.size.width, _safeAreaCurtainView.frame.size.height);
+    }
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -1237,7 +1272,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
 
 - (CGFloat)visibleContentHeight
 {
-    return _allowLiveLocationSharing ? 165.0f : 97.0f;
+    return (_allowLiveLocationSharing ? 165.0f : 97.0f) + self.controllerSafeAreaInset.bottom;
 }
 
 @end

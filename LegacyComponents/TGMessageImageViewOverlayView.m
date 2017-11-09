@@ -472,6 +472,9 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             if (ABS(diameter - 37.0f) < 0.1) {
                 crossSize = 10.0f;
                 inset = 2.0;
+            } else if (ABS(diameter - 32.0f) < 0.1) {
+                crossSize = 10.0f;
+                inset = 0.0;
             }
             
             CGContextSetBlendMode(context, kCGBlendModeCopy);
@@ -599,6 +602,9 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             if (ABS(diameter - 37.0f) < 0.1) {
                 pathLineWidth = 2.5f;
                 pathDiameter = diameter - pathLineWidth * 2.0 - 1.5f;
+            } else if (ABS(diameter - 32.0f) < 0.1) {
+                pathLineWidth = 2.0f;
+                pathDiameter = diameter - pathLineWidth * 2.0 - 1.5f;
             } else {
                 pathLineWidth = 2.5f;
                 pathDiameter = diameter - pathLineWidth * 2.0 - 1.5f;
@@ -616,12 +622,12 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             const CGFloat diameter = self.radius;
             CGFloat width = round(diameter * 0.4);
             CGFloat height = round(width * 1.2f);
-            CGFloat offset = round(50.0f * 0.06f);
+            CGFloat offset = round(diameter * 0.06f);
             CGFloat verticalOffset = 0.0f;
             CGFloat alpha = 0.8f;
             UIColor *iconColor = TGColorWithHexAndAlpha(0xff000000, 0.45f);
             if (diameter <= 25.0f + FLT_EPSILON) {
-                offset -= 1.0f;
+                offset = round(50.0f * 0.06f) - 1.0f;
                 verticalOffset += 0.5f;
                 alpha = 1.0f;
                 iconColor = TGColorWithHex(0x434344);

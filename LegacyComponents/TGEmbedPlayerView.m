@@ -435,6 +435,8 @@
     _wkWebView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:conf];
     _wkWebView.navigationDelegate = self;
     _wkWebView.scrollView.scrollEnabled = false;
+    if (iosMajorVersion() >= 11)
+        _wkWebView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     
     NSString *embedHTML = [self _embedHTML];
     bool useURL = (embedHTML.length == 0);

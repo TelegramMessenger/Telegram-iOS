@@ -10,6 +10,7 @@
 @property (nonatomic, strong, readonly) SDisposableSet *disposables;
 
 @property (nonatomic, assign) bool requiuresDimView;
+@property (nonatomic, assign) bool requiresShadow;
 @property (nonatomic, assign) bool dismissesByOutsideTap;
 @property (nonatomic, assign) bool hasSwipeGesture;
 
@@ -17,6 +18,7 @@
 
 @property (nonatomic, assign) bool narrowInLandscape;
 @property (nonatomic, assign) bool inhibitPopoverPresentation;
+@property (nonatomic, assign) bool stickWithSpecifiedParentController;
 
 @property (nonatomic, readonly) NSArray *itemViews;
 
@@ -37,6 +39,8 @@
 @property (nonatomic, assign) CGFloat maxHeight;
 
 @property (nonatomic, readonly) CGFloat statusBarHeight;
+@property (nonatomic, readonly) UIEdgeInsets safeAreaInset;
+@property (nonatomic, readonly) CGFloat menuHeight;
 
 @property (nonatomic) bool packIsArchived;
 @property (nonatomic) bool packIsMask;

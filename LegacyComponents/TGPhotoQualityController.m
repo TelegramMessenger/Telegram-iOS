@@ -505,6 +505,12 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     CGFloat panelToolbarPortraitSize = panelSize + TGPhotoEditorToolbarSize;
     CGFloat panelToolbarLandscapeSize = panelToolbarPortraitSize;
     
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2 , (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
+    screenEdges.top += safeAreaInset.top;
+    screenEdges.left += safeAreaInset.left;
+    screenEdges.bottom -= safeAreaInset.bottom;
+    screenEdges.right -= safeAreaInset.right;
     
     if (_dismissing)
         return;
@@ -515,15 +521,15 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         {
             [UIView performWithoutAnimation:^
             {
-                _landscapeToolsWrapperView.frame = CGRectMake(0, (screenSide - referenceSize.height) / 2, panelToolbarLandscapeSize, _landscapeToolsWrapperView.frame.size.height);
+                _landscapeToolsWrapperView.frame = CGRectMake(0, screenEdges.top, panelToolbarLandscapeSize, _landscapeToolsWrapperView.frame.size.height);
                 _landscapeToolControlView.frame = CGRectMake(panelToolbarLandscapeSize - panelSize, 0, panelSize, _landscapeToolsWrapperView.frame.size.height);
             }];
             
-            _landscapeToolsWrapperView.frame = CGRectMake((screenSide - referenceSize.width) / 2, (screenSide - referenceSize.height) / 2, panelToolbarLandscapeSize, referenceSize.height);
+            _landscapeToolsWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.top, panelToolbarLandscapeSize, referenceSize.height);
             
             _landscapeToolControlView.frame = CGRectMake(panelToolbarLandscapeSize - panelSize - 7.0f, 0, panelSize - 7.0f, _landscapeToolsWrapperView.frame.size.height);
             
-            _portraitToolsWrapperView.frame = CGRectMake((screenSide - referenceSize.width) / 2, screenSide - panelToolbarPortraitSize, referenceSize.width, panelToolbarPortraitSize);
+            _portraitToolsWrapperView.frame = CGRectMake(screenEdges.left, screenSide - panelToolbarPortraitSize, referenceSize.width, panelToolbarPortraitSize);
         }
             break;
             
@@ -531,15 +537,15 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         {
             [UIView performWithoutAnimation:^
             {
-                _landscapeToolsWrapperView.frame = CGRectMake(screenSide - panelToolbarLandscapeSize, (screenSide - referenceSize.height) / 2, panelToolbarLandscapeSize, _landscapeToolsWrapperView.frame.size.height);
+                _landscapeToolsWrapperView.frame = CGRectMake(screenSide - panelToolbarLandscapeSize, screenEdges.top, panelToolbarLandscapeSize, _landscapeToolsWrapperView.frame.size.height);
                 _landscapeToolControlView.frame = CGRectMake(0, 0, panelSize, _landscapeToolsWrapperView.frame.size.height);
             }];
             
-            _landscapeToolsWrapperView.frame = CGRectMake((screenSide + referenceSize.width) / 2 - panelToolbarLandscapeSize, (screenSide - referenceSize.height) / 2, panelToolbarLandscapeSize, referenceSize.height);
+            _landscapeToolsWrapperView.frame = CGRectMake(screenEdges.right - panelToolbarLandscapeSize, screenEdges.top, panelToolbarLandscapeSize, referenceSize.height);
             
             _landscapeToolControlView.frame = CGRectMake(7.0f, 0, panelSize - 7.0f, _landscapeToolsWrapperView.frame.size.height);
             
-            _portraitToolsWrapperView.frame = CGRectMake((screenSide - referenceSize.width) / 2, screenSide - panelToolbarPortraitSize, referenceSize.width, panelToolbarPortraitSize);
+            _portraitToolsWrapperView.frame = CGRectMake(screenEdges.left, screenSide - panelToolbarPortraitSize, referenceSize.width, panelToolbarPortraitSize);
         }
             break;
             
@@ -550,9 +556,9 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
                 x = 0;
             else
                 x = screenSide - panelSize;
-            _landscapeToolsWrapperView.frame = CGRectMake(x, (screenSide - referenceSize.height) / 2, panelToolbarLandscapeSize, referenceSize.height);
+            _landscapeToolsWrapperView.frame = CGRectMake(x, screenEdges.top, panelToolbarLandscapeSize, referenceSize.height);
             
-            _portraitToolsWrapperView.frame = CGRectMake((screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2 - panelToolbarPortraitSize, referenceSize.width, panelToolbarPortraitSize);
+            _portraitToolsWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.bottom - panelToolbarPortraitSize, referenceSize.width, panelToolbarPortraitSize);
             
             _portraitToolControlView.frame = CGRectMake(0, 7.0f, _portraitToolsWrapperView.frame.size.width, _portraitToolsWrapperView.frame.size.height - TGPhotoEditorToolbarSize - 7.0f);
         }

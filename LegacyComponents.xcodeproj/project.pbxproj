@@ -28,6 +28,8 @@
 		09AB58151F6C401B0087449F /* TGLocationWavesView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09AB58131F6C401B0087449F /* TGLocationWavesView.m */; };
 		09B51E001F6AF476000EE471 /* TGLocationMapViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09B51E011F6AF476000EE471 /* TGLocationMapViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */; };
+		09E97B571F97C11700526020 /* TGTooltipView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09E97B551F97C11600526020 /* TGTooltipView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09E97B581F97C11700526020 /* TGTooltipView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09E97B561F97C11600526020 /* TGTooltipView.m */; };
 		09F36E561F748E040022A5FE /* TGLocationLiveSessionItemView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F36E541F748E040022A5FE /* TGLocationLiveSessionItemView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09F36E571F748E040022A5FE /* TGLocationLiveSessionItemView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09F36E551F748E040022A5FE /* TGLocationLiveSessionItemView.m */; };
 		09F36E5A1F74FB130022A5FE /* TGLocationLiveElapsedView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F36E581F74FB130022A5FE /* TGLocationLiveElapsedView.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1180,6 +1182,8 @@
 		09AB58131F6C401B0087449F /* TGLocationWavesView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationWavesView.m; sourceTree = "<group>"; };
 		09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationMapViewController.h; sourceTree = "<group>"; };
 		09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationMapViewController.m; sourceTree = "<group>"; };
+		09E97B551F97C11600526020 /* TGTooltipView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGTooltipView.h; sourceTree = "<group>"; };
+		09E97B561F97C11600526020 /* TGTooltipView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGTooltipView.m; sourceTree = "<group>"; };
 		09F36E541F748E040022A5FE /* TGLocationLiveSessionItemView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveSessionItemView.h; sourceTree = "<group>"; };
 		09F36E551F748E040022A5FE /* TGLocationLiveSessionItemView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGLocationLiveSessionItemView.m; sourceTree = "<group>"; };
 		09F36E581F74FB130022A5FE /* TGLocationLiveElapsedView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveElapsedView.h; sourceTree = "<group>"; };
@@ -2627,6 +2631,8 @@
 		D01778AF1F1FFF6E0044446D /* Basic UI Components */ = {
 			isa = PBXGroup;
 			children = (
+				09E97B551F97C11600526020 /* TGTooltipView.h */,
+				09E97B561F97C11600526020 /* TGTooltipView.m */,
 				D01778B01F1FFF810044446D /* TGLabel.h */,
 				D01778B11F1FFF810044446D /* TGLabel.m */,
 				D01778B41F1FFFE30044446D /* TGToolbarButton.h */,
@@ -3972,6 +3978,7 @@
 				D0177A711F2201F00044446D /* TGModernGalleryDefaultInterfaceView.h in Headers */,
 				D01779491F20FFF60044446D /* TGMediaAssetMoment.h in Headers */,
 				D07BCAED1F2B507600ED97AA /* TGAttachmentVideoCell.h in Headers */,
+				09E97B571F97C11700526020 /* TGTooltipView.h in Headers */,
 				D07BC9251F2A380D00ED97AA /* TGPaintSwatch.h in Headers */,
 				D07BC91D1F2A380D00ED97AA /* TGPaintShader.h in Headers */,
 				09F916B11F5D9A4E00E0AEFA /* TGModernConversationAlphacodeAssociatedPanel.h in Headers */,
@@ -4770,6 +4777,7 @@
 				D07BC7A91F2A2B8900ED97AA /* GPUImageFramebuffer.m in Sources */,
 				D07BC6EE1F2A19A700ED97AA /* TGCameraFlashControl.m in Sources */,
 				D017797C1F21075C0044446D /* TGModernCache.m in Sources */,
+				09E97B581F97C11700526020 /* TGTooltipView.m in Sources */,
 				D07BCBF21F2B72DC00ED97AA /* STKDataSourceWrapper.m in Sources */,
 				09F36E571F748E040022A5FE /* TGLocationLiveSessionItemView.m in Sources */,
 				09750FC61F30DD52001B9886 /* TGClipboardGalleryPhotoItem.m in Sources */,

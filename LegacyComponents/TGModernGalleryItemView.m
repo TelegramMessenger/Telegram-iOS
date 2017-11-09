@@ -20,6 +20,10 @@
     return [SSignal single:@true];
 }
 
+- (void)reset
+{
+}
+
 - (void)prepareForRecycle
 {
 }

@@ -4,6 +4,7 @@
 
 @interface TGMediaPickerScrubberHeaderView : UIView
 
+@property (nonatomic, assign) UIEdgeInsets safeAreaInset;
 @property (nonatomic, strong) UIView *panelView;
 @property (nonatomic, strong) TGMediaPickerGalleryVideoScrubber *scrubberView;
 

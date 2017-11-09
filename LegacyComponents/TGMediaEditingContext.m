@@ -434,6 +434,14 @@
     return _cropPipe.signalProducer();
 }
 
+- (SSignal *)adjustmentsUpdatedSignal
+{
+    return [_adjustmentsPipe.signalProducer() map:^id(__unused id value)
+    {
+        return @true;
+    }];
+}
+
 #pragma mark -
 
 - (NSNumber *)timerForItem:(NSObject<TGMediaEditableItem> *)item
@@ -480,21 +488,12 @@
     return [[SSignal single:[self timerForItem:item]] then:updateSignal];
 }
 
-- (NSNumber *)timer
+- (SSignal *)timersUpdatedSignal
 {
-    return _timer;
-}
-
-- (void)setTimer:(NSNumber *)seconds
-{
-    _timer = seconds;
-    
-    _timerPipe.sink([TGMediaTimerUpdate timerUpdate:seconds]);
-}
-
-- (SSignal *)timerSignal
-{
-    return [[SSignal single:[self timer]] then:_timerPipe.signalProducer()];
+    return [_timerPipe.signalProducer() map:^id(__unused id value)
+    {
+        return @true;
+    }];
 }
 
 #pragma mark -

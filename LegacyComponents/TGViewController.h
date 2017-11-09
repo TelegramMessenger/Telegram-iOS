@@ -51,6 +51,7 @@ typedef enum {
 + (bool)isWidescreen;
 + (bool)hasLargeScreen;
 + (bool)hasVeryLargeScreen;
++ (bool)hasTallScreen;
 
 + (void)disableAutorotation;
 + (void)enableAutorotation;
@@ -80,6 +81,7 @@ typedef enum {
 @property (nonatomic, readonly) UIEdgeInsets controllerCleanInset;
 @property (nonatomic, readonly) UIEdgeInsets controllerInset;
 @property (nonatomic, readonly) UIEdgeInsets controllerScrollInset;
+@property (nonatomic, readonly) UIEdgeInsets controllerSafeAreaInset;
 @property (nonatomic) UIEdgeInsets parentInsets;
 @property (nonatomic) UIEdgeInsets explicitTableInset;
 @property (nonatomic) UIEdgeInsets explicitScrollIndicatorInset;
@@ -119,6 +121,7 @@ typedef enum {
 - (void)controllerInsetUpdated:(UIEdgeInsets)previousInset;
 - (bool)shouldAdjustScrollViewInsetsForInversedLayout;
 - (bool)shouldIgnoreNavigationBar;
+- (bool)shouldIgnoreStatusBar;
 
 - (void)setNavigationBarHidden:(bool)navigationBarHidden animated:(BOOL)animated;
 - (void)setNavigationBarHidden:(bool)navigationBarHidden withAnimation:(TGViewControllerNavigationBarAnimation)animation;
@@ -148,6 +151,8 @@ typedef enum {
 
 - (void)localizationUpdated;
 
+- (UIEdgeInsets)calculatedSafeAreaInset;
++ (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation;
 + (int)preferredAnimationCurve;
 
 - (CGSize)referenceViewSizeForOrientation:(UIInterfaceOrientation)orientation;

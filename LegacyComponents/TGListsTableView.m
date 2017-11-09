@@ -75,6 +75,12 @@
     {
         [(TGSearchBar *)tableHeaderView updateClipping:bounds.origin.y + self.contentInset.top];
     }
+    
+    UIView *indexView = self.subviews.lastObject;
+    if ([NSStringFromClass([indexView class]) rangeOfString:@"ViewIndex"].location != NSNotFound)
+    {
+        indexView.frame = CGRectMake(self.frame.size.width - indexView.frame.size.width - self.indexOffset, indexView.frame.origin.y, indexView.frame.size.width, indexView.frame.size.height);
+    }
 }
 
 - (void)insertSubview:(UIView *)view atIndex:(NSInteger)index {

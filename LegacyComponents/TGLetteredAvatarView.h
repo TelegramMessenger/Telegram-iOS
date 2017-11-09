@@ -11,5 +11,6 @@
 
 - (void)loadUserPlaceholderWithSize:(CGSize)size uid:(int)uid firstName:(NSString *)firstName lastName:(NSString *)lastName placeholder:(UIImage *)placeholder;
 - (void)loadGroupPlaceholderWithSize:(CGSize)size conversationId:(int64_t)conversationId title:(NSString *)title placeholder:(UIImage *)placeholder;
+- (void)loadSavedMessagesWithSize:(CGSize)size placeholder:(UIImage *)placeholder;
 
 @end

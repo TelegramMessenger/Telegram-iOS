@@ -541,6 +541,14 @@
     }
 }
 
+- (UIRectEdge)preferredScreenEdgesDeferringSystemGestures
+{
+    if (self.childViewControllers.count > 0)
+        return [self.childViewControllers.lastObject preferredScreenEdgesDeferringSystemGestures];
+    
+    return [super preferredScreenEdgesDeferringSystemGestures];
+}
+
 - (BOOL)prefersStatusBarHidden
 {
     if (self.childViewControllers.count > 0)
@@ -1082,6 +1090,11 @@
     CGFloat screenWidth = MIN(self.view.frame.size.width, self.view.frame.size.height);
     CGFloat recipientWidth = MIN(_recipientLabel.frame.size.width, screenWidth - 100.0f);
     
+    if (self.controllerSafeAreaInset.top > 20.0f + FLT_EPSILON)
+        screenEdges.top += self.controllerSafeAreaInset.top;
+    screenEdges.left += self.controllerSafeAreaInset.left;
+    screenEdges.right -= self.controllerSafeAreaInset.right;
+    
     CGRect frame = CGRectZero;
     switch (orientation)
     {
@@ -1112,6 +1125,7 @@
     }
     
     CGSize referenceSize = [self referenceViewSizeForOrientation:originalOrientation];
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
     
     [_captionMixin setContentAreaHeight:self.view.frame.size.height];
     
@@ -1125,7 +1139,7 @@
     CGFloat portraitToolbarViewBottomEdge = screenSide;
     if (TGIsPad())
         portraitToolbarViewBottomEdge = screenEdges.bottom;
-    _portraitToolbarView.frame = CGRectMake(screenEdges.left, portraitToolbarViewBottomEdge - TGPhotoEditorToolbarSize, referenceSize.width, TGPhotoEditorToolbarSize);
+    _portraitToolbarView.frame = CGRectMake(screenEdges.left, portraitToolbarViewBottomEdge - TGPhotoEditorToolbarSize - safeAreaInset.bottom, referenceSize.width, TGPhotoEditorToolbarSize + safeAreaInset.bottom);
     
     UIEdgeInsets captionEdgeInsets = screenEdges;
     captionEdgeInsets.bottom = _portraitToolbarView.frame.size.height;
@@ -1137,7 +1151,7 @@
         {
             [UIView performWithoutAnimation:^
             {
-                _landscapeToolbarView.frame = CGRectMake(screenEdges.left, screenEdges.top, TGPhotoEditorToolbarSize, referenceSize.height);
+                _landscapeToolbarView.frame = CGRectMake(screenEdges.left, screenEdges.top, TGPhotoEditorToolbarSize + safeAreaInset.left, referenceSize.height);
             }];
         }
             break;
@@ -1146,7 +1160,7 @@
         {
             [UIView performWithoutAnimation:^
             {
-                _landscapeToolbarView.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize, screenEdges.top, TGPhotoEditorToolbarSize, referenceSize.height);
+                _landscapeToolbarView.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - safeAreaInset.right, screenEdges.top, TGPhotoEditorToolbarSize + safeAreaInset.right, referenceSize.height);
             }];
         }
             break;

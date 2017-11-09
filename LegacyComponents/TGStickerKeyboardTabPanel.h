@@ -19,6 +19,8 @@ typedef enum
 @property (nonatomic, copy) void (^toggleExpanded)(void);
 @property (nonatomic, copy) void (^expandInteraction)(CGFloat offset);
 
+@property (nonatomic, assign) UIEdgeInsets safeAreaInset;
+
 - (instancetype)initWithFrame:(CGRect)frame style:(TGStickerKeyboardViewStyle)style;
 
 - (void)setStickerPacks:(NSArray *)stickerPacks showRecent:(bool)showRecent showFavorite:(bool)showFavorite showGroup:(bool)showGroup showGroupLast:(bool)showGroupLast showGifs:(bool)showGifs showTrendingFirst:(bool)showTrendingFirst showTrendingLast:(bool)showTrendingLast;
@@ -33,5 +35,7 @@ typedef enum
 
 - (void)setExpanded:(bool)expanded;
 - (void)updateExpanded:(bool)expanded;
+
+- (void)setHidden:(bool)hidden animated:(bool)animated;
 
 @end

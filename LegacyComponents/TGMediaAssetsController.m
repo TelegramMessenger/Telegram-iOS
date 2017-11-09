@@ -6,6 +6,8 @@
 #import "TGMediaGroupsController.h"
 
 #import <LegacyComponents/TGMediaAssetMomentList.h>
+#import <LegacyComponents/TGMenuView.h>
+#import <LegacyComponents/TGTooltipView.h>
 
 #import <LegacyComponents/TGFileUtils.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>
@@ -26,7 +28,7 @@
 #import <LegacyComponents/TGVideoEditAdjustments.h>
 #import <LegacyComponents/TGPaintingData.h>
 
-@interface TGMediaAssetsController () <UINavigationControllerDelegate>
+@interface TGMediaAssetsController () <UINavigationControllerDelegate, ASWatcher>
 {
     TGMediaAssetsControllerIntent _intent;
     
@@ -34,25 +36,37 @@
     TGMediaSelectionContext *_selectionContext;
     TGMediaEditingContext *_editingContext;
     
+    SMetaDisposable *_groupingChangedDisposable;
     SMetaDisposable *_selectionChangedDisposable;
+    SMetaDisposable *_timersChangedDisposable;
+    SMetaDisposable *_adjustmentsChangedDisposable;
     
     TGViewController *_searchController;
     UIView *_searchSnapshotView;
     
+    NSTimer *_tooltipTimer;
+    TGMenuContainerView *_tooltipContainerView;
+    TGTooltipContainerView *_groupingTooltipContainerView;
+    
     id<LegacyComponentsContext> _context;
     bool _saveEditedPhotos;
-
+    
+    SMetaDisposable *_tooltipDismissDisposable;
 }
 
+@property (nonatomic, strong) ASHandle *actionHandle;
 @property (nonatomic, readonly) TGMediaAssetsLibrary *assetsLibrary;
 
 @end
 
 @implementation TGMediaAssetsController
 
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping
 {
-    TGMediaAssetsController *assetsController = [[TGMediaAssetsController alloc] initWithContext:context intent:intent saveEditedPhotos:saveEditedPhotos];
+    if (intent != TGMediaAssetsControllerSendMediaIntent)
+        allowGrouping = false;
+    
+    TGMediaAssetsController *assetsController = [[TGMediaAssetsController alloc] initWithContext:context intent:intent saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping];
     
     __weak TGMediaAssetsController *weakController = assetsController;
     void (^catchToolbarView)(bool) = ^(bool enabled)
@@ -183,7 +197,7 @@
     return pickerController;
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context intent:(TGMediaAssetsControllerIntent)intent saveEditedPhotos:(bool)saveEditedPhotos
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context intent:(TGMediaAssetsControllerIntent)intent saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping
 {
     self = [super initWithNavigationBarClass:[TGNavigationBar class] toolbarClass:[UIToolbar class]];
     if (self != nil)
@@ -191,12 +205,16 @@
         _context = context;
         _saveEditedPhotos = saveEditedPhotos;
         
+        _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
+        
         self.delegate = self;
         _intent = intent;
         _assetsLibrary = [TGMediaAssetsLibrary libraryForAssetType:[TGMediaAssetsController assetTypeForIntent:intent]];
         
         __weak TGMediaAssetsController *weakSelf = self;
-        _selectionContext = [[TGMediaSelectionContext alloc] init];
+        _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping];
+        if (allowGrouping)
+            _selectionContext.grouping = ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_mediaGroupingDisabled_v0"] boolValue];
         [_selectionContext setItemSourceUpdatedSignal:[_assetsLibrary libraryChanged]];
         _selectionContext.updatedItemsSignal = ^SSignal *(NSArray *items)
         {
@@ -207,6 +225,43 @@
             return [strongSelf->_assetsLibrary updatedAssetsForAssets:items];
         };
         
+        bool (^updateGroupingButtonVisibility)(void) = ^bool
+        {
+            __strong TGMediaAssetsController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return false;
+            
+            bool onlyGroupableMedia = true;
+            for (TGMediaAsset *asset in strongSelf->_selectionContext.selectedItems)
+            {
+                if (asset.type == TGMediaAssetGifType)
+                {
+                    onlyGroupableMedia = false;
+                    break;
+                }
+                else
+                {
+                    if ([[strongSelf->_editingContext timerForItem:asset] integerValue] > 0)
+                    {
+                        onlyGroupableMedia = false;
+                        break;
+                    }
+                    
+                    id<TGMediaEditAdjustments> adjustments = [strongSelf->_editingContext adjustmentsForItem:asset];
+                    if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]] && ((TGMediaVideoEditAdjustments *)adjustments).sendAsGif)
+                    {
+                        onlyGroupableMedia = false;
+                        break;
+                    }
+                }
+            }
+            
+            bool groupingButtonVisible = strongSelf->_selectionContext.allowGrouping && onlyGroupableMedia && strongSelf->_selectionContext.count > 1;
+            [strongSelf->_toolbarView setCenterButtonHidden:!groupingButtonVisible animated:true];
+            
+            return groupingButtonVisible;
+        };
+        
         _selectionChangedDisposable = [[SMetaDisposable alloc] init];
         [_selectionChangedDisposable setDisposable:[[_selectionContext selectionChangedSignal] startWithNext:^(__unused id next)
         {
@@ -214,14 +269,46 @@
             if (strongSelf == nil)
                 return;
             
+            bool groupingButtonVisible = updateGroupingButtonVisibility();
             [strongSelf->_toolbarView setSelectedCount:strongSelf->_selectionContext.count animated:true];
             [strongSelf->_toolbarView setRightButtonEnabled:strongSelf->_selectionContext.count > 0 animated:false];
+            
+            if (groupingButtonVisible && [strongSelf shouldDisplayTooltip] && strongSelf->_selectionContext.grouping)
+                [strongSelf setupTooltip:[strongSelf->_toolbarView convertRect:strongSelf->_toolbarView.centerButton.frame toView:strongSelf.view]];
         }]];
         
         if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent)
             _editingContext = [[TGMediaEditingContext alloc] init];
         else if (intent == TGMediaAssetsControllerSendFileIntent)
             _editingContext = [TGMediaEditingContext contextForCaptionsOnly];
+        
+        if (allowGrouping)
+        {
+            _groupingChangedDisposable = [[SMetaDisposable alloc] init];
+            [_groupingChangedDisposable setDisposable:[_selectionContext.groupingChangedSignal startWithNext:^(NSNumber *next)
+            {
+                __strong TGMediaAssetsController *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                [strongSelf->_toolbarView setCenterButtonSelected:next.boolValue];
+            }]];
+            
+            if (_editingContext != nil)
+            {
+                _timersChangedDisposable = [[SMetaDisposable alloc] init];
+                [_timersChangedDisposable setDisposable:[_editingContext.timersUpdatedSignal startWithNext:^(__unused NSNumber *next)
+                {
+                    updateGroupingButtonVisibility();
+                }]];
+                
+                _adjustmentsChangedDisposable = [[SMetaDisposable alloc] init];
+                [_adjustmentsChangedDisposable setDisposable:[_editingContext.adjustmentsUpdatedSignal startWithNext:^(__unused NSNumber *next)
+                {
+                    updateGroupingButtonVisibility();
+                }]];
+            }
+        }
     }
     return self;
 }
@@ -230,16 +317,34 @@
 {
     self.delegate = nil;
     [_selectionChangedDisposable dispose];
+    [_tooltipDismissDisposable dispose];
 }
 
 - (void)loadView
 {
     [super loadView];
     
-    _toolbarView = [[TGMediaPickerToolbarView alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height - TGMediaPickerToolbarHeight, self.view.frame.size.width, TGMediaPickerToolbarHeight)];
+    CGFloat inset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation].bottom;
+    _toolbarView = [[TGMediaPickerToolbarView alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height - TGMediaPickerToolbarHeight - inset, self.view.frame.size.width, TGMediaPickerToolbarHeight + inset)];
+    _toolbarView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation];
     _toolbarView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     if (_intent != TGMediaAssetsControllerSendFileIntent && _intent != TGMediaAssetsControllerSendMediaIntent)
         [_toolbarView setRightButtonHidden:true];
+    if (_selectionContext.allowGrouping)
+    {
+        [_toolbarView setCenterButtonImage:TGTintedImage(TGComponentsImageNamed(@"MediaPickerGroupPhotosIcon"), UIColorRGB(0x858e99))];
+        [_toolbarView setCenterButtonSelectedImage:TGComponentsImageNamed(@"MediaPickerGroupPhotosIcon")];
+        [_toolbarView setCenterButtonHidden:true animated:false];
+        [_toolbarView setCenterButtonSelected:_selectionContext.grouping];
+        
+        __weak TGMediaAssetsController *weakSelf = self;
+        _toolbarView.centerPressed = ^
+        {
+            __strong TGMediaAssetsController *strongSelf = weakSelf;
+            if (strongSelf != nil)
+                [strongSelf groupPhotosPressed];
+        };
+    }
     [self.view addSubview:_toolbarView];
 }
 
@@ -263,6 +368,13 @@
     };
 }
 
+- (void)groupPhotosPressed
+{
+    [_selectionContext toggleGrouping];
+    
+    [self showGroupingTooltip:_selectionContext.grouping duration:2.5];
+}
+
 - (void)dismiss
 {
     if (self.dismissalBlock != nil)
@@ -274,6 +386,11 @@
 - (void)viewDidLayoutSubviews
 {
     [super viewDidLayoutSubviews];
+    
+    UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
+    if (self.view.frame.size.width > self.view.frame.size.height)
+        orientation = UIInterfaceOrientationLandscapeLeft;
+    _toolbarView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
     
     if (_searchController == nil)
         return;
@@ -350,7 +467,17 @@
 - (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSString *))descriptionGenerator
 {
     bool storeAssets = (_editingContext != nil) && self.shouldStoreAssets;
+    
+    [[NSUserDefaults standardUserDefaults] setObject:@(!_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
+    
     return [TGMediaAssetsController resultSignalsForSelectionContext:_selectionContext editingContext:_editingContext intent:_intent currentItem:currentItem storeAssets:storeAssets useMediaCache:self.localMediaCacheEnabled descriptionGenerator:descriptionGenerator saveEditedPhotos:_saveEditedPhotos];
+}
+
++ (int64_t)generateGroupedId
+{
+    int64_t value;
+    arc4random_buf(&value, sizeof(int64_t));
+    return value;
 }
 
 + (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)__unused useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
@@ -416,6 +543,11 @@
         }];
     };
     
+    NSNumber *groupedId;
+    NSInteger i = 0;
+    if (selectionContext.grouping && selectedItems.count > 1)
+        groupedId = @([self generateGroupedId]);
+    
     for (TGMediaAsset *asset in selectedItems)
     {
         switch (asset.type)
@@ -475,6 +607,8 @@
                         
                         if (timer != nil)
                             dict[@"timer"] = timer;
+                        else if (groupedId != nil)
+                            dict[@"groupedId"] = groupedId;
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil);
                         return generatedItem;
@@ -519,6 +653,8 @@
                         
                         if (timer != nil)
                             dict[@"timer"] = timer;
+                        else if (groupedId != nil)
+                            dict[@"groupedId"] = groupedId;
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil);
                         return generatedItem;
@@ -526,6 +662,8 @@
                     {
                         return inlineSignal;
                     }]];
+                    
+                    i++;
                 }
             }
                 break;
@@ -600,10 +738,14 @@
                         
                         if (timer != nil)
                             dict[@"timer"] = timer;
+                        else if (groupedId != nil)
+                            dict[@"groupedId"] = groupedId;
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil);
                         return generatedItem;
                     }]];
+                    
+                    i++;
                 }
             }
                 break;
@@ -669,6 +811,12 @@
                 
             default:
                 break;
+        }
+        
+        if (groupedId != nil && i == 10)
+        {
+            i = 0;
+            groupedId = @([self generateGroupedId]);
         }
     }
     return signals;
@@ -845,6 +993,101 @@
     }
     
     return assetType;
+}
+
+#pragma mark - Grouping Tooltip
+
+- (bool)shouldDisplayTooltip
+{
+    return ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedGroupTooltip_v0"] boolValue];
+}
+
+- (void)setupTooltip:(CGRect)rect
+{
+    if (_tooltipContainerView != nil)
+        return;
+    
+    rect = CGRectOffset(rect, 0.0f, 15.0f);
+    
+    _tooltipTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(tooltipTimerTick) interval:3.0 repeat:false];
+    
+    _tooltipContainerView = [[TGMenuContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.view.frame.size.width, self.view.frame.size.height)];
+    [self.view addSubview:_tooltipContainerView];
+    
+    NSMutableArray *actions = [[NSMutableArray alloc] init];
+    [actions addObject:[[NSDictionary alloc] initWithObjectsAndKeys:TGLocalized(@"MediaPicker.TapToUngroupDescription"), @"title", nil]];
+    
+    [_tooltipContainerView.menuView setButtonsAndActions:actions watcherHandle:_actionHandle];
+    [_tooltipContainerView.menuView sizeToFit];
+    _tooltipContainerView.menuView.buttonHighlightDisabled = true;
+    
+    [_tooltipContainerView showMenuFromRect:rect animated:false];
+    
+    [[NSUserDefaults standardUserDefaults] setObject:@true forKey:@"TG_displayedGroupTooltip_v0"];
+}
+
+- (void)tooltipTimerTick
+{
+    [_tooltipTimer invalidate];
+    _tooltipTimer = nil;
+    
+    [_tooltipContainerView hideMenu];
+}
+
+- (void)actionStageActionRequested:(NSString *)action options:(id)__unused options
+{
+    if ([action isEqualToString:@"menuAction"])
+    {
+        [_tooltipTimer invalidate];
+        _tooltipTimer = nil;
+        
+        [_tooltipContainerView hideMenu];
+    }
+}
+
+- (void)showGroupingTooltip:(bool)grouped duration:(NSTimeInterval)duration
+{
+    NSString *tooltipText = TGLocalized(grouped ? @"MediaPicker.GroupDescription" : @"MediaPicker.UngroupDescription");
+    
+    if (_groupingTooltipContainerView.isShowingTooltip && _groupingTooltipContainerView.tooltipView.sourceView == _toolbarView.centerButton)
+    {
+        [_groupingTooltipContainerView.tooltipView setText:tooltipText animated:true];
+    }
+    else
+    {
+        [_tooltipContainerView removeFromSuperview];
+        [_groupingTooltipContainerView removeFromSuperview];
+        
+        _groupingTooltipContainerView = [[TGTooltipContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.view.frame.size.width, self.view.frame.size.height)];
+        [self.view addSubview:_groupingTooltipContainerView];
+        
+        [_groupingTooltipContainerView.tooltipView setText:tooltipText animated:false];
+        _groupingTooltipContainerView.tooltipView.sourceView = _toolbarView.centerButton;
+        
+        CGRect recordButtonFrame = [_toolbarView convertRect:_toolbarView.centerButton.frame toView:_groupingTooltipContainerView];
+        recordButtonFrame.origin.y += 15.0f;
+        [_groupingTooltipContainerView showTooltipFromRect:recordButtonFrame animated:false];
+    }
+    
+    if (_tooltipDismissDisposable == nil)
+        _tooltipDismissDisposable = [[SMetaDisposable alloc] init];
+    
+    __weak TGTooltipContainerView *weakContainerView = _groupingTooltipContainerView;
+    [_tooltipDismissDisposable setDisposable:[[[SSignal complete] delay:duration onQueue:[SQueue mainQueue]] startWithNext:nil completed:^{
+        __strong TGTooltipContainerView *strongContainerView = weakContainerView;
+        if (strongContainerView != nil)
+            [strongContainerView hideTooltip];
+    }]];
+}
+
+- (BOOL)prefersStatusBarHidden
+{
+    return !TGIsPad() && iosMajorVersion() >= 11 && UIInterfaceOrientationIsLandscape([[LegacyComponentsGlobals provider] applicationStatusBarOrientation]);
+}
+
+- (bool)allowGrouping
+{
+    return _selectionContext.allowGrouping;
 }
 
 @end

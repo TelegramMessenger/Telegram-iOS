@@ -121,6 +121,16 @@
     return TGComponentsImageNamed(@"PhotoEditorMuteActive.png");
 }
 
++ (UIImage *)groupIcon
+{
+    return TGComponentsImageNamed(@"PhotoEditorGroupPhotosIcon.png");
+}
+
++ (UIImage *)ungroupIcon
+{
+    return TGComponentsImageNamed(@"PhotoEditorUngroupPhotosIcon.png");
+}
+
 + (UIImage *)qualityIconForPreset:(TGMediaVideoConversionPreset)preset
 {
     UIImage *background = TGComponentsImageNamed(@"PhotoEditorQuality");

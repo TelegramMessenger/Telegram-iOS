@@ -36,6 +36,7 @@
     var position = 0.0;
     var downloadProgress = 0.0;
     var failed = false;
+    var autostarted = false;
 
     YT.ready(function() {
         player = new YT.Player('player', %@);
@@ -62,9 +63,6 @@
         window.location.href = 'ytplayer://onReady?data=' + event.data;
         iframe = document.getElementById('player');
         duration = player.getDuration();
-        if (%@) {
-            player.playVideo();
-        }
         injectCmd('fixChrome');
     }
     

@@ -1004,6 +1004,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     {
         _stickersView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         _stickersView.frame = self.view.bounds;
+        _stickersView.safeAreaInset = self.controllerSafeAreaInset;
         [self.parentViewController.view addSubview:_stickersView];
     }
     else
@@ -1886,7 +1887,12 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     CGFloat panelToolbarPortraitSize = TGPhotoPaintBottomPanelSize + TGPhotoEditorToolbarSize;
     CGFloat panelToolbarLandscapeSize = TGPhotoPaintBottomPanelSize + self.toolbarLandscapeSize;
     
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2, (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
+    screenEdges.top += safeAreaInset.top;
+    screenEdges.left += safeAreaInset.left;
+    screenEdges.bottom -= safeAreaInset.bottom;
+    screenEdges.right -= safeAreaInset.right;
     
     CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize];
     
@@ -1894,6 +1900,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     if (_settingsView != nil)
         [_settingsView setInterfaceOrientation:orientation];
+    
+    _stickersView.safeAreaInset = safeAreaInset;
     
     switch (orientation)
     {
@@ -1915,7 +1923,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             
             _landscapeActionsView.frame = CGRectMake(screenEdges.right - TGPhotoPaintTopPanelSize, screenEdges.top, TGPhotoPaintTopPanelSize, referenceSize.height);
             
-            _settingsView.frame = CGRectMake(self.toolbarLandscapeSize + 50.0f, 0.0f, _settingsView.frame.size.width, _settingsView.frame.size.height);
+            _settingsView.frame = CGRectMake(self.toolbarLandscapeSize + 50.0f + safeAreaInset.left, 0.0f, _settingsView.frame.size.width, _settingsView.frame.size.height);
         }
             break;
             
@@ -1937,7 +1945,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             
             _landscapeActionsView.frame = CGRectMake(screenEdges.left, screenEdges.top, TGPhotoPaintTopPanelSize, referenceSize.height);
             
-            _settingsView.frame = CGRectMake(_settingsViewWrapper.frame.size.width - _settingsView.frame.size.width - self.toolbarLandscapeSize - 50.0f, 0.0f, _settingsView.frame.size.width, _settingsView.frame.size.height);
+            _settingsView.frame = CGRectMake(_settingsViewWrapper.frame.size.width - _settingsView.frame.size.width - self.toolbarLandscapeSize - 50.0f - safeAreaInset.right, 0.0f, _settingsView.frame.size.width, _settingsView.frame.size.height);
         }
             break;
             
@@ -1968,7 +1976,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             }
             else
             {
-                _settingsView.frame = CGRectMake(_settingsViewWrapper.frame.size.width - _settingsView.frame.size.width, _settingsViewWrapper.frame.size.height - _settingsView.frame.size.height - TGPhotoEditorToolbarSize - 50.0f, _settingsView.frame.size.width, _settingsView.frame.size.height);
+                _settingsView.frame = CGRectMake(_settingsViewWrapper.frame.size.width - _settingsView.frame.size.width, _settingsViewWrapper.frame.size.height - _settingsView.frame.size.height - TGPhotoEditorToolbarSize - 50.0f - safeAreaInset.bottom, _settingsView.frame.size.width, _settingsView.frame.size.height);
             }
         }
             break;

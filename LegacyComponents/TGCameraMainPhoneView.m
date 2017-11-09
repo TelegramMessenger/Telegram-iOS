@@ -50,6 +50,7 @@
 @interface TGCameraMainPhoneView () <ASWatcher>
 {
     TGCameraTopPanelView *_topPanelView;
+    UIView *_topPanelBackgroundView;
     UIView *_bottomPanelView;
     UIView *_bottomPanelBackgroundView;
     
@@ -58,7 +59,10 @@
     TGCameraFlashControl *_flashControl;
     TGCameraFlashActiveView *_flashActiveView;
     
+    CGFloat _topPanelOffset;
     CGFloat _topPanelHeight;
+    
+    CGFloat _bottomPanelOffset;
     CGFloat _bottomPanelHeight;
     CGFloat _modeControlHeight;
     
@@ -88,19 +92,31 @@
     {
         _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
         
+        CGFloat shutterButtonWidth = 66.0f;
         CGSize screenSize = TGScreenSize();
         CGFloat widescreenWidth = MAX(screenSize.width, screenSize.height);
-        if (widescreenWidth >= 736.0f - FLT_EPSILON)
+        if (widescreenWidth == 812.0f)
+        {
+            _topPanelOffset = 33.0f;
+            _topPanelHeight = 44.0f;
+            _bottomPanelOffset = 63.0f;
+            _bottomPanelHeight = 123.0f;
+            _modeControlHeight = 40.0f;
+            shutterButtonWidth = 70.0f;
+        }
+        else if (widescreenWidth >= 736.0f - FLT_EPSILON)
         {
             _topPanelHeight = 44.0f;
             _bottomPanelHeight = 140.0f;
             _modeControlHeight = 50.0f;
+            shutterButtonWidth = 70.0f;
         }
         else if (widescreenWidth >= 667.0f - FLT_EPSILON)
         {
             _topPanelHeight = 44.0f;
             _bottomPanelHeight = 123.0f;
-            _modeControlHeight = 42.0f;
+            _modeControlHeight = 40.0f;
+            shutterButtonWidth = 70.0f;
         }
         else
         {
@@ -112,7 +128,7 @@
         __weak TGCameraMainPhoneView *weakSelf = self;
         
         _topPanelView = [[TGCameraTopPanelView alloc] init];
-        _topPanelView.backgroundColor = [TGCameraInterfaceAssets transparentPanelBackgroundColor];
+        _topPanelView.clipsToBounds = false;
         _topPanelView.isPointInside = ^bool(CGPoint point)
         {
             __strong TGCameraMainPhoneView *strongSelf = weakSelf;
@@ -123,6 +139,10 @@
             return CGRectContainsPoint(rect, point);
         };
         [self addSubview:_topPanelView];
+        
+        _topPanelBackgroundView = [[UIView alloc] initWithFrame:_topPanelView.bounds];
+        _topPanelBackgroundView.backgroundColor = [TGCameraInterfaceAssets transparentPanelBackgroundColor];
+        [_topPanelView addSubview:_topPanelBackgroundView];
         
         _bottomPanelView = [[UIView alloc] init];
         [self addSubview:_bottomPanelView];
@@ -160,7 +180,7 @@
         [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_bottomPanelView addSubview:_doneButton];
         
-        _shutterButton = [[TGCameraShutterButton alloc] initWithFrame:CGRectMake((frame.size.width - 66) / 2, 10, 66, 66)];
+        _shutterButton = [[TGCameraShutterButton alloc] initWithFrame:CGRectMake((frame.size.width - shutterButtonWidth) / 2, 10, shutterButtonWidth, shutterButtonWidth)];
         [_shutterButton addTarget:self action:@selector(shutterButtonReleased) forControlEvents:UIControlEventTouchUpInside];
         [_shutterButton addTarget:self action:@selector(shutterButtonPressed) forControlEvents:UIControlEventTouchDown];
         [_bottomPanelView addSubview:_shutterButton];
@@ -692,16 +712,17 @@
 
 - (void)layoutSubviews
 {
-    _topPanelView.frame = CGRectMake(0, 0, self.frame.size.width, _topPanelHeight);
+    _topPanelView.frame = CGRectMake(0, _topPanelOffset, self.frame.size.width, _topPanelHeight);
+    _topPanelBackgroundView.frame = CGRectMake(0.0f, -_topPanelOffset, self.frame.size.width, _topPanelHeight + _topPanelOffset);
     [self _layoutTopPanelSubviewsForInterfaceOrientation:_interfaceOrientation];
     
-    _bottomPanelView.frame = CGRectMake(0, self.frame.size.height - _bottomPanelHeight, self.frame.size.width, _bottomPanelHeight);
+    _bottomPanelView.frame = CGRectMake(0, self.frame.size.height - _bottomPanelHeight - _bottomPanelOffset, self.frame.size.width, _bottomPanelHeight + _bottomPanelOffset);
     _modeControl.frame = CGRectMake(0, 0, self.frame.size.width, _modeControlHeight);
-    _shutterButton.frame = CGRectMake((self.frame.size.width - 66) / 2, _modeControlHeight, _shutterButton.frame.size.width, _shutterButton.frame.size.height);
-    _cancelButton.frame = CGRectMake(0, _shutterButton.frame.origin.y + 11, _cancelButton.frame.size.width, _cancelButton.frame.size.height);
-    _doneButton.frame = CGRectMake(_bottomPanelView.frame.size.width - _doneButton.frame.size.width, _shutterButton.frame.origin.y + 11, _doneButton.frame.size.width, _doneButton.frame.size.height);
+    _shutterButton.frame = CGRectMake(round((self.frame.size.width - _shutterButton.frame.size.width) / 2), _modeControlHeight, _shutterButton.frame.size.width, _shutterButton.frame.size.height);
+    _cancelButton.frame = CGRectMake(0, round(_shutterButton.center.y - _cancelButton.frame.size.height / 2.0f), _cancelButton.frame.size.width, _cancelButton.frame.size.height);
+    _doneButton.frame = CGRectMake(_bottomPanelView.frame.size.width - _doneButton.frame.size.width, round(_shutterButton.center.y - _doneButton.frame.size.height / 2.0f), _doneButton.frame.size.width, _doneButton.frame.size.height);
     
-    _flipButton.frame = CGRectMake(self.frame.size.width - _flipButton.frame.size.width - 4.0f, 47.0f, _flipButton.frame.size.width, _flipButton.frame.size.height);
+    _flipButton.frame = CGRectMake(self.frame.size.width - _flipButton.frame.size.width - 4.0f - 7.0f, round(_shutterButton.center.y - _flipButton.frame.size.height / 2.0f), _flipButton.frame.size.width, _flipButton.frame.size.height);
     
     if (!_displayedTooltip)
     {

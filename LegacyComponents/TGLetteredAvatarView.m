@@ -146,6 +146,17 @@ static bool isEmojiCharacter(NSString *singleChar)
         [_label setNeedsDisplay];
 }
 
+- (void)loadSavedMessagesWithSize:(CGSize)size placeholder:(UIImage *)placeholder
+{
+    _label.text = @"";
+    
+    NSString *placeholderUri = [[NSString alloc] initWithFormat:@"placeholder://?type=saved-messages&w=%d&h=%d" PRId32 "", (int)size.width, (int)size.height];
+    if (!TGStringCompare([self currentUrl], placeholderUri))
+        [super loadImage:placeholderUri filter:nil placeholder:placeholder];
+    
+    _label.hidden = true;
+}
+
 - (void)loadUserPlaceholderWithSize:(CGSize)size uid:(int)uid firstName:(NSString *)firstName lastName:(NSString *)lastName placeholder:(UIImage *)placeholder
 {
     _label.font = _doubleFont;

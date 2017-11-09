@@ -38,11 +38,14 @@
     TGMediaPickerModernGalleryMixin *_previewGalleryMixin;
     NSIndexPath *_previewIndexPath;
     
+    id<SDisposable> _selectionChangedDisposable;
+    
     bool _checked3dTouch;
     
     id<LegacyComponentsContext> _context;
     bool _saveEditedPhotos;
 }
+
 @end
 
 @implementation TGMediaAssetsPickerController
@@ -91,6 +94,7 @@
 - (void)dealloc
 {
     [_assetsDisposable dispose];
+    [_selectionChangedDisposable dispose];
 }
 
 - (void)loadView
@@ -120,6 +124,22 @@
         
         return [strongSelf _itemAtIndexPath:indexPath];
     };
+    
+    _selectionChangedDisposable = [[self.selectionContext selectionChangedSignal] startWithNext:^(id next)
+    {
+        __strong TGMediaAssetsPickerController *strongSelf = weakSelf;
+        if (strongSelf != nil)
+            return [strongSelf updateSelectionIndexes];
+    }];
+}
+
+- (void)updateSelectionIndexes
+{
+    for (TGMediaPickerCell *cell in _collectionView.visibleCells)
+    {
+        NSUInteger index = [self.selectionContext indexOfItem:(id<TGMediaSelectableItem>)cell.item];
+        [cell.checkButton setNumber:index];
+    }
 }
 
 - (void)viewDidLoad

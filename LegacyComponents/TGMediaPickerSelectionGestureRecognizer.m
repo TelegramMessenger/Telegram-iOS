@@ -128,7 +128,10 @@ const CGFloat TGSelectionGestureVerticalFailureThreshold = 5.0f;
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)__unused otherGestureRecognizer
 {
-    return gestureRecognizer == _gestureRecognizer;
+    if ([otherGestureRecognizer.view isKindOfClass:[UIScrollView class]])
+        return true;
+    
+    return false;
 }
 
 @end

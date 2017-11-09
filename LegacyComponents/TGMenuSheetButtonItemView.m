@@ -62,10 +62,13 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
         self.action();
 }
 
-- (void)buttonLongPressed
+- (void)buttonLongPressed:(UILongPressGestureRecognizer *)gestureRecognizer
 {
-    if (self.longPressAction != nil)
-        self.longPressAction();
+    if (gestureRecognizer.state == UIGestureRecognizerStateBegan)
+    {
+        if (self.longPressAction != nil)
+            self.longPressAction();
+    }
 }
 
 - (void)setLongPressAction:(void (^)(void))longPressAction
@@ -73,7 +76,7 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
     _longPressAction = [longPressAction copy];
     if (_longPressAction != nil)
     {
-        UILongPressGestureRecognizer *gestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(buttonLongPressed)];
+        UILongPressGestureRecognizer *gestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(buttonLongPressed:)];
         gestureRecognizer.minimumPressDuration = 0.4;
         [_button addGestureRecognizer:gestureRecognizer];
     }

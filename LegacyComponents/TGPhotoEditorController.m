@@ -1658,7 +1658,6 @@
 - (void)updateLayout:(UIInterfaceOrientation)orientation
 {
     bool isPad = [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad;
-    
     if ([self inFormSheet] || isPad)
         orientation = UIInterfaceOrientationPortrait;
     
@@ -1674,13 +1673,15 @@
     
     _landscapeToolbarView.interfaceOrientation = orientation;
     
+    UIEdgeInsets safeAreaInset = [self calculatedSafeAreaInset];
+    
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
         {
             [UIView performWithoutAnimation:^
             {
-                _landscapeToolbarView.frame = CGRectMake(screenEdges.left, screenEdges.top, TGPhotoEditorToolbarSize, referenceSize.height);
+                _landscapeToolbarView.frame = CGRectMake(screenEdges.left, screenEdges.top, TGPhotoEditorToolbarSize + safeAreaInset.left, referenceSize.height);
             }];
         }
             break;
@@ -1689,7 +1690,7 @@
         {
             [UIView performWithoutAnimation:^
             {
-                _landscapeToolbarView.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize, screenEdges.top, TGPhotoEditorToolbarSize, referenceSize.height);
+                _landscapeToolbarView.frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - safeAreaInset.right, screenEdges.top, TGPhotoEditorToolbarSize + safeAreaInset.right, referenceSize.height);
             }];
         }
             break;
@@ -1704,7 +1705,7 @@
     CGFloat portraitToolbarViewBottomEdge = screenSide;
     if (isPad)
         portraitToolbarViewBottomEdge = screenEdges.bottom;
-    _portraitToolbarView.frame = CGRectMake(screenEdges.left, portraitToolbarViewBottomEdge - TGPhotoEditorToolbarSize, referenceSize.width, TGPhotoEditorToolbarSize);
+    _portraitToolbarView.frame = CGRectMake(screenEdges.left, portraitToolbarViewBottomEdge - TGPhotoEditorToolbarSize - safeAreaInset.bottom, referenceSize.width, TGPhotoEditorToolbarSize + safeAreaInset.bottom);
 }
 
 - (void)_setScreenImage:(UIImage *)screenImage

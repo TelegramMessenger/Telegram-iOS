@@ -289,6 +289,20 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     return value;
 }
 
++ (bool)hasTallScreen {
+    static bool value = false;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^
+    {
+        CGSize screenSize = [TGViewController screenSizeForInterfaceOrientation:UIInterfaceOrientationPortrait];
+        CGFloat side = MAX(screenSize.width, screenSize.height);
+        value = side >= 812 - FLT_EPSILON;
+    });
+    
+    return value;
+}
+
 + (void)disableAutorotation
 {
     autorotationDisabled = true;
@@ -439,7 +453,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     return [super navigationController];
 }
 
-- (bool)shouldIgnoreStatusBar
+- (bool)shouldIgnoreStatusBarInOrientation:(UIInterfaceOrientation)orientation
 {
     if (_currentSizeClass != UIUserInterfaceSizeClassCompact) {
         if ([self.navigationController isKindOfClass:[TGNavigationController class]])
@@ -456,7 +470,15 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         }
     }
     
+    if (!TGIsPad() && iosMajorVersion() >= 11)
+        return UIInterfaceOrientationIsLandscape(orientation);
+    
     return false;
+}
+
+- (bool)shouldIgnoreStatusBar
+{
+    return [self shouldIgnoreStatusBarInOrientation:self.interfaceOrientation];
 }
 
 - (bool)shouldIgnoreNavigationBar
@@ -687,16 +709,18 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 {
     float additionalKeyboardHeight = [self _keyboardAdditionalDeltaHeightWhenRotatingFrom:_viewControllerRotatingFromOrientation toOrientation:toInterfaceOrientation];
     
-    [self _updateControllerInsetForOrientation:toInterfaceOrientation statusBarHeight:[TGHacks statusBarHeightForOrientation:toInterfaceOrientation] keyboardHeight:[self _currentKeyboardHeight:toInterfaceOrientation] + additionalKeyboardHeight force:false notify:true];
+    CGFloat statusBarHeight = [TGHacks statusBarHeightForOrientation:toInterfaceOrientation];
+    [self _updateControllerInsetForOrientation:toInterfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:[self _currentKeyboardHeight:toInterfaceOrientation] + additionalKeyboardHeight force:false notify:true];
 }
 
 - (UIEdgeInsets)controllerInsetForInterfaceOrientation:(UIInterfaceOrientation)orientation
 {
-    CGFloat statusBarHeight = [TGHacks statusBarHeightForOrientation:orientation];
+    UIEdgeInsets safeAreaInset = _context.safeAreaInset;
+    CGFloat statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : [TGHacks statusBarHeightForOrientation:orientation];
     CGFloat keyboardHeight = [self _currentKeyboardHeight:orientation];
     
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];
-    UIEdgeInsets edgeInset = UIEdgeInsetsMake(([self shouldIgnoreStatusBar] ? 0.0f : statusBarHeight) + navigationBarHeight, 0, 0, 0);
+    UIEdgeInsets edgeInset = UIEdgeInsetsMake(([self shouldIgnoreStatusBarInOrientation:orientation] ? 0.0f : statusBarHeight) + navigationBarHeight, 0, 0, 0);
     
     edgeInset.left += _parentInsets.left;
     edgeInset.top += _parentInsets.top;
@@ -704,10 +728,12 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     edgeInset.bottom += _parentInsets.bottom;
     
     if ([self.parentViewController isKindOfClass:[UITabBarController class]])
-        edgeInset.bottom += [self tabBarHeight];
+        edgeInset.bottom += [self tabBarHeight:UIInterfaceOrientationIsLandscape(orientation)];
     
     if (!_ignoreKeyboardWhenAdjustingScrollViewInsets)
         edgeInset.bottom = MAX(edgeInset.bottom, keyboardHeight);
+    
+    edgeInset.bottom += safeAreaInset.bottom;
     
     edgeInset.left += _explicitTableInset.left;
     edgeInset.right += _explicitTableInset.right;
@@ -780,6 +806,9 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (CGFloat)_currentStatusBarHeight
 {
+    if (_context.safeAreaInset.top > FLT_EPSILON)
+        return _context.safeAreaInset.top;
+    
     CGRect statusBarFrame = [[LegacyComponentsGlobals provider] statusBarFrame];
     CGFloat minStatusBarHeight = [self prefersStatusBarHidden] ? 0.0f : 20.0f;
     CGFloat statusBarHeight = MAX(minStatusBarHeight, MIN(statusBarFrame.size.width, statusBarFrame.size.height));
@@ -1021,26 +1050,48 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     return (UIInterfaceOrientationIsPortrait(orientation) ? portraitHeight : landscapeHeight) + _additionalNavigationBarHeight;
 }
 
-- (CGFloat)tabBarHeight
+- (CGFloat)tabBarHeight:(bool)landscape
 {
-    static CGFloat height = 0.0f;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
-    {
-        if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone)
-            height = 49.0f;
-        else
-            height = 56.0f;
-    });
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone)
+        return iosMajorVersion() >= 11 ? (landscape ? 32.0f : 49.0f) : 49.0f;
+    else
+        return 56.0f;
+}
+
+- (UIEdgeInsets)calculatedSafeAreaInset
+{
+    UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
+    if (self.view.frame.size.width > self.view.frame.size.height)
+        orientation = UIInterfaceOrientationLandscapeLeft;
     
-    return height;
+    return [TGViewController safeAreaInsetForOrientation:orientation];
+}
+
++ (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation
+{
+    if (TGIsPad() || (int)TGScreenSize().height != 812)
+        return UIEdgeInsetsZero;
+        
+    switch (orientation)
+    {
+        case UIInterfaceOrientationLandscapeLeft:
+        case UIInterfaceOrientationLandscapeRight:
+            return UIEdgeInsetsMake(0.0f, 44.0f, 21.0f, 44.0f);
+            
+        
+        default:
+            return UIEdgeInsetsMake(44.0f, 0.0f, 34.0f, 0.0f);
+    }
 }
 
 - (bool)_updateControllerInsetForOrientation:(UIInterfaceOrientation)orientation statusBarHeight:(CGFloat)statusBarHeight keyboardHeight:(CGFloat)keyboardHeight force:(bool)force notify:(bool)notify
 {
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];
     
-    UIEdgeInsets edgeInset = UIEdgeInsetsMake(([self shouldIgnoreStatusBar] ? 0.0f : statusBarHeight) + navigationBarHeight, 0, 0, 0);
+    statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : statusBarHeight;
+    
+    UIEdgeInsets edgeInset = UIEdgeInsetsMake(([self shouldIgnoreStatusBarInOrientation:orientation] ? 0.0f : statusBarHeight) + navigationBarHeight, 0, 0, 0);
     
     edgeInset.left += _parentInsets.left;
     edgeInset.top += _parentInsets.top;
@@ -1048,10 +1099,12 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     edgeInset.bottom += _parentInsets.bottom;
     
     if ([self.parentViewController isKindOfClass:[UITabBarController class]])
-        edgeInset.bottom += [self tabBarHeight];
+        edgeInset.bottom += [self tabBarHeight:UIInterfaceOrientationIsLandscape(orientation)];
     
     if (!_ignoreKeyboardWhenAdjustingScrollViewInsets)
         edgeInset.bottom = MAX(edgeInset.bottom, keyboardHeight);
+    
+    edgeInset.bottom += safeAreaInset.bottom;
     
     UIEdgeInsets previousInset = _controllerInset;
     UIEdgeInsets previousCleanInset = _controllerCleanInset;
@@ -1059,7 +1112,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     
     UIEdgeInsets scrollEdgeInset = edgeInset;
     scrollEdgeInset.left += _explicitScrollIndicatorInset.left;
-    scrollEdgeInset.right += _explicitScrollIndicatorInset.right;
+    scrollEdgeInset.right += _explicitScrollIndicatorInset.right + safeAreaInset.right;
     scrollEdgeInset.top += _explicitScrollIndicatorInset.top;
     scrollEdgeInset.bottom += _explicitScrollIndicatorInset.bottom;
     
@@ -1075,6 +1128,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         _controllerInset = edgeInset;
         _controllerCleanInset = cleanInset;
         _controllerScrollInset = scrollEdgeInset;
+        _controllerSafeAreaInset = safeAreaInset;
         _controllerStatusBarHeight = statusBarHeight;
         
         if (notify)
@@ -1110,8 +1164,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         contentOffset.y = -finalInset.top;
         [scrollView setContentOffset:contentOffset animated:false];
     }
-    
-    
 }
 
 - (bool)shouldAdjustScrollViewInsetsForInversedLayout
@@ -1200,6 +1252,8 @@ static id<LegacyComponentsContext> _defaultContext = nil;
             {
                 CGFloat barHeight = [self navigationBarHeightForInterfaceOrientation:self.interfaceOrientation];
                 CGFloat statusBarHeight = [TGHacks statusBarHeightForOrientation:self.interfaceOrientation];
+                if ([self shouldIgnoreStatusBarInOrientation:self.interfaceOrientation])
+                    statusBarHeight = 0.0f;
                 
                 CGSize screenSize = [TGViewController screenSizeForInterfaceOrientation:self.interfaceOrientation];
                 

@@ -1,5 +1,8 @@
 #import "TGCheckButtonView.h"
 
+#import "TGFont.h"
+#import "TGImageUtils.h"
+
 @interface TGCheckButtonView ()
 {
     UIView *_wrapperView;
@@ -286,6 +289,14 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
     
     if (_borderOnTop)
         [_wrapperView.layer addSublayer:_checkBackground];
+    
+    if (_numberLabel != nil)
+    {
+        if (_numberLabel.superview == nil)
+            [_checkFillView addSubview:_numberLabel];
+        else
+            [_numberLabel.superview bringSubviewToFront:_numberLabel];
+    }
 }
 
 - (void)setSelected:(bool)selected animated:(bool)animated
@@ -424,10 +435,39 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
     super.selected = selected;
 }
 
-- (void)setNumber:(NSInteger)number
+- (void)setNumber:(NSUInteger)number
 {
+    if (number == NSNotFound)
+        number = 0;
+    
     _number = number;
-    _numberLabel.text = number > 0 ? [NSString stringWithFormat:@"%ld", number] : @"";
+    if (_numberLabel == nil && number != 0)
+    {
+        _numberLabel = [[UILabel alloc] init];
+        _numberLabel.backgroundColor = [UIColor clearColor];
+        _numberLabel.frame = CGRectMake(0.0f, -TGScreenPixel, _wrapperView.frame.size.width, _wrapperView.frame.size.height);
+        _numberLabel.textColor = [UIColor whiteColor];
+        _numberLabel.textAlignment = NSTextAlignmentCenter;
+        _numberLabel.userInteractionEnabled = false;
+        _numberLabel.font = [TGFont roundedFontOfSize:_style == TGCheckButtonStyleGallery ? 18.0f : 16.0f];
+        [_checkFillView addSubview:_numberLabel];
+    }
+    
+    if (number > 0)
+    {
+        _checkView.alpha = 0.0f;
+        _numberLabel.alpha = 1.0f;
+        _numberLabel.text = [NSString stringWithFormat:@"%ld", number];
+        if (_style != TGCheckButtonStyleGallery)
+            _numberLabel.font = [TGFont roundedFontOfSize:_number < 10 ? 16.0f : 15.0f];
+    }
+    else
+    {
+        [UIView animateWithDuration:0.2 animations:^
+        {
+            _numberLabel.alpha = 0.0f;
+        }];
+    }
 }
 
 #pragma mark -

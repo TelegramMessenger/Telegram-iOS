@@ -36,6 +36,7 @@ typedef enum
 @property (nonatomic, copy) TGViewController *(^requestSearchController)(void);
 
 @property (nonatomic, readonly) TGMediaAssetsPickerController *pickerController;
+@property (nonatomic, readonly) bool allowGrouping;
 
 - (UIBarButtonItem *)rightBarButtonItem;
 
@@ -44,7 +45,7 @@ typedef enum
 - (void)completeWithAvatarImage:(UIImage *)image;
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem;
 
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos;
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping;
 
 + (TGMediaAssetType)assetTypeForIntent:(TGMediaAssetsControllerIntent)intent;
 
