@@ -39,9 +39,13 @@ static NSString *fallbackString(NSString *key) {
         _isActive = isActive;
         
         NSString *rawCode = code;
-        NSRange range = [code rangeOfString:@"_"];
+        NSRange range = [rawCode rangeOfString:@"_"];
         if (range.location != NSNotFound) {
-            rawCode = [code substringToIndex:range.location];
+            rawCode = [rawCode substringToIndex:range.location];
+        }
+        range = [rawCode rangeOfString:@"-"];
+        if (range.location != NSNotFound) {
+            rawCode = [rawCode substringToIndex:range.location];
         }
         rawCode = [rawCode lowercaseString];
         unsigned int lc = 0;
