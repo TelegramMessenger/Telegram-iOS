@@ -37,9 +37,9 @@ int32_t AudioOutput::estimatedDelay=60;
 
 AudioOutput *AudioOutput::Create(std::string deviceID){
 #if defined(__ANDROID__)
-	if(systemVersion<21)
+	//if(systemVersion<21)
 		return new AudioOutputAndroid();
-	return new AudioOutputOpenSLES();
+	//return new AudioOutputOpenSLES();
 #elif defined(__APPLE__)
 #if TARGET_OS_OSX
 	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)
