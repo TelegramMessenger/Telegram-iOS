@@ -124,6 +124,9 @@
 
 - (NSURL *)localVideoFileURL
 {
+    if (self.customLocalVideoFileURL != nil)
+        return self.customLocalVideoFileURL;
+    
 	if(self.permalink == nil)
 		return nil;
 

@@ -548,6 +548,19 @@
     if (selectionContext.grouping && selectedItems.count > 1)
         groupedId = @([self generateGroupedId]);
     
+    bool hasAnyTimers = false;
+    if (editingContext != nil)
+    {
+        for (TGMediaAsset *asset in selectedItems)
+        {
+            if ([editingContext timerForItem:asset] != nil)
+            {
+                hasAnyTimers = true;
+                break;
+            }
+        }
+    }
+    
     for (TGMediaAsset *asset in selectedItems)
     {
         switch (asset.type)
@@ -607,7 +620,7 @@
                         
                         if (timer != nil)
                             dict[@"timer"] = timer;
-                        else if (groupedId != nil)
+                        else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil);
@@ -653,7 +666,7 @@
                         
                         if (timer != nil)
                             dict[@"timer"] = timer;
-                        else if (groupedId != nil)
+                        else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil);
@@ -738,7 +751,7 @@
                         
                         if (timer != nil)
                             dict[@"timer"] = timer;
-                        else if (groupedId != nil)
+                        else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil);

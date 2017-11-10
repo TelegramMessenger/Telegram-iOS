@@ -436,41 +436,41 @@
     }
     
     dispatch_group_notify(dispatchGroup, context.queue._dispatch_queue, ^
-                          {
-                              TGMediaVideoConversionContext *context = [context_ value];
-                              if (context.cancelled)
-                              {
-                                  [context.assetReader cancelReading];
-                                  [context.assetWriter cancelWriting];
-                              }
-                              else
-                              {
-                                  bool audioProcessingFailed = false;
-                                  bool videoProcessingFailed = false;
-                                  
-                                  if (context.audioProcessor != nil)
-                                      audioProcessingFailed = !context.audioProcessor.succeed;
-                                  
-                                  if (context.videoProcessor != nil)
-                                      videoProcessingFailed = !context.videoProcessor.succeed;
-                                  
-                                  if (!audioProcessingFailed && !videoProcessingFailed && context.assetReader.status != AVAssetReaderStatusFailed)
-                                  {
-                                      [context.assetWriter finishWritingWithCompletionHandler:^
-                                       {
-                                           if (context.assetWriter.status != AVAssetWriterStatusFailed)
-                                               completionBlock();
-                                           else
-                                               [context.subscriber putError:context.assetWriter.error];
-                                       }];
-                                  }
-                                  else
-                                  {
-                                      [context.subscriber putError:context.assetReader.error];
-                                  }
-                              }
-                              
-                          });
+    {
+        TGMediaVideoConversionContext *context = [context_ value];
+        if (context.cancelled)
+        {
+            [context.assetReader cancelReading];
+            [context.assetWriter cancelWriting];
+        }
+        else
+        {
+            bool audioProcessingFailed = false;
+            bool videoProcessingFailed = false;
+            
+            if (context.audioProcessor != nil)
+                audioProcessingFailed = !context.audioProcessor.succeed;
+            
+            if (context.videoProcessor != nil)
+                videoProcessingFailed = !context.videoProcessor.succeed;
+            
+            if (!audioProcessingFailed && !videoProcessingFailed && context.assetReader.status != AVAssetReaderStatusFailed)
+            {
+                [context.assetWriter finishWritingWithCompletionHandler:^
+                {
+                    if (context.assetWriter.status != AVAssetWriterStatusFailed)
+                        completionBlock();
+                    else
+                        [context.subscriber putError:context.assetWriter.error];
+                }];
+            }
+            else
+            {
+                [context.subscriber putError:context.assetReader.error];
+            }
+        }
+        
+    });
 }
 
 #pragma mark - Hash

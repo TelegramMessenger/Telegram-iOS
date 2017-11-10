@@ -30,7 +30,7 @@
 @interface TGMediaAssetsSaveToCameraRoll : NSObject
 
 + (void)saveImageAtURL:(NSURL *)url;
-+ (void)saveImageWithData:(NSData *)imageData;
++ (void)saveImageWithData:(NSData *)imageData silentlyFail:(bool)silentlyFail completionBlock:(void (^)(bool))completionBlock;
 + (void)saveVideoAtURL:(NSURL *)url;
 
 @end

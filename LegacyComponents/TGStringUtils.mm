@@ -767,24 +767,11 @@ static bool isEmojiCharacter(NSString *singleChar)
             first = format;
         }
     }
-    else if (seconds < 60 * 60 * 24 * 365)
+    else
     {
         int number = (int)ceilf((seconds / (60 * 60 * 24 * 30.5f)));
         
         NSString *format = TGLocalized([self integerValueFormat:@"MessageTimer.Months_" value:number]);
-        
-        NSRange range = [format rangeOfString:@"%@"];
-        if (range.location != NSNotFound)
-        {
-            first = [[NSString alloc] initWithFormat:@"%d", number];
-            second = [[format substringFromIndex:range.location + range.length] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-        } else {
-            first = format;
-        }
-    } else {
-        int number = (int)seconds / (60 * 60 * 24 * 365);
-        
-        NSString *format = TGLocalized([self integerValueFormat:@"MessageTimer.Years_" value:number]);
         
         NSRange range = [format rangeOfString:@"%@"];
         if (range.location != NSNotFound)

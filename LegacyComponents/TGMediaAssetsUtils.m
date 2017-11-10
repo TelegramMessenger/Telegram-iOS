@@ -208,21 +208,34 @@
     }];
 }
 
-+ (void)saveImageWithData:(NSData *)imageData
++ (void)saveImageWithData:(NSData *)imageData silentlyFail:(bool)silentlyFail completionBlock:(void (^)(bool))completionBlock
 {
-    if (![[[LegacyComponentsGlobals provider] accessChecker] checkPhotoAuthorizationStatusForIntent:TGPhotoAccessIntentSave alertDismissCompletion:nil])
-        return;
+    if (!silentlyFail)
+    {
+        if (![[[LegacyComponentsGlobals provider] accessChecker] checkPhotoAuthorizationStatusForIntent:TGPhotoAccessIntentSave alertDismissCompletion:nil])
+            return;
+    }
     
     TGProgressWindow *progressWindow = [[TGProgressWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
     [progressWindow show:true];
     
     [[[[TGMediaAssetsLibrary sharedLibrary] saveAssetWithImageData:imageData] deliverOn:[SQueue mainQueue]] startWithNext:nil error:^(__unused id error)
      {
-         [[[LegacyComponentsGlobals provider] accessChecker] checkPhotoAuthorizationStatusForIntent:TGPhotoAccessIntentSave alertDismissCompletion:nil];
-         [progressWindow dismiss:true];
+         if (!silentlyFail)
+         {
+             [[[LegacyComponentsGlobals provider] accessChecker] checkPhotoAuthorizationStatusForIntent:TGPhotoAccessIntentSave alertDismissCompletion:nil];
+             [progressWindow dismiss:true];
+         }
+         
+         if (completionBlock != nil)
+             completionBlock(false);
      } completed:^
      {
-         [progressWindow dismissWithSuccess];
+         if (!silentlyFail)
+             [progressWindow dismissWithSuccess];
+         
+         if (completionBlock != nil)
+             completionBlock(true);
      }];
 }
 

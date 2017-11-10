@@ -8,7 +8,6 @@
 
 @interface TGMediaAssetsModernLibrary () <PHPhotoLibraryChangeObserver>
 {
-    PHPhotoLibrary *_photoLibrary;
     SPipe *_libraryChangePipe;
 }
 @end

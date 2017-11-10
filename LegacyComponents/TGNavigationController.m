@@ -136,6 +136,9 @@
 - (BOOL)gestureRecognizerShouldBegin:(UIPanGestureRecognizer *)gestureRecognizer
 {
     CGPoint velocity = [gestureRecognizer velocityInView:gestureRecognizer.view];
+    if (fabs(velocity.y) > fabs(velocity.x))
+        return false;
+    
     if ((!TGIsRTL() && velocity.x < FLT_EPSILON) || (TGIsRTL() && velocity.x > FLT_EPSILON))
         return false;
     
@@ -153,8 +156,8 @@
 - (BOOL)gestureRecognizer:(UIPanGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
 {
     CGPoint location = [gestureRecognizer locationInView:gestureRecognizer.view];
-    CGPoint velocity = [gestureRecognizer velocityInView:gestureRecognizer.view];
-    if ((!TGIsRTL() && velocity.x < FLT_EPSILON) || (TGIsRTL() && velocity.x > FLT_EPSILON))
+    
+    if (self.viewControllers.count == 1)
         return false;
     
     if ((!TGIsRTL() && location.x < 44.0f) || (TGIsRTL() && location.x > gestureRecognizer.view.frame.size.width - 44.0f))
@@ -166,10 +169,19 @@
     else if ([otherGestureRecognizer.view isKindOfClass:[UIScrollView class]])
     {
         UIScrollView *scrollView = (UIScrollView *)otherGestureRecognizer.view;
-        if (!TGIsRTL() && scrollView.contentSize.width > scrollView.contentSize.height && fabs(scrollView.contentOffset.x + scrollView.contentInset.left) < FLT_EPSILON)
+        bool viewIsHorizontalScrollView = !TGIsRTL() && scrollView.contentSize.width > scrollView.contentSize.height && fabs(scrollView.contentOffset.x + scrollView.contentInset.left) < FLT_EPSILON;
+        bool viewIsDeceleratingScrollView = scrollView.contentSize.height > scrollView.contentSize.width && scrollView.isDecelerating;
+        if (viewIsHorizontalScrollView || viewIsDeceleratingScrollView)
         {
-            otherGestureRecognizer.enabled = false;
-            otherGestureRecognizer.enabled = true;
+            if (viewIsHorizontalScrollView)
+            {
+                CGPoint velocity = [gestureRecognizer velocityInView:gestureRecognizer.view];
+                if ((!TGIsRTL() && velocity.x < FLT_EPSILON) || (TGIsRTL() && velocity.x > FLT_EPSILON))
+                    return false;
+                
+                otherGestureRecognizer.enabled = false;
+                otherGestureRecognizer.enabled = true;
+            }
             return true;
         }
     }

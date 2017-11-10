@@ -50,6 +50,7 @@
 @property(nonatomic, readonly) BOOL isRecoub;
 @property(nonatomic, readonly) BOOL isMyCoub;
 
+@property(nonatomic, retain) NSURL *customLocalVideoFileURL;
 @property(nonatomic, retain) NSString *remoteVideoLocation;
 @property(nonatomic, retain) NSString *remoteAudioLocation;
 @property(nonatomic, retain) NSString *remoteAudioLocationPattern;

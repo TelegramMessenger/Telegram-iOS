@@ -35,6 +35,7 @@
     
     CBPlayerView *_playerView;
     CBCoubPlayer *_coubPlayer;
+    NSURL *_videoPath;
     
     SDisposableSet *_disposables;
     
@@ -67,6 +68,8 @@
             
             if (videoPath != nil && [[NSFileManager defaultManager] fileExistsAtPath:videoPath isDirectory:NULL])
             {
+                _videoPath = [NSURL fileURLWithPath:videoPath];
+                
                 __weak TGEmbedCoubPlayerView *weakSelf = self;
                 [_disposables add:[[[TGMediaAssetImageSignals videoThumbnailForAVAsset:[AVURLAsset assetWithURL:[NSURL fileURLWithPath:videoPath]] size:CGSizeMake(480, 480) timestamp:CMTimeMake(1, 100)] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
                 {
@@ -283,7 +286,8 @@
         if (strongSelf == nil)
             return;
         
-        id<CBCoubAsset> coub = [CBCoubNew coubWithAttributes:data];
+        CBCoubNew *coub = [CBCoubNew coubWithAttributes:data];
+        coub.customLocalVideoFileURL = strongSelf->_videoPath;
         strongSelf->_asset = coub;
         
         if ([coub isKindOfClass:[CBCoubNew class]])
@@ -479,7 +483,6 @@
     {
         NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
         _session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
-        
         [[_session dataTaskWithURL:[NSURL URLWithString:url] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {}] resume];
     }
     return self;

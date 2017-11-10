@@ -115,6 +115,8 @@
 
 - (void)viewWillDisappear:(BOOL)animated
 {
+    [_collectionView stopScrollingAnimation];
+    
     [super viewWillDisappear:animated];
     
     NSArray *viewControllers = self.navigationController.viewControllers;

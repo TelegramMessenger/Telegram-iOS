@@ -231,7 +231,8 @@
                     }
                 }
                 
-                [(id<TGImagePickerControllerDelegate>)delegate imagePickerController:nil didFinishPickingWithAssets:@[image]];
+                if (image != nil)
+                    [(id<TGImagePickerControllerDelegate>)delegate imagePickerController:nil didFinishPickingWithAssets:@[image]];
             }
         }
     }

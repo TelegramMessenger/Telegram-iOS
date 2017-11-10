@@ -830,7 +830,6 @@
 
 - (bool)shouldDisplayGroupingTooltip
 {
-    return true;
     return ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedGroupTooltip_v0"] boolValue];
 }
 

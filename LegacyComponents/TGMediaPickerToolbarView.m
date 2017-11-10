@@ -253,7 +253,7 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
 {
     if (_centerButton == nil)
     {
-        _centerButton = [[TGModernButton alloc] initWithFrame:CGRectMake((self.frame.size.width - 60.0f) / 2.0f, 0, 60, 44)];
+        _centerButton = [[TGModernButton alloc] initWithFrame:CGRectMake(round((self.frame.size.width - 60.0f) / 2.0f), 0, 60, 44)];
         _centerButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
         _centerButton.adjustsImageWhenHighlighted = false;
         _centerButton.exclusiveTouch = true;
