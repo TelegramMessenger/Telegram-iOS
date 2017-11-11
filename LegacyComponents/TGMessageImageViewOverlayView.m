@@ -274,7 +274,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
     [self setNeedsDisplay];
 }
 
-- (void)setCompletedAnimated:(bool)animated started:(void (^)(void))started
+- (void)setCompletedAnimated:(bool)animated
 {
     if (_type == TGMessageImageViewOverlayViewTypeCompleted)
         return;
@@ -304,11 +304,6 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
                 
                 prop.threshold = 0.01f;
             }];
-            animation.animationDidStartBlock = ^(POPAnimation *anim)
-            {
-                if (started != nil)
-                    started();
-            };
             animation.beginTime = CACurrentMediaTime() + 0.08;
             animation.fromValue = @0;
             animation.toValue = @1;
@@ -321,9 +316,6 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
     {
         _checkProgress = 1.0f;
         [self setNeedsDisplay];
-        
-        if (started != nil)
-            started();
     }
 }
 
@@ -1307,10 +1299,8 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
 - (void)setCompletedAnimated:(bool)animated;
 {
     __weak TGMessageImageViewOverlayView *weakSelf = self;
-    [_contentLayer setCompletedAnimated:animated started:^{
-        __strong TGMessageImageViewOverlayView *strongSelf = weakSelf;
-        [strongSelf->_progressLayer setNone];
-    }];
+    [_contentLayer setCompletedAnimated:animated];
+    [_progressLayer setNone];
     _blurredBackgroundLayer.hidden = _blurless;
 }
 

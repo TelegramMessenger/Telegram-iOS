@@ -828,7 +828,7 @@
     if (_tooltipContainerView != nil)
         return;
     
-    rect = CGRectOffset(rect, 0.0f, 15.0f);
+    rect = CGRectOffset(rect, 0.0f, 3.0f);
     
     _tooltipTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(tooltipTimerTick) interval:3.0 repeat:false];
     
@@ -878,7 +878,7 @@
         _groupingTooltipContainerView.tooltipView.sourceView = _groupButton;
         
         CGRect recordButtonFrame = [_groupButton.superview convertRect:_groupButton.frame toView:_groupingTooltipContainerView];
-        recordButtonFrame.origin.y += 15.0f;
+        recordButtonFrame.origin.y += 3.0f;
         [_groupingTooltipContainerView showTooltipFromRect:recordButtonFrame animated:false];
     }
     
