@@ -15,3 +15,11 @@
 - (void)setSelected:(bool)selected animated:(bool)animated;
 
 @end
+
+
+@interface TGMediaPickerGroupButton : UIButton
+
+- (void)setHidden:(bool)hidden animated:(bool)animated;
+- (void)setInternalHidden:(bool)internalHidden animated:(bool)animated;
+
+@end

@@ -26,6 +26,7 @@ typedef enum {
 - (void)setPlayMedia;
 - (void)setPauseMedia;
 - (void)setSecret:(bool)isViewed;
+- (void)setCompletedAnimated:(bool)animated;
 - (void)setNone;
 
 @end

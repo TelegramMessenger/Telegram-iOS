@@ -36,6 +36,8 @@
 
 + (UIImage *)groupIcon;
 + (UIImage *)ungroupIcon;
++ (UIImage *)groupIconBackground;
++ (UIImage *)groupIconBackgroundActive;
 
 + (UIImage *)mirrorIcon;
 + (UIImage *)aspectRatioIcon;

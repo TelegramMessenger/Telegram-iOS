@@ -4,6 +4,7 @@
 #import "TGImageUtils.h"
 #import "TGFont.h"
 #import "TGStringUtils.h"
+#import "TGPhotoEditorInterfaceAssets.h"
 
 #import "POPSpringAnimation.h"
 
@@ -491,6 +492,151 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
     {
         self.alpha = hidden ? 0.0f : 1.0f;
         super.hidden = hidden;
+    }
+}
+
+@end
+
+
+@interface TGMediaPickerGroupButton ()
+{
+    UIView *_wrapperView;
+    UIImageView *_backgroundView;
+    UIImageView *_iconView;
+    
+    bool _position;
+}
+
+@end
+
+@implementation TGMediaPickerGroupButton
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self != nil)
+    {
+        self.exclusiveTouch = true;
+        
+        _wrapperView = [[UIView alloc] initWithFrame:self.bounds];
+        _wrapperView.userInteractionEnabled = false;
+        [self addSubview:_wrapperView];
+        
+        _backgroundView = [[UIImageView alloc] initWithFrame:CGRectMake(0.0f, 0, 38, 38)];
+        _backgroundView.image = [TGPhotoEditorInterfaceAssets groupIconBackground];
+        [_wrapperView addSubview:_backgroundView];
+        
+        _iconView = [[UIImageView alloc] initWithFrame:CGRectMake(-TGScreenPixel, -2.0f, _wrapperView.bounds.size.width, _wrapperView.bounds.size.height)];
+        _iconView.contentMode = UIViewContentModeCenter;
+        _iconView.image = [TGPhotoEditorInterfaceAssets ungroupIcon];
+        [_wrapperView addSubview:_iconView];
+    }
+    return self;
+}
+
+- (void)setSelected:(BOOL)selected
+{
+    [super setSelected:selected];
+    
+    _backgroundView.image = selected ? [TGPhotoEditorInterfaceAssets groupIconBackgroundActive] : [TGPhotoEditorInterfaceAssets groupIconBackground];
+    _iconView.image = selected ? [TGPhotoEditorInterfaceAssets groupIcon] : [TGPhotoEditorInterfaceAssets ungroupIcon];
+}
+
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    _wrapperView.transform = CGAffineTransformIdentity;
+    
+    [super touchesCancelled:touches withEvent:event];
+}
+
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    UITouch *touch = [touches anyObject];
+    
+    if (!CGRectContainsPoint(self.bounds, [touch locationInView:self]))
+    {
+        _wrapperView.transform = CGAffineTransformIdentity;
+    }
+    else
+    {
+        [UIView animateWithDuration:0.12f delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^
+        {
+            _wrapperView.transform = CGAffineTransformMakeScale(1.2f, 1.2f);
+        } completion:^(BOOL finished)
+        {
+            if (finished)
+            {
+                [UIView animateWithDuration:0.08f delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^
+                {
+                    _wrapperView.transform = CGAffineTransformIdentity;
+                } completion:nil];
+            }
+        }];
+    }
+    [super touchesEnded:touches withEvent:event];
+}
+
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    UITouch *touch = [touches anyObject];
+    
+    if (!CGRectContainsPoint(self.bounds, [touch locationInView:self]))
+        _wrapperView.transform = CGAffineTransformIdentity;
+    else
+        _wrapperView.transform = CGAffineTransformMakeScale(0.8f, 0.8f);
+    
+    [super touchesMoved:touches withEvent:event];
+}
+
+- (void)setHidden:(BOOL)hidden
+{
+    self.alpha = hidden ? 0.0f : 1.0f;
+    super.hidden = hidden;
+}
+
+- (void)setHidden:(bool)hidden animated:(bool)animated
+{
+    [self setHidden:hidden delay:0 animated:animated];
+}
+
+- (void)setHidden:(bool)hidden delay:(NSTimeInterval)delay animated:(bool)animated
+{
+    if (animated)
+    {
+        super.hidden = false;
+        
+        [UIView animateWithDuration:0.2f delay:delay options:UIViewAnimationOptionCurveLinear animations:^
+        {
+            self.alpha = hidden ? 0.0f : 1.0f;
+        } completion:^(BOOL finished)
+        {
+            if (finished)
+                self.hidden = hidden;
+        }];
+    }
+    else
+    {
+        self.alpha = hidden ? 0.0f : 1.0f;
+        super.hidden = hidden;
+    }
+}
+
+- (void)setInternalHidden:(bool)hidden animated:(bool)animated
+{
+    if (animated)
+    {
+        [UIView animateWithDuration:0.2 delay:0.0 options:UIViewAnimationOptionCurveLinear animations:^
+        {
+            _wrapperView.alpha = hidden ? 0.0f : 1.0f;
+        } completion:^(BOOL finished)
+        {
+            self.userInteractionEnabled = !hidden;
+        }];
+    }
+    else
+    {
+        _wrapperView.alpha = hidden ? 0.0f : 1.0f;
+        self.userInteractionEnabled = !hidden;
     }
 }
 

@@ -123,12 +123,62 @@
 
 + (UIImage *)groupIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorGroupPhotosIcon.png");
+    return TGTintedImage(TGComponentsImageNamed(@"PhotoEditorGroupPhotosIcon.png"), UIColorRGB(0x4cb4ff));
 }
 
 + (UIImage *)ungroupIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorUngroupPhotosIcon.png");
+    return TGComponentsImageNamed(@"PhotoEditorGroupPhotosIcon.png");
+}
+
++ (UIImage *)groupIconBackground
+{
+    static dispatch_once_t onceToken;
+    static UIImage *backgroundImage;
+    dispatch_once(&onceToken, ^
+    {
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.7f).CGColor);
+        
+        CGContextFillEllipseInRect(context, CGRectMake(3.5f, 1.0f, 31.0f, 31.0f));
+        
+        CGFloat lineWidth = 1.5f;
+        if (TGScreenScaling() == 3.0f)
+            lineWidth = 5.0f / 3.0f;
+        CGContextSetLineWidth(context, lineWidth);
+        CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
+        CGContextStrokeEllipseInRect(context, CGRectMake(3.0f, 1.0f, 31.0f, 31.0f));
+        
+        backgroundImage = [UIGraphicsGetImageFromCurrentImageContext() resizableImageWithCapInsets:UIEdgeInsetsMake(38.0f / 4.0f, 38.0f / 4.0f, 38.0f / 4.0f, 38.0f / 4.0f)];
+        UIGraphicsEndImageContext();
+    });
+    return backgroundImage;
+}
+                         
++ (UIImage *)groupIconBackgroundActive
+{
+    static dispatch_once_t onceToken;
+    static UIImage *backgroundImage;
+    dispatch_once(&onceToken, ^
+    {
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.7f).CGColor);
+        
+        CGContextFillEllipseInRect(context, CGRectMake(3.5f, 1.0f, 31.0f, 31.0f));
+        
+        CGFloat lineWidth = 1.5f;
+        if (TGScreenScaling() == 3.0f)
+            lineWidth = 5.0f / 3.0f;
+        CGContextSetLineWidth(context, lineWidth);
+        CGContextSetStrokeColorWithColor(context, UIColorRGB(0x4cb4ff).CGColor);
+        CGContextStrokeEllipseInRect(context, CGRectMake(3.0f, 1.0f, 31.0f, 31.0f));
+        
+        backgroundImage = [UIGraphicsGetImageFromCurrentImageContext() resizableImageWithCapInsets:UIEdgeInsetsMake(38.0f / 4.0f, 38.0f / 4.0f, 38.0f / 4.0f, 38.0f / 4.0f)];
+        UIGraphicsEndImageContext();
+    });
+    return backgroundImage;
 }
 
 + (UIImage *)qualityIconForPreset:(TGMediaVideoConversionPreset)preset

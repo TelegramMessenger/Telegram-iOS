@@ -17,7 +17,8 @@ typedef enum {
     TGMessageImageViewOverlayViewTypeSecretViewed = 7,
     TGMessageImageViewOverlayViewTypeSecretProgress = 8,
     TGMessageImageViewOverlayViewTypePlayMedia = 9,
-    TGMessageImageViewOverlayViewTypePauseMedia = 10
+    TGMessageImageViewOverlayViewTypePauseMedia = 10,
+    TGMessageImageViewOverlayViewTypeCompleted = 11
 } TGMessageImageViewOverlayViewType;
 
 @interface TGMessageImageViewOverlayParticle : NSObject
@@ -49,6 +50,9 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
 @property (nonatomic) CGFloat progress;
 @property (nonatomic) int type;
 @property (nonatomic, strong) UIColor *overlayBackgroundColorHint;
+
+@property (nonatomic) CGFloat afterProgressRotation;
+@property (nonatomic) CGFloat checkProgress;
 
 @property (nonatomic, strong) UIImage *blurredBackgroundImage;
 
@@ -89,7 +93,11 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
     
     [self pop_removeAnimationForKey:@"progress"];
     [self pop_removeAnimationForKey:@"progressAmbient"];
+    [self pop_removeAnimationForKey:@"completion"];
     _progress = 0.0f;
+    _checkProgress = 0.0f;
+    
+    [self setNeedsDisplay];
 }
 
 - (void)setDownload
@@ -110,6 +118,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
     {
         [self pop_removeAnimationForKey:@"progress"];
         [self pop_removeAnimationForKey:@"progressAmbient"];
+        [self pop_removeAnimationForKey:@"comlpetion"];
         
         _type = TGMessageImageViewOverlayViewTypePlay;
         [self setNeedsDisplay];
@@ -230,19 +239,19 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             {
                 animation = [POPBasicAnimation animation];
                 animation.property = [POPAnimatableProperty propertyWithName:@"progress" initializer:^(POPMutableAnimatableProperty *prop)
-                                      {
-                                          prop.readBlock = ^(TGMessageImageViewOverlayLayer *layer, CGFloat values[])
-                                          {
-                                              values[0] = layer.progress;
-                                          };
-                                          
-                                          prop.writeBlock = ^(TGMessageImageViewOverlayLayer *layer, const CGFloat values[])
-                                          {
-                                              layer.progress = values[0];
-                                          };
-                                          
-                                          prop.threshold = 0.01f;
-                                      }];
+                {
+                    prop.readBlock = ^(TGMessageImageViewOverlayLayer *layer, CGFloat values[])
+                    {
+                        values[0] = layer.progress;
+                    };
+                    
+                    prop.writeBlock = ^(TGMessageImageViewOverlayLayer *layer, const CGFloat values[])
+                    {
+                        layer.progress = values[0];
+                    };
+                    
+                    prop.threshold = 0.01f;
+                }];
                 animation.fromValue = @(_progress);
                 animation.toValue = @(progress);
                 animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
@@ -256,6 +265,65 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             
             [self setNeedsDisplay];
         }
+    }
+}
+
+- (void)setCheckProgress:(CGFloat)checkProgress
+{
+    _checkProgress = checkProgress;
+    [self setNeedsDisplay];
+}
+
+- (void)setCompletedAnimated:(bool)animated started:(void (^)(void))started
+{
+    if (_type == TGMessageImageViewOverlayViewTypeCompleted)
+        return;
+    
+    _type = TGMessageImageViewOverlayViewTypeCompleted;
+    
+    if (animated)
+    {
+        POPBasicAnimation *animation = [self pop_animationForKey:@"completion"];
+        if (animation == nil)
+        {
+            _checkProgress = 0.0f;
+            [self setNeedsDisplay];
+            
+            animation = [POPBasicAnimation animation];
+            animation.property = [POPAnimatableProperty propertyWithName:@"completion" initializer:^(POPMutableAnimatableProperty *prop)
+            {
+                prop.readBlock = ^(TGMessageImageViewOverlayLayer *layer, CGFloat values[])
+                {
+                    values[0] = layer.checkProgress;
+                };
+                
+                prop.writeBlock = ^(TGMessageImageViewOverlayLayer *layer, const CGFloat values[])
+                {
+                    layer.checkProgress = values[0];
+                };
+                
+                prop.threshold = 0.01f;
+            }];
+            animation.animationDidStartBlock = ^(POPAnimation *anim)
+            {
+                if (started != nil)
+                    started();
+            };
+            animation.beginTime = CACurrentMediaTime() + 0.08;
+            animation.fromValue = @0;
+            animation.toValue = @1;
+            animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+            animation.duration = 0.25;
+            [self pop_addAnimation:animation forKey:@"completion"];
+        }
+    }
+    else
+    {
+        _checkProgress = 1.0f;
+        [self setNeedsDisplay];
+        
+        if (started != nil)
+            started();
     }
 }
 
@@ -326,19 +394,19 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             {
                 animation = [POPBasicAnimation animation];
                 animation.property = [POPAnimatableProperty propertyWithName:@"progress" initializer:^(POPMutableAnimatableProperty *prop)
-                                      {
-                                          prop.readBlock = ^(TGMessageImageViewOverlayLayer *layer, CGFloat values[])
-                                          {
-                                              values[0] = layer.progress;
-                                          };
-                                          
-                                          prop.writeBlock = ^(TGMessageImageViewOverlayLayer *layer, const CGFloat values[])
-                                          {
-                                              layer.progress = values[0];
-                                          };
-                                          
-                                          prop.threshold = 0.01f;
-                                      }];
+                {
+                    prop.readBlock = ^(TGMessageImageViewOverlayLayer *layer, CGFloat values[])
+                    {
+                        values[0] = layer.progress;
+                    };
+                    
+                    prop.writeBlock = ^(TGMessageImageViewOverlayLayer *layer, const CGFloat values[])
+                    {
+                        layer.progress = values[0];
+                    };
+                    
+                    prop.threshold = 0.01f;
+                }];
                 animation.fromValue = @(_progress);
                 animation.toValue = @(0.0);
                 animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
@@ -366,13 +434,13 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
     static UIImage *progressFireIcon = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
-                  {
-                      fireIconMask = [UIImage imageNamed:@"SecretPhotoFireMask.png"];
-                      fireIcon = [UIImage imageNamed:@"SecretPhotoFire.png"];
-                      viewedIconMask = [UIImage imageNamed:@"SecretPhotoCheckMask.png"];
-                      viewedIcon = [UIImage imageNamed:@"SecretPhotoCheck.png"];
-                      progressFireIcon = TGTintedImage(fireIcon, [UIColor whiteColor]);
-                  });
+    {
+        fireIconMask = [UIImage imageNamed:@"SecretPhotoFireMask.png"];
+        fireIcon = [UIImage imageNamed:@"SecretPhotoFire.png"];
+        viewedIconMask = [UIImage imageNamed:@"SecretPhotoCheckMask.png"];
+        viewedIcon = [UIImage imageNamed:@"SecretPhotoCheck.png"];
+        progressFireIcon = TGTintedImage(fireIcon, [UIColor whiteColor]);
+    });
     
     switch (_type)
     {
@@ -944,6 +1012,95 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             
             break;
         }
+            
+        case TGMessageImageViewOverlayViewTypeCompleted:
+        {
+            CGFloat diameter = _overlayStyle == TGMessageImageViewOverlayStyleList ? 30.0f : self.radius;
+            CGFloat inset = 0.0f;
+            CGFloat crossSize = _overlayStyle == TGMessageImageViewOverlayStyleList ? 10.0f : 14.0f;
+            
+            if (ABS(diameter - 37.0f) < 0.1) {
+                crossSize = 10.0f;
+                inset = 2.0;
+            } else if (ABS(diameter - 32.0f) < 0.1) {
+                crossSize = 10.0f;
+                inset = 0.0;
+            }
+            
+            CGContextSetBlendMode(context, kCGBlendModeCopy);
+            
+            if (_overlayStyle == TGMessageImageViewOverlayStyleDefault)
+            {
+                if (_overlayBackgroundColorHint != nil)
+                    CGContextSetFillColorWithColor(context, _overlayBackgroundColorHint.CGColor);
+                else
+                    CGContextSetFillColorWithColor(context, TGColorWithHexAndAlpha(0x000000, 0.7f).CGColor);
+                CGContextFillEllipseInRect(context, CGRectMake(inset, inset, diameter - inset * 2.0f, diameter - inset * 2.0f));
+            }
+            
+            CGContextSetLineCap(context, kCGLineCapRound);
+            
+            if (_overlayStyle == TGMessageImageViewOverlayStyleDefault)
+            {
+                CGContextSetBlendMode(context, kCGBlendModeNormal);
+                CGContextSetStrokeColorWithColor(context, TGColorWithHexAndAlpha(0xffffff, 1.0f).CGColor);
+            }
+            
+            CGContextSetBlendMode(context, kCGBlendModeCopy);
+            
+            CGFloat pathLineWidth = 2.0f;
+            CGFloat pathDiameter = diameter - pathLineWidth;
+
+            if (ABS(diameter - 37.0f) < 0.1) {
+                pathLineWidth = 2.5f;
+                pathDiameter = diameter - pathLineWidth * 2.0 - 1.5f;
+            } else if (ABS(diameter - 32.0f) < 0.1) {
+                pathLineWidth = 2.0f;
+                pathDiameter = diameter - pathLineWidth * 2.0 - 1.5f;
+            } else {
+                pathLineWidth = 2.5f;
+                pathDiameter = diameter - pathLineWidth * 2.0 - 1.5f;
+            }
+
+            CGPoint center = CGPointMake(diameter / 2.0f, diameter / 2.0f);
+            
+            CGContextSetLineWidth(context, pathLineWidth);
+            CGContextSetLineCap(context, kCGLineCapRound);
+            CGContextSetLineJoin(context, kCGLineJoinRound);
+            CGContextSetMiterLimit(context, 10);
+            
+            CGFloat firstSegment = MAX(0.0f, MIN(1.0f, _checkProgress * 3.0f));
+            
+            CGPoint s = CGPointMake(center.x - 10.0f, center.y + 1.0f);
+            CGPoint p1 = CGPointMake(7.0f, 7.0f);
+            CGPoint p2 = CGPointMake(15.0f, -16.0f);
+            
+            if (diameter < 36.0f)
+            {
+                s = CGPointMake(center.x - 7.0f, center.y + 1.0f);
+                p1 = CGPointMake(4.5f, 4.5f);
+                p2 = CGPointMake(10.0f, -11.0f);
+            }
+            
+            if (firstSegment > FLT_EPSILON)
+            {
+                if (firstSegment < 1.0f)
+                {
+                    CGContextMoveToPoint(context, s.x + p1.x * firstSegment, s.y + p1.y * firstSegment);
+                    CGContextAddLineToPoint(context, s.x, s.y);
+                }
+                else
+                {
+                    CGFloat secondSegment = (_checkProgress - 0.33f) * 1.5f;
+                    CGContextMoveToPoint(context, s.x + p1.x + p2.x * secondSegment, s.y + p1.y + p2.y * secondSegment);
+                    CGContextAddLineToPoint(context, s.x + p1.x, s.y + p1.y);
+                    CGContextAddLineToPoint(context, s.x, s.y);
+                }
+            }
+            CGContextStrokePath(context);
+        }
+            break;
+            
         default:
             break;
     }
@@ -1145,6 +1302,16 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
     _progressLayer.hidden = true;
     
     [_contentLayer setSecretProgress:progress completeDuration:completeDuration animated:animated];
+}
+
+- (void)setCompletedAnimated:(bool)animated;
+{
+    __weak TGMessageImageViewOverlayView *weakSelf = self;
+    [_contentLayer setCompletedAnimated:animated started:^{
+        __strong TGMessageImageViewOverlayView *strongSelf = weakSelf;
+        [strongSelf->_progressLayer setNone];
+    }];
+    _blurredBackgroundLayer.hidden = _blurless;
 }
 
 @end

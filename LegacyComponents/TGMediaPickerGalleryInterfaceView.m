@@ -62,7 +62,7 @@
     TGModernButton *_muteButton;
     TGCheckButtonView *_checkButton;
     TGMediaPickerPhotoCounterButton *_photoCounterButton;
-    TGModernButton *_groupButton;
+    TGMediaPickerGroupButton *_groupButton;
     
     TGMediaPickerPhotoStripView *_selectedPhotosView;
     
@@ -206,59 +206,6 @@
             _photoCounterButton.userInteractionEnabled = false;
             [_wrapperView addSubview:_photoCounterButton];
             
-            bool (^updateGroupingButtonVisibility)(void) = ^bool
-            {
-                __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
-                if (strongSelf == nil)
-                    return false;
-                
-                bool onlyGroupableMedia = true;
-                for (id item in strongSelf->_selectionContext.selectedItems)
-                {
-                    if ([item isKindOfClass:[TGMediaAsset class]])
-                    {
-                        if (((TGMediaAsset *)item).type == TGMediaAssetGifType)
-                        {
-                            onlyGroupableMedia = false;
-                            break;
-                        }
-                        else
-                        {
-                            if ([[strongSelf->_editingContext timerForItem:item] integerValue] > 0)
-                            {
-                                onlyGroupableMedia = false;
-                                break;
-                            }
-                            
-                            id<TGMediaEditAdjustments> adjustments = [strongSelf->_editingContext adjustmentsForItem:item];
-                            if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]] && ((TGMediaVideoEditAdjustments *)adjustments).sendAsGif)
-                            {
-                                onlyGroupableMedia = false;
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                bool groupingButtonVisible = strongSelf->_groupButton != nil && onlyGroupableMedia && strongSelf->_selectionContext.count > 1;
-                dispatch_async(dispatch_get_main_queue(), ^
-                {
-                    if (groupingButtonVisible)
-                        strongSelf->_groupButton.hidden = false;
-                    [strongSelf->_groupButton.layer removeAllAnimations];
-                    [UIView animateWithDuration:0.2 animations:^
-                     {
-                         strongSelf->_groupButton.alpha = groupingButtonVisible ? 1.0f : 0.0f;
-                     } completion:^(BOOL finished)
-                     {
-                         if (finished)
-                             strongSelf->_groupButton.hidden = !groupingButtonVisible;
-                     }];
-                });
-                
-                return groupingButtonVisible;
-            };
-            
             _selectionChangedDisposable = [[_selectionContext selectionChangedSignal] startWithNext:^(id next)
             {
                 __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
@@ -272,24 +219,16 @@
                 if (selectableItem != nil)
                     [strongSelf->_checkButton setNumber:[strongSelf->_selectionContext indexOfItem:selectableItem]];
                 
-                bool groupingButtonVisible = updateGroupingButtonVisibility();
-                if (groupingButtonVisible && [strongSelf shouldDisplayGroupingTooltip] && strongSelf->_selectionContext.grouping)
+                bool groupingButtonVisible = [strongSelf updateGroupingButtonVisibility];
+                if (!strongSelf->_groupButton.hidden && groupingButtonVisible && [strongSelf shouldDisplayGroupingTooltip] && strongSelf->_selectionContext.grouping)
                     [strongSelf setupGroupingTooltip:[strongSelf->_groupButton.superview convertRect:strongSelf->_groupButton.frame toView:strongSelf]];
             }];
             
             if (_selectionContext.allowGrouping)
             {
-                _groupButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 44.0f, 44.0f)];
-                _groupButton.adjustsImageWhenHighlighted = false;
-                if (_selectionContext.count < 2)
-                {
-                    _groupButton.alpha = 0.0f;
-                    _groupButton.hidden = true;
-                }
+                _groupButton = [[TGMediaPickerGroupButton alloc] initWithFrame:CGRectMake(0, 0, 38.0f, 38.0f)];
+                [_groupButton setHidden:true animated:false];
                 _groupButton.selected = _selectionContext.grouping;
-                [_groupButton setImage:[TGPhotoEditorInterfaceAssets ungroupIcon] forState:UIControlStateNormal];
-                [_groupButton setImage:[TGPhotoEditorInterfaceAssets groupIcon] forState:UIControlStateSelected];
-                [_groupButton setImage:[TGPhotoEditorInterfaceAssets groupIcon]  forState:UIControlStateSelected | UIControlStateHighlighted];
                 [_groupButton addTarget:self action:@selector(toggleGrouping) forControlEvents:UIControlEventTouchUpInside];
                 [_wrapperView addSubview:_groupButton];
                 
@@ -304,16 +243,24 @@
                 {
                     _timersChangedDisposable = [_editingContext.timersUpdatedSignal startWithNext:^(__unused NSNumber *next)
                     {
-                        updateGroupingButtonVisibility();
+                        __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+                        if (strongSelf == nil)
+                            return;
+                        
+                        [strongSelf updateGroupingButtonVisibility];
                     }];
                     
                     _adjustmentsChangedDisposable = [_editingContext.adjustmentsUpdatedSignal startWithNext:^(__unused NSNumber *next)
                     {
-                        updateGroupingButtonVisibility();
+                        __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+                        if (strongSelf == nil)
+                            return;
+                        
+                        [strongSelf updateGroupingButtonVisibility];
                     }];
                 }
                 
-                updateGroupingButtonVisibility();
+                [self updateGroupingButtonVisibility];
             }
         }
         
@@ -405,6 +352,45 @@
     [_itemAvailabilityDisposable dispose];
     [_selectionChangedDisposable dispose];
     [_timersChangedDisposable dispose];
+}
+
+- (bool)updateGroupingButtonVisibility
+{
+    bool onlyGroupableMedia = true;
+    for (id item in _selectionContext.selectedItems)
+    {
+        if ([item isKindOfClass:[TGMediaAsset class]])
+        {
+            if (((TGMediaAsset *)item).type == TGMediaAssetGifType)
+            {
+                onlyGroupableMedia = false;
+                break;
+            }
+            else
+            {
+                if ([[_editingContext timerForItem:item] integerValue] > 0)
+                {
+                    onlyGroupableMedia = false;
+                    break;
+                }
+                
+                id<TGMediaEditAdjustments> adjustments = [_editingContext adjustmentsForItem:item];
+                if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]] && ((TGMediaVideoEditAdjustments *)adjustments).sendAsGif)
+                {
+                    onlyGroupableMedia = false;
+                    break;
+                }
+            }
+        }
+    }
+    
+    bool groupingButtonVisible = _groupButton != nil && onlyGroupableMedia && _selectionContext.count > 1;
+    dispatch_async(dispatch_get_main_queue(), ^
+    {
+        [_groupButton setInternalHidden:!groupingButtonVisible animated:true];
+    });
+    
+    return groupingButtonVisible;
 }
 
 - (void)setHasCaptions:(bool)hasCaptions
@@ -593,8 +579,19 @@
 
 - (void)photoCounterButtonPressed
 {
+    bool selected = !_photoCounterButton.selected;
     [_photoCounterButton setSelected:!_photoCounterButton.selected animated:true];
     [_selectedPhotosView setHidden:!_photoCounterButton.selected animated:true];
+    [_groupButton setHidden:!_photoCounterButton.selected animated:true];
+    
+    bool groupingButtonVisible = [self updateGroupingButtonVisibility];
+    if (selected && _groupButton != nil && groupingButtonVisible && _selectionContext.grouping && [self shouldDisplayGroupingTooltip])
+    {
+        TGDispatchAfter(0.5, dispatch_get_main_queue(), ^
+        {
+            [self setupGroupingTooltip:[_groupButton.superview convertRect:_groupButton.frame toView:self]];
+        });
+    }
 }
 
 - (void)updateEditorButtonsForItem:(id<TGModernGalleryItem>)item animated:(bool)animated
@@ -774,13 +771,6 @@
         if (value > 0)
             highlightedButtons |= TGPhotoEditorTimerTab;
     }
-    if (_groupButton != nil && _groupButton.alpha > FLT_EPSILON && _selectionContext.grouping && !willShowTimerTooltip && [self shouldDisplayGroupingTooltip])
-    {
-        TGDispatchAfter(0.5, dispatch_get_main_queue(), ^
-        {
-            [self setupGroupingTooltip:[_groupButton.superview convertRect:_groupButton.frame toView:self]];
-        });
-    }
     
     [_portraitToolbarView setEditButtonsHighlighted:highlightedButtons];
     [_landscapeToolbarView setEditButtonsHighlighted:highlightedButtons];
@@ -838,7 +828,7 @@
     if (_tooltipContainerView != nil)
         return;
     
-    rect = CGRectOffset(rect, 0.0f, 97.0f);
+    rect = CGRectOffset(rect, 0.0f, 15.0f);
     
     _tooltipTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(tooltipTimerTick) interval:3.0 repeat:false];
     
@@ -848,7 +838,6 @@
     NSMutableArray *actions = [[NSMutableArray alloc] init];
     [actions addObject:[[NSDictionary alloc] initWithObjectsAndKeys:TGLocalized(@"MediaPicker.TapToUngroupDescription"), @"title", nil]];
     
-    _tooltipContainerView.menuView.forceArrowOnTop = true;
     [_tooltipContainerView.menuView setButtonsAndActions:actions watcherHandle:_actionHandle];
     [_tooltipContainerView.menuView sizeToFit];
     _tooltipContainerView.menuView.buttonHighlightDisabled = true;
@@ -887,7 +876,6 @@
         
         [_groupingTooltipContainerView.tooltipView setText:tooltipText animated:false];
         _groupingTooltipContainerView.tooltipView.sourceView = _groupButton;
-        _groupingTooltipContainerView.tooltipView.forceArrowOnTop = true;
         
         CGRect recordButtonFrame = [_groupButton.superview convertRect:_groupButton.frame toView:_groupingTooltipContainerView];
         recordButtonFrame.origin.y += 15.0f;
@@ -968,17 +956,12 @@
             _muteButton.alpha = alpha;
             _arrowView.alpha = alpha * 0.45f;
             _recipientLabel.alpha = alpha;
-            
-            if (!_groupButton.hidden)
-                _groupButton.alpha = alpha;
         } completion:^(BOOL finished)
         {
             if (finished)
             {
                 _checkButton.userInteractionEnabled = !hidden;
                 _muteButton.userInteractionEnabled = !hidden;
-                if (!_groupButton.hidden)
-                    _groupButton.userInteractionEnabled = !hidden;
             }
         }];
     }
@@ -992,12 +975,6 @@
         
         _arrowView.alpha = alpha * 0.45f;
         _recipientLabel.alpha = alpha;
-        
-        if (!_groupButton.hidden)
-        {
-            _groupButton.alpha = alpha;
-            _groupButton.userInteractionEnabled = !hidden;
-        }
     }
     
     if (hidden)
@@ -1007,6 +984,9 @@
     }
     
     [_photoCounterButton setHidden:hidden delay:delay animated:animated];
+    
+    if (!_groupButton.hidden)
+        [_groupButton setHidden:true animated:animated];
 }
 
 - (void)setAllInterfaceHidden:(bool)hidden delay:(NSTimeInterval)__unused delay animated:(bool)animated
@@ -1023,9 +1003,6 @@
             _portraitToolbarView.alpha = alpha;
             _landscapeToolbarView.alpha = alpha;
             _captionMixin.inputPanel.alpha = alpha;
-            
-            if (!_groupButton.hidden)
-                _groupButton.alpha = alpha;
         } completion:^(BOOL finished)
         {
             if (finished)
@@ -1035,9 +1012,6 @@
                 _portraitToolbarView.userInteractionEnabled = !hidden;
                 _landscapeToolbarView.userInteractionEnabled = !hidden;
                 _captionMixin.inputPanel.userInteractionEnabled = !hidden;
-                
-                if (!_groupButton.hidden)
-                    _groupButton.userInteractionEnabled = !hidden;
             }
         }];
     }
@@ -1060,12 +1034,6 @@
         
         _captionMixin.inputPanel.alpha = alpha;
         _captionMixin.inputPanel.userInteractionEnabled = !hidden;
-        
-        if (!_groupButton.hidden)
-        {
-            _groupButton.alpha = alpha;
-            _groupButton.userInteractionEnabled = !hidden;
-        }
     }
     
     if (hidden)
@@ -1075,6 +1043,8 @@
     }
     
     [_photoCounterButton setHidden:hidden delay:delay animated:animated];
+    if (!_groupButton.hidden)
+        [_groupButton setHidden:true animated:animated];
     
     [self setItemHeaderViewHidden:hidden animated:animated];
 }
@@ -1340,19 +1310,20 @@
         screenEdges.top += _safeAreaInset.top;
     screenEdges.left += _safeAreaInset.left;
     screenEdges.right -= _safeAreaInset.right;
+    screenEdges.bottom -= _safeAreaInset.bottom;
     
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
-            frame = CGRectMake(screenEdges.right - 44, screenEdges.top + 5 + _groupButton.frame.size.height + 7.0f, _groupButton.frame.size.width, _groupButton.frame.size.height);
+            frame = CGRectMake(screenEdges.left + TGPhotoEditorToolbarSize + 14, screenEdges.bottom - _groupButton.frame.size.height - 1.0f + _safeAreaInset.bottom, _groupButton.frame.size.width, _groupButton.frame.size.height);
             break;
             
         case UIInterfaceOrientationLandscapeRight:
-            frame = CGRectMake(screenEdges.left + 4, screenEdges.top + 5 + _groupButton.frame.size.height + 7.0f, _groupButton.frame.size.width, _groupButton.frame.size.height);
+            frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - 38 - 14, screenEdges.bottom - _groupButton.frame.size.height - 1.0f + _safeAreaInset.bottom, _groupButton.frame.size.width, _groupButton.frame.size.height);
             break;
             
         default:
-            frame = CGRectMake(screenEdges.right - 44 - _groupButton.frame.size.width - 7.0f, screenEdges.top + 3 - TGScreenPixel, _groupButton.frame.size.width, _groupButton.frame.size.height);
+            frame = CGRectMake(screenEdges.left + 6.0f, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 40.0f, _groupButton.frame.size.width, _groupButton.frame.size.height);
             break;
     }
     
