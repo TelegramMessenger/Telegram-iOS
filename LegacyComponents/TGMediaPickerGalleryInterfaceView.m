@@ -1327,9 +1327,6 @@
             break;
     }
     
-    if (hasHeaderView)
-        frame.origin.y += 64;
-    
     return frame;
 }
 
