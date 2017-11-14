@@ -37,7 +37,7 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
 
                                     modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, currentData in
                                         if let currentData = currentData as? CachedChannelData {
-                                            return currentData.withUpdatedTopParticipants(parsedParticipants).withUpdatedParticipantsSummary(currentData.participantsSummary.withUpdatedMemberCount(count))
+                                            return currentData.withUpdatedTopParticipants(parsedParticipants)
                                         } else {
                                             return currentData
                                         }

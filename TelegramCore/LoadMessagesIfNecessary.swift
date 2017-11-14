@@ -18,10 +18,19 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
     
     
     let postboxSignal = postbox.modify { modifier -> ([Message], Set<MessageId>, SimpleDictionary<PeerId, Peer>) in
+        
+        var ids = messageIds
+        
+        if let cachedData = modifier.getPeerCachedData(peerId: messageIds[0].peerId) as? CachedChannelData {
+            if let minAvailableMessageId = cachedData.minAvailableMessageId {
+                ids = ids.filter({$0 < minAvailableMessageId})
+            }
+        }
+        
         var messages:[Message] = []
         var missingMessageIds:Set<MessageId> = Set()
         var supportPeers:SimpleDictionary<PeerId, Peer> = SimpleDictionary()
-        for messageId in messageIds {
+        for messageId in ids {
             if let message = modifier.getMessage(messageId) {
                 messages.append(message)
             } else {
