@@ -4,7 +4,7 @@ import AsyncDisplayKit
 
 private let separatorHeight: CGFloat = 1.0 / UIScreen.main.scale
 private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: UIColor, tintColor: UIColor) -> UIImage? {
-    let font = Font.regular(10.0)
+    let font = Font.medium(10.0)
     let titleSize = (title as NSString).boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin], attributes: [NSAttributedStringKey.font: font], context: nil).size
     
     let imageSize: CGSize
@@ -22,7 +22,7 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
         context.fill(CGRect(origin: CGPoint(), size: size))
         
         if let image = image {
-            let imageRect = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - imageSize.width) / 2.0), y: 0.0), size: imageSize)
+            let imageRect = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - imageSize.width) / 2.0), y: 1.0), size: imageSize)
             context.saveGState()
             context.translateBy(x: imageRect.midX, y: imageRect.midY)
             context.scaleBy(x: 1.0, y: -1.0)
@@ -34,7 +34,7 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
         }
     }
     
-    (title as NSString).draw(at: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - 3.0), withAttributes: [NSAttributedStringKey.font: font, NSAttributedStringKey.foregroundColor: tintColor])
+    (title as NSString).draw(at: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - 2.0), withAttributes: [NSAttributedStringKey.font: font, NSAttributedStringKey.foregroundColor: tintColor])
     
     let image = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
@@ -150,7 +150,7 @@ class TabBarNode: ASDisplayNode {
         self.separatorNode.isOpaque = true
         self.separatorNode.isLayerBacked = true
         
-        self.badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.tabBarBadgeBackgroundColor, backgroundColor: nil)!
+        self.badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.tabBarBadgeBackgroundColor, strokeColor: theme.tabBarBadgeStrokeColor, strokeWidth: 1.0, backgroundColor: nil)!
         
         super.init()
         
@@ -167,7 +167,12 @@ class TabBarNode: ASDisplayNode {
             self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
             self.backgroundColor = theme.tabBarBackgroundColor
             
-            self.badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.tabBarBadgeBackgroundColor, backgroundColor: nil)!
+            self.badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.tabBarBadgeBackgroundColor, strokeColor: theme.tabBarBadgeStrokeColor, strokeWidth: 1.0, backgroundColor: nil)!
+            for container in self.tabBarNodeContainers {
+                if let attributedText = container.badgeTextNode.attributedText, !attributedText.string.isEmpty {
+                    container.badgeTextNode.attributedText = NSAttributedString(string: attributedText.string, font: badgeFont, textColor: self.theme.tabBarBadgeTextColor)
+                }
+            }
             
             for i in 0 ..< self.tabBarItems.count {
                 self.updateNodeImage(i)
@@ -275,7 +280,7 @@ class TabBarNode: ASDisplayNode {
                 if container.badgeValue != container.appliedBadgeValue {
                     container.appliedBadgeValue = container.badgeValue
                     if let badgeValue = container.badgeValue, !badgeValue.isEmpty {
-                        container.badgeTextNode.attributedText = NSAttributedString(string: badgeValue, font: badgeFont, textColor: .white)
+                        container.badgeTextNode.attributedText = NSAttributedString(string: badgeValue, font: badgeFont, textColor: self.theme.tabBarBadgeTextColor)
                         container.badgeBackgroundNode.isHidden = false
                         container.badgeTextNode.isHidden = false
                     } else {
@@ -287,7 +292,7 @@ class TabBarNode: ASDisplayNode {
                 if !container.badgeBackgroundNode.isHidden {
                     let badgeSize = container.badgeTextNode.measure(CGSize(width: 200.0, height: 100.0))
                     let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
-                    let backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.calculatedSize.width / 2.0) - 3.0 + node.calculatedSize.width - backgroundSize.width - 1.0, y: 2.0), size: backgroundSize)
+                    let backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.frame.width / 2.0) - 3.0 + node.frame.width - backgroundSize.width - 1.0, y: 2.0), size: backgroundSize)
                     container.badgeBackgroundNode.frame = backgroundFrame
                     container.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: 3.0), size: badgeSize)
                 }

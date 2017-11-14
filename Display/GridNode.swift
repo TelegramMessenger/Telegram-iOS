@@ -373,16 +373,21 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         
         self.itemLayout = self.generateItemLayout()
         
+        var updateLayoutTransition = transaction.updateLayout?.transition
+        
         let generatedScrollToItem: GridNodeScrollToItem?
         if let scrollToItem = transaction.scrollToItem {
             generatedScrollToItem = scrollToItem
+            if updateLayoutTransition == nil {
+                updateLayoutTransition = scrollToItem.transition
+            }
         } else if previousLayoutWasEmpty {
             generatedScrollToItem = GridNodeScrollToItem(index: 0, position: .top, transition: .immediate, directionHint: .up, adjustForSection: true, adjustForTopInset: true)
         } else {
             generatedScrollToItem = nil
         }
         
-        self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: transaction.updateLayout?.transition, itemTransition: transaction.itemTransition, completion: completion)
+        self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: updateLayoutTransition, customScrollToItem: transaction.scrollToItem != nil, itemTransition: transaction.itemTransition, completion: completion)
     }
     
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -401,7 +406,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.applyingContentOffset {
-            self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil, itemTransition: .immediate, completion: { _ in })
+            self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil, customScrollToItem: false, itemTransition: .immediate, completion: { _ in })
         }
     }
     
@@ -764,7 +769,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         return lowestHeaderNode
     }
     
-    private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, itemTransition: ContainedViewLayoutTransition, completion: (GridNodeDisplayedItemRange) -> Void) {
+    private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, customScrollToItem: Bool, itemTransition: ContainedViewLayoutTransition, completion: (GridNodeDisplayedItemRange) -> Void) {
         let boundsTransition: ContainedViewLayoutTransition = updateLayoutTransition ?? .immediate
         
         var previousItemFrames: [WrappedGridItemNode: CGRect]?
@@ -806,14 +811,14 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             self.scrollView.scrollIndicatorInsets = presentationLayoutTransition.layout.layout.insets
         }
         var boundsOffset: CGFloat = 0.0
+        var shouldAnimateBounds = false
         if !self.scrollView.contentOffset.equalTo(presentationLayoutTransition.layout.contentOffset) || self.bounds.size != presentationLayoutTransition.layout.layout.size {
             let updatedBounds = CGRect(origin: presentationLayoutTransition.layout.contentOffset, size: presentationLayoutTransition.layout.layout.size)
             boundsOffset = updatedBounds.origin.y - previousBounds.origin.y
             self.bounds = updatedBounds
-            //boundsTransition.animateOffsetAdditive(layer: self.layer, offset: -boundsOffset - insetsOffset)
-            boundsTransition.animateBounds(layer: self.layer, from: previousBounds)
+            shouldAnimateBounds = true
         }
-        applyingContentOffset = false
+        self.applyingContentOffset = false
         
         let lowestSectionNode: ASDisplayNode? = self.lowestSectionNode()
         
@@ -859,6 +864,9 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         
         if let previousItemFrames = previousItemFrames, case let .animated(duration, curve) = presentationLayoutTransition.transition {
             let contentOffset = presentationLayoutTransition.layout.contentOffset
+            
+            boundsOffset = 0.0
+            shouldAnimateBounds = false
             
             var offset: CGFloat?
             for (index, itemNode) in self.itemNodes {
@@ -934,7 +942,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         if let previousFrame = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
                             self.removeItemNodeWithIndex(index, removeNode: false)
                             let position = CGPoint(x: previousFrame.midX, y: previousFrame.midY)
-                            itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak itemNode] _ in
+                            itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, force: true, completion: { [weak itemNode] _ in
                                 itemNode?.removeFromSupernode()
                             })
                         } else {
@@ -946,7 +954,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 for itemNode in removedNodes {
                     if let previousFrame = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
                         let position = CGPoint(x: previousFrame.midX, y: previousFrame.midY)
-                        itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak itemNode] _ in
+                        itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, force: true, completion: { [weak itemNode] _ in
                             itemNode?.removeFromSupernode()
                         })
                     } else {
@@ -960,7 +968,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         if let previousFrame = previousItemFrames[WrappedGridItemNode(node: sectionNode)] {
                             self.removeSectionNodeWithSection(wrappedSection, removeNode: false)
                             let position = CGPoint(x: previousFrame.midX, y: previousFrame.midY)
-                            sectionNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak sectionNode] _ in
+                            sectionNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, force: true, completion: { [weak sectionNode] _ in
                                 sectionNode?.removeFromSupernode()
                             })
                         } else {
@@ -1060,6 +1068,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             for itemNode in removedNodes {
                 itemNode.removeFromSupernode()
             }
+        }
+        
+        if shouldAnimateBounds {
+            boundsTransition.animateBounds(layer: self.layer, from: previousBounds)
         }
         
         completion(self.displayedItemRange())

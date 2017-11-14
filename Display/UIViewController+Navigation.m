@@ -35,6 +35,9 @@ static const void *UIViewControllerNavigationControllerKey = &UIViewControllerNa
 static const void *UIViewControllerPresentingControllerKey = &UIViewControllerPresentingControllerKey;
 static const void *UIViewControllerPresentingProxyControllerKey = &UIViewControllerPresentingProxyControllerKey;
 static const void *disablesInteractiveTransitionGestureRecognizerKey = &disablesInteractiveTransitionGestureRecognizerKey;
+static const void *disablesAutomaticKeyboardHandlingKey = &disablesAutomaticKeyboardHandlingKey;
+static const void *setNeedsStatusBarAppearanceUpdateKey = &setNeedsStatusBarAppearanceUpdateKey;
+static const void *inputAccessoryHeightProviderKey = &inputAccessoryHeightProviderKey;
 
 static bool notyfyingShiftState = false;
 
@@ -96,6 +99,7 @@ static bool notyfyingShiftState = false;
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(navigationController) newSelector:@selector(_65087dc8_navigationController)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentingViewController) newSelector:@selector(_65087dc8_presentingViewController)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentViewController:animated:completion:) newSelector:@selector(_65087dc8_presentViewController:animated:completion:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(setNeedsStatusBarAppearanceUpdate) newSelector:@selector(_65087dc8_setNeedsStatusBarAppearanceUpdate)];
         
         //[RuntimeUtils swizzleInstanceMethodOfClass:NSClassFromString(@"UIKeyboardImpl") currentSelector:@selector(notifyShiftState) withAnotherClass:[UIKeyboardImpl_65087dc8 class] newSelector:@selector(notifyShiftState)];
         //[RuntimeUtils swizzleInstanceMethodOfClass:NSClassFromString(@"UIInputWindowController") currentSelector:@selector(updateViewConstraints) withAnotherClass:[UIInputWindowController_65087dc8 class] newSelector:@selector(updateViewConstraints)];
@@ -189,6 +193,19 @@ static bool notyfyingShiftState = false;
     [self _65087dc8_presentViewController:viewControllerToPresent animated:flag completion:completion];
 }
 
+- (void)_65087dc8_setNeedsStatusBarAppearanceUpdate {
+    [self _65087dc8_setNeedsStatusBarAppearanceUpdate];
+    
+    void (^block)() = [self associatedObjectForKey:setNeedsStatusBarAppearanceUpdateKey];
+    if (block) {
+        block();
+    }
+}
+
+- (void)state_setNeedsStatusBarAppearanceUpdate:(void (^_Nullable)())block {
+    [self setAssociatedObject:[block copy] forKey:setNeedsStatusBarAppearanceUpdateKey];
+}
+
 @end
 
 @implementation UIView (Navigation)
@@ -199,6 +216,26 @@ static bool notyfyingShiftState = false;
 
 - (void)setDisablesInteractiveTransitionGestureRecognizer:(bool)disablesInteractiveTransitionGestureRecognizer {
     [self setAssociatedObject:@(disablesInteractiveTransitionGestureRecognizer) forKey:disablesInteractiveTransitionGestureRecognizerKey];
+}
+
+- (bool)disablesAutomaticKeyboardHandling {
+    return [[self associatedObjectForKey:disablesAutomaticKeyboardHandlingKey] boolValue];
+}
+
+- (void)setDisablesAutomaticKeyboardHandling:(bool)disablesAutomaticKeyboardHandling {
+    [self setAssociatedObject:@(disablesAutomaticKeyboardHandling) forKey:disablesAutomaticKeyboardHandlingKey];
+}
+
+- (void)input_setInputAccessoryHeightProvider:(CGFloat (^_Nullable)())block {
+    [self setAssociatedObject:[block copy] forKey:inputAccessoryHeightProviderKey];
+}
+
+- (CGFloat)input_getInputAccessoryHeight {
+    CGFloat (^block)() = [self associatedObjectForKey:inputAccessoryHeightProviderKey];
+    if (block) {
+        return block();
+    }
+    return 0.0f;
 }
 
 @end

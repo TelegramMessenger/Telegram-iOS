@@ -1,7 +1,7 @@
 import UIKit
 import AsyncDisplayKit
 
-private let containerInsets = UIEdgeInsets(top: 16.0, left: 16.0, bottom: 8.0, right: 16.0)
+private let containerInsets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
 
 private class ActionSheetControllerNodeScrollView: UIScrollView {
     override func touchesShouldCancel(in view: UIView) -> Bool {
@@ -10,7 +10,7 @@ private class ActionSheetControllerNodeScrollView: UIScrollView {
 }
 
 final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    static let dimColor: UIColor = UIColor(white: 0.0, alpha: 0.4)
+    private let theme: ActionSheetControllerTheme
     
     private let dismissTapView: UIView
     
@@ -25,7 +25,9 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     var dismiss: () -> Void = { }
     
-    override init() {
+    init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        
         self.scrollView = ActionSheetControllerNodeScrollView()
         
         if #available(iOSApplicationExtension 11.0, *) {
@@ -38,22 +40,22 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.dismissTapView = UIView()
         
         self.leftDimView = UIView()
-        self.leftDimView.backgroundColor = ActionSheetControllerNode.dimColor
+        self.leftDimView.backgroundColor = self.theme.dimColor
         self.leftDimView.isUserInteractionEnabled = false
         
         self.rightDimView = UIView()
-        self.rightDimView.backgroundColor = ActionSheetControllerNode.dimColor
+        self.rightDimView.backgroundColor = self.theme.dimColor
         self.rightDimView.isUserInteractionEnabled = false
         
         self.topDimView = UIView()
-        self.topDimView.backgroundColor = ActionSheetControllerNode.dimColor
+        self.topDimView.backgroundColor = self.theme.dimColor
         self.topDimView.isUserInteractionEnabled = false
         
         self.bottomDimView = UIView()
-        self.bottomDimView.backgroundColor = ActionSheetControllerNode.dimColor
+        self.bottomDimView.backgroundColor = self.theme.dimColor
         self.bottomDimView.isUserInteractionEnabled = false
 
-        self.itemGroupsContainerNode = ActionSheetItemGroupsContainerNode()
+        self.itemGroupsContainerNode = ActionSheetItemGroupsContainerNode(theme: self.theme)
         
         super.init()
         
@@ -74,7 +76,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        var insets = layout.insets(options: [.statusBar])
+        let insets = layout.insets(options: [.statusBar])
         
         self.scrollView.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.dismissTapView.frame = CGRect(origin: CGPoint(), size: layout.size)
@@ -88,7 +90,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func animateIn() {
         let tempDimView = UIView()
-        tempDimView.backgroundColor = ActionSheetControllerNode.dimColor
+        tempDimView.backgroundColor = self.theme.dimColor
         tempDimView.frame = self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height)
         self.view.addSubview(tempDimView)
         
@@ -105,7 +107,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func animateOut() {
         let tempDimView = UIView()
-        tempDimView.backgroundColor = ActionSheetControllerNode.dimColor
+        tempDimView.backgroundColor = self.theme.dimColor
         tempDimView.frame = self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height)
         self.view.addSubview(tempDimView)
         
@@ -138,7 +140,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         let contentOffset = self.scrollView.contentOffset
-        var additionalTopHeight = max(0.0, -contentOffset.y)
+        let additionalTopHeight = max(0.0, -contentOffset.y)
         
         if additionalTopHeight >= 30.0 {
             self.animateOut()
@@ -146,8 +148,8 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func updateScrollDimViews(size: CGSize) {
-        var additionalTopHeight = max(0.0, -self.scrollView.contentOffset.y)
-        var additionalBottomHeight = -min(0.0, -self.scrollView.contentOffset.y)
+        let additionalTopHeight = max(0.0, -self.scrollView.contentOffset.y)
+        let additionalBottomHeight = -min(0.0, -self.scrollView.contentOffset.y)
         
         self.topDimView.frame = CGRect(x: containerInsets.left, y: -additionalTopHeight, width: size.width - containerInsets.left - containerInsets.right, height: max(0.0, self.itemGroupsContainerNode.frame.minY + additionalTopHeight))
         self.bottomDimView.frame = CGRect(x: containerInsets.left, y: self.itemGroupsContainerNode.frame.maxY, width: size.width - containerInsets.left - containerInsets.right, height: max(0.0, size.height - self.itemGroupsContainerNode.frame.maxY + additionalBottomHeight))

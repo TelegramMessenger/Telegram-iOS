@@ -121,6 +121,7 @@ public struct ListViewDeleteAndInsertOptions: OptionSet {
     public static let AnimateTopItemPosition = ListViewDeleteAndInsertOptions(rawValue: 32)
     public static let PreferSynchronousDrawing = ListViewDeleteAndInsertOptions(rawValue: 64)
     public static let PreferSynchronousResourceLoading = ListViewDeleteAndInsertOptions(rawValue: 128)
+    public static let AnimateCrossfade = ListViewDeleteAndInsertOptions(rawValue: 256)
 }
 
 public struct ListViewUpdateSizeAndInsets {

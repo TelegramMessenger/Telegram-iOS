@@ -9,9 +9,9 @@ public final class NavigationBarTheme {
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(color.cgColor)
             
-            context.translateBy(x: 0.0, y: 2.0)
+            context.translateBy(x: 0.0, y: -UIScreenPixel)
             
-            let _ = try? drawSvgPath(context, path: "M8.16012402,0.373030797 L0.635333572,7.39652821 L0.635333572,7.39652821 C-0.172148528,8.15021677 -0.215756811,9.41579564 0.537931744,10.2232777 C0.56927099,10.2568538 0.601757528,10.2893403 0.635333572,10.3206796 L8.16012402,17.344177 L8.16012402,17.344177 C8.69299787,17.8415514 9.51995274,17.8415514 10.0528266,17.344177 L10.0528266,17.344177 L10.0528266,17.344177 C10.5406633,16.8888394 10.567009,16.1242457 10.1116715,15.636409 C10.092738,15.6161242 10.0731114,15.5964976 10.0528266,15.5775641 L2.85430928,8.85860389 L10.0528266,2.13964366 L10.0528266,2.13964366 C10.5406633,1.68430612 10.567009,0.919712345 10.1116715,0.431875673 C10.092738,0.411590857 10.0731114,0.391964261 10.0528266,0.373030797 L10.0528266,0.373030797 L10.0528266,0.373030797 C9.51995274,-0.124343599 8.69299787,-0.124343599 8.16012402,0.373030797 Z ")
+            let _ = try? drawSvgPath(context, path: "M3.60751322,11.5 L11.5468531,3.56066017 C12.1326395,2.97487373 12.1326395,2.02512627 11.5468531,1.43933983 C10.9610666,0.853553391 10.0113191,0.853553391 9.42553271,1.43933983 L0.449102936,10.4157696 C-0.149700979,11.0145735 -0.149700979,11.9854265 0.449102936,12.5842304 L9.42553271,21.5606602 C10.0113191,22.1464466 10.9610666,22.1464466 11.5468531,21.5606602 C12.1326395,20.9748737 12.1326395,20.0251263 11.5468531,19.4393398 L3.60751322,11.5 Z ")
         })
     }
     
@@ -19,16 +19,22 @@ public final class NavigationBarTheme {
     public let primaryTextColor: UIColor
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
+    public let badgeBackgroundColor: UIColor
+    public let badgeStrokeColor: UIColor
+    public let badgeTextColor: UIColor
     
-    public init(buttonColor: UIColor, primaryTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor) {
+    public init(buttonColor: UIColor, primaryTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor) {
         self.buttonColor = buttonColor
         self.primaryTextColor = primaryTextColor
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
+        self.badgeBackgroundColor = badgeBackgroundColor
+        self.badgeStrokeColor = badgeStrokeColor
+        self.badgeTextColor = badgeTextColor
     }
     
     public func withUpdatedSeparatorColor(_ color: UIColor) -> NavigationBarTheme {
-        return NavigationBarTheme(buttonColor: self.buttonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, separatorColor: color)
+        return NavigationBarTheme(buttonColor: self.buttonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, separatorColor: color, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
     }
 }
 
@@ -509,7 +515,7 @@ open class NavigationBar: ASDisplayNode {
         
         self.titleNode = ASTextNode()
         self.backButtonNode = NavigationButtonNode()
-        self.badgeNode = NavigationBarBadgeNode(fillColor: .red, textColor: .white)
+        self.badgeNode = NavigationBarBadgeNode(fillColor: theme.badgeBackgroundColor, strokeColor: theme.badgeStrokeColor, textColor: theme.badgeTextColor)
         self.badgeNode.isUserInteractionEnabled = false
         self.badgeNode.isHidden = true
         self.backButtonArrow = ASImageNode()
@@ -581,6 +587,8 @@ open class NavigationBar: ASDisplayNode {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.theme.primaryTextColor)
             }
             self.stripeNode.backgroundColor = self.theme.separatorColor
+            
+            self.badgeNode.updateTheme(fillColor: theme.badgeBackgroundColor, strokeColor: theme.badgeStrokeColor, textColor: theme.badgeTextColor)
         }
     }
     
@@ -810,7 +818,7 @@ open class NavigationBar: ASDisplayNode {
     
     private func makeTransitionBadgeNode() -> ASDisplayNode? {
         if self.badgeNode.supernode != nil && !self.badgeNode.isHidden {
-            let node = NavigationBarBadgeNode(fillColor: .red, textColor: .white)
+            let node = NavigationBarBadgeNode(fillColor: self.theme.badgeBackgroundColor, strokeColor: self.theme.badgeStrokeColor, textColor: self.theme.badgeTextColor)
             node.text = self.badgeNode.text
             let nodeSize = node.measure(CGSize(width: 200.0, height: 100.0))
             node.frame = CGRect(origin: CGPoint(), size: nodeSize)

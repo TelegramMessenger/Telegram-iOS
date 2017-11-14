@@ -10,15 +10,17 @@ public final class TabBarControllerTheme {
     public let tabBarTextColor: UIColor
     public let tabBarSelectedTextColor: UIColor
     public let tabBarBadgeBackgroundColor: UIColor
+    public let tabBarBadgeStrokeColor: UIColor
     public let tabBarBadgeTextColor: UIColor
     
-    public init(backgroundColor: UIColor, tabBarBackgroundColor: UIColor, tabBarSeparatorColor: UIColor, tabBarTextColor: UIColor, tabBarSelectedTextColor: UIColor, tabBarBadgeBackgroundColor: UIColor, tabBarBadgeTextColor: UIColor) {
+    public init(backgroundColor: UIColor, tabBarBackgroundColor: UIColor, tabBarSeparatorColor: UIColor, tabBarTextColor: UIColor, tabBarSelectedTextColor: UIColor, tabBarBadgeBackgroundColor: UIColor, tabBarBadgeStrokeColor: UIColor, tabBarBadgeTextColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.tabBarBackgroundColor = tabBarBackgroundColor
         self.tabBarSeparatorColor = tabBarSeparatorColor
         self.tabBarTextColor = tabBarTextColor
         self.tabBarSelectedTextColor = tabBarSelectedTextColor
         self.tabBarBadgeBackgroundColor = tabBarBadgeBackgroundColor
+        self.tabBarBadgeStrokeColor = tabBarBadgeStrokeColor
         self.tabBarBadgeTextColor = tabBarBadgeTextColor
     }
 }
@@ -32,20 +34,16 @@ open class TabBarController: ViewController {
         }
     }
     
-    public var controllers: [ViewController] = [] {
-        didSet {
-            self.tabBarControllerNode.tabBarNode.tabBarItems = self.controllers.map({ $0.tabBarItem })
-            
-            if oldValue.count == 0 && self.controllers.count != 0 {
-                self.updateSelectedIndex()
-            }
-        }
-    }
+    private var controllers: [ViewController] = []
     
-    private var _selectedIndex: Int = 2
+    private var _selectedIndex: Int?
     public var selectedIndex: Int {
         get {
-            return _selectedIndex
+            if let _selectedIndex = self._selectedIndex {
+                return _selectedIndex
+            } else {
+                return 0
+            }
         } set(value) {
             let index = max(0, min(self.controllers.count - 1, value))
             if _selectedIndex != index {
@@ -122,8 +120,8 @@ open class TabBarController: ViewController {
             self.currentController = nil
         }
         
-        if self._selectedIndex < self.controllers.count {
-            self.currentController = self.controllers[self._selectedIndex]
+        if let _selectedIndex = self._selectedIndex, _selectedIndex < self.controllers.count {
+            self.currentController = self.controllers[_selectedIndex]
         }
         
         var displayNavigationBar = false
@@ -150,6 +148,8 @@ open class TabBarController: ViewController {
         if self.displayNavigationBar != displayNavigationBar {
             self.setDisplayNavigationBar(displayNavigationBar)
         }
+        
+        self.tabBarControllerNode.containerLayoutUpdated(self.containerLayout, transition: .immediate)
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -175,6 +175,24 @@ open class TabBarController: ViewController {
     override open func viewDidDisappear(_ animated: Bool) {
         if let currentController = self.currentController {
             currentController.viewDidDisappear(animated)
+        }
+    }
+    
+    public func setControllers(_ controllers: [ViewController], selectedIndex: Int?) {
+        var updatedSelectedIndex: Int? = selectedIndex
+        if updatedSelectedIndex == nil, let selectedIndex = self._selectedIndex, selectedIndex < self.controllers.count {
+            if let index = controllers.index(where: { $0 === self.controllers[selectedIndex] }) {
+                updatedSelectedIndex = index
+            } else {
+                updatedSelectedIndex = 0
+            }
+        }
+        self.controllers = controllers
+        self.tabBarControllerNode.tabBarNode.tabBarItems = self.controllers.map({ $0.tabBarItem })
+        
+        if let updatedSelectedIndex = updatedSelectedIndex {
+            self.selectedIndex = updatedSelectedIndex
+            self.updateSelectedIndex()
         }
     }
 }

@@ -1,13 +1,17 @@
 import UIKit
 import AsyncDisplayKit
 
-private let groupSpacing: CGFloat = 16.0
+private let groupSpacing: CGFloat = 8.0
 
 final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
+    private let theme: ActionSheetControllerTheme
+    
     private var groups: [ActionSheetItemGroup] = []
     private var groupNodes: [ActionSheetItemGroupNode] = []
     
-    override init() {
+    init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        
         super.init()
     }
     
@@ -20,8 +24,8 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
         self.groupNodes.removeAll()
         
         for group in groups {
-            let groupNode = ActionSheetItemGroupNode()
-            groupNode.updateItemNodes(group.items.map({ $0.node() }), leadingVisibleNodeCount: group.leadingVisibleNodeCount ?? 1000.0)
+            let groupNode = ActionSheetItemGroupNode(theme: self.theme)
+            groupNode.updateItemNodes(group.items.map({ $0.node(theme: self.theme) }), leadingVisibleNodeCount: group.leadingVisibleNodeCount ?? 1000.0)
             self.groupNodes.append(groupNode)
             self.addSubnode(groupNode)
         }

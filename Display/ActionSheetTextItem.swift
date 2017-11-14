@@ -8,8 +8,8 @@ public class ActionSheetTextItem: ActionSheetItem {
         self.title = title
     }
     
-    public func node() -> ActionSheetItemNode {
-        let node = ActionSheetTextNode()
+    public func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
+        let node = ActionSheetTextNode(theme: theme)
         node.setItem(self)
         return node
     }
@@ -27,18 +27,22 @@ public class ActionSheetTextItem: ActionSheetItem {
 public class ActionSheetTextNode: ActionSheetItemNode {
     public static let defaultFont: UIFont = Font.regular(13.0)
     
+    private let theme: ActionSheetControllerTheme
+    
     private var item: ActionSheetTextItem?
     
     private let label: ASTextNode
     
-    override public init() {
+    override public init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        
         self.label = ASTextNode()
         self.label.isLayerBacked = true
         self.label.maximumNumberOfLines = 1
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail
         
-        super.init()
+        super.init(theme: theme)
         
         self.label.isUserInteractionEnabled = false
         self.addSubnode(self.label)
@@ -47,9 +51,7 @@ public class ActionSheetTextNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetTextItem) {
         self.item = item
         
-        let textColor = UIColor(rgb: 0x7c7c7c)
-        
-        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetTextNode.defaultFont, textColor: textColor)
+        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetTextNode.defaultFont, textColor: self.theme.secondaryTextColor)
         
         self.setNeedsLayout()
     }

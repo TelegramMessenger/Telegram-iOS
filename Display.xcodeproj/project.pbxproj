@@ -93,6 +93,7 @@
 		D0AE2CA61C94548900F2FD3C /* GenerateImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE2CA51C94548900F2FD3C /* GenerateImage.swift */; };
 		D0AE3D4D1D25C816001CCE13 /* NavigationBarTransitionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */; };
 		D0B367201C94A53A00346D2E /* StatusBarProxyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */; };
+		D0BB4EBA1F96DCC60036D9DE /* WindowInputAccessoryHeightProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BB4EB91F96DCC60036D9DE /* WindowInputAccessoryHeightProvider.swift */; };
 		D0BE93191E8ED71100DCC1E6 /* NativeWindowHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE93181E8ED71100DCC1E6 /* NativeWindowHostView.swift */; };
 		D0C0B5991EDF3BC9000F4D2C /* ActionSheetTextItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5981EDF3BC9000F4D2C /* ActionSheetTextItem.swift */; };
 		D0C0B59D1EE022CC000F4D2C /* NavigationBarContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B59C1EE022CC000F4D2C /* NavigationBarContentNode.swift */; };
@@ -113,7 +114,9 @@
 		D0C85DD01D1C082E00124894 /* ActionSheetItemGroupsContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DCF1D1C082E00124894 /* ActionSheetItemGroupsContainerNode.swift */; };
 		D0C85DD21D1C08AE00124894 /* ActionSheetItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DD11D1C08AE00124894 /* ActionSheetItemNode.swift */; };
 		D0C85DD41D1C1E6A00124894 /* ActionSheetItemGroupNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DD31D1C1E6A00124894 /* ActionSheetItemGroupNode.swift */; };
+		D0CB78901F9822F8004AB79B /* WindowPanRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB788F1F9822F8004AB79B /* WindowPanRecognizer.swift */; };
 		D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */; };
+		D0CE67921F7DA11700FFB557 /* ActionSheetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE67911F7DA11700FFB557 /* ActionSheetTheme.swift */; };
 		D0CE8CE91F6FC7EC00AA2DB0 /* NavigationBarTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE8CE81F6FC7EC00AA2DB0 /* NavigationBarTitleView.swift */; };
 		D0D94A171D3814F900740E02 /* UniversalTapRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */; };
 		D0DA444C1E4DCA4A005FDCA7 /* AlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA444B1E4DCA4A005FDCA7 /* AlertController.swift */; };
@@ -233,6 +236,7 @@
 		D0AE2CA51C94548900F2FD3C /* GenerateImage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GenerateImage.swift; sourceTree = "<group>"; };
 		D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarTransitionState.swift; sourceTree = "<group>"; };
 		D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarProxyNode.swift; sourceTree = "<group>"; };
+		D0BB4EB91F96DCC60036D9DE /* WindowInputAccessoryHeightProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowInputAccessoryHeightProvider.swift; sourceTree = "<group>"; };
 		D0BE93181E8ED71100DCC1E6 /* NativeWindowHostView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NativeWindowHostView.swift; sourceTree = "<group>"; };
 		D0C0B5981EDF3BC9000F4D2C /* ActionSheetTextItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetTextItem.swift; sourceTree = "<group>"; };
 		D0C0B59C1EE022CC000F4D2C /* NavigationBarContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarContentNode.swift; sourceTree = "<group>"; };
@@ -253,7 +257,9 @@
 		D0C85DCF1D1C082E00124894 /* ActionSheetItemGroupsContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemGroupsContainerNode.swift; sourceTree = "<group>"; };
 		D0C85DD11D1C08AE00124894 /* ActionSheetItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemNode.swift; sourceTree = "<group>"; };
 		D0C85DD31D1C1E6A00124894 /* ActionSheetItemGroupNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemGroupNode.swift; sourceTree = "<group>"; };
+		D0CB788F1F9822F8004AB79B /* WindowPanRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPanRecognizer.swift; sourceTree = "<group>"; };
 		D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScrollToTopProxyView.swift; sourceTree = "<group>"; };
+		D0CE67911F7DA11700FFB557 /* ActionSheetTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSheetTheme.swift; sourceTree = "<group>"; };
 		D0CE8CE81F6FC7EC00AA2DB0 /* NavigationBarTitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBarTitleView.swift; sourceTree = "<group>"; };
 		D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UniversalTapRecognizer.swift; sourceTree = "<group>"; };
 		D0DA444B1E4DCA4A005FDCA7 /* AlertController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlertController.swift; sourceTree = "<group>"; };
@@ -315,6 +321,8 @@
 				D05CC2A11B69326C00E235A3 /* WindowContent.swift */,
 				D0BE93181E8ED71100DCC1E6 /* NativeWindowHostView.swift */,
 				D087BFB41F75181D003FD209 /* ChildWindowHostView.swift */,
+				D0BB4EB91F96DCC60036D9DE /* WindowInputAccessoryHeightProvider.swift */,
+				D0CB788F1F9822F8004AB79B /* WindowPanRecognizer.swift */,
 			);
 			name = Window;
 			sourceTree = "<group>";
@@ -342,6 +350,7 @@
 				D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */,
 				D096A44F1EA64F580000A7AE /* ActionSheetCheckboxItem.swift */,
 				D0C0B5981EDF3BC9000F4D2C /* ActionSheetTextItem.swift */,
+				D0CE67911F7DA11700FFB557 /* ActionSheetTheme.swift */,
 			);
 			name = "Action Sheet";
 			sourceTree = "<group>";
@@ -822,6 +831,7 @@
 				D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */,
 				D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */,
 				D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */,
+				D0BB4EBA1F96DCC60036D9DE /* WindowInputAccessoryHeightProvider.swift in Sources */,
 				D05CC31F1B695A9600E235A3 /* NavigationControllerProxy.m in Sources */,
 				D05CC3031B69568600E235A3 /* NotificationCenterUtils.m in Sources */,
 				D02958001D6F096000360E5E /* ContextMenuContainerNode.swift in Sources */,
@@ -894,10 +904,12 @@
 				D0C2DFC61CC4431D0044FF83 /* ASTransformLayerNode.swift in Sources */,
 				D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */,
 				D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */,
+				D0CE67921F7DA11700FFB557 /* ActionSheetTheme.swift in Sources */,
 				D05BE4AE1D217F6B002BD72C /* MergedLayoutEvents.swift in Sources */,
 				D0C0D2901C997110001D2851 /* FBAnimationPerformanceTracker.mm in Sources */,
 				D015F7521D1AE08D00E269B5 /* ContainableController.swift in Sources */,
 				D036574B1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift in Sources */,
+				D0CB78901F9822F8004AB79B /* WindowPanRecognizer.swift in Sources */,
 				D05CC2FE1B6955D000E235A3 /* UIWindow+OrientationChange.m in Sources */,
 				D0C85DD41D1C1E6A00124894 /* ActionSheetItemGroupNode.swift in Sources */,
 				D0C0B5991EDF3BC9000F4D2C /* ActionSheetTextItem.swift in Sources */,

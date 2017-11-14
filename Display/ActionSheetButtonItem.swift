@@ -20,8 +20,8 @@ public class ActionSheetButtonItem: ActionSheetItem {
         self.action = action
     }
     
-    public func node() -> ActionSheetItemNode {
-        let node = ActionSheetButtonNode()
+    public func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
+        let node = ActionSheetButtonNode(theme: theme)
         node.setItem(self)
         return node
     }
@@ -37,6 +37,8 @@ public class ActionSheetButtonItem: ActionSheetItem {
 }
 
 public class ActionSheetButtonNode: ActionSheetItemNode {
+    private let theme: ActionSheetControllerTheme
+    
     public static let defaultFont: UIFont = Font.regular(20.0)
     
     private var item: ActionSheetButtonItem?
@@ -44,7 +46,9 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
     private let button: HighlightTrackingButton
     private let label: ASTextNode
     
-    override public init() {
+    override public init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        
         self.button = HighlightTrackingButton()
         
         self.label = ASTextNode()
@@ -52,7 +56,7 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         self.label.maximumNumberOfLines = 1
         self.label.displaysAsynchronously = false
         
-        super.init()
+        super.init(theme: theme)
         
         self.view.addSubview(self.button)
         
@@ -62,10 +66,10 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         self.button.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.backgroundNode.backgroundColor = ActionSheetItemNode.highlightedBackgroundColor
+                    strongSelf.backgroundNode.backgroundColor = strongSelf.theme.itemHighlightedBackgroundColor
                 } else {
                     UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.backgroundNode.backgroundColor = ActionSheetItemNode.defaultBackgroundColor
+                        strongSelf.backgroundNode.backgroundColor = strongSelf.theme.itemBackgroundColor
                     })
                 }
             }
@@ -80,11 +84,11 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         let textColor: UIColor
         switch item.color {
             case .accent:
-                textColor = UIColor(rgb: 0x007ee5)
+                textColor = self.theme.standardActionTextColor
             case .destructive:
-                textColor = .red
+                textColor = self.theme.destructiveActionTextColor
             case .disabled:
-                textColor = .gray
+                textColor = self.theme.disabledActionTextColor
         }
         self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: textColor)
         

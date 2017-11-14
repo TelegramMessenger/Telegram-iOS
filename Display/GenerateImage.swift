@@ -300,6 +300,9 @@ public class DrawingContext {
     }
     
     public func generateImage() -> UIImage? {
+        if self.scaledSize.width.isZero || self.scaledSize.height.isZero {
+            return nil
+        }
         if let image = CGImage(width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo, provider: provider!, decode: nil, shouldInterpolate: false, intent: .defaultIntent) {
             return UIImage(cgImage: image, scale: scale, orientation: .up)
         } else {

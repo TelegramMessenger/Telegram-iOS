@@ -5,9 +5,13 @@ open class ActionSheetController: ViewController {
         return self.displayNode as! ActionSheetControllerNode
     }
     
+    private let theme: ActionSheetControllerTheme
+    
     private var groups: [ActionSheetItemGroup] = []
     
-    public init() {
+    public init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        
         super.init(navigationBarTheme: nil)
     }
     
@@ -20,7 +24,7 @@ open class ActionSheetController: ViewController {
     }
     
     open override func loadDisplayNode() {
-        self.displayNode = ActionSheetControllerNode()
+        self.displayNode = ActionSheetControllerNode(theme: self.theme)
         self.displayNodeDidLoad()
         
         self.actionSheetNode.dismiss = { [weak self] in

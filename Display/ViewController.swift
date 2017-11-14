@@ -38,7 +38,14 @@ open class ViewControllerPresentationArguments {
         return self.supportedOrientations
     }
     
-    public final var deferScreenEdgeGestures: UIRectEdge = []
+    public final var deferScreenEdgeGestures: UIRectEdge = [] {
+        didSet {
+            if self.deferScreenEdgeGestures != oldValue {
+                self.window?.invalidateDeferScreenEdgeGestures()
+            }
+        }
+    }
+    
     override open func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
         return .bottom
     }
@@ -75,6 +82,8 @@ open class ViewControllerPresentationArguments {
     
     private weak var activeInputViewCandidate: UIResponder?
     private weak var activeInputView: UIResponder?
+    
+    open var hasActiveInput: Bool = false
     
     private var navigationBarOrigin: CGFloat = 0.0
     
@@ -160,15 +169,22 @@ open class ViewControllerPresentationArguments {
         if !self.isViewLoaded {
             self.loadView()
         }
-        self.view.frame = CGRect(origin: self.view.frame.origin, size: layout.size)
+        transition.updateFrame(node: self.displayNode, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
         if let _ = layout.statusBarHeight {
             self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
         }
         
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
-        var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: max(0.0, statusBarHeight - 20.0)), size: CGSize(width: layout.size.width, height: 64.0))
+        let navigationBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
+        let navigationBarOffset: CGFloat
+        if statusBarHeight.isZero {
+            navigationBarOffset = -20.0
+        } else {
+            navigationBarOffset = 0.0
+        }
+        var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: navigationBarHeight))
         if layout.statusBarHeight == nil {
-            navigationBarFrame.size.height = 44.0
+            navigationBarFrame.size.height = 64.0
         }
         
         if !self.displayNavigationBar {

@@ -29,6 +29,7 @@ static NSMutableArray *notificationHandlers() {
         }
     }
     
+    //printf("***** %s\n", [aName cStringUsingEncoding:NSUTF8StringEncoding]);
     [self _a65afc19_postNotificationName:aName object:anObject userInfo:aUserInfo];
 }
 

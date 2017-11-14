@@ -79,13 +79,13 @@ class StatusBarManager {
         self.host = host
     }
     
-    func updateState(surfaces: [StatusBarSurface], forceInCallStatusBarText: String?, animated: Bool) {
+    func updateState(surfaces: [StatusBarSurface], forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, animated: Bool) {
         let previousSurfaces = self.surfaces
         self.surfaces = surfaces
-        self.updateSurfaces(previousSurfaces, forceInCallStatusBarText: forceInCallStatusBarText, animated: animated)
+        self.updateSurfaces(previousSurfaces, forceInCallStatusBarText: forceInCallStatusBarText, forceHiddenBySystemWindows: forceHiddenBySystemWindows, animated: animated)
     }
     
-    private func updateSurfaces(_ previousSurfaces: [StatusBarSurface], forceInCallStatusBarText: String?, animated: Bool) {
+    private func updateSurfaces(_ previousSurfaces: [StatusBarSurface], forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, animated: Bool) {
         let statusBarFrame = self.host.statusBarFrame
         guard let statusBarView = self.host.statusBarView else {
             return
@@ -215,7 +215,7 @@ class StatusBarManager {
             statusBar.updateState(statusBar: statusBarView, inCallText: forceInCallStatusBarText, animated: animated)
         }
         
-        if let globalStatusBar = globalStatusBar {
+        if let globalStatusBar = globalStatusBar, !forceHiddenBySystemWindows {
             let statusBarStyle: UIStatusBarStyle
             if forceInCallStatusBarText != nil {
                 statusBarStyle = .lightContent

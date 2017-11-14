@@ -146,8 +146,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private var bottomItemOverscrollBackground: ASDisplayNode?
     
     private var touchesPosition = CGPoint()
-    private var isTracking = false
-    private var isDeceleratingAfterTracking = false
+    public private(set) var isTracking = false
+    public private(set) var trackingOffset: CGFloat = 0.0
+    public private(set) var beganTrackingAtTopOrigin = false
+    public private(set) var isDeceleratingAfterTracking = false
     
     private final var transactionQueue: ListViewTransactionQueue
     private final var transactionOffset: CGFloat = 0.0
@@ -447,6 +449,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         self.transactionOffset += -deltaY
         
+        if self.isTracking {
+            self.trackingOffset += -deltaY
+        }
+        
         self.enqueueUpdateVisibleItems()
         
         var useScrollDynamics = false
@@ -612,7 +618,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         var transition: ContainedViewLayoutTransition = .immediate
         if let updateSizeAndInsets = updateSizeAndInsets {
-            if updateSizeAndInsets.duration > DBL_EPSILON {
+            if !updateSizeAndInsets.duration.isZero {
                 switch updateSizeAndInsets.curve {
                     case let .Spring(duration):
                         transition = .animated(duration: duration, curve: .spring)
@@ -954,8 +960,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         return ListViewState(insets: self.insets, visibleSize: self.visibleSize, invisibleInset: self.invisibleInset, nodes: nodes, scrollPosition: nil, stationaryOffset: nil, stackFromBottom: self.stackFromBottom)
     }
     
-    public func transaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, updateOpaqueState: Any?, completion: @escaping (ListViewDisplayedItemRange) -> Void = { _ in }) {
-        if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil && updateSizeAndInsets == nil {
+    public func transaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, additionalScrollDistance: CGFloat = 0.0, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, updateOpaqueState: Any?, completion: @escaping (ListViewDisplayedItemRange) -> Void = { _ in }) {
+        if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil && updateSizeAndInsets == nil && additionalScrollDistance.isZero {
             completion(self.immediateDisplayedItemRange())
             return
         }
@@ -963,7 +969,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.transactionQueue.addTransaction({ [weak self] transactionCompletion in
             if let strongSelf = self {
                 strongSelf.transactionOffset = 0.0
-                strongSelf.deleteAndInsertItemsTransaction(deleteIndices: deleteIndices, insertIndicesAndItems: insertIndicesAndItems, updateIndicesAndItems: updateIndicesAndItems, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: stationaryItemRange, updateOpaqueState: updateOpaqueState, completion: { [weak strongSelf] in
+                strongSelf.deleteAndInsertItemsTransaction(deleteIndices: deleteIndices, insertIndicesAndItems: insertIndicesAndItems, updateIndicesAndItems: updateIndicesAndItems, options: options, scrollToItem: scrollToItem, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: stationaryItemRange, updateOpaqueState: updateOpaqueState, completion: { [weak strongSelf] in
                     completion(strongSelf?.immediateDisplayedItemRange() ?? ListViewDisplayedItemRange(loadedRange: nil, visibleRange: nil))
                     
                     transactionCompletion()
@@ -972,7 +978,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         })
     }
 
-    private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, updateOpaqueState: Any?, completion: @escaping () -> Void) {
+    private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, additionalScrollDistance: CGFloat, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, updateOpaqueState: Any?, completion: @escaping () -> Void) {
         if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil {
             if let updateSizeAndInsets = updateSizeAndInsets , (self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets)) {
                 self.visibleSize = updateSizeAndInsets.size
@@ -1249,7 +1255,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             
                             let beginReplay = { [weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), animateTopItemVerticalOrigin: options.contains(.AnimateTopItemPosition), operations: updatedOperations, requestItemInsertionAnimationsIndices: options.contains(.RequestItemInsertionAnimations) ? insertedIndexSet : Set(), scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, updateOpaqueState: updateOpaqueState, completion: {
+                                    strongSelf.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), animateCrossfade: options.contains(.AnimateCrossfade), animateTopItemVerticalOrigin: options.contains(.AnimateTopItemPosition), operations: updatedOperations, requestItemInsertionAnimationsIndices: options.contains(.RequestItemInsertionAnimations) ? insertedIndexSet : Set(), scrollToItem: scrollToItem, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, updateOpaqueState: updateOpaqueState, completion: {
                                         if options.contains(.PreferSynchronousDrawing) {
                                             let startTime = CACurrentMediaTime()
                                             self?.recursivelyEnsureDisplaySynchronously(true)
@@ -1656,7 +1662,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
-    private func replayOperations(animated: Bool, animateAlpha: Bool, animateTopItemVerticalOrigin: Bool, operations: [ListViewStateOperation], requestItemInsertionAnimationsIndices: Set<Int>, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemIndex: Int?, updateOpaqueState: Any?, completion: () -> Void) {
+    private func replayOperations(animated: Bool, animateAlpha: Bool, animateCrossfade: Bool, animateTopItemVerticalOrigin: Bool, operations: [ListViewStateOperation], requestItemInsertionAnimationsIndices: Set<Int>, scrollToItem: ListViewScrollToItem?, additionalScrollDistance: CGFloat, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemIndex: Int?, updateOpaqueState: Any?, completion: () -> Void) {
         let timestamp = CACurrentMediaTime()
         
         if let updateOpaqueState = updateOpaqueState {
@@ -1666,10 +1672,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         var previousTopItemVerticalOrigin: CGFloat?
         var previousBottomItemMaxY: CGFloat?
         var snapshotView: UIView?
+        if animateCrossfade {
+            snapshotView = self.view.snapshotView(afterScreenUpdates: false)
+        }
         if animateTopItemVerticalOrigin {
             previousTopItemVerticalOrigin = self.topItemVerticalOrigin()
             previousBottomItemMaxY = self.bottomItemMaxY()
-            snapshotView = self.view.snapshotView(afterScreenUpdates: false)
         }
         
         var previousApparentFrames: [(ListViewItemNode, CGRect)] = []
@@ -1913,6 +1921,13 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     break
                 }
             }
+        } else if !additionalScrollDistance.isZero {
+            self.stopScrolling()
+            /*for itemNode in self.itemNodes {
+                var frame = itemNode.frame
+                frame.origin.y += additionalScrollDistance
+                itemNode.frame = frame
+            }*/
         }
         
         self.insertNodesInBatches(nodes: [], completion: {
@@ -1928,11 +1943,15 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     self.visibleSize = updateSizeAndInsets.size
                     
                     var offsetFix: CGFloat
-                    if self.snapToBottomInsetUntilFirstInteraction {
+                    if self.isTracking {
+                        offsetFix = 0.0
+                    } else if self.snapToBottomInsetUntilFirstInteraction {
                         offsetFix = -updateSizeAndInsets.insets.bottom + self.insets.bottom
                     } else {
                         offsetFix = updateSizeAndInsets.insets.top - self.insets.top
                     }
+                    
+                    offsetFix += additionalScrollDistance
                     
                     self.insets = updateSizeAndInsets.insets
                     self.visibleSize = updateSizeAndInsets.size
@@ -1962,7 +1981,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     sizeAndInsetsOffset = offsetFix
                     completeOffset += snapToBoundsOffset
                     
-                    if updateSizeAndInsets.duration > DBL_EPSILON {
+                    if !updateSizeAndInsets.duration.isZero {
                         let animation: CABasicAnimation
                         switch updateSizeAndInsets.curve {
                             case let .Spring(duration):
@@ -2062,6 +2081,14 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 
                 if !snapToBoundsOffset.isZero {
                     self.updateVisibleContentOffset()
+                }
+                
+                if let snapshotView = snapshotView {
+                    snapshotView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: snapshotView.frame.size)
+                    self.view.addSubview(snapshotView)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
                 }
             }
             
@@ -2586,7 +2613,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 var updatedOperations = operations
                 updatedState.removeInvisibleNodes(&updatedOperations)
                 self.dispatchOnVSync {
-                    self.replayOperations(animated: false, animateAlpha: false, animateTopItemVerticalOrigin: false, operations: updatedOperations, requestItemInsertionAnimationsIndices: Set(), scrollToItem: nil, updateSizeAndInsets: nil, stationaryItemIndex: nil, updateOpaqueState: nil, completion: completion)
+                    self.replayOperations(animated: false, animateAlpha: false, animateCrossfade: false, animateTopItemVerticalOrigin: false, operations: updatedOperations, requestItemInsertionAnimationsIndices: Set(), scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemIndex: nil, updateOpaqueState: nil, completion: completion)
                 }
             }
         }
@@ -2759,6 +2786,14 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     }
     
     override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        let offset = self.visibleContentOffset()
+        switch offset {
+            case let .known(value) where value <= 10.0:
+                self.beganTrackingAtTopOrigin = true
+            default:
+                self.beganTrackingAtTopOrigin = false
+        }
+        
         self.touchesPosition = touches.first!.location(in: self.view)
         self.selectionTouchLocation = touches.first!.location(in: self.view)
         
@@ -2915,7 +2950,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         switch recognizer.state {
             case .began:
                 self.isTracking = true
-                break
+                self.trackingOffset = 0.0
             case .changed:
                 self.touchesPosition = recognizer.location(in: self.view)
             case .ended, .cancelled:

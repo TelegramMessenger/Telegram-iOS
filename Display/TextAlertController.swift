@@ -33,7 +33,8 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
         
         super.init()
         
-        self.setTitle(action.title, with: action.type == .defaultAction ? Font.medium(17.0) : Font.regular(17.0), with: UIColor(rgb: 0x007ee5), for: [])
+        self.titleNode.maximumNumberOfLines = 2
+        self.setAttributedTitle(NSAttributedString(string: action.title, font: Font.regular(17.0), textColor: UIColor(rgb: 0x007ee5), paragraphAlignment: .center), for: [])
         
         self.highligthedChanged = { [weak self] value in
             if let strongSelf = self {

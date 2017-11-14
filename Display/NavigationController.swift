@@ -75,7 +75,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.containerLayout = layout
         self.view.frame = CGRect(origin: self.view.frame.origin, size: layout.size)
         
-        let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight)
+        let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging)
         
         if let topViewController = self.topViewController {
             if let topViewController = topViewController as? ContainableController {
@@ -220,13 +220,16 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public func pushViewController(_ controller: ViewController) {
-        self.view.endEditing(true)
-        let appliedLayout = self.containerLayout.withUpdatedInputHeight(nil)
+        if !controller.hasActiveInput {
+            self.view.endEditing(true)
+        }
+        let appliedLayout = self.containerLayout.withUpdatedInputHeight(controller.hasActiveInput ? self.containerLayout.inputHeight : nil)
         controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
-        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: {[weak self] _ in
+        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
-                if strongSelf.containerLayout.withUpdatedInputHeight(nil) != appliedLayout {
-                    controller.containerLayoutUpdated(strongSelf.containerLayout.withUpdatedInputHeight(nil), transition: .immediate)
+                let containerLayout = strongSelf.containerLayout.withUpdatedInputHeight(controller.hasActiveInput ? strongSelf.containerLayout.inputHeight : nil)
+                if containerLayout != appliedLayout {
+                    controller.containerLayoutUpdated(containerLayout, transition: .immediate)
                 }
                 strongSelf.pushViewController(controller, animated: true)
             }
@@ -320,7 +323,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             
             if let controller = topViewController as? ContainableController {
                 var layoutToApply = self.containerLayout
-                if !self.viewControllers.contains(where: { $0 === controller }) {
+                var hasActiveInput = false
+                if let controller = controller as? ViewController {
+                    hasActiveInput = controller.hasActiveInput
+                }
+                if !hasActiveInput {
                     layoutToApply = layoutToApply.withUpdatedInputHeight(nil)
                 }
                 controller.containerLayoutUpdated(layoutToApply, transition: .immediate)

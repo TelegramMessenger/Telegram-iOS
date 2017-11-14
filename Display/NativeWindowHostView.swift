@@ -61,13 +61,22 @@ private final class NativeWindow: UIWindow, WindowHost {
     var presentController: ((ViewController, PresentationSurfaceLevel) -> Void)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     var presentNativeImpl: ((UIViewController) -> Void)?
+    var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
+    
+    private var frameTransition: ContainedViewLayoutTransition?
     
     override var frame: CGRect {
         get {
             return super.frame
         } set(value) {
             let sizeUpdated = super.frame.size != value.size
-            super.frame = value
+            if sizeUpdated, let transition = self.frameTransition, case let .animated(duration, curve) = transition {
+                let previousFrame = super.frame
+                super.frame = value
+                self.layer.animateFrame(from: previousFrame, to: value, duration: duration, timingFunction: curve.timingFunction)
+            } else {
+                super.frame = value
+            }
             
             if sizeUpdated {
                 self.updateSize?(value.size)
@@ -97,7 +106,11 @@ private final class NativeWindow: UIWindow, WindowHost {
     
     override func _update(toInterfaceOrientation arg1: Int32, duration arg2: Double, force arg3: Bool) {
         self.updateIsUpdatingOrientationLayout?(true)
+        if !arg2.isZero {
+            self.frameTransition = .animated(duration: arg2, curve: .easeInOut)
+        }
         super._update(toInterfaceOrientation: arg1, duration: arg2, force: arg3)
+        self.frameTransition = nil
         self.updateIsUpdatingOrientationLayout?(false)
         
         self.updateToInterfaceOrientation?()
@@ -113,6 +126,26 @@ private final class NativeWindow: UIWindow, WindowHost {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         return self.hitTestImpl?(point, event)
+    }
+    
+    override func insertSubview(_ view: UIView, at index: Int) {
+        super.insertSubview(view, at: index)
+    }
+    
+    override func addSubview(_ view: UIView) {
+        super.addSubview(view)
+    }
+    
+    override func insertSubview(_ view: UIView, aboveSubview siblingSubview: UIView) {
+        if let transitionClass = NSClassFromString("UITransitionView"), view.isKind(of: transitionClass) {
+            super.insertSubview(view, aboveSubview: self.subviews.last!)
+        } else {
+            super.insertSubview(view, aboveSubview: siblingSubview)
+        }
+    }
+    
+    func invalidateDeferScreenEdgeGestures() {
+        self.invalidateDeferScreenEdgeGestureImpl?()
     }
 }
 
@@ -159,6 +192,10 @@ public func nativeWindowHostView() -> WindowHostView {
     
     window.hitTestImpl = { [weak hostView] point, event in
         return hostView?.hitTest?(point, event)
+    }
+    
+    window.invalidateDeferScreenEdgeGestureImpl = { [weak hostView] in
+        return hostView?.invalidateDeferScreenEdgeGesture?()
     }
     
     rootViewController.presentController = { [weak hostView] controller, level, animated, completion in

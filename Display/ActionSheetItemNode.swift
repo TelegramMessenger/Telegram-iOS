@@ -2,18 +2,19 @@ import UIKit
 import AsyncDisplayKit
 
 open class ActionSheetItemNode: ASDisplayNode {
-    public static let defaultBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 0.8)
-    public static let highlightedBackgroundColor: UIColor = UIColor(white: 0.9, alpha: 0.7)
+    private let theme: ActionSheetControllerTheme
     
     public let backgroundNode: ASDisplayNode
     private let overflowSeparatorNode: ASDisplayNode
     
-    public override init() {
+    public init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        
         self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = ActionSheetItemNode.defaultBackgroundColor
+        self.backgroundNode.backgroundColor = self.theme.itemBackgroundColor
         
         self.overflowSeparatorNode = ASDisplayNode()
-        self.overflowSeparatorNode.backgroundColor = UIColor(white: 0.5, alpha: 0.3)
+        self.overflowSeparatorNode.backgroundColor = self.theme.itemHighlightedBackgroundColor
         
         super.init()
         

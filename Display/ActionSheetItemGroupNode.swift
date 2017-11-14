@@ -8,6 +8,8 @@ private class ActionSheetItemGroupNodeScrollView: UIScrollView {
 }
 
 final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
+    private let theme: ActionSheetControllerTheme
+    
     private let centerDimView: UIImageView
     private let topDimView: UIView
     private let bottomDimView: UIView
@@ -22,26 +24,28 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
     
     var respectInputHeight = true
     
-    override init() {
+    init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        
         self.centerDimView = UIImageView()
-        self.centerDimView.image = generateStretchableFilledCircleImage(radius: 16.0, color: nil, backgroundColor: ActionSheetControllerNode.dimColor)
+        self.centerDimView.image = generateStretchableFilledCircleImage(radius: 16.0, color: nil, backgroundColor: self.theme.dimColor)
         
         self.topDimView = UIView()
-        self.topDimView.backgroundColor = ActionSheetControllerNode.dimColor
+        self.topDimView.backgroundColor = self.theme.dimColor
         self.topDimView.isUserInteractionEnabled = false
         
         self.bottomDimView = UIView()
-        self.bottomDimView.backgroundColor = ActionSheetControllerNode.dimColor
+        self.bottomDimView.backgroundColor = self.theme.dimColor
         self.bottomDimView.isUserInteractionEnabled = false
         
         self.trailingDimView = UIView()
-        self.trailingDimView.backgroundColor = ActionSheetControllerNode.dimColor
+        self.trailingDimView.backgroundColor = self.theme.dimColor
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
         self.clippingNode.cornerRadius = 16.0
         
-        self.backgroundEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+        self.backgroundEffectView = UIVisualEffectView(effect: UIBlurEffect(style: self.theme.backgroundType == .light ? .light : .dark))
         
         self.scrollView = ActionSheetItemGroupNodeScrollView()
         if #available(iOSApplicationExtension 11.0, *) {
@@ -107,7 +111,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
             i += 1
         }
         
-        return CGSize(width: constrainedSize.width, height: min(itemNodesHeight, constrainedSize.height))
+        return CGSize(width: constrainedSize.width, height: min(floorToScreenPixels(itemNodesHeight), constrainedSize.height))
     }
     
     override func layout() {

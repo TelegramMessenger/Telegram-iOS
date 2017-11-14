@@ -5,29 +5,17 @@ struct KeyboardSurface {
     let host: UIView
 }
 
-private func hasFirstResponder(_ view: UIView) -> Bool {
+private func getFirstResponder(_ view: UIView) -> UIView? {
     if view.isFirstResponder {
-        return true
+        return view
     } else {
         for subview in view.subviews {
-            if hasFirstResponder(subview) {
-                return true
+            if let result = getFirstResponder(subview) {
+                return result
             }
         }
-        return false
+        return nil
     }
-}
-
-private func findKeyboardBackdrop(_ view: UIView) -> UIView? {
-    if NSStringFromClass(type(of: view)) == "UIKBInputBackdropView" {
-        return view
-    }
-    for subview in view.subviews {
-        if let result = findKeyboardBackdrop(subview) {
-            return result
-        }
-    }
-    return nil
 }
 
 class KeyboardManager {
@@ -35,13 +23,7 @@ class KeyboardManager {
     
     private weak var previousPositionAnimationMirrorSource: CATracingLayer?
     private weak var previousFirstResponderView: UIView?
-    
-    var gestureRecognizer: MinimizeKeyboardGestureRecognizer? = nil
-    
-    var minimized: Bool = false
-    var minimizedUpdated: (() -> Void)?
-    
-    var updatedMinimizedBackdrop = false
+    private var interactiveInputOffset: CGFloat = 0.0
     
     var surfaces: [KeyboardSurface] = [] {
         didSet {
@@ -53,63 +35,49 @@ class KeyboardManager {
         self.host = host
     }
     
+    func updateInteractiveInputOffset(_ offset: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        guard let keyboardView = self.host.keyboardView else {
+            return
+        }
+        
+        self.interactiveInputOffset = offset
+        
+        let previousBounds = keyboardView.bounds
+        let updatedBounds = CGRect(origin: CGPoint(x: 0.0, y: -offset), size: previousBounds.size)
+        keyboardView.layer.bounds = updatedBounds
+        if transition.isAnimated {
+            transition.animateOffsetAdditive(layer: keyboardView.layer, offset: previousBounds.minY - updatedBounds.minY, completion: completion)
+        } else {
+            completion()
+        }
+        
+        //transition.updateSublayerTransformOffset(layer: keyboardView.layer, offset: CGPoint(x: 0.0, y: offset))
+    }
+    
     private func updateSurfaces(_ previousSurfaces: [KeyboardSurface]) {
         guard let keyboardWindow = self.host.keyboardWindow else {
             return
         }
         
-        if let keyboardView = self.host.keyboardView {
-            if self.minimized {
-                let normalizedHeight = floor(0.85 * keyboardView.frame.size.height)
-                let factor = normalizedHeight / keyboardView.frame.size.height
-                let scaleTransform = CATransform3DMakeScale(factor, factor, 1.0)
-                let horizontalOffset = (keyboardView.frame.size.width - keyboardView.frame.size.width * factor) / 2.0
-                let verticalOffset = (keyboardView.frame.size.height - keyboardView.frame.size.height * factor) / 2.0
-                let translate = CATransform3DMakeTranslation(horizontalOffset, verticalOffset, 0.0)
-                keyboardView.layer.sublayerTransform = CATransform3DConcat(scaleTransform, translate)
-                
-                self.updatedMinimizedBackdrop = false
-                
-                if let backdrop = findKeyboardBackdrop(keyboardView) {
-                    let scale = CATransform3DMakeScale(1.0 / factor, 1.0, 0.0)
-                    let translate = CATransform3DMakeTranslation(-horizontalOffset * (1.0 / factor), 0.0, 0.0)
-                    backdrop.layer.sublayerTransform = CATransform3DConcat(scale, translate)
-                }
-            } else {
-                keyboardView.layer.sublayerTransform = CATransform3DIdentity
-                if !self.updatedMinimizedBackdrop {
-                    if let backdrop = findKeyboardBackdrop(keyboardView) {
-                        backdrop.layer.sublayerTransform = CATransform3DIdentity
-                    }
-                    
-                    self.updatedMinimizedBackdrop = true
-                }
-            }
-        }
-        
-        if let gestureRecognizer = self.gestureRecognizer {
-            if keyboardWindow.gestureRecognizers == nil || !keyboardWindow.gestureRecognizers!.contains(gestureRecognizer) {
-                keyboardWindow.addGestureRecognizer(gestureRecognizer)
-            }
-        } else {
-            let gestureRecognizer = MinimizeKeyboardGestureRecognizer(target: self, action: #selector(self.minimizeGesture(_:)))
-            self.gestureRecognizer = gestureRecognizer
-            keyboardWindow.addGestureRecognizer(gestureRecognizer)
-        }
-        
         var firstResponderView: UIView?
+        var firstResponderDisablesAutomaticKeyboardHandling = false
         for surface in self.surfaces {
-            if hasFirstResponder(surface.host) {
+            if let view = getFirstResponder(surface.host) {
                 firstResponderView = surface.host
+                firstResponderDisablesAutomaticKeyboardHandling = view.disablesAutomaticKeyboardHandling
                 break
             }
         }
         
         if let firstResponderView = firstResponderView {
             let containerOrigin = firstResponderView.convert(CGPoint(), to: nil)
-            let horizontalTranslation = CATransform3DMakeTranslation(containerOrigin.x, 0.0, 0.0)
-            keyboardWindow.layer.sublayerTransform = horizontalTranslation
-            if let tracingLayer = firstResponderView.layer as? CATracingLayer {
+            let horizontalTranslation = CATransform3DMakeTranslation(firstResponderDisablesAutomaticKeyboardHandling ? 0.0 : containerOrigin.x, 0.0, 0.0)
+            let currentTransform = keyboardWindow.layer.sublayerTransform
+            if !CATransform3DEqualToTransform(horizontalTranslation, currentTransform) {
+                //print("set to \(CGPoint(x: containerOrigin.x, y: self.interactiveInputOffset))")
+                keyboardWindow.layer.sublayerTransform = horizontalTranslation
+            }
+            if let tracingLayer = firstResponderView.layer as? CATracingLayer, !firstResponderDisablesAutomaticKeyboardHandling {
                 if let previousPositionAnimationMirrorSource = self.previousPositionAnimationMirrorSource, previousPositionAnimationMirrorSource !== tracingLayer {
                     previousPositionAnimationMirrorSource.setPositionAnimationMirrorTarget(nil)
                 }
@@ -136,12 +104,5 @@ class KeyboardManager {
         }
         
         self.previousFirstResponderView = firstResponderView
-    }
-    
-    @objc func minimizeGesture(_ recognizer: UISwipeGestureRecognizer) {
-        if case .ended = recognizer.state {
-            self.minimized = !self.minimized
-            self.minimizedUpdated?()
-        }
     }
 }

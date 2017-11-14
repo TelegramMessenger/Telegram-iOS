@@ -3,6 +3,7 @@ import AsyncDisplayKit
 
 final class NavigationBarBadgeNode: ASDisplayNode {
     private var fillColor: UIColor
+    private var strokeColor: UIColor
     private var textColor: UIColor
     
     private let textNode: ASTextNode2
@@ -17,8 +18,9 @@ final class NavigationBarBadgeNode: ASDisplayNode {
         }
     }
     
-    init(fillColor: UIColor, textColor: UIColor) {
+    init(fillColor: UIColor, strokeColor: UIColor, textColor: UIColor) {
         self.fillColor = fillColor
+        self.strokeColor = strokeColor
         self.textColor = textColor
         
         self.textNode = ASTextNode2()
@@ -29,12 +31,20 @@ final class NavigationBarBadgeNode: ASDisplayNode {
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: fillColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: fillColor, strokeColor: strokeColor, strokeWidth: 1.0)
         
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.textNode)
+    }
+    
+    func updateTheme(fillColor: UIColor, strokeColor: UIColor, textColor: UIColor) {
+        self.fillColor = fillColor
+        self.strokeColor = strokeColor
+        self.textColor = textColor
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: fillColor, strokeColor: strokeColor, strokeWidth: 1.0)
+        self.textNode.attributedText = NSAttributedString(string: self.text, font: self.font, textColor: self.textColor)
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {

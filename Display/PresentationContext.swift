@@ -37,7 +37,7 @@ final class PresentationContext {
         return self.view != nil && self.layout != nil
     }
     
-    private var controllers: [ViewController] = []
+    private(set) var controllers: [ViewController] = []
     
     private var presentationDisposables = DisposableSet()
     
