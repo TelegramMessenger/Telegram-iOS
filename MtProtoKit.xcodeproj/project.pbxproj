@@ -24,6 +24,8 @@
 		D020FAFF1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D020FAF91D994E3100F279AA /* MTHttpRequestOperation.m */; };
 		D0580AC21B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0580AC01B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h */; };
 		D0580AC31B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */; };
+		D073D2D81FB5E493009E1DA2 /* MTBindingTempAuthKeyContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */; };
+		D073D2D91FB5E494009E1DA2 /* MTBindingTempAuthKeyContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */; };
 		D079AB9C1AF39B8000076F59 /* MtProtoKitMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D09A59581B582EFF00FC3724 /* MTFileBasedKeychain.h in Headers */ = {isa = PBXBuildFile; fileRef = D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D09A59591B582EFF00FC3724 /* MTFileBasedKeychain.m in Sources */ = {isa = PBXBuildFile; fileRef = D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */; };
@@ -38,6 +40,8 @@
 		D0B418791D7E04CB004562A4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B418781D7E04CB004562A4 /* Security.framework */; };
 		D0B4187B1D7E04CF004562A4 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4187A1D7E04CF004562A4 /* libz.tbd */; };
 		D0B4187D1D7E04EB004562A4 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4187C1D7E04EB004562A4 /* libcrypto.a */; };
+		D0C0EAE61FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C0EAE41FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.h */; };
+		D0C0EAE71FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */; };
 		D0C932231E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C932211E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0C932241E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C932211E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0C932251E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C932211E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -712,6 +716,8 @@
 		D0B418781D7E04CB004562A4 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/System/Library/Frameworks/Security.framework; sourceTree = DEVELOPER_DIR; };
 		D0B4187A1D7E04CF004562A4 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/usr/lib/libz.tbd; sourceTree = DEVELOPER_DIR; };
 		D0B4187C1D7E04EB004562A4 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = openssl/OSX/libcrypto.a; sourceTree = "<group>"; };
+		D0C0EAE41FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTBindingTempAuthKeyContext.h; sourceTree = "<group>"; };
+		D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTBindingTempAuthKeyContext.m; sourceTree = "<group>"; };
 		D0C932211E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTNetworkUsageCalculationInfo.h; sourceTree = "<group>"; };
 		D0C932221E095D6A0074F044 /* MTNetworkUsageCalculationInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTNetworkUsageCalculationInfo.m; sourceTree = "<group>"; };
 		D0C932291E095E280074F044 /* MTNetworkUsageManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTNetworkUsageManager.h; sourceTree = "<group>"; };
@@ -1064,6 +1070,8 @@
 				D063A32718B1618D00C65116 /* MTSessionInfo.m */,
 				D063A32818B1618D00C65116 /* MTTimeFixContext.h */,
 				D063A32918B1618D00C65116 /* MTTimeFixContext.m */,
+				D0C0EAE41FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.h */,
+				D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */,
 				D063A32218B1618D00C65116 /* MTPreparedMessage.h */,
 				D063A32318B1618D00C65116 /* MTPreparedMessage.m */,
 				D063A32018B1618D00C65116 /* MTOutgoingMessage.h */,
@@ -1616,6 +1624,7 @@
 				D0CB065D1ADC45CE005E298F /* MTTcpConnectionBehaviour.h in Headers */,
 				D09A59581B582EFF00FC3724 /* MTFileBasedKeychain.h in Headers */,
 				D0E9B9ED1F0176DA00F079A4 /* MTBackupAddressSignals.h in Headers */,
+				D0C0EAE61FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.h in Headers */,
 				D0CB06311ADC4583005E298F /* MTDatacenterAddressSet.h in Headers */,
 				D0D1A03C1ADD983C007D9ED6 /* MTDestroySessionResponseMessage.h in Headers */,
 				D0CB061E1ADC4541005E298F /* MTOutputStream.h in Headers */,
@@ -2007,6 +2016,7 @@
 				D0B0DF5E1DD7E75B003BA12D /* MTBag.m in Sources */,
 				D0CD99041D75C0ED00F41187 /* MTApiEnvironment.m in Sources */,
 				D0CD983C1D74B9AA00F41187 /* MTResPqMessage.m in Sources */,
+				D073D2D81FB5E493009E1DA2 /* MTBindingTempAuthKeyContext.m in Sources */,
 				D0CD98C41D74BA8A00F41187 /* MTTcpTransport.m in Sources */,
 				D0CD98AC1D74BA6F00F41187 /* MTMessageEncryptionKey.m in Sources */,
 				D0CD98301D74B9AA00F41187 /* MTInternalMessageParser.m in Sources */,
@@ -2101,6 +2111,7 @@
 				D0B0DF5D1DD7E75B003BA12D /* MTBag.m in Sources */,
 				D0D1A0551ADD983C007D9ED6 /* MTMsgsStateReqMessage.m in Sources */,
 				D0D1A0411ADD983C007D9ED6 /* MTExportedAuthorizationData.m in Sources */,
+				D0C0EAE71FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m in Sources */,
 				D0CB06571ADC45BA005E298F /* MTResendMessageService.m in Sources */,
 				D0CB06551ADC45BA005E298F /* MTDropResponseContext.m in Sources */,
 				D0CB06451ADC4599005E298F /* MTMessageEncryptionKey.m in Sources */,
@@ -2195,6 +2206,7 @@
 				D0B0DF5F1DD7E75B003BA12D /* MTBag.m in Sources */,
 				D0CD99091D75C0ED00F41187 /* MTApiEnvironment.m in Sources */,
 				D0CD984B1D74B9AA00F41187 /* MTResPqMessage.m in Sources */,
+				D073D2D91FB5E494009E1DA2 /* MTBindingTempAuthKeyContext.m in Sources */,
 				D0CD98C31D74BA8A00F41187 /* MTTcpTransport.m in Sources */,
 				D0CD98B31D74BA6F00F41187 /* MTMessageEncryptionKey.m in Sources */,
 				D0CD983F1D74B9AA00F41187 /* MTInternalMessageParser.m in Sources */,

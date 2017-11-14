@@ -309,7 +309,7 @@
         currentData = buffer.data;
     }
     
-    if (_apiEnvironment != nil && _apiEnvironment.disableUpdates)
+    if ((_apiEnvironment != nil && _apiEnvironment.disableUpdates) || _forceBackgroundRequests)
     {
         MTBuffer *buffer = [[MTBuffer alloc] init];
         
@@ -568,7 +568,7 @@
                             NSMutableDictionary *authKeyAttributes = [[NSMutableDictionary alloc] initWithDictionary:authInfo.authKeyAttributes];
                             authKeyAttributes[@"apiInitializationHash"] = _apiEnvironment.apiInitializationHash;
                             
-                            authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId saltSet:authInfo.saltSet authKeyAttributes:authKeyAttributes];
+                            authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId saltSet:authInfo.saltSet authKeyAttributes:authKeyAttributes tempAuthKey:authInfo.tempAuthKey];
                             [_context updateAuthInfoForDatacenterWithId:mtProto.datacenterId authInfo:authInfo];
                         }
                     }
@@ -656,7 +656,7 @@
                                 NSMutableDictionary *authKeyAttributes = [[NSMutableDictionary alloc] initWithDictionary:authInfo.authKeyAttributes];
                                 [authKeyAttributes removeObjectForKey:@"apiInitializationHash"];
                                 
-                                authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId saltSet:authInfo.saltSet authKeyAttributes:authKeyAttributes];
+                                authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId saltSet:authInfo.saltSet authKeyAttributes:authKeyAttributes tempAuthKey:authInfo.tempAuthKey];
                                 [_context updateAuthInfoForDatacenterWithId:mtProto.datacenterId authInfo:authInfo];
                             }];
                         }

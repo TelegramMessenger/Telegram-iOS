@@ -1,17 +1,31 @@
-/*
- * This is the source code of Telegram for iOS v. 1.1
- * It is licensed under GNU GPL v. 2 or later.
- * You should have received a copy of the license in this archive (see LICENSE).
- *
- * Copyright Peter Iakovlev, 2013.
- */
-
 #import "MTDatacenterAuthInfo.h"
 #import "MTDatacenterSaltInfo.h"
 
+@implementation MTDatacenterAuthKey
+
+- (instancetype)initWithAuthKey:(NSData *)authKey authKeyId:(int64_t)authKeyId {
+    self = [super init];
+    if (self != nil) {
+        _authKey = authKey;
+        _authKeyId = authKeyId;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    return [self initWithAuthKey:[aDecoder decodeObjectForKey:@"key"] authKeyId:[aDecoder decodeInt64ForKey:@"keyId"]];
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_authKey forKey:@"key"];
+    [aCoder encodeInt64:_authKeyId forKey:@"keyId"];
+}
+
+@end
+
 @implementation MTDatacenterAuthInfo
 
-- (instancetype)initWithAuthKey:(NSData *)authKey authKeyId:(int64_t)authKeyId saltSet:(NSArray *)saltSet authKeyAttributes:(NSDictionary *)authKeyAttributes
+- (instancetype)initWithAuthKey:(NSData *)authKey authKeyId:(int64_t)authKeyId saltSet:(NSArray *)saltSet authKeyAttributes:(NSDictionary *)authKeyAttributes tempAuthKey:(MTDatacenterAuthKey *)tempAuthKey
 {
     self = [super init];
     if (self != nil)
@@ -20,6 +34,7 @@
         _authKeyId = authKeyId;
         _saltSet = saltSet;
         _authKeyAttributes = authKeyAttributes;
+        _tempAuthKey = tempAuthKey;
     }
     return self;
 }
@@ -33,6 +48,7 @@
         _authKeyId = [aDecoder decodeInt64ForKey:@"authKeyId"];
         _saltSet = [aDecoder decodeObjectForKey:@"saltSet"];
         _authKeyAttributes = [aDecoder decodeObjectForKey:@"authKeyAttributes"];
+        _tempAuthKey = [aDecoder decodeObjectForKey:@"tempAuthKey"];
     }
     return self;
 }
@@ -43,6 +59,7 @@
     [aCoder encodeInt64:_authKeyId forKey:@"authKeyId"];
     [aCoder encodeObject:_saltSet forKey:@"saltSet"];
     [aCoder encodeObject:_authKeyAttributes forKey:@"authKeyAttributes"];
+    [aCoder encodeObject:_tempAuthKey forKey:@"tempAuthKey"];
 }
 
 - (int64_t)authSaltForMessageId:(int64_t)messageId
@@ -91,7 +108,11 @@
         }
     }
     
-    return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:mergedSaltSet authKeyAttributes:_authKeyAttributes];
+    return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:mergedSaltSet authKeyAttributes:_authKeyAttributes tempAuthKey:_tempAuthKey];
+}
+
+- (MTDatacenterAuthInfo *)withUpdatedTempAuthKey:(MTDatacenterAuthKey *)tempAuthKey {
+    return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:_saltSet authKeyAttributes:_authKeyAttributes tempAuthKey:tempAuthKey];
 }
 
 @end

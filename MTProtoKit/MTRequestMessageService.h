@@ -34,6 +34,7 @@
 @property (nonatomic, weak) id<MTRequestMessageServiceDelegate> delegate;
 
 @property (nonatomic, strong) MTApiEnvironment *apiEnvironment;
+@property (nonatomic) bool forceBackgroundRequests;
 
 - (instancetype)initWithContext:(MTContext *)context;
 

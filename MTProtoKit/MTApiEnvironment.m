@@ -33,6 +33,9 @@
 #define IPHONE_6SPlus_NAMESTRING             @"iPhone 6S Plus"
 #define IPHONE_7_NAMESTRING             @"iPhone 7"
 #define IPHONE_7Plus_NAMESTRING             @"iPhone 7 Plus"
+#define IPHONE_8_NAMESTRING             @"iPhone 8"
+#define IPHONE_8Plus_NAMESTRING             @"iPhone 8 Plus"
+#define IPHONE_X_NAMESTRING             @"iPhone X"
 #define IPHONE_SE_NAMESTRING             @"iPhone SE"
 #define IPHONE_UNKNOWN_NAMESTRING       @"Unknown iPhone"
 
@@ -85,6 +88,9 @@ typedef enum {
     UIDevice6SPlusiPhone,
     UIDevice7iPhone,
     UIDevice7PlusiPhone,
+    UIDevice8iPhone,
+    UIDevice8PlusiPhone,
+    UIDeviceXiPhone,
     UIDeviceSEPhone,
     
     UIDevice1GiPod,
@@ -165,7 +171,7 @@ typedef enum {
 {
     self = [super init];
     if (self != nil)
-    {        
+    {
         _deviceModel = [self platformString];
 #if TARGET_OS_IPHONE
         _systemVersion = [[UIDevice currentDevice] systemVersion];
@@ -202,13 +208,13 @@ typedef enum {
     
     [self _updateApiInitializationHash];
 }
-    
+
 - (void)setLangPack:(NSString *)langPack {
     _langPack = langPack;
     
     [self _updateApiInitializationHash];
 }
-    
+
 - (void)setLangPackCode:(NSString *)langPackCode {
     _langPackCode = langPackCode;
     
@@ -232,6 +238,9 @@ typedef enum {
         case UIDevice6SPlusiPhone: return IPHONE_6SPlus_NAMESTRING;
         case UIDevice7iPhone: return IPHONE_7_NAMESTRING;
         case UIDevice7PlusiPhone: return IPHONE_7Plus_NAMESTRING;
+        case UIDevice8iPhone: return IPHONE_8_NAMESTRING;
+        case UIDevice8PlusiPhone: return IPHONE_8Plus_NAMESTRING;
+        case UIDeviceXiPhone: return IPHONE_X_NAMESTRING;
         case UIDeviceSEPhone: return IPHONE_SE_NAMESTRING;
         case UIDeviceUnknowniPhone: return IPHONE_UNKNOWN_NAMESTRING;
             
@@ -294,6 +303,14 @@ typedef enum {
     if ([platform isEqualToString:@"iPhone9,3"])    return UIDevice7iPhone;
     if ([platform isEqualToString:@"iPhone9,2"])    return UIDevice7PlusiPhone;
     if ([platform isEqualToString:@"iPhone9,4"])    return UIDevice7PlusiPhone;
+    
+    if ([platform isEqualToString:@"iPhone10,1"])    return UIDevice8iPhone;
+    if ([platform isEqualToString:@"iPhone10,4"])    return UIDevice8iPhone;
+    if ([platform isEqualToString:@"iPhone10,2"])    return UIDevice8PlusiPhone;
+    if ([platform isEqualToString:@"iPhone10,5"])    return UIDevice8PlusiPhone;
+    if ([platform isEqualToString:@"iPhone10,3"])    return UIDeviceXiPhone;
+    if ([platform isEqualToString:@"iPhone10,6"])    return UIDeviceXiPhone;
+    
     if ([platform isEqualToString:@"iPhone8,4"])    return UIDeviceSEPhone;
     
     // iPod
@@ -416,3 +433,4 @@ typedef enum {
 }
 
 @end
+
