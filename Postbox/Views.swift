@@ -18,6 +18,7 @@ public enum PostboxViewKey: Hashable {
     case unreadCounts(items: [UnreadMessageCountsItem])
     case peerNotificationSettings(peerId: PeerId)
     case pendingPeerNotificationSettings
+    case messageOfInterestHole(peerId: PeerId, namespace: MessageId.Namespace, count: Int)
     
     public var hashValue: Int {
         switch self {
@@ -55,6 +56,8 @@ public enum PostboxViewKey: Hashable {
                 return 6 &+ 31 &* peerId.hashValue
             case .pendingPeerNotificationSettings:
                 return 7
+            case let .messageOfInterestHole(peerId, namespace, count):
+                return 8 &+ 31 &* peerId.hashValue &+ 31 &* namespace.hashValue &+ 31 &* count.hashValue
         }
     }
     
@@ -162,6 +165,12 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case let .messageOfInterestHole(peerId, namespace, count):
+                if case .messageOfInterestHole(peerId, namespace, count) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -202,5 +211,7 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutablePeerNotificationSettingsView(postbox: postbox, peerId: peerId)
         case .pendingPeerNotificationSettings:
             return MutablePendingPeerNotificationSettingsView(postbox: postbox)
+        case let .messageOfInterestHole(peerId, namespace, count):
+            return MutableMessageOfInterestHolesView(postbox: postbox, peerId: peerId, namespace: namespace, count: count)
     }
 }

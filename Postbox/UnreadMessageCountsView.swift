@@ -59,7 +59,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                                 updated = true
                             }
                         }
-                    case let .peer(peerId, count):
+                    case let .peer(peerId, _):
                         if transaction.peerIdsWithUpdatedUnreadCounts.contains(peerId) {
                             var updatedCount: Int32 = 0
                             if let combinedState = postbox.readStateTable.getCombinedState(peerId) {

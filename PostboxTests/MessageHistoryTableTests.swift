@@ -31,13 +31,17 @@ private func ==(lhs: [Media], rhs: [Media]) -> Bool {
 }
 
 private enum Entry: Equatable, CustomStringConvertible {
-    case Message(Int32, Int32, String, [Media], MessageFlags)
+    case MessageEntry(Int32, Int32, String, [Media], MessageFlags, MessageGroupInfo?)
     case Hole(Int32, Int32, Int32)
+    
+    static func Message(_ id: Int32, _ timestamp: Int32, _ text: String, _ media: [Media], _ flags: MessageFlags, _ groupInfo: MessageGroupInfo? = nil) -> Entry {
+        return .MessageEntry(id, timestamp, text, media, flags, groupInfo)
+    }
     
     var description: String {
         switch self {
-            case let .Message(id, timestamp, text, media, flags):
-                return "Message(\(id), \(timestamp), \(text), \(media), \(flags))"
+            case let .MessageEntry(id, timestamp, text, media, flags, groupInfo):
+                return "Message(\(id), \(timestamp), \(text), \(media), \(flags), \(String(describing: groupInfo))"
             case let .Hole(min, max, timestamp):
                 return "Hole(\(min), \(max), \(timestamp))"
         }
@@ -46,16 +50,16 @@ private enum Entry: Equatable, CustomStringConvertible {
 
 private func ==(lhs: Entry, rhs: Entry) -> Bool {
     switch lhs {
-        case let .Message(lhsId, lhsTimestamp, lhsText, lhsMedia, lhsFlags):
+        case let .MessageEntry(lhsId, lhsTimestamp, lhsText, lhsMedia, lhsFlags, lhsGroupInfo):
             switch rhs {
-                case let .Message(rhsId, rhsTimestamp, rhsText, rhsMedia, rhsFlags):
-                    return lhsId == rhsId && lhsTimestamp == rhsTimestamp && lhsText == rhsText && lhsMedia == rhsMedia && lhsFlags == rhsFlags
+                case let .MessageEntry(rhsId, rhsTimestamp, rhsText, rhsMedia, rhsFlags, rhsGroupInfo):
+                    return lhsId == rhsId && lhsTimestamp == rhsTimestamp && lhsText == rhsText && lhsMedia == rhsMedia && lhsFlags == rhsFlags && lhsGroupInfo == rhsGroupInfo
                 case .Hole:
                     return false
             }
         case let .Hole(lhsMin, lhsMax, lhsMaxTimestamp):
             switch rhs {
-                case .Message:
+                case .MessageEntry:
                     return false
                 case let .Hole(rhsMin, rhsMax, rhsMaxTimestamp):
                     return lhsMin == rhsMin && lhsMax == rhsMax && lhsMaxTimestamp == rhsMaxTimestamp
@@ -325,7 +329,7 @@ class MessageHistoryTableTests: XCTestCase {
         self.path = nil
     }
     
-    private func addMessage(_ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags = [], _ tags: MessageTags = []) {
+    private func addMessage(_ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags = [], _ tags: MessageTags = [], location: AddMessagesLocation = .Random, groupingKey: Int64? = nil) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
@@ -334,10 +338,10 @@ class MessageHistoryTableTests: XCTestCase {
         var updatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32] = [:]
         var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
-        let _ = self.historyTable!.addMessages(messages: [StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: StoreMessageForwardInfo(authorId: peerId, sourceId: peerId, sourceMessageId: MessageId(peerId: peerId, namespace: 0, id: 10), date: 10, authorSignature: "abc"), authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, processMessages: nil)
+        let _ = self.historyTable!.addMessages(messages: [StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: StoreMessageForwardInfo(authorId: peerId, sourceId: peerId, sourceMessageId: MessageId(peerId: peerId, namespace: 0, id: 10), date: 10, authorSignature: "abc"), authorId: authorPeerId, text: text, attributes: [], media: media)], location: location, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, processMessages: nil)
     }
 
-    private func updateMessage(_ previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags) {
+    private func updateMessage(_ previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags, _ groupingKey: Int64?) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
@@ -346,7 +350,19 @@ class MessageHistoryTableTests: XCTestCase {
         var updatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32] = [:]
         var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
-        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
+        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
+    }
+    
+    private func updateMessageTimestamp(_ previousId: Int32, _ timestamp: Int32) {
+        var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
+        var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
+        var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
+        var globalTagsOperations: [GlobalMessageHistoryTagsOperation] = []
+        var pendingActionsOperations: [PendingMessageActionsOperation] = []
+        var updatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32] = [:]
+        var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
+        var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
+        self.historyTable!.updateMessageTimestamp(MessageId(peerId: peerId, namespace: namespace, id: previousId), timestamp: timestamp, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
     }
     
     private func addHole(_ id: Int32) {
@@ -385,7 +401,7 @@ class MessageHistoryTableTests: XCTestCase {
         self.historyTable!.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
     }
     
-    private func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil) {
+    private func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media], Int64?)], _ tagMask: MessageTags? = nil) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
@@ -394,10 +410,10 @@ class MessageHistoryTableTests: XCTestCase {
         var updatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32] = [:]
         var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
-        self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
+        self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, groupingKey: $0.4, timestamp: $0.1, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
     }
     
-    private func fillMultipleHoles(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil, _ tags: MessageTags = []) {
+    private func fillMultipleHoles(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media], Int64?)], _ tagMask: MessageTags? = nil, _ tags: MessageTags = []) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
@@ -406,13 +422,22 @@ class MessageHistoryTableTests: XCTestCase {
         var updatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32] = [:]
         var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
-        self.historyTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, timestamp: $0.1, flags: [], tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
+        self.historyTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, groupingKey: $0.4, timestamp: $0.1, flags: [], tags: tags, globalTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries)
     }
     
     private func replaceSummary(_ count: Int32, _ maxId: MessageId.Id) {
         
         var updatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary] = [:]
         self.messageHistoryTagsSummaryTable!.replace(key: MessageHistoryTagsSummaryKey(tag: .Summary, peerId: peerId, namespace: namespace), count: count, maxId: maxId, updatedSummaries: &updatedMessageTagSummaries)
+    }
+    
+    private func getExistingMessageGroupInfo(_ id: Int32) -> MessageGroupInfo {
+        if let entry = self.indexTable!.get(MessageId(peerId: peerId, namespace: namespace, id: id)) {
+            if let message = self.historyTable?.getMessage(entry.index) {
+                return message.groupInfo!
+            }
+        }
+        preconditionFailure()
     }
     
     private func expectEntries(_ entries: [Entry], tagMask: MessageTags? = nil) {
@@ -442,7 +467,7 @@ class MessageHistoryTableTests: XCTestCase {
                     } else {
                         stableIds.insert(stableId)
                     }
-                    return .Message(message.id.id, message.timestamp, message.text, message.media, message.flags)
+                    return .Message(message.id.id, message.timestamp, message.text, message.media, message.flags, message.groupInfo)
                 case let .Hole(hole):
                     stableId = hole.stableId
                     if stableIds.contains(stableId) {
@@ -762,35 +787,35 @@ class MessageHistoryTableTests: XCTestCase {
     func testFillHoleComplete() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: true, direction: .UpperToLower), [(100, 100, "m100", []), (200, 200, "m200", [])])
+        fillHole(1, HoleFill(complete: true, direction: .UpperToLower), [(100, 100, "m100", [], nil), (200, 200, "m200", [], nil)])
         expectEntries([.Message(100, 100, "m100", [], []), .Message(200, 200, "m200", [], [])])
     }
     
     func testFillHoleUpperToLowerPartial() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(100, 100, "m100", []), (200, 200, "m200", [])])
+        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(100, 100, "m100", [], nil), (200, 200, "m200", [], nil)])
         expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", [], []), .Message(200, 200, "m200", [], [])])
     }
     
     func testFillHoleUpperToLowerToBounds() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(1, 1, "m1", []), (200, 200, "m200", [])])
+        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(1, 1, "m1", [], nil), (200, 200, "m200", [], nil)])
         expectEntries([.Message(1, 1, "m1", [], []), .Message(200, 200, "m200", [], [])])
     }
     
     func testFillHoleLowerToUpperToBounds() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper), [(100, 100, "m100", []), (Int32.max, 200, "m200", [])])
+        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(100, 100, "m100", [], nil), (Int32.max, 200, "m200", [], nil)])
         expectEntries([.Message(100, 100, "m100", [], []), .Message(Int32.max, 200, "m200", [], [])])
     }
     
     func testFillHoleLowerToUpperPartial() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper), [(100, 100, "m100", []), (200, 200, "m200", [])])
+        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(100, 100, "m100", [], nil), (200, 200, "m200", [], nil)])
         expectEntries([.Message(100, 100, "m100", [], []), .Message(200, 200, "m200", [], []), .Hole(201, Int32.max, Int32.max)])
     }
     
@@ -800,7 +825,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(100, 100, "m100")
         addMessage(200, 200, "m200")
         
-        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150, "m150", [])])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150, "m150", [], nil)])
         
         expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", [], []), .Hole(101, 149, 150), .Message(150, 150, "m150", [], []), .Message(200, 200, "m200", [], []), .Hole(201, Int32.max, Int32.max)])
     }
@@ -811,7 +836,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(100, 100, "m100")
         addMessage(200, 200, "m200")
         
-        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper), [(150, 150, "m150", [])])
+        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(150, 150, "m150", [], nil)])
         
         expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", [], []), .Message(150, 150, "m150", [], []), .Hole(151, 199, 200), .Message(200, 200, "m200", [], []), .Hole(201, Int32.max, Int32.max)])
     }
@@ -822,7 +847,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(100, 100, "m100")
         addMessage(200, 200, "m200")
         
-        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(150, 150, "m150", [])])
+        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(150, 150, "m150", [], nil)])
         
         expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", [], []), .Message(150, 150, "m150", [], []), .Message(200, 200, "m200", [], []), .Hole(201, Int32.max, Int32.max)])
     }
@@ -849,7 +874,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(100, 100, "m100")
         addMessage(101, 101, "m101")
         
-        fillHole(100, HoleFill(complete: true, direction: .UpperToLower), [(90, 90, "m90", [])])
+        fillHole(100, HoleFill(complete: true, direction: .UpperToLower), [(90, 90, "m90", [], nil)])
         
         expectEntries([.Message(90, 90, "m90", [], []), .Message(100, 100, "m100", [], []), .Message(101, 101, "m101", [], [])])
     }
@@ -859,7 +884,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(200, 200, "m200")
         addHole(150)
         
-        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150, "m150", []), (300, 300, "m300", [])])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150, "m150", [], nil), (300, 300, "m300", [], nil)])
         
         expectEntries([.Message(100, 100, "m100", [], []), .Hole(101, 149, 150), .Message(150, 150, "m150", [], []), .Message(200, 200, "m200", [], []), .Message(300, 300, "m300", [], [])])
     }
@@ -968,7 +993,7 @@ class MessageHistoryTableTests: XCTestCase {
         expectEntries([.Message(100, 100, "m100", [], [.Unsent])])
         expectUnsent([100])
         
-        updateMessage(100, 100, 100, "m100", [], [], [])
+        updateMessage(100, 100, 100, "m100", [], [], [], nil)
         expectEntries([.Message(100, 100, "m100", [], [])])
         expectUnsent([])
     }
@@ -978,7 +1003,7 @@ class MessageHistoryTableTests: XCTestCase {
         expectEntries([.Message(100, 100, "m100", [], [.Unsent])])
         expectUnsent([100])
         
-        updateMessage(100, 100, 100, "m100", [], [.Unsent, .Failed], [])
+        updateMessage(100, 100, 100, "m100", [], [.Unsent, .Failed], [], nil)
         expectEntries([.Message(100, 100, "m100", [], [.Unsent, .Failed])])
         expectUnsent([])
     }
@@ -988,7 +1013,7 @@ class MessageHistoryTableTests: XCTestCase {
         expectEntries([.Message(100, 100, "m100", [], [.Unsent])])
         expectUnsent([100])
         
-        updateMessage(100, 200, 200, "m100", [], [], [])
+        updateMessage(100, 200, 200, "m100", [], [], [], nil)
         expectEntries([.Message(200, 200, "m100", [], [])])
         expectUnsent([])
     }
@@ -1000,7 +1025,7 @@ class MessageHistoryTableTests: XCTestCase {
         expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", [], [.Unsent]), .Hole(101, Int32.max, Int32.max)])
         expectUnsent([100])
         
-        updateMessage(100, 200, 200, "m100", [], [], [])
+        updateMessage(100, 200, 200, "m100", [], [], [], nil)
         expectEntries([.Hole(1, 199, 200), .Message(200, 200, "m100", [], []), .Hole(201, Int32.max, Int32.max)])
         expectUnsent([])
     }
@@ -1051,7 +1076,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(200, 200, "m200", [], [], [.Second])
         addHole(150)
         
-        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(180, 180, "m180", [])])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(180, 180, "m180", [], nil)])
         
         expectEntries([.Message(100, 100, "m100", [], []), .Hole(101, 179, 180)], tagMask: [.First])
         expectEntries([.Hole(101, 179, 180), .Message(200, 200, "m200", [], [])], tagMask: [.Second])
@@ -1063,7 +1088,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(200, 200, "m200", [], [], [.Second])
         addHole(150)
         
-        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper), [(180, 180, "m180", [])])
+        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(180, 180, "m180", [], nil)])
         
         expectEntries([.Message(100, 100, "m100", [], []), .Hole(181, 199, 200)], tagMask: [.First])
         expectEntries([.Hole(181, 199, 200), .Message(200, 200, "m200", [], [])], tagMask: [.Second])
@@ -1075,7 +1100,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(200, 200, "m200", [], [], [.Second])
         addHole(150)
         
-        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(180, 180, "m180", [])])
+        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(180, 180, "m180", [], nil)])
         
         expectEntries([.Message(100, 100, "m100", [], [])], tagMask: [.First])
         expectEntries([.Message(200, 200, "m200", [], [])], tagMask: [.Second])
@@ -1087,7 +1112,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(200, 200, "m200", [], [], [.Second])
         addHole(150)
         
-        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(180, 180, "m180", [])], [.First])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(180, 180, "m180", [], nil)], [.First])
         
         expectEntries([.Message(100, 100, "m100", [], []), .Hole(101, 179, 180)], tagMask: [.First])
         expectEntries([.Hole(101, 179, 180), .Hole(181, 199, 200), .Message(200, 200, "m200", [], [])], tagMask: [.Second])
@@ -1099,7 +1124,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(200, 200, "m200", [], [], [.Second])
         addHole(150)
         
-        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper), [(180, 180, "m180", [])], [.First])
+        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(180, 180, "m180", [], nil)], [.First])
         
         expectEntries([.Message(100, 100, "m100", [], []), .Hole(181, 199, 200)], tagMask: [.First])
         expectEntries([.Hole(101, 179, 180), .Hole(181, 199, 200), .Message(200, 200, "m200", [], [])], tagMask: [.Second])
@@ -1111,7 +1136,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(200, 200, "m200", [], [], [.Second])
         addHole(150)
         
-        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(180, 180, "m180", [])], [.First])
+        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(180, 180, "m180", [], nil)], [.First])
         
         expectEntries([.Message(100, 100, "m100", [], [])], tagMask: [.First])
         expectEntries([.Hole(101, 179, 180), .Hole(181, 199, 200), .Message(200, 200, "m200", [], [])], tagMask: [.Second])
@@ -1135,7 +1160,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(200, 200, "m200", [], [], [.Second])
         addHole(150)
         
-        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper), [], [.First])
+        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [], [.First])
         
         expectEntries([.Message(100, 100, "m100", [], [])], tagMask: [.First])
         expectEntries([.Hole(101, 199, 200), .Message(200, 200, "m200", [], [])], tagMask: [.Second])
@@ -1181,7 +1206,7 @@ class MessageHistoryTableTests: XCTestCase {
             .Hole(401, Int32.max, Int32.max)
         ], tagMask: [.Second])
         
-        fillMultipleHoles(500, HoleFill(complete: false, direction: .UpperToLower), [(500, 500, "m500", []), (350, 350, "m350", [])], [.Second], [.Second])
+        fillMultipleHoles(500, HoleFill(complete: false, direction: .UpperToLower), [(500, 500, "m500", [], nil), (350, 350, "m350", [], nil)], [.Second], [.Second])
         
         expectEntries([
             .Hole(1, 99, 100),
@@ -1375,7 +1400,7 @@ class MessageHistoryTableTests: XCTestCase {
         expectSummary(MessageHistoryTagNamespaceSummary(version: 1, count: 1, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 200)))
         replaceSummary(10, 300)
         expectSummary(MessageHistoryTagNamespaceSummary(version: 2, count: 10, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 300)))
-        self.updateMessage(300, 300, 300, "m300", [], [], [])
+        self.updateMessage(300, 300, 300, "m300", [], [], [], nil)
         expectSummary(MessageHistoryTagNamespaceSummary(version: 2, count: 9, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 300)))
     }
     
@@ -1545,5 +1570,307 @@ class MessageHistoryTableTests: XCTestCase {
         addHole(201)
         removeMessagesInRange(minId: 0, maxId: 300)
         expectEntries([.Hole(301, Int32.max, Int32.max)], tagMask: nil)
+    }
+    
+    func testAddHole1() {
+        addMessage(100, 100)
+        addMessage(101, 101)
+        addMessage(102, 102)
+        
+        addHole(Int32.max)
+        
+        expectEntries([
+            .Message(100, 100, "", [], []),
+            .Message(101, 101, "", [], []),
+            .Message(102, 102, "", [], []),
+            .Hole(103, Int32.max, Int32.max)
+        ], tagMask: nil)
+        
+        addMessage(104, 104, location: .UpperHistoryBlock)
+        
+        expectEntries([
+            .Message(100, 100, "", [], []),
+            .Message(101, 101, "", [], []),
+            .Message(102, 102, "", [], []),
+            .Hole(103, 103, 104),
+            .Message(104, 104, "", [], []),
+        ], tagMask: nil)
+    }
+    
+    /*None,A,None -> None, A(D), None
+     None,A,A(D) -> None, A(D), None
+     A(D),A,None -> A(D), A(D), None
+     None,A,B(D1) -> None, A(D2), B(D1)
+     A(D),A,A(D) -> A(D),A(D),A(D)
+     A(D1),A,B(D2) -> A(D1), A(D1), B(D2)
+     B(D1),A,None -> B(D1), A(D2), None
+     B(D1),A,A(D2) -> B(D1), A(D2), A(D2)
+     
+     B(D1),A,B(D1) -> B(D1), A(D2), B(D3)
+     */
+    
+    func testGroupNoneNone() {
+        addMessage(100, 100, groupingKey: 1)
+        let groupInfo = getExistingMessageGroupInfo(100)
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo)
+        ])
+    }
+    
+    func testGroupHoleHole() {
+        addHole(1)
+        addMessage(100, 100, groupingKey: 1)
+        let groupInfo = getExistingMessageGroupInfo(100)
+        expectEntries([
+            .Hole(1, 99, 100),
+            .Message(100, 100, "", [], [], groupInfo),
+            .Hole(101, Int32.max, Int32.max)
+        ])
+    }
+    
+    func testGroupSameNone() {
+        addMessage(100, 100, groupingKey: 1)
+        let groupInfo = getExistingMessageGroupInfo(100)
+        addMessage(110, 110, groupingKey: 1)
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo),
+            .Message(110, 110, "", [], [], groupInfo)
+        ])
+    }
+    
+    func testGroupNoneSame() {
+        addMessage(100, 100, groupingKey: 1)
+        let groupInfo = getExistingMessageGroupInfo(100)
+        addMessage(90, 90, groupingKey: 1)
+        expectEntries([
+            .Message(90, 90, "", [], [], groupInfo),
+            .Message(100, 100, "", [], [], groupInfo)
+        ])
+    }
+    
+    func testGroupNoneOther() {
+        addMessage(100, 100, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        addMessage(90, 90, groupingKey: 2)
+        let groupInfo2 = getExistingMessageGroupInfo(90)
+        expectEntries([
+            .Message(90, 90, "", [], [], groupInfo2),
+            .Message(100, 100, "", [], [], groupInfo1)
+        ])
+    }
+    
+    func testGroupSameSame() {
+        addMessage(100, 100, groupingKey: 1)
+        let groupInfo = getExistingMessageGroupInfo(100)
+        addMessage(90, 90, groupingKey: 1)
+        addMessage(95, 95, groupingKey: 1)
+        expectEntries([
+            .Message(90, 90, "", [], [], groupInfo),
+            .Message(95, 95, "", [], [], groupInfo),
+            .Message(100, 100, "", [], [], groupInfo)
+        ])
+    }
+    
+    func testGroupSameOther() {
+        addMessage(100, 100, groupingKey: 2)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        addMessage(90, 90, groupingKey: 1)
+        let groupInfo2 = getExistingMessageGroupInfo(90)
+        addMessage(95, 95, groupingKey: 1)
+        expectEntries([
+            .Message(90, 90, "", [], [], groupInfo2),
+            .Message(95, 95, "", [], [], groupInfo2),
+            .Message(100, 100, "", [], [], groupInfo1)
+        ])
+    }
+    
+    func testGroupOtherNone() {
+        addMessage(100, 100, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        addMessage(110, 110, groupingKey: 2)
+        let groupInfo2 = getExistingMessageGroupInfo(110)
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Message(110, 110, "", [], [], groupInfo2)
+        ])
+    }
+    
+    func testGroupOtherSame() {
+        addMessage(100, 100, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        addMessage(110, 110, groupingKey: 2)
+        let groupInfo2 = getExistingMessageGroupInfo(110)
+        addMessage(105, 105, groupingKey: 2)
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Message(105, 105, "", [], [], groupInfo2),
+            .Message(110, 110, "", [], [], groupInfo2)
+        ])
+    }
+    
+    func testGroupOtherOtherTailSingle() {
+        addMessage(100, 100, groupingKey: 1)
+        addMessage(120, 120, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        
+        addMessage(110, 110, groupingKey: 2)
+        let groupInfo2 = getExistingMessageGroupInfo(110)
+        
+        let groupInfo3 = getExistingMessageGroupInfo(120)
+        
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Message(110, 110, "", [], [], groupInfo2),
+            .Message(120, 120, "", [], [], groupInfo3)
+        ])
+        
+        XCTAssert(groupInfo3 != groupInfo1 && groupInfo3 != groupInfo2)
+    }
+    
+    func testGroupOtherOtherTailMultiple() {
+        addMessage(100, 100, groupingKey: 1)
+        addMessage(120, 120, groupingKey: 1)
+        addMessage(130, 130, groupingKey: 1)
+        addMessage(140, 140, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        
+        addMessage(110, 110, groupingKey: 2)
+        let groupInfo2 = getExistingMessageGroupInfo(110)
+        
+        let groupInfo3 = getExistingMessageGroupInfo(120)
+        
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Message(110, 110, "", [], [], groupInfo2),
+            .Message(120, 120, "", [], [], groupInfo3),
+            .Message(130, 130, "", [], [], groupInfo3),
+            .Message(140, 140, "", [], [], groupInfo3)
+        ])
+        
+        XCTAssert(groupInfo3 != groupInfo1 && groupInfo3 != groupInfo2)
+    }
+    
+    func testGroupBreakWithHole() {
+        addMessage(100, 100, groupingKey: 1)
+        addMessage(120, 120, groupingKey: 1)
+        addMessage(130, 130, groupingKey: 1)
+        addMessage(140, 140, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        
+        addHole(110)
+        
+        let groupInfo3 = getExistingMessageGroupInfo(120)
+        
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Hole(101, 119, 120),
+            .Message(120, 120, "", [], [], groupInfo3),
+            .Message(130, 130, "", [], [], groupInfo3),
+            .Message(140, 140, "", [], [], groupInfo3)
+        ])
+        
+        XCTAssert(groupInfo3 != groupInfo1)
+    }
+    
+    func testGroupCombine1() {
+        addMessage(100, 100, groupingKey: 1)
+        addMessage(120, 120, groupingKey: nil)
+        addMessage(130, 130, groupingKey: 1)
+        addMessage(140, 140, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        let groupInfo2 = getExistingMessageGroupInfo(130)
+        
+        removeMessages([120])
+        
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Message(130, 130, "", [], [], groupInfo1),
+            .Message(140, 140, "", [], [], groupInfo1)
+        ])
+        
+        XCTAssert(groupInfo1 != groupInfo2)
+    }
+    
+    func testGroupCombine2() {
+        addMessage(100, 100, groupingKey: 1)
+        addMessage(120, 120, groupingKey: nil)
+        addMessage(125, 125, groupingKey: nil)
+        addMessage(130, 130, groupingKey: 1)
+        addMessage(140, 140, groupingKey: 1)
+        addMessage(150, 150, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        let groupInfo2 = getExistingMessageGroupInfo(130)
+        
+        removeMessages([120, 125, 140])
+        
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Message(130, 130, "", [], [], groupInfo1),
+            .Message(150, 150, "", [], [], groupInfo1)
+        ])
+        
+        XCTAssert(groupInfo1 != groupInfo2)
+    }
+    
+    func testGroupCombine3() {
+        addMessage(100, 100, groupingKey: 1)
+        addMessage(140, 140, groupingKey: 1)
+        addMessage(150, 150, groupingKey: 1)
+        addHole(120)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        let groupInfo2 = getExistingMessageGroupInfo(140)
+        
+        fillHole(120, HoleFill(complete: true, direction: .LowerToUpper(updatedMaxIndex: nil)), [
+            (110, 110, "", [], 1),
+            (115, 115, "", [], 1)
+        ])
+        
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Message(110, 110, "", [], [], groupInfo1),
+            .Message(115, 115, "", [], [], groupInfo1),
+            .Message(140, 140, "", [], [], groupInfo1),
+            .Message(150, 150, "", [], [], groupInfo1)
+        ])
+        
+        XCTAssert(groupInfo1 != groupInfo2)
+    }
+    
+    func testGroupBreakWithUpdate1() {
+        addMessage(100, 100, groupingKey: 1)
+        addMessage(120, 120, groupingKey: 1)
+        addMessage(130, 130, groupingKey: 1)
+        addMessage(140, 140, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        
+        updateMessage(120, 150, 150, "", [], [], [], 1)
+        
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Message(130, 130, "", [], [], groupInfo1),
+            .Message(140, 140, "", [], [], groupInfo1),
+            .Message(150, 150, "", [], [], groupInfo1)
+        ])
+    }
+    
+    func testGroupBreakWithUpdate2() {
+        addMessage(100, 100, groupingKey: 1)
+        addMessage(120, 120, groupingKey: 1)
+        addMessage(130, 130, groupingKey: 1)
+        addMessage(140, 140, groupingKey: 1)
+        let groupInfo1 = getExistingMessageGroupInfo(100)
+        
+        updateMessage(120, 150, 150, "", [], [], [], 2)
+        
+        let groupInfo2 = getExistingMessageGroupInfo(150)
+        
+        expectEntries([
+            .Message(100, 100, "", [], [], groupInfo1),
+            .Message(130, 130, "", [], [], groupInfo1),
+            .Message(140, 140, "", [], [], groupInfo1),
+            .Message(150, 150, "", [], [], groupInfo2)
+        ])
+        
+        XCTAssert(groupInfo1 != groupInfo2)
     }
 }

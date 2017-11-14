@@ -133,6 +133,8 @@
 		D0A352F81F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A352F71F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift */; };
 		D0A352F91F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A352F71F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift */; };
 		D0A7D9451C556CFE0016A115 /* MessageHistoryIndexTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */; };
+		D0AA55131FB4C6AB00C2AB58 /* BinarySearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA55121FB4C6AB00C2AB58 /* BinarySearch.swift */; };
+		D0AA55141FB4C6AB00C2AB58 /* BinarySearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA55121FB4C6AB00C2AB58 /* BinarySearch.swift */; };
 		D0AAD1B21E3266B100D5B9DE /* TimestampBasedMessageAttributesIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1B01E3266B100D5B9DE /* TimestampBasedMessageAttributesIndexTable.swift */; };
 		D0AAD1B31E3266B100D5B9DE /* TimestampBasedMessageAttributesTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1B11E3266B100D5B9DE /* TimestampBasedMessageAttributesTable.swift */; };
 		D0AAD1B51E32673C00D5B9DE /* TimestampBasedMessageAttributesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1B41E32673C00D5B9DE /* TimestampBasedMessageAttributesView.swift */; };
@@ -143,6 +145,10 @@
 		D0AD23271E194D1C00A7089A /* PeerOperationLogTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD23261E194D1C00A7089A /* PeerOperationLogTable.swift */; };
 		D0AD23291E196B6400A7089A /* PeerOperationLogMetadataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD23281E196B6400A7089A /* PeerOperationLogMetadataTable.swift */; };
 		D0AE3EBC1F68261B0069BC90 /* PeerNotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE3EBB1F68261B0069BC90 /* PeerNotificationSettingsView.swift */; };
+		D0B166EA1F9D142A00976B40 /* MessageOfInterestHolesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B166E91F9D142A00976B40 /* MessageOfInterestHolesView.swift */; };
+		D0B166EB1F9D142A00976B40 /* MessageOfInterestHolesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B166E91F9D142A00976B40 /* MessageOfInterestHolesView.swift */; };
+		D0B167201F9EAAA900976B40 /* OrderedList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671F1F9EAAA900976B40 /* OrderedList.swift */; };
+		D0B167211F9EAAA900976B40 /* OrderedList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671F1F9EAAA900976B40 /* OrderedList.swift */; };
 		D0B418171D7DFAF3004562A4 /* PostboxMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B418151D7DFAF3004562A4 /* PostboxMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0B4181C1D7DFDF1004562A4 /* SQLite-Bridging.m in Sources */ = {isa = PBXBuildFile; fileRef = D07516761B2EC90400AE42E0 /* SQLite-Bridging.m */; };
 		D0B4181D1D7DFDF4004562A4 /* sqlite3.c in Sources */ = {isa = PBXBuildFile; fileRef = D07516401B2D9CEF00AE42E0 /* sqlite3.c */; settings = {COMPILER_FLAGS = "-Wno-conversion -Wno-ambiguous-macro -Wno-conditional-uninitialized -Wno-unused-const-variable -Wno-unused-function -Wno-unreachable-code"; }; };
@@ -399,6 +405,7 @@
 		D0A352F41F5488E9001423DC /* InvalidatedMessageHistoryTagsSummaryTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvalidatedMessageHistoryTagsSummaryTable.swift; sourceTree = "<group>"; };
 		D0A352F71F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvalidatedMessageHistoryTagSummariesView.swift; sourceTree = "<group>"; };
 		D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryIndexTableTests.swift; sourceTree = "<group>"; };
+		D0AA55121FB4C6AB00C2AB58 /* BinarySearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinarySearch.swift; sourceTree = "<group>"; };
 		D0AAD1B01E3266B100D5B9DE /* TimestampBasedMessageAttributesIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimestampBasedMessageAttributesIndexTable.swift; sourceTree = "<group>"; };
 		D0AAD1B11E3266B100D5B9DE /* TimestampBasedMessageAttributesTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimestampBasedMessageAttributesTable.swift; sourceTree = "<group>"; };
 		D0AAD1B41E32673C00D5B9DE /* TimestampBasedMessageAttributesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimestampBasedMessageAttributesView.swift; sourceTree = "<group>"; };
@@ -408,6 +415,8 @@
 		D0AD23261E194D1C00A7089A /* PeerOperationLogTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerOperationLogTable.swift; sourceTree = "<group>"; };
 		D0AD23281E196B6400A7089A /* PeerOperationLogMetadataTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerOperationLogMetadataTable.swift; sourceTree = "<group>"; };
 		D0AE3EBB1F68261B0069BC90 /* PeerNotificationSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerNotificationSettingsView.swift; sourceTree = "<group>"; };
+		D0B166E91F9D142A00976B40 /* MessageOfInterestHolesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageOfInterestHolesView.swift; sourceTree = "<group>"; };
+		D0B1671F1F9EAAA900976B40 /* OrderedList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderedList.swift; sourceTree = "<group>"; };
 		D0B418131D7DFAF2004562A4 /* PostboxMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PostboxMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B418151D7DFAF3004562A4 /* PostboxMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PostboxMac.h; sourceTree = "<group>"; };
 		D0B418161D7DFAF3004562A4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -686,6 +695,8 @@
 				D07827C01E0079CB00071108 /* StringIndexTokens.swift */,
 				D03229ED1E6B33FD0000AF9C /* SqliteInterface.swift */,
 				D01BAA541ED1D70C00295217 /* ManagedFile.swift */,
+				D0B1671F1F9EAAA900976B40 /* OrderedList.swift */,
+				D0AA55121FB4C6AB00C2AB58 /* BinarySearch.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -738,6 +749,7 @@
 				D0C27B441F4B598200A4E170 /* CachedPeerDataView.swift */,
 				D0AE3EBB1F68261B0069BC90 /* PeerNotificationSettingsView.swift */,
 				D0DA1D2E1F70419D0034E892 /* PendingPeerNotificationSettingsView.swift */,
+				D0B166E91F9D142A00976B40 /* MessageOfInterestHolesView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -991,6 +1003,7 @@
 				C25B56FE1F431C3300581D02 /* MessageHistoryTagsSummaryTable.swift in Sources */,
 				D050F2661E4A5B5A00988324 /* MessageGloballyUniqueIdTable.swift in Sources */,
 				D03229EF1E6B33FD0000AF9C /* SqliteInterface.swift in Sources */,
+				D0AA55141FB4C6AB00C2AB58 /* BinarySearch.swift in Sources */,
 				D01C7F081EFC1ED3008305F1 /* UnorderedItemListTable.swift in Sources */,
 				D050F2671E4A5B5A00988324 /* TimestampBasedMessageAttributesTable.swift in Sources */,
 				D050F2681E4A5B5A00988324 /* TimestampBasedMessageAttributesIndexTable.swift in Sources */,
@@ -1090,11 +1103,13 @@
 				D073CE7D1DCBF3B4007511FD /* PeerPresence.swift in Sources */,
 				D0B4184C1D7DFE20004562A4 /* ContactPeerIdsView.swift in Sources */,
 				D0DA44491E4C7D1E005FDCA7 /* PostboxAccess.swift in Sources */,
+				D0B167211F9EAAA900976B40 /* OrderedList.swift in Sources */,
 				D0CE8CF41F70249400AA2DB0 /* PostboxUpgrade_13to14.swift in Sources */,
 				D073CE751DCBF3B4007511FD /* Message.swift in Sources */,
 				D087C20D1E43C11C00D686F8 /* OrderedItemListView.swift in Sources */,
 				D00C7CD51E365C4E0080C3D5 /* PeerChatListInclusion.swift in Sources */,
 				D0F7B1CB1E045C6A007EB8A5 /* ChatListTable.swift in Sources */,
+				D0B166EB1F9D142A00976B40 /* MessageOfInterestHolesView.swift in Sources */,
 				D0F7B1C01E045C62007EB8A5 /* StringIndexTokens.swift in Sources */,
 				D07047AC1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift in Sources */,
 				D0F7B1CA1E045C6A007EB8A5 /* MessageHistoryUnsentTable.swift in Sources */,
@@ -1135,6 +1150,7 @@
 				D0CE8CF61F703B1E00AA2DB0 /* PendingPeerNotificationSettingsIndexTable.swift in Sources */,
 				D03229EE1E6B33FD0000AF9C /* SqliteInterface.swift in Sources */,
 				D01C7F071EFC1ED3008305F1 /* UnorderedItemListTable.swift in Sources */,
+				D0AA55131FB4C6AB00C2AB58 /* BinarySearch.swift in Sources */,
 				D0F9E8631C579F0200037222 /* MediaCleanupTable.swift in Sources */,
 				D0F3CC741DDE1EB9008148FA /* ItemCacheMetaTable.swift in Sources */,
 				D08D451F1D5D2CA700A7428A /* RatingTable.swift in Sources */,
@@ -1234,11 +1250,13 @@
 				D019B1CF1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift in Sources */,
 				D0F9E86D1C5A0E5D00037222 /* MetadataTable.swift in Sources */,
 				D0DA44481E4C7D1E005FDCA7 /* PostboxAccess.swift in Sources */,
+				D0B167201F9EAAA900976B40 /* OrderedList.swift in Sources */,
 				D0E3A7841B28AE0900A402D9 /* Peer.swift in Sources */,
 				D0D510F61D63BBE100A97B8A /* MessageHistoryOperation.swift in Sources */,
 				D0BC38721E409E670044D6FE /* RenderedPeer.swift in Sources */,
 				D08775031E3E3E7400A97350 /* PreferencesEntry.swift in Sources */,
 				D0AB0B901D65D4AB002C78E7 /* UnsentMessageIndicesView.swift in Sources */,
+				D0B166EA1F9D142A00976B40 /* MessageOfInterestHolesView.swift in Sources */,
 				D07047A21F3CE58200F6A8D4 /* PendingMessageActionsTable.swift in Sources */,
 				D01BAA551ED1D70C00295217 /* ManagedFile.swift in Sources */,
 				D0BEAF6A1E54B5FB00BD963D /* AccountManagerMetadataTable.swift in Sources */,

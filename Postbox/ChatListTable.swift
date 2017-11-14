@@ -146,6 +146,10 @@ final class ChatListTable: Table {
         }
     }
     
+    func getPeerChatListIndex(_ peerId: PeerId) -> ChatListIndex? {
+        return self.indexTable.get(peerId).includedIndex(peerId: peerId)
+    }
+    
     func replay(historyOperationsByPeerId: [PeerId : [MessageHistoryOperation]], updatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?], updatedChatListInclusions: [PeerId: PeerChatListInclusion], messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, operations: inout [ChatListOperation]) {
         self.ensureInitialized()
         var changedPeerIds = Set<PeerId>()

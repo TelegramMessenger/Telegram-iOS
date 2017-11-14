@@ -46,15 +46,15 @@ private func ==(lhs: Item, rhs: Item) -> Bool {
             switch rhs {
                 case let .Message(rId, rTimestamp):
                     return id == rId && timestamp == rTimestamp
-                case .Hole:
+                default:
                     return false
             }
         case let .Hole(minId, maxId, maxTimestamp):
             switch rhs {
-                case .Message:
-                    return false
                 case let .Hole(rMinId, rMaxId, rMaxTimestamp):
                     return minId == rMinId && maxId == rMaxId && maxTimestamp == rMaxTimestamp
+                default:
+                    return false
             }
     }
 }
@@ -99,30 +99,30 @@ class MessageHistoryIndexTableTests: XCTestCase {
         self.indexTable!.addHole(MessageId(peerId: peerId, namespace: namespace, id: id), operations: &operations)
     }
     
-    func addMessage(_ id: Int32, _ timestamp: Int32) {
+    func addMessage(_ id: Int32, _ timestamp: Int32, _ groupingKey: Int64? = nil) {
         var operations: [MessageHistoryIndexOperation] = []
-        self.indexTable!.addMessages([InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, globallyUniqueId: nil, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])], location: .Random, operations: &operations)
+        self.indexTable!.addMessages([InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, globallyUniqueId: nil, groupingKey: groupingKey, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])], location: .Random, operations: &operations)
     }
     
     func addMessagesUpperBlock(_ messages: [(Int32, Int32)]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.addMessages(messages.map { (id, timestamp) in
-            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, globallyUniqueId: nil, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
+            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, globallyUniqueId: nil, groupingKey: nil, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
         }, location: .UpperHistoryBlock, operations: &operations)
     }
     
-    func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32)], _ tagMask: MessageTags? = nil) {
+    func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, Int64?)], _ tagMask: MessageTags? = nil) {
         var operations: [MessageHistoryIndexOperation] = []
         
         self.indexTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({
-            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, globallyUniqueId: nil, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
+            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, globallyUniqueId: nil, groupingKey: $0.2, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
         }), operations: &operations)
     }
     
     func fillMultipleHoles(_ mainId: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32)], _ tagMask: MessageTags? = nil) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: mainId), fillType: fillType, tagMask: tagMask, messages: messages.map({
-            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, globallyUniqueId: nil, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
+            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, globallyUniqueId: nil, groupingKey: nil, flags: [], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
         }), operations: &operations)
     }
     
@@ -284,35 +284,35 @@ class MessageHistoryIndexTableTests: XCTestCase {
     func testFillHoleComplete() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: true, direction: .UpperToLower), [(100, 100), (200, 200)])
+        fillHole(1, HoleFill(complete: true, direction: .UpperToLower), [(100, 100, nil), (200, 200, nil)])
         expect([.Message(100, 100), .Message(200, 200)])
     }
     
     func testFillHoleUpperToLowerPartial() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(100, 100), (200, 200)])
+        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(100, 100, nil), (200, 200, nil)])
         expect([.Hole(1, 99, 100), .Message(100, 100), .Message(200, 200)])
     }
     
     func testFillHoleUpperToLowerToBounds() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(1, 1), (200, 200)])
+        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(1, 1, nil), (200, 200, nil)])
         expect([.Message(1, 1), .Message(200, 200)])
     }
     
     func testFillHoleLowerToUpperToBounds() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper), [(100, 100), (Int32.max, 200)])
+        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(100, 100, nil), (Int32.max, 200, nil)])
         expect([.Message(100, 100), .Message(Int32.max, 200)])
     }
     
     func testFillHoleLowerToUpperPartial() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper), [(100, 100), (200, 200)])
+        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(100, 100, nil), (200, 200, nil)])
         expect([.Message(100, 100), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
     
@@ -322,7 +322,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(200, 200)
         
-        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150)])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150, nil)])
         
         expect([.Hole(1, 99, 100), .Message(100, 100), .Hole(101, 149, 150), .Message(150, 150), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
@@ -333,7 +333,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(200, 200)
         
-        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper), [(150, 150)])
+        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(150, 150, nil)])
         
         expect([.Hole(1, 99, 100), .Message(100, 100), .Message(150, 150), .Hole(151, 199, 200), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
@@ -344,7 +344,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(200, 200)
         
-        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(150, 150)])
+        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(150, 150, nil)])
         
         expect([.Hole(1, 99, 100), .Message(100, 100), .Message(150, 150), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
@@ -371,7 +371,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(101, 101)
         
-        fillHole(100, HoleFill(complete: true, direction: .UpperToLower), [(90, 90)])
+        fillHole(100, HoleFill(complete: true, direction: .UpperToLower), [(90, 90, nil)])
         
         expect([.Message(90, 90), .Message(100, 100), .Message(101, 101)])
     }
@@ -381,7 +381,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(200, 200)
         addHole(150)
         
-        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150), (300, 300)])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150, nil), (300, 300, nil)])
         
         expect([.Message(100, 100), .Hole(101, 149, 150), .Message(150, 150), .Message(200, 200), .Message(300, 300)])
     }
@@ -518,14 +518,14 @@ class MessageHistoryIndexTableTests: XCTestCase {
     func testFillHoleAtIndex() {
         addHole(1)
         expect([.Hole(1, Int32.max, Int32.max)])
-        fillHole(1, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 10, timestamp: 10), lowerComplete: false, upperComplete: false)), [(5, 5), (10, 10)])
+        fillHole(1, HoleFill(complete: false, direction: .AroundId(MessageId(peerId: peerId, namespace: namespace, id: 10), lowerComplete: false, upperComplete: false)), [(5, 5, nil), (10, 10, nil)])
         expect([.Hole(1, 4, 5), .Message(5, 5), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
     }
     
     func testFillHoleAtIndexComplete() {
         addHole(1)
         expect([.Hole(1, Int32.max, Int32.max)])
-        fillHole(1, HoleFill(complete: true, direction: .AroundIndex(MessageIndex(id: 10, timestamp: 10), lowerComplete: false, upperComplete: false)), [(5, 5), (10, 10)])
+        fillHole(1, HoleFill(complete: true, direction: .AroundId(MessageId(peerId: peerId, namespace: namespace, id: 10), lowerComplete: false, upperComplete: false)), [(5, 5, nil), (10, 10, nil)])
         expect([.Message(5, 5), .Message(10, 10)])
     }
     
@@ -573,7 +573,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: false, direction: .LowerToUpper), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
     }
@@ -583,7 +583,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: true, direction: .LowerToUpper), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: true, direction: .LowerToUpper(updatedMaxIndex: nil)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
     }
@@ -593,7 +593,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 15, timestamp: 15), lowerComplete: false, upperComplete: false)), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundId(MessageId(peerId: peerId, namespace: namespace, id: 15), lowerComplete: false, upperComplete: false)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
     }
@@ -603,7 +603,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 15, timestamp: 15), lowerComplete: false, upperComplete: true)), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundId(MessageId(peerId: peerId, namespace: namespace, id: 15), lowerComplete: false, upperComplete: true)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
     }
@@ -613,7 +613,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 15, timestamp: 15), lowerComplete: true, upperComplete: false)), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundId(MessageId(peerId: peerId, namespace: namespace, id: 15), lowerComplete: true, upperComplete: false)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
     }
@@ -623,7 +623,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 15, timestamp: 15), lowerComplete: false, upperComplete: false)), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .AroundId(MessageId(peerId: peerId, namespace: namespace, id: 15), lowerComplete: false, upperComplete: false)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
     }

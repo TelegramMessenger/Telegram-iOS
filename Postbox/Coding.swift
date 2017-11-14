@@ -403,6 +403,26 @@ public final class PostboxEncoder {
         }
     }
     
+    public func encodeObjectArrayWithEncoder<T>(_ value: [T], forKey key: StaticString, encoder: (T, PostboxEncoder) -> Void) {
+        self.encodeKey(key)
+        var t: Int8 = ValueType.ObjectArray.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        let innerEncoder = PostboxEncoder()
+        for object in value {
+            var typeHash: Int32 = murMurHashString32("\(type(of: object))")
+            self.buffer.write(&typeHash, offset: 0, length: 4)
+            
+            innerEncoder.reset()
+            encoder(object, innerEncoder)
+            
+            var length: Int32 = Int32(innerEncoder.buffer.offset)
+            self.buffer.write(&length, offset: 0, length: 4)
+            self.buffer.write(innerEncoder.buffer.memory, offset: 0, length: Int(length))
+        }
+    }
+    
     public func encodeGenericObjectArray(_ value: [PostboxCoding], forKey key: StaticString) {
         self.encodeKey(key)
         var t: Int8 = ValueType.ObjectArray.rawValue
@@ -952,6 +972,39 @@ public final class PostboxDecoder {
                 self.offset += 4 + Int(objectLength)
                 
                 array.append(T(decoder: innerDecoder))
+                
+                i += 1
+            }
+            
+            return array
+        } else {
+            return []
+        }
+    }
+    
+    public func decodeObjectArrayWithCustomDecoderForKey<T>(_ key: StaticString, decoder: (PostboxDecoder) throws -> T) throws -> [T] {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var array: [T] = []
+            array.reserveCapacity(Int(length))
+            
+            var i: Int32 = 0
+            while i < length {
+                var typeHash: Int32 = 0
+                memcpy(&typeHash, self.buffer.memory + self.offset, 4)
+                self.offset += 4
+                
+                var objectLength: Int32 = 0
+                memcpy(&objectLength, self.buffer.memory + self.offset, 4)
+                
+                let innerDecoder = PostboxDecoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false))
+                self.offset += 4 + Int(objectLength)
+                
+                let value = try decoder(innerDecoder)
+                array.append(value)
                 
                 i += 1
             }

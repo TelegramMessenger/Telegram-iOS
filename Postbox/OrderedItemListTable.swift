@@ -114,7 +114,7 @@ final class OrderedItemListTable: Table {
             self.valueBox.set(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: items[i].id), value: MemoryBuffer(memory: &indexValue, capacity: 4, length: 4, freeWhenDone: false))
             self.indexTable.set(collectionId: collectionId, id: items[i].id, content: items[i].contents)
         }
-        #if (arch(i386) || arch(x86_64)) && os(iOS)
+        #if ((arch(i386) || arch(x86_64)) && os(iOS)) || DEBUG
             assert(self.testIntegrity(collectionId: collectionId))
         #endif
     }
@@ -157,7 +157,7 @@ final class OrderedItemListTable: Table {
         self.valueBox.set(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: 0), value: item.id)
         var itemIndex: UInt32 = 0
         self.valueBox.set(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: item.id), value: MemoryBuffer(memory: &itemIndex, capacity: 4, length: 4, freeWhenDone: false))
-        #if (arch(i386) || arch(x86_64)) && os(iOS)
+        #if ((arch(i386) || arch(x86_64)) && os(iOS)) || DEBUG
             assert(self.testIntegrity(collectionId: collectionId))
         #endif
     }
@@ -186,7 +186,7 @@ final class OrderedItemListTable: Table {
             }
             self.indexTable.remove(collectionId: collectionId, id: itemId)
         }
-        #if (arch(i386) || arch(x86_64)) && os(iOS)
+        #if ((arch(i386) || arch(x86_64)) && os(iOS)) || DEBUG
         assert(self.testIntegrity(collectionId: collectionId))
         #endif
     }

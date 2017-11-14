@@ -428,6 +428,10 @@ final class MessageHistoryReadStateTable: Table {
         return deltas
     }
     
+    func transactionPeerIdsWithUpdatedCombinedReadStates() -> Set<PeerId> {
+        return Set(updatedInitialPeerReadStates.keys)
+    }
+    
     override func clearMemoryCache() {
         self.cachedPeerReadStates.removeAll()
         assert(self.updatedInitialPeerReadStates.isEmpty)

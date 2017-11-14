@@ -16,32 +16,36 @@ enum HistoryIndexEntry {
 
 public enum HoleFillDirection: Equatable {
     case UpperToLower
-    case LowerToUpper
-    case AroundIndex(MessageIndex, lowerComplete: Bool, upperComplete: Bool)
-}
+    case LowerToUpper(updatedMaxIndex: MessageIndex?)
+    case AroundId(MessageId, lowerComplete: Bool, upperComplete: Bool)
 
-public func ==(lhs: HoleFillDirection, rhs: HoleFillDirection) -> Bool {
-    switch lhs {
-        case .UpperToLower:
-            switch rhs {
-                case .UpperToLower:
-                    return true
-                default:
+    public static func ==(lhs: HoleFillDirection, rhs: HoleFillDirection) -> Bool {
+        switch lhs {
+            case .UpperToLower:
+                switch rhs {
+                    case .UpperToLower:
+                        return true
+                    default:
+                        return false
+                }
+            case let .LowerToUpper(lhsUpdatedMaxIndex):
+                switch rhs {
+                    case let .LowerToUpper(rhsUpdatedMaxIndex):
+                        if lhsUpdatedMaxIndex == rhsUpdatedMaxIndex {
+                            return true
+                        } else {
+                            return false
+                        }
+                    default:
+                        return false
+                }
+            case let .AroundId(id, lowerComplete, upperComplete):
+                if case .AroundId(id, lowerComplete, upperComplete) = rhs {
+                        return true
+                } else {
                     return false
-            }
-        case .LowerToUpper:
-            switch rhs {
-                case .LowerToUpper:
-                    return true
-                default:
-                    return false
-            }
-        case let .AroundIndex(index, lowerComplete, upperComplete):
-            if case .AroundIndex(index, lowerComplete, upperComplete) = rhs {
-                    return true
-            } else {
-                return false
-            }
+                }
+        }
     }
 }
 
@@ -247,6 +251,7 @@ final class MessageHistoryIndexTable: Table {
                                 if lowerIndex.id.id <= hole.min {
                                     removeHoles.append(hole.maxIndex)
                                 } else {
+                                    assert(modifyHole == nil)
                                     modifyHole = (hole.maxIndex, MessageHistoryHole(stableId: hole.stableId, maxIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: lowerIndex.id.id - 1), timestamp: lowerIndex.timestamp), min: hole.min, tags: hole.tags))
                                 }
                             }
@@ -474,7 +479,7 @@ final class MessageHistoryIndexTable: Table {
                             if fillType.complete {
                                 currentLowerBound = 1
                             }
-                        case .AroundIndex:
+                        case .AroundId:
                             break
                     }
                     
@@ -492,7 +497,7 @@ final class MessageHistoryIndexTable: Table {
                             if fillType.complete {
                                 filledLowerBound = 1
                             }
-                        case .AroundIndex:
+                        case .AroundId:
                             break
                     }
                 }
@@ -569,7 +574,7 @@ final class MessageHistoryIndexTable: Table {
             if let adjustedMainHoleId = adjustedMainHoleId {
                 if holeId == adjustedMainHoleId {
                     switch fillType.direction {
-                        case let .AroundIndex(index, lowerComplete, upperComplete):
+                        case let .AroundId(id, lowerComplete, upperComplete):
                             if lowerComplete {
                                 adjustedLowerComplete = true
                             }
@@ -577,9 +582,9 @@ final class MessageHistoryIndexTable: Table {
                                 adjustedUpperComplete = true
                             }
                             
-                            currentFillType = HoleFill(complete: fillType.complete, direction: .AroundIndex(index, lowerComplete: adjustedLowerComplete, upperComplete: adjustedUpperComplete))
-                        case .LowerToUpper:
-                            currentFillType = HoleFill(complete: fillType.complete || adjustedUpperComplete, direction: .LowerToUpper)
+                            currentFillType = HoleFill(complete: fillType.complete, direction: .AroundId(id, lowerComplete: adjustedLowerComplete, upperComplete: adjustedUpperComplete))
+                        case let .LowerToUpper(updatedMaxIndex):
+                            currentFillType = HoleFill(complete: fillType.complete || adjustedUpperComplete, direction: .LowerToUpper(updatedMaxIndex: updatedMaxIndex))
                         case .UpperToLower:
                             currentFillType = HoleFill(complete: fillType.complete || adjustedLowerComplete, direction: .UpperToLower)
                     }
@@ -587,14 +592,14 @@ final class MessageHistoryIndexTable: Table {
                     if holeId < adjustedMainHoleId {
                         currentFillType = HoleFill(complete: adjustedLowerComplete, direction: .UpperToLower)
                     } else {
-                        currentFillType = HoleFill(complete: adjustedUpperComplete, direction: .LowerToUpper)
+                        currentFillType = HoleFill(complete: adjustedUpperComplete, direction: .LowerToUpper(updatedMaxIndex: nil))
                     }
                 }
             } else {
                 if holeId < mainHoleId {
                     currentFillType = HoleFill(complete: adjustedLowerComplete, direction: .UpperToLower)
                 } else {
-                    currentFillType = HoleFill(complete: adjustedUpperComplete, direction: .LowerToUpper)
+                    currentFillType = HoleFill(complete: adjustedUpperComplete, direction: .LowerToUpper(updatedMaxIndex: nil))
                 }
             }
             self.fillHole(holeId, fillType: currentFillType, tagMask: tagMask, messages: holeMessages, operations: &operations)
@@ -622,8 +627,8 @@ final class MessageHistoryIndexTable: Table {
             switch upperItem {
                 case let .Hole(upperHole):
                     if let tagMask = tagMask {
-                        if case .AroundIndex = fillType.direction {
-                            assertionFailure(".AroundIndex not supported")
+                        if case .AroundId = fillType.direction {
+                            assertionFailure(".AroundId not supported")
                             return
                         }
                         
@@ -653,7 +658,14 @@ final class MessageHistoryIndexTable: Table {
                                 if i == 0 {
                                     if upperHole.min < message.id.id {
                                         let holeTags: UInt32
-                                        if fillType.complete || fillType.direction == .LowerToUpper {
+                                        var holeClosed = false
+                                        if fillType.complete {
+                                            holeClosed = true
+                                        } else if case .LowerToUpper = fillType.direction {
+                                            holeClosed = true
+                                        }
+                                        
+                                        if holeClosed {
                                             holeTags = clearedTags
                                         } else {
                                             holeTags = upperHole.tags
@@ -702,7 +714,13 @@ final class MessageHistoryIndexTable: Table {
                                 
                                 if (maxMessageInRange == nil || maxMessageInRange!.id < message.id) {
                                     maxMessageInRange = message
-                                    if (fillType.complete || fillType.direction == .LowerToUpper) {
+                                    var holeClosed = false
+                                    if fillType.complete {
+                                        holeClosed = true
+                                    } else if case .LowerToUpper = fillType.direction {
+                                        holeClosed = true
+                                    }
+                                    if holeClosed {
                                         if !removedHole {
                                             removedHole = true
                                             self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
@@ -726,7 +744,7 @@ final class MessageHistoryIndexTable: Table {
                                 removedHole = true
                                 self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                             }
-                        } else if fillType.direction == .LowerToUpper {
+                        } else if case let .LowerToUpper(updatedMaxIndex) = fillType.direction {
                             if let maxMessageInRange = maxMessageInRange , maxMessageInRange.id.id != Int32.max && maxMessageInRange.id.id + 1 <= upperHole.maxIndex.id.id {
                                 let stableId: UInt32
                                 let tags: UInt32 = upperHole.tags
@@ -735,7 +753,7 @@ final class MessageHistoryIndexTable: Table {
                                 } else {
                                     stableId = self.metadataTable.getNextStableMessageIndexId()
                                 }
-                                self.justInsertHole(MessageHistoryHole(stableId: stableId, maxIndex: upperHole.maxIndex, min: maxMessageInRange.id.id + 1, tags: tags), operations: &operations)
+                                self.justInsertHole(MessageHistoryHole(stableId: stableId, maxIndex: updatedMaxIndex ?? upperHole.maxIndex, min: maxMessageInRange.id.id + 1, tags: tags), operations: &operations)
                             }
                         } else if fillType.direction == .UpperToLower {
                             if let minMessageInRange = minMessageInRange , minMessageInRange.id.id - 1 >= upperHole.min {
@@ -748,7 +766,7 @@ final class MessageHistoryIndexTable: Table {
                                 }
                                 self.justInsertHole(MessageHistoryHole(stableId: stableId, maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: minMessageInRange.id.id - 1), timestamp: minMessageInRange.timestamp), min: upperHole.min, tags: tags), operations: &operations)
                             }
-                        } else if case let .AroundIndex(_, lowerComplete, upperComplete) = fillType.direction {
+                        } else if case let .AroundId(_, lowerComplete, upperComplete) = fillType.direction {
                             if !removedHole {
                                 self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                                 removedHole = true
@@ -941,6 +959,70 @@ final class MessageHistoryIndexTable: Table {
         }
         
         return (count, holes)
+    }
+    
+    func entriesAround(id: MessageId, count: Int) -> ([HistoryIndexEntry], HistoryIndexEntry?, HistoryIndexEntry?) {
+        var lowerEntries: [HistoryIndexEntry] = []
+        var upperEntries: [HistoryIndexEntry] = []
+        var lower: HistoryIndexEntry?
+        var upper: HistoryIndexEntry?
+        
+        self.valueBox.range(self.table, start: self.key(id), end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
+            lowerEntries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
+            return true
+        }, limit: count / 2 + 1)
+        
+        if lowerEntries.count >= count / 2 + 1 {
+            lower = lowerEntries.last
+            lowerEntries.removeLast()
+        }
+        
+        self.valueBox.range(self.table, start: self.key(id).predecessor, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
+            upperEntries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
+            return true
+        }, limit: count - lowerEntries.count + 1)
+        if upperEntries.count >= count - lowerEntries.count + 1 {
+            upper = upperEntries.last
+            upperEntries.removeLast()
+        }
+        
+        if lowerEntries.count != 0 && lowerEntries.count + upperEntries.count < count {
+            var additionalLowerEntries: [HistoryIndexEntry] = []
+            self.valueBox.range(self.table, start: self.key(lowerEntries.last!.index.id), end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
+                additionalLowerEntries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
+                return true
+            }, limit: count - lowerEntries.count - upperEntries.count + 1)
+            if additionalLowerEntries.count >= count - lowerEntries.count + upperEntries.count + 1 {
+                lower = additionalLowerEntries.last
+                additionalLowerEntries.removeLast()
+            }
+            lowerEntries.append(contentsOf: additionalLowerEntries)
+        }
+        
+        var entries: [HistoryIndexEntry] = []
+        entries.append(contentsOf: lowerEntries.reversed())
+        entries.append(contentsOf: upperEntries)
+        return (entries: entries, lower: lower, upper: upper)
+    }
+    
+    func earlierEntries(id: MessageId, count: Int) -> [HistoryIndexEntry] {
+        var entries: [HistoryIndexEntry] = []
+        let key = self.key(id)
+        self.valueBox.range(self.table, start: key, end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
+            entries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
+            return true
+        }, limit: count)
+        return entries
+    }
+    
+    func laterEntries(id: MessageId, count: Int) -> [HistoryIndexEntry] {
+        var entries: [HistoryIndexEntry] = []
+        let key = self.key(id)
+        self.valueBox.range(self.table, start: key, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
+            entries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
+            return true
+        }, limit: count)
+        return entries
     }
     
     func debugList(_ peerId: PeerId, namespace: MessageId.Namespace) -> [HistoryIndexEntry] {
