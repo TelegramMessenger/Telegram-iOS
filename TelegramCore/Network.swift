@@ -398,6 +398,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context))
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
+            //mtProto.useTempAuthKeys = true
             
             let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
             
@@ -548,7 +549,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     func download(datacenterId: Int, isCdn: Bool = false, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                subscriber.putNext(Download(datacenterId: datacenterId, isCdn: isCdn, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory)))
+                subscriber.putNext(Download(queue: strongSelf.queue, datacenterId: datacenterId, isCdn: isCdn, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: strongSelf.shouldKeepConnection.get()))
             }
             subscriber.putCompletion()
             

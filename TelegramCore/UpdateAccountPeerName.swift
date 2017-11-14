@@ -33,7 +33,7 @@ public enum UpdateAboutError {
 
 
 public func updateAbout(account: Account, about: String?) -> Signal<Void, UpdateAboutError> {
-    return account.network.request(Api.functions.account.updateProfile(flags: (1 << 2), firstName: nil, lastName: nil, about: about))
+    return account.network.request(Api.functions.account.updateProfile(flags: about == nil ? 0 : (1 << 2), firstName: nil, lastName: nil, about: about))
         |> mapError { _ -> UpdateAboutError in
             return .generic
         }

@@ -247,6 +247,8 @@ private var declaredEncodables: Void = {
     declareEncodable(ConsumablePersonalMentionMessageAttribute.self, f: { ConsumablePersonalMentionMessageAttribute(decoder: $0) })
     declareEncodable(ConsumePersonalMessageAction.self, f: { ConsumePersonalMessageAction(decoder: $0) })
     declareEncodable(CachedStickerPack.self, f: { CachedStickerPack(decoder: $0) })
+    declareEncodable(LoggingSettings.self, f: { LoggingSettings(decoder: $0) })
+    declareEncodable(CachedLocalizationInfos.self, f: { CachedLocalizationInfos(decoder: $0) })
     
     return
 }()
@@ -434,6 +436,17 @@ public final class AccountAuxiliaryMethods {
     }
 }
 
+public struct AccountRunningImportantTasks: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let other = AccountRunningImportantTasks(rawValue: 1 << 0)
+    public static let pendingMessages = AccountRunningImportantTasks(rawValue: 1 << 1)
+}
+
 public class Account {
     public let id: AccountRecordId
     public let basePath: String
@@ -482,6 +495,11 @@ public class Account {
     private let _loggedOut = ValuePromise<Bool>(false, ignoreRepeated: true)
     public var loggedOut: Signal<Bool, NoError> {
         return self._loggedOut.get()
+    }
+    
+    private let _importantTasksRunning = ValuePromise<AccountRunningImportantTasks>([], ignoreRepeated: true)
+    public var importantTasksRunning: Signal<AccountRunningImportantTasks, NoError> {
+        return self._importantTasksRunning.get()
     }
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
@@ -651,7 +669,26 @@ public class Account {
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedConsumePersonalMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network).start())
+        
+        let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
+            managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
+            self.pendingMessageManager.hasPendingMessages |> map { $0 ? AccountRunningImportantTasks.pendingMessages : [] }
+        ]
+        let importantBackgroundOperationsRunning = combineLatest(importantBackgroundOperations)
+            |> deliverOn(Queue())
+            |> map { values -> AccountRunningImportantTasks in
+                var result: AccountRunningImportantTasks = []
+                for value in values {
+                    result.formUnion(value)
+                }
+                return result
+            }
+        
+        self.managedOperationsDisposable.add(importantBackgroundOperationsRunning.start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf._importantTasksRunning.set(value)
+            }
+        }))
         self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())

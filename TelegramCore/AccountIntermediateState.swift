@@ -14,6 +14,7 @@ final class AccountInitialState {
     let peerIds: Set<PeerId>
     let messageIds: Set<MessageId>
     let channelStates: [PeerId: ChannelState]
+    //let topCloudMessageIds: [PeerId: MessageId]
     let peerNotificationSettings: [PeerId: PeerNotificationSettings]
     let peerIdsWithNewMessages: Set<PeerId>
     let locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]

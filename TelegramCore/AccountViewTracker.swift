@@ -208,12 +208,16 @@ public final class AccountViewTracker {
     private var channelPollingContexts: [PeerId: ChannelPollingContext] = [:]
     private var featuredStickerPacksContext: FeaturedStickerPacksContext?
     
+    let chatHistoryPreloadManager: ChatHistoryPreloadManager
+    
     private let historyViewChannelStateValidationContexts: HistoryViewChannelStateValidationContexts
     
     init(account: Account) {
         self.account = account
         
         self.historyViewChannelStateValidationContexts = HistoryViewChannelStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network)
+        
+        self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, networkState: account.networkState)
     }
     
     deinit {
@@ -384,7 +388,7 @@ public final class AccountViewTracker {
                                                                     break loop
                                                                 }
                                                             }
-                                                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                                         })
                                                     }
                                                 }
@@ -439,7 +443,7 @@ public final class AccountViewTracker {
                                                 break loop
                                             }
                                         }
-                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                     })
 
                                     modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: ConsumePersonalMessageAction())
@@ -592,9 +596,9 @@ public final class AccountViewTracker {
         }
     }
     
-    public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, clipHoles: Bool = true, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int, clipHoles: Bool = true, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, count: count, clipHoles: clipHoles, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, anchorIndex: anchorIndex, count: count, clipHoles: clipHoles, fixedCombinedReadState: fixedCombinedReadState, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(peerId: peerId, additionalData: additionalData))
             return wrappedMessageHistorySignal(peerId: peerId, signal: signal)
         } else {
             return .never()

@@ -59,7 +59,7 @@ func managedMessageHistoryHoles(network: Network, postbox: Postbox) -> Signal<Vo
             }
             
             for (entry, disposable) in added {
-                disposable.set(fetchMessageHistoryHole(network: network, postbox: postbox, hole: entry.hole, direction: entry.direction, tagMask: entry.tags).start())
+                disposable.set(fetchMessageHistoryHole(source: .network(network), postbox: postbox, hole: entry.hole, direction: entry.direction, tagMask: entry.tags).start())
             }
         })
         

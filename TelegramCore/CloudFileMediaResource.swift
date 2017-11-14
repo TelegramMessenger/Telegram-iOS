@@ -200,18 +200,30 @@ public struct LocalFileMediaResourceId: MediaResourceId {
 }
 
 public class LocalFileMediaResource: TelegramMediaResource {
-    let fileId: Int64
+    public let fileId: Int64
+    public let size: Int?
     
-    public init(fileId: Int64) {
+    public init(fileId: Int64, size: Int? = nil) {
         self.fileId = fileId
+        self.size = size
     }
     
     public required init(decoder: PostboxDecoder) {
         self.fileId = decoder.decodeInt64ForKey("f", orElse: 0)
+        if let size = decoder.decodeOptionalInt32ForKey("s") {
+            self.size = Int(size)
+        } else {
+            self.size = nil
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.fileId, forKey: "f")
+        if let size = self.size {
+            encoder.encodeInt32(Int32(size), forKey: "s")
+        } else {
+            encoder.encodeNil(forKey: "s")
+        }
     }
     
     public var id: MediaResourceId {
@@ -220,7 +232,7 @@ public class LocalFileMediaResource: TelegramMediaResource {
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? LocalFileMediaResource {
-            return self.fileId == to.fileId
+            return self.fileId == to.fileId && self.size == to.size
         } else {
             return false
         }

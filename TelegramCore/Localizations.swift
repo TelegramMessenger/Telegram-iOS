@@ -49,19 +49,51 @@ public func suggestedLocalizationInfo(network: Network, languageCode: String, ex
         }
 }
 
-public func availableLocalizations(network: Network) -> Signal<[LocalizationInfo], NoError> {
-    return network.request(Api.functions.langpack.getLanguages())
+final class CachedLocalizationInfos: PostboxCoding {
+    let list: [LocalizationInfo]
+    
+    init(list: [LocalizationInfo]) {
+        self.list = list
+    }
+    
+    init(decoder: PostboxDecoder) {
+        self.list = decoder.decodeObjectArrayWithDecoderForKey("l")
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObjectArray(self.list, forKey: "l")
+    }
+}
+
+public func availableLocalizations(postbox: Postbox, network: Network, allowCached: Bool) -> Signal<[LocalizationInfo], NoError> {
+    let cached: Signal<[LocalizationInfo], NoError>
+    if allowCached {
+        cached = postbox.modify { modifier -> Signal<[LocalizationInfo], NoError> in
+            if let entry = modifier.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0))) as? CachedLocalizationInfos {
+                return .single(entry.list)
+            }
+            return .complete()
+        } |> switchToLatest
+    } else {
+        cached = .complete()
+    }
+    let remote = network.request(Api.functions.langpack.getLanguages())
         |> retryRequest
-        |> map { languages -> [LocalizationInfo] in
+        |> mapToSignal { languages -> Signal<[LocalizationInfo], NoError> in
             var infos: [LocalizationInfo] = []
             for language in languages {
                 switch language {
-                case let .langPackLanguage(name, nativeName, langCode):
-                    infos.append(LocalizationInfo(languageCode: langCode, title: name, localizedTitle: nativeName))
+                    case let .langPackLanguage(name, nativeName, langCode):
+                        infos.append(LocalizationInfo(languageCode: langCode, title: name, localizedTitle: nativeName))
                 }
             }
-            return infos
+            return postbox.modify { modifier -> [LocalizationInfo] in
+                modifier.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: CachedLocalizationInfos(list: infos), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                return infos
+            }
         }
+    
+    return cached |> then(remote)
 }
 
 public func downloadLocalization(network: Network, languageCode: String) -> Signal<Localization, NoError> {

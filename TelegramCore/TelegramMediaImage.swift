@@ -5,28 +5,60 @@ import Foundation
     import Postbox
 #endif
 
-public enum TelegramMediaRemoteImageReference {
-    case remoteImage(imageId: Int64, accessHash: Int64)
-    case none
+public enum TelegramMediaImageReference: PostboxCoding, Equatable {
+    case cloud(imageId: Int64, accessHash: Int64)
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("_v", orElse: 0) {
+            case 0:
+                self = .cloud(imageId: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
+            default:
+                self = .cloud(imageId: 0, accessHash: 0)
+                assertionFailure()
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+            case let .cloud(imageId, accessHash):
+                encoder.encodeInt32(0, forKey: "_v")
+                encoder.encodeInt64(imageId, forKey: "i")
+                encoder.encodeInt64(accessHash, forKey: "h")
+        }
+    }
+    
+    public static func ==(lhs: TelegramMediaImageReference, rhs: TelegramMediaImageReference) -> Bool {
+        switch lhs {
+            case let .cloud(imageId, accessHash):
+                if case .cloud(imageId, accessHash) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public final class TelegramMediaImage: Media, Equatable {
     public let imageId: MediaId
     public let representations: [TelegramMediaImageRepresentation]
+    public let reference: TelegramMediaImageReference?
     public let peerIds: [PeerId] = []
     
     public var id: MediaId? {
         return self.imageId
     }
     
-    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation]) {
+    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], reference: TelegramMediaImageReference?) {
         self.imageId = imageId
         self.representations = representations
+        self.reference = reference
     }
     
     public init(decoder: PostboxDecoder) {
         self.imageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.representations = decoder.decodeObjectArrayForKey("r")
+        self.reference = decoder.decodeObjectForKey("rf", decoder: { TelegramMediaImageReference(decoder: $0) }) as? TelegramMediaImageReference
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -34,6 +66,11 @@ public final class TelegramMediaImage: Media, Equatable {
         self.imageId.encodeToBuffer(buffer)
         encoder.encodeBytes(buffer, forKey: "i")
         encoder.encodeObjectArray(self.representations, forKey: "r")
+        if let reference = self.reference {
+            encoder.encodeObject(reference, forKey: "rf")
+        } else {
+            encoder.encodeNil(forKey: "rf")
+        }
     }
     
     public func representationForDisplayAtSize(_ size: CGSize) -> TelegramMediaImageRepresentation? {
@@ -75,10 +112,10 @@ public final class TelegramMediaImage: Media, Equatable {
         }
         return false
     }
-}
-
-public func ==(lhs: TelegramMediaImage, rhs: TelegramMediaImage) -> Bool {
-    return lhs.isEqual(rhs)
+    
+    public static func ==(lhs: TelegramMediaImage, rhs: TelegramMediaImage) -> Bool {
+        return lhs.isEqual(rhs)
+    }
 }
 
 public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, CustomStringConvertible {
@@ -138,7 +175,7 @@ public func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSiz
 public func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
     switch photo {
         case let .photo(_, id, accessHash, _, sizes):
-            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes))
+            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes), reference: .cloud(imageId: id, accessHash: accessHash))
         case .photoEmpty:
             return nil
     }

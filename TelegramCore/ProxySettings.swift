@@ -9,17 +9,19 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public final class ProxySettings: PreferencesEntry {
+public final class ProxySettings: PreferencesEntry, Equatable {
     public let host: String
     public let port: Int32
     public let username: String?
     public let password: String?
+    public let useForCalls: Bool
     
-    public init(host: String, port: Int32, username: String?, password: String?) {
+    public init(host: String, port: Int32, username: String?, password: String?, useForCalls: Bool) {
         self.host = host
         self.port = port
         self.username = username
         self.password = password
+        self.useForCalls = useForCalls
     }
     
     public init(decoder: PostboxDecoder) {
@@ -27,6 +29,7 @@ public final class ProxySettings: PreferencesEntry {
         self.port = decoder.decodeInt32ForKey("port", orElse: 0)
         self.username = decoder.decodeOptionalStringForKey("username")
         self.password = decoder.decodeOptionalStringForKey("password")
+        self.useForCalls = decoder.decodeInt32ForKey("useForCalls", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -42,6 +45,7 @@ public final class ProxySettings: PreferencesEntry {
         } else {
             encoder.encodeNil(forKey: "password")
         }
+        encoder.encodeInt32(self.useForCalls ? 1 : 0, forKey: "useForCalls")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
@@ -49,19 +53,25 @@ public final class ProxySettings: PreferencesEntry {
             return false
         }
         
-        if self.host != to.host {
+        return self == to
+    }
+    
+    public static func ==(lhs: ProxySettings, rhs: ProxySettings) -> Bool {
+        if lhs.host != rhs.host {
             return false
         }
-        if self.port != to.port {
+        if lhs.port != rhs.port {
             return false
         }
-        if self.username != to.username {
+        if lhs.username != rhs.username {
             return false
         }
-        if self.password != to.password {
+        if lhs.password != rhs.password {
             return false
         }
-        
+        if lhs.useForCalls != rhs.useForCalls {
+            return false
+        }
         return true
     }
 }

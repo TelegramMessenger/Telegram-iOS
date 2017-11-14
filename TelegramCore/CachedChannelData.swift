@@ -139,6 +139,9 @@ public final class CachedChannelData: CachedPeerData {
     
     public let peerIds: Set<PeerId>
     public let messageIds: Set<MessageId>
+    public var associatedHistoryPeerId: PeerId? {
+        return self.migrationReference?.maxMessageId.peerId
+    }
     
     init() {
         self.flags = []

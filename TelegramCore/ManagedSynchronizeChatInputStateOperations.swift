@@ -12,6 +12,12 @@ import Foundation
 private final class ManagedSynchronizeChatInputStateOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]
     
+    private let hasRunningOperations: ValuePromise<Bool>
+    
+    init(hasRunningOperations: ValuePromise<Bool>) {
+        self.hasRunningOperations = hasRunningOperations
+    }
+    
     func update(_ entries: [PeerMergedOperationLogEntry]) -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) {
         var disposeOperations: [Disposable] = []
         var beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)] = []
@@ -43,6 +49,8 @@ private final class ManagedSynchronizeChatInputStateOperationsHelper {
             self.operationDisposables.removeValue(forKey: mergedIndex)
         }
         
+        self.hasRunningOperations.set(!self.operationDisposables.isEmpty)
+        
         return (disposeOperations, beginOperations)
     }
     
@@ -69,11 +77,12 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
         } |> switchToLatest
 }
 
-func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    return Signal { _ in
+func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Network) -> Signal<Bool, NoError> {
+    return Signal { subscriber in
+        let hasRunningOperations = ValuePromise<Bool>(false, ignoreRepeated: true)
         let tag: PeerOperationLogTag = OperationLogTags.SynchronizeChatInputStates
         
-        let helper = Atomic<ManagedSynchronizeChatInputStateOperationsHelper>(value: ManagedSynchronizeChatInputStateOperationsHelper())
+        let helper = Atomic<ManagedSynchronizeChatInputStateOperationsHelper>(value: ManagedSynchronizeChatInputStateOperationsHelper(hasRunningOperations: hasRunningOperations))
         
         let disposable = postbox.mergedOperationLogView(tag: tag, limit: 10).start(next: { view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) in
@@ -103,6 +112,10 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
             }
         })
         
+        let statusDisposable = hasRunningOperations.get().start(next: { value in
+            subscriber.putNext(value)
+        })
+        
         return ActionDisposable {
             let disposables = helper.with { helper -> [Disposable] in
                 return helper.reset()
@@ -111,6 +124,7 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
                 disposable.dispose()
             }
             disposable.dispose()
+            statusDisposable.dispose()
         }
     }
 }

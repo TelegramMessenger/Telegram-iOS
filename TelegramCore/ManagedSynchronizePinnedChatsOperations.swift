@@ -235,7 +235,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 
                 for (peerId, chatState) in chatStates {
                     if let chatState = chatState as? ChannelState {
-                        if let current = modifier.getPeerChatState(peerId) as? ChannelState {
+                        if let _ = modifier.getPeerChatState(peerId) as? ChannelState {
                             // skip changing state
                         } else {
                             modifier.setPeerChatState(peerId, state: chatState)

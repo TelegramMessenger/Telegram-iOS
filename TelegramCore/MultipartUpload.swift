@@ -322,7 +322,7 @@ enum MultipartUploadResult {
     case inputSecretFile(Api.InputEncryptedFile, Int32, SecretFileEncryptionKey)
 }
 
-enum MultipartUploadSource {
+public enum MultipartUploadSource {
     case resource(MediaResource)
     case data(Data)
 }

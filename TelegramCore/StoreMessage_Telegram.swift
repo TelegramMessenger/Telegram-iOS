@@ -47,7 +47,6 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                                 refinedTag = nil
                             }
                         }
-                        break inner
                     case let .Audio(isVoice, _, _, _, _):
                         if isVoice {
                             refinedTag = .voiceOrInstantVideo
@@ -101,7 +100,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
 extension Api.Message {
     var peerId: PeerId? {
         switch self {
-            case let .message(flags, _, fromId, toId, _, _, _, _, _, _, _, _, _, _, _):
+            case let .message(flags, _, fromId, toId, _, _, _, _, _, _, _, _, _, _, _, _):
                 switch toId {
                     case let .peerUser(userId):
                         return PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
@@ -126,7 +125,7 @@ extension Api.Message {
     
     var peerIds: [PeerId] {
         switch self {
-            case let .message(flags, _, fromId, toId, fwdFrom, viaBotId, _, _, _, media, _, entities, _, _, _):
+            case let .message(flags, _, fromId, toId, fwdFrom, viaBotId, _, _, _, media, _, entities, _, _, _, _):
                 let peerId: PeerId
                 switch toId {
                     case let .peerUser(userId):
@@ -145,7 +144,7 @@ extension Api.Message {
             
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, _, channelId, _, _):
+                        case let .messageFwdHeader(_, fromId, _, channelId, _, _, _, _):
                             if let channelId = channelId {
                                 result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
                             }
@@ -227,7 +226,7 @@ extension Api.Message {
     
     var associatedMessageIds: [MessageId]? {
         switch self {
-            case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _):
+            case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _):
                 if let replyToMsgId = replyToMsgId {
                     let peerId: PeerId
                         switch toId {
@@ -355,7 +354,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -385,7 +384,7 @@ extension StoreMessage {
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, date, channelId, channelPost, postAuthor):
+                        case let .messageFwdHeader(_, fromId, date, channelId, channelPost, postAuthor, _, _):
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
@@ -504,7 +503,7 @@ extension StoreMessage {
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities)
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, groupingKey: groupingId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
@@ -565,7 +564,7 @@ extension StoreMessage {
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil)
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
+                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
     }
 }

@@ -50,7 +50,7 @@ public func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: "", photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], migrationReference: nil, creationDate: 0, version: 0)
         case let .chatForbidden(id, title):
             return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], migrationReference: nil, creationDate: 0, version: 0)
-        case let .channel(flags, id, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights):
+        case let .channel(flags, id, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights, _):
             let participationStatus: TelegramChannelParticipationStatus
             if (flags & Int32(1 << 1)) != 0 {
                 participationStatus = .kicked
@@ -107,7 +107,7 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
     switch rhs {
         case .chat, .chatEmpty, .chatForbidden, .channelForbidden:
             return parseTelegramGroupOrChannel(chat: rhs)
-        case let .channel(flags, _, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights):
+        case let .channel(flags, _, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights, _):
             if let _ = accessHash {
                 return parseTelegramGroupOrChannel(chat: rhs)
             } else if let lhs = lhs as? TelegramChannel {

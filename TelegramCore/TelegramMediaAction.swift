@@ -170,8 +170,8 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
             if case .unknown = rhs {
                 return true
             }
-        case let .groupCreated(title):
-            if case .groupCreated(title) = rhs {
+        case let .groupCreated(lhsTitle):
+            if case let .groupCreated(rhsTitle) = rhs, lhsTitle == rhsTitle {
                 return true
             }
         case let .addedMembers(peerIds):
@@ -308,7 +308,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .channelMigratedFromGroup(title: title, groupId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)))
         case let .messageActionChatAddUser(users):
             return TelegramMediaAction(action: .addedMembers(peerIds: users.map({ PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) })))
-        case let .messageActionChatCreate(title, _):
+        case let .messageActionChatCreate(title, userIds):
             return TelegramMediaAction(action: .groupCreated(title: title))
         case .messageActionChatDeletePhoto:
             return TelegramMediaAction(action: .photoUpdated(image: nil))

@@ -13,7 +13,7 @@ import Foundation
 
 public struct TelegramPeerPhoto {
     public let image: TelegramMediaImage
-    public let reference:TelegramMediaRemoteImageReference
+    public let reference: TelegramMediaImageReference?
     public let index:Int
     public let totalCount:Int
 }
@@ -46,14 +46,14 @@ public func requestPeerPhotos(account:Account, peerId:PeerId) -> Signal<[Telegra
                             for i in 0 ..< photos.count {
                                 let photo = photos[i]
                                 let image:TelegramMediaImage
-                                let reference: TelegramMediaRemoteImageReference
+                                let reference: TelegramMediaImageReference
                                 switch photo {
                                 case let .photo(data):
-                                    image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: data.id), representations: telegramMediaImageRepresentationsFromApiSizes(data.sizes))
-                                    reference = .remoteImage(imageId: data.id, accessHash: data.accessHash)
+                                    reference = .cloud(imageId: data.id, accessHash: data.accessHash)
+                                    image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: data.id), representations: telegramMediaImageRepresentationsFromApiSizes(data.sizes), reference: reference)
                                 case let .photoEmpty(id: id):
-                                    image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: [])
-                                    reference = .remoteImage(imageId: id, accessHash: 0)
+                                    reference = .cloud(imageId: id, accessHash: 0)
+                                    image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: [], reference: reference)
                                 }
                                 images.append(TelegramPeerPhoto(image: image, reference: reference, index: i, totalCount: totalCount))
                             }
@@ -120,7 +120,7 @@ public func requestPeerPhotos(account:Account, peerId:PeerId) -> Signal<[Telegra
                                         switch media.action {
                                         case let .photoUpdated(image):
                                             if let image = image {
-                                                photos.append(TelegramPeerPhoto(image: image, reference: .none, index: index, totalCount: messages.count))
+                                                photos.append(TelegramPeerPhoto(image: image, reference: nil, index: index, totalCount: messages.count))
                                             }
                                         default:
                                             break

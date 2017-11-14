@@ -57,6 +57,7 @@ public struct Namespaces {
         public static let resolvedByNamePeers: Int8 = 0
         public static let cachedTwoStepToken: Int8 = 1
         public static let cachedStickerPacks: Int8 = 2
+        public static let cachedAvailableLocalizations: Int8 = 3
     }
     
     struct UnorderedItemList {
@@ -117,6 +118,8 @@ private enum PreferencesKeyValues: Int32 {
     case suggestedLocalization = 3
     case limitsConfiguration = 4
     case proxySettings = 5
+    case loggingSettings = 6
+    case coreSettings = 7
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -159,6 +162,18 @@ public struct PreferencesKeys {
     public static let proxySettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.proxySettings.rawValue)
+        return key
+    }()
+    
+    public static let loggingSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.loggingSettings.rawValue)
+        return key
+    }()
+    
+    public static let coreSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.coreSettings.rawValue)
         return key
     }()
 }
