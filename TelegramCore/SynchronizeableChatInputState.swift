@@ -45,7 +45,7 @@ public struct SynchronizeableChatInputState: PostboxCoding, Equatable {
             return false
         }
         if lhs.text != rhs.text {
-            return true
+            return false
         }
         if lhs.timestamp != rhs.timestamp {
             return false

@@ -25,15 +25,30 @@ private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilt
     }
 }
 
-func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHistoryHole, direction: MessageHistoryViewRelativeHoleDirection, tagMask: MessageTags?) -> Signal<Void, NoError> {
+enum FetchMessageHistoryHoleSource {
+    case network(Network)
+    case download(Download)
+    
+    func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?)) -> Signal<T, MTRpcError> {
+        switch self {
+            case let .network(network):
+                return network.request(data)
+            case let .download(download):
+                return download.request(data)
+        }
+    }
+}
+
+func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Postbox, hole: MessageHistoryHole, direction: MessageHistoryViewRelativeHoleDirection, tagMask: MessageTags?, limit: Int = 100) -> Signal<Void, NoError> {
     return postbox.loadedPeerWithId(hole.maxIndex.id.peerId)
         |> take(1)
         //|> delay(4.0, queue: Queue.concurrentDefaultQueue())
         |> mapToSignal { peer in
             if let inputPeer = apiInputPeer(peer) {
-                let limit = 100
-                
+                //Logger.shared.log("Holes", "fetchMessageHistoryHole for \(peer.displayTitle)")
+                print("fetchMessageHistoryHole for \(peer.displayTitle)")
                 let request: Signal<Api.messages.Messages, MTRpcError>
+                var maxIndexRequest: Signal<Api.messages.Messages?, MTRpcError> = .single(nil)
                 if let tagMask = tagMask {
                     if tagMask == MessageTags.unseenPersonalMessage {
                         let offsetId: Int32
@@ -53,13 +68,13 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                                 addOffset = Int32(-limit)
                                 maxId = Int32.max
                                 minId = hole.min - 1
-                            case let .AroundIndex(index):
-                                offsetId = index.id.id
+                            case let .AroundId(id):
+                                offsetId = id.id
                                 addOffset = Int32(-limit / 2)
                                 maxId = Int32.max
                                 minId = 1
                         }
-                        request = network.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                        request = source.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                     } else if let filter = messageFilterForTagMask(tagMask) {
                         let offsetId: Int32
                         let addOffset: Int32
@@ -78,14 +93,14 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                                 addOffset = Int32(-limit)
                                 maxId = Int32.max
                                 minId = hole.min - 1
-                            case let .AroundIndex(index):
-                                offsetId = index.id.id
+                            case let .AroundId(id):
+                                offsetId = id.id
                                 addOffset = Int32(-limit / 2)
                                 maxId = Int32.max
                                 minId = 1
                         }
                         
-                        request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                        request = source.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                     } else {
                         assertionFailure()
                         request = .never()
@@ -108,19 +123,24 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                             addOffset = Int32(-limit)
                             maxId = Int32.max
                             minId = hole.min - 1
-                        case let .AroundIndex(index):
-                            offsetId = index.id.id
+                            if hole.maxIndex.timestamp == Int32.max {
+                                let innerOffsetId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                                let innerMaxId = hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1)
+                                maxIndexRequest = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: innerOffsetId, offsetDate: hole.maxIndex.timestamp, addOffset: 0, limit: 1, maxId: innerMaxId, minId: 1))
+                                    |> map(Optional.init)
+                            }
+                        case let .AroundId(id):
+                            offsetId = id.id
                             addOffset = Int32(-limit / 2)
                             maxId = Int32.max
                             minId = 1
                     }
                     
-                    request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                    request = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                 }
                 
-                return request
-                    |> retryRequest
-                    |> mapToSignal { result in
+                return combineLatest(request |> retryRequest, maxIndexRequest |> retryRequest)
+                    |> mapToSignal { result, maxIndexResult in
                         let messages: [Api.Message]
                         let chats: [Api.Chat]
                         let users: [Api.User]
@@ -139,6 +159,24 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                                 chats = apiChats
                                 users = apiUsers
                                 channelPts = pts
+                        }
+                        var updatedMaxIndex: MessageIndex?
+                        if let maxIndexResult = maxIndexResult {
+                            let maxIndexMessages: [Api.Message]
+                            switch maxIndexResult {
+                                case let .messages(apiMessages, _, _):
+                                    maxIndexMessages = apiMessages
+                                case let .messagesSlice(_, apiMessages, _, _):
+                                    maxIndexMessages = apiMessages
+                                case let .channelMessages(_, _, _, apiMessages, _, _):
+                                    maxIndexMessages = apiMessages
+                            }
+                            if !maxIndexMessages.isEmpty {
+                                assert(maxIndexMessages.count == 1)
+                                if let storeMessage = StoreMessage(apiMessage: maxIndexMessages[0]), case let .Id(id) = storeMessage.id {
+                                    updatedMaxIndex = MessageIndex(id: id, timestamp: storeMessage.timestamp)
+                                }
+                            }
                         }
                         return postbox.modify { modifier in
                             var storeMessages: [StoreMessage] = []
@@ -160,9 +198,9 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                                 case .UpperToLower:
                                     fillDirection = .UpperToLower
                                 case .LowerToUpper:
-                                    fillDirection = .LowerToUpper
-                                case let .AroundIndex(index):
-                                    fillDirection = .AroundIndex(index, lowerComplete: false, upperComplete: false)
+                                    fillDirection = .LowerToUpper(updatedMaxIndex: updatedMaxIndex)
+                                case let .AroundId(id):
+                                    fillDirection = .AroundId(id, lowerComplete: false, upperComplete: false)
                             }
                             
                             modifier.fillMultipleHoles(hole, fillType: HoleFill(complete: messages.count == 0, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
@@ -186,6 +224,8 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                                 return updated
                             })
                             modifier.updatePeerPresences(peerPresences)
+                            
+                            print("fetchMessageHistoryHole for \(peer.displayTitle) done")
                             
                             return
                         }
@@ -285,13 +325,22 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                         
                         for message in messages {
                             if let storeMessage = StoreMessage(apiMessage: message) {
-                                storeMessages.append(storeMessage)
+                                var updatedStoreMessage = storeMessage
+                                if case let .Id(id) = storeMessage.id {
+                                    if let channelState = chatStates[id.peerId] as? ChannelState {
+                                        var updatedAttributes = storeMessage.attributes
+                                        updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                                        updatedStoreMessage = updatedStoreMessage.withUpdatedAttributes(updatedAttributes)
+                                    }
+                                }
+                                storeMessages.append(updatedStoreMessage)
                             }
                         }
                     case let .dialogsSlice(_, dialogs, messages, chats, users):
+                        var intermediateMessages: [StoreMessage] = []
                         for message in messages {
                             if let storeMessage = StoreMessage(apiMessage: message) {
-                                storeMessages.append(storeMessage)
+                                intermediateMessages.append(storeMessage)
                             }
                         }
                         
@@ -343,7 +392,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             let topMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: apiTopMessage)
                             
                             var timestamp: Int32?
-                            for message in storeMessages {
+                            for message in intermediateMessages {
                                 if case let .Id(id) = message.id, id == topMessageId {
                                     timestamp = message.timestamp
                                 }
@@ -355,6 +404,18 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                                     replacementHole = ChatListHole(index: index)
                                 }
                             }
+                        }
+                    
+                        for storeMessage in intermediateMessages {
+                            var updatedStoreMessage = storeMessage
+                            if case let .Id(id) = storeMessage.id {
+                                if let channelState = chatStates[id.peerId] as? ChannelState {
+                                    var updatedAttributes = storeMessage.attributes
+                                    updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                                    updatedStoreMessage = updatedStoreMessage.withUpdatedAttributes(updatedAttributes)
+                                }
+                            }
+                            storeMessages.append(updatedStoreMessage)
                         }
                 }
                 
@@ -421,7 +482,15 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             
                             for message in apiMessages {
                                 if let storeMessage = StoreMessage(apiMessage: message) {
-                                    storeMessages.append(storeMessage)
+                                    var updatedStoreMessage = storeMessage
+                                    if case let .Id(id) = storeMessage.id {
+                                        if let channelState = chatStates[id.peerId] as? ChannelState {
+                                            var updatedAttributes = storeMessage.attributes
+                                            updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                                            updatedStoreMessage = updatedStoreMessage.withUpdatedAttributes(updatedAttributes)
+                                        }
+                                    }
+                                    storeMessages.append(updatedStoreMessage)
                                 }
                             }
                     }

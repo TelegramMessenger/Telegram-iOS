@@ -34,7 +34,11 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
                 return postbox.modify { modifier -> Void in
                     let reportStatus: PeerReportStatus
                     if let peer = modifier.getPeer(peerId), let associatedPeerId = peer.associatedPeerId, !modifier.isPeerContact(peerId: associatedPeerId) {
-                        reportStatus = .canReport
+                        if let peer = peer as? TelegramSecretChat, case .creator = peer.role {
+                            reportStatus = .none
+                        } else {
+                            reportStatus = .canReport
+                        }
                     } else {
                         reportStatus = .none
                     }

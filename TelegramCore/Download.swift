@@ -29,7 +29,9 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     let mtProto: MTProto
     let requestService: MTRequestMessageService
     
-    init(datacenterId: Int, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?) {
+    private var shouldKeepConnectionDisposable: Disposable?
+    
+    init(queue: Queue, datacenterId: Int, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>) {
         self.datacenterId = datacenterId
         self.isCdn = isCdn
         self.context = context
@@ -41,16 +43,31 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             self.mtProto.requiredAuthToken = Int(datacenterId) as NSNumber
         }
         self.requestService = MTRequestMessageService(context: self.context)
+        self.requestService.forceBackgroundRequests = true
         
         super.init()
         
         self.requestService.delegate = self
         self.mtProto.add(self.requestService)
+        
+        let mtProto = self.mtProto
+        self.shouldKeepConnectionDisposable = (shouldKeepConnection |> distinctUntilChanged |> deliverOn(queue)).start(next: { [weak mtProto] value in
+            if let mtProto = mtProto {
+                if value {
+                    Logger.shared.log("Network", "Resume worker network connection")
+                    mtProto.resume()
+                } else {
+                    Logger.shared.log("Network", "Pause worker network connection")
+                    mtProto.pause()
+                }
+            }
+        })
     }
     
     deinit {
         self.mtProto.remove(self.requestService)
         self.mtProto.stop()
+        self.shouldKeepConnectionDisposable?.dispose()
     }
     
     func requestMessageServiceAuthorizationRequired(_ requestMessageService: MTRequestMessageService!) {

@@ -119,6 +119,29 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
     }
 }
 
+public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], messages: [EnqueueMessage]) -> Signal<[MessageId], NoError> {
+    let signal: Signal<[(Bool, EnqueueMessage)], NoError>
+    if let transformOutgoingMessageMedia = account.transformOutgoingMessageMedia {
+        signal = opportunisticallyTransformOutgoingMedia(network: account.network, postbox: account.postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messages: messages, userInteractive: true)
+    } else {
+        signal = .single(messages.map { (false, $0) })
+    }
+    return signal
+        |> mapToSignal { messages -> Signal<[MessageId], NoError> in
+            return account.postbox.modify { modifier -> [MessageId] in
+                var messageIds: [MessageId] = []
+                for peerId in peerIds {
+                    for id in enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages) {
+                        if let id = id {
+                            messageIds.append(id)
+                        }
+                    }
+                }
+                return messageIds
+            }
+    }
+}
+
 public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Void in
         var removeMessageIds: [MessageId] = []
@@ -242,7 +265,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                     
                     let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: mediaList, textEntities: entitiesAttribute?.entities)
                     
-                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
+                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source):
                     if let sourceMessage = modifier.getMessage(source), let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         if let peer = peer as? TelegramSecretChat {
@@ -295,7 +318,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         
                         let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: sourceMessage.media, textEntities: entitiesAttribute?.entities)
                         
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
                     }
             }
         }

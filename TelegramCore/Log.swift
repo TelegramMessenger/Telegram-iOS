@@ -63,7 +63,6 @@ private var sharedLogger: Logger?
 public final class Logger {
     private let queue = Queue(name: "org.telegram.Telegram.log", qos: .utility)
     private let maxLength: Int = 2 * 1024 * 1024
-    //private let maxLength: Int = 4 * 1024
     private let maxFiles: Int = 20
     
     private let basePath: String

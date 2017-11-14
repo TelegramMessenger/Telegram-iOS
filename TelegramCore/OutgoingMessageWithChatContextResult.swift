@@ -144,7 +144,7 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                             arc4random_buf(&randomId, 8)
                             let thumbnailResource = HttpReferenceMediaResource(url: thumbnailUrl, size: nil)
                             let imageDimensions = dimensions ?? CGSize(width: 128.0, height: 128.0)
-                            let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: thumbnailResource)])
+                            let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: thumbnailResource)], reference: nil)
                             return .message(text: caption, attributes: attributes, media: tmpImage, replyToMessageId: nil)
                         } else {
                             return .message(text: caption, attributes: attributes, media: nil, replyToMessageId: nil)

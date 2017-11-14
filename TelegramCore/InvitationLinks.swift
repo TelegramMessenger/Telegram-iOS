@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func ensuredExistingPeerExportedInvitation(account: Account, peerId: PeerId, revokeExisted:Bool = false) -> Signal<Void, NoError> {
+public func ensuredExistingPeerExportedInvitation(account: Account, peerId: PeerId, revokeExisted: Bool = false) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {

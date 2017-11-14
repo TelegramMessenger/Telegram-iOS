@@ -616,17 +616,20 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
     
     for update in sortedUpdates(updates) {
         switch update {
-            case let .updateChannelTooLong(_, channelId, _):
+            case let .updateChannelTooLong(_, channelId, channelPts):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 if !channelsToPoll.contains(peerId) {
-                    //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateChannelTooLong")
-                    channelsToPoll.insert(peerId)
+                    if let channelPts = channelPts, let channelState = state.channelStates[peerId], channelState.pts >= channelPts {
+                        Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip updateChannelTooLong by pts")
+                    } else {
+                        channelsToPoll.insert(peerId)
+                    }
                 }
             case let .updateDeleteChannelMessages(channelId, messages, pts: pts, ptsCount):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 if let previousState = updatedState.channelStates[peerId] {
                     if previousState.pts >= pts {
-                        //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
+                        Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
                     } else if previousState.pts + ptsCount == pts {
                         updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
                         updatedState.updateChannelState(peerId, state: previousState.withUpdatedPts(pts))
@@ -648,7 +651,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                     let peerId = messageId.peerId
                     if let previousState = updatedState.channelStates[peerId] {
                         if previousState.pts >= pts {
-                            //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old edit update")
+                            Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old edit update")
                         } else if previousState.pts + ptsCount == pts {
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
@@ -719,7 +722,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 if let message = StoreMessage(apiMessage: apiMessage) {
                     if let previousState = updatedState.channelStates[message.id.peerId] {
                         if previousState.pts >= pts {
-                            //Logger.shared.log("State", "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
+                        Logger.shared.log("State", "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
                         } else if previousState.pts + ptsCount == pts {
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
@@ -799,7 +802,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                             attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
                         }
                         
-                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: [])
+                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: [])
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                     }
                 }
@@ -1128,9 +1131,6 @@ private func resolveAssociatedMessages(account: Account, state: AccountMutableSt
                 missingPeers = true
             }
         }
-        if missingPeers {
-            
-        }
         
         let fetchMessages = combineLatest(signals)
         
@@ -1350,7 +1350,15 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
                     
                     for message in messages {
                         if let storeMessage = StoreMessage(apiMessage: message) {
-                            storeMessages.append(storeMessage)
+                            var updatedStoreMessage = storeMessage
+                            if case let .Id(id) = storeMessage.id {
+                                if let channelState = channelStates[id.peerId] {
+                                    var updatedAttributes = storeMessage.attributes
+                                    updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                                    updatedStoreMessage = updatedStoreMessage.withUpdatedAttributes(updatedAttributes)
+                                }
+                            }
+                            storeMessages.append(updatedStoreMessage)
                         }
                     }
             }
@@ -1681,7 +1689,8 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
 
 func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modifier, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(modifier, finalState: finalState.state)
-    if !verified { 
+    if !verified {
+        Logger.shared.log("State", "failed to verify final state")
         return nil
     }
     
@@ -1877,7 +1886,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                             break loop
                         }
                     }
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
             case let .UpdateInstalledStickerPacks(operation):
                 stickerPackOperations.append(operation)
@@ -1894,6 +1903,10 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     pollLangPack = true
                 }
         }
+    }
+    
+    for peerId in finalState.state.initialState.peerIdsWithNewMessages {
+        updatePeerChatInclousionWithNewMessages(modifier: modifier, id: peerId)
     }
     
     if !stickerPackOperations.isEmpty {

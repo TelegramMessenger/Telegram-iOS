@@ -376,6 +376,17 @@
 		D0AB0B941D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B931D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift */; };
 		D0AB0B961D662F0B002C78E7 /* ManagedChatListHoles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B951D662F0B002C78E7 /* ManagedChatListHoles.swift */; };
 		D0AB0B9A1D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B991D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift */; };
+		D0AF32221FAC95C20097362B /* StandaloneUploadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32211FAC95C20097362B /* StandaloneUploadedMedia.swift */; };
+		D0AF32231FAC95C20097362B /* StandaloneUploadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32211FAC95C20097362B /* StandaloneUploadedMedia.swift */; };
+		D0AF32311FACEDEC0097362B /* CoreSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32301FACEDEC0097362B /* CoreSettings.swift */; };
+		D0AF32321FACEDEC0097362B /* CoreSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32301FACEDEC0097362B /* CoreSettings.swift */; };
+		D0AF32351FAE8C6B0097362B /* MultipeerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32341FAE8C6B0097362B /* MultipeerManager.swift */; };
+		D0AF32361FAE8C6B0097362B /* MultipeerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32341FAE8C6B0097362B /* MultipeerManager.swift */; };
+		D0AF32381FAE8C920097362B /* MultipeerConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AF32371FAE8C910097362B /* MultipeerConnectivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		D0B1671D1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */; };
+		D0B1671E1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */; };
+		D0B167231F9F972E00976B40 /* LoggingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B167221F9F972E00976B40 /* LoggingSettings.swift */; };
+		D0B167241F9F972E00976B40 /* LoggingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B167221F9F972E00976B40 /* LoggingSettings.swift */; };
 		D0B417C11D7DCEEF004562A4 /* ApiGroupOrChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B417C01D7DCEEF004562A4 /* ApiGroupOrChannel.swift */; };
 		D0B4186B1D7E03D5004562A4 /* TelegramCoreMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B418691D7E03D5004562A4 /* TelegramCoreMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0B418721D7E0409004562A4 /* PostboxMac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B418701D7E0409004562A4 /* PostboxMac.framework */; };
@@ -808,6 +819,12 @@
 		D0AB0B951D662F0B002C78E7 /* ManagedChatListHoles.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedChatListHoles.swift; sourceTree = "<group>"; };
 		D0AB0B991D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizePeerReadStates.swift; sourceTree = "<group>"; };
 		D0AC49491D7097A400AA55DA /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0AF32211FAC95C20097362B /* StandaloneUploadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandaloneUploadedMedia.swift; sourceTree = "<group>"; };
+		D0AF32301FACEDEC0097362B /* CoreSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreSettings.swift; sourceTree = "<group>"; };
+		D0AF32341FAE8C6B0097362B /* MultipeerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipeerManager.swift; sourceTree = "<group>"; };
+		D0AF32371FAE8C910097362B /* MultipeerConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MultipeerConnectivity.framework; path = System/Library/Frameworks/MultipeerConnectivity.framework; sourceTree = SDKROOT; };
+		D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryPreloadManager.swift; sourceTree = "<group>"; };
+		D0B167221F9F972E00976B40 /* LoggingSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggingSettings.swift; sourceTree = "<group>"; };
 		D0B417C01D7DCEEF004562A4 /* ApiGroupOrChannel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApiGroupOrChannel.swift; sourceTree = "<group>"; };
 		D0B418671D7E03D5004562A4 /* TelegramCoreMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramCoreMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B418691D7E03D5004562A4 /* TelegramCoreMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramCoreMac.h; sourceTree = "<group>"; };
@@ -917,6 +934,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0AF32381FAE8C920097362B /* MultipeerConnectivity.framework in Frameworks */,
 				D0CAF2EA1D75EC600011F558 /* MtProtoKitDynamic.framework in Frameworks */,
 				D067066C1D512ADB00DED3E3 /* Postbox.framework in Frameworks */,
 				D067066D1D512ADB00DED3E3 /* SwiftSignalKit.framework in Frameworks */,
@@ -962,6 +980,8 @@
 				D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */,
 				D01C7ED21EF5DF83008305F1 /* LimitsConfiguration.swift */,
 				D01C7ED51EF5E468008305F1 /* ProxySettings.swift */,
+				D0B167221F9F972E00976B40 /* LoggingSettings.swift */,
+				D0AF32301FACEDEC0097362B /* CoreSettings.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -1169,9 +1189,9 @@
 				D017495D1E118F790057C89A /* AccountStateManager.swift */,
 				D017495F1E118FC30057C89A /* AccountIntermediateState.swift */,
 				D03B0D031D62255C00955575 /* AccountStateManagementUtils.swift */,
+				D03B0D051D62255C00955575 /* UpdateGroup.swift */,
 				D03DC90F1F82E344001D584C /* AccountStateReset.swift */,
 				D03B0D041D62255C00955575 /* SynchronizePeerReadState.swift */,
-				D03B0D051D62255C00955575 /* UpdateGroup.swift */,
 				D03B0D061D62255C00955575 /* UpdateMessageService.swift */,
 				D03B0D071D62255C00955575 /* UpdatesApiUtils.swift */,
 				D09BB6B31DB02C2B00A905C0 /* PendingMessageManager.swift */,
@@ -1202,6 +1222,7 @@
 				D0C0B5891ED9DA6B000F4D2C /* ManagedLocalizationUpdatesOperations.swift */,
 				D07047B91F3DF75500F6A8D4 /* ConsumePersonalMessageAction.swift */,
 				D07047B61F3DF2CD00F6A8D4 /* ManagedConsumePersonalMessagesActions.swift */,
+				D0AF32211FAC95C20097362B /* StandaloneUploadedMedia.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -1263,6 +1284,7 @@
 				D0BEAF5F1E54ACF900BD963D /* AccountManager.swift */,
 				D0528E591E658B3600E2FEF5 /* ManagedLocalInputActivities.swift */,
 				D099D7481EEF418D00A3128C /* HistoryViewChannelStateValidation.swift */,
+				D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */,
 			);
 			name = Account;
 			sourceTree = "<group>";
@@ -1334,6 +1356,7 @@
 		D06706631D512ADA00DED3E3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0AF32371FAE8C910097362B /* MultipeerConnectivity.framework */,
 				D0B4187E1D7E054E004562A4 /* MtProtoKitMac.framework */,
 				D0B418701D7E0409004562A4 /* PostboxMac.framework */,
 				D0B418711D7E0409004562A4 /* SwiftSignalKitMac.framework */,
@@ -1424,6 +1447,7 @@
 				D021E0E01DB5400200C6B04F /* Sticker Management */,
 				D05A32DF1E6F096B002760B4 /* Settings */,
 				D08CAA8A1ED81EA10000FDA8 /* Localization */,
+				D0AF32331FAE8C540097362B /* Multipeer */,
 				D03B0E3A1D631E4400955575 /* Supporting Files */,
 				D09D8C041D4FAB1D0081DBEC /* TelegramCore.h */,
 				D09D8C051D4FAB1D0081DBEC /* Info.plist */,
@@ -1438,6 +1462,14 @@
 				D09D8C111D4FAB1D0081DBEC /* Info.plist */,
 			);
 			path = TelegramCoreTests;
+			sourceTree = "<group>";
+		};
+		D0AF32331FAE8C540097362B /* Multipeer */ = {
+			isa = PBXGroup;
+			children = (
+				D0AF32341FAE8C6B0097362B /* MultipeerManager.swift */,
+			);
+			name = Multipeer;
 			sourceTree = "<group>";
 		};
 		D0B418681D7E03D5004562A4 /* TelegramCoreMac */ = {
@@ -1763,6 +1795,7 @@
 				D03B0D441D6319F900955575 /* CloudFileMediaResource.swift in Sources */,
 				D018D3371E648ACF00C5E089 /* CreateChannel.swift in Sources */,
 				D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */,
+				D0AF32221FAC95C20097362B /* StandaloneUploadedMedia.swift in Sources */,
 				D0F53BE91E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */,
 				D0E35A0E1DE4953E00BC6096 /* FetchHttpResource.swift in Sources */,
 				D01AC91D1DD5DA5E00E8160F /* RequestMessageActionCallback.swift in Sources */,
@@ -1829,11 +1862,13 @@
 				D03DC9131F82F89D001D584C /* RegularChatState.swift in Sources */,
 				D0613FCF1E60520700202CDB /* ChannelMembers.swift in Sources */,
 				C2366C891E4F40480097CCFF /* SupportPeerId.swift in Sources */,
+				D0AF32351FAE8C6B0097362B /* MultipeerManager.swift in Sources */,
 				D05A32E11E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */,
 				D003702B1DA42586004308D3 /* PhoneNumber.swift in Sources */,
 				D00BDA1C1EE5952A00C64C5E /* TelegramChannelBannedRights.swift in Sources */,
 				D03B0CF91D62250800955575 /* TelegramMediaMap.swift in Sources */,
 				D0BC38791E40BAF20044D6FE /* SynchronizePinnedChatsOperation.swift in Sources */,
+				D0B1671D1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */,
 				D050F2101E48AB0600988324 /* InteractivePhoneFormatter.swift in Sources */,
 				D0C48F3C1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */,
 				D042C6831E8D9DF800C863B0 /* Unixtime.swift in Sources */,
@@ -1875,6 +1910,7 @@
 				D033FEB61E61F3F900644997 /* BlockedPeers.swift in Sources */,
 				D00C7CCC1E3620C30080C3D5 /* CachedChannelParticipants.swift in Sources */,
 				D09BB6B41DB02C2B00A905C0 /* PendingMessageManager.swift in Sources */,
+				D0B167231F9F972E00976B40 /* LoggingSettings.swift in Sources */,
 				D0BC387B1E40D2880044D6FE /* TogglePeerChatPinned.swift in Sources */,
 				D0BB7C5A1E5C8074001527C3 /* ChannelParticipants.swift in Sources */,
 				D0448C8E1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */,
@@ -1972,6 +2008,7 @@
 				D041E3F81E535A88008C24B4 /* RemovePeerMember.swift in Sources */,
 				D0B417C11D7DCEEF004562A4 /* ApiGroupOrChannel.swift in Sources */,
 				D041E3F51E535464008C24B4 /* AddPeerMember.swift in Sources */,
+				D0AF32311FACEDEC0097362B /* CoreSettings.swift in Sources */,
 				D0B843BF1DA7FF30005F29E1 /* NBNumberFormat.m in Sources */,
 				D0E305A71E5B5CBE00D7A3A2 /* PeerAdmins.swift in Sources */,
 				D0B843C51DA7FF30005F29E1 /* NBPhoneNumber.m in Sources */,
@@ -2021,12 +2058,14 @@
 				D0DB7F041F43030C00591D48 /* InstallInteractiveReadMessagesAction.swift in Sources */,
 				D01D6BFA1E42A718006151C6 /* SearchStickers.swift in Sources */,
 				D0D748031E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */,
+				D0B167241F9F972E00976B40 /* LoggingSettings.swift in Sources */,
 				C2A315C01E2E776A00D89000 /* RequestStartBot.swift in Sources */,
 				D0642EFA1F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift in Sources */,
 				D0F7B1EA1E045C87007EB8A5 /* ChangePeerNotificationSettings.swift in Sources */,
 				D0B418A71D7E0592004562A4 /* Fetch.swift in Sources */,
 				D02ABC7C1E30058F00CAE539 /* DeleteMessagesInteractively.swift in Sources */,
 				D03DC9111F82E344001D584C /* AccountStateReset.swift in Sources */,
+				D0B1671E1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */,
 				D050F2111E48AB0600988324 /* InteractivePhoneFormatter.swift in Sources */,
 				D050F2631E4A5AEB00988324 /* SynchronizePinnedChatsOperation.swift in Sources */,
 				D0B418B81D7E05A6004562A4 /* ContactManagement.swift in Sources */,
@@ -2108,6 +2147,7 @@
 				D0B418961D7E0580004562A4 /* TelegramMediaFile.swift in Sources */,
 				D08CAA881ED81DD40000FDA8 /* LocalizationInfo.swift in Sources */,
 				D099D74A1EEF418D00A3128C /* HistoryViewChannelStateValidation.swift in Sources */,
+				D0AF32231FAC95C20097362B /* StandaloneUploadedMedia.swift in Sources */,
 				D001F3EC1E128A1C007A8C60 /* Holes.swift in Sources */,
 				D0B4189B1D7E0580004562A4 /* TelegramMediaWebpage.swift in Sources */,
 				D00C7CE11E3785710080C3D5 /* MarkMessageContentAsConsumedInteractively.swift in Sources */,
@@ -2144,6 +2184,7 @@
 				D0F7AB2D1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */,
 				D0B844121DAB91CD005F29E1 /* Log.swift in Sources */,
 				D03C53721DAD5CA9004C17B3 /* CachedUserData.swift in Sources */,
+				D0AF32321FACEDEC0097362B /* CoreSettings.swift in Sources */,
 				D073CE6B1DCBCF17007511FD /* ReplyMessageAttribute.swift in Sources */,
 				D001F3E91E128A1C007A8C60 /* SecretChatState.swift in Sources */,
 				D08F4A6A1E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */,
@@ -2250,6 +2291,7 @@
 				D0FA8BA21E1F99E1001E855B /* SecretChatFileReference.swift in Sources */,
 				D0B844301DAB91E0005F29E1 /* NBNumberFormat.m in Sources */,
 				D001F3F71E128A1C007A8C60 /* ApplyUpdateMessage.swift in Sources */,
+				D0AF32361FAE8C6B0097362B /* MultipeerManager.swift in Sources */,
 				D0B418971D7E0580004562A4 /* TelegramMediaImage.swift in Sources */,
 				D041E3F91E535A88008C24B4 /* RemovePeerMember.swift in Sources */,
 				D049EAF61E44DF3300A2CD3A /* AccountState.swift in Sources */,

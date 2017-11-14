@@ -79,6 +79,7 @@ public final class TelegramSecretChat: Peer {
 public final class CachedSecretChatData: CachedPeerData {
     public let peerIds: Set<PeerId> = Set()
     public let messageIds: Set<MessageId> = Set()
+    public let associatedHistoryPeerId: PeerId? = nil
 
     public let reportStatus: PeerReportStatus
     

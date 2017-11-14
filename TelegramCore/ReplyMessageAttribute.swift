@@ -12,7 +12,7 @@ public class ReplyMessageAttribute: MessageAttribute {
         return [self.messageId]
     }
     
-    init(messageId: MessageId) {
+    public init(messageId: MessageId) {
         self.messageId = messageId
     }
     
