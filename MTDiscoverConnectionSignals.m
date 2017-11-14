@@ -232,7 +232,7 @@ typedef struct {
             }];
             [bestTcp4Signals addObject:signal];
             
-            NSArray *alternatePorts = @[@80, @25];
+            NSArray *alternatePorts = @[@80, @5222];
             for (NSNumber *nPort in alternatePorts) {
                 NSSet *ipsWithPort = tcpIpsByPort[nPort];
                 if (![ipsWithPort containsObject:address.ip]) {
