@@ -125,7 +125,7 @@ extension Api.Message {
     
     var peerIds: [PeerId] {
         switch self {
-            case let .message(flags, _, fromId, toId, fwdFrom, viaBotId, _, _, _, media, _, entities, _, _, _, _):
+            case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _):
                 let peerId: PeerId
                 switch toId {
                     case let .peerUser(userId):
@@ -142,14 +142,17 @@ extension Api.Message {
                     result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId))
                 }
             
-                if let fwdFrom = fwdFrom {
-                    switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, _, channelId, _, _, _, _):
+                if let fwdHeader = fwdHeader {
+                    switch fwdHeader {
+                        case let .messageFwdHeader(_, fromId, _, channelId, _, _, savedFromPeer, _):
                             if let channelId = channelId {
                                 result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
                             }
                             if let fromId = fromId {
                                 result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId))
+                            }
+                            if let savedFromPeer = savedFromPeer {
+                                result.append(savedFromPeer.peerId)
                             }
                     }
                 }

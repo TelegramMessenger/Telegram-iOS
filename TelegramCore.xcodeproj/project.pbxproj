@@ -113,6 +113,8 @@
 		D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */; };
 		D01AC9231DD5E9A200E8160F /* ApplyUpdateMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */; };
 		D01B27A21E394D8B0022A4C0 /* PrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B27A11E394D8B0022A4C0 /* PrivacySettings.swift */; };
+		D01C06B71FBBA269001561AB /* CanSendMessagesToPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06B61FBBA269001561AB /* CanSendMessagesToPeer.swift */; };
+		D01C06B81FBBA269001561AB /* CanSendMessagesToPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06B61FBBA269001561AB /* CanSendMessagesToPeer.swift */; };
 		D01C7ED31EF5DF83008305F1 /* LimitsConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7ED21EF5DF83008305F1 /* LimitsConfiguration.swift */; };
 		D01C7ED41EF5DF83008305F1 /* LimitsConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7ED21EF5DF83008305F1 /* LimitsConfiguration.swift */; };
 		D01C7ED61EF5E468008305F1 /* ProxySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7ED51EF5E468008305F1 /* ProxySettings.swift */; };
@@ -656,6 +658,7 @@
 		D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestEditMessage.swift; sourceTree = "<group>"; };
 		D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplyUpdateMessage.swift; sourceTree = "<group>"; };
 		D01B27A11E394D8B0022A4C0 /* PrivacySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrivacySettings.swift; sourceTree = "<group>"; };
+		D01C06B61FBBA269001561AB /* CanSendMessagesToPeer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanSendMessagesToPeer.swift; sourceTree = "<group>"; };
 		D01C7ED21EF5DF83008305F1 /* LimitsConfiguration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LimitsConfiguration.swift; sourceTree = "<group>"; };
 		D01C7ED51EF5E468008305F1 /* ProxySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProxySettings.swift; sourceTree = "<group>"; };
 		D01C7F031EFC1C49008305F1 /* DeviceContact.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceContact.swift; sourceTree = "<group>"; };
@@ -1077,6 +1080,7 @@
 				D042C6821E8D9DF800C863B0 /* Unixtime.swift */,
 				D01C7F031EFC1C49008305F1 /* DeviceContact.swift */,
 				D053B3FD1F16534400E2D58A /* MonotonicTime.swift */,
+				D01C06B61FBBA269001561AB /* CanSendMessagesToPeer.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1883,6 +1887,7 @@
 				D0FA8BAD1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */,
 				D03B0CBF1D62234A00955575 /* Log.swift in Sources */,
 				C2FD33E41E687BF1008D13D4 /* PeerPhotoUpdater.swift in Sources */,
+				D01C06B71FBBA269001561AB /* CanSendMessagesToPeer.swift in Sources */,
 				D0B843B51DA7FF30005F29E1 /* NBMetadataCore.m in Sources */,
 				D03B0CD61D62245300955575 /* TelegramUser.swift in Sources */,
 				D02395D61F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift in Sources */,
@@ -2172,6 +2177,7 @@
 				D0B418A61D7E0592004562A4 /* CloudFileMediaResource.swift in Sources */,
 				D073CEA51DCBF3F5007511FD /* StickerManagement.swift in Sources */,
 				D03C536D1DAD5CA9004C17B3 /* ApiGroupOrChannel.swift in Sources */,
+				D01C06B81FBBA269001561AB /* CanSendMessagesToPeer.swift in Sources */,
 				D0E35A151DE4C6A200BC6096 /* OutgoingMessageWithChatContextResult.swift in Sources */,
 				D0B418A91D7E0597004562A4 /* Buffer.swift in Sources */,
 				D02ABC821E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift in Sources */,
