@@ -1106,7 +1106,7 @@ final class MutableMessageHistoryView {
     private func fetchEarlier(postbox: Postbox, index: MessageIndex?, count: Int) -> [MutableMessageHistoryEntry] {
         switch self.peerIds {
             case let .single(peerId):
-                return postbox.fetchEarlierHistoryEntries(peerId, index: index, count: count)
+                return postbox.fetchEarlierHistoryEntries(peerId, index: index, count: count, tagMask: self.tagMask)
             case .associated, .multiple:
                 var entries: [MutableMessageHistoryEntry] = []
                 for peerId in peerIds.peerIds {
@@ -1120,7 +1120,7 @@ final class MutableMessageHistoryView {
                     } else {
                         fetchIndex = nil
                     }
-                    let peerEntries = postbox.fetchEarlierHistoryEntries(peerId, index: fetchIndex, count: count)
+                    let peerEntries = postbox.fetchEarlierHistoryEntries(peerId, index: fetchIndex, count: count, tagMask: self.tagMask)
                     entries.append(contentsOf: peerEntries)
                 }
                 entries.sort(by: { lhs, rhs in
@@ -1137,7 +1137,7 @@ final class MutableMessageHistoryView {
     private func fetchLater(postbox: Postbox, index: MessageIndex?, count: Int) -> [MutableMessageHistoryEntry] {
         switch self.peerIds {
             case let .single(peerId):
-                return postbox.fetchLaterHistoryEntries(peerId, index: index, count: count)
+                return postbox.fetchLaterHistoryEntries(peerId, index: index, count: count, tagMask: self.tagMask)
             case .associated, .multiple:
                 var entries: [MutableMessageHistoryEntry] = []
                 for peerId in peerIds.peerIds {
@@ -1151,7 +1151,7 @@ final class MutableMessageHistoryView {
                     } else {
                         fetchIndex = nil
                     }
-                    let peerEntries = postbox.fetchLaterHistoryEntries(peerId, index: fetchIndex, count: count)
+                    let peerEntries = postbox.fetchLaterHistoryEntries(peerId, index: fetchIndex, count: count, tagMask: self.tagMask)
                     entries.append(contentsOf: peerEntries)
                 }
                 entries.sort(by: { lhs, rhs in
