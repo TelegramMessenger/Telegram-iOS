@@ -1944,23 +1944,27 @@ public final class Postbox {
     
     private func syncAroundMessageHistoryViewForPeerId(_ peerIds: MessageHistoryViewPeerIds, count: Int, clipHoles: Bool, index: InternalMessageHistoryAnchorIndex, anchorIndex: InternalMessageHistoryAnchorIndex, unreadIndex: MessageIndex?, fixedCombinedReadState: CombinedPeerReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?] = [:]
-        if case let .single(peerId) = peerIds {
-            for namespace in topTaggedMessageIdNamespaces {
-                if let messageId = self.peerChatTopTaggedMessageIdsTable.get(peerId: peerId, namespace: namespace) {
-                    if let indexEntry = self.messageHistoryIndexTable.get(messageId), case let .Message(index) = indexEntry {
-                        if let message = self.messageHistoryTable.getMessage(index) {
-                            topTaggedMessages[namespace] = MessageHistoryTopTaggedMessage.intermediate(message)
+        switch peerIds {
+            case .single, .associated:
+                let peerId = peerIds.peerIds[0]
+                for namespace in topTaggedMessageIdNamespaces {
+                    if let messageId = self.peerChatTopTaggedMessageIdsTable.get(peerId: peerId, namespace: namespace) {
+                        if let indexEntry = self.messageHistoryIndexTable.get(messageId), case let .Message(index) = indexEntry {
+                            if let message = self.messageHistoryTable.getMessage(index) {
+                                topTaggedMessages[namespace] = MessageHistoryTopTaggedMessage.intermediate(message)
+                            } else {
+                                assertionFailure()
+                            }
                         } else {
                             assertionFailure()
                         }
                     } else {
-                        assertionFailure()
+                        let item: MessageHistoryTopTaggedMessage? = nil
+                        topTaggedMessages[namespace] = item
                     }
-                } else {
-                    let item: MessageHistoryTopTaggedMessage? = nil
-                    topTaggedMessages[namespace] = item
                 }
-            }
+            default:
+                break
         }
         
         var additionalDataEntries: [AdditionalMessageHistoryViewDataEntry] = []

@@ -1446,11 +1446,11 @@ public final class MessageHistoryView {
             }
             
             groupStart = nil
-            for i in (0 ... referenceIndex).reversed() {
+            for i in (0 ... min(referenceIndex, entries.count - 1)).reversed() {
                 if case .HoleEntry = entries[i] {
                     if let groupStart = groupStart {
                         entries.removeSubrange(0 ..< groupStart.0 + 1)
-                        laterId = nil
+                        earlierId = nil
                     } else {
                         if i != 0 {
                             entries.removeSubrange(0 ..< i)
@@ -1511,7 +1511,7 @@ public final class MessageHistoryView {
                     index = 0
                     for entry in entries {
                         if entry.index.id.namespace == namespace {
-                            maxNamespaceIndex = entry.index
+                            maxNamespaceIndex = entry.index.predecessor()
                             break
                         }
                         index += 1
