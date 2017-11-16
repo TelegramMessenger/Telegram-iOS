@@ -399,3 +399,11 @@ public func requestBotPaymentReceipt(network: Network, messageId: MessageId) -> 
             }
         }
 }
+
+public func clearBotPaymentInfo(network: Network) -> Signal<Void, NoError> {
+    return network.request(Api.functions.payments.clearSavedInfo(flags: 1 | 2))
+        |> retryRequest
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
+}
