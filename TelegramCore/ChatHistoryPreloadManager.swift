@@ -1,6 +1,11 @@
 import Foundation
-import Postbox
-import SwiftSignalKit
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+#endif
 
 private struct HistoryPreloadHole: Hashable, Comparable {
     let index: ChatListIndex

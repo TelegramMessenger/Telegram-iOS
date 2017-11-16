@@ -381,10 +381,14 @@ extension StoreMessage {
                         }
                 }
                 
+                var attributes: [MessageAttribute] = []
+
+                
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, date, channelId, channelPost, postAuthor, _, _):
+                        //savedFromPeer: Api.Peer?, savedFromMsgId: Int32?
+                        case let .messageFwdHeader(_, fromId, date, channelId, channelPost, postAuthor, savedFromPeer, savedFromMsgId):
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
@@ -400,6 +404,20 @@ extension StoreMessage {
                                     sourceMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: channelPost)
                                 }
                             }
+                            
+                            if let savedFromPeer = savedFromPeer, let savedFromMsgId = savedFromMsgId {
+                                let peerId: PeerId
+                                switch savedFromPeer {
+                                case let .peerChannel(channelId):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                                case let .peerChat(chatId):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                                case let .peerUser(userId):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                }
+                                let messageId: MessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: savedFromMsgId)
+                                attributes.append(SourceReferenceMessageAttribute(messageId: messageId))
+                            }
                         
                             if let authorId = authorId {
                                 forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
@@ -411,7 +429,6 @@ extension StoreMessage {
                 
                 var messageText = message
                 var medias: [Media] = []
-                var attributes: [MessageAttribute] = []
                 
                 var consumableContent: (Bool, Bool)? = nil
                 

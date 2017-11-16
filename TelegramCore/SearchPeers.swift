@@ -9,33 +9,52 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func searchPeers(account: Account, query: String) -> Signal<[Peer], NoError> {
+public struct FoundPeer {
+    public let peer: Peer
+    public let subscribers: Int32?
+    init(peer: Peer, subscribers: Int32?) {
+        self.peer = peer
+        self.subscribers = subscribers
+    }
+}
+
+public func searchPeers(account: Account, query: String) -> Signal<[FoundPeer], NoError> {
     let searchResult = account.network.request(Api.functions.contacts.search(q: query, limit: 10))
         |> map { Optional($0) }
         |> `catch` { _ in
             return Signal<Api.contacts.Found?, NoError>.single(nil)
         }
     let processedSearchResult = searchResult
-        |> mapToSignal { result -> Signal<[Peer], NoError> in
+        |> mapToSignal { result -> Signal<[FoundPeer], NoError> in
             if let result = result {
                 switch result {
                 case let .found(results, chats, users):
-                    return account.postbox.modify { modifier -> [Peer] in
+                    return account.postbox.modify { modifier -> [FoundPeer] in
                         var peers: [PeerId: Peer] = [:]
-                        
+                        var subscribres:[PeerId : Int32] = [:]
                         for user in users {
                             if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                 peers[user.id] = user
                             }
                         }
                         
+                        
+                        
                         for chat in chats {
                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                 peers[groupOrChannel.id] = groupOrChannel
+                                switch chat {
+                                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                                    if let participantsCount = participantsCount {
+                                        subscribres[groupOrChannel.id] = participantsCount
+                                    }
+                                default:
+                                    break
+                                }
                             }
                         }
                         
-                        var renderedPeers: [Peer] = []
+                        var renderedPeers: [FoundPeer] = []
                         for result in results {
                             let peerId: PeerId
                             switch result {
@@ -47,7 +66,7 @@ public func searchPeers(account: Account, query: String) -> Signal<[Peer], NoErr
                                 peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                             }
                             if let peer = peers[peerId] {
-                                renderedPeers.append(peer)
+                                renderedPeers.append(FoundPeer(peer: peer, subscribers: subscribres[peerId]))
                             }
                         }
                         
