@@ -129,11 +129,11 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
             switch result {
                 case let .internalReference(id, type, title, description, image, file, message):
                     if type == "game" {
-                        return .message(text: "", attributes: attributes, media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: title ?? "", description: description ?? "", image: image, file: file), replyToMessageId: nil)
+                        return .message(text: "", attributes: attributes, media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: title ?? "", description: description ?? "", image: image, file: file), replyToMessageId: nil, localGroupingKey: nil)
                     } else if let image = image {
-                        return .message(text: caption, attributes: attributes, media: image, replyToMessageId: nil)
+                        return .message(text: caption, attributes: attributes, media: image, replyToMessageId: nil, localGroupingKey: nil)
                     } else if let file = file {
-                        return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil)
+                        return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil, localGroupingKey: nil)
                     } else {
                         return nil
                     }
@@ -145,9 +145,9 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                             let thumbnailResource = HttpReferenceMediaResource(url: thumbnailUrl, size: nil)
                             let imageDimensions = dimensions ?? CGSize(width: 128.0, height: 128.0)
                             let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: thumbnailResource)], reference: nil)
-                            return .message(text: caption, attributes: attributes, media: tmpImage, replyToMessageId: nil)
+                            return .message(text: caption, attributes: attributes, media: tmpImage, replyToMessageId: nil, localGroupingKey: nil)
                         } else {
-                            return .message(text: caption, attributes: attributes, media: nil, replyToMessageId: nil)
+                            return .message(text: caption, attributes: attributes, media: nil, replyToMessageId: nil, localGroupingKey: nil)
                         }
                     } else if type == "document" || type == "gif" || type == "audio" || type == "voice" {
                         var previewRepresentations: [TelegramMediaImageRepresentation] = []
@@ -182,9 +182,9 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                         var randomId: Int64 = 0
                         arc4random_buf(&randomId, 8)
                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: EmptyMediaResource(), previewRepresentations: previewRepresentations, mimeType: contentType ?? "application/binary", size: nil, attributes: fileAttributes)
-                        return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil)
+                        return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil, localGroupingKey: nil)
                     } else {
-                        return .message(text: caption, attributes: attributes, media: nil, replyToMessageId: nil)
+                        return .message(text: caption, attributes: attributes, media: nil, replyToMessageId: nil, localGroupingKey: nil)
                     }
             }
         case let .text(text, entities, disableUrlPreview, replyMarkup):
@@ -194,16 +194,16 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
             if let replyMarkup = replyMarkup {
                 attributes.append(replyMarkup)
             }
-            return .message(text: text, attributes: attributes, media: nil, replyToMessageId: nil)
+            return .message(text: text, attributes: attributes, media: nil, replyToMessageId: nil, localGroupingKey: nil)
         case let .mapLocation(media, replyMarkup):
             if let replyMarkup = replyMarkup {
                 attributes.append(replyMarkup)
             }
-            return .message(text: "", attributes: attributes, media: media, replyToMessageId: nil)
+            return .message(text: "", attributes: attributes, media: media, replyToMessageId: nil, localGroupingKey: nil)
         case let .contact(media, replyMarkup):
             if let replyMarkup = replyMarkup {
                 attributes.append(replyMarkup)
             }
-            return .message(text: "", attributes: attributes, media: media, replyToMessageId: nil)
+            return .message(text: "", attributes: attributes, media: media, replyToMessageId: nil, localGroupingKey: nil)
     }
 }

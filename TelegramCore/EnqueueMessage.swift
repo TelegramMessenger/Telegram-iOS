@@ -8,13 +8,13 @@ import Foundation
 #endif
 
 public enum EnqueueMessage {
-    case message(text: String, attributes: [MessageAttribute], media: Media?, replyToMessageId: MessageId?)
+    case message(text: String, attributes: [MessageAttribute], media: Media?, replyToMessageId: MessageId?, localGroupingKey: Int64?)
     case forward(source: MessageId)
     
     public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
         switch self {
-            case let .message(text, attributes, media, _):
-                return .message(text: text, attributes: attributes, media: media, replyToMessageId: replyToMessageId)
+            case let .message(text, attributes, media, _, localGroupingKey):
+                return .message(text: text, attributes: attributes, media: media, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey)
             case .forward:
                 return self
         }
@@ -68,7 +68,7 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
     var hasMedia = false
     loop: for message in messages {
         switch message {
-            case let .message(_, _, media, _):
+            case let .message(_, _, media, _, _):
                 if media != nil {
                     hasMedia = true
                     break loop
@@ -85,13 +85,13 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
     var signals: [Signal<(Bool, EnqueueMessage), NoError>] = []
     for message in messages {
         switch message {
-            case let .message(text, attributes, media, replyToMessageId):
+            case let .message(text, attributes, media, replyToMessageId, localGroupingKey):
                 if let media = media {
                     signals.append(opportunisticallyTransformMessageWithMedia(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, media: media, userInteractive: userInteractive) |> map { result -> (Bool, EnqueueMessage) in
                         if let result = result {
-                            return (true, .message(text: text, attributes: attributes, media: result, replyToMessageId: replyToMessageId))
+                            return (true, .message(text: text, attributes: attributes, media: result, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey))
                         } else {
-                            return (false, .message(text: text, attributes: attributes, media: media, replyToMessageId: replyToMessageId))
+                            return (false, .message(text: text, attributes: attributes, media: media, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey))
                         }
                     })
                 } else {
@@ -158,7 +158,7 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
                         }
                     }
                     
-                    messages.append(.message(text: message.text, attributes: message.attributes, media: message.media.first, replyToMessageId: replyToMessageId))
+                    messages.append(.message(text: message.text, attributes: message.attributes, media: message.media.first, replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey))
                 }
             }
             let _ = enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: messages.map { (false, $0) })
@@ -198,7 +198,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
             globallyUniqueIds.append(randomId)
             
             switch message {
-                case let .message(text, requestedAttributes, media, replyToMessageId):
+                case let .message(text, requestedAttributes, media, replyToMessageId, localGroupingKey):
                     if let peer = peer as? TelegramSecretChat {
                         var isAction = false
                         if let _ = media as? TelegramMediaAction {
@@ -265,7 +265,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                     
                     let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: mediaList, textEntities: entitiesAttribute?.entities)
                     
-                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
+                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source):
                     if let sourceMessage = modifier.getMessage(source), let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         if let peer = peer as? TelegramSecretChat {

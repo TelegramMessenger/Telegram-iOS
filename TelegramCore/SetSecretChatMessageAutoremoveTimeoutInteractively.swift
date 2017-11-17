@@ -19,7 +19,7 @@ public func setSecretChatMessageAutoremoveTimeoutInteractively(account: Account,
                 modifier.setPeerChatState(peerId, state: updatedState)
             }
             
-            enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], media: TelegramMediaAction(action: TelegramMediaActionType.messageAutoremoveTimeoutUpdated(timeout == nil ? 0 : timeout!)), replyToMessageId: nil))])
+            enqueueMessages(modifier: modifier, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], media: TelegramMediaAction(action: TelegramMediaActionType.messageAutoremoveTimeoutUpdated(timeout == nil ? 0 : timeout!)), replyToMessageId: nil, localGroupingKey: nil))])
         }
     }
 }
