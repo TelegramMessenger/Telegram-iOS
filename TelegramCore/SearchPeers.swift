@@ -9,12 +9,17 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public struct FoundPeer {
+public struct FoundPeer: Equatable {
     public let peer: Peer
     public let subscribers: Int32?
+    
     init(peer: Peer, subscribers: Int32?) {
         self.peer = peer
         self.subscribers = subscribers
+    }
+    
+    public static func ==(lhs: FoundPeer, rhs: FoundPeer) -> Bool {
+        return lhs.peer.isEqual(rhs.peer) && lhs.subscribers == rhs.subscribers
     }
 }
 

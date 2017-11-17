@@ -108,8 +108,10 @@ public func searchMessages(account: Account, peerId: PeerId?, query: String, fro
                         }
                     }
                     
-                    let secretMessages = modifier.searchMessages(peerId: nil, query: query, tags: nil)
-                    renderedMessages.append(contentsOf: secretMessages)
+                    if peerId == nil {
+                        let secretMessages = modifier.searchMessages(peerId: nil, query: query, tags: nil)
+                        renderedMessages.append(contentsOf: secretMessages)
+                    }
                     
                     renderedMessages.sort(by: { lhs, rhs in
                         return MessageIndex(lhs) > MessageIndex(rhs)
