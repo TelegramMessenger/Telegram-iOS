@@ -512,6 +512,12 @@ static bool keyboardHidden = true;
     return [[LegacyComponentsGlobals provider] applicationKeyboardWindow];
 }
 
++ (void)setApplicationKeyboardOffset:(CGFloat)offset
+{
+    UIWindow *keyboardWindow = [self applicationKeyboardWindow];
+    keyboardWindow.frame = CGRectOffset(keyboardWindow.bounds, 0.0f, offset);
+}
+
 + (UIView *)applicationKeyboardView
 {
     static Class keyboardViewClass = Nil;

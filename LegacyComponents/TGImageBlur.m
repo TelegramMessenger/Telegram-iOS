@@ -1765,6 +1765,8 @@ UIImage *TGLoadedAttachmentImage(UIImage *source, CGSize size, uint32_t *average
 UIImage *TGLoadedAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int cornerRadius, int inset, int position)
 {
     CGFloat scale = TGScreenScaling(); //TGIsRetina() ? 2.0f : 1.0f;
+    if (cornerRadius < 0)
+        cornerRadius = 0;
     
     CGFloat actionCircleDiameter = 50.0f;
     

@@ -200,7 +200,13 @@
 
 - (BOOL)prefersStatusBarHidden
 {
-    return self.navigationController.prefersStatusBarHidden;
+    if (iosMajorVersion() >= 7)
+    {
+        if (self.navigationController != nil)
+            return self.navigationController.prefersStatusBarHidden;
+    }
+    
+    return false;
 }
 
 @end

@@ -210,14 +210,15 @@
 
 + (void)saveImageWithData:(NSData *)imageData silentlyFail:(bool)silentlyFail completionBlock:(void (^)(bool))completionBlock
 {
+    TGProgressWindow *progressWindow = nil;
     if (!silentlyFail)
     {
         if (![[[LegacyComponentsGlobals provider] accessChecker] checkPhotoAuthorizationStatusForIntent:TGPhotoAccessIntentSave alertDismissCompletion:nil])
             return;
-    }
     
-    TGProgressWindow *progressWindow = [[TGProgressWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-    [progressWindow show:true];
+        TGProgressWindow *progressWindow = [[TGProgressWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        [progressWindow show:true];
+    }
     
     [[[[TGMediaAssetsLibrary sharedLibrary] saveAssetWithImageData:imageData] deliverOn:[SQueue mainQueue]] startWithNext:nil error:^(__unused id error)
      {

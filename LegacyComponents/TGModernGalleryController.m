@@ -1275,7 +1275,7 @@ static CGFloat transformRotation(CGAffineTransform transform)
     _view.scrollView.bounds = CGRectMake(_view.scrollView.bounds.size.width * currentItemIndex, 0.0f, _view.scrollView.bounds.size.width, _view.scrollView.bounds.size.height);
     _synchronousBoundsChange = false;
     
-    if (ABS((NSInteger)previousItemIndex - (NSInteger)currentItemIndex) == 1)
+    if (ABS((NSInteger)previousItemIndex - (NSInteger)currentItemIndex) == 1 && previousItemIndex < _model.items.count)
     {
         TGModernGalleryItemView *previousItemView = [self itemViewForItem:_model.items[previousItemIndex]];
         [previousItemView reset];

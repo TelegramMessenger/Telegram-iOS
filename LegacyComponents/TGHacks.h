@@ -40,6 +40,7 @@ typedef enum {
 + (void)applyCurrentKeyboardAutocorrectionVariant;
 + (UIWindow *)applicationKeyboardWindow;
 + (UIView *)applicationKeyboardView;
++ (void)setApplicationKeyboardOffset:(CGFloat)offset;
 
 + (void)forcePerformWithAnimation:(dispatch_block_t)block;
 

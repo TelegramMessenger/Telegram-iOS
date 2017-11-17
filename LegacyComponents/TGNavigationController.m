@@ -162,9 +162,13 @@
     
     if ((!TGIsRTL() && location.x < 44.0f) || (TGIsRTL() && location.x > gestureRecognizer.view.frame.size.width - 44.0f))
     {
-        otherGestureRecognizer.enabled = false;
-        otherGestureRecognizer.enabled = true;
-        return true;
+        CGPoint velocity = [gestureRecognizer velocityInView:gestureRecognizer.view];
+        if (fabs(velocity.x) > fabs(velocity.y))
+        {
+            otherGestureRecognizer.enabled = false;
+            otherGestureRecognizer.enabled = true;
+            return true;
+        }
     }
     else if ([otherGestureRecognizer.view isKindOfClass:[UIScrollView class]])
     {
@@ -720,6 +724,14 @@ TGNavigationController *findNavigationController()
 - (CGSize)preferredContentSize
 {
     return _preferredContentSize;
+}
+
+- (BOOL)prefersStatusBarHidden
+{
+    if (iosMajorVersion() >= 7)
+        return [super prefersStatusBarHidden];
+    
+    return false;
 }
 
 @end

@@ -165,13 +165,10 @@
     {
         if (animated)
         {
-            if (!hidden)
-                cell.alpha = 0.0f;
-            
-            [UIView animateWithDuration:0.3 animations:^
+            [UIView animateWithDuration:0.3 delay:0.0f options:UIViewAnimationOptionBeginFromCurrentState animations:^
             {
                 cell.alpha = hidden ? 0.0f : 1.0f;
-            }];
+            } completion:nil];
         }
         else
         {
