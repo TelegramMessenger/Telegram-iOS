@@ -946,9 +946,10 @@ final class MessageHistoryTable: Table {
                 case (.otherGroup, .sameGroup(let info)):
                     groupInfo = info
                 case (.otherGroup(let info), .otherGroup(let otherInfo)):
-                    assert(info == otherInfo)
                     groupInfo = self.generateNewGroupInfo()
-                    self.updateSameGroupInfos(lowerBound: index, from: otherInfo, to: self.generateNewGroupInfo(), updatedGroupInfos: &updatedGroupInfos)
+                    if info == otherInfo {
+                        self.updateSameGroupInfos(lowerBound: index, from: otherInfo, to: self.generateNewGroupInfo(), updatedGroupInfos: &updatedGroupInfos)
+                    }
             }
             return groupInfo
         } else {
