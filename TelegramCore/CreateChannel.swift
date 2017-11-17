@@ -11,7 +11,7 @@ import Foundation
 
 public func createChannel(account: Account, title: String, description: String?) -> Signal<PeerId?, NoError> {
     return account.postbox.modify { modifier -> Signal<PeerId?, NoError> in
-        return account.network.request(Api.functions.channels.createChannel(flags: 1 << 0, title: title, about: description ?? ""))
+        return account.network.request(Api.functions.channels.createChannel(flags: 1 << 0, title: title, about: description ?? ""), automaticFloodWait: false)
             |> map { Optional($0) }
             |> `catch` { _ in
                 return Signal<Api.Updates?, NoError>.single(nil)

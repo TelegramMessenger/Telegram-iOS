@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		C205FEA81EB3B75900455808 /* ExportMessageLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C205FEA71EB3B75900455808 /* ExportMessageLink.swift */; };
 		C205FEA91EB3B75900455808 /* ExportMessageLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C205FEA71EB3B75900455808 /* ExportMessageLink.swift */; };
+		C210DD621FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = C210DD611FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift */; };
+		C210DD631FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = C210DD611FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift */; };
 		C22EE61B1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */; };
 		C22EE61C1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */; };
 		C230BEB61EE9A3760029586C /* ChannelAdminEventLogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = C230BEB51EE9A3760029586C /* ChannelAdminEventLogs.swift */; };
@@ -383,7 +385,6 @@
 		D0AF32311FACEDEC0097362B /* CoreSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32301FACEDEC0097362B /* CoreSettings.swift */; };
 		D0AF32321FACEDEC0097362B /* CoreSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32301FACEDEC0097362B /* CoreSettings.swift */; };
 		D0AF32351FAE8C6B0097362B /* MultipeerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32341FAE8C6B0097362B /* MultipeerManager.swift */; };
-		D0AF32361FAE8C6B0097362B /* MultipeerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32341FAE8C6B0097362B /* MultipeerManager.swift */; };
 		D0AF32381FAE8C920097362B /* MultipeerConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AF32371FAE8C910097362B /* MultipeerConnectivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D0B1671D1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */; };
 		D0B1671E1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */; };
@@ -610,6 +611,7 @@
 
 /* Begin PBXFileReference section */
 		C205FEA71EB3B75900455808 /* ExportMessageLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExportMessageLink.swift; sourceTree = "<group>"; };
+		C210DD611FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceMessageAttribute.swift; sourceTree = "<group>"; };
 		C22EE61A1E67418000334C38 /* ToggleChannelSignatures.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ToggleChannelSignatures.swift; sourceTree = "<group>"; };
 		C230BEB51EE9A3760029586C /* ChannelAdminEventLogs.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdminEventLogs.swift; sourceTree = "<group>"; };
 		C2366C821E4F3EAA0097CCFF /* GroupReturnAndLeft.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupReturnAndLeft.swift; sourceTree = "<group>"; };
@@ -1158,6 +1160,7 @@
 				D07047B31F3DF1FE00F6A8D4 /* ConsumablePersonalMentionMessageAttribute.swift */,
 				D099D7451EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift */,
 				C28725411EF967E700613564 /* NotificationInfoMessageAttribute.swift */,
+				C210DD611FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift */,
 			);
 			name = Attributes;
 			sourceTree = "<group>";
@@ -1779,6 +1782,7 @@
 				D01A21AC1F38D10E00DDA104 /* SavedStickerItem.swift in Sources */,
 				D0642EF91F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift in Sources */,
 				D03B0CF71D62250800955575 /* TelegramMediaImage.swift in Sources */,
+				C210DD621FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift in Sources */,
 				D0E23DDF1E8082A400B9B6D2 /* ArchivedStickerPacks.swift in Sources */,
 				D0BC386E1E3FDAB70044D6FE /* CreateGroup.swift in Sources */,
 				D0FA8BB31E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */,
@@ -2207,6 +2211,7 @@
 				D033FEB71E61F3F900644997 /* BlockedPeers.swift in Sources */,
 				D0448C9A1E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */,
 				D050F2611E4A5AE700988324 /* PrivacySettings.swift in Sources */,
+				C210DD631FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift in Sources */,
 				D0B8440F1DAB91CD005F29E1 /* Either.swift in Sources */,
 				D0DC35511DE36908000195EB /* RequestChatContextResults.swift in Sources */,
 				D08CAA8D1ED81EDF0000FDA8 /* Localizations.swift in Sources */,
@@ -2297,7 +2302,6 @@
 				D0FA8BA21E1F99E1001E855B /* SecretChatFileReference.swift in Sources */,
 				D0B844301DAB91E0005F29E1 /* NBNumberFormat.m in Sources */,
 				D001F3F71E128A1C007A8C60 /* ApplyUpdateMessage.swift in Sources */,
-				D0AF32361FAE8C6B0097362B /* MultipeerManager.swift in Sources */,
 				D0B418971D7E0580004562A4 /* TelegramMediaImage.swift in Sources */,
 				D041E3F91E535A88008C24B4 /* RemovePeerMember.swift in Sources */,
 				D049EAF61E44DF3300A2CD3A /* AccountState.swift in Sources */,
