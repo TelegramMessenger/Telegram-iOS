@@ -758,6 +758,7 @@
 		B280F42D1DDF999F006179A7 /* fa */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fa; path = fa.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		B29855421D85EB5D007FF452 /* allfeatures.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = allfeatures.xcconfig; sourceTree = "<group>"; };
 		B29855431D85EBAC007FF452 /* module_allfeatures.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module_allfeatures.modulemap; sourceTree = "<group>"; };
+		B2B04C141FBFB1D100EC12F5 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = tr.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		B2D1CE5D1D9DE4F700CA74A8 /* FeedbackPlaceholder.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = FeedbackPlaceholder.png; sourceTree = "<group>"; };
 		BEE0207C16C5107E004426EA /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		E328A2FB1C88B344008BB527 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/HockeySDK.strings; sourceTree = "<group>"; };
@@ -2044,6 +2045,7 @@
 				1E20A57F181E9D4600D5B770 /* nl */,
 				B280F42D1DDF999F006179A7 /* fa */,
 				E328A2FB1C88B344008BB527 /* nb */,
+				B2B04C141FBFB1D100EC12F5 /* tr */,
 			);
 			name = HockeySDK.strings;
 			sourceTree = "<group>";
