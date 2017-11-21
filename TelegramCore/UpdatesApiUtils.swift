@@ -177,6 +177,15 @@ extension Api.Update {
         }
     }
     
+    var updatedRawMessageId: (Int64, Int32)? {
+        switch self {
+            case let .updateMessageID(id, randomId):
+                return (randomId, id)
+            default:
+                return nil
+        }
+    }
+    
     var messageId: MessageId? {
         switch self {
             case let .updateNewMessage(message, _, _):
@@ -342,6 +351,41 @@ extension Api.Updates {
                 return [MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), namespace: Namespaces.Message.Cloud, id: id)]
             case let .updateShortChatMessage(_, id, _, chatId, _, _, _, _, _, _, _, _):
                 return [MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), namespace: Namespaces.Message.Cloud, id: id)]
+        }
+    }
+    
+    var updatedRawMessageIds: [Int64: Int32] {
+        switch self {
+            case let .updates(updates, _, _, _, _):
+                var result: [Int64: Int32] = [:]
+                for update in updates {
+                    if let (randomId, id) = update.updatedRawMessageId {
+                        result[randomId] = id
+                    }
+                }
+                return result
+            case let .updatesCombined(updates, _, _, _, _, _):
+                var result: [Int64: Int32] = [:]
+                for update in updates {
+                    if let (randomId, id) = update.updatedRawMessageId {
+                        result[randomId] = id
+                    }
+                }
+                return result
+            case let .updateShort(update, _):
+                if let (randomId, id) = update.updatedRawMessageId {
+                    return [randomId: id]
+                } else {
+                    return [:]
+                }
+            case .updateShortSentMessage:
+                return [:]
+            case .updatesTooLong:
+                return [:]
+            case let .updateShortMessage(_, id, userId, _, _, _, _, _, _, _, _):
+                return [:]
+            case let .updateShortChatMessage(_, id, _, chatId, _, _, _, _, _, _, _, _):
+                return [:]
         }
     }
 }

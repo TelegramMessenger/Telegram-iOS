@@ -24,10 +24,15 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
     } |> mapError { _ -> UpdatePinnedMessageError in
         return .generic
     } |> mapToSignal { peer -> Signal<Void, UpdatePinnedMessageError> in
-        if let group = peer as? TelegramChannel {
-            let canManage = group.hasAdminRights([.canPinMessages])
+        if let channel = peer as? TelegramChannel {
+            var canManagePin = false
+            if case .broadcast = channel.info {
+                canManagePin = channel.hasAdminRights([.canEditMessages])
+            } else {
+                canManagePin = channel.hasAdminRights([.canPinMessages])
+            }
             
-            if let inputChannel = apiInputChannel(group), canManage {
+            if let inputChannel = apiInputChannel(channel), canManagePin {
                 var flags: Int32 = 0
                 let messageId: Int32
                 switch update {

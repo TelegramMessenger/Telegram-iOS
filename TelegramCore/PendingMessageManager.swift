@@ -18,9 +18,25 @@ public struct PendingMessageStatus: Equatable {
 
 private enum PendingMessageState {
     case none
-    case waitingForUploadToStart(Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>)
-    case uploading
-    case sending
+    case waitingForUploadToStart(groupId: Int64?, upload: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>)
+    case uploading(groupId: Int64?)
+    case waitingToBeSent(groupId: Int64?, content: PendingMessageUploadedContent)
+    case sending(groupId: Int64?)
+    
+    var groupId: Int64? {
+        switch self {
+            case .none:
+                return nil
+            case let .waitingForUploadToStart(groupId, _):
+                return groupId
+            case let .uploading(groupId):
+                return groupId
+            case let .waitingToBeSent(groupId, _):
+                return groupId
+            case let .sending(groupId):
+                return groupId
+        }
+    }
 }
 
 private final class PendingMessageContext {
@@ -89,8 +105,12 @@ public final class PendingMessageManager {
             let removedMessageIds = self.pendingMessageIds.subtracting(messageIds)
             
             var updateUploadingPeerIds = Set<PeerId>()
+            var updateUploadingGroupIds = Set<Int64>()
             for id in removedMessageIds {
                 if let context = self.messageContexts[id] {
+                    if let groupId = context.state.groupId {
+                        updateUploadingGroupIds.insert(groupId)
+                    }
                     context.state = .none
                     updateUploadingPeerIds.insert(id.peerId)
                     context.disposable.dispose()
@@ -106,10 +126,12 @@ public final class PendingMessageManager {
             
             self.pendingMessageIds = messageIds
             
-            if !updateUploadingPeerIds.isEmpty {
-                for peerId in updateUploadingPeerIds {
-                    self.updateWaitingUploads(peerId: peerId)
-                }
+            for peerId in updateUploadingPeerIds {
+                self.updateWaitingUploads(peerId: peerId)
+            }
+            
+            for groupId in updateUploadingGroupIds {
+                self.beginSendingGroupIfPossible(groupId: groupId)
             }
             
             self._hasPendingMessages.set(!self.pendingMessageIds.isEmpty)
@@ -203,6 +225,8 @@ public final class PendingMessageManager {
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
                 
+                var groupIds = Set<Int64>()
+                
                 for message in messages.sorted(by: { $0.id < $1.id }) {
                     guard let messageContext = strongSelf.messageContexts[message.id] else {
                         continue
@@ -216,21 +240,101 @@ public final class PendingMessageManager {
                     
                     switch contentToUpload {
                         case let .ready(content):
-                            strongSelf.beginSendingMessage(messageContext: messageContext, messageId: message.id, content: content)
+                            if let groupingKey = message.groupingKey {
+                                groupIds.insert(groupingKey)
+                            }
+                            strongSelf.beginSendingMessage(messageContext: messageContext, messageId: message.id, groupId: message.groupingKey, content: content)
                         case let .upload(uploadSignal):
                             if strongSelf.canBeginUploadingMessage(id: message.id) {
-                                strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, uploadSignal: uploadSignal)
+                                strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: uploadSignal)
                             } else {
-                                messageContext.state = .waitingForUploadToStart(uploadSignal)
+                                messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: uploadSignal)
                             }
                     }
+                }
+                
+                for groupId in groupIds {
+                    strongSelf.beginSendingGroupIfPossible(groupId: groupId)
                 }
             }
         }))
     }
     
-    private func beginSendingMessage(messageContext: PendingMessageContext, messageId: MessageId, content: PendingMessageUploadedContent) {
-        messageContext.state = .sending
+    private func beginSendingMessage(messageContext: PendingMessageContext, messageId: MessageId, groupId: Int64?, content: PendingMessageUploadedContent) {
+        if let groupId = groupId {
+            messageContext.state = .waitingToBeSent(groupId: groupId, content: content)
+        } else {
+            self.commitSendingSingleMessage(messageContext: messageContext, messageId: messageId, content: content)
+        }
+    }
+    
+    private func beginSendingGroupIfPossible(groupId: Int64) {
+        if let data = self.dataForPendingMessageGroup(groupId) {
+            self.commitSendingMessageGroup(groupId: groupId, messages: data)
+        }
+    }
+    
+    private func dataForPendingMessageGroup(_ groupId: Int64) -> [(messageContext: PendingMessageContext, messageId: MessageId, content: PendingMessageUploadedContent)]? {
+        var result: [(messageContext: PendingMessageContext, messageId: MessageId, content: PendingMessageUploadedContent)] = []
+        
+        loop: for (id, context) in self.messageContexts {
+            switch context.state {
+                case .none:
+                    continue loop
+                case let .waitingForUploadToStart(contextGroupId, _):
+                    if contextGroupId == groupId {
+                        return nil
+                    }
+                case let .uploading(contextGroupId):
+                    if contextGroupId == groupId {
+                        return nil
+                    }
+                case let .waitingToBeSent(contextGroupId, content):
+                    if contextGroupId == groupId {
+                        result.append((context, id, content))
+                    }
+                case let .sending(contextGroupId):
+                    if contextGroupId == groupId {
+                        return nil
+                    }
+            }
+        }
+        
+        if result.isEmpty {
+            return nil
+        } else {
+            return result
+        }
+    }
+    
+    private func commitSendingMessageGroup(groupId: Int64, messages: [(messageContext: PendingMessageContext, messageId: MessageId, content: PendingMessageUploadedContent)]) {
+        for (context, _, _) in messages {
+            context.state = .sending(groupId: groupId)
+        }
+        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendGroupMessagesContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, group: messages.map { ($0.1, $0.2) })
+            |> map { next -> PendingMessageResult in
+                return .progress(1.0)
+            }
+        messages[0].0.disposable.set((sendMessage |> deliverOn(self.queue) |> afterDisposed { [weak self] in
+            if let strongSelf = self {
+                assert(strongSelf.queue.isCurrent())
+                for (_, id, _) in messages {
+                    if let current = strongSelf.messageContexts[id] {
+                        current.status = .none
+                        for subscriber in current.statusSubscribers.copyItems() {
+                            subscriber(nil)
+                        }
+                        if current.statusSubscribers.isEmpty {
+                            strongSelf.messageContexts.removeValue(forKey: id)
+                        }
+                    }
+                }
+            }
+        }).start())
+    }
+    
+    private func commitSendingSingleMessage(messageContext: PendingMessageContext, messageId: MessageId, content: PendingMessageUploadedContent) {
+        messageContext.state = .sending(groupId: nil)
         let sendMessage: Signal<PendingMessageResult, NoError> = self.sendMessageContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, messageId: messageId, content: content)
             |> map { next -> PendingMessageResult in
                 return .progress(1.0)
@@ -266,8 +370,8 @@ public final class PendingMessageManager {
         }))
     }
     
-    private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
-        messageContext.state = .uploading
+    private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, groupId: Int64?, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
+        messageContext.state = .uploading(groupId: groupId)
         
         let status = PendingMessageStatus(isRunning: true, progress: 0.0)
         messageContext.status = status
@@ -290,8 +394,11 @@ public final class PendingMessageManager {
                         }
                     case let .content(content):
                         if let current = strongSelf.messageContexts[id] {
-                            strongSelf.beginSendingMessage(messageContext: current, messageId: id, content: content)
+                            strongSelf.beginSendingMessage(messageContext: current, messageId: id, groupId: groupId, content: content)
                             strongSelf.updateWaitingUploads(peerId: id.peerId)
+                            if let groupId = groupId {
+                                strongSelf.beginSendingGroupIfPossible(groupId: groupId)
+                            }
                         }
                 }
             }
@@ -304,9 +411,9 @@ public final class PendingMessageManager {
         let messageIdsForPeer: [MessageId] = self.messageContexts.keys.filter({ $0.peerId == peerId }).sorted()
         loop: for contextId in messageIdsForPeer {
             let context = self.messageContexts[contextId]!
-            if case let .waitingForUploadToStart(uploadSignal) = context.state {
+            if case let .waitingForUploadToStart(groupId, uploadSignal) = context.state {
                 if self.canBeginUploadingMessage(id: contextId) {
-                    context.state = .uploading
+                    context.state = .uploading(groupId: groupId)
                     let status = PendingMessageStatus(isRunning: true, progress: 0.0)
                     context.status = status
                     for subscriber in context.statusSubscribers.copyItems() {
@@ -328,27 +435,11 @@ public final class PendingMessageManager {
                                     }
                                 case let .content(content):
                                     if let current = strongSelf.messageContexts[contextId] {
-                                        current.state = .sending
-                                        
-                                        current.disposable.set((strongSelf.sendMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, messageId: contextId, content: content)
-                                            |> map { next -> PendingMessageResult in
-                                                return .progress(1.0)
-                                            } |> deliverOn(strongSelf.queue)).start(next: { next in
-                                                if let strongSelf = self {
-                                                    assert(strongSelf.queue.isCurrent())
-                                                    
-                                                    switch next {
-                                                        case let .progress(progress):
-                                                            if let current = strongSelf.messageContexts[contextId] {
-                                                                let status = PendingMessageStatus(isRunning: true, progress: progress)
-                                                                current.status = status
-                                                                for subscriber in current.statusSubscribers.copyItems() {
-                                                                    subscriber(status)
-                                                                }
-                                                            }
-                                                    }
-                                                }
-                                            }))
+                                        strongSelf.beginSendingMessage(messageContext: current, messageId: contextId, groupId: groupId, content: content)
+                                        strongSelf.updateWaitingUploads(peerId: peerId)
+                                        if let groupId = groupId {
+                                            strongSelf.beginSendingGroupIfPossible(groupId: groupId)
+                                        }
                                     }
                             }
                         }
@@ -357,6 +448,151 @@ public final class PendingMessageManager {
                 break loop
             }
         }
+    }
+    
+    private func sendGroupMessagesContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, group: [(messageId: MessageId, content: PendingMessageUploadedContent)]) -> Signal<Void, NoError> {
+        return postbox.modify { [weak self] modifier -> Signal<Void, NoError> in
+            if group.isEmpty {
+                return .complete()
+            }
+            
+            let peerId = group[0].messageId.peerId
+            
+            var messages: [(Message, PendingMessageUploadedContent)] = []
+            for (id, content) in group {
+                if let message = modifier.getMessage(id) {
+                    messages.append((message, content))
+                } else {
+                    return .complete()
+                }
+            }
+            
+            messages.sort { MessageIndex($0.0) < MessageIndex($1.0) }
+            
+            if peerId.namespace == Namespaces.Peer.SecretChat {
+                assertionFailure()
+                return .complete()
+            } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                var isForward = false
+                var replyMessageId: Int32?
+                
+                var flags: Int32 = 0
+                
+                for attribute in messages[0].0.attributes {
+                    if let replyAttribute = attribute as? ReplyMessageAttribute {
+                        replyMessageId = replyAttribute.messageId.id
+                    } else if let _ = attribute as? ForwardSourceInfoAttribute {
+                        isForward = true
+                    } else if let attribute = attribute as? NotificationInfoMessageAttribute {
+                        if attribute.flags.contains(.muted) {
+                            flags |= Int32(1 << 5)
+                        }
+                    }
+                }
+                
+                let sendMessageRequest: Signal<Api.Updates, NoError>
+                if isForward {
+                    flags |= (1 << 9)
+                    
+                    var forwardIds: [(MessageId, Int64)] = []
+                    for (message, content) in messages {
+                        var uniqueId: Int64?
+                        inner: for attribute in message.attributes {
+                            if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
+                                uniqueId = outgoingInfo.uniqueId
+                                break inner
+                            }
+                        }
+                        
+                        if let uniqueId = uniqueId {
+                            switch content {
+                                case let .forward(forwardAttribute):
+                                    forwardIds.append((forwardAttribute.messageId, uniqueId))
+                                default:
+                                    assertionFailure()
+                                    return .complete()
+                            }
+                        } else {
+                            return .complete()
+                        }
+                    }
+                    let forwardPeerIds = Set(forwardIds.map { $0.0.peerId })
+                    if forwardPeerIds.count != 1 {
+                        assertionFailure()
+                        sendMessageRequest = .fail(NoError())
+                    } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = modifier.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer))
+                            |> mapError { _ -> NoError in
+                                return NoError()
+                            }
+                    } else {
+                        assertionFailure()
+                        sendMessageRequest = .fail(NoError())
+                    }
+                    //messages.forwardMessages flags:# silent:flags.5?true background:flags.6?true with_my_score:flags.8?true from_peer:InputPeer id:Vector<int> random_id:Vector<long> to_peer:InputPeer grouped:flags.9?true = Updates;
+                } else {
+                    flags |= (1 << 7)
+                    if let _ = replyMessageId {
+                        flags |= Int32(1 << 0)
+                    }
+                    
+                    //messages.sendMultiMedia flags:# silent:flags.5?true background:flags.6?true clear_draft:flags.7?true peer:InputPeer reply_to_msg_id:flags.0?int multi_media:Vector<InputSingleMedia> = Updates;
+                    
+                    var singleMedias: [Api.InputSingleMedia] = []
+                    for (message, content) in messages {
+                        var uniqueId: Int64?
+                        inner: for attribute in message.attributes {
+                            if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
+                                uniqueId = outgoingInfo.uniqueId
+                                break inner
+                            }
+                        }
+                        if let uniqueId = uniqueId {
+                            switch content {
+                                case let .media(inputMedia):
+                                    singleMedias.append(.inputSingleMedia(media: inputMedia, randomId: uniqueId))
+                                default:
+                                    return .complete()
+                            }
+                        } else {
+                            return .complete()
+                        }
+                    }
+                    
+                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, multiMedia: singleMedias))
+                        |> mapError { _ -> NoError in
+                            return NoError()
+                        }
+                }
+                
+                return sendMessageRequest
+                    |> mapToSignal { result -> Signal<Void, NoError> in
+                        if let strongSelf = self {
+                            return strongSelf.applySentGroupMessages(postbox: postbox, stateManager: stateManager, messages: messages.map { $0.0 }, result: result)
+                        } else {
+                            return .never()
+                        }
+                    }
+                    |> `catch` { _ -> Signal<Void, NoError> in
+                        let modify = postbox.modify { modifier -> Void in
+                            for (id, _) in group {
+                                modifier.updateMessage(id, update: { currentMessage in
+                                    var storeForwardInfo: StoreMessageForwardInfo?
+                                    if let forwardInfo = currentMessage.forwardInfo {
+                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                    }
+                                    return .update(StoreMessage(id: id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                                })
+                            }
+                        }
+                        
+                        return modify
+                    }
+            } else {
+                assertionFailure()
+                return .complete()
+            }
+        } |> switchToLatest
     }
     
     private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, messageId: MessageId, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
@@ -552,6 +788,20 @@ public final class PendingMessageManager {
             if let strongSelf = self {
                 strongSelf.queue.async {
                     if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
+                        for subscriber in context.messageDeliveredSubscribers.copyItems() {
+                            subscriber()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private func applySentGroupMessages(postbox: Postbox, stateManager: AccountStateManager, messages: [Message], result: Api.Updates) -> Signal<Void, NoError> {
+        return applyUpdateGroupMessages(postbox: postbox, stateManager: stateManager, messages: messages, result: result) |> afterDisposed { [weak self] in
+            if let strongSelf = self {
+                strongSelf.queue.async {
+                    if let peerId = messages.first?.id.peerId, let context = strongSelf.peerSummaryContexts[peerId] {
                         for subscriber in context.messageDeliveredSubscribers.copyItems() {
                             subscriber()
                         }

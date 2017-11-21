@@ -7,9 +7,14 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+public enum EnqueueMessageGrouping {
+    case none
+    case auto
+}
+
 public enum EnqueueMessage {
     case message(text: String, attributes: [MessageAttribute], media: Media?, replyToMessageId: MessageId?, localGroupingKey: Int64?)
-    case forward(source: MessageId)
+    case forward(source: MessageId, grouping: EnqueueMessageGrouping)
     
     public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
         switch self {
@@ -182,6 +187,8 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
         
         var addedHashtags: [String] = []
         
+        var localGroupingKeyBySourceKey: [Int64: Int64] = [:]
+        
         var globallyUniqueIds: [Int64] = []
         for (transformedMedia, message) in messages {
             var attributes: [MessageAttribute] = []
@@ -256,7 +263,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         }
                     }
                 
-                    let authorId:PeerId?
+                    let authorId: PeerId?
                     if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info, !info.flags.contains(.messagesShouldHaveSignatures) {
                         authorId = peer.id
                     }  else {
@@ -266,8 +273,9 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                     let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: mediaList, textEntities: entitiesAttribute?.entities)
                     
                     storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
-                case let .forward(source):
-                    if let sourceMessage = modifier.getMessage(source), let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
+                case let .forward(source, grouping):
+                    let sourceMessage = modifier.getMessage(source)
+                    if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         if let peer = peer as? TelegramSecretChat {
                             var isAction = false
                             for media in sourceMessage.media {
@@ -282,6 +290,9 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         }
                         
                         attributes.append(ForwardSourceInfoAttribute(messageId: sourceMessage.id))
+                        if peerId == account.peerId {
+                            attributes.append(SourceReferenceMessageAttribute(messageId: sourceMessage.id))
+                        }
                         attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
                         let forwardInfo: StoreMessageForwardInfo?
                         if let sourceForwardInfo = sourceMessage.forwardInfo {
@@ -318,7 +329,25 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                         
                         let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: sourceMessage.media, textEntities: entitiesAttribute?.entities)
                         
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
+                        let localGroupingKey: Int64?
+                        switch grouping {
+                            case .none:
+                                localGroupingKey = nil
+                            case .auto:
+                                if let groupingKey = sourceMessage.groupingKey {
+                                    if let generatedKey = localGroupingKeyBySourceKey[groupingKey] {
+                                        localGroupingKey = generatedKey
+                                    } else {
+                                        let generatedKey = arc4random64()
+                                        localGroupingKeyBySourceKey[groupingKey] = generatedKey
+                                        localGroupingKey = generatedKey
+                                    }
+                                } else {
+                                    localGroupingKey = nil
+                                }
+                        }
+                        
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
                     }
             }
         }
