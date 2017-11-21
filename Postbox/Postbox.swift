@@ -466,6 +466,11 @@ public final class Modifier {
         return self.postbox?.getMessage(id)
     }
     
+    public func getMessageGroup(_ id: MessageId) -> [Message]? {
+        assert(!self.disposed)
+        return self.postbox?.getMessageGroup(id)
+    }
+    
     public func getTopMesssageIndex(peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex? {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -1875,7 +1880,8 @@ public final class Postbox {
                     }
                     
                     var minIndexWithUnreadMessages: InternalMessageHistoryAnchorIndex?
-                    var maxIndex: InternalMessageHistoryAnchorIndex?
+                    var maxScrollIndex: InternalMessageHistoryAnchorIndex?
+                    var i = 0
                     for peerId in ids {
                         if let (maxReadIndex, unreadCount) = self.messageHistoryTable.maxReadIndex(peerId) {
                             if unreadCount > 0 {
@@ -1887,21 +1893,17 @@ public final class Postbox {
                                     minIndexWithUnreadMessages = maxReadIndex
                                 }
                             }
-                            if let current = maxIndex {
-                                if current < maxReadIndex {
-                                    maxIndex = maxReadIndex
-                                }
-                            } else {
-                                maxIndex = maxReadIndex
-                            }
-                            
-                            index = maxReadIndex
                         }
+                        if i == 0, let scrollIndex = self.peerChatInterfaceStateTable.get(peerId)?.historyScrollMessageIndex {
+                            maxScrollIndex = .message(index: scrollIndex, exact: true)
+                        }
+                        
+                        i += 1
                     }
                     if let minIndexWithUnreadMessages = minIndexWithUnreadMessages {
                         index = minIndexWithUnreadMessages
-                    } else if let maxIndex = maxIndex {
-                        index = maxIndex
+                    } else if let maxScrollIndex = maxScrollIndex {
+                        index = maxScrollIndex
                     }
             }
             var unreadIndex: MessageIndex?
@@ -2609,6 +2611,17 @@ public final class Postbox {
             if case let .Message(index) = entry {
                 if let message = self.messageHistoryTable.getMessage(index) {
                     return self.renderIntermediateMessage(message)
+                }
+            }
+        }
+        return nil
+    }
+    
+    func getMessageGroup(_ id: MessageId) -> [Message]? {
+        if let entry = self.messageHistoryIndexTable.get(id) {
+            if case let .Message(index) = entry {
+                if let messages = self.messageHistoryTable.getMessageGroup(index) {
+                    return messages.map(self.renderIntermediateMessage)
                 }
             }
         }

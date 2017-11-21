@@ -832,6 +832,50 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
+    func getMessageGroup(_ index: MessageIndex) -> [IntermediateMessage]? {
+        if let value = self.valueBox.get(self.table, key: self.key(index)) {
+            let entry = self.readIntermediateEntry(self.key(index), value: value)
+            if case let .Message(message) = entry {
+                if let groupingKey = message.groupingKey {
+                    var result: [IntermediateMessage] = []
+                    var previousIndex = index
+                    while true {
+                        var previous: IntermediateMessageHistoryEntry?
+                        self.valueBox.range(self.table, start: self.key(previousIndex), end: self.lowerBound(index.id.peerId), values: { key, value in
+                            previous = readIntermediateEntry(key, value: value)
+                            return false
+                        }, limit: 1)
+                        if let previous = previous, case let .Message(previousMessage) = previous, previousMessage.groupingKey == groupingKey {
+                            result.insert(previousMessage, at: 0)
+                            previousIndex = MessageIndex(previousMessage)
+                        } else {
+                            break
+                        }
+                    }
+                    result.append(message)
+                    var nextIndex = index
+                    while true {
+                        var next: IntermediateMessageHistoryEntry?
+                        self.valueBox.range(self.table, start: self.key(nextIndex), end: self.upperBound(index.id.peerId), values: { key, value in
+                            next = readIntermediateEntry(key, value: value)
+                            return false
+                        }, limit: 1)
+                        if let next = next, case let .Message(nextMessage) = next, nextMessage.groupingKey == groupingKey {
+                            result.append(nextMessage)
+                            nextIndex = MessageIndex(nextMessage)
+                        } else {
+                            break
+                        }
+                    }
+                    return result
+                } else {
+                    return [message]
+                }
+            }
+        }
+        return nil
+    }
+    
     func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation],  updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         for messageId in self.unsentTable.get() {
             if messageId.peerId == lowerBound.peerId && messageId.namespace == lowerBound.namespace && messageId.id > lowerBound.id {

@@ -556,7 +556,7 @@ final class MutableMessageHistoryView {
             }
             
             if orderStatistics.contains(.locationWithinMonth) {
-                if case let .single(peerId) = peerIds {
+                if let peerId = peerIds.peerIds.first {
                     var topMessageEntryIndex: Int?
                     var index = self.entries.count - 1
                     loop: for entry in self.entries.reversed() {

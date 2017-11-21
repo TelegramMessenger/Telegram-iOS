@@ -14,6 +14,12 @@ public struct SimpleDictionary<K: Hashable, V>: Sequence {
     public init() {
     }
     
+    public init(_ dict: [K: V]) {
+        for (k, v) in dict {
+            self.items.append((k, v))
+        }
+    }
+    
     private init(items: [(K, V)] = []) {
         self.items = items
     }
