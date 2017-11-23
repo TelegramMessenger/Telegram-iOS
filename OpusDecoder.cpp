@@ -8,6 +8,7 @@
 #include "audio/Resampler.h"
 #include "logging.h"
 #include <assert.h>
+#include <algorithm>
 
 #define PACKET_SIZE (960*2)
 
@@ -222,6 +223,9 @@ void tgvoip::OpusDecoder::RunThread(){
 			unsigned char *buf=bufferPool->Get();
 			if(buf){
 				if(size>0){
+					for(std::vector<AudioEffect*>::iterator effect=postProcEffects.begin();effect!=postProcEffects.end();++effect){
+						(*effect)->Process(reinterpret_cast<int16_t*>(processedBuffer+(PACKET_SIZE*i)), 960);
+					}
 					memcpy(buf, processedBuffer+(PACKET_SIZE*i), PACKET_SIZE);
 				}else{
 					LOGE("Error decoding, result=%d", size);
@@ -254,4 +258,14 @@ void tgvoip::OpusDecoder::ResetQueue(){
 
 void tgvoip::OpusDecoder::SetJitterBuffer(JitterBuffer* jitterBuffer){
 	this->jitterBuffer=jitterBuffer;
+}
+
+void tgvoip::OpusDecoder::AddAudioEffect(AudioEffect *effect){
+	postProcEffects.push_back(effect);
+}
+
+void tgvoip::OpusDecoder::RemoveAudioEffect(AudioEffect *effect){
+	std::vector<AudioEffect*>::iterator i=std::find(postProcEffects.begin(), postProcEffects.end(), effect);
+	if(i!=postProcEffects.end())
+		postProcEffects.erase(i);
 }

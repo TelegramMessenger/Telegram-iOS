@@ -180,6 +180,10 @@ void VoIPControllerWrapper::SetProxy(ProxyProtocol protocol, Platform::String^ a
 	controller->SetProxy((int)protocol, _address, port, _username, _password);
 }
 
+void VoIPControllerWrapper::SetAudioOutputGainControlEnabled(bool enabled){
+	controller->SetAudioOutputGainControlEnabled(enabled);
+}
+
 void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
 	JsonObject^ jconfig=JsonValue::Parse(json)->GetObject();
 	std::map<std::string, std::string> config;

@@ -97,12 +97,12 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 	if(enableAGC){
 		agc=WebRtcAgc_Create();
 		WebRtcAgcConfig agcConfig;
-		agcConfig.compressionGaindB = 9;
+		agcConfig.compressionGaindB = 20;
 		agcConfig.limiterEnable = 1;
-		agcConfig.targetLevelDbfs = 3;
-		WebRtcAgc_Init(agc, 0, 255, kAgcModeAdaptiveAnalog, 48000);
+		agcConfig.targetLevelDbfs = 9;
+		WebRtcAgc_Init(agc, 0, 255, kAgcModeAdaptiveDigital, 48000);
 		WebRtcAgc_set_config(agc, agcConfig);
-		agcMicLevel=128;
+		agcMicLevel=0;
 	}
 #endif
 }
@@ -352,5 +352,77 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 	((webrtc::SplittingFilter*)splittingFilter)->Synthesis(bufOut, bufIn);
 	
 	memcpy(samplesOut, bufIn->ibuf_const()->bands(0)[0], 960*2);
+}
+
+AudioEffect::~AudioEffect(){
+
+}
+
+void AudioEffect::SetPassThrough(bool passThrough){
+	this->passThrough=passThrough;
+}
+
+AutomaticGainControl::AutomaticGainControl(){
+	splittingFilter=new webrtc::SplittingFilter(1, 3, 960);
+	splittingFilterIn=new webrtc::IFChannelBuffer(960, 1, 1);
+	splittingFilterOut=new webrtc::IFChannelBuffer(960, 1, 3);
+
+	agc=WebRtcAgc_Create();
+	WebRtcAgcConfig agcConfig;
+	agcConfig.compressionGaindB = 9;
+	agcConfig.limiterEnable = 1;
+	agcConfig.targetLevelDbfs = 3;
+	WebRtcAgc_Init(agc, 0, 255, kAgcModeAdaptiveDigital, 48000);
+	WebRtcAgc_set_config(agc, agcConfig);
+	agcMicLevel=0;
+}
+
+AutomaticGainControl::~AutomaticGainControl(){
+	delete (webrtc::SplittingFilter*)splittingFilter;
+	delete (webrtc::IFChannelBuffer*)splittingFilterIn;
+	delete (webrtc::IFChannelBuffer*)splittingFilterOut;
+	WebRtcAgc_Free(agc);
+}
+
+void AutomaticGainControl::Process(int16_t *inOut, size_t numSamples){
+	if(passThrough)
+		return;
+	if(numSamples!=960){
+		LOGW("AutomaticGainControl only works on 960-sample buffers (got %u samples)", numSamples);
+		return;
+	}
+	//LOGV("processing frame through AGC");
+
+	webrtc::IFChannelBuffer* bufIn=(webrtc::IFChannelBuffer*) splittingFilterIn;
+	webrtc::IFChannelBuffer* bufOut=(webrtc::IFChannelBuffer*) splittingFilterOut;
+
+	memcpy(bufIn->ibuf()->bands(0)[0], inOut, 960*2);
+
+	((webrtc::SplittingFilter*)splittingFilter)->Analysis(bufIn, bufOut);
+
+	int i;
+	int16_t _agcOut[3][320];
+	int16_t* agcIn[3];
+	int16_t* agcOut[3];
+	for(i=0;i<3;i++){
+		agcIn[i]=(int16_t*)bufOut->ibuf_const()->bands(0)[i];
+		agcOut[i]=_agcOut[i];
+	}
+	uint8_t saturation;
+	WebRtcAgc_AddMic(agc, agcIn, 3, 160);
+	WebRtcAgc_Process(agc, (const int16_t *const *) agcIn, 3, 160, agcOut, agcMicLevel, &agcMicLevel, 0, &saturation);
+	for(i=0;i<3;i++){
+		agcOut[i]+=160;
+		agcIn[i]+=160;
+	}
+	WebRtcAgc_AddMic(agc, agcIn, 3, 160);
+	WebRtcAgc_Process(agc, (const int16_t *const *) agcIn, 3, 160, agcOut, agcMicLevel, &agcMicLevel, 0, &saturation);
+	memcpy(bufOut->ibuf()->bands(0)[0], _agcOut[0], 320*2);
+	memcpy(bufOut->ibuf()->bands(0)[1], _agcOut[1], 320*2);
+	memcpy(bufOut->ibuf()->bands(0)[2], _agcOut[2], 320*2);
+
+	((webrtc::SplittingFilter*)splittingFilter)->Synthesis(bufOut, bufIn);
+
+	memcpy(inOut, bufIn->ibuf_const()->bands(0)[0], 960*2);
 }
 

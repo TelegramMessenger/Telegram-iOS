@@ -75,12 +75,12 @@ void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 			memset(buf.mData, 0, buf.mDataByteSize);
 			return;
 		}
-		while(remainingDataSize<buf.mDataByteSize){
-			assert(remainingDataSize+BUFFER_SIZE*2<10240);
+#if TARGET_OS_OSX
+		while(remainingDataSize<buf.mDataByteSize/2){
+			assert(remainingDataSize+BUFFER_SIZE*2<sizeof(remainingData));
 			InvokeCallback(remainingData+remainingDataSize, BUFFER_SIZE*2);
 			remainingDataSize+=BUFFER_SIZE*2;
 		}
-#if TARGET_OS_OSX
 		float* dst=reinterpret_cast<float*>(buf.mData);
 		int16_t* src=reinterpret_cast<int16_t*>(remainingData);
 		for(k=0;k<buf.mDataByteSize/4;k++){
@@ -89,6 +89,11 @@ void AudioOutputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 		remainingDataSize-=buf.mDataByteSize/2;
 		memmove(remainingData, remainingData+buf.mDataByteSize/2, remainingDataSize);
 #else
+		while(remainingDataSize<buf.mDataByteSize){
+			assert(remainingDataSize+BUFFER_SIZE*2<sizeof(remainingData));
+			InvokeCallback(remainingData+remainingDataSize, BUFFER_SIZE*2);
+			remainingDataSize+=BUFFER_SIZE*2;
+		}
 		memcpy(buf.mData, remainingData, buf.mDataByteSize);
 		remainingDataSize-=buf.mDataByteSize;
 		memmove(remainingData, remainingData+buf.mDataByteSize, remainingDataSize);

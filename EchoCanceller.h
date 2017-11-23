@@ -10,6 +10,7 @@
 #include "threading.h"
 #include "BufferPool.h"
 #include "BlockingQueue.h"
+#include "MediaStreamItf.h"
 
 namespace tgvoip{
 class EchoCanceller{
@@ -48,6 +49,29 @@ private:
 	int32_t agcMicLevel;
 #endif
 };
-}
+
+	class AudioEffect{
+	public:
+		virtual ~AudioEffect()=0;
+		virtual void Process(int16_t* inOut, size_t numSamples)=0;
+		virtual void SetPassThrough(bool passThrough);
+	protected:
+		bool passThrough;
+	};
+
+	class AutomaticGainControl : public AudioEffect{
+	public:
+		AutomaticGainControl();
+		virtual ~AutomaticGainControl();
+		virtual void Process(int16_t* inOut, size_t numSamples);
+
+	private:
+		void* agc;
+		void* splittingFilter;
+		void* splittingFilterIn;
+		void* splittingFilterOut;
+		int32_t agcMicLevel;
+	};
+};
 
 #endif //LIBTGVOIP_ECHOCANCELLER_H

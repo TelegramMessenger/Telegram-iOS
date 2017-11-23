@@ -299,6 +299,10 @@ extern "C" JNIEXPORT jstring Java_org_telegram_messenger_voip_VoIPController_nat
 	return env->NewStringUTF(log.c_str());
 }
 
+extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeSetAudioOutputGainControlEnabled(JNIEnv* env, jclass clasz, jlong inst, jboolean enabled){
+	((VoIPController*)(intptr_t)inst)->SetAudioOutputGainControlEnabled(enabled);
+}
+
 extern "C" JNIEXPORT jint Java_org_telegram_messenger_voip_Resampler_convert44to48(JNIEnv* env, jclass cls, jobject from, jobject to){
 	return tgvoip::audio::Resampler::Convert44To48((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
 }
