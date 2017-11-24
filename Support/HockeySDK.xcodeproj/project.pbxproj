@@ -937,8 +937,8 @@
 				1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */,
 				1E27E60A1B74F01400192AE2 /* crashonlyextensions.xcconfig */,
 				1E45A90E1B78DB0C002CA772 /* default.xcconfig */,
-				B24AB7651FC8C1EC00AAAD1B /* HockeySDKDistribution.sh */,
 				B22DFBFF1FC74DF50052AF19 /* feedbackonly.xcconfig */,
+				B24AB7651FC8C1EC00AAAD1B /* HockeySDKDistribution.sh */,
 			);
 			name = Support;
 			sourceTree = "<group>";
