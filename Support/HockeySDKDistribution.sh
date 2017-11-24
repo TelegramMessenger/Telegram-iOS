@@ -16,6 +16,7 @@ ZIP_FOLDER=HockeySDK-iOS
 TEMP_DIR=${PRODUCTS_DIR}/${ZIP_FOLDER}
 INSTALL_DIR=${TEMP_DIR}/${FMK_NAME}.framework
 ALL_FEATURES_INSTALL_DIR=${TEMP_DIR}/HockeySDKAllFeatures/${FMK_NAME}.framework
+FEEDBACK_ONLY_INSTALL_DIR=${TEMP_DIR}/HockeySDKFeedbackOnly/${FMK_NAME}.framework
 
 # Working dir will be deleted after the framework creation.
 WRK_DIR=build
@@ -29,6 +30,8 @@ DEVICE_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphoneos
 SIMULATOR_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphonesimulator
 DEVICE_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphoneos
 SIMULATOR_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphonesimulator
+DEVICE_DIR_ONLY_FEEDBACK=${WRK_DIR}/ReleaseFeedbackOnly-iphoneos
+SIMULATOR_DIR_ONLY_FEEDBACK=${WRK_DIR}/ReleaseFeedbackOnly-iphonesimulator
 
 # //////////////////////////////
 # Building the  SDK with all features except the Feedback Feature
@@ -217,6 +220,51 @@ fi
 mkdir "${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension"
 mv "${INSTALL_DIR}" "${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension/${FMK_NAME}.framework"
 
+rm -r "${WRK_DIR}"
+
+# //////////////////////////////
+# Building the Feedback-Only SDK
+# //////////////////////////////
+
+# Building both architectures.
+xcodebuild -project "HockeySDK.xcodeproj" -configuration "ReleaseFeedbackOnly" -target "${FMK_NAME}" -sdk iphoneos
+xcodebuild -project "HockeySDK.xcodeproj" -configuration "ReleaseFeedbackOnly" -target "${FMK_NAME}" -sdk iphonesimulator
+
+# Creates and renews the final product folder.
+mkdir -p "${FEEDBACK_ONLY_INSTALL_DIR}"
+mkdir -p "${FEEDBACK_ONLY_INSTALL_DIR}/Headers"
+mkdir -p "${FEEDBACK_ONLY_INSTALL_DIR}/Modules"
+
+# Copy the swift import file
+cp -f "${SRCROOT}/module_feedbackonly.modulemap" "${FEEDBACK_ONLY_INSTALL_DIR}/Modules/module.modulemap"
+
+# Copies the headers and resources files to the final product folder.
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}"/include/HockeySDK/BITFeedback*.h "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITHockeyAttachment.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITHockeyBaseManager.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITHockeyBaseViewController.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITHockeyManager.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITHockeyManagerDelegate.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+#cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITMetricsManager.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+#cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITStoreUpdateManager.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+#cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITStoreUpdateManagerDelegate.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+#cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITUpdateManager.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+#cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITUpdateManagerDelegate.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+#cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/BITUpdateViewController.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/HockeySDK.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/HockeySDKEnums.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/HockeySDKFeatureConfig.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/HockeySDKNullability.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
+
+# Use the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.
+lipo -create "${DEVICE_DIR_ONLY_FEEDBACK}/lib${FMK_NAME}.a" "${SIMULATOR_DIR_ONLY_FEEDBACK}/lib${FMK_NAME}.a" -output "${FEEDBACK_ONLY_INSTALL_DIR}/${FMK_NAME}"
+
+# build embeddedframework folder and move framework into it
+mkdir "${FEEDBACK_ONLY_INSTALL_DIR}/../${FMK_NAME}.embeddedframework"
+mv "${FEEDBACK_ONLY_INSTALL_DIR}/" "${FEEDBACK_ONLY_INSTALL_DIR}/../${FMK_NAME}.embeddedframework/${FMK_NAME}.framework"
+mv "${DEVICE_DIR_ONLY_FEEDBACK}/${FMK_RESOURCE_BUNDLE}.bundle" "${TEMP_DIR}/HockeySDKFeedbackOnly/${FMK_NAME}.embeddedframework/"
+
+# do some cleanup
 rm -r "${WRK_DIR}"
 
 # //////////////////////////////
