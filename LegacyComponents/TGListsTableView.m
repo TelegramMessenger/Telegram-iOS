@@ -93,10 +93,13 @@
 - (void)didAddSubview:(UIView *)subview
 {
     [super didAddSubview:subview];
+    if (!self.mayHaveIndex)
+        return;
     
     if (iosMajorVersion() >= 7)
     {
         static Class indexClass = Nil;
+        
         static ptrdiff_t backgroundColorPtr = -1;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^

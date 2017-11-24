@@ -4,6 +4,7 @@
 
 @property (nonatomic, assign) bool blockContentOffset;
 @property (nonatomic, assign) CGFloat indexOffset;
+@property (nonatomic, assign) bool mayHaveIndex;
 
 @property (nonatomic, copy) void (^onHitTest)(CGPoint);
 

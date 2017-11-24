@@ -98,6 +98,7 @@ static const char *freedomDecoratedClass = "freedomDecoratedClass";
 
 static int (*freedom_getClassList)(Class *, int) = NULL;
 static const char * (*freedom_class_getName)(Class cls) = NULL;
+static bool freedom_initialized = false;
 
 FreedomIdentifier FreedomIdentifierEmpty = (FreedomIdentifier){ .string = NULL, .key = 0 };
 
@@ -143,6 +144,7 @@ Class freedomClass(uint32_t name)
             
             free(classList);
         }
+        freedom_initialized = true;
     });
     
     auto it = classMap.find(name);
@@ -549,8 +551,19 @@ static SEL freedomFindMethodName(uint32_t name, Class className, Method *methodL
 void freedomClassAutoDecorate(uint32_t name, __unused FreedomDecoration *classDecorations, __unused int numClassDecorations, FreedomDecoration *instanceDecorations, int numInstanceDecorations)
 {
     __unsafe_unretained Class className = freedomClass(name);
-    if (className != Nil)
+    freedomClassAutoDecorateExplicit(className, name, classDecorations, numClassDecorations, instanceDecorations, numInstanceDecorations);
+}
+
+void freedomClassAutoDecorateExplicit(Class className, uint32_t name, __unused FreedomDecoration *classDecorations, __unused int numClassDecorations, FreedomDecoration *instanceDecorations, int numInstanceDecorations)
+{
+    if (className != nil)
     {
+        if (name == 0)
+        {
+            const char *string = [NSStringFromClass(className) UTF8String];
+            name = (uint32_t)murMurHashBytes32((void *)string, (int)strlen(string));
+        }
+            
         Class decoratedClass = objc_allocateClassPair(className, [[NSString alloc] initWithFormat:@"Decorated%" PRIx32 "", name].UTF8String, 0);
         
         unsigned int methodCount = 0;
@@ -654,4 +667,9 @@ void freedomInit()
         freedom_getClassList = &objc_getClassList;
         freedom_class_getName = &class_getName;
     });
+}
+
+bool freedomInitialized()
+{
+    return freedom_initialized;
 }

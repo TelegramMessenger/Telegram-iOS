@@ -130,7 +130,7 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
 {
     _hiddenPipe = [[SPipe alloc] init];
     
-    if (iosMajorVersion() >= 7 && [TGViewController isWidescreen] && [CMMotionActivityManager isActivityAvailable])
+    if (iosMajorVersion() >= 7 && iosMajorVersion() < 10 && [TGViewController isWidescreen] && [CMMotionActivityManager isActivityAvailable])
     {
         TGFixView *activityIndicator = [[TGFixView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
         activityIndicator.alpha = 0.02f;

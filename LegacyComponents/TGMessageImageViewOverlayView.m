@@ -427,10 +427,10 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
     {
-        fireIconMask = [UIImage imageNamed:@"SecretPhotoFireMask.png"];
-        fireIcon = [UIImage imageNamed:@"SecretPhotoFire.png"];
-        viewedIconMask = [UIImage imageNamed:@"SecretPhotoCheckMask.png"];
-        viewedIcon = [UIImage imageNamed:@"SecretPhotoCheck.png"];
+        fireIconMask = TGImageNamed(@"SecretPhotoFireMask.png");
+        fireIcon = TGImageNamed(@"SecretPhotoFire.png");
+        viewedIconMask = TGImageNamed(@"SecretPhotoCheckMask.png");
+        viewedIcon = TGImageNamed(@"SecretPhotoCheck.png");
         progressFireIcon = TGTintedImage(fireIcon, [UIColor whiteColor]);
     });
     
@@ -700,7 +700,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
                 CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
                 
-                UIImage *iconImage = [UIImage imageNamed:@"ModernMessageDocumentIconIncoming.png"];
+                UIImage *iconImage = TGImageNamed(@"ModernMessageDocumentIconIncoming.png");
                 [iconImage drawAtPoint:CGPointMake(floor((diameter - iconImage.size.width) / 2.0f), floor((diameter - iconImage.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:1.0f];
             }
             else if (_overlayStyle == TGMessageImageViewOverlayStyleOutgoing)
@@ -708,7 +708,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
                 CGContextSetFillColorWithColor(context, TGColorWithHexAndAlpha(0x3fc33b, 1.0f).CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
                 
-                UIImage *iconImage = [UIImage imageNamed:@"ModernMessageDocumentIconOutgoing.png"];
+                UIImage *iconImage = TGImageNamed(@"ModernMessageDocumentIconOutgoing.png");
                 [iconImage drawAtPoint:CGPointMake(floor((diameter - iconImage.size.width) / 2.0f), floor((diameter - iconImage.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:1.0f];
             }
             else

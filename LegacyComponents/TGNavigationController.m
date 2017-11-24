@@ -18,12 +18,6 @@
 
 @end
 
-@interface UINavigationController () {
-    
-}
-
-@end
-
 @interface TGNavigationController () <UINavigationControllerDelegate, UIGestureRecognizerDelegate>
 {
     UITapGestureRecognizer *_dimmingTapRecognizer;
@@ -33,6 +27,10 @@
     CGFloat _currentAdditionalStatusBarHeight;
     
     UIPanGestureRecognizer *_panGestureRecognizer;
+    
+    bool _animatingControllerPush;
+    
+    bool _didFirstLayout;
 }
 
 @property (nonatomic) bool wasShowingNavigationBar;
@@ -135,6 +133,9 @@
 
 - (BOOL)gestureRecognizerShouldBegin:(UIPanGestureRecognizer *)gestureRecognizer
 {
+    if (_animatingControllerPush)
+        return false;
+        
     CGPoint velocity = [gestureRecognizer velocityInView:gestureRecognizer.view];
     if (fabs(velocity.y) > fabs(velocity.x))
         return false;
@@ -155,6 +156,9 @@
 
 - (BOOL)gestureRecognizer:(UIPanGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
 {
+    if (_animatingControllerPush)
+        return false;
+    
     CGPoint location = [gestureRecognizer locationInView:gestureRecognizer.view];
     
     if (self.viewControllers.count == 1)
@@ -192,9 +196,17 @@
     return false;
 }
 
+- (void)navigationController:(UINavigationController *)navigationController didShowViewController:(UIViewController *)viewController animated:(BOOL)animated
+{
+    _animatingControllerPush = false;
+}
+
 - (UIGestureRecognizer *)interactivePopGestureRecognizer
 {
-    return _panGestureRecognizer;
+    if (_panGestureRecognizer != nil)
+        return _panGestureRecognizer;
+    
+    return [super interactivePopGestureRecognizer];
 }
 
 - (void)setDisplayPlayer:(bool)displayPlayer
@@ -400,18 +412,29 @@ static UIView *findDimmingView(UIView *view)
 - (void)viewDidLayoutSubviews
 {
     [super viewDidLayoutSubviews];
-    
+
     CGSize screenSize = TGScreenSize();
+    
     static Class containerClass = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
+    
+    if (freedomInitialized())
     {
-        containerClass = freedomClass(0xf045e5dfU);
-    });
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^
+        {
+            containerClass = freedomClass(0xf045e5dfU);
+        });
+    }
     
     for (UIView *view in self.view.subviews)
     {
-        if ([view isKindOfClass:containerClass])
+        bool isContainerView = false;
+        if (freedomInitialized())
+            isContainerView = [view isKindOfClass:containerClass];
+        else
+            isContainerView = [NSStringFromClass(view.class) rangeOfString:@"TransitionView"].location != NSNotFound;
+        
+        if (isContainerView)
         {
             CGRect frame = view.frame;
             
@@ -448,6 +471,8 @@ static UIView *findDimmingView(UIView *view)
             break;
         }
     }
+    
+    _didFirstLayout = true;
 }
 
 - (void)viewDidLoad
@@ -622,6 +647,8 @@ static UIView *findDimmingView(UIView *view)
     }
     [super pushViewController:viewController animated:animated];
     _isInControllerTransition = false;
+    
+    _animatingControllerPush = animated;
 }
 
 - (void)setViewControllers:(NSArray *)viewControllers animated:(BOOL)animated
@@ -639,6 +666,8 @@ static UIView *findDimmingView(UIView *view)
     [self setupStatusBarOnControllers:viewControllers];
     [super setViewControllers:viewControllers animated:animated];
     _isInControllerTransition = false;
+    
+    _animatingControllerPush = animated;
     
 }
 

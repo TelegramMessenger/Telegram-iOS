@@ -746,8 +746,19 @@ UIImage *TGCircleImage(CGFloat radius, UIColor *color)
     return image;
 }
 
+UIImage *TGImageNamed(NSString *name)
+{
+    if (iosMajorVersion() >= 8)
+        return [UIImage imageNamed:name inBundle:nil compatibleWithTraitCollection:nil];
+    else
+        return [UIImage imageNamed:name];
+}
+
 UIImage *TGTintedImage(UIImage *image, UIColor *color)
 {
+    if (image == nil)
+        return nil;
+    
     UIGraphicsBeginImageContextWithOptions(image.size, false, 0.0f);
     CGContextRef context = UIGraphicsGetCurrentContext();
     [image drawInRect:CGRectMake(0, 0, image.size.width, image.size.height)];
@@ -1069,7 +1080,7 @@ static bool readCGFloat(NSString *string, int &position, CGFloat &result) {
             } else {
                 seenDot = true;
             }
-        } else if (c < '0' || c > '9') {
+        } else if ((c < '0' || c > '9') && c != '-') {
             if (position == start) {
                 result = 0.0f;
                 return true;
@@ -1134,6 +1145,9 @@ void TGDrawSvgPath(CGContextRef context, NSString *path) {
             CGContextBeginPath(context);
         } else if (c == 'S') { // Z
             CGContextClosePath(context);
+            CGContextStrokePath(context);
+            CGContextBeginPath(context);
+        } else if (c == 'U') { // Z
             CGContextStrokePath(context);
             CGContextBeginPath(context);
         }

@@ -30,7 +30,8 @@ typedef struct {
 } FreedomBitfield;
     
 void freedomInit();
-
+bool freedomInitialized();
+    
 Class freedomClass(uint32_t name);
 Class freedomMakeClass(Class superclass, Class subclass);
 ptrdiff_t freedomIvarOffset(Class targetClass, uint32_t name);
@@ -42,6 +43,7 @@ void freedomDumpBitfields(Class targetClass, void *object, uint32_t fieldName);
     
 IMP freedomNativeImpl(Class targetClass, SEL selector);
 void freedomClassAutoDecorate(uint32_t name, FreedomDecoration *classDecorations, int numClassDecorations, FreedomDecoration *instanceDecorations, int numInstanceDecorations);
+void freedomClassAutoDecorateExplicit(Class c, uint32_t name, FreedomDecoration *classDecorations, int numClassDecorations, FreedomDecoration *instanceDecorations, int numInstanceDecorations);
 IMP freedomImpl(id target, uint32_t name, SEL *selector);
 IMP freedomImplInstancesOfClass(Class targetClass, uint32_t name, SEL *selector);
 

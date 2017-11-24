@@ -31,7 +31,8 @@ UIImage *TGSecretAttachmentImage(UIImage *source, CGSize sourceSize, CGSize size
 UIImage *TGIdenticonImage(NSData *data, NSData *additionalData, CGSize size);
     
 UIImage *TGCircleImage(CGFloat radius, UIColor *color);
-    
+
+UIImage *TGImageNamed(NSString *name);
 UIImage *TGTintedImage(UIImage *image, UIColor *color);
     
 NSString *TGImageHash(NSData *data);
