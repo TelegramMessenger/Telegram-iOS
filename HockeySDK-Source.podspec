@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = 'HockeySDK-Source'
-  s.version           = '5.0.0'
+  s.version           = '5.0.1'
 
   s.summary           = 'Collect live crash reports, get feedback from your users, distribute your betas, and analyze your test coverage with HockeyApp.'
   s.description       = <<-DESC
@@ -22,10 +22,10 @@ Pod::Spec.new do |s|
   s.source_files      = 'Classes'
   s.requires_arc      = true
   
-  s.frameworks              = 'AssetsLibrary', 'CoreGraphics', 'CoreTelephony', 'CoreText', 'MobileCoreServices', 'Photos', 'QuartzCore', 'QuickLook', 'Security', 'SystemConfiguration', 'UIKit'
+  s.frameworks              = 'CoreGraphics', 'CoreTelephony', 'CoreText', 'MobileCoreServices', 'Photos', 'QuartzCore', 'QuickLook', 'Security', 'SystemConfiguration', 'UIKit'
   s.libraries = 'c++', 'z'
   s.vendored_frameworks = 'Vendor/CrashReporter.framework'
-  s.pod_target_xcconfig     = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"104\\"" BITHOCKEY_C_BUILD="\\"104\\""} }
+  s.pod_target_xcconfig     = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"105\\"" BITHOCKEY_C_BUILD="\\"105\\""} }
   s.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
   s.preserve_paths          = 'Resources', 'Support'
   s.private_header_files  = 'Classes/*Private.h'
