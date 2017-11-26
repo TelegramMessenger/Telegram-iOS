@@ -25,11 +25,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
- 
-/*
- * This is intended to be used only by Cocoapods
- */
 
+/*
+ * This file is only used by the binary framework target when building
+ * and creating the crash reporting only framework
+ *
+ * Attention: Do not include this into your projects yourself!
+ */
+ 
 #ifndef HockeySDK_HockeySDKFeatureConfig_h
 #define HockeySDK_HockeySDKFeatureConfig_h
 
@@ -37,7 +40,7 @@
 /**
  * If true, include support for handling crash reports
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_CRASH_REPORTER
 #    define HOCKEYSDK_FEATURE_CRASH_REPORTER 0
@@ -47,17 +50,17 @@
 /**
  * If true, include support for managing user feedback
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_FEEDBACK
-#    define HOCKEYSDK_FEATURE_FEEDBACK 0
+#    define HOCKEYSDK_FEATURE_FEEDBACK 1
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
 
 /**
  * If true, include support for informing the user about new updates pending in the App Store
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_STORE_UPDATES
 #    define HOCKEYSDK_FEATURE_STORE_UPDATES 0
@@ -67,7 +70,7 @@
 /**
  * If true, include support for authentication installations for Ad-Hoc and Enterprise builds
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_AUTHENTICATOR
 #    define HOCKEYSDK_FEATURE_AUTHENTICATOR 0
@@ -77,11 +80,20 @@
 /**
  * If true, include support for handling in-app updates for Ad-Hoc and Enterprise builds
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_UPDATES
 #    define HOCKEYSDK_FEATURE_UPDATES 0
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 
+
+/**
+ * If true, include support for auto collecting metrics data such as sessions and user
+ *
+ * _Default_: Enabled
+ */
+#ifndef HOCKEYSDK_FEATURE_METRICS
+#    define HOCKEYSDK_FEATURE_METRICS 0
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 
 #endif /* HockeySDK_HockeySDKFeatureConfig_h */

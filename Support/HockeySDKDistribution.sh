@@ -250,6 +250,9 @@ cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/HockeySDKEnums.h
 cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/HockeySDKFeatureConfig.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
 cp -R "${SRCROOT}/${DEVICE_DIR_ONLY_FEEDBACK}/include/HockeySDK/HockeySDKNullability.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/"
 
+# Copy the patched feature header
+cp -f "${SRCROOT}/HockeySDKFeedbackOnlyConfig.h" "${FEEDBACK_ONLY_INSTALL_DIR}/Headers/HockeySDKFeatureConfig.h"
+
 # Use the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.
 lipo -create "${DEVICE_DIR_ONLY_FEEDBACK}/lib${FMK_NAME}.a" "${SIMULATOR_DIR_ONLY_FEEDBACK}/lib${FMK_NAME}.a" -output "${FEEDBACK_ONLY_INSTALL_DIR}/${FMK_NAME}"
 

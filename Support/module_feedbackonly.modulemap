@@ -13,9 +13,5 @@ framework module HockeySDK {
   link framework "QuartzCore"
   link framework "QuickLook"
   link framework "Security"
-  link framework "SystemConfiguration"
   link framework "UIKit"
-  link "c++"
-  link "z"
-
 }
