@@ -51,9 +51,16 @@ Pod::Spec.new do |s|
   s.subspec 'AllFeaturesLib' do |ss|
     ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDKAllFeatures/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDKAllFeatures/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.lproj'] }
 
-    ss.frameworks = 'AssetsLibrary', 'CoreGraphics', 'CoreText', 'CoreTelephony', 'MobileCoreServices', 'Photos', 'QuartzCore', 'QuickLook', 'UIKit'
+    ss.frameworks = 'CoreGraphics', 'CoreText', 'CoreTelephony', 'MobileCoreServices', 'Photos', 'QuartzCore', 'QuickLook', 'UIKit'
     ss.libraries = 'z'
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKAllFeatures/HockeySDK.embeddedframework/HockeySDK.framework'
+  end
+
+  s.subspec 'FeedbackOnlyLib' do |ss|
+    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDKFeedbackOnly/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDKFeedbackOnly/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.lproj'] }
+
+    ss.frameworks = 'CoreGraphics', 'CoreText', 'CoreTelephony', 'MobileCoreServices', 'Photos', 'QuartzCore', 'QuickLook', 'UIKit'
+    ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKFeedbackOnly/HockeySDK.embeddedframework/HockeySDK.framework'
   end
 
 end
