@@ -275,6 +275,9 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
     public var sizeValue: Int32? {
         return self.size
     }
+    public var pathValue: String {
+        return localFilePath
+    }
     
     public required init(decoder: PostboxDecoder) {
         self.localFilePath = decoder.decodeStringForKey("p", orElse: "")
