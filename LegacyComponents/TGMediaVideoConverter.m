@@ -187,15 +187,18 @@
         
         return [[SBlockDisposable alloc] initWithBlock:^
         {
-            [context modify:^id(TGMediaVideoConversionContext *currentContext)
+            [queue dispatch:^
             {
-                if (currentContext.finished)
-                    return currentContext;
-                
-                [currentContext.videoProcessor cancel];
-                [currentContext.audioProcessor cancel];
-                
-                return [currentContext cancelledContext];
+                [context modify:^id(TGMediaVideoConversionContext *currentContext)
+                {
+                    if (currentContext.finished)
+                        return currentContext;
+                    
+                    [currentContext.videoProcessor cancel];
+                    [currentContext.audioProcessor cancel];
+                    
+                    return [currentContext cancelledContext];
+                }];
             }];
         }];
     }];

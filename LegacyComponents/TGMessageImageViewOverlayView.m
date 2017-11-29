@@ -868,16 +868,23 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             CGContextSetFillColorWithColor(context, TGColorWithHexAndAlpha(0xffffffff, 0.7f).CGColor);
             CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
             
+            CGFloat factor = 1.0f;
+            if (diameter < 33.0f)
+            {
+                CGContextScaleCTM(context, 0.64f, 0.64f);
+                factor = 1.5625;
+            }
+            
             if (_type == TGMessageImageViewOverlayViewTypeSecret)
             {
-                [fireIconMask drawAtPoint:CGPointMake(floor((diameter - fireIcon.size.width) / 2.0f), floor((diameter - fireIcon.size.height) / 2.0f)) blendMode:kCGBlendModeDestinationIn alpha:1.0f];
-                [fireIcon drawAtPoint:CGPointMake(floor((diameter - fireIcon.size.width) / 2.0f), floor((diameter - fireIcon.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:0.4f];
+                [fireIconMask drawAtPoint:CGPointMake(floor((diameter * factor - fireIcon.size.width) / 2.0f), floor((diameter * factor - fireIcon.size.height) / 2.0f)) blendMode:kCGBlendModeDestinationIn alpha:1.0f];
+                [fireIcon drawAtPoint:CGPointMake(floor((diameter * factor - fireIcon.size.width) / 2.0f), floor((diameter * factor - fireIcon.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:0.4f];
             }
             else
             {
                 CGPoint offset = CGPointMake(1.0f, 2.0f);
-                [viewedIconMask drawAtPoint:CGPointMake(offset.x + floor((diameter - viewedIcon.size.width) / 2.0f), offset.y + floor((diameter - viewedIcon.size.height) / 2.0f)) blendMode:kCGBlendModeDestinationIn alpha:1.0f];
-                [viewedIcon drawAtPoint:CGPointMake(offset.x + floor((diameter - viewedIcon.size.width) / 2.0f), offset.y + floor((diameter - viewedIcon.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:0.3f];
+                [viewedIconMask drawAtPoint:CGPointMake(offset.x + floor((diameter * factor - viewedIcon.size.width) / 2.0f), offset.y + floor((diameter * factor - viewedIcon.size.height) / 2.0f)) blendMode:kCGBlendModeDestinationIn alpha:1.0f];
+                [viewedIcon drawAtPoint:CGPointMake(offset.x + floor((diameter * factor - viewedIcon.size.width) / 2.0f), offset.y + floor((diameter * factor - viewedIcon.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:0.3f];
             }
             
             break;
@@ -951,8 +958,17 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             path.lineCapStyle = kCGLineCapRound;
             [path stroke];
             
-            [progressFireIcon drawAtPoint:CGPointMake(floor((diameter - progressFireIcon.size.width) / 2.0f), floor((diameter - progressFireIcon.size.height) / 2.0f))];
+            CGContextSaveGState(context);
+            CGFloat factor = 1.0f;
+            if (diameter < 33.0f)
+            {
+                CGContextScaleCTM(context, 0.64f, 0.64f);
+                factor = 1.5625;
+            }
             
+            [progressFireIcon drawAtPoint:CGPointMake(floor((diameter * factor - progressFireIcon.size.width) / 2.0f), floor((diameter * factor - progressFireIcon.size.height) / 2.0f))];
+            
+            CGContextRestoreGState(context);
             CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
             
             for (TGMessageImageViewOverlayParticle *particle in _particles)

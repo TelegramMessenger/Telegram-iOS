@@ -468,7 +468,8 @@
 {
     bool storeAssets = (_editingContext != nil) && self.shouldStoreAssets;
     
-    [[NSUserDefaults standardUserDefaults] setObject:@(!_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
+    if (_intent == TGMediaAssetsControllerSendMediaIntent)
+        [[NSUserDefaults standardUserDefaults] setObject:@(!_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
     
     return [TGMediaAssetsController resultSignalsForSelectionContext:_selectionContext editingContext:_editingContext intent:_intent currentItem:currentItem storeAssets:storeAssets useMediaCache:self.localMediaCacheEnabled descriptionGenerator:descriptionGenerator saveEditedPhotos:_saveEditedPhotos];
 }

@@ -42,6 +42,9 @@ static void initializeTGDateUtils()
     NSRange pmRange = [dateString rangeOfString:[dateFormatter PMSymbol]];
     value_dateHas12hFormat = !(amRange.location == NSNotFound && pmRange.location == NSNotFound);
     
+    if ([dateFormatter.locale respondsToSelector:@selector(countryCode)] && [dateFormatter.locale.countryCode isEqualToString:@"UA"])
+        value_dateHas12hFormat = false;
+    
     dateString = [NSDateFormatter dateFormatFromTemplate:@"MdY" options:0 locale:[NSLocale currentLocale]];
     if ([dateString rangeOfString:@"."].location != NSNotFound)
     {

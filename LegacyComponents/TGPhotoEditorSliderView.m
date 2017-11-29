@@ -14,7 +14,6 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     CGFloat _knobTouchCenterStart;
     CGFloat _knobDragCenter;
     
-    UIPanGestureRecognizer *_panGestureRecognizer;
     UITapGestureRecognizer *_tapGestureRecognizer;
     UITapGestureRecognizer *_doubleTapGestureRecognizer;
     
@@ -437,6 +436,22 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         self.reset();
 }
 
+- (void)maybeCancelParentViewScrolling:(UIView *)parentView depth:(int32_t)depth
+{
+    if (depth > 5)
+        return;
+    
+    if ([parentView isKindOfClass:[UIScrollView class]])
+    {
+        ((UIScrollView *)parentView).scrollEnabled = false;
+        ((UIScrollView *)parentView).scrollEnabled = true;
+    }
+    else if (parentView.superview != nil)
+    {
+        [self maybeCancelParentViewScrolling:parentView.superview depth:depth++];
+    }
+}
+
 - (BOOL)beginTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)__unused event
 {
     CGPoint touchLocation = [touch locationInView:self];
@@ -457,6 +472,8 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     _knobStartedDragging = false;
     
     [_feedbackGenerator prepare];
+    
+    [self maybeCancelParentViewScrolling:self.superview depth:0];
     
     return true;
 }

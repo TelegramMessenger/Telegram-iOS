@@ -1367,9 +1367,9 @@ UIImage *TGBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, 
     return image;
 }
 
-UIImage *TGSecretBlurredAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder)
+UIImage *TGSecretBlurredAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int position)
 {
-    return TGSecretBlurredAttachmentWithCornerRadiusImage(source, size, averageColor, attachmentBorder, 13, 0);
+    return TGSecretBlurredAttachmentWithCornerRadiusImage(source, size, averageColor, attachmentBorder, 13, position);
 }
 
 UIImage *TGSecretBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, CGFloat cornerRadius, int position)

@@ -796,7 +796,7 @@ typedef enum
     NSDictionary *fileDictionary = [[NSFileManager defaultManager] attributesOfItemAtPath:url.path error:NULL];
     NSUInteger fileSize = (NSUInteger)[fileDictionary fileSize];
     
-    UIImage *startImage = TGSecretBlurredAttachmentImage(image, image.size, NULL, false);
+    UIImage *startImage = TGSecretBlurredAttachmentImage(image, image.size, NULL, false, 0);
     [TGVideoMessageCaptureController saveStartImage:startImage];
     
     TGVideoEditAdjustments *adjustments = nil;

@@ -510,6 +510,9 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
             if ([string attributesAtIndex:range.location effectiveRange:nil][NSAttachmentAttributeName] != nil) {
                 NSMutableAttributedString *mutableString = [[NSMutableAttributedString alloc] initWithAttributedString:string];
                 [mutableString replaceCharactersInRange:NSMakeRange(range.location - 1, 1) withString:@""];
+                NSRange badRange = [mutableString.string rangeOfString:@"\uFFFC"];
+                if (badRange.location != NSNotFound)
+                    [mutableString replaceCharactersInRange:badRange withString:@""];
                 self.attributedText = mutableString;
                 
                 return false;
@@ -520,6 +523,9 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
         if (range.location != 0 && [string attributesAtIndex:range.location - 1 effectiveRange:nil][NSAttachmentAttributeName] != nil) {
             NSMutableAttributedString *mutableString = [[NSMutableAttributedString alloc] initWithAttributedString:string];
             [mutableString replaceCharactersInRange:NSMakeRange(range.location - 1, 0) withString:atext];
+            NSRange badRange = [mutableString.string rangeOfString:@"\uFFFC"];
+            if (badRange.location != NSNotFound)
+                [mutableString replaceCharactersInRange:badRange withString:@""];
             self.attributedText = mutableString;
             
             return false;

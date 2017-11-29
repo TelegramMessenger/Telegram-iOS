@@ -7,7 +7,7 @@ UIImage *TGAverageColorRoundImage(UIColor *color, CGSize size);
 UIImage *TGAverageColorAttachmentImage(UIColor *color, bool attachmentBorder, int position);
 UIImage *TGAverageColorAttachmentWithCornerRadiusImage(UIColor *color, bool attachmentBorder, int cornerRadius, int position);
 UIImage *TGBlurredAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int position);
-UIImage *TGSecretBlurredAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder);
+UIImage *TGSecretBlurredAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int position);
 UIImage *TGBlurredFileImage(UIImage *source, CGSize size, uint32_t *averageColor, int borderRadius);
 UIImage *TGLoadedAttachmentImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int position);
 UIImage *TGAnimationFrameAttachmentImage(UIImage *source, CGSize size, CGSize renderSize);

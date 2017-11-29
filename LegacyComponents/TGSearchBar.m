@@ -226,7 +226,6 @@
         }
         else if (_style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain || _style == TGSearchBarStyleHeader)
         {
-            //iconImage = TGImageNamed(@"SearchBarIconLight.png");
             iconImage = [TGSearchBar searchBarIcon];
         }
         else if (_style == TGSearchBarStyleLightAlwaysPlain)
@@ -243,7 +242,7 @@
 
 + (UIImage *)searchBarIcon
 {
-    UIGraphicsBeginImageContextWithOptions(CGSizeMake(40, 40), false, 0.0f);
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(13, 13), false, 0.0f);
     
     UIColor *color = UIColorRGB(0x8e8e93);
     
@@ -320,7 +319,7 @@
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^
         {
-            CGFloat diameter = 10.0f;
+            CGFloat diameter = 14.0f;
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(diameter, diameter), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
             CGContextSetFillColorWithColor(context, UIColorRGB(0xe5e5e5).CGColor);
@@ -394,7 +393,18 @@
         else if (_style == TGSearchBarStyleDark)
             fileName = @"SearchInputFieldDark.png";
         else if (_style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain)
-            fileName = @"SearchInputFieldLight.png";
+        {
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(14.0f, 14.0f), false, 0.0f);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            CGContextSetFillColorWithColor(context, UIColorRGB(0xf1f1f1).CGColor);
+            CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 14.0f, 14.0f));
+            UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+            image = [image stretchableImageWithLeftCapWidth:(int)(image.size.width / 2) topCapHeight:(int)(image.size.height / 2)];
+            UIGraphicsEndImageContext();
+            
+            _activeTextFieldBackgroundImage = image;
+            return _activeTextFieldBackgroundImage;
+        }
         else if (_style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader) {
             _activeTextFieldBackgroundImage = [self normalTextFieldBackgroundImage];
             return _activeTextFieldBackgroundImage;
@@ -1016,12 +1026,11 @@
             indicator.hidden = true;
             [_wrappingView addSubview:indicator];
             
-            indicator.frame = (CGRect){{CGFloor(_customSearchIcon.frame.origin.x + (_customSearchIcon.frame.size.width - indicator.frame.size.width) / 2.0f), CGFloor(_customSearchIcon.frame.origin.y + (_customSearchIcon.frame.size.height - indicator.frame.size.height) / 2.0f) + 1.0f + TGScreenPixel}, indicator.frame.size};
-            
             _customSearchActivityIndicator = indicator;
         }
         
         indicator.hidden = false;
+        indicator.frame = (CGRect){{CGFloor(_customSearchIcon.frame.origin.x + (_customSearchIcon.frame.size.width - indicator.frame.size.width) / 2.0f), CGFloor(_customSearchIcon.frame.origin.y + (_customSearchIcon.frame.size.height - indicator.frame.size.height) / 2.0f) + 1.0f}, indicator.frame.size};
         [indicator startAnimating];
     }
     else

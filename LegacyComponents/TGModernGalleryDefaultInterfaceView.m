@@ -5,6 +5,7 @@
 #import "TGImageUtils.h"
 #import "TGViewController.h"
 
+#import "TGModernGalleryItemView.h"
 #import "TGModernGalleryDefaultFooterView.h"
 
 #import "TGModernBackToolbarButton.h"
@@ -17,6 +18,8 @@
 
 @interface TGModernGalleryDefaultInterfaceView ()
 {
+    __weak TGModernGalleryItemView *_currentItemView;
+    
     TGModernBackToolbarButton *_closeButton;
     
     NSMutableArray *_itemHeaderViews;
@@ -85,6 +88,7 @@
 {
     _safeAreaInset = safeAreaInset;
     
+    [_currentItemView setSafeAreaInset:_safeAreaInset];
     for (UIView *view in _itemFooterViews)
     {
         if ([view respondsToSelector:@selector(setSafeAreaInset:)])
@@ -341,6 +345,8 @@
 
 - (void)itemFocused:(id<TGModernGalleryItem>)__unused item itemView:(TGModernGalleryItemView *)__unused itemView
 {
+    _currentItemView = itemView;
+    [_currentItemView setSafeAreaInset:_safeAreaInset];
 }
 
 - (void)setScrollViewOffsetRequested:(void (^)(CGFloat))__unused scrollViewOffsetRequested
