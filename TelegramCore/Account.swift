@@ -430,10 +430,12 @@ public enum AccountNetworkState: Equatable {
 public final class AccountAuxiliaryMethods {
     public let updatePeerChatInputState: (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?
     public let fetchResource: (Account, MediaResource, Range<Int>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?
+    public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
     
-    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Range<Int>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?) {
+    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Range<Int>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
         self.updatePeerChatInputState = updatePeerChatInputState
         self.fetchResource = fetchResource
+        self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
     }
 }
 
@@ -522,7 +524,7 @@ public class Account {
         })
         self.localInputActivityManager = PeerInputActivityManager()
         self.viewTracker = AccountViewTracker(account: self)
-        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, stateManager: self.stateManager)
+        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager)
         
         self.network.loggedOut = { [weak self] in
             if let strongSelf = self {
@@ -667,7 +669,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeSavedGifsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeSavedStickersOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedConsumePersonalMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         

@@ -58,6 +58,7 @@ public struct Namespaces {
         public static let cachedTwoStepToken: Int8 = 1
         public static let cachedStickerPacks: Int8 = 2
         public static let cachedAvailableLocalizations: Int8 = 3
+        public static let cachedSentMediaReferences: Int8 = 4
     }
     
     struct UnorderedItemList {

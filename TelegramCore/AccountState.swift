@@ -5,7 +5,6 @@ import Foundation
     import Postbox
 #endif
 
-
 private enum SentAuthorizationCodeTypeValue: Int32 {
     case otherSession = 0
     case sms = 1

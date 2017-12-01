@@ -184,6 +184,8 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         var sentStickers: [TelegramMediaFile] = []
         var sentGifs: [TelegramMediaFile] = []
         
+        var updatedGroupingKey: Int64?
+        
         for (message, _, updatedMessage) in mapping {
             modifier.updateMessage(message.id, update: { currentMessage in
                 let updatedId: MessageId
@@ -232,8 +234,17 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: currentMessage.flags.contains(.Incoming), attributes: attributes, media: media, textEntities: entitiesAttribute?.entities)
                 
+                if let updatedGroupingKey = updatedGroupingKey {
+                    assert(updatedGroupingKey == updatedMessage.groupingKey)
+                }
+                updatedGroupingKey = updatedMessage.groupingKey
+                
                 return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
             })
+        }
+        
+        if let updatedGroupingKey = updatedGroupingKey {
+            modifier.updateMessageGroupingKeysAtomically(mapping.map { $0.1.id }, groupingKey: updatedGroupingKey)
         }
         
         if let latestIndex = mapping.last?.1 {

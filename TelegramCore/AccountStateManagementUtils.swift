@@ -18,6 +18,12 @@ private func peerIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
                 peerIds.insert(peerId)
             }
         }
+        switch group {
+            case let .updateChannelPts(channelId, _, _):
+                peerIds.insert(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
+            default:
+                break
+        }
     }
     
     return peerIds
@@ -419,28 +425,32 @@ func finalStateWithUpdateGroups(_ account: Account, state: AccountMutableState, 
     var currentDateGroups = dateGroups(groups)
     currentDateGroups.sort(by: { group1, group2 -> Bool in
         switch group1 {
-        case let .withDate(_, date1, _, _):
-            switch group2 {
-            case let .withDate(_, date2, _, _):
-                return date1 < date2
-            case _:
+            case let .withDate(_, date1, _, _):
+                switch group2 {
+                    case let .withDate(_, date2, _, _):
+                        return date1 < date2
+                    default:
+                        return false
+                }
+            default:
                 return false
-            }
-        case _:
-            return false
         }
     })
     
     for group in currentDateGroups {
         switch group {
-        case let .withDate(updates, _, users, chats):
-            collectedUpdates.append(contentsOf: updates)
-            
-            updatedState.mergeChats(chats)
-            updatedState.mergeUsers(users)
-        case _:
-            break
+            case let .withDate(updates, _, users, chats):
+                collectedUpdates.append(contentsOf: updates)
+                
+                updatedState.mergeChats(chats)
+                updatedState.mergeUsers(users)
+            default:
+                break
         }
+    }
+    
+    for case let .updateChannelPts(channelId, pts, ptsCount) in groups {
+        collectedUpdates.append(Api.Update.updateDeleteChannelMessages(channelId: channelId, messages: [], pts: pts, ptsCount: ptsCount))
     }
     
     return finalStateWithUpdates(account: account, state: updatedState, updates: collectedUpdates, shouldPoll: hadReset, missingUpdates: !ptsUpdatesAfterHole.isEmpty || !qtsUpdatesAfterHole.isEmpty || !seqGroupsAfterHole.isEmpty, shouldResetChannels: true)
@@ -1745,6 +1755,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
             case let .UpdateState(state):
                 let currentState = modifier.getState() as! AuthorizedAccountState
                 modifier.setState(currentState.changedState(state))
+                Logger.shared.log("State", "apply state \(state)")
             case let .UpdateChannelState(peerId, channelState):
                 modifier.setPeerChatState(peerId, state: channelState)
             case let .UpdateNotificationSettings(subject, notificationSettings):

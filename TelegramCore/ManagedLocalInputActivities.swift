@@ -58,7 +58,7 @@ private final class ManagedLocalTypingActivitiesContext {
     }
 }
 
-func managedLocalTypingActivities(activities: Signal<[PeerId: [PeerId: PeerInputActivity]], NoError>, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedLocalTypingActivities(activities: Signal<[PeerId: [PeerId: PeerInputActivity]], NoError>, postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let context = Atomic(value: ManagedLocalTypingActivitiesContext())
         let disposable = activities.start(next: { activities in
@@ -71,7 +71,7 @@ func managedLocalTypingActivities(activities: Signal<[PeerId: [PeerId: PeerInput
             }
             
             for (peerId, activity, disposable) in start {
-                disposable.set(requestActivity(postbox: postbox, network: network, peerId: peerId, activity: activity).start())
+                disposable.set(requestActivity(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, activity: activity).start())
             }
         })
         return ActionDisposable {
@@ -109,9 +109,12 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
     }
 }
 
-private func requestActivity(postbox: Postbox, network: Network, peerId: PeerId, activity: PeerInputActivity?) -> Signal<Void, NoError> {
+private func requestActivity(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity?) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId) {
+            if peerId == accountPeerId {
+                return .complete()
+            }
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                 return .complete()
             }

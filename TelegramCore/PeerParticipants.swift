@@ -23,8 +23,8 @@ private struct PeerParticipants: Equatable {
     }
 }
 
-public func peerParticipants(account: Account, id: PeerId) -> Signal<[Peer], NoError> {
-    return account.postbox.peerView(id: id) |> map { view -> PeerParticipants in
+public func peerParticipants(postbox: Postbox, id: PeerId) -> Signal<[Peer], NoError> {
+    return postbox.peerView(id: id) |> map { view -> PeerParticipants in
         if let cachedGroupData = view.cachedData as? CachedGroupData, let participants = cachedGroupData.participants {
             var peers: [Peer] = []
             for participant in participants.participants {

@@ -13,6 +13,7 @@ func fetchHttpResource(url: String) -> Signal<MediaResourceDataFetchResult, NoEr
     if let url = URL(string: url) {
         let signal = MTHttpRequestOperation.data(forHttpUrl: url)!
         return Signal { subscriber in
+            subscriber.putNext(.reset)
             let disposable = signal.start(next: { next in
                 let data = next as! Data
                 let fetchResult: MediaResourceDataFetchResult = .dataPart(data: data, range: 0 ..< data.count, complete: true)
