@@ -105,7 +105,7 @@ public enum ResourceDataRequestOption {
 }
 
 public final class MediaBox {
-    let basePath: String
+    public let basePath: String
     
     private let statusQueue = Queue()
     private let concurrentQueue = Queue.concurrentDefaultQueue()
