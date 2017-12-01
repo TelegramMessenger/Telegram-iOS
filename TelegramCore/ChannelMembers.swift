@@ -14,8 +14,8 @@ public enum ChannelMembersFilter {
     case search(String)
 }
 
-public func channelMembers(account: Account, peerId: PeerId, filter: ChannelMembersFilter = .none) -> Signal<[RenderedChannelParticipant], NoError> {
-    return account.postbox.modify { modifier -> Signal<[RenderedChannelParticipant], NoError> in
+public func channelMembers(postbox: Postbox, network: Network, peerId: PeerId, filter: ChannelMembersFilter = .none) -> Signal<[RenderedChannelParticipant], NoError> {
+    return postbox.modify { modifier -> Signal<[RenderedChannelParticipant], NoError> in
         if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             let apiFilter: Api.ChannelParticipantsFilter
             switch filter {
@@ -24,7 +24,7 @@ public func channelMembers(account: Account, peerId: PeerId, filter: ChannelMemb
                 case let .search(query):
                     apiFilter = .channelParticipantsSearch(q: query)
             }
-            return account.network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: apiFilter, offset: 0, limit: 100, hash: 0))
+            return network.request(Api.functions.channels.getParticipants(channel: inputChannel, filter: apiFilter, offset: 0, limit: 100, hash: 0))
                 |> retryRequest
                 |> map { result -> [RenderedChannelParticipant] in
                     var items: [RenderedChannelParticipant] = []

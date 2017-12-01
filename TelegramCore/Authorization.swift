@@ -174,10 +174,10 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                                             case let .authorization(_, _, user):
                                                 let user = TelegramUser(user: user)
                                                 let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
-                                                modifier.setState(state)
-                                                updatePeers(modifier: modifier, peers: [user], update: { current, peer -> Peer? in
+                                                modifier.updatePeersInternal([user], update: { current, peer -> Peer? in
                                                     return peer
                                                 })
+                                                modifier.setState(state)
                                         }
                                 }
                             } |> mapError { _ -> AuthorizationCodeVerificationError in
@@ -220,10 +220,10 @@ public func authorizeWithPassword(account: UnauthorizedAccount, password: String
                     case let .authorization(_, _, user):
                         let user = TelegramUser(user: user)
                         let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
-                        modifier.setState(state)
-                        updatePeers(modifier: modifier, peers: [user], update: { current, peer -> Peer? in
+                        modifier.updatePeersInternal([user], update: { current, peer -> Peer? in
                             return peer
                         })
+                        modifier.setState(state)
                     }
             }
             |> mapError { _ -> AuthorizationPasswordVerificationError in

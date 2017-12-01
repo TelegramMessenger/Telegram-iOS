@@ -32,7 +32,7 @@ private func fetchLocalFileResource(path: String, move: Bool) -> Signal<MediaRes
 
 func fetchResource(account: Account, resource: MediaResource, range: Range<Int>, tag: MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>? {
     if let _ = resource as? EmptyMediaResource {
-        return .never()
+        return .single(.reset) |> then(.never())
     } else if let secretFileResource = resource as? SecretFileMediaResource {
         return .single(.dataPart(data: Data(), range: 0 ..< 0, complete: false)) |> then(fetchSecretFileResource(account: account, resource: secretFileResource, range: range, tag: tag))
     } else if let cloudResource = resource as? TelegramMultipartFetchableResource {

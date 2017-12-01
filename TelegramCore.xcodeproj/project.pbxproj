@@ -503,6 +503,8 @@
 		D0C27B401F4B51D000A4E170 /* CachedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */; };
 		D0C27B421F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */; };
 		D0C27B431F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */; };
+		D0C44B611FC616E200227BE0 /* SearchGroupMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C44B601FC616E200227BE0 /* SearchGroupMembers.swift */; };
+		D0C44B621FC616E200227BE0 /* SearchGroupMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C44B601FC616E200227BE0 /* SearchGroupMembers.swift */; };
 		D0C48F391E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */; };
 		D0C48F3A1E8138DF0075317D /* ArchivedStickerPacksInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */; };
 		D0C48F3C1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */; };
@@ -524,6 +526,8 @@
 		D0DF0C911D81A857008AEB01 /* ImageRepresentationsUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C901D81A857008AEB01 /* ImageRepresentationsUtils.swift */; };
 		D0DF0C931D81AD09008AEB01 /* MessageUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C921D81AD09008AEB01 /* MessageUtils.swift */; };
 		D0DF0CA81D82BF32008AEB01 /* PeerParticipants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0CA71D82BF32008AEB01 /* PeerParticipants.swift */; };
+		D0DFD5DF1FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DFD5DE1FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift */; };
+		D0DFD5E01FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DFD5DE1FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift */; };
 		D0E23DD51E8042F500B9B6D2 /* FeaturedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DD41E8042F500B9B6D2 /* FeaturedStickerPack.swift */; };
 		D0E23DD61E8042F500B9B6D2 /* FeaturedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DD41E8042F500B9B6D2 /* FeaturedStickerPack.swift */; };
 		D0E23DDA1E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DD91E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift */; };
@@ -887,6 +891,7 @@
 		D0C0B58C1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeLocalizationUpdatesOperation.swift; sourceTree = "<group>"; };
 		D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedStickerPack.swift; sourceTree = "<group>"; };
 		D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerSpecificStickerPack.swift; sourceTree = "<group>"; };
+		D0C44B601FC616E200227BE0 /* SearchGroupMembers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchGroupMembers.swift; sourceTree = "<group>"; };
 		D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchivedStickerPacksInfo.swift; sourceTree = "<group>"; };
 		D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedPeerFromMessage.swift; sourceTree = "<group>"; };
 		D0C50E331E93A86600F62E39 /* CallSessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallSessionManager.swift; sourceTree = "<group>"; };
@@ -900,6 +905,7 @@
 		D0DF0C901D81A857008AEB01 /* ImageRepresentationsUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageRepresentationsUtils.swift; sourceTree = "<group>"; };
 		D0DF0C921D81AD09008AEB01 /* MessageUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageUtils.swift; sourceTree = "<group>"; };
 		D0DF0CA71D82BF32008AEB01 /* PeerParticipants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerParticipants.swift; sourceTree = "<group>"; };
+		D0DFD5DE1FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedSentMediaReferences.swift; sourceTree = "<group>"; };
 		D0E23DD41E8042F500B9B6D2 /* FeaturedStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FeaturedStickerPack.swift; sourceTree = "<group>"; };
 		D0E23DD91E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift; sourceTree = "<group>"; };
 		D0E23DDE1E8082A400B9B6D2 /* ArchivedStickerPacks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchivedStickerPacks.swift; sourceTree = "<group>"; };
@@ -1238,6 +1244,7 @@
 			isa = PBXGroup;
 			children = (
 				D03B0D121D62257600955575 /* Resources */,
+				D0DFD5DE1FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift */,
 			);
 			name = Media;
 			sourceTree = "<group>";
@@ -1543,6 +1550,7 @@
 				D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */,
 				D0DA1D311F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift */,
 				D02395D51F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift */,
+				D0C44B601FC616E200227BE0 /* SearchGroupMembers.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -1757,6 +1765,7 @@
 				D03229F41E6B39700000AF9C /* ImportAccount.swift in Sources */,
 				D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */,
 				D03B0D091D62255C00955575 /* EnqueueMessage.swift in Sources */,
+				D0DFD5DF1FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift in Sources */,
 				D00D343C1E6EC9770057B307 /* TelegramMediaGame.swift in Sources */,
 				D033FEB01E61EB0200644997 /* PeerReportStatus.swift in Sources */,
 				D050F2511E4A59C200988324 /* JoinLink.swift in Sources */,
@@ -1800,6 +1809,7 @@
 				D0DF0CA81D82BF32008AEB01 /* PeerParticipants.swift in Sources */,
 				D0FA8BA71E1FA6DF001E855B /* TelegramSecretChat.swift in Sources */,
 				D03B0D5F1D631A6900955575 /* Serialization.swift in Sources */,
+				D0C44B611FC616E200227BE0 /* SearchGroupMembers.swift in Sources */,
 				D03B0D441D6319F900955575 /* CloudFileMediaResource.swift in Sources */,
 				D018D3371E648ACF00C5E089 /* CreateChannel.swift in Sources */,
 				D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */,
@@ -2140,6 +2150,7 @@
 				D0F3CC791DDE2859008148FA /* SearchMessages.swift in Sources */,
 				D0B8442B1DAB91E0005F29E1 /* NBMetadataCore.m in Sources */,
 				D03DC9141F82F89D001D584C /* RegularChatState.swift in Sources */,
+				D0C44B621FC616E200227BE0 /* SearchGroupMembers.swift in Sources */,
 				D00C7CD01E3628180080C3D5 /* UpdateCachedChannelParticipants.swift in Sources */,
 				D0F3A8A61E82C94C00B4C64C /* SynchronizeableChatInputState.swift in Sources */,
 				D00BDA1A1EE593D600C64C5E /* TelegramChannelAdminRights.swift in Sources */,
@@ -2240,6 +2251,7 @@
 				D03C53681DAD5CA9004C17B3 /* PeerUtils.swift in Sources */,
 				D07047BB1F3DF75500F6A8D4 /* ConsumePersonalMessageAction.swift in Sources */,
 				D050F2621E4A5AE700988324 /* GlobalNotificationSettings.swift in Sources */,
+				D0DFD5E01FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift in Sources */,
 				D0B418991D7E0580004562A4 /* TelegramMediaMap.swift in Sources */,
 				D0561DEB1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */,
 				D0613FCB1E60440600202CDB /* InvitationLinks.swift in Sources */,
