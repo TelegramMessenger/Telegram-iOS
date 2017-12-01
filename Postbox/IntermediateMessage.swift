@@ -61,6 +61,10 @@ class IntermediateMessage {
         self.referencedMedia = referencedMedia
     }
     
+    func withUpdatedGroupingKey(_ groupingKey: Int64?) -> IntermediateMessage {
+        return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: groupingKey, groupInfo: self.groupInfo, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: self.embeddedMediaData, referencedMedia: self.referencedMedia)
+    }
+    
     func withUpdatedGroupInfo(_ groupInfo: MessageGroupInfo?) -> IntermediateMessage {
         return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: groupInfo, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: self.embeddedMediaData, referencedMedia: self.referencedMedia)
     }

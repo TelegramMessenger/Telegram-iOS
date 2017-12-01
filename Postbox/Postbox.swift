@@ -318,6 +318,11 @@ public final class Modifier {
         self.postbox?.offsetPendingMessagesTimestamps(lowerBound: lowerBound, timestamp: timestamp)
     }
     
+    public func updateMessageGroupingKeysAtomically(_ ids: [MessageId], groupingKey: Int64) {
+        assert(!self.disposed)
+        self.postbox?.updateMessageGroupingKeysAtomically(ids, groupingKey: groupingKey)
+    }
+    
     public func updateMedia(_ id: MediaId, update: Media?) {
         assert(!self.disposed)
         self.postbox?.updateMedia(id, update: update)
@@ -1108,8 +1113,6 @@ public final class Postbox {
     fileprivate func setState(_ state: PostboxCoding) {
         self.currentUpdatedState = state
         self.metadataTable.setState(state)
-        
-        self.statePipe.putNext(state)
     }
     
     fileprivate func getState() -> PostboxCoding? {
@@ -1515,7 +1518,6 @@ public final class Postbox {
             }
         }
         
-        self.currentUpdatedState = nil
         self.currentOperationsByPeerId.removeAll()
         self.currentUpdatedChatListInclusions.removeAll()
         self.currentFilledHolesByPeerId.removeAll()
@@ -1551,6 +1553,11 @@ public final class Postbox {
         for table in self.tables {
             table.beforeCommit()
         }
+        
+        if let currentUpdatedState = self.currentUpdatedState {
+            self.statePipe.putNext(currentUpdatedState)
+        }
+        self.currentUpdatedState = nil
         
         return (updatedTransactionState, updatedMasterClientId)
     }
@@ -1694,6 +1701,10 @@ public final class Postbox {
     
     fileprivate func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32) {
         self.messageHistoryTable.offsetPendingMessagesTimestamps(lowerBound: lowerBound, timestamp: timestamp, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries)
+    }
+    
+    fileprivate func updateMessageGroupingKeysAtomically(_ ids: [MessageId], groupingKey: Int64) {
+        self.messageHistoryTable.updateMessageGroupingKeysAtomically(ids: ids, groupingKey: groupingKey, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries)
     }
     
     fileprivate func updateMedia(_ id: MediaId, update: Media?) {
