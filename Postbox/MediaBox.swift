@@ -345,7 +345,9 @@ public final class MediaBox {
                                                 let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
                                             }
                                             subscriber.putNext(MediaResourceData(path: symlinkPath, size: data.size, complete: data.complete))
-                                            subscriber.putCompletion()
+                                            if data.complete {
+                                                subscriber.putCompletion()
+                                            }
                                         } else {
                                             subscriber.putNext(data)
                                             subscriber.putCompletion()

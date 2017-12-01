@@ -884,6 +884,40 @@ final class MessageHistoryTable: Table {
         }
     }
     
+    func updateMessageGroupingKeysAtomically(ids: [MessageId], groupingKey: Int64, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation],  updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
+        if ids.isEmpty {
+            return
+        }
+        
+        var indices: [MessageIndex] = []
+        for id in ids {
+            if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
+                indices.append(index)
+            }
+        }
+        indices.sort()
+        assert(indices.count == ids.count)
+        
+        for index in indices {
+            if let message = self.getMessage(index), let _ = message.groupInfo {
+                let updatedMessage = message.withUpdatedGroupingKey(groupingKey)
+                self.storeIntermediateMessage(updatedMessage, sharedKey: self.key(MessageIndex.absoluteLowerBound()))
+                
+                let operations: [MessageHistoryOperation] = [
+                    .Remove([(index, true, message.tags)]),
+                    .InsertMessage(updatedMessage)
+                ]
+                if operationsByPeerId[message.id.peerId] == nil {
+                    operationsByPeerId[message.id.peerId] = operations
+                } else {
+                    operationsByPeerId[message.id.peerId]!.append(contentsOf: operations)
+                }
+            } else {
+                assertionFailure()
+            }
+        }
+    }
+    
     private func adjacentEntries(_ index: MessageIndex, key: Int64) -> (lower: (IntermediateMessageHistoryEntry?, AdjacentEntryGroupInfo), upper: (IntermediateMessageHistoryEntry?, AdjacentEntryGroupInfo)) {
         var lower: IntermediateMessageHistoryEntry?
         var upper: IntermediateMessageHistoryEntry?
