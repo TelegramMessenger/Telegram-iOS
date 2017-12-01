@@ -260,7 +260,7 @@ public struct LocalFileReferenceMediaResourceId: MediaResourceId {
 }
 
 public class LocalFileReferenceMediaResource: TelegramMediaResource {
-    let localFilePath: String
+    public let localFilePath: String
     let randomId: Int64
     let isUniquelyReferencedTemporaryFile: Bool
     let size: Int32?
