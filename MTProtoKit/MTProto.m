@@ -1788,6 +1788,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     int32_t messageDataLength = 0;
     [decryptedData getBytes:&messageDataLength range:NSMakeRange(28, 4)];
     
+    int32_t paddingLength = ((int32_t)decryptedData.length) - messageDataLength;
+    if (paddingLength < 12 || paddingLength > 1024) {
+#if MTProtoV2
+        __unused NSData *result = MTSha256(decryptedData);
+#endif
+        return nil;
+    }
+    
     if (messageDataLength < 0 || messageDataLength > (int32_t)decryptedData.length) {
 #if MTProtoV2
         __unused NSData *result = MTSha256(decryptedData);
