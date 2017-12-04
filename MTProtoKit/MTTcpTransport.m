@@ -315,7 +315,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         if (transportContext.connectionWatchdogTimer == nil)
         {
             __weak MTTcpTransport *weakSelf = self;
-            transportContext.connectionWatchdogTimer = [[MTTimer alloc] initWithTimeout:10.0 repeat:false completion:^
+            transportContext.connectionWatchdogTimer = [[MTTimer alloc] initWithTimeout:20.0 repeat:false completion:^
             {
                 __strong MTTcpTransport *strongSelf = weakSelf;
                 [strongSelf connectionWatchdogTimeout];

@@ -16,11 +16,11 @@
 
 @class MTContext;
 @class MTDatacenterAuthMessageService;
-@class MTDatacenterAuthInfo;
+@class MTDatacenterAuthKey;
 
 @protocol MTDatacenterAuthMessageServiceDelegate <NSObject>
 
-- (void)authMessageServiceCompletedWithAuthInfo:(MTDatacenterAuthInfo *)authInfo;
+- (void)authMessageServiceCompletedWithAuthKey:(MTDatacenterAuthKey *)authKey timestamp:(int64_t)timestamp;
 
 @end
 
@@ -28,6 +28,6 @@
 
 @property (nonatomic, weak) id<MTDatacenterAuthMessageServiceDelegate> delegate;
 
-- (instancetype)initWithContext:(MTContext *)context;
+- (instancetype)initWithContext:(MTContext *)context tempAuth:(bool)tempAuth;
 
 @end

@@ -23,6 +23,7 @@
 #import "MTSessionInfo.h"
 #import "MTDatacenterSaltInfo.h"
 #import "MTTimeFixContext.h"
+#import "MTBindingTempAuthKeyContext.h"
 
 #import "MTMessageService.h"
 #import "MTMessageTransaction.h"
@@ -52,6 +53,8 @@
 #import "MTMsgDetailedInfoMessage.h"
 #import "MTNewSessionCreatedMessage.h"
 #import "MTPongMessage.h"
+#import "MTRpcResultMessage.h"
+#import "MTRpcError.h"
 
 #import "MTApiEnvironment.h"
 
@@ -62,11 +65,13 @@
 typedef enum {
     MTProtoStateAwaitingDatacenterScheme = 1,
     MTProtoStateAwaitingDatacenterAuthorization = 2,
-    MTProtoStateAwaitingDatacenterAuthToken = 4,
-    MTProtoStateAwaitingTimeFixAndSalts = 8,
-    MTProtoStateAwaitingLostMessages = 16,
-    MTProtoStateStopped = 32,
-    MTProtoStatePaused = 64
+    MTProtoStateAwaitingDatacenterTempAuthKey = 4,
+    MTProtoStateAwaitingDatacenterAuthToken = 8,
+    MTProtoStateAwaitingTimeFixAndSalts = 16,
+    MTProtoStateAwaitingLostMessages = 32,
+    MTProtoStateStopped = 64,
+    MTProtoStatePaused = 128,
+    MTProtoStateBindingTempAuthKey = 256
 } MTProtoState;
 
 static const NSUInteger MTMaxContainerSize = 3 * 1024;
@@ -93,6 +98,10 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     MTDatacenterAuthInfo *_authInfo;
     MTSessionInfo *_sessionInfo;
     MTTimeFixContext *_timeFixContext;
+    
+    MTDatacenterAuthKey *_bindPersistentKey;
+    void (^_bindPersistentKeyCompletion)();
+    MTBindingTempAuthKeyContext *_bindingTempAuthKeyContext;
     
     MTTransportScheme *_transportScheme;
     MTTransport *_transport;
@@ -256,6 +265,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         }];
         
         _timeFixContext = nil;
+        _bindingTempAuthKeyContext = nil;
         
         if (_transport != nil)
             [self removeMessageService:_transport];
@@ -304,6 +314,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn];
             }
         }
+        else if (!_useUnauthorizedMode && _useTempAuthKeys && [_context authInfoForDatacenterWithId:_datacenterId].tempAuthKey == nil) {
+            if ((_mtState & MTProtoStateAwaitingDatacenterTempAuthKey) == 0)
+            {
+                [self setMtState:_mtState | MTProtoStateAwaitingDatacenterTempAuthKey];
+                
+                [_context tempAuthKeyForDatacenterWithIdRequired:_datacenterId];
+            }
+        }
         else if (_requiredAuthToken != nil && !_useUnauthorizedMode && ![_requiredAuthToken isEqual:[_context authTokenForDatacenterWithId:_datacenterId]])
         {
             if ((_mtState & MTProtoStateAwaitingDatacenterAuthToken) == 0)
@@ -334,6 +352,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         
         _sessionInfo = [[MTSessionInfo alloc] initWithRandomSessionIdAndContext:_context];
         _timeFixContext = nil;
+        _bindingTempAuthKeyContext = nil;
         
         for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
         {
@@ -629,17 +648,22 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (bool)canAskForTransactions
 {
-    return (_mtState & (MTProtoStateAwaitingDatacenterScheme | MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterAuthToken | MTProtoStateAwaitingTimeFixAndSalts | MTProtoStateStopped)) == 0;
+    return (_mtState & (MTProtoStateAwaitingDatacenterScheme | MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterTempAuthKey | MTProtoStateAwaitingDatacenterAuthToken | MTProtoStateAwaitingTimeFixAndSalts | MTProtoStateBindingTempAuthKey | MTProtoStateStopped)) == 0;
 }
 
 - (bool)canAskForServiceTransactions
 {
-    return (_mtState & (MTProtoStateAwaitingDatacenterScheme | MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterAuthToken | MTProtoStateStopped)) == 0;
+    return (_mtState & (MTProtoStateAwaitingDatacenterScheme | MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterTempAuthKey | MTProtoStateAwaitingDatacenterAuthToken | MTProtoStateStopped)) == 0;
 }
 
 - (bool)timeFixOrSaltsMissing
 {
     return _mtState & MTProtoStateAwaitingTimeFixAndSalts;
+}
+
+- (bool)bindingTempAuthKey
+{
+    return _mtState & MTProtoStateBindingTempAuthKey;
 }
 
 - (bool)isStopped
@@ -753,12 +777,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
-        if (_authInfo.authKey != nil && !_sessionInfo.scheduledForCleanup)
-        {
-            _sessionInfo.scheduledForCleanup = true;
-            [_context scheduleSessionCleanupForAuthKeyId:_authInfo.authKeyId sessionInfo:_sessionInfo];
-        }
-        
         if (_transport != transport)
         {
             if (transactionReady)
@@ -1178,6 +1196,124 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             
             NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
             
+            MTDatacenterAuthKey *effectiveAuthKey;
+            if (_useTempAuthKeys) {
+                NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
+                effectiveAuthKey = _authInfo.tempAuthKey;
+            } else {
+                effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId];
+            }
+            
+#if MTProtoV2
+            int xValue = 0;
+            NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
+            [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
+            [msgKeyLargeData appendData:decryptedData];
+            
+            NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
+            NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
+            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
+#else
+            NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + messageData.length);
+            NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
+            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
+#endif
+            
+            NSData *transactionData = nil;
+            
+            if (encryptionKey != nil)
+            {
+                NSMutableData *encryptedData = [[NSMutableData alloc] initWithCapacity:14 + decryptedData.length];
+                [encryptedData appendData:decryptedData];
+                MTAesEncryptInplace(encryptedData, encryptionKey.key, encryptionKey.iv);
+                
+                int64_t authKeyId = effectiveAuthKey.authKeyId;
+                [encryptedData replaceBytesInRange:NSMakeRange(0, 0) withBytes:&authKeyId length:8];
+                [encryptedData replaceBytesInRange:NSMakeRange(8, 0) withBytes:messageKey.bytes length:messageKey.length];
+                
+                transactionData = encryptedData;
+            }
+            
+            if (transactionReady != nil)
+            {
+                if (transactionData != nil)
+                {
+                    __weak MTProto *weakSelf = self;
+                    transactionReady(@[[[MTTransportTransaction alloc] initWithPayload:transactionData completion:^(bool success, id transactionId)
+                    {
+                        [[MTProto managerQueue] dispatchOnQueue:^
+                        {
+                            if (success)
+                            {
+                                if (transactionId != nil)
+                                {
+                                    _timeFixContext = [[MTTimeFixContext alloc] initWithMessageId:timeFixMessageId messageSeqNo:timeFixSeqNo transactionId:transactionId timeFixAbsoluteStartTime:MTAbsoluteSystemTime()];
+                                }
+                            }
+                            else
+                            {
+                                __strong MTProto *strongSelf = weakSelf;
+                                [strongSelf requestTransportTransaction];
+                            }
+                        }];
+                    } needsQuickAck:false expectsDataInResponse:true]]);
+                }
+                else
+                    transactionReady(nil);
+            }
+        }
+        else if (![self timeFixOrSaltsMissing] && [self bindingTempAuthKey] && [self canAskForServiceTransactions] && (_bindingTempAuthKeyContext == nil || _bindingTempAuthKeyContext.transactionId == nil))
+        {
+            int64_t bindingMessageId = [_sessionInfo generateClientMessageId:NULL];
+            int32_t bindingSeqNo = [_sessionInfo takeSeqNo:true];
+            
+            int32_t expiresAt = (int32_t)([_context globalTime] + 60 * 60 * 32);
+            
+            int64_t randomId = 0;
+            arc4random_buf(&randomId, 8);
+            
+            int64_t nonce = 0;
+            arc4random_buf(&nonce, 8);
+            
+            MTBuffer *decryptedMessage = [[MTBuffer alloc] init];
+            //bind_auth_key_inner#75a3f765 nonce:long temp_auth_key_id:long perm_auth_key_id:long temp_session_id:long expires_at:int = BindAuthKeyInner;
+            [decryptedMessage appendInt32:(int32_t)0x75a3f765];
+            [decryptedMessage appendInt64:nonce];
+            [decryptedMessage appendInt64:_authInfo.authKeyId];
+            [decryptedMessage appendInt64:_bindPersistentKey.authKeyId];
+            [decryptedMessage appendInt64:_sessionInfo.sessionId];
+            [decryptedMessage appendInt32:expiresAt];
+            
+            NSData *encryptedMessage = [self _manuallyEncryptedMessage:[decryptedMessage data] messageId:bindingMessageId authKey:_bindPersistentKey];
+            
+            MTBuffer *bindRequestData = [[MTBuffer alloc] init];
+            
+            //auth.bindTempAuthKey#cdd42a05 perm_auth_key_id:long nonce:long expires_at:int encrypted_message:bytes = Bool;
+            
+            [bindRequestData appendInt32:(int32_t)0xcdd42a05];
+            [bindRequestData appendInt64:_bindPersistentKey.authKeyId];
+            [bindRequestData appendInt64:nonce];
+            [bindRequestData appendInt32:expiresAt];
+            [bindRequestData appendTLBytes:encryptedMessage];
+            
+            NSData *messageData = bindRequestData.data;
+            
+            MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
+            
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%llx sending temp key binding message (%" PRId64 "/%" PRId32 ")]", self, bindingMessageId, bindingSeqNo);
+            }
+            
+            [decryptedOs writeInt64:[_authInfo authSaltForMessageId:bindingMessageId]];
+            [decryptedOs writeInt64:_sessionInfo.sessionId];
+            [decryptedOs writeInt64:bindingMessageId];
+            [decryptedOs writeInt32:bindingSeqNo];
+            
+            [decryptedOs writeInt32:(int32_t)messageData.length];
+            [decryptedOs writeData:messageData];
+            
+            NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
+            
 #if MTProtoV2
             int xValue = 0;
             NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
@@ -1213,15 +1349,11 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 if (transactionData != nil)
                 {
                     __weak MTProto *weakSelf = self;
-                    transactionReady(@[[[MTTransportTransaction alloc] initWithPayload:transactionData completion:^(bool success, id transactionId)
-                    {
-                        [[MTProto managerQueue] dispatchOnQueue:^
-                        {
-                            if (success)
-                            {
-                                if (transactionId != nil)
-                                {
-                                    _timeFixContext = [[MTTimeFixContext alloc] initWithMessageId:timeFixMessageId messageSeqNo:timeFixSeqNo transactionId:transactionId timeFixAbsoluteStartTime:MTAbsoluteSystemTime()];
+                    transactionReady(@[[[MTTransportTransaction alloc] initWithPayload:transactionData completion:^(bool success, id transactionId) {
+                        [[MTProto managerQueue] dispatchOnQueue:^{
+                            if (success) {
+                                if (transactionId != nil) {
+                                    _bindingTempAuthKeyContext = [[MTBindingTempAuthKeyContext alloc] initWithMessageId:bindingMessageId messageSeqNo:bindingSeqNo transactionId:transactionId];
                                 }
                             }
                             else
@@ -1243,6 +1375,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (NSData *)_dataForEncryptedContainerWithMessages:(NSArray *)preparedMessages sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId
 {
+    MTDatacenterAuthKey *effectiveAuthKey;
+    if (_useTempAuthKeys) {
+        NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
+        effectiveAuthKey = _authInfo.tempAuthKey;
+    } else {
+        effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId];
+    }
+    
     NSMutableArray *containerMessageIds = [[NSMutableArray alloc] init];
     
     MTOutputStream *containerOs = [[MTOutputStream alloc] init];
@@ -1300,17 +1440,17 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 #if MTProtoV2
     int xValue = 0;
     NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
-    [msgKeyLargeData appendBytes:_authInfo.authKey.bytes + 88 + xValue length:32];
+    [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
     [msgKeyLargeData appendData:decryptedData];
     
     NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
     NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
     int32_t nQuickAckId = *((int32_t *)(msgKeyLarge.bytes));
 #else
     NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + containerData.length);
     NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
     int32_t nQuickAckId = *((int32_t *)(messageKeyFull.bytes));
 #endif
     
@@ -1324,7 +1464,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         [encryptedData appendData:decryptedData];
         MTAesEncryptInplace(encryptedData, encryptionKey.key, encryptionKey.iv);
         
-        int64_t authKeyId = _authInfo.authKeyId;
+        int64_t authKeyId = effectiveAuthKey.authKeyId;
         [encryptedData replaceBytesInRange:NSMakeRange(0, 0) withBytes:&authKeyId length:8];
         [encryptedData replaceBytesInRange:NSMakeRange(8, 0) withBytes:messageKey.bytes length:messageKey.length];
         
@@ -1346,6 +1486,16 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     NSData *messageData = [os currentBytes];
     
     return messageData;
+}
+
+- (NSData *)paddedDataV1:(NSData *)data {
+    NSMutableData *padded = [[NSMutableData alloc] initWithData:data];
+    uint8_t randomBytes[128];
+    arc4random_buf(randomBytes, 128);
+    for (int i = 0; ((int)data.length + i) % 16 != 0; i++) {
+        [padded appendBytes:randomBytes + i length:1];
+    }
+    return padded;
 }
 
 - (NSData *)paddedData:(NSData *)data {
@@ -1381,8 +1531,66 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return padded;
 }
 
+- (NSData *)_manuallyEncryptedMessage:(NSData *)preparedData messageId:(int64_t)messageId authKey:(MTDatacenterAuthKey *)authKey {
+    MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
+    
+    int64_t random1 = 0;
+    int64_t random2 = 0;
+    arc4random_buf(&random1, 8);
+    arc4random_buf(&random2, 8);
+    
+    [decryptedOs writeInt64:random1];
+    [decryptedOs writeInt64:random2];
+    [decryptedOs writeInt64:messageId];
+    [decryptedOs writeInt32:0];
+    
+    [decryptedOs writeInt32:(int32_t)preparedData.length];
+    [decryptedOs writeData:preparedData];
+    
+    NSData *decryptedData = [self paddedDataV1:[decryptedOs currentBytes]];
+    
+#if false && MTProtoV2
+    int xValue = 0;
+    NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
+    [msgKeyLargeData appendBytes:authKey.authKey.bytes + 88 + xValue length:32];
+    [msgKeyLargeData appendData:decryptedData];
+    
+    NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
+    NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:authKey.authKey messageKey:messageKey toClient:false];
+#else
+    NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + preparedData.length);
+    NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
+    
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:authKey.authKey messageKey:messageKey toClient:false];
+#endif
+    
+    if (encryptionKey != nil)
+    {
+        NSMutableData *encryptedData = [[NSMutableData alloc] initWithCapacity:14 + decryptedData.length];
+        [encryptedData appendData:decryptedData];
+        MTAesEncryptInplace(encryptedData, encryptionKey.key, encryptionKey.iv);
+        
+        int64_t authKeyId = authKey.authKeyId;
+        [encryptedData replaceBytesInRange:NSMakeRange(0, 0) withBytes:&authKeyId length:8];
+        [encryptedData replaceBytesInRange:NSMakeRange(8, 0) withBytes:messageKey.bytes length:messageKey.length];
+        
+        return encryptedData;
+    }
+    else
+        return nil;
+}
+
 - (NSData *)_dataForEncryptedMessage:(MTPreparedMessage *)preparedMessage sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId
 {
+    MTDatacenterAuthKey *effectiveAuthKey;
+    if (_useTempAuthKeys) {
+        NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
+        effectiveAuthKey = _authInfo.tempAuthKey;
+    } else {
+        effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId];
+    }
+    
     MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
     
     [decryptedOs writeInt64:preparedMessage.salt];
@@ -1398,12 +1606,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 #if MTProtoV2
     int xValue = 0;
     NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
-    [msgKeyLargeData appendBytes:_authInfo.authKey.bytes + 88 + xValue length:32];
+    [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
     [msgKeyLargeData appendData:decryptedData];
     
     NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
     NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
 #else
     NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + preparedMessage.data.length);
     NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
@@ -1413,7 +1621,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     if (quickAckId != NULL)
         *quickAckId = nQuickAckId;
     
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:false];
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
 #endif
     
     if (encryptionKey != nil)
@@ -1422,7 +1630,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         [encryptedData appendData:decryptedData];
         MTAesEncryptInplace(encryptedData, encryptionKey.key, encryptionKey.iv);
         
-        int64_t authKeyId = _authInfo.authKeyId;
+        int64_t authKeyId = effectiveAuthKey.authKeyId;
         [encryptedData replaceBytesInRange:NSMakeRange(0, 0) withBytes:&authKeyId length:8];
         [encryptedData replaceBytesInRange:NSMakeRange(8, 0) withBytes:messageKey.bytes length:messageKey.length];
         
@@ -1444,6 +1652,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (_timeFixContext != nil && _timeFixContext.transactionId != nil && [transactionIds containsObject:_timeFixContext.transactionId])
         {
             _timeFixContext = nil;
+            requestTransaction = true;
+        }
+        
+        if (_bindingTempAuthKeyContext != nil && _bindingTempAuthKeyContext.transactionId != nil && [transactionIds containsObject:_bindingTempAuthKeyContext.transactionId])
+        {
+            _bindingTempAuthKeyContext = nil;
             requestTransaction = true;
         }
         
@@ -1470,6 +1684,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     if (_timeFixContext != nil && _timeFixContext.transactionId != nil)
     {
         _timeFixContext = nil;
+        requestTransaction = true;
+    }
+    
+    if (_bindingTempAuthKeyContext != nil && _bindingTempAuthKeyContext.transactionId != nil)
+    {
+        _bindingTempAuthKeyContext = nil;
         requestTransaction = true;
     }
     
@@ -1509,6 +1729,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (transport != _transport || completion == nil)
             return;
         
+        MTDatacenterAuthKey *effectiveAuthKey;
+        if (_useTempAuthKeys) {
+            NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
+            effectiveAuthKey = _authInfo.tempAuthKey;
+        } else {
+            effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId];
+        }
+        
         MTInputStream *is = [[MTInputStream alloc] initWithData:data];
         
         int64_t keyId = [is readInt64];
@@ -1517,9 +1745,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         {
             NSData *messageKey = [is readData:16];
 #if MTProtoV2
-            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:_authInfo.authKey messageKey:messageKey toClient:true];
+            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:true];
 #else
-            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:true];
+            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:true];
 #endif
             
             NSMutableData *encryptedMessageData = [is readMutableData:(data.length - 24)];
@@ -1692,11 +1920,18 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                     [messageService mtProto:self protocolErrorReceived:protocolErrorCode];
             }
             
-            if (protocolErrorCode == -404 && _cdn) {
-                _authInfo = nil;
-                [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil];
-                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:true];
-                _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
+            if (protocolErrorCode == -404) {
+                if (_cdn) {
+                    _authInfo = nil;
+                    [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil];
+                    [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:true];
+                    _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
+                } else if (_useTempAuthKeys) {
+                    _authInfo = [_authInfo withUpdatedTempAuthKey:nil];
+                    _mtState |= MTProtoStateAwaitingDatacenterTempAuthKey;
+                    [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:_authInfo];
+                    [_context tempAuthKeyForDatacenterWithIdRequired:_datacenterId];
+                }
             }
             
             if (currentTransport == _transport)
@@ -1761,7 +1996,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (NSData *)_decryptIncomingTransportData:(NSData *)data
 {
-    if (_authInfo == nil)
+    MTDatacenterAuthKey *effectiveAuthKey;
+    if (_useTempAuthKeys) {
+        NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
+        effectiveAuthKey = _authInfo.tempAuthKey;
+    } else {
+        effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId];
+    }
+    
+    if (effectiveAuthKey == nil)
         return nil;
     
     if (data.length < 24 + 36)
@@ -1769,15 +2012,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     
     int64_t authKeyId = 0;
     [data getBytes:&authKeyId range:NSMakeRange(0, 8)];
-    if (authKeyId != _authInfo.authKeyId)
+    if (authKeyId != effectiveAuthKey.authKeyId)
         return nil;
     
     NSData *embeddedMessageKey = [data subdataWithRange:NSMakeRange(8, 16)];
     
 #if MTProtoV2
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:_authInfo.authKey messageKey:embeddedMessageKey toClient:true];
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:embeddedMessageKey toClient:true];
 #else
-    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:embeddedMessageKey toClient:true];
+    MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:effectiveAuthKey.authKey messageKey:embeddedMessageKey toClient:true];
 #endif
     
     if (encryptionKey == nil)
@@ -1806,7 +2049,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 #if MTProtoV2
     int xValue = 8;
     NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
-    [msgKeyLargeData appendBytes:_authInfo.authKey.bytes + 88 + xValue length:32];
+    [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
     [msgKeyLargeData appendData:decryptedData];
     
     NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
@@ -2027,25 +2270,10 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             {
                 _timeFixContext = nil;
                 
-                __block bool test = false;
-#if TARGET_IPHONE_SIMULATOR
-                static dispatch_once_t onceToken;
-                dispatch_once(&onceToken, ^
-                {
-                    test = true;
-                });
-#endif
-                /*if (ABS(MTAbsoluteSystemTime() - _timeFixContext.timeFixAbsoluteStartTime) > 5.0 || test)
-                {
-                    [self initiateTimeSync];
-                }
-                else*/
-                {
-                    int64_t validSalt = ((MTBadServerSaltNotificationMessage *)badMsgNotification).nextServerSalt;
-                    NSTimeInterval timeDifference = incomingMessage.messageId / 4294967296.0 - [[NSDate date] timeIntervalSince1970];
-                    [self completeTimeSync];
-                    [self timeSyncInfoChanged:timeDifference saltList:@[[[MTDatacenterSaltInfo alloc] initWithSalt:validSalt firstValidMessageId:incomingMessage.messageId lastValidMessageId:incomingMessage.messageId + (4294967296 * 30 * 60)]]];
-                }
+                int64_t validSalt = ((MTBadServerSaltNotificationMessage *)badMsgNotification).nextServerSalt;
+                NSTimeInterval timeDifference = incomingMessage.messageId / 4294967296.0 - [[NSDate date] timeIntervalSince1970];
+                [self completeTimeSync];
+                [self timeSyncInfoChanged:timeDifference saltList:@[[[MTDatacenterSaltInfo alloc] initWithSalt:validSalt firstValidMessageId:incomingMessage.messageId lastValidMessageId:incomingMessage.messageId + (4294967296 * 30 * 60)]]];
             }
             else
                 [self initiateTimeSync];
@@ -2103,6 +2331,11 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         [messageService mtProto:self messageDeliveryFailed:(int64_t)[nMessageId longLongValue]];
                 }
             }
+        }
+        
+        if (_bindingTempAuthKeyContext != nil && badMessageId == _bindingTempAuthKeyContext.messageId)
+        {
+            _bindingTempAuthKeyContext = nil;
         }
         
         if ([self canAskForTransactions] || [self canAskForServiceTransactions])
@@ -2192,6 +2425,47 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if ([self canAskForTransactions] || [self canAskForServiceTransactions])
                 [self requestTransportTransaction];
         }
+        
+        if (_bindingTempAuthKeyContext != nil && [incomingMessage.body isKindOfClass:[MTRpcResultMessage class]] && ((MTRpcResultMessage *)incomingMessage.body).requestMessageId == _bindingTempAuthKeyContext.messageId) {
+            MTRpcResultMessage *rpcResultMessage = (MTRpcResultMessage *)incomingMessage.body;
+            
+            _bindingTempAuthKeyContext = nil;
+            
+            id maybeInternalMessage = [MTInternalMessageParser parseMessage:rpcResultMessage.data];
+            
+            id rpcResult = nil;
+            MTRpcError *rpcError = nil;
+            
+            if ([maybeInternalMessage isKindOfClass:[MTRpcError class]])
+                rpcError = maybeInternalMessage;
+            else
+            {
+                if (rpcResultMessage.data.length == 4) {
+                    int32_t signature = 0;
+                    [rpcResultMessage.data getBytes:&signature range:NSMakeRange(0, 4)];
+                    if (signature == (int32_t)0xbc799737) {
+                        rpcResult = @true;
+                    } else if (signature == (int32_t)0x997275b5) {
+                        rpcResult = @false;
+                    }
+                }
+                if (rpcResult == nil) {
+                    rpcResult = @true;
+                    rpcError = [[MTRpcError alloc] initWithErrorCode:500 errorDescription:@"TL_PARSING_ERROR"];
+                }
+            }
+            
+            if ([rpcResult respondsToSelector:@selector(boolValue)] && [rpcResult boolValue]) {
+                if ((_mtState & MTProtoStateBindingTempAuthKey) != 0) {
+                    [self setMtState:_mtState & (~MTProtoStateBindingTempAuthKey)];
+                }
+                if (_bindPersistentKeyCompletion) {
+                    _bindPersistentKeyCompletion();
+                }
+            } else {
+                
+            }
+        }
     }
 }
 
@@ -2218,12 +2492,25 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         {
             _authInfo = authInfo;
             
+            bool wasSuspended = _mtState & (MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterTempAuthKey);
+            
             if (_mtState & MTProtoStateAwaitingDatacenterAuthorization)
             {
                 [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterAuthorization)];
-                
-                [self resetTransport];
-                [self requestTransportTransaction];
+            }
+            
+            if (_mtState & MTProtoStateAwaitingDatacenterTempAuthKey)
+            {
+                if (_authInfo.tempAuthKey != nil) {
+                    [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterTempAuthKey)];
+                }
+            }
+            
+            if ((_mtState & (MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterTempAuthKey)) == 0) {
+                if (wasSuspended) {
+                    [self resetTransport];
+                    [self requestTransportTransaction];
+                }
             }
         }
     }];
@@ -2309,13 +2596,19 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     
 - (void)contextApiEnvironmentUpdated:(MTContext *)context apiEnvironment:(MTApiEnvironment *)apiEnvironment {
     [[MTProto managerQueue] dispatchOnQueue:^{
+        NSString *previousLangPackCode = _apiEnvironment.langPackCode;
         MTSocksProxySettings *previousSocksProxySettings = _apiEnvironment.socksProxySettings;
         
         _apiEnvironment = apiEnvironment;
         
+        bool resetConnection = false;
+        
         if ((_apiEnvironment.socksProxySettings != nil) != (previousSocksProxySettings != nil) || (previousSocksProxySettings != nil && ![_apiEnvironment.socksProxySettings isEqual:previousSocksProxySettings])) {
-            [self resetTransport];
-            [self requestTransportTransaction];
+            resetConnection = true;
+        }
+        
+        if (![_apiEnvironment.langPackCode isEqualToString:previousLangPackCode]) {
+            resetConnection = true;
         }
         
         for (id<MTMessageService> service in _messageServices) {
@@ -2324,7 +2617,22 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             }
         }
         
-        //[self resetTransport];
+        if (resetConnection) {
+            [self resetTransport];
+            [self requestTransportTransaction];
+        }
+    }];
+}
+
+- (void)bindToPersistentKey:(MTDatacenterAuthKey *)persistentKey completion:(void (^)())completion {
+    [[MTProto managerQueue] dispatchOnQueue:^{
+        _bindPersistentKey = persistentKey;
+        _bindPersistentKeyCompletion = [completion copy];
+        _bindingTempAuthKeyContext = nil;
+        _mtState |= MTProtoStateBindingTempAuthKey;
+        
+        [self resetTransport];
+        [self requestTransportTransaction];
     }];
 }
 

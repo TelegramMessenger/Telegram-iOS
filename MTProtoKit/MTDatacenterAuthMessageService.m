@@ -1,11 +1,3 @@
-/*
- * This is the source code of Telegram for iOS v. 1.1
- * It is licensed under GNU GPL v. 2 or later.
- * You should have received a copy of the license in this archive (see LICENSE).
- *
- * Copyright Peter Iakovlev, 2013.
- */
-
 #import "MTDatacenterAuthMessageService.h"
 
 #import "MTLogging.h"
@@ -128,6 +120,7 @@ typedef enum {
 
 @interface MTDatacenterAuthMessageService ()
 {
+    bool _tempAuth;
     MTSessionInfo *_sessionInfo;
     
     MTDatacenterAuthStage _stage;
@@ -144,7 +137,7 @@ typedef enum {
     int64_t _dhPublicKeyFingerprint;
     NSData *_dhEncryptedData;
     
-    MTDatacenterAuthInfo *_authInfo;
+    MTDatacenterAuthKey *_authKey;
     NSData *_encryptedClientData;
     
     NSArray<NSDictionary *> *_publicKeys;
@@ -154,11 +147,12 @@ typedef enum {
 
 @implementation MTDatacenterAuthMessageService
 
-- (instancetype)initWithContext:(MTContext *)context
+- (instancetype)initWithContext:(MTContext *)context tempAuth:(bool)tempAuth
 {
     self = [super init];
     if (self != nil)
     {
+        _tempAuth = tempAuth;
         _sessionInfo = [[MTSessionInfo alloc] initWithRandomSessionIdAndContext:context];
     }
     return self;
@@ -179,7 +173,7 @@ typedef enum {
     _dhPublicKeyFingerprint = 0;
     _dhEncryptedData = nil;
     
-    _authInfo = nil;
+    _authKey = nil;
     _encryptedClientData = nil;
     
     if (mtProto.cdn) {
@@ -367,42 +361,82 @@ typedef enum {
                 __unused int result = SecRandomCopyBytes(kSecRandomDefault, 32, nonceBytes);
                 _newNonce = [[NSData alloc] initWithBytes:nonceBytes length:32];
                 
-                MTBuffer *innerDataBuffer = [[MTBuffer alloc] init];
-                [innerDataBuffer appendInt32:(int32_t)0x83c95aec];
-                [innerDataBuffer appendTLBytes:pqBytes];
-                [innerDataBuffer appendTLBytes:_dhP];
-                [innerDataBuffer appendTLBytes:_dhQ];
-                [innerDataBuffer appendBytes:_nonce.bytes length:_nonce.length];
-                [innerDataBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
-                [innerDataBuffer appendBytes:_newNonce.bytes length:_newNonce.length];
-                
-                NSData *innerDataBytes = innerDataBuffer.data;
-                
-                NSMutableData *dataWithHash = [[NSMutableData alloc] init];
-                [dataWithHash appendData:MTSha1(innerDataBytes)];
-                [dataWithHash appendData:innerDataBytes];
-                while (dataWithHash.length < 255)
-                {
-                    uint8_t random = 0;
-                    arc4random_buf(&random, 1);
-                    [dataWithHash appendBytes:&random length:1];
-                }
-                
-                NSData *encryptedData = MTRsaEncrypt([publicKey objectForKey:@"key"], dataWithHash);
-                if (encryptedData.length < 256)
-                {
-                    NSMutableData *newEncryptedData = [[NSMutableData alloc] init];
-                    for (int i = 0; i < 256 - (int)encryptedData.length; i++)
+                if (_tempAuth) {
+                    MTBuffer *innerDataBuffer = [[MTBuffer alloc] init];
+                    [innerDataBuffer appendInt32:(int32_t)0x3c6a84d4];
+                    [innerDataBuffer appendTLBytes:pqBytes];
+                    [innerDataBuffer appendTLBytes:_dhP];
+                    [innerDataBuffer appendTLBytes:_dhQ];
+                    [innerDataBuffer appendBytes:_nonce.bytes length:_nonce.length];
+                    [innerDataBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
+                    [innerDataBuffer appendBytes:_newNonce.bytes length:_newNonce.length];
+                    [innerDataBuffer appendInt32:60 * 60 * 32];
+                    
+                    NSData *innerDataBytes = innerDataBuffer.data;
+                    
+                    NSMutableData *dataWithHash = [[NSMutableData alloc] init];
+                    [dataWithHash appendData:MTSha1(innerDataBytes)];
+                    [dataWithHash appendData:innerDataBytes];
+                    while (dataWithHash.length < 255)
                     {
                         uint8_t random = 0;
                         arc4random_buf(&random, 1);
-                        [newEncryptedData appendBytes:&random length:1];
+                        [dataWithHash appendBytes:&random length:1];
                     }
-                    [newEncryptedData appendData:encryptedData];
-                    encryptedData = newEncryptedData;
+                    
+                    NSData *encryptedData = MTRsaEncrypt([publicKey objectForKey:@"key"], dataWithHash);
+                    if (encryptedData.length < 256)
+                    {
+                        NSMutableData *newEncryptedData = [[NSMutableData alloc] init];
+                        for (int i = 0; i < 256 - (int)encryptedData.length; i++)
+                        {
+                            uint8_t random = 0;
+                            arc4random_buf(&random, 1);
+                            [newEncryptedData appendBytes:&random length:1];
+                        }
+                        [newEncryptedData appendData:encryptedData];
+                        encryptedData = newEncryptedData;
+                    }
+                    
+                    _dhEncryptedData = encryptedData;
+                } else {
+                    MTBuffer *innerDataBuffer = [[MTBuffer alloc] init];
+                    [innerDataBuffer appendInt32:(int32_t)0x83c95aec];
+                    [innerDataBuffer appendTLBytes:pqBytes];
+                    [innerDataBuffer appendTLBytes:_dhP];
+                    [innerDataBuffer appendTLBytes:_dhQ];
+                    [innerDataBuffer appendBytes:_nonce.bytes length:_nonce.length];
+                    [innerDataBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
+                    [innerDataBuffer appendBytes:_newNonce.bytes length:_newNonce.length];
+                    
+                    NSData *innerDataBytes = innerDataBuffer.data;
+                    
+                    NSMutableData *dataWithHash = [[NSMutableData alloc] init];
+                    [dataWithHash appendData:MTSha1(innerDataBytes)];
+                    [dataWithHash appendData:innerDataBytes];
+                    while (dataWithHash.length < 255)
+                    {
+                        uint8_t random = 0;
+                        arc4random_buf(&random, 1);
+                        [dataWithHash appendBytes:&random length:1];
+                    }
+                    
+                    NSData *encryptedData = MTRsaEncrypt([publicKey objectForKey:@"key"], dataWithHash);
+                    if (encryptedData.length < 256)
+                    {
+                        NSMutableData *newEncryptedData = [[NSMutableData alloc] init];
+                        for (int i = 0; i < 256 - (int)encryptedData.length; i++)
+                        {
+                            uint8_t random = 0;
+                            arc4random_buf(&random, 1);
+                            [newEncryptedData appendBytes:&random length:1];
+                        }
+                        [newEncryptedData appendData:encryptedData];
+                        encryptedData = newEncryptedData;
+                    }
+                    
+                    _dhEncryptedData = encryptedData;
                 }
-                
-                _dhEncryptedData = encryptedData;
                 
                 _stage = MTDatacenterAuthStageReqDH;
                 _currentStageMessageId = 0;
@@ -574,7 +608,7 @@ typedef enum {
                     [serverSaltData appendBytes:&x length:1];
                 }
                 
-                _authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey authKeyId:authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:*((int64_t *)serverSaltData.bytes) firstValidMessageId:((int64_t)message.timestamp) * 4294967296 lastValidMessageId:((int64_t)(message.timestamp + 29.0 * 60.0)) * 4294967296]] authKeyAttributes:nil];
+                _authKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:authKey authKeyId:authKeyId];
                 
                 //client_DH_inner_data#6643b654 nonce:int128 server_nonce:int128 retry_id:long g_b:bytes = Client_DH_Inner_Data;
                 MTBuffer *clientDhInnerDataBuffer = [[MTBuffer alloc] init];
@@ -619,7 +653,7 @@ typedef enum {
         
         if ([_nonce isEqualToData:setClientDhParamsResponseMessage.nonce] && [_serverNonce isEqualToData:setClientDhParamsResponseMessage.serverNonce])
         {
-            NSData *authKeyAuxHashFull = MTSha1(_authInfo.authKey);
+            NSData *authKeyAuxHashFull = MTSha1(_authKey.authKey);
             NSData *authKeyAuxHash = [[NSData alloc] initWithBytes:((uint8_t *)authKeyAuxHashFull.bytes) length:8];
             
             NSMutableData *newNonce1 = [[NSMutableData alloc] init];
@@ -663,8 +697,8 @@ typedef enum {
                     _currentStageTransactionId = nil;
                     
                     id<MTDatacenterAuthMessageServiceDelegate> delegate = _delegate;
-                    if ([delegate respondsToSelector:@selector(authMessageServiceCompletedWithAuthInfo:)])
-                        [delegate authMessageServiceCompletedWithAuthInfo:_authInfo];
+                    if ([delegate respondsToSelector:@selector(authMessageServiceCompletedWithAuthKey:timestamp:)])
+                        [delegate authMessageServiceCompletedWithAuthKey:_authKey timestamp:message.messageId];
                 }
             }
             else if ([setClientDhParamsResponseMessage isKindOfClass:[MTSetClientDhParamsResponseRetryMessage class]])

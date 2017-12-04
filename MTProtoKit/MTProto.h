@@ -13,6 +13,7 @@
 @class MTContext;
 @class MTNetworkUsageCalculationInfo;
 @class MTApiEnvironment;
+@class MTDatacenterAuthKey;
 
 @class MTProto;
 
@@ -44,6 +45,7 @@
 
 @property (nonatomic) bool shouldStayConnected;
 @property (nonatomic) bool useUnauthorizedMode;
+@property (nonatomic) bool useTempAuthKeys;
 @property (nonatomic) bool media;
 @property (nonatomic) bool cdn;
 @property (nonatomic) id requiredAuthToken;
@@ -66,5 +68,7 @@
 - (void)requestTimeResync;
 
 - (void)_messageResendRequestFailed:(int64_t)messageId;
+
+- (void)bindToPersistentKey:(MTDatacenterAuthKey *)persistentKey completion:(void (^)())completion;
 
 @end
