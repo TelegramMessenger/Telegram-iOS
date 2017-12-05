@@ -242,31 +242,39 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 #pragma mark - Custom getter
 
 - (BITChannel *)channel {
-  if (!_channel) {
-    _channel = [[BITChannel alloc] initWithTelemetryContext:self.telemetryContext persistence:self.persistence];
+  @synchronized(self) {
+    if (!_channel) {
+      _channel = [[BITChannel alloc] initWithTelemetryContext:self.telemetryContext persistence:self.persistence];
+    }
+    return _channel;
   }
-  return _channel;
 }
 
 - (BITTelemetryContext *)telemetryContext {
-  if (!_telemetryContext) {
-    _telemetryContext = [[BITTelemetryContext alloc] initWithAppIdentifier:self.appIdentifier persistence:self.persistence];
+  @synchronized(self) {
+    if (!_telemetryContext) {
+      _telemetryContext = [[BITTelemetryContext alloc] initWithAppIdentifier:self.appIdentifier persistence:self.persistence];
+    }
+    return _telemetryContext;
   }
-  return _telemetryContext;
 }
 
 - (BITPersistence *)persistence {
-  if (!_persistence) {
-    _persistence = [BITPersistence new];
+  @synchronized(self) {
+    if (!_persistence) {
+      _persistence = [BITPersistence new];
+    }
+    return _persistence;
   }
-  return _persistence;
 }
 
 - (NSUserDefaults *)userDefaults {
-  if (!_userDefaults) {
-    _userDefaults = [NSUserDefaults standardUserDefaults];
+  @synchronized(self) {
+    if (!_userDefaults) {
+      _userDefaults = [NSUserDefaults standardUserDefaults];
+    }
+    return _userDefaults;
   }
-  return _userDefaults;
 }
 
 @end
