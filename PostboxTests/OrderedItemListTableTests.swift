@@ -84,6 +84,15 @@ class OrderedItemListTableTests: XCTestCase {
         XCTAssert(self.itemListTable!.testIntegrity(collectionId: 0), "Index integrity violated")
     }
     
+    private func removeId(_ id: Int32) {
+        var operations: [Int32 : [OrderedItemListOperation]] = [:]
+        var idValue: Int32 = id
+        let buffer = MemoryBuffer(memory: malloc(4)!, capacity: 4, length: 4, freeWhenDone: true)
+        memcpy(buffer.memory, &idValue, 4)
+        self.itemListTable!.remove(collectionId: 0, itemId: buffer, operations: &operations)
+        XCTAssert(self.itemListTable!.testIntegrity(collectionId: 0), "Index integrity violated")
+    }
+    
     func testEmpty() {
         expectIds([])
     }
@@ -122,5 +131,26 @@ class OrderedItemListTableTests: XCTestCase {
         expectIds([20, 10, 30])
         addOrMoveId(30)
         expectIds([30, 20, 10])
+    }
+    
+    func testRandom() {
+        expectIds([])
+        var currentIds = Set<Int32>()
+        for _ in 0 ..< 100 {
+            let op = arc4random_uniform(4)
+            switch op {
+                case 0 ... 2:
+                    let id = Int32(bitPattern: arc4random_uniform(100))
+                    addOrMoveId(id, op == 0 ? 20 : nil)
+                    currentIds.insert(id)
+                default:
+                    if !currentIds.isEmpty {
+                        let index = Int(Int32(bitPattern: arc4random_uniform(UInt32(bitPattern: Int32(currentIds.count)))))
+                        let id = currentIds[currentIds.index(currentIds.startIndex, offsetBy: index)]
+                        removeId(id)
+                        currentIds.remove(id)
+                    }
+            }
+        }
     }
 }
