@@ -54,7 +54,7 @@ private func hashForCountAndIds(count: Int32, ids: [Int32]) -> Int32 {
 }
 
 func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
-    #if DEBUG
+    #if os(iOS) && DEBUG
         return .never()
     #endif
     let initialContactPeerIdsHash = postbox.contactPeerIdsView()

@@ -263,20 +263,13 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
     public let localFilePath: String
     let randomId: Int64
     let isUniquelyReferencedTemporaryFile: Bool
-    let size: Int32?
+    public let size: Int32?
     
     public init(localFilePath: String, randomId: Int64, isUniquelyReferencedTemporaryFile: Bool = false, size: Int32? = nil) {
         self.localFilePath = localFilePath
         self.randomId = randomId
         self.isUniquelyReferencedTemporaryFile = isUniquelyReferencedTemporaryFile
         self.size = size
-    }
-    
-    public var sizeValue: Int32? {
-        return self.size
-    }
-    public var pathValue: String {
-        return localFilePath
     }
     
     public required init(decoder: PostboxDecoder) {

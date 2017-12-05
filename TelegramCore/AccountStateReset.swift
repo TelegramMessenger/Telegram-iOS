@@ -174,7 +174,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
             }
             
             return postbox.modify { modifier -> Void in
-                modifier.resetChatList(replacementHole: replacementHole)
+                modifier.resetChatList(keepPeerNamespaces: Set([Namespaces.Peer.SecretChat]), replacementHole: replacementHole)
                 
                 updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                     return updated
