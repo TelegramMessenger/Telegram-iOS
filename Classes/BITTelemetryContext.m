@@ -355,12 +355,13 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
 #pragma mark - Helper
 
 - (NSDictionary *)contextDictionary {
-  NSMutableDictionary *contextDictionary = [NSMutableDictionary new];
-  [contextDictionary addEntriesFromDictionary:self.tags];
-  [contextDictionary addEntriesFromDictionary:[self.session serializeToDictionary]];
-  [contextDictionary addEntriesFromDictionary:[self.user serializeToDictionary]];
-  
-  return contextDictionary;
+  __block NSMutableDictionary *tmp = [NSMutableDictionary new];
+  dispatch_sync(self.operationsQueue, ^{
+    [tmp addEntriesFromDictionary:self.tags];
+    [tmp addEntriesFromDictionary:[self.session serializeToDictionary]];
+    [tmp addEntriesFromDictionary:[self.user serializeToDictionary]];
+  });
+  return tmp;
 }
 
 - (NSDictionary *)tags {
