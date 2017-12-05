@@ -426,38 +426,43 @@ void bit_resetEventBuffer(char **eventBuffer) {
 }
 
 - (void)invalidateTimer {
-  if ([self timerIsRunning]) {
-    dispatch_source_cancel((dispatch_source_t)self.timerSource);
-    self.timerSource = nil;
+  @synchronized(self) {
+    if (self.timerSource != nil) {
+      dispatch_source_cancel((dispatch_source_t)self.timerSource);
+      self.timerSource = nil;
+    }
   }
 }
 
 -(BOOL)timerIsRunning {
-  return self.timerSource != nil;
+  @synchronized(self) {
+    return self.timerSource != nil;
+  }
 }
 
 - (void)startTimer {
-  
-  // Reset timer, if it is already running.
-  if ([self timerIsRunning]) {
+  @synchronized(self) {
+
+    // Reset timer, if it is already running.
     [self invalidateTimer];
-  }
-  
-  self.timerSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.dataItemsOperations);
-  dispatch_source_set_timer((dispatch_source_t)self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * self.batchInterval), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
-  __weak typeof(self) weakSelf = self;
-  dispatch_source_set_event_handler((dispatch_source_t)self.timerSource, ^{
-    typeof(self) strongSelf = weakSelf;
-    if (strongSelf) {
-      if (strongSelf.dataItemCount > 0) {
-        [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
-      } else {
-        strongSelf.channelBlocked = NO;
+    
+    dispatch_source_t timerSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.dataItemsOperations);
+    dispatch_source_set_timer(timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * self.batchInterval), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
+    __weak typeof(self) weakSelf = self;
+    dispatch_source_set_event_handler(timerSource, ^{
+      typeof(self) strongSelf = weakSelf;
+      if (strongSelf) {
+        if (strongSelf.dataItemCount > 0) {
+          [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
+        } else {
+          strongSelf.channelBlocked = NO;
+        }
+        [strongSelf invalidateTimer];
       }
-      [strongSelf invalidateTimer];
-    }
-  });
-  dispatch_resume((dispatch_source_t)self.timerSource);
+    });
+    dispatch_resume(timerSource);
+    self.timerSource = timerSource;
+  }
 }
 
 /**
