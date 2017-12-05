@@ -43,7 +43,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             self.mtProto.requiredAuthToken = Int(datacenterId) as NSNumber
         }
         self.requestService = MTRequestMessageService(context: self.context)
-        //self.requestService.forceBackgroundRequests = true
+        self.requestService.forceBackgroundRequests = true
         
         super.init()
         
