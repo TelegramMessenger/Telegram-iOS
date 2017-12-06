@@ -1,9 +1,9 @@
 ## 5.0.1
 
 - [FEATURE] Add Turkish localization thanks to [Ozgur](https://github.com/ozgur).[#478](https://github.com/bitstadium/HockeySDK-iOS/pull/478) 
-- [FEATURE] Support tracking events in the background. [#475](https://github.com/bitstadium/HockeySDK-iOS/pull/475)
 - [FEATURE] Add support to detect low memory and OS kill heuristics for extensions. Thx to [Dave Weston](https://github.com/dtweston) for this! [#470](https://github.com/bitstadium/HockeySDK-iOS/pull/470) 
-- [FIX] Improvements around thread-safety for Metrics. [#471](471)
+- [IMPROVEMENT] Support tracking events in the background. [#475](https://github.com/bitstadium/HockeySDK-iOS/pull/475)
+- [FIX] Improvements around thread-safety and concurrency for Metrics. [#471](https://github.com/bitstadium/HockeySDK-iOS/pull/471) [#479](https://github.com/bitstadium/HockeySDK-iOS/pull/479)
 
 ## 5.0.0
 
