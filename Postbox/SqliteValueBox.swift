@@ -127,6 +127,7 @@ final class SqliteValueBox: ValueBox {
     private var rangeValueDescStatementsLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeValueDescStatementsNoLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var scanStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var scanKeysStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var existsStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var updateStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var insertStatements: [Int32 : SqlitePreparedStatement] = [:]
@@ -643,6 +644,27 @@ final class SqliteValueBox: ValueBox {
             assert(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.scanStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        return resultStatement
+    }
+    
+    private func scanKeysStatement(_ table: ValueBoxTable) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
+        
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.scanKeysStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) ORDER BY key ASC", -1, &statement, nil)
+            assert(status == SQLITE_OK)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.scanKeysStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
@@ -1187,6 +1209,36 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
+    public func scan(_ table: ValueBoxTable, keys: (ValueBoxKey) -> Bool) {
+        assert(self.queue.isCurrent())
+        
+        if let _ = self.tables[table.id] {
+            let statement: SqlitePreparedStatement = self.scanKeysStatement(table)
+            
+            var startTime = CFAbsoluteTimeGetCurrent()
+            
+            var currentTime = CFAbsoluteTimeGetCurrent()
+            self.readQueryTime += currentTime - startTime
+            
+            startTime = currentTime
+            
+            while statement.step(handle: self.database.handle, path: self.basePath) {
+                startTime = CFAbsoluteTimeGetCurrent()
+                
+                let key = statement.keyAt(0)
+                
+                currentTime = CFAbsoluteTimeGetCurrent()
+                self.readQueryTime += currentTime - startTime
+                
+                if !keys(key) {
+                    break
+                }
+            }
+            
+            statement.reset()
+        }
+    }
+    
     public func scanInt64(_ table: ValueBoxTable, values: (Int64, ReadBuffer) -> Bool) {
         assert(self.queue.isCurrent())
         
@@ -1397,6 +1449,11 @@ final class SqliteValueBox: ValueBox {
             statement.destroy()
         }
         self.scanStatements.removeAll()
+        
+        for (_, statement) in self.scanKeysStatements {
+            statement.destroy()
+        }
+        self.scanKeysStatements.removeAll()
         
         for (_, statement) in self.existsStatements {
             statement.destroy()
