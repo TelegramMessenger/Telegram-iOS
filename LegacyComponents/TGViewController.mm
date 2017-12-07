@@ -943,9 +943,16 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 - (UIStatusBarStyle)preferredStatusBarStyle
 {
     if (![_context rootCallStatusBarHidden])
+    {
         return UIStatusBarStyleLightContent;
+    }
     else
-        return UIStatusBarStyleDefault;
+    {
+        if ([_context respondsToSelector:@selector(prefersLightStatusBar)])
+            return [_context prefersLightStatusBar] ? UIStatusBarStyleLightContent : UIStatusBarStyleDefault;
+        else
+            return UIStatusBarStyleDefault;
+    }
 }
 
 - (void)setNeedsStatusBarAppearanceUpdate

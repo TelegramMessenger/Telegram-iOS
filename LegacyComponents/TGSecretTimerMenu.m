@@ -51,7 +51,7 @@
     [itemViews addObject:doneItem];
     
     [controller setItemViews:itemViews animated:false];
-    [controller presentInViewController:parentController sourceView:sourceView animated:true];
+    [controller presentInViewController:(UIViewController *)parentController sourceView:sourceView animated:true];
     
     return controller;
 }

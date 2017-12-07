@@ -17,6 +17,8 @@
 @interface TGSearchBar () <UITextFieldDelegate>
 {
     CGFloat _cancelButtonWidth;
+    
+    TGSearchBarPallete *_pallete;
 }
 
 @property (nonatomic, strong) UIView *wrappingClip;
@@ -312,21 +314,31 @@
     return _showsCustomCancelButton;
 }
 
+- (void)setPallete:(TGSearchBarPallete *)pallete
+{
+    _pallete = pallete;
+    
+    _customTextField.textColor = pallete.textColor;
+    _prefixLabel.textColor = pallete.placeholderColor;
+    _placeholderLabel.textColor = pallete.placeholderColor;
+    
+    _normalTextFieldBackgroundImage = nil;
+    _activeTextFieldBackgroundImage = nil;
+    _textFieldBackground.image = _showsCustomCancelButton ? self.activeTextFieldBackgroundImage : self.normalTextFieldBackgroundImage;
+}
+
 - (UIImage *)normalTextFieldBackgroundImage
 {
     if (_highContrast) {
-        static UIImage *image = nil;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^
-        {
-            CGFloat diameter = 14.0f;
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(diameter, diameter), false, 0.0f);
-            CGContextRef context = UIGraphicsGetCurrentContext();
-            CGContextSetFillColorWithColor(context, UIColorRGB(0xe5e5e5).CGColor);
-            CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
-            image = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:(NSInteger)(diameter / 2.0f) topCapHeight:(NSInteger)(diameter / 2.0f)];
-            UIGraphicsEndImageContext();
-        });
+        UIColor *highContrastColor = _pallete != nil ? _pallete.highContrastBackgroundColor : UIColorRGB(0xe5e5e5);
+        CGFloat diameter = 14.0f;
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(diameter, diameter), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        CGContextSetFillColorWithColor(context, highContrastColor.CGColor);
+        CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
+        UIImage *image = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:(NSInteger)(diameter / 2.0f) topCapHeight:(NSInteger)(diameter / 2.0f)];
+        UIGraphicsEndImageContext();
+        
         return image;
     } else if (_normalTextFieldBackgroundImage == nil) {
         NSString *fileName = nil;
@@ -337,9 +349,10 @@
             fileName = @"SearchInputFieldDark.png";
         else if (_style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain)
         {
+            UIColor *color = _pallete != nil ? _pallete.backgroundColor : UIColorRGB(0xf1f1f1);
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(14.0f, 14.0f), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
-            CGContextSetFillColorWithColor(context, UIColorRGB(0xf1f1f1).CGColor);
+            CGContextSetFillColorWithColor(context, color.CGColor);
             CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 14.0f, 14.0f));
             UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
             image = [image stretchableImageWithLeftCapWidth:(int)(image.size.width / 2) topCapHeight:(int)(image.size.height / 2)];
@@ -394,9 +407,10 @@
             fileName = @"SearchInputFieldDark.png";
         else if (_style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain)
         {
+            UIColor *color = _pallete != nil ? _pallete.backgroundColor : UIColorRGB(0xf1f1f1);
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(14.0f, 14.0f), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
-            CGContextSetFillColorWithColor(context, UIColorRGB(0xf1f1f1).CGColor);
+            CGContextSetFillColorWithColor(context, color.CGColor);
             CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 14.0f, 14.0f));
             UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
             image = [image stretchableImageWithLeftCapWidth:(int)(image.size.width / 2) topCapHeight:(int)(image.size.height / 2)];
@@ -449,7 +463,7 @@
         
         if (_style == TGSearchBarStyleDefault || _style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain || _style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader)
         {
-            textColor = [UIColor blackColor];
+            textColor = _pallete != nil ? _pallete.textColor : [UIColor blackColor];
             clearImage = TGImageNamed(@"SearchBarClearIcon.png");
         }
         else if (_style == TGSearchBarStyleDark)
@@ -462,7 +476,7 @@
         
         _customTextField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
         _customTextField.returnKeyType = UIReturnKeySearch;
-        _customTextField.keyboardAppearance = _style == TGSearchBarStyleDark ? UIKeyboardAppearanceAlert : UIKeyboardAppearanceDefault;
+        _customTextField.keyboardAppearance = _style == TGSearchBarStyleDark || _pallete.isDark ? UIKeyboardAppearanceAlert : UIKeyboardAppearanceDefault;
         _customTextField.delegate = self;
         [_customTextField addTarget:self action:@selector(textFieldDidChange:) forControlEvents:UIControlEventEditingChanged];
         
@@ -1046,6 +1060,24 @@
     _customClearButton.hidden = !_placeholderLabel.hidden && _prefixText.length == 0;
     
     [self setNeedsLayout];
+}
+
+@end
+
+
+@implementation TGSearchBarPallete
+
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor highContrastBackgroundColor:(UIColor *)highContrastBackgroundColor textColor:(UIColor *)textColor placeholderColor:(UIColor *)placeholderColor clearBackgroundColor:(UIColor *)clearBackgroundColor clearIconColor:(UIColor *)clearIconColor
+{
+    TGSearchBarPallete *pallete = [[TGSearchBarPallete alloc] init];
+    pallete->_isDark = dark;
+    pallete->_backgroundColor = backgroundColor;
+    pallete->_highContrastBackgroundColor = highContrastBackgroundColor;
+    pallete->_textColor = textColor;
+    pallete->_placeholderColor = placeholderColor;
+    pallete->_clearBackgroundColor = clearBackgroundColor;
+    pallete->_clearIconColor = clearIconColor;
+    return pallete;
 }
 
 @end

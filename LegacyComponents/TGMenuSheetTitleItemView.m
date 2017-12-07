@@ -3,6 +3,8 @@
 #import "LegacyComponentsInternal.h"
 #import "TGFont.h"
 
+#import "TGMenuSheetController.h"
+
 @interface TGMenuSheetTitleItemView ()
 {
     UILabel *_titleLabel;
@@ -48,6 +50,15 @@
     
     if (iosMajorVersion() >= 11)
         self.accessibilityIgnoresInvertColors = true;
+}
+
+- (void)setPallete:(TGMenuSheetPallete *)pallete
+{
+    _titleLabel.backgroundColor = [UIColor clearColor];
+    _titleLabel.textColor = pallete.textColor;
+    
+    _subtitleLabel.backgroundColor = [UIColor clearColor];
+    _subtitleLabel.textColor = pallete.textColor;
 }
 
 - (CGFloat)preferredHeightForWidth:(CGFloat)width screenHeight:(CGFloat)__unused screenHeight

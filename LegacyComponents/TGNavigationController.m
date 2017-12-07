@@ -80,6 +80,9 @@
 {
     TGNavigationController *navigationController = [[TGNavigationController alloc] initWithNavigationBarClass:navigationBarClass toolbarClass:[UIToolbar class]];
     
+    if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(navigationBarPallete)])
+        [((TGNavigationBar *)navigationController.navigationBar) setPallete:[[LegacyComponentsGlobals provider] navigationBarPallete]];
+    
     bool first = true;
     for (id controller in controllers) {
         if ([controller isKindOfClass:[TGViewController class]]) {
@@ -888,6 +891,11 @@ TGNavigationController *findNavigationController()
         return [super prefersStatusBarHidden];
     
     return false;
+}
+
+- (UIStatusBarStyle)preferredStatusBarStyle
+{
+    return self.topViewController.preferredStatusBarStyle;
 }
 
 @end

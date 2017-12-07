@@ -5,6 +5,20 @@
 
 @class SDisposableSet;
 
+@interface TGMenuSheetPallete : NSObject
+
+@property (nonatomic, readonly) UIColor *backgroundColor;
+@property (nonatomic, readonly) UIColor *selectionColor;
+@property (nonatomic, readonly) UIColor *separatorColor;
+@property (nonatomic, readonly) UIColor *accentColor;
+@property (nonatomic, readonly) UIColor *destructiveColor;
+@property (nonatomic, readonly) UIColor *textColor;
+@property (nonatomic, readonly) UIColor *secondaryTextColor;
+
++ (instancetype)palleteWithBackgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor;
+
+@end
+
 @interface TGMenuSheetController : UIViewController
 
 @property (nonatomic, strong, readonly) SDisposableSet *disposables;
@@ -44,6 +58,8 @@
 
 @property (nonatomic) bool packIsArchived;
 @property (nonatomic) bool packIsMask;
+
+@property (nonatomic, strong) TGMenuSheetPallete *pallete;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context dark:(bool)dark;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context itemViews:(NSArray *)itemViews;

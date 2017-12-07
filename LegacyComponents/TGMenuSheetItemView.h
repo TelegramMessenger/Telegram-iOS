@@ -10,6 +10,8 @@ typedef enum
     TGMenuSheetItemTypeFooter
 } TGMenuSheetItemType;
 
+@class TGMenuSheetPallete;
+
 @interface TGMenuSheetItemView : UIView <UIViewControllerPreviewingDelegate>
 {
     CGFloat _screenHeight;
@@ -23,6 +25,7 @@ typedef enum
 
 - (void)setDark;
 - (void)setHidden:(bool)hidden animated:(bool)animated;
+- (void)setPallete:(TGMenuSheetPallete *)pallete;
 
 @property (nonatomic, readonly) CGFloat contentHeightCorrection;
 - (CGFloat)preferredHeightForWidth:(CGFloat)width screenHeight:(CGFloat)screenHeight;

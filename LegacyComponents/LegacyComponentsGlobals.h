@@ -12,6 +12,8 @@
 @class TGWallpaperInfo;
 @class TGMemoryImageCache;
 @class TGImageMediaAttachment;
+@class TGNavigationBarPallete;
+@class TGMenuSheetPallete;
 
 typedef enum {
     TGAudioSessionTypePlayVoice,
@@ -78,6 +80,10 @@ typedef enum {
 - (void)pausePictureInPicturePlayback;
 - (void)resumePictureInPicturePlayback;
 - (void)maybeReleaseVolumeOverlay;
+
+@optional
+- (TGNavigationBarPallete *)navigationBarPallete;
+- (TGMenuSheetPallete *)menuSheetPallete;
 
 @end
 

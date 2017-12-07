@@ -40,6 +40,14 @@
     return self;
 }
 
+- (void)setBackgroundColor:(UIColor *)backgroundColor
+{
+    [super setBackgroundColor:backgroundColor];
+    
+    if (![backgroundColor isEqual:[UIColor clearColor]])
+        _whiteFooterView.backgroundColor = backgroundColor;
+}
+
 - (void)layoutSubviews
 {
     [super layoutSubviews];

@@ -1,6 +1,7 @@
 #import "TGMenuSheetController.h"
 
 #import "LegacyComponentsInternal.h"
+#import "LegacyComponentsGlobals.h"
 #import "TGNavigationController.h"
 #import "TGOverlayController.h"
 #import "TGOverlayControllerWindow.h"
@@ -93,6 +94,9 @@ typedef enum
         _disposables = [[SDisposableSet alloc] init];
         _permittedArrowDirections = UIPopoverArrowDirectionDown;
         _requiuresDimView = true;
+        
+        if (!dark && [[LegacyComponentsGlobals provider] respondsToSelector:@selector(menuSheetPallete)])
+            self.pallete = [[LegacyComponentsGlobals provider] menuSheetPallete];
         
         self.wantsFullScreenLayout = true;
     }
@@ -255,7 +259,7 @@ typedef enum
             [UIView animateWithDuration:0.25 delay:0.0 options:UIViewAnimationOptionCurveEaseInOut animations:changeBlock completion:completionBlock];
         }
         
-        _sheetView = [[TGMenuSheetView alloc] initWithContext:_context itemViews:itemViews sizeClass:sizeClass dark:_dark];
+        _sheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:_pallete itemViews:itemViews sizeClass:sizeClass dark:_dark];
         _sheetView.menuRelayout = menuRelayout;
         _sheetView.menuWidth = sheetView.menuWidth;
         _sheetView.maxHeight = _maxHeight;
@@ -275,7 +279,7 @@ typedef enum
     {
         void (^configureBlock)(void) = ^
         {
-            _sheetView = [[TGMenuSheetView alloc] initWithContext:_context itemViews:itemViews sizeClass:sizeClass dark:_dark];
+            _sheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:_pallete itemViews:itemViews sizeClass:sizeClass dark:_dark];
             _sheetView.menuRelayout = menuRelayout;
             _sheetView.maxHeight = _maxHeight;
             if (self.isViewLoaded)
@@ -1152,3 +1156,22 @@ typedef enum
 }
 
 @end
+
+
+@implementation TGMenuSheetPallete
+
++ (instancetype)palleteWithBackgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor
+{
+    TGMenuSheetPallete *pallete = [[TGMenuSheetPallete alloc] init];
+    pallete->_backgroundColor = backgroundColor;
+    pallete->_selectionColor = selectionColor;
+    pallete->_separatorColor = separatorColor;
+    pallete->_accentColor = accentColor;
+    pallete->_destructiveColor = destructiveColor;
+    pallete->_textColor = textColor;
+    pallete->_secondaryTextColor = secondaryTextColor;
+    return pallete;
+}
+
+@end
+

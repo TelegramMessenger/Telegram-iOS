@@ -294,9 +294,9 @@ static bool TGProgressWindowIsLight = true;
     }
 }
 
-+ (void)changeStyle
++ (void)setDarkStyle:(bool)dark
 {
-    TGProgressWindowIsLight = !TGProgressWindowIsLight;
+    TGProgressWindowIsLight = !dark;
 }
 
 @end

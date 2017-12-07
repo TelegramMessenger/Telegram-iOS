@@ -2,6 +2,17 @@
 
 @class SSignal;
 
+@interface TGNavigationBarPallete : NSObject
+
+@property (nonatomic, readonly) UIColor *backgroundColor;
+@property (nonatomic, readonly) UIColor *separatorColor;
+@property (nonatomic, readonly) UIColor *titleColor;
+@property (nonatomic, readonly) UIColor *tintColor;
+
++ (instancetype)palleteWithBackgroundColor:(UIColor *)backgroundColor separatorColor:(UIColor *)separatorColor titleColor:(UIColor *)titleColor tintColor:(UIColor *)tintColor;
+
+@end
+
 @protocol TGNavigationBarMusicPlayerView <NSObject>
 
 @end
@@ -28,6 +39,7 @@
 
 - (id)initWithFrame:(CGRect)frame barStyle:(UIBarStyle)barStyle;
 
+- (void)setPallete:(TGNavigationBarPallete *)pallete;
 - (void)setHiddenState:(bool)hidden animated:(bool)animated;
 
 - (SSignal *)hiddenSignal;

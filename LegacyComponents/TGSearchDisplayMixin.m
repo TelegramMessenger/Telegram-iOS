@@ -423,8 +423,12 @@
         
         _searchResultsTableView = [delegate createTableViewForSearchMixin:self];
         _searchResultsTableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
         if (iosMajorVersion() >= 11)
             _searchResultsTableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+#pragma clang diagnostic pop
         
         [self setSearchResultsTableViewHidden:true];
     }

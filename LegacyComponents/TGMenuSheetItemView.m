@@ -43,6 +43,11 @@
     }
 }
 
+- (void)setPallete:(TGMenuSheetPallete *)pallete
+{
+    
+}
+
 - (CGFloat)contentHeightCorrection
 {
     return 0;

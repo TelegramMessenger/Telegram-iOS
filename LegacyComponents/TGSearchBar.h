@@ -17,6 +17,20 @@ typedef enum {
 
 @end
 
+@interface TGSearchBarPallete : NSObject
+
+@property (nonatomic, readonly) bool isDark;
+@property (nonatomic, readonly) UIColor *backgroundColor;
+@property (nonatomic, readonly) UIColor *highContrastBackgroundColor;
+@property (nonatomic, readonly) UIColor *textColor;
+@property (nonatomic, readonly) UIColor *placeholderColor;
+@property (nonatomic, readonly) UIColor *clearBackgroundColor;
+@property (nonatomic, readonly) UIColor *clearIconColor;
+
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor highContrastBackgroundColor:(UIColor *)highContrastBackgroundColor textColor:(UIColor *)textColor placeholderColor:(UIColor *)placeholderColor clearBackgroundColor:(UIColor *)clearBackgroundColor clearIconColor:(UIColor *)clearIconColor;
+
+@end
+
 @interface TGSearchBar : UIView
 
 + (CGFloat)searchBarBaseHeight;
@@ -64,5 +78,7 @@ typedef enum {
 - (void)updateClipping:(CGFloat)clippedHeight;
 
 - (void)localizationUpdated;
+
+- (void)setPallete:(TGSearchBarPallete *)pallete;
 
 @end

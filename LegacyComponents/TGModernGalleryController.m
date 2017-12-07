@@ -69,6 +69,9 @@
         _adjustsStatusBarVisibility = true;
         _defaultStatusBarStyle = UIStatusBarStyleDefault;
         _shouldAnimateStatusBarStyleTransition = true;
+        
+        if ([context respondsToSelector:@selector(prefersLightStatusBar)])
+            _defaultStatusBarStyle = [context prefersLightStatusBar] ? UIStatusBarStyleLightContent : UIStatusBarStyleDefault;
     }
     return self;
 }

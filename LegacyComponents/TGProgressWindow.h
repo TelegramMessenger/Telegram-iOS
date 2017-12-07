@@ -21,7 +21,7 @@
 - (void)dismiss:(bool)animated;
 - (void)dismissWithSuccess;
 
-+ (void)changeStyle;
++ (void)setDarkStyle:(bool)dark;
 
 @end
 

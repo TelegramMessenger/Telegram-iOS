@@ -129,7 +129,7 @@ typedef enum
     [_containerView addSubview:_dismissButton];
     
     [_mainSheetView removeFromSuperview];
-    _mainSheetView = [[TGMenuSheetView alloc] initWithContext:_context itemViews:mainItemViews sizeClass:UIUserInterfaceSizeClassCompact dark:false];
+    _mainSheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:nil itemViews:mainItemViews sizeClass:UIUserInterfaceSizeClassCompact dark:false];
     
     __weak TGItemMenuSheetPreviewView *weakSelf = self;
     void (^menuRelayout)(void) = ^
@@ -151,7 +151,7 @@ typedef enum
     if (actionItemViews.count > 0)
     {
         [_actionsSheetView removeFromSuperview];
-        _actionsSheetView = [[TGMenuSheetView alloc] initWithContext:_context itemViews:actionItemViews sizeClass:UIUserInterfaceSizeClassCompact dark:false];
+        _actionsSheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:nil itemViews:actionItemViews sizeClass:UIUserInterfaceSizeClassCompact dark:false];
         _actionsSheetView.hidden = true;
     }
 }

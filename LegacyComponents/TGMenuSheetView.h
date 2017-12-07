@@ -6,6 +6,8 @@
 
 @end
 
+@class TGMenuSheetPallete;
+
 @interface TGMenuSheetView : UIView
 
 @property (nonatomic, readonly) NSArray *itemViews;
@@ -32,7 +34,7 @@
 
 @property (nonatomic, copy) void (^handleInternalPan)(UIPanGestureRecognizer *);
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context itemViews:(NSArray *)itemViews sizeClass:(UIUserInterfaceSizeClass)sizeClass dark:(bool)dark;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context pallete:(TGMenuSheetPallete *)pallete itemViews:(NSArray *)itemViews sizeClass:(UIUserInterfaceSizeClass)sizeClass dark:(bool)dark;
 
 - (void)setItemViews:(NSArray *)itemViews animated:(bool)animated;
 
