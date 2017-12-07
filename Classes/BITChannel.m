@@ -307,9 +307,15 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (UIApplicationState)checkApplicationStateForApplication:(UIApplication *)application {
   __block UIApplicationState state;
-  dispatch_async(dispatch_get_main_queue(), ^{
+  dispatch_block_t block = ^{
     state = application.applicationState;
-  });
+  };
+  
+  if ([NSThread isMainThread]) {
+    block();
+  } else {
+    dispatch_sync(dispatch_get_main_queue(), block);
+  }
   
   return state;
 }
