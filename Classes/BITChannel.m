@@ -221,8 +221,8 @@ NS_ASSUME_NONNULL_BEGIN
   }];
   __block NSUInteger i = 0;
   __weak typeof(self) weakSelf = self;
-  __block __weak void (^weakWaitBlock)();
-  void (^waitBlock)();
+  __block __weak void (^weakWaitBlock)(void);
+  void (^waitBlock)(void);
   weakWaitBlock = waitBlock = ^{
     typeof(self) strongSelf = weakSelf;
     if (i < queues.count) {
@@ -288,8 +288,9 @@ NS_ASSUME_NONNULL_BEGIN
       NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
       [strongSelf appendDictionaryToEventBuffer:dict];
       UIApplication *application = [UIApplication sharedApplication];
+      UIApplicationState state = [self checkApplicationStateForApplication:application];
       if (strongSelf.dataItemCount >= strongSelf.maxBatchSize ||
-         (application && application.applicationState == UIApplicationStateBackground)) {
+         (application && state == UIApplicationStateBackground)) {
         
         // Case 2: Max batch count has been reached or the app is running in the background, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
@@ -302,6 +303,15 @@ NS_ASSUME_NONNULL_BEGIN
       }
     }
   });
+}
+
+- (UIApplicationState)checkApplicationStateForApplication:(UIApplication *)application {
+  __block UIApplicationState state;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    state = application.applicationState;
+  });
+  
+  return state;
 }
 
 #pragma mark - Envelope telemerty items
