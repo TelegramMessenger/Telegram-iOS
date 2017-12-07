@@ -433,7 +433,7 @@ NS_ASSUME_NONNULL_BEGIN
  This is not identical to the `[ASIdentifierManager advertisingIdentifier]` or
  the `[UIDevice identifierForVendor]`!
  */
-@property (nonatomic, readonly) NSString *installString;
+@property (nonatomic, readonly, copy) NSString *installString;
 
 
 /**

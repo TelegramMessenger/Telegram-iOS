@@ -10,6 +10,12 @@
 #import "BITHockeyHelper.h"
 #import "BITTestsDependencyInjection.h"
 
+@interface BITSender ()
+
+@property (nonatomic, strong) NSURLSession *session;
+
+@end
+
 @interface BITSenderTests : BITTestsDependencyInjection
 
 @property(nonatomic, strong) BITSender *sut;
@@ -54,18 +60,6 @@
   XCTAssertEqualObjects(testRequest.HTTPBody, expectedBodyData);
 }
 
-- (void)testSendDataTriggersPlatformSpecificNetworkOperation {
-  // setup
-  self.sut = OCMPartialMock(self.sut);
-  OCMStub([self.sut isURLSessionSupported]).andReturn(YES);
-  
-  NSURLRequest *testRequest = [NSURLRequest new];
-  NSString *testFilePath = @"path/to/file";
-  [self.sut sendRequest:testRequest filePath:testFilePath];
-
-  OCMVerify([self.sut sendUsingURLSessionWithRequest:testRequest filePath:testFilePath]);
-}
-
 - (void)testSendDataVerifyDataIsGzipped {
   self.sut = OCMPartialMock(self.sut);
   NSString *testFilePath = @"path/to/file";
@@ -89,23 +83,27 @@
   }] filePath:testFilePath]);
 }
 
-- (void)testSendUsingURLSession {
+- (void)testSendRequest {
   
-  // setup=
+  // Setup
   self.sut = OCMPartialMock(self.sut);
   NSString *testFilePath = @"path/to/file";
   NSURLRequest *testRequest = [NSURLRequest new];
-  if ([self.sut isURLSessionSupported]) {
-    // test
-    [self.sut sendUsingURLSessionWithRequest:testRequest filePath:testFilePath];
-    
-    //verify
-    OCMVerify([self.sut resumeSessionDataTask:(id)anything()]);
-  }
+  id session = mock(NSURLSession.class);
+  id task = mock(NSURLSessionDataTask.class);
+  OCMStub([session dataTaskWithRequest:testRequest completionHandler:anything()]).andReturn(task);
+  OCMStub([self.sut session]).andReturn(session);
+  
+  // Test
+  [self.sut sendRequest:testRequest filePath:testFilePath];
+  
+  // Verify
+  OCMVerify([self.sut session]);
+  OCMVerify([session dataTaskWithRequest:testRequest completionHandler:anything()]);
+  OCMVerify([task resume]);
 }
 
-- (void)testDeleteDataWithStatusCodeWorks{
-  
+- (void)testDeleteDataWithStatusCodeWorks {
   for(NSInteger statusCode = 100; statusCode <= 510; statusCode++){
     if((statusCode == 429) || (statusCode == 408) || (statusCode == 500) || (statusCode == 503) || (statusCode == 511)) {
       XCTAssertTrue([self.sut shouldDeleteDataWithStatusCode:statusCode] == NO);
@@ -117,36 +115,36 @@
 
 - (void)testRegisterObserversOnInit {
   self.mockNotificationCenter = mock(NSNotificationCenter.class);
-  self.sut = [[BITSender alloc]initWithPersistence:self.mockPersistence  serverURL:self.testServerURL];
+  self.sut = [[BITSender alloc]initWithPersistence:self.mockPersistence serverURL:self.testServerURL];
   
   [verify((id)self.mockNotificationCenter) addObserverForName:BITPersistenceSuccessNotification object:nil queue:nil usingBlock:(id)anything()];
 }
 
 - (void)testFilesGetDeletedOnPositiveOrUnrecoverableStatusCodes {
- 
-  // setup=
+
+  // Setup
   self.sut = OCMPartialMock(self.sut);
   NSInteger testStatusCode = 999;
   OCMStub([self.sut shouldDeleteDataWithStatusCode:testStatusCode]).andReturn(YES);
   self.sut.runningRequestsCount = 8;
-   NSData *testData = [@"test" dataUsingEncoding:NSUTF8StringEncoding];
+  NSData *testData = [@"test" dataUsingEncoding:NSUTF8StringEncoding];
   NSString *testFilePath = @"path/to/file";
   
   // Stub `sendSavedData` method so there won't be already a new running request when our test request finishes
   // Otherwise `runningRequestsCount` will already have been decreased by one and been increased by one again.
   OCMStub([self.sut sendSavedData]).andDo(nil);
   
-  // test
+  // Test
   [self.sut handleResponseWithStatusCode:testStatusCode responseData:testData filePath:testFilePath error:[NSError errorWithDomain:@"Network error" code:503 userInfo:nil]];
   
-  //verify
+  // Verify
   [verify(self.mockPersistence) deleteFileAtPath:testFilePath];
   XCTAssertTrue(self.sut.runningRequestsCount == 7);
 }
 
 - (void)testFilesGetUnblockedOnRecoverableErrorCodes {
   
-  // setup=
+  // Setup
   self.sut = OCMPartialMock(self.sut);
   NSInteger testStatusCode = 999;
   OCMStub([self.sut shouldDeleteDataWithStatusCode:testStatusCode]).andReturn(NO);
@@ -154,13 +152,13 @@
   NSData *testData = [@"test" dataUsingEncoding:NSUTF8StringEncoding];
   NSString *testFilePath = @"path/to/file";
   
-  // test
+  // Test
   [self.sut handleResponseWithStatusCode:testStatusCode
                         responseData:testData
                             filePath:testFilePath
                                error:[NSError errorWithDomain:@"Network error" code:503 userInfo:nil]];
   
-  //verify
+  // Verify
   [verify(self.mockPersistence) giveBackRequestedFilePath:testFilePath];
   XCTAssertTrue(self.sut.runningRequestsCount == 7);
 }

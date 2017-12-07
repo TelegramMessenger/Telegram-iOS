@@ -59,7 +59,6 @@ NSString *bit_appIdentifierToGuid(NSString *appIdentifier);
 NSString *bit_appName(NSString *placeHolderString);
 NSString *bit_UUID(void);
 NSString *bit_appAnonID(BOOL forceNewAnonID);
-BOOL bit_isPreiOS8Environment(void);
 BOOL bit_isPreiOS10Environment(void);
 BOOL bit_isAppStoreReceiptSandbox(void);
 BOOL bit_hasEmbeddedMobileProvision(void);
@@ -77,7 +76,6 @@ BOOL bit_isDebuggerAttached(void);
 
 /* NSString helpers */
 NSString *bit_URLEncodedString(NSString *inputString);
-NSString *bit_base64String(NSData * data, unsigned long length);
 
 /* Context helpers */
 NSString *bit_utcDateString(NSDate *date);
