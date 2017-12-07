@@ -6,6 +6,7 @@
 #import "BITTelemetryContext.h"
 #import "BITMetricsManagerPrivate.h"
 #import "BITHockeyHelper.h"
+#import "BITHockeyHelper+Application.h"
 #import "HockeySDKPrivate.h"
 #import "BITChannelPrivate.h"
 #import "BITEventData.h"
@@ -197,7 +198,8 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   
   // If the app is running in the background.
   UIApplication *application = [UIApplication sharedApplication];
-  if (application && application.applicationState == UIApplicationStateBackground) {
+  BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground) ? YES : NO;
+  if (application && applicationIsInBackground) {
     [self.channel createBackgroundTask:application withWaitingGroup:group];
   }
 }
@@ -222,7 +224,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   
   // If the app is running in the background.
   UIApplication *application = [UIApplication sharedApplication];
-  if (application && application.applicationState == UIApplicationStateBackground) {
+  BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground) ? YES : NO;  if (application && applicationIsInBackground) {
     [self.channel createBackgroundTask:application withWaitingGroup:group];
   }
 }

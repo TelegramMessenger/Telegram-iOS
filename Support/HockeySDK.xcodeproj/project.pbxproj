@@ -428,6 +428,9 @@
 		97F0F9FE18ABAECD00EF50AA /* iconCamera@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */; };
 		97F0FA0518B2294D00EF50AA /* BITFeedbackMessageAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */; };
 		B2156DD51D9DED7F0001DDDC /* AppIconPlaceHolder.png in Resources */ = {isa = PBXBuildFile; fileRef = B2156DD01D9DED7F0001DDDC /* AppIconPlaceHolder.png */; };
+		B2B2DB0A1FD9E47B00FB7FF2 /* BITHockeyHelper+Application.h in Headers */ = {isa = PBXBuildFile; fileRef = B2B2DB081FD9E47B00FB7FF2 /* BITHockeyHelper+Application.h */; };
+		B2B2DB0B1FD9E47B00FB7FF2 /* BITHockeyHelper+Application.m in Sources */ = {isa = PBXBuildFile; fileRef = B2B2DB091FD9E47B00FB7FF2 /* BITHockeyHelper+Application.m */; };
+		B2B2DB0C1FD9E48000FB7FF2 /* BITHockeyHelper+Application.h in Headers */ = {isa = PBXBuildFile; fileRef = B2B2DB081FD9E47B00FB7FF2 /* BITHockeyHelper+Application.h */; };
 		B2D1CE5E1D9DE55900CA74A8 /* FeedbackPlaceholder.png in Resources */ = {isa = PBXBuildFile; fileRef = B2D1CE5D1D9DE4F700CA74A8 /* FeedbackPlaceholder.png */; };
 		E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E40E0B0917DA19DC005E38C1 /* BITHockeyAppClientTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E40E0B0817DA19DC005E38C1 /* BITHockeyAppClientTests.m */; };
@@ -762,6 +765,8 @@
 		B29855421D85EB5D007FF452 /* allfeatures.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = allfeatures.xcconfig; sourceTree = "<group>"; };
 		B29855431D85EBAC007FF452 /* module_allfeatures.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module_allfeatures.modulemap; sourceTree = "<group>"; };
 		B2B04C141FBFB1D100EC12F5 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = tr.lproj/HockeySDK.strings; sourceTree = "<group>"; };
+		B2B2DB081FD9E47B00FB7FF2 /* BITHockeyHelper+Application.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BITHockeyHelper+Application.h"; sourceTree = "<group>"; };
+		B2B2DB091FD9E47B00FB7FF2 /* BITHockeyHelper+Application.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "BITHockeyHelper+Application.m"; sourceTree = "<group>"; };
 		B2D1CE5D1D9DE4F700CA74A8 /* FeedbackPlaceholder.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = FeedbackPlaceholder.png; sourceTree = "<group>"; };
 		BEE0207C16C5107E004426EA /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		E328A2FB1C88B344008BB527 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/HockeySDK.strings; sourceTree = "<group>"; };
@@ -959,6 +964,8 @@
 				1E49A4A4161222B900463151 /* BITHockeyBaseViewController.m */,
 				1E49A4A5161222B900463151 /* BITHockeyHelper.h */,
 				1E49A4A6161222B900463151 /* BITHockeyHelper.m */,
+				B2B2DB081FD9E47B00FB7FF2 /* BITHockeyHelper+Application.h */,
+				B2B2DB091FD9E47B00FB7FF2 /* BITHockeyHelper+Application.m */,
 				8080576B1C5818AE00BB319D /* BITHockeyLogger.h */,
 				8042A7F41CC507B700B603FE /* BITHockeyLoggerPrivate.h */,
 				8080576C1C5818AE00BB319D /* BITHockeyLogger.m */,
@@ -1398,6 +1405,7 @@
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
 				9774BCFF192CB20A00085EB5 /* BITActivityIndicatorButton.h in Headers */,
 				8034E6961BA3214300D83A30 /* BITCategoryContainer.h in Headers */,
+				B2B2DB0A1FD9E47B00FB7FF2 /* BITHockeyHelper+Application.h in Headers */,
 				1E49A4BE161222B900463151 /* BITHockeyHelper.h in Headers */,
 				973EC8BB18BDE29800DBFFBB /* BITArrowImageAnnotation.h in Headers */,
 				1E49A4C4161222B900463151 /* BITAppStoreHeader.h in Headers */,
@@ -1432,6 +1440,7 @@
 				1EB617731B0A30E90035A986 /* BITAuthenticator.h in Headers */,
 				1EB617751B0A30F50035A986 /* BITCrashManager.h in Headers */,
 				8034E62C1BA31AD600D83A30 /* BITTelemetryData.h in Headers */,
+				B2B2DB0C1FD9E48000FB7FF2 /* BITHockeyHelper+Application.h in Headers */,
 				1EB6176D1B0A30CC0035A986 /* BITWebTableViewCell.h in Headers */,
 				8034E68A1BA31D7C00D83A30 /* BITUser.h in Headers */,
 				80668C751C8CD93B00A133D3 /* BITEventData.h in Headers */,
@@ -1842,6 +1851,7 @@
 				1EB92E741955C38C0093C8B6 /* BITHockeyAttachment.m in Sources */,
 				E48A3DED17B3ED1C00924C3D /* BITAuthenticator.m in Sources */,
 				1E49A4DB161222D400463151 /* HockeySDKPrivate.m in Sources */,
+				B2B2DB0B1FD9E47B00FB7FF2 /* BITHockeyHelper+Application.m in Sources */,
 				1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */,
 				1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */,
 				1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */,

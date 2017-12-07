@@ -6,6 +6,7 @@
 #import "BITHockeyManager.h"
 #import "BITChannelPrivate.h"
 #import "BITHockeyHelper.h"
+#import "BITHockeyHelper+Application.h"
 #import "BITTelemetryContext.h"
 #import "BITTelemetryData.h"
 #import "BITEnvelope.h"
@@ -287,10 +288,11 @@ NS_ASSUME_NONNULL_BEGIN
     @synchronized(self) {
       NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
       [strongSelf appendDictionaryToEventBuffer:dict];
+      // If the app is running in the background.
       UIApplication *application = [UIApplication sharedApplication];
-      UIApplicationState state = [self checkApplicationStateForApplication:application];
+      BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground) ? YES : NO;
       if (strongSelf.dataItemCount >= strongSelf.maxBatchSize ||
-         (application && state == UIApplicationStateBackground)) {
+         (application && applicationIsInBackground)) {
         
         // Case 2: Max batch count has been reached or the app is running in the background, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
@@ -303,21 +305,6 @@ NS_ASSUME_NONNULL_BEGIN
       }
     }
   });
-}
-
-- (UIApplicationState)checkApplicationStateForApplication:(UIApplication *)application {
-  __block UIApplicationState state;
-  dispatch_block_t block = ^{
-    state = application.applicationState;
-  };
-  
-  if ([NSThread isMainThread]) {
-    block();
-  } else {
-    dispatch_sync(dispatch_get_main_queue(), block);
-  }
-  
-  return state;
 }
 
 #pragma mark - Envelope telemerty items

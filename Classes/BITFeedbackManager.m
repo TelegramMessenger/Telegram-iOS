@@ -42,6 +42,7 @@
 
 #import "HockeySDKNullability.h"
 #import "BITHockeyHelper.h"
+#import "BITHockeyHelper+Application.h"
 #import "BITHockeyAppClient.h"
 
 #define kBITFeedbackUserDataAsked   @"HockeyFeedbackUserDataAsked"
@@ -131,7 +132,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (void)didEnterBackgroundActions {
   self.didEnterBackgroundState = NO;
 
-  if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground) {
+  if ([BITHockeyHelper applicationState] == BITApplicationStateBackground) {
     self.didEnterBackgroundState = YES;
   }
 }
@@ -270,15 +271,16 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   [self isiOS10PhotoPolicySet];
 
   // we are already delayed, so the notification already came in and this won't invoked twice
-  switch ([[UIApplication sharedApplication] applicationState]) {
-    case UIApplicationStateActive:
+  switch ([BITHockeyHelper applicationState]) {
+    case BITApplicationStateActive:
       // we did startup, so yes we are coming from background
       self.didEnterBackgroundState = YES;
 
       [self didBecomeActiveActions];
       break;
-    case UIApplicationStateBackground:
-    case UIApplicationStateInactive:
+    case BITApplicationStateBackground:
+    case BITApplicationStateInactive:
+    case BITApplicationStateUnknown:
       // do nothing, wait for active state
       break;
   }
