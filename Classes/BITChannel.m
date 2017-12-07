@@ -290,7 +290,7 @@ NS_ASSUME_NONNULL_BEGIN
       [strongSelf appendDictionaryToEventBuffer:dict];
       // If the app is running in the background.
       UIApplication *application = [UIApplication sharedApplication];
-      BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground) ? YES : NO;
+      BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground);
       if (strongSelf.dataItemCount >= strongSelf.maxBatchSize ||
          (application && applicationIsInBackground)) {
         
