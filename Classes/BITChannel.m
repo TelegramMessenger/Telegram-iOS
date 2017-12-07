@@ -197,7 +197,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)persistDataItemQueueWithBackgroundTask:(UIApplication *)application {
   __weak typeof(self) weakSelf = self;
-  dispatch_async(self.dataItemsOperations, ^{
+  dispatch_sync(self.dataItemsOperations, ^{
     typeof(self) strongSelf = weakSelf;
     [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
   });
