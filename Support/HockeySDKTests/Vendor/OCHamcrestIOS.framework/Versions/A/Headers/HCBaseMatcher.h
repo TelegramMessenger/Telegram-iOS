@@ -8,10 +8,10 @@
 
 
 /*!
- * @abstract Base class for all @ref HCMatcher implementations.
+ * @abstract Base class for all HCMatcher implementations.
  * @discussion Simple matchers can just subclass HCBaseMatcher and implement <code>-matches:</code>
  * and <code>-describeTo:</code>. But if the matching algorithm has several "no match" paths,
- * consider subclassing @ref HCDiagnosingMatcher instead.
+ * consider subclassing HCDiagnosingMatcher instead.
  */
 @interface HCBaseMatcher : NSObject <HCMatcher, NSCopying>
 

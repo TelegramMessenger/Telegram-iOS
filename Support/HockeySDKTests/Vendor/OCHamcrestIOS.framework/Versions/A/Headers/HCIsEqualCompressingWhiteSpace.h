@@ -5,21 +5,21 @@
 
 
 /*!
- * @abstract Tests if a string is equal to another string, ignoring any changes in whitespace.
+ * @abstract Tests if a string is equal to another string, when whitespace differences are (mostly) ignored.
  */
-@interface HCIsEqualIgnoringWhiteSpace : HCBaseMatcher
+@interface HCIsEqualCompressingWhiteSpace : HCBaseMatcher
 
 - (instancetype)initWithString:(NSString *)string;
 
 @end
 
 
-FOUNDATION_EXPORT id HC_equalToIgnoringWhiteSpace(NSString *expectedString);
+FOUNDATION_EXPORT id HC_equalToCompressingWhiteSpace(NSString *expectedString);
 
 #ifndef HC_DISABLE_SHORT_SYNTAX
 /*!
  * @abstract Creates a matcher for NSStrings that matches when the examined string is equal to the
- * specified expected string, ignoring differences in whitespace.
+ * specified expected string, when whitespace differences are (mostly) ignored.
  * @param expectedString The expected value of matched strings. (Must not be <code>nil</code>.)
  * @discussion To be exact, the following whitespace rules are applied:
  * <ul>
@@ -28,14 +28,14 @@ FOUNDATION_EXPORT id HC_equalToIgnoringWhiteSpace(NSString *expectedString);
  * </ul>
  *
  * <b>Example</b><br />
- * <pre>assertThat(\@"   my\tfoo  bar ", equalToIgnoringWhiteSpace(\@" my  foo bar"))</pre>
+ * <pre>assertThat(\@"   my\tfoo  bar ", equalToCompressingWhiteSpace(\@" my  foo bar"))</pre>
  *
  * <b>Name Clash</b><br />
  * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
- * HC_equalToIgnoringWhiteSpace instead.
+ * HC_equalToCompressingWhiteSpace instead.
  */
-static inline id equalToIgnoringWhiteSpace(NSString *expectedString)
+static inline id equalToCompressingWhiteSpace(NSString *expectedString)
 {
-    return HC_equalToIgnoringWhiteSpace(expectedString);
+    return HC_equalToCompressingWhiteSpace(expectedString);
 }
 #endif

@@ -1,5 +1,5 @@
 #import <XCTest/XCTest.h>
-#import "OCMock.h"
+#import <OCMock/OCMock.h>
 #import "BITHockeyLoggerPrivate.h"
 
 static char *const testFile = "Filename";
