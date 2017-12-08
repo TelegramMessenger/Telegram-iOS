@@ -287,10 +287,9 @@ NS_ASSUME_NONNULL_BEGIN
       NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
       [strongSelf appendDictionaryToEventBuffer:dict];
       // If the app is running in the background.
-      UIApplication *application = [UIApplication sharedApplication];
       BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground);
       if (strongSelf.dataItemCount >= strongSelf.maxBatchSize ||
-         (application && applicationIsInBackground)) {
+         (applicationIsInBackground)) {
         
         // Case 2: Max batch count has been reached or the app is running in the background, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
