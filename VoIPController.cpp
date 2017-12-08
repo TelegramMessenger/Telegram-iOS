@@ -100,10 +100,12 @@ bool VoIPController::didInitWin32TimeScale = false;
 #define SHA256_LENGTH 32
 
 #ifndef TGVOIP_USE_CUSTOM_CRYPTO
+extern "C" {
 #include <openssl/sha.h>
 #include <openssl/aes.h>
 #include <openssl/modes.h>
 #include <openssl/rand.h>
+}
 
 void tgvoip_openssl_aes_ige_encrypt(uint8_t* in, uint8_t* out, size_t length, uint8_t* key, uint8_t* iv){
 	AES_KEY akey;
