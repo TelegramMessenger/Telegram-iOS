@@ -200,7 +200,8 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   
   // If the app is running in the background.
   UIApplication *application = [UIApplication sharedApplication];
-  if (application && application.applicationState == UIApplicationStateBackground) {
+  BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground);
+  if (applicationIsInBackground) {
     [self.channel createBackgroundTaskWhileDataIsSending:application withWaitingGroup:group];
   }
 }
