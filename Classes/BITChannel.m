@@ -258,11 +258,17 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Adding to queue
 
 - (void)enqueueTelemetryItem:(BITTelemetryData *)item {
-  
+  [self enqueueTelemetryItem:item completionHandler:nil];
+}
+
+- (void)enqueueTelemetryItem:(BITTelemetryData *)item completionHandler:(nullable void (^)(void))completionHandler {
   if (!item) {
     
     // Item is nil: Do not enqueue item and abort operation.
     BITHockeyLogWarning(@"WARNING: TelemetryItem was nil.");
+    if(completionHandler) {
+      completionHandler();
+    }
     return;
   }
   
@@ -279,6 +285,11 @@ NS_ASSUME_NONNULL_BEGIN
       if (![strongSelf timerIsRunning]) {
         [strongSelf startTimer];
       }
+      
+      if(completionHandler) {
+        completionHandler();
+      }
+      
       return;
     }
     
@@ -299,6 +310,10 @@ NS_ASSUME_NONNULL_BEGIN
         if (![strongSelf timerIsRunning]) {
           [strongSelf startTimer];
         }
+      }
+      
+      if(completionHandler) {
+        completionHandler();
       }
     }
   });
