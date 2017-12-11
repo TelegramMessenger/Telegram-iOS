@@ -19,6 +19,7 @@
 
 #import "TGModernGallerySelectableItem.h"
 #import "TGModernGalleryEditableItem.h"
+#import "TGMediaPickerGalleryPhotoItem.h"
 #import "TGMediaPickerGalleryPhotoItemView.h"
 #import "TGMediaPickerGalleryVideoItemView.h"
 
@@ -537,7 +538,8 @@
             [strongSelf->_portraitToolbarView setEditButtonsEnabled:available animated:true];
             [strongSelf->_landscapeToolbarView setEditButtonsEnabled:available animated:true];
             
-            strongSelf->_muteButton.hidden = ![strongItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
+            bool sendableAsGif = [strongItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]] || ([strongItemView.item isKindOfClass:[TGMediaPickerGalleryPhotoItem class]] && ((TGMediaPickerGalleryPhotoItem *)strongItemView.item).asset.subtypes & TGMediaAssetSubtypePhotoLive);
+            strongSelf->_muteButton.hidden = !sendableAsGif;
         }
     }]];
 }
@@ -1093,7 +1095,8 @@
         return;
     
     TGModernGalleryItemView *currentItemView = _currentItemView;
-    if ([currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]])
+    bool sendableAsGif = [currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]] || ([currentItemView.item isKindOfClass:[TGMediaPickerGalleryPhotoItem class]] && ((TGMediaPickerGalleryPhotoItem *)currentItemView.item).asset.subtypes & TGMediaAssetSubtypePhotoLive);
+    if (sendableAsGif)
         [(TGMediaPickerGalleryVideoItemView *)currentItemView toggleSendAsGif];
 }
 

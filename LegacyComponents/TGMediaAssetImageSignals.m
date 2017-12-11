@@ -43,6 +43,11 @@ static Class TGMediaAssetImageSignalsClass = nil;
     return [TGMediaAssetImageSignalsClass imageForAsset:asset imageType:imageType size:size allowNetworkAccess:allowNetworkAccess];
 }
 
++ (SSignal *)livePhotoForAsset:(TGMediaAsset *)asset
+{
+    return [TGMediaAssetImageSignalsClass livePhotoForAsset:asset];
+}
+
 + (SSignal *)imageDataForAsset:(TGMediaAsset *)asset
 {
     return [self imageDataForAsset:asset allowNetworkAccess:true];
@@ -194,8 +199,8 @@ static Class TGMediaAssetImageSignalsClass = nil;
 
 + (SSignal *)avAssetForVideoAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess
 {
-    if (asset == nil || !asset.isVideo)
-        return [SSignal fail:nil];
+    //if (asset == nil || !asset.isVideo)
+    //    return [SSignal fail:nil];
     
     return [TGMediaAssetImageSignalsClass avAssetForVideoAsset:asset allowNetworkAccess:allowNetworkAccess];
 }

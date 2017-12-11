@@ -630,52 +630,77 @@
                     
                     SSignal *assetSignal = inlineSignal;
                     SSignal *imageSignal = assetSignal;
-                    if (editingContext != nil)
+                    if (adjustments.sendAsGif)
                     {
-                        imageSignal = [[[[[editingContext imageSignalForItem:asset withUpdates:true] filter:^bool(id result)
+                        [signals addObject:[inlineThumbnailSignal(asset) map:^NSDictionary *(UIImage *image)
                         {
-                            return result == nil || ([result isKindOfClass:[UIImage class]] && !((UIImage *)result).degraded);
-                        }] take:1] mapToSignal:^SSignal *(id result)
-                        {
-                            if (result == nil)
-                            {
-                                return [SSignal fail:nil];
-                            }
-                            else if ([result isKindOfClass:[UIImage class]])
-                            {
-                                UIImage *image = (UIImage *)result;
-                                image.edited = true;
-                                return [SSignal single:image];
-                            }
-
-                            return [SSignal complete];
-                        }] onCompletion:^
-                        {
-                            __strong TGMediaEditingContext *strongEditingContext = editingContext;
-                            [strongEditingContext description];
-                        }];
+                            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                            dict[@"type"] = @"cloudPhoto";
+                            dict[@"previewImage"] = image;
+                            dict[@"livePhoto"] = @true;
+                            dict[@"asset"] = asset;
+                            
+                            if (adjustments.paintingData.stickers.count > 0)
+                                dict[@"stickers"] = adjustments.paintingData.stickers;
+                            
+                            if (timer != nil)
+                                dict[@"timer"] = timer;
+                            else if (groupedId != nil && !hasAnyTimers)
+                                dict[@"groupedId"] = groupedId;
+                            
+                            id generatedItem = descriptionGenerator(dict, caption, nil);
+                            return generatedItem;
+                        }]];
                     }
-                    
-                    [signals addObject:[[imageSignal map:^NSDictionary *(UIImage *image)
+                    else
                     {
-                        NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                        dict[@"type"] = @"editedPhoto";
-                        dict[@"image"] = image;
+                        if (editingContext != nil)
+                        {
+                            imageSignal = [[[[[editingContext imageSignalForItem:asset withUpdates:true] filter:^bool(id result)
+                            {
+                                return result == nil || ([result isKindOfClass:[UIImage class]] && !((UIImage *)result).degraded);
+                            }] take:1] mapToSignal:^SSignal *(id result)
+                            {
+                                if (result == nil)
+                                {
+                                    return [SSignal fail:nil];
+                                }
+                                else if ([result isKindOfClass:[UIImage class]])
+                                {
+                                    UIImage *image = (UIImage *)result;
+                                    image.edited = true;
+                                    return [SSignal single:image];
+                                }
+
+                                return [SSignal complete];
+                            }] onCompletion:^
+                            {
+                                __strong TGMediaEditingContext *strongEditingContext = editingContext;
+                                [strongEditingContext description];
+                            }];
+                        }
                         
-                        if (adjustments.paintingData.stickers.count > 0)
-                            dict[@"stickers"] = adjustments.paintingData.stickers;
-                        
-                        if (timer != nil)
-                            dict[@"timer"] = timer;
-                        else if (groupedId != nil && !hasAnyTimers)
-                            dict[@"groupedId"] = groupedId;
-                        
-                        id generatedItem = descriptionGenerator(dict, caption, nil);
-                        return generatedItem;
-                    }] catch:^SSignal *(__unused id error)
-                    {
-                        return inlineSignal;
-                    }]];
+                        [signals addObject:[[imageSignal map:^NSDictionary *(UIImage *image)
+                        {
+                            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                            dict[@"type"] = @"editedPhoto";
+                            dict[@"image"] = image;
+                            
+                            if (adjustments.paintingData.stickers.count > 0)
+                                dict[@"stickers"] = adjustments.paintingData.stickers;
+                            
+                            if (timer != nil)
+                                dict[@"timer"] = timer;
+                            else if (groupedId != nil && !hasAnyTimers)
+                                dict[@"groupedId"] = groupedId;
+                            
+                            id generatedItem = descriptionGenerator(dict, caption, nil);
+                            return generatedItem;
+                        }] catch:^SSignal *(__unused id error)
+                        {
+                            return inlineSignal;
+                        }]];
+                    }
                     
                     i++;
                 }

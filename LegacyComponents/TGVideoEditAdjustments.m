@@ -15,6 +15,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
 @synthesize cropLockedAspectRatio = _cropLockedAspectRatio;
 @synthesize cropMirrored = _cropMirrored;
 @synthesize paintingData = _paintingData;
+@synthesize sendAsGif = _sendAsGif;
 
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize
                                        cropRect:(CGRect)cropRect

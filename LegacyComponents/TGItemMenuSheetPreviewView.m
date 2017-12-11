@@ -8,6 +8,8 @@
 #import <LegacyComponents/TGHacks.h>
 #import <objc/runtime.h>
 
+#import "TGMenuSheetController.h"
+
 const CGFloat TGItemMenuSheetPreviewLockThreshold = 45.0f;
 const CGFloat TGItemMenuSheetPreviewLockVelocityThreshold = 800.0f;
 const CGFloat TGItemMenuSheetPreviewPeekScale = 0.95f;
@@ -45,6 +47,7 @@ typedef enum
     bool _actionsWerePresentedOnGestureStart;
     
     id<LegacyComponentsContext> _context;
+    TGMenuSheetPallete *_pallete;
 }
 @end
 
@@ -59,12 +62,15 @@ typedef enum
         
         _context = context;
         
+        if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(menuSheetPallete)])
+            _pallete = [[LegacyComponentsGlobals provider] menuSheetPallete];
+        
         TGItemMenuTransitionType type = [self _transitionType];
         if (type != TGItemMenuTransitionTypeLegacy)
         {
             UIBlurEffect *effect = nil;
             if (type == TGItemMenuTransitionTypeSimplified)
-                effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleLight];
+                effect = _pallete.isDark ? [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark] : [UIBlurEffect effectWithStyle:UIBlurEffectStyleLight];
             
             _blurView = [[UIVisualEffectView alloc] initWithEffect:effect];
             [self addSubview:_blurView];
@@ -129,7 +135,8 @@ typedef enum
     [_containerView addSubview:_dismissButton];
     
     [_mainSheetView removeFromSuperview];
-    _mainSheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:nil itemViews:mainItemViews sizeClass:UIUserInterfaceSizeClassCompact dark:false];
+    
+    _mainSheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:_pallete itemViews:mainItemViews sizeClass:UIUserInterfaceSizeClassCompact dark:false];
     
     __weak TGItemMenuSheetPreviewView *weakSelf = self;
     void (^menuRelayout)(void) = ^
@@ -142,7 +149,6 @@ typedef enum
     };
     _mainSheetView.menuRelayout = menuRelayout;
     
-    
     [_arrowView removeFromSuperview];
     _arrowView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PreviewUpArrow")];
     _arrowView.alpha = 0.0f;
@@ -151,7 +157,7 @@ typedef enum
     if (actionItemViews.count > 0)
     {
         [_actionsSheetView removeFromSuperview];
-        _actionsSheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:nil itemViews:actionItemViews sizeClass:UIUserInterfaceSizeClassCompact dark:false];
+        _actionsSheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:_pallete itemViews:actionItemViews sizeClass:UIUserInterfaceSizeClassCompact dark:false];
         _actionsSheetView.hidden = true;
     }
 }

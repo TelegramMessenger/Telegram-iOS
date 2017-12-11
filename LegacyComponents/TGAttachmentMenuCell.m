@@ -1,5 +1,6 @@
 #import "TGAttachmentMenuCell.h"
 #import <LegacyComponents/TGMenuSheetView.h>
+#import "LegacyComponentsInternal.h"
 
 const CGFloat TGAttachmentMenuCellCornerRadius = 5.5f;
 
@@ -30,7 +31,7 @@ const CGFloat TGAttachmentMenuCellCornerRadius = 5.5f;
                 UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
                 CGContextRef context = UIGraphicsGetCurrentContext();
                 
-                CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+                CGContextSetFillColorWithColor(context, UIColorRGB(0x222f40).CGColor);
                 CGContextFillRect(context, rect);
                 
                 CGContextSetBlendMode(context, kCGBlendModeClear);

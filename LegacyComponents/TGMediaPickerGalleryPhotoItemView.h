@@ -8,4 +8,6 @@
 
 @property (nonatomic, strong) TGModernGalleryImageItemImageView *imageView;
 
+- (void)toggleSendAsGif;
+
 @end

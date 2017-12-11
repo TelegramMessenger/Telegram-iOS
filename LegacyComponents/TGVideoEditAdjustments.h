@@ -18,7 +18,6 @@ typedef enum
 @property (nonatomic, readonly) NSTimeInterval trimStartValue;
 @property (nonatomic, readonly) NSTimeInterval trimEndValue;
 @property (nonatomic, readonly) TGMediaVideoConversionPreset preset;
-@property (nonatomic, readonly) bool sendAsGif;
 
 - (CMTimeRange)trimTimeRange;
 

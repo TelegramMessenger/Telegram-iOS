@@ -73,7 +73,7 @@
                 UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
                 CGContextRef context = UIGraphicsGetCurrentContext();
                 
-                CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+                CGContextSetFillColorWithColor(context, UIColorRGB(0x222f40).CGColor);
                 CGContextFillRect(context, rect);
                 
                 CGContextSetBlendMode(context, kCGBlendModeClear);

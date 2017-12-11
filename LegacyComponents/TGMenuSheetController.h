@@ -7,6 +7,7 @@
 
 @interface TGMenuSheetPallete : NSObject
 
+@property (nonatomic, readonly) bool isDark;
 @property (nonatomic, readonly) UIColor *backgroundColor;
 @property (nonatomic, readonly) UIColor *selectionColor;
 @property (nonatomic, readonly) UIColor *separatorColor;
@@ -14,8 +15,9 @@
 @property (nonatomic, readonly) UIColor *destructiveColor;
 @property (nonatomic, readonly) UIColor *textColor;
 @property (nonatomic, readonly) UIColor *secondaryTextColor;
+@property (nonatomic, readonly) UIColor *spinnerColor;
 
-+ (instancetype)palleteWithBackgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor;
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor spinnerColor:(UIColor *)spinnerColor;
 
 @end
 

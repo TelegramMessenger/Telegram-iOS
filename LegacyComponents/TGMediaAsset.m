@@ -274,6 +274,9 @@
     if (subtypes & PHAssetMediaSubtypeVideoTimelapse)
         result |= TGMediaAssetSubtypeVideoTimelapse;
     
+    if (subtypes & PHAssetMediaSubtypePhotoLive)
+        result |= TGMediaAssetSubtypePhotoLive;
+    
     return result;
 }
 

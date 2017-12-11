@@ -1160,9 +1160,10 @@ typedef enum
 
 @implementation TGMenuSheetPallete
 
-+ (instancetype)palleteWithBackgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor spinnerColor:(UIColor *)spinnerColor
 {
     TGMenuSheetPallete *pallete = [[TGMenuSheetPallete alloc] init];
+    pallete->_isDark = dark;
     pallete->_backgroundColor = backgroundColor;
     pallete->_selectionColor = selectionColor;
     pallete->_separatorColor = separatorColor;
@@ -1170,6 +1171,7 @@ typedef enum
     pallete->_destructiveColor = destructiveColor;
     pallete->_textColor = textColor;
     pallete->_secondaryTextColor = secondaryTextColor;
+    pallete->_spinnerColor = spinnerColor;
     return pallete;
 }
 

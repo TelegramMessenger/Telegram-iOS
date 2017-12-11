@@ -99,6 +99,11 @@
     return [SSignal fail:nil];
 }
 
++ (SSignal *)livePhotoForAsset:(TGMediaAsset *)asset
+{
+    return [SSignal fail:nil];
+}
+
 + (SSignal *)imageDataForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)__unused allowNetworkAccess
 {
     return [[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)

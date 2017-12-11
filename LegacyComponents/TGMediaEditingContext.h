@@ -26,6 +26,7 @@
 @property (nonatomic, readonly) UIImageOrientation cropOrientation;
 @property (nonatomic, readonly) CGFloat cropLockedAspectRatio;
 @property (nonatomic, readonly) bool cropMirrored;
+@property (nonatomic, readonly) bool sendAsGif;
 @property (nonatomic, readonly) TGPaintingData *paintingData;
 
 - (bool)hasPainting;

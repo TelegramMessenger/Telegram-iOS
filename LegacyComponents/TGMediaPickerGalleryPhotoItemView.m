@@ -1,5 +1,7 @@
 #import "TGMediaPickerGalleryPhotoItemView.h"
 
+#import <PhotosUI/PhotosUI.h>
+
 #import "LegacyComponentsInternal.h"
 #import "TGFont.h"
 #import "TGStringUtils.h"
@@ -13,8 +15,11 @@
 #import <LegacyComponents/TGImageView.h>
 
 #import <LegacyComponents/TGMediaSelectionContext.h>
+#import <LegacyComponents/PGPhotoEditorValues.h>
 
 #import "TGMediaPickerGalleryPhotoItem.h"
+
+#import <LegacyComponents/TGMenuView.h>
 
 @interface TGMediaPickerGalleryPhotoItemView ()
 {
@@ -25,12 +30,21 @@
     void (^_currentAvailabilityObserver)(bool);
     
     UIView *_temporaryRepView;
+    PHLivePhotoView *_livePhotoView;
     
     SMetaDisposable *_attributesDisposable;
+    
+    TGMenuContainerView *_tooltipContainerView;
 }
+
+@property (nonatomic, strong) TGMediaPickerGalleryPhotoItem *item;
+
 @end
 
 @implementation TGMediaPickerGalleryPhotoItemView
+
+@dynamic item;
+@synthesize safeAreaInset = _safeAreaInset;
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
@@ -79,6 +93,11 @@
 {
     _imageView.hidden = false;
     [_imageView reset];
+    if (_livePhotoView != nil)
+    {
+        [_livePhotoView removeFromSuperview];
+        _livePhotoView = nil;
+    }
     [self setProgressVisible:false value:0.0f animated:false];
 }
 
@@ -162,10 +181,33 @@
                 return;
             
             if ([next isKindOfClass:[UIImage class]])
+            {
                 strongSelf->_imageSize = ((UIImage *)next).size;
+            }
             
             [strongSelf reset];
+            
+            strongSelf->_livePhotoView.frame = strongSelf->_imageView.frame;
         }]];
+        
+        if (item.asset.subtypes & TGMediaAssetSubtypePhotoLive)
+        {
+            _livePhotoView = [[PHLivePhotoView alloc] init];
+            _livePhotoView.muted = true;
+            _livePhotoView.contentMode = UIViewContentModeScaleAspectFill;
+            _livePhotoView.hidden = self.imageView.hidden;
+            _livePhotoView.frame = CGRectMake((self.containerView.frame.size.width - _imageSize.width) / 2.0f, (self.containerView.frame.size.height - _imageSize.height) / 2.0f, _imageSize.width, _imageSize.height);
+            [self.containerView addSubview:_livePhotoView];
+            
+            [[[TGMediaAssetImageSignals livePhotoForAsset:item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(PHLivePhoto *next)
+            {
+                __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                strongSelf->_livePhotoView.livePhoto = next;
+            }];
+        }
         
         if (!item.asFile)
             return;
@@ -313,6 +355,39 @@
 {
     UIView *contentView = [self transitionContentView];
     return [contentView convertRect:contentView.bounds toView:[self transitionView]];
+}
+
+- (void)toggleSendAsGif
+{
+    PGPhotoEditorValues *adjustments = (PGPhotoEditorValues *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
+    PGPhotoEditorValues *updatedAdjustments = [PGPhotoEditorValues editorValuesWithOriginalSize:adjustments.originalSize cropRect:adjustments.cropRect cropRotation:adjustments.cropRotation cropOrientation:adjustments.cropOrientation cropLockedAspectRatio:adjustments.cropLockedAspectRatio cropMirrored:adjustments.cropMirrored toolValues:adjustments.toolValues paintingData:adjustments.paintingData sendAsGif:!adjustments.sendAsGif];
+    [self.item.editingContext setAdjustments:updatedAdjustments forItem:self.item.editableMediaItem];
+    
+    bool sendAsGif = !adjustments.sendAsGif;
+    if (sendAsGif)
+    {
+        if (UIInterfaceOrientationIsPortrait([[LegacyComponentsGlobals provider] applicationStatusBarOrientation]))
+        {
+            UIView *parentView = [self.delegate itemViewDidRequestInterfaceView:self];
+            
+            _tooltipContainerView = [[TGMenuContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, parentView.frame.size.width, parentView.frame.size.height)];
+            [parentView addSubview:_tooltipContainerView];
+            
+            NSMutableArray *actions = [[NSMutableArray alloc] init];
+            [actions addObject:[[NSDictionary alloc] initWithObjectsAndKeys:TGLocalized(@"MediaPicker.LivePhotoDescription"), @"title", nil]];
+            _tooltipContainerView.menuView.forceArrowOnTop = true;
+            _tooltipContainerView.menuView.multiline = true;
+            [_tooltipContainerView.menuView setButtonsAndActions:actions watcherHandle:nil];
+            _tooltipContainerView.menuView.buttonHighlightDisabled = true;
+            [_tooltipContainerView.menuView sizeToFit];
+            
+            CGRect iconViewFrame = CGRectMake(12, 188 + _safeAreaInset.top, 40, 40);
+            [_tooltipContainerView showMenuFromRect:iconViewFrame animated:false];
+        }
+        
+        //if (self.item.selectionContext != nil)
+        //    [self.item.selectionContext setItem:self.item.selectableMediaItem selected:true];
+    }
 }
 
 @end

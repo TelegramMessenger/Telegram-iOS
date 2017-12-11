@@ -11,8 +11,9 @@
 @synthesize cropLockedAspectRatio = _cropLockedAspectRatio;
 @synthesize cropMirrored = _cropMirrored;
 @synthesize paintingData = _paintingData;
+@synthesize sendAsGif = _sendAsGif;
 
-+ (instancetype)editorValuesWithOriginalSize:(CGSize)originalSize cropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropLockedAspectRatio:(CGFloat)cropLockedAspectRatio cropMirrored:(bool)cropMirrored toolValues:(NSDictionary *)toolValues paintingData:(TGPaintingData *)paintingData
++ (instancetype)editorValuesWithOriginalSize:(CGSize)originalSize cropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropLockedAspectRatio:(CGFloat)cropLockedAspectRatio cropMirrored:(bool)cropMirrored toolValues:(NSDictionary *)toolValues paintingData:(TGPaintingData *)paintingData sendAsGif:(bool)sendAsGif
 {
     PGPhotoEditorValues *values = [[PGPhotoEditorValues alloc] init];
     values->_originalSize = originalSize;
@@ -23,6 +24,7 @@
     values->_cropMirrored = cropMirrored;
     values->_toolValues = toolValues;
     values->_paintingData = paintingData;
+    values->_sendAsGif = sendAsGif;
     
     return values;
 }
