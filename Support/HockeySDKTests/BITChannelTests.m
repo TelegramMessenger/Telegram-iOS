@@ -44,12 +44,21 @@
   self.sut.maxBatchSize = 3;
   BITTelemetryData *testData = [BITTelemetryData new];
   
-  [self.sut enqueueTelemetryItem:testData];
+  __weak XCTestExpectation *expectation = [self expectationWithDescription:@"Enqueued a telemetry item."];
   
-  dispatch_sync(self.sut.dataItemsOperations, ^{
+  [self.sut enqueueTelemetryItem:testData completionHandler:^{
     assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(1));
     XCTAssertTrue(strlen(BITTelemetryEventBuffer) > 0);
-  });
+    
+    [expectation fulfill];
+  }];
+
+  [self waitForExpectationsWithTimeout:5.0
+                               handler:^(NSError *_Nullable error) {
+                                 if (error) {
+                                   XCTFail(@"Expectation Failed with error: %@", error);
+                                 }
+                               }];
 }
 
 - (void)testEnqueueEnvelopeWithMultipleEnvelopesAndJSONStream {
@@ -60,23 +69,50 @@
   
   assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(0));
   
-  [self.sut enqueueTelemetryItem:testData];
-  dispatch_sync(self.sut.dataItemsOperations, ^{
+  __weak XCTestExpectation *expectation = [self expectationWithDescription:@"Enqueued a telemetry item."];
+  
+  [self.sut enqueueTelemetryItem:testData completionHandler:^{
     assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(1));
     XCTAssertTrue(strlen(BITTelemetryEventBuffer) > 0);
-  });
+    [expectation fulfill];
+  }];
   
-  [self.sut enqueueTelemetryItem:testData];
-  dispatch_sync(self.sut.dataItemsOperations, ^{
+  [self waitForExpectationsWithTimeout:5.0
+                               handler:^(NSError *_Nullable error) {
+                                 if (error) {
+                                   XCTFail(@"Expectation Failed with error: %@", error);
+                                 }
+                               }];
+  
+  expectation = [self expectationWithDescription:@"Enqueued a second telemetry item."];
+
+  [self.sut enqueueTelemetryItem:testData completionHandler:^{
     assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(2));
     XCTAssertTrue(strlen(BITTelemetryEventBuffer) > 0);
-  });
+    [expectation fulfill];
+  }];
   
-  [self.sut enqueueTelemetryItem:testData];
-  dispatch_sync(self.sut.dataItemsOperations, ^{
+  [self waitForExpectationsWithTimeout:5.0
+                               handler:^(NSError *_Nullable error) {
+                                 if (error) {
+                                   XCTFail(@"Expectation Failed with error: %@", error);
+                                 }
+                               }];
+  
+  expectation = [self expectationWithDescription:@"Enqueued a third telemetry item."];
+  
+  [self.sut enqueueTelemetryItem:testData completionHandler:^{
     assertThatUnsignedInteger(self.sut.dataItemCount, equalToUnsignedInteger(0));
     XCTAssertTrue(strcmp(BITTelemetryEventBuffer, "") == 0);
-  });
+    [expectation fulfill];
+  }];
+  
+  [self waitForExpectationsWithTimeout:5.0
+                               handler:^(NSError *_Nullable error) {
+                                 if (error) {
+                                   XCTFail(@"Expectation Failed with error: %@", error);
+                                 }
+                               }];
 }
 
 #pragma mark - Safe JSON Stream Tests

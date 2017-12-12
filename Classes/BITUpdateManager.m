@@ -36,6 +36,7 @@
 
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
+#import "BITHockeyHelper+Application.h"
 
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITUpdateManagerPrivate.h"
@@ -141,7 +142,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (void)didEnterBackgroundActions {
   self.didEnterBackgroundState = NO;
   
-  if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground) {
+  if ([BITHockeyHelper applicationState] == BITApplicationStateBackground) {
     self.didEnterBackgroundState = YES;
   }
 }
@@ -867,7 +868,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     [self checkExpiryDateReached];
     if (![self expiryDateReached]) {
       if ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates]) {
-        if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) return;
+        if ([BITHockeyHelper applicationState] != BITApplicationStateActive) return;
         
         [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0];
       }

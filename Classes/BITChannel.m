@@ -6,6 +6,7 @@
 #import "BITHockeyManager.h"
 #import "BITChannelPrivate.h"
 #import "BITHockeyHelper.h"
+#import "BITHockeyHelper+Application.h"
 #import "BITTelemetryContext.h"
 #import "BITTelemetryData.h"
 #import "BITEnvelope.h"
@@ -257,11 +258,17 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Adding to queue
 
 - (void)enqueueTelemetryItem:(BITTelemetryData *)item {
-  
+  [self enqueueTelemetryItem:item completionHandler:nil];
+}
+
+- (void)enqueueTelemetryItem:(BITTelemetryData *)item completionHandler:(nullable void (^)(void))completionHandler {
   if (!item) {
     
     // Item is nil: Do not enqueue item and abort operation.
     BITHockeyLogWarning(@"WARNING: TelemetryItem was nil.");
+    if(completionHandler) {
+      completionHandler();
+    }
     return;
   }
   
@@ -278,6 +285,11 @@ NS_ASSUME_NONNULL_BEGIN
       if (![strongSelf timerIsRunning]) {
         [strongSelf startTimer];
       }
+      
+      if(completionHandler) {
+        completionHandler();
+      }
+      
       return;
     }
     
@@ -285,9 +297,10 @@ NS_ASSUME_NONNULL_BEGIN
     @synchronized(self) {
       NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
       [strongSelf appendDictionaryToEventBuffer:dict];
-      UIApplication *application = [UIApplication sharedApplication];
+      // If the app is running in the background.
+      BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground);
       if (strongSelf.dataItemCount >= strongSelf.maxBatchSize ||
-         (application && application.applicationState == UIApplicationStateBackground)) {
+         (applicationIsInBackground)) {
         
         // Case 2: Max batch count has been reached or the app is running in the background, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
@@ -297,6 +310,10 @@ NS_ASSUME_NONNULL_BEGIN
         if (![strongSelf timerIsRunning]) {
           [strongSelf startTimer];
         }
+      }
+      
+      if(completionHandler) {
+        completionHandler();
       }
     }
   });

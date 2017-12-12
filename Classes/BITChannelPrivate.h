@@ -109,6 +109,15 @@ void bit_resetEventBuffer(char *__nonnull*__nonnull eventBuffer);
  */
 - (BOOL)isQueueBusy;
 
+/**
+ * Enqueue a telemetry item. This is for testing purposes where we actually use the completion handler.
+ *
+ * @param completionHandler The completion handler that will be called after enqueuing a BITTelemetryData object.
+ *
+ * @discussion intended for testing purposes.
+ */
+- (void)enqueueTelemetryItem:(BITTelemetryData *)item completionHandler:(nullable void (^)(void))completionHandler;
+
 @end
 
 NS_ASSUME_NONNULL_END
