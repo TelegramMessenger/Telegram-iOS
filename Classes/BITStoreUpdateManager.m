@@ -34,6 +34,7 @@
 
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
+#import "BITHockeyHelper+Application.h"
 
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITStoreUpdateManagerPrivate.h"
@@ -416,12 +417,13 @@
   [self registerObservers];
   
   // we are already delayed, so the notification already came in and this won't invoked twice
-  switch ([[UIApplication sharedApplication] applicationState]) {
-    case UIApplicationStateActive:
+  switch ([BITHockeyHelper applicationState]) {
+    case BITApplicationStateActive:
       [self didBecomeActiveActions];
       break;
-    case UIApplicationStateBackground:
-    case UIApplicationStateInactive:
+    case BITApplicationStateBackground:
+    case BITApplicationStateInactive:
+    case BITApplicationStateUnknown:
       // do nothing, wait for active state
       break;
   }

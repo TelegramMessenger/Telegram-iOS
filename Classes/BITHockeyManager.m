@@ -701,9 +701,10 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
   self.startManagerIsInvoked = NO;
   
   if (self.validAppIdentifier) {
+    id<BITHockeyManagerDelegate> currentDelegate = self.delegate;
+
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
     BITHockeyLogDebug(@"INFO: Setup CrashManager");
-    id<BITHockeyManagerDelegate> currentDelegate = self.delegate;
     self.crashManager = [[BITCrashManager alloc] initWithAppIdentifier:self.appIdentifier
                                                     appEnvironment:self.appEnvironment
                                                    hockeyAppClient:[self hockeyAppClient]];

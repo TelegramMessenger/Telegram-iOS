@@ -7,7 +7,7 @@
 
 
 /*!
- * @abstract An @ref HCDescription that is stored as a string.
+ * @abstract An HCDescription that is stored as a string.
  */
 @interface HCStringDescription : HCBaseDescription
 {

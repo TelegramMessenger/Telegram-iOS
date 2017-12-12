@@ -76,7 +76,8 @@ FOUNDATION_EXPORT NSString *const BITChannelBlockedNotification;
 /**
  *  Create background task for queues and group.
  */
-- (void)createBackgroundTask:(UIApplication *)application withWaitingGroup:(nullable dispatch_group_t)group;
+- (void)createBackgroundTaskWhileDataIsSending:(UIApplication *)application
+                              withWaitingGroup:(nullable dispatch_group_t)group;
 
 /**
  *  Adds the specified dictionary to the JSON Stream string.
@@ -107,6 +108,15 @@ void bit_resetEventBuffer(char *__nonnull*__nonnull eventBuffer);
  *  @return Returns yes if currently no new data should be enqueued on the channel.
  */
 - (BOOL)isQueueBusy;
+
+/**
+ * Enqueue a telemetry item. This is for testing purposes where we actually use the completion handler.
+ *
+ * @param completionHandler The completion handler that will be called after enqueuing a BITTelemetryData object.
+ *
+ * @discussion intended for testing purposes.
+ */
+- (void)enqueueTelemetryItem:(BITTelemetryData *)item completionHandler:(nullable void (^)(void))completionHandler;
 
 @end
 

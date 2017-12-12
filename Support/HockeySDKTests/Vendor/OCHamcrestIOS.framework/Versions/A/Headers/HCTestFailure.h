@@ -13,8 +13,8 @@
  * @abstract Test case used to run test method.
  * @discussion Can be <code>nil</code>.
  *
- * For unmet OCHamcrest assertions, if the assertion was @ref assertThat or @ref assertWithTimeout,
- * <em>testCase</em> will be the test case instance.
+ * For unmet OCHamcrest assertions, if the assertion was <code>assertThat</code> or
+ * <code>assertWithTimeout</code>, <em>testCase</em> will be the test case instance.
  */
 @property (nonatomic, strong, readonly) id testCase;
 

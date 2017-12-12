@@ -6,6 +6,7 @@
 #import "BITHockeyManager.h"
 #import "BITChannelPrivate.h"
 #import "BITHockeyHelper.h"
+#import "BITHockeyHelper+Application.h"
 #import "BITTelemetryContext.h"
 #import "BITTelemetryData.h"
 #import "BITEnvelope.h"
@@ -33,10 +34,6 @@ NS_ASSUME_NONNULL_BEGIN
 @interface BITChannel ()
 
 @property (nonatomic, weak, nullable) id appDidEnterBackgroundObserver;
-@property (nonatomic, weak, nullable) id persistenceSuccessObserver;
-@property (nonatomic, weak, nullable) id senderFinishSendingDataObserver;
-
-@property (nonatomic, nonnull) dispatch_group_t senderGroup;
 
 @end
 
@@ -60,8 +57,6 @@ NS_ASSUME_NONNULL_BEGIN
     }
     dispatch_queue_t serialQueue = dispatch_queue_create(BITDataItemsOperationsQueue, DISPATCH_QUEUE_SERIAL);
     _dataItemsOperations = serialQueue;
-    
-    _senderGroup = dispatch_group_create();
     
     [self registerObservers];
   }
@@ -107,26 +102,6 @@ NS_ASSUME_NONNULL_BEGIN
                                                               queue:NSOperationQueue.mainQueue
                                                          usingBlock:notificationBlock];
   }
-  if (nil == self.persistenceSuccessObserver) {
-    self.persistenceSuccessObserver =
-        [center addObserverForName:BITPersistenceSuccessNotification
-                            object:nil
-                             queue:nil
-                        usingBlock:^(NSNotification __unused *notification) {
-                          typeof(self) strongSelf = weakSelf;
-                          dispatch_group_enter(strongSelf.senderGroup);
-                        }];
-  }
-  if (nil == self.senderFinishSendingDataObserver) {
-    self.senderFinishSendingDataObserver =
-        [center addObserverForName:BITSenderFinishSendingDataNotification
-                            object:nil
-                             queue:nil
-                        usingBlock:^(NSNotification __unused *notification) {
-                          typeof(self) strongSelf = weakSelf;
-                          dispatch_group_leave(strongSelf.senderGroup);
-                        }];
-  }
 }
 
 - (void) unregisterObservers {
@@ -135,16 +110,6 @@ NS_ASSUME_NONNULL_BEGIN
   if (appDidEnterBackgroundObserver) {
     [center removeObserver:appDidEnterBackgroundObserver];
     self.appDidEnterBackgroundObserver = nil;
-  }
-  id persistenceSuccessObserver = self.persistenceSuccessObserver;
-  if (persistenceSuccessObserver) {
-    [center removeObserver:persistenceSuccessObserver];
-    self.persistenceSuccessObserver = nil;
-  }
-  id senderFinishSendingDataObserver = self.senderFinishSendingDataObserver;
-  if (senderFinishSendingDataObserver) {
-    [center removeObserver:senderFinishSendingDataObserver];
-    self.senderFinishSendingDataObserver = nil;
   }
 }
 
@@ -201,18 +166,54 @@ NS_ASSUME_NONNULL_BEGIN
     typeof(self) strongSelf = weakSelf;
     [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
   });
-  [self createBackgroundTask:application withWaitingGroup:nil];
+  [self createBackgroundTaskWhileDataIsSending:application withWaitingGroup:nil];
 }
 
-- (void)createBackgroundTask:(UIApplication *)application withWaitingGroup:(nullable dispatch_group_t)group {
+- (void)createBackgroundTaskWhileDataIsSending:(UIApplication *)application
+                              withWaitingGroup:(nullable dispatch_group_t)group {
   if (application == nil) {
     return;
   }
+  
+  // Queues needs for waiting consistently.
   NSArray *queues = @[
                       self.dataItemsOperations,           // For enqueue
                       self.persistence.persistenceQueue,  // For persist
                       dispatch_get_main_queue()           // For notification
                       ];
+
+  // Tracking for sender activity.
+  // BITPersistenceSuccessNotification - start sending
+  // BITSenderFinishSendingDataNotification - finish sending
+  __block dispatch_group_t senderGroup = dispatch_group_create();
+  __block NSInteger senderCounter = 0;
+  __block id persistenceSuccessObserver = [[NSNotificationCenter defaultCenter]
+      addObserverForName:BITPersistenceSuccessNotification
+                  object:nil
+                   queue:nil
+              usingBlock:^(__unused NSNotification *notification) {
+                dispatch_group_enter(senderGroup);
+                senderCounter++;
+                if (persistenceSuccessObserver) {
+                  [[NSNotificationCenter defaultCenter] removeObserver:persistenceSuccessObserver];
+                  persistenceSuccessObserver = nil;
+                }
+              }];
+  __block id senderFinishSendingDataObserver = [[NSNotificationCenter defaultCenter]
+      addObserverForName:BITSenderFinishSendingDataNotification
+                  object:nil
+                   queue:nil
+              usingBlock:^(__unused NSNotification *notification) {
+                if (senderCounter > 0) {
+                  dispatch_group_leave(senderGroup);
+                  senderCounter--;
+                }
+                if (senderFinishSendingDataObserver) {
+                  [[NSNotificationCenter defaultCenter] removeObserver:senderFinishSendingDataObserver];
+                  senderFinishSendingDataObserver = nil;
+                }
+              }];
+
   BITHockeyLogVerbose(@"BITChannel: Start background task");
   __block UIBackgroundTaskIdentifier backgroundTask = [application beginBackgroundTaskWithExpirationHandler:^{
     BITHockeyLogVerbose(@"BITChannel: Background task is expired");
@@ -220,18 +221,16 @@ NS_ASSUME_NONNULL_BEGIN
     backgroundTask = UIBackgroundTaskInvalid;
   }];
   __block NSUInteger i = 0;
-  __weak typeof(self) weakSelf = self;
-  __block __weak void (^weakWaitBlock)();
-  void (^waitBlock)();
+  __block __weak void (^weakWaitBlock)(void);
+  void (^waitBlock)(void);
   weakWaitBlock = waitBlock = ^{
-    typeof(self) strongSelf = weakSelf;
     if (i < queues.count) {
       dispatch_queue_t queue = [queues objectAtIndex:i++];
       BITHockeyLogVerbose(@"BITChannel: Waiting queue: %@", [[NSString alloc] initWithUTF8String:dispatch_queue_get_label(queue)]);
       dispatch_async(queue, weakWaitBlock);
     } else {
       BITHockeyLogVerbose(@"BITChannel: Waiting sender");
-      dispatch_group_notify(strongSelf.senderGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+      dispatch_group_notify(senderGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         if (backgroundTask != UIBackgroundTaskInvalid) {
           BITHockeyLogVerbose(@"BITChannel: Cancel background task");
           [application endBackgroundTask:backgroundTask];
@@ -259,11 +258,17 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Adding to queue
 
 - (void)enqueueTelemetryItem:(BITTelemetryData *)item {
-  
+  [self enqueueTelemetryItem:item completionHandler:nil];
+}
+
+- (void)enqueueTelemetryItem:(BITTelemetryData *)item completionHandler:(nullable void (^)(void))completionHandler {
   if (!item) {
     
     // Item is nil: Do not enqueue item and abort operation.
     BITHockeyLogWarning(@"WARNING: TelemetryItem was nil.");
+    if(completionHandler) {
+      completionHandler();
+    }
     return;
   }
   
@@ -280,6 +285,11 @@ NS_ASSUME_NONNULL_BEGIN
       if (![strongSelf timerIsRunning]) {
         [strongSelf startTimer];
       }
+      
+      if(completionHandler) {
+        completionHandler();
+      }
+      
       return;
     }
     
@@ -287,9 +297,10 @@ NS_ASSUME_NONNULL_BEGIN
     @synchronized(self) {
       NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
       [strongSelf appendDictionaryToEventBuffer:dict];
-      UIApplication *application = [UIApplication sharedApplication];
+      // If the app is running in the background.
+      BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground);
       if (strongSelf.dataItemCount >= strongSelf.maxBatchSize ||
-         (application && application.applicationState == UIApplicationStateBackground)) {
+         (applicationIsInBackground)) {
         
         // Case 2: Max batch count has been reached or the app is running in the background, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
@@ -299,6 +310,10 @@ NS_ASSUME_NONNULL_BEGIN
         if (![strongSelf timerIsRunning]) {
           [strongSelf startTimer];
         }
+      }
+      
+      if(completionHandler) {
+        completionHandler();
       }
     }
   });
