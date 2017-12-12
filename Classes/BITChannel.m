@@ -221,8 +221,8 @@ NS_ASSUME_NONNULL_BEGIN
     backgroundTask = UIBackgroundTaskInvalid;
   }];
   __block NSUInteger i = 0;
-  __block __weak void (^weakWaitBlock)();
-  void (^waitBlock)();
+  __block __weak void (^weakWaitBlock)(void);
+  void (^waitBlock)(void);
   weakWaitBlock = waitBlock = ^{
     if (i < queues.count) {
       dispatch_queue_t queue = [queues objectAtIndex:i++];
