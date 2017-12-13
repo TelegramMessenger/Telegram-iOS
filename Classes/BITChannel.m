@@ -293,14 +293,16 @@ NS_ASSUME_NONNULL_BEGIN
       return;
     }
     
+    // Should be outside of @synchronized block!
+    BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground);
+    
     // Enqueue item.
     @synchronized(self) {
       NSDictionary *dict = [strongSelf dictionaryForTelemetryData:item];
       [strongSelf appendDictionaryToEventBuffer:dict];
+      
       // If the app is running in the background.
-      BOOL applicationIsInBackground = ([BITHockeyHelper applicationState] == BITApplicationStateBackground);
-      if (strongSelf.dataItemCount >= strongSelf.maxBatchSize ||
-         (applicationIsInBackground)) {
+      if (strongSelf.dataItemCount >= strongSelf.maxBatchSize || applicationIsInBackground) {
         
         // Case 2: Max batch count has been reached or the app is running in the background, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue:&BITTelemetryEventBuffer];
