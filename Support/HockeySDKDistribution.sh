@@ -151,7 +151,6 @@ cp -f "${SRCROOT}/module_crashonly.modulemap" "${INSTALL_DIR}/Modules/module.mod
 
 # Copies the headers without the resources files to the final product folder.
 cp -R "${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}"/include/HockeySDK/BITCrash*.h "${INSTALL_DIR}/Headers/"
-cp -R "${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITMetricsManager.h" "${INSTALL_DIR}/Headers/"
 cp -R "${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyAttachment.h" "${INSTALL_DIR}/Headers/"
 cp -R "${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyBaseManager.h" "${INSTALL_DIR}/Headers/"
 cp -R "${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManager.h" "${INSTALL_DIR}/Headers/"

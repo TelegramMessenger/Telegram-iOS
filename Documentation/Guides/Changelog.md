@@ -1,3 +1,8 @@
+## 5.1.1
+
+- [BUGFIX] Fixes a critical bug that would cause apps to freeze when calling `trackEvent` in UIApplicationDelegate callbacks. [#492](https://github.com/bitstadium/HockeySDK-iOS/pull/493)
+- [BUGFIX] Fix a critical bug in the crashonly variant of the SDK. [#49](https://github.com/bitstadium/HockeySDK-iOS/pull/494)
+
 ## 5.1.0
 
 - [FEATURE] Add Turkish localization thanks to [Ozgur](https://github.com/ozgur).[#478](https://github.com/bitstadium/HockeySDK-iOS/pull/478) 
