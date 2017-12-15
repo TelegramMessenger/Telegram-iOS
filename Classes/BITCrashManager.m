@@ -556,6 +556,7 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
             self.didLogLowMemoryWarning = YES;
           }
         });
+        dispatch_resume(source);
       });
     } else {
       self.appDidReceiveLowMemoryWarningObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification
