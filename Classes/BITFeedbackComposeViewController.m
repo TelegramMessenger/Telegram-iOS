@@ -155,11 +155,7 @@
   
   CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
   if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    if (isPortraitOrientation) {
-      frame.size.height -= kbSize.height;
-    } else {
-      frame.size.height -= kbSize.width;
-    }
+    frame.size.height -= kbSize.height;
   } else {
     CGSize windowSize = [[UIScreen mainScreen] bounds].size;
     CGFloat windowHeight = windowSize.height - 20;
@@ -168,20 +164,19 @@
     if (isPortraitOrientation) {
       frame.size.height = windowHeight - navBarHeight - kbSize.height;
     } else {
-      windowHeight = windowSize.width - 20;
+      windowHeight = windowSize.height - 20;
       CGFloat modalGap = 0.0;
-      if (windowHeight - kbSize.width < self.view.bounds.size.height) {
+      if (windowHeight - kbSize.height < self.view.bounds.size.height) {
         modalGap = 30;
       } else {
         modalGap = (windowHeight - self.view.bounds.size.height) / 2;
       }
-      frame.size.height = windowSize.width - navBarHeight - modalGap - kbSize.width;
+      frame.size.height = windowSize.height - navBarHeight - modalGap - kbSize.height;
     }
   }
   [self.contentViewContainer setFrame:frame];
   
   [self performSelector:@selector(refreshAttachmentScrollview) withObject:nil afterDelay:0.0];
-  
 }
 
 - (void)keyboardWillBeHidden:(NSNotification*) __unused aNotification {
