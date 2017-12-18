@@ -131,9 +131,8 @@ NS_ASSUME_NONNULL_BEGIN
   
   // Make sure string (which points to BITTelemetryEventBuffer) is not changed.
   char *previousBuffer = NULL;
-  char *newEmptyString = NULL;
+  char *newEmptyString = strdup("");
   do {
-    newEmptyString = strdup("");
     previousBuffer = *eventBuffer;
     
     // This swaps pointers and makes sure eventBuffer now has the balue of newEmptyString.
@@ -417,13 +416,14 @@ void bit_appendStringToEventBuffer(NSString *string, char **eventBuffer) {
 }
 
 void bit_resetEventBuffer(char **eventBuffer) {
-  if (!eventBuffer) { return; }
+  if (!eventBuffer) {
+    return;
+  }
   
-  char *newEmptyString = NULL;
   char *prevString = NULL;
+  char *newEmptyString = strdup("");
   do {
     prevString = *eventBuffer;
-    newEmptyString = strdup("");
     
     // Compare pointers to strings to make sure we are still threadsafe!
     if (OSAtomicCompareAndSwapPtr(prevString, newEmptyString, (void*)eventBuffer)) {
