@@ -556,6 +556,7 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
             self.didLogLowMemoryWarning = YES;
           }
         });
+        dispatch_resume(source);
       });
     } else {
       self.appDidReceiveLowMemoryWarningObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification
@@ -1053,7 +1054,7 @@ __attribute__((noreturn)) static void uncaught_cxx_exception_handler(const BITCr
  */
 - (void)invokeDelayedProcessing {
 #if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
-  if ([BITHockeyHelper applicationState] != BITApplicationStateActive) {
+  if (!bit_isRunningInAppExtension() && [BITHockeyHelper applicationState] != BITApplicationStateActive) {
     return;
   }
 #endif
