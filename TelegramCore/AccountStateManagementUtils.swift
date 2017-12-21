@@ -825,12 +825,12 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
-            /*%FEED case let .updateReadFeed(feedId, maxPosition):
+            case let .updateReadFeed(feedId, maxPosition):
                 switch maxPosition {
                     case let .feedPosition(date, peer, id):
                         let index = MessageIndex(id: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date)
                         updatedState.readGroupFeedInbox(groupId: PeerGroupId(rawValue: feedId), index: index)
-                }*/
+                }
             case let .updateWebPage(apiWebpage, _, _):
                 switch apiWebpage {
                     case let .webPageEmpty(id):
@@ -998,14 +998,29 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
             case let .updateEncryptedChatTyping(chatId):
                 updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), peerId: nil, activity: .typingText)
             case let .updateDialogPinned(flags, peer):
+                let item: PinnedItemId
+                switch peer {
+                    case let .dialogPeer(peer):
+                        item = .peer(peer.peerId)
+                    case let .dialogPeerFeed(feedId):
+                        item = .group(PeerGroupId(rawValue: feedId))
+                }
                 if (flags & (1 << 0)) != 0 {
-                    updatedState.addUpdatePinnedItemIds(.pin(.peer(peer.peerId)))
+                    updatedState.addUpdatePinnedItemIds(.pin(item))
                 } else {
-                    updatedState.addUpdatePinnedItemIds(.unpin(.peer(peer.peerId)))
+                    updatedState.addUpdatePinnedItemIds(.unpin(item))
                 }
             case let .updatePinnedDialogs(_, order):
                 if let order = order {
-                    updatedState.addUpdatePinnedItemIds(.reorder(order.map { .peer($0.peerId) }))
+                    updatedState.addUpdatePinnedItemIds(.reorder(order.map { let item: PinnedItemId
+                        switch $0 {
+                            case let .dialogPeer(peer):
+                                item = .peer(peer.peerId)
+                            case let .dialogPeerFeed(feedId):
+                                item = .group(PeerGroupId(rawValue: feedId))
+                        }
+                        return item
+                    }))
                 } else {
                     updatedState.addUpdatePinnedItemIds(.sync)
                 }
@@ -1292,10 +1307,10 @@ func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountS
 }
 
 private func resetChannels(_ account: Account, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
-    var inputPeers: [Api.InputPeer] = []
+    var inputPeers: [Api.InputDialogPeer] = []
     for peer in peers {
         if let inputPeer = apiInputPeer(peer) {
-            inputPeers.append(inputPeer)
+            inputPeers.append(.inputDialogPeer(peer: inputPeer))
         }
     }
     return account.network.request(Api.functions.messages.getPeerDialogs(peers: inputPeers))
@@ -1336,9 +1351,9 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
                                 apiUnreadMentionsCount = unreadMentionsCount
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
-                            /*%FEED case .dialogFeed:
+                            case .dialogFeed:
                                 assertionFailure()
-                                continue loop*/
+                                continue loop
                         }
                         
                         let peerId: PeerId
