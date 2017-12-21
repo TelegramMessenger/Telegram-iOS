@@ -68,6 +68,10 @@ public struct Namespaces {
             return UnorderedItemListEntryTag(value: key)
         }()
     }
+    
+    public struct PeerGroup {
+        public static let feed = PeerGroupId(rawValue: 1)
+    }
 }
 
 public extension MessageTags {
@@ -110,6 +114,7 @@ struct OperationLogTags {
     static let SynchronizeSavedGifs = PeerOperationLogTag(value: 12)
     static let SynchronizeLocalizationUpdates = PeerOperationLogTag(value: 13)
     static let SynchronizeSavedStickers = PeerOperationLogTag(value: 14)
+    static let SynchronizeGroupedPeers = PeerOperationLogTag(value: 15)
 }
 
 private enum PreferencesKeyValues: Int32 {

@@ -114,13 +114,23 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
 }
 
 private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, operation: SynchronizePinnedChatsOperation) -> Signal<Void, NoError> {
-    let initialRemotePeerIds = operation.previousPeerIds
-    let initialRemotePeerIdsWithoutSecretChats = initialRemotePeerIds.filter {
-        $0.namespace != Namespaces.Peer.SecretChat
+    let initialRemoteItemIds = operation.previousItemIds
+    let initialRemoteItemIdsWithoutSecretChats = initialRemoteItemIds.filter { item in
+        switch item {
+            case let .peer(peerId):
+                return peerId.namespace != Namespaces.Peer.SecretChat
+            case .group:
+                return false
+        }
     }
-    let localPeerIds = modifier.getPinnedPeerIds()
-    let localPeerIdsWithoutSecretChats = localPeerIds.filter {
-        $0.namespace != Namespaces.Peer.SecretChat
+    let localItemIds = modifier.getPinnedItemIds()
+    let localItemIdsWithoutSecretChats = localItemIds.filter { item in
+        switch item {
+            case let .peer(peerId):
+                return peerId.namespace != Namespaces.Peer.SecretChat
+            case .group:
+                return false
+        }
     }
     
     return network.request(Api.functions.messages.getPinnedDialogs())
@@ -134,14 +144,14 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
             var chatStates: [PeerId: PeerChatState] = [:]
             var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
             
-            var remotePeerIds: [PeerId] = []
+            var remoteItemIds: [PinnedItemId] = []
             
             switch dialogs {
                 case let .peerDialogs(dialogs, messages, chats, users, _):
                     dialogsChats = chats
                     dialogsUsers = users
                     
-                    for dialog in dialogs {
+                    loop: for dialog in dialogs {
                         let apiPeer: Api.Peer
                         let apiReadInboxMaxId: Int32
                         let apiReadOutboxMaxId: Int32
@@ -158,6 +168,9 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                 apiUnreadCount = unreadCount
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
+                            /*%FEED case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+                                remoteItemIds.append(.group(PeerGroupId(rawValue: feedId)))
+                                continue loop*/
                         }
                         
                         let peerId: PeerId
@@ -170,7 +183,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                 peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                         }
                         
-                        remotePeerIds.append(peerId)
+                        remoteItemIds.append(.peer(peerId))
                         
                         if readStates[peerId] == nil {
                             readStates[peerId] = [:]
@@ -206,18 +219,18 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 }
             }
             
-            let locallyRemovedFromRemotePeerIds = Set(initialRemotePeerIdsWithoutSecretChats).subtracting(Set(localPeerIdsWithoutSecretChats))
-            let remotelyRemovedPeerIds = Set(initialRemotePeerIdsWithoutSecretChats).subtracting(Set(remotePeerIds))
+            let locallyRemovedFromRemoteItemIds = Set(initialRemoteItemIdsWithoutSecretChats).subtracting(Set(localItemIdsWithoutSecretChats))
+            let remotelyRemovedItemIds = Set(initialRemoteItemIdsWithoutSecretChats).subtracting(Set(remoteItemIds))
             
-            var resultingPeerIds = localPeerIds.filter { !remotelyRemovedPeerIds.contains($0) }
-            resultingPeerIds.append(contentsOf: remotePeerIds.filter { !locallyRemovedFromRemotePeerIds.contains($0) && !resultingPeerIds.contains($0) })
+            var resultingItemIds = localItemIds.filter { !remotelyRemovedItemIds.contains($0) }
+            resultingItemIds.append(contentsOf: remoteItemIds.filter { !locallyRemovedFromRemoteItemIds.contains($0) && !resultingItemIds.contains($0) })
             
             return postbox.modify { modifier -> Signal<Void, NoError> in
                 updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
                     return updated
                 })
                 
-                modifier.setPinnedPeerIds(resultingPeerIds)
+                modifier.setPinnedItemIds(resultingItemIds)
                 
                 modifier.updatePeerPresences(peerPresences)
                 
@@ -245,13 +258,18 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                     }
                 }
                 
-                if remotePeerIds == resultingPeerIds {
+                if remoteItemIds == resultingItemIds {
                     return .complete()
                 } else {
                     var inputPeers: [Api.InputPeer] = []
-                    for peerId in resultingPeerIds {
-                        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-                            inputPeers.append(inputPeer)
+                    for itemId in resultingItemIds {
+                        switch itemId {
+                            case let .peer(peerId):
+                                if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                                    inputPeers.append(inputPeer)
+                                }
+                            case .group:
+                                break
                         }
                     }
                     

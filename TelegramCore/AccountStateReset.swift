@@ -16,6 +16,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
         network.request(Api.functions.updates.getState())
             |> retryRequest
     
+    /*%FEED */
     return combineLatest(network.request(Api.functions.messages.getDialogs(flags: 0, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100))
         |> retryRequest, pinnedChats, state)
         |> mapToSignal { result, pinnedChats, state -> Signal<Void, NoError> in
@@ -40,7 +41,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                     holeExists = true
             }
             
-            let replacePinnedPeerIds: [PeerId]
+            let replacePinnedItemIds: [PinnedItemId]
             switch pinnedChats {
                 case let .peerDialogs(apiDialogs, apiMessages, apiChats, apiUsers, _):
                     dialogsDialogs.append(contentsOf: apiDialogs)
@@ -48,21 +49,19 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                     dialogsChats.append(contentsOf: apiChats)
                     dialogsUsers.append(contentsOf: apiUsers)
                     
-                    var peerIds: [PeerId] = []
+                    var itemIds: [PinnedItemId] = []
                     
-                    for dialog in apiDialogs {
-                        let apiPeer: Api.Peer
+                    loop: for dialog in apiDialogs {
                         switch dialog {
                             case let .dialog(_, peer, _, _, _, _, _, _, _, _):
-                                apiPeer = peer
+                                itemIds.append(.peer(peer.peerId))
+                            /*%FEED case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+                                itemIds.append(.group(PeerGroupId(rawValue: feedId)))
+                                continue loop*/
                         }
-                        
-                        let peerId = apiPeer.peerId
-                        
-                        peerIds.append(peerId)
                 }
                 
-                replacePinnedPeerIds = peerIds
+                replacePinnedItemIds = itemIds
             }
             
             var replacementHole: ChatListHole?
@@ -74,7 +73,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
             
             var topMesageIds: [PeerId: MessageId] = [:]
             
-            for dialog in dialogsDialogs {
+            loop: for dialog in dialogsDialogs {
                 let apiPeer: Api.Peer
                 let apiReadInboxMaxId: Int32
                 let apiReadOutboxMaxId: Int32
@@ -93,6 +92,9 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                         apiUnreadMentionsCount = unreadMentionsCount
                         apiNotificationSettings = peerNotificationSettings
                         apiChannelPts = pts
+                    /*%FEED case .dialogFeed:
+                        assertionFailure()
+                        continue loop*/
                 }
                 
                 let peerId: PeerId
@@ -154,6 +156,9 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                                     }
                                 }
                             }
+                        /*%FEED case .dialogFeed:
+                            assertionFailure()
+                            break*/
                     }
                 }
             }
@@ -220,7 +225,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                     }
                 }
                 
-                modifier.setPinnedPeerIds(replacePinnedPeerIds)
+                modifier.setPinnedItemIds(replacePinnedItemIds)
                 
                 for (peerId, summary) in mentionTagSummaries {
                     modifier.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)

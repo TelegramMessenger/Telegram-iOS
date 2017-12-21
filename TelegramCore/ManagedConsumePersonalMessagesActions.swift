@@ -242,7 +242,10 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                         case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _):
                                             apiTopMessage = topMessage
                                             apiUnreadMentionsCount = unreadMentionsCount
-                                        }
+                                        /*%FEED case .dialogFeed:
+                                            assertionFailure()
+                                            return .complete()*/
+                                    }
                                     
                                     return postbox.modify { modifier -> Void in
                                         modifier.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)

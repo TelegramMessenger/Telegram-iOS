@@ -472,6 +472,14 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     public let shouldKeepConnection = Promise<Bool>(false)
     private let shouldKeepConnectionDisposable = MetaDisposable()
     
+    public var mockConnectionStatus: ConnectionStatus? {
+        didSet {
+            if let mockConnectionStatus = self.mockConnectionStatus {
+                self._connectionStatus.set(.single(mockConnectionStatus))
+            }
+        }
+    }
+    
     var loggedOut: (() -> Void)?
     
     fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String) {

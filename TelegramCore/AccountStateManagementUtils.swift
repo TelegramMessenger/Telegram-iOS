@@ -825,6 +825,12 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
+            /*%FEED case let .updateReadFeed(feedId, maxPosition):
+                switch maxPosition {
+                    case let .feedPosition(date, peer, id):
+                        let index = MessageIndex(id: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date)
+                        updatedState.readGroupFeedInbox(groupId: PeerGroupId(rawValue: feedId), index: index)
+                }*/
             case let .updateWebPage(apiWebpage, _, _):
                 switch apiWebpage {
                     case let .webPageEmpty(id):
@@ -993,15 +999,15 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), peerId: nil, activity: .typingText)
             case let .updateDialogPinned(flags, peer):
                 if (flags & (1 << 0)) != 0 {
-                    updatedState.addUpdatePinnedPeerIds(.pin(peer.peerId))
+                    updatedState.addUpdatePinnedItemIds(.pin(.peer(peer.peerId)))
                 } else {
-                    updatedState.addUpdatePinnedPeerIds(.unpin(peer.peerId))
+                    updatedState.addUpdatePinnedItemIds(.unpin(.peer(peer.peerId)))
                 }
             case let .updatePinnedDialogs(_, order):
                 if let order = order {
-                    updatedState.addUpdatePinnedPeerIds(.reorder(order.map { $0.peerId }))
+                    updatedState.addUpdatePinnedItemIds(.reorder(order.map { .peer($0.peerId) }))
                 } else {
-                    updatedState.addUpdatePinnedPeerIds(.sync)
+                    updatedState.addUpdatePinnedItemIds(.sync)
                 }
             case let .updateReadMessagesContents(messages, _, _):
                 updatedState.addReadMessagesContents((nil, messages))
@@ -1311,7 +1317,7 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
                     dialogsChats.append(contentsOf: chats)
                     dialogsUsers.append(contentsOf: users)
                     
-                    for dialog in dialogs {
+                    loop: for dialog in dialogs {
                         let apiPeer: Api.Peer
                         let apiReadInboxMaxId: Int32
                         let apiReadOutboxMaxId: Int32
@@ -1330,6 +1336,9 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
                                 apiUnreadMentionsCount = unreadMentionsCount
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
+                            /*%FEED case .dialogFeed:
+                                assertionFailure()
+                                continue loop*/
                         }
                         
                         let peerId: PeerId
@@ -1661,7 +1670,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1711,6 +1720,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     var updatedCalls: [Api.PhoneCall] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
+    var syncRecentGifs = false
     var langPackDifferences: [Api.LangPackDifference] = []
     var pollLangPack = false
     
@@ -1748,6 +1758,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 modifier.applyIncomingReadMaxId(messageId)
             case let .ReadOutbox(messageId):
                 modifier.applyOutgoingReadMaxId(messageId)
+            case let .ReadGroupFeedInbox(groupId, index):
+                modifier.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
             case let .ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
                 modifier.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count)]])
             case let .ResetMessageTagSummary(peerId, namespace, count, range):
@@ -1844,30 +1856,40 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 } else if chatPeerId.namespace == Namespaces.Peer.SecretChat {
                     updatedSecretChatTypingActivities.insert(chatPeerId)
                 }
-            case let .UpdatePinnedPeerIds(pinnedOperation):
+            case let .UpdatePinnedItemIds(pinnedOperation):
                 switch pinnedOperation {
-                    case let .pin(peerId):
-                        if modifier.getPeer(peerId) == nil || modifier.getPeerChatListInclusion(peerId) == .notSpecified {
-                            addSynchronizePinnedChatsOperation(modifier: modifier)
-                        } else {
-                            var currentPeerIds = modifier.getPinnedPeerIds()
-                            if !currentPeerIds.contains(peerId) {
-                                currentPeerIds.insert(peerId, at: 0)
-                                modifier.setPinnedPeerIds(currentPeerIds)
-                            }
+                    case let .pin(itemId):
+                        switch itemId {
+                            case let .peer(peerId):
+                                if modifier.getPeer(peerId) == nil || modifier.getPeerChatListInclusion(peerId) == .notSpecified {
+                                    addSynchronizePinnedChatsOperation(modifier: modifier)
+                                } else {
+                                    var currentItemIds = modifier.getPinnedItemIds()
+                                    if !currentItemIds.contains(.peer(peerId)) {
+                                        currentItemIds.insert(.peer(peerId), at: 0)
+                                        modifier.setPinnedItemIds(currentItemIds)
+                                    }
+                                }
+                            case let .group(groupId):
+                                break
                         }
-                    case let .unpin(peerId):
-                        var currentPeerIds = modifier.getPinnedPeerIds()
-                        if let index = currentPeerIds.index(of: peerId) {
-                            currentPeerIds.remove(at: index)
-                            modifier.setPinnedPeerIds(currentPeerIds)
-                        } else {
-                            addSynchronizePinnedChatsOperation(modifier: modifier)
+                    case let .unpin(itemId):
+                        switch itemId {
+                            case let .peer(peerId):
+                                var currentItemIds = modifier.getPinnedItemIds()
+                                if let index = currentItemIds.index(of: .peer(peerId)) {
+                                    currentItemIds.remove(at: index)
+                                    modifier.setPinnedItemIds(currentItemIds)
+                                } else {
+                                    addSynchronizePinnedChatsOperation(modifier: modifier)
+                                }
+                            case let .group(groupId):
+                                break
                         }
-                    case let .reorder(peerIds):
-                        let currentPeerIds = modifier.getPinnedPeerIds()
-                        if Set(peerIds) == Set(currentPeerIds) {
-                            modifier.setPinnedPeerIds(peerIds)
+                    case let .reorder(itemIds):
+                        let currentItemIds = modifier.getPinnedItemIds()
+                        if Set(itemIds) == Set(currentItemIds) {
+                            modifier.setPinnedItemIds(itemIds)
                         } else {
                             addSynchronizePinnedChatsOperation(modifier: modifier)
                         }
@@ -1901,6 +1923,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 })
             case let .UpdateInstalledStickerPacks(operation):
                 stickerPackOperations.append(operation)
+            case let .UpdateRecentGifs:
+                syncRecentGifs = true
             case let .UpdateChatInputState(peerId, inputState):
                 modifier.updatePeerChatInterfaceState(peerId, update: { current in
                     return auxiliaryMethods.updatePeerChatInputState(current, inputState)
@@ -2039,6 +2063,10 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: .masks)
             }
         }
+    }
+    
+    if syncRecentGifs {
+        addSynchronizeSavedGifsOperation(modifier: modifier, operation: .sync)
     }
     
     for chatPeerId in updatedSecretChatTypingActivities {

@@ -425,7 +425,7 @@ extension StoreMessage {
                             if let authorId = authorId {
                                 forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
                             } else if let sourceId = sourceId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
                             }
                     }
                 }
@@ -522,6 +522,8 @@ extension StoreMessage {
                 }
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities)
+                
+                storeFlags.insert(.CanBeGroupedIntoFeed)
                 
                 assert(!tags.contains(.unseenPersonalMessage) || date > 1493596800)
                 

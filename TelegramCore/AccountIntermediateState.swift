@@ -32,10 +32,10 @@ final class AccountInitialState {
     }
 }
 
-enum AccountStateUpdatePinnerPeerIdsOperation {
-    case pin(PeerId)
-    case unpin(PeerId)
-    case reorder([PeerId])
+enum AccountStateUpdatePinnedItemIdsOperation {
+    case pin(PinnedItemId)
+    case unpin(PinnedItemId)
+    case reorder([PinnedItemId])
     case sync
 }
 
@@ -64,6 +64,7 @@ enum AccountStateMutationOperation {
     case ReadOutbox(MessageId)
     case ResetReadState(PeerId, MessageId.Namespace, MessageId.Id, MessageId.Id, MessageId.Id, Int32)
     case ResetMessageTagSummary(PeerId, MessageId.Namespace, Int32, MessageHistoryTagNamespaceCountValidityRange)
+    case ReadGroupFeedInbox(PeerGroupId, MessageIndex)
     case UpdateState(AuthorizedAccountState.State)
     case UpdateChannelState(PeerId, ChannelState)
     case UpdateNotificationSettings(AccountStateNotificationSettingsSubject, PeerNotificationSettings)
@@ -78,10 +79,11 @@ enum AccountStateMutationOperation {
     case AddSecretMessages([Api.EncryptedMessage])
     case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
     case AddPeerInputActivity(chatPeerId: PeerId, peerId: PeerId?, activity: PeerInputActivity?)
-    case UpdatePinnedPeerIds(AccountStateUpdatePinnerPeerIdsOperation)
+    case UpdatePinnedItemIds(AccountStateUpdatePinnedItemIdsOperation)
     case ReadMessageContents((PeerId?, [Int32]))
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
+    case UpdateRecentGifs
     case UpdateChatInputState(PeerId, SynchronizeableChatInputState?)
     case UpdateCall(Api.PhoneCall)
     case UpdateLangPack(Api.LangPackDifference?)
@@ -178,6 +180,10 @@ struct AccountMutableState {
         self.addOperation(.ReadOutbox(messageId))
     }
     
+    mutating func readGroupFeedInbox(groupId: PeerGroupId, index: MessageIndex) {
+        self.addOperation(.ReadGroupFeedInbox(groupId, index))
+    }
+    
     mutating func resetReadState(_ peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32) {
         self.addOperation(.ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count))
     }
@@ -266,8 +272,8 @@ struct AccountMutableState {
         self.addOperation(.AddPeerInputActivity(chatPeerId: chatPeerId, peerId: peerId, activity: activity))
     }
     
-    mutating func addUpdatePinnedPeerIds(_ operation: AccountStateUpdatePinnerPeerIdsOperation) {
-        self.addOperation(.UpdatePinnedPeerIds(operation))
+    mutating func addUpdatePinnedItemIds(_ operation: AccountStateUpdatePinnedItemIdsOperation) {
+        self.addOperation(.UpdatePinnedItemIds(operation))
     }
     
     mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, [Int32])) {
@@ -282,6 +288,10 @@ struct AccountMutableState {
         self.addOperation(.UpdateInstalledStickerPacks(operation))
     }
     
+    mutating func addUpdateRecentGifs() {
+        self.addOperation(.UpdateRecentGifs)
+    }
+    
     mutating func addUpdateChatInputState(peerId: PeerId, state: SynchronizeableChatInputState?) {
         self.addOperation(.UpdateChatInputState(peerId, state))
     }
@@ -292,7 +302,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedPeerIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {

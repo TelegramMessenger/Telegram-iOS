@@ -250,6 +250,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedStickerPack.self, f: { CachedStickerPack(decoder: $0) })
     declareEncodable(LoggingSettings.self, f: { LoggingSettings(decoder: $0) })
     declareEncodable(CachedLocalizationInfos.self, f: { CachedLocalizationInfos(decoder: $0) })
+    declareEncodable(SynchronizeGroupedPeersOperation.self, f: { SynchronizeGroupedPeersOperation(decoder: $0) })
     
     return
 }()
@@ -644,7 +645,7 @@ public class Account {
             |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
                 if let strongSelf = self, value {
                     Logger.shared.log("Account", "Became master")
-                    return managedServiceViews(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
+                    return managedServiceViews(accountPeerId: peerId, network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
                 } else {
                     Logger.shared.log("Account", "Resigned master")
                     return .never()
@@ -662,6 +663,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        
+        self.managedOperationsDisposable.add(managedSynchronizeGroupedPeersOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .stickers).start())
         self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .masks).start())
         self.managedOperationsDisposable.add(managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: self.postbox, network: self.network).start())

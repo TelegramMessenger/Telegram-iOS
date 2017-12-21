@@ -52,6 +52,10 @@ public struct TelegramChannelBroadcastFlags: OptionSet {
 public struct TelegramChannelBroadcastInfo: Equatable {
     public let flags: TelegramChannelBroadcastFlags
     
+    public init(flags: TelegramChannelBroadcastFlags) {
+        self.flags = flags
+    }
+    
     public static func ==(lhs: TelegramChannelBroadcastInfo, rhs: TelegramChannelBroadcastInfo) -> Bool {
         return lhs.flags == rhs.flags
     }
@@ -152,6 +156,7 @@ public final class TelegramChannel: Peer {
     public let restrictionInfo: PeerAccessRestrictionInfo?
     public let adminRights: TelegramChannelAdminRights?
     public let bannedRights: TelegramChannelBannedRights?
+    public let peerGroupId: PeerGroupId?
     
     public var indexName: PeerIndexNameRepresentation {
         return .title(title: self.title, addressName: self.username)
@@ -160,7 +165,7 @@ public final class TelegramChannel: Peer {
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
-    public init(id: PeerId, accessHash: Int64?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChannelAdminRights?, bannedRights: TelegramChannelBannedRights?) {
+    public init(id: PeerId, accessHash: Int64?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChannelAdminRights?, bannedRights: TelegramChannelBannedRights?, peerGroupId: PeerGroupId?) {
         self.id = id
         self.accessHash = accessHash
         self.title = title
@@ -174,6 +179,7 @@ public final class TelegramChannel: Peer {
         self.restrictionInfo = restrictionInfo
         self.adminRights = adminRights
         self.bannedRights = bannedRights
+        self.peerGroupId = peerGroupId
     }
     
     public init(decoder: PostboxDecoder) {
@@ -190,6 +196,11 @@ public final class TelegramChannel: Peer {
         self.restrictionInfo = decoder.decodeObjectForKey("ri") as? PeerAccessRestrictionInfo
         self.adminRights = decoder.decodeObjectForKey("ar", decoder: { TelegramChannelAdminRights(decoder: $0) }) as? TelegramChannelAdminRights
         self.bannedRights = decoder.decodeObjectForKey("br", decoder: { TelegramChannelBannedRights(decoder: $0) }) as? TelegramChannelBannedRights
+        if let value = decoder.decodeOptionalInt32ForKey("pgi") {
+            self.peerGroupId = PeerGroupId(rawValue: value)
+        } else {
+            self.peerGroupId = nil
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -226,6 +237,11 @@ public final class TelegramChannel: Peer {
         } else {
             encoder.encodeNil(forKey: "br")
         }
+        if let peerGroupId = self.peerGroupId {
+            encoder.encodeInt32(peerGroupId.rawValue, forKey: "pgi")
+        } else {
+            encoder.encodeNil(forKey: "pgi")
+        }
     }
     
     public func isEqual(_ other: Peer) -> Bool {
@@ -253,11 +269,15 @@ public final class TelegramChannel: Peer {
             return false
         }
         
+        if self.peerGroupId != other.peerGroupId {
+            return false
+        }
+        
         return true
     }
     
     func withUpdatedAddressName(_ addressName: String?) -> TelegramChannel {
-        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights)
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, peerGroupId: self.peerGroupId)
     }
 }
 

@@ -499,6 +499,14 @@
 		D0C0B58B1ED9DA6B000F4D2C /* ManagedLocalizationUpdatesOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5891ED9DA6B000F4D2C /* ManagedLocalizationUpdatesOperations.swift */; };
 		D0C0B58D1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B58C1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift */; };
 		D0C0B58E1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B58C1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift */; };
+		D0C26D661FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D651FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift */; };
+		D0C26D671FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D651FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift */; };
+		D0C26D691FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D681FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift */; };
+		D0C26D6A1FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D681FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift */; };
+		D0C26D6C1FE286C3004ABF18 /* FetchChatList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D6B1FE286C3004ABF18 /* FetchChatList.swift */; };
+		D0C26D6D1FE286C3004ABF18 /* FetchChatList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D6B1FE286C3004ABF18 /* FetchChatList.swift */; };
+		D0C26D7B1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D7A1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift */; };
+		D0C26D7C1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D7A1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift */; };
 		D0C27B3F1F4B51D000A4E170 /* CachedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */; };
 		D0C27B401F4B51D000A4E170 /* CachedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */; };
 		D0C27B421F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */; };
@@ -889,6 +897,10 @@
 		D0BEAF5F1E54ACF900BD963D /* AccountManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountManager.swift; sourceTree = "<group>"; };
 		D0C0B5891ED9DA6B000F4D2C /* ManagedLocalizationUpdatesOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedLocalizationUpdatesOperations.swift; sourceTree = "<group>"; };
 		D0C0B58C1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeLocalizationUpdatesOperation.swift; sourceTree = "<group>"; };
+		D0C26D651FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynchronizeGroupedPeersOperation.swift; sourceTree = "<group>"; };
+		D0C26D681FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeGroupedPeersOperations.swift; sourceTree = "<group>"; };
+		D0C26D6B1FE286C3004ABF18 /* FetchChatList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchChatList.swift; sourceTree = "<group>"; };
+		D0C26D7A1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedGroupFeedReadStateSyncOperations.swift; sourceTree = "<group>"; };
 		D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedStickerPack.swift; sourceTree = "<group>"; };
 		D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerSpecificStickerPack.swift; sourceTree = "<group>"; };
 		D0C44B601FC616E200227BE0 /* SearchGroupMembers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchGroupMembers.swift; sourceTree = "<group>"; };
@@ -1235,7 +1247,10 @@
 				D0C0B5891ED9DA6B000F4D2C /* ManagedLocalizationUpdatesOperations.swift */,
 				D07047B91F3DF75500F6A8D4 /* ConsumePersonalMessageAction.swift */,
 				D07047B61F3DF2CD00F6A8D4 /* ManagedConsumePersonalMessagesActions.swift */,
+				D0C26D651FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift */,
+				D0C26D681FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift */,
 				D0AF32211FAC95C20097362B /* StandaloneUploadedMedia.swift */,
+				D0C26D7A1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -1507,6 +1522,7 @@
 		D0DF0C881D819C5F008AEB01 /* Peers */ = {
 			isa = PBXGroup;
 			children = (
+				D0C26D6B1FE286C3004ABF18 /* FetchChatList.swift */,
 				D0BC386F1E40853E0044D6FE /* UpdatePeers.swift */,
 				D0DF0C891D819C7E008AEB01 /* JoinChannel.swift */,
 				D0DF0CA71D82BF32008AEB01 /* PeerParticipants.swift */,
@@ -1854,6 +1870,7 @@
 				D0FA0ABD1E76C908005BB9B7 /* TwoStepVerification.swift in Sources */,
 				D02ABC7E1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift in Sources */,
 				D0448CA51E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */,
+				D0C26D661FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift in Sources */,
 				D03C53771DAFF20F004C17B3 /* MultipartUpload.swift in Sources */,
 				D00C7CE01E3785710080C3D5 /* MarkMessageContentAsConsumedInteractively.swift in Sources */,
 				C2E0646D1ECF171D00387BB8 /* TelegramMediaWebDocument.swift in Sources */,
@@ -1903,6 +1920,7 @@
 				C2FD33E41E687BF1008D13D4 /* PeerPhotoUpdater.swift in Sources */,
 				D01C06B71FBBA269001561AB /* CanSendMessagesToPeer.swift in Sources */,
 				D0B843B51DA7FF30005F29E1 /* NBMetadataCore.m in Sources */,
+				D0C26D691FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift in Sources */,
 				D03B0CD61D62245300955575 /* TelegramUser.swift in Sources */,
 				D02395D61F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift in Sources */,
 				D019B1CC1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift in Sources */,
@@ -1945,6 +1963,7 @@
 				D0F02CE51E9926C40065DEE2 /* ManagedConfigurationUpdates.swift in Sources */,
 				D0528E6A1E65DD2100E2FEF5 /* WebpagePreview.swift in Sources */,
 				D0BEAF5D1E54941B00BD963D /* Authorization.swift in Sources */,
+				D0C26D6C1FE286C3004ABF18 /* FetchChatList.swift in Sources */,
 				D0B843831DA6EDB8005F29E1 /* CachedGroupData.swift in Sources */,
 				D0E35A121DE4A25E00BC6096 /* OutgoingChatContextResultMessageAttribute.swift in Sources */,
 				C239BE9C1E630CA700C2C453 /* UpdatePinnedMessage.swift in Sources */,
@@ -1959,6 +1978,7 @@
 				D03B0CE81D6224AD00955575 /* ViewCountMessageAttribute.swift in Sources */,
 				D0FA35051EA6135D00E56FFA /* CacheStorageSettings.swift in Sources */,
 				D03B0D0C1D62255C00955575 /* AccountStateManagementUtils.swift in Sources */,
+				D0C26D7B1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift in Sources */,
 				D073CE5D1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
 				D0FA8B9E1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift in Sources */,
 				D0561DEA1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */,
@@ -2062,6 +2082,7 @@
 				D01C7ED41EF5DF83008305F1 /* LimitsConfiguration.swift in Sources */,
 				C26A37EF1E5E0C41006977AC /* ChannelParticipants.swift in Sources */,
 				D00D343D1E6EC9770057B307 /* TelegramMediaGame.swift in Sources */,
+				D0C26D6A1FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift in Sources */,
 				D01C7F051EFC1C49008305F1 /* DeviceContact.swift in Sources */,
 				D050F26A1E4A5B6D00988324 /* ManagedGlobalNotificationSettings.swift in Sources */,
 				D050F26B1E4A5B6D00988324 /* ApplyMaxReadIndexInteractively.swift in Sources */,
@@ -2116,6 +2137,7 @@
 				C2E064691ECEEF0B00387BB8 /* TelegramMediaInvoice.swift in Sources */,
 				D001F3EE1E128A1C007A8C60 /* AccountStateManager.swift in Sources */,
 				D0B844351DAB91E0005F29E1 /* NBPhoneNumberDesc.m in Sources */,
+				D0C26D7C1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift in Sources */,
 				C205FEA91EB3B75900455808 /* ExportMessageLink.swift in Sources */,
 				D0448CA31E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */,
 				D0B8442F1DAB91E0005F29E1 /* NBMetadataHelper.m in Sources */,
@@ -2176,6 +2198,7 @@
 				D0B8442A1DAB91E0005F29E1 /* NBAsYouTypeFormatter.m in Sources */,
 				D07047B51F3DF1FE00F6A8D4 /* ConsumablePersonalMentionMessageAttribute.swift in Sources */,
 				D0448C8F1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */,
+				D0C26D6D1FE286C3004ABF18 /* FetchChatList.swift in Sources */,
 				D073CE6E1DCBCF17007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
 				D05A32E21E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */,
 				D0613FD01E60520700202CDB /* ChannelMembers.swift in Sources */,
@@ -2262,6 +2285,7 @@
 				C2FD33E21E680E9E008D13D4 /* RequestUserPhotos.swift in Sources */,
 				D0B8440E1DAB91CD005F29E1 /* MessageUtils.swift in Sources */,
 				D0FA8BAB1E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift in Sources */,
+				D0C26D671FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift in Sources */,
 				D0B418BA1D7E05BB004562A4 /* NetworkLogging.m in Sources */,
 				D03C536B1DAD5CA9004C17B3 /* TelegramGroup.swift in Sources */,
 				D0B418941D7E0580004562A4 /* TelegramMediaAction.swift in Sources */,
@@ -2554,6 +2578,128 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = "Release AppStore";
+		};
+		D0924FE81FE52C12003F693F /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D03B0E591D63215200955575 /* TelegramCore.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D0924FE91FE52C12003F693F /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D03B0E591D63215200955575 /* TelegramCore.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				COPY_PHASE_STRIP = YES;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = X834Q8SBVP;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = TelegramCore/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/third-party/libwebp/lib",
+				);
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private.modulemap";
+				OTHER_LDFLAGS = "-Wl,-dead_strip";
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramCore;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_REFLECTION_METADATA_LEVEL = none;
+				SWIFT_VERSION = 4.0;
+				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D0924FEA1FE52C12003F693F /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D03B0E591D63215200955575 /* TelegramCore.xcconfig */;
+			buildSettings = {
+				INFOPLIST_FILE = TelegramCoreTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.TelegramCoreTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D0924FEB1FE52C12003F693F /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D03B0E591D63215200955575 /* TelegramCore.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				FRAMEWORK_VERSION = A;
+				INFOPLIST_FILE = TelegramCoreMac/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MODULEMAP_PRIVATE_FILE = "$(SRCROOT)/TelegramCore/module.private-mac.modulemap";
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.TelegramCoreMac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 4.0;
+			};
+			name = "Release Hockeyapp Internal";
 		};
 		D09D8C131D4FAB1D0081DBEC /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
@@ -2849,6 +2995,7 @@
 				D09D8C131D4FAB1D0081DBEC /* Debug Hockeyapp */,
 				D09D8C141D4FAB1D0081DBEC /* Debug AppStore */,
 				C22069BE1E8EB4A200E82730 /* Release Hockeyapp */,
+				D0924FE81FE52C12003F693F /* Release Hockeyapp Internal */,
 				D06706551D51162400DED3E3 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -2860,6 +3007,7 @@
 				D09D8C161D4FAB1D0081DBEC /* Debug Hockeyapp */,
 				D09D8C171D4FAB1D0081DBEC /* Debug AppStore */,
 				C22069BF1E8EB4A200E82730 /* Release Hockeyapp */,
+				D0924FE91FE52C12003F693F /* Release Hockeyapp Internal */,
 				D06706561D51162400DED3E3 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -2871,6 +3019,7 @@
 				D09D8C191D4FAB1D0081DBEC /* Debug Hockeyapp */,
 				D09D8C1A1D4FAB1D0081DBEC /* Debug AppStore */,
 				C22069C01E8EB4A200E82730 /* Release Hockeyapp */,
+				D0924FEA1FE52C12003F693F /* Release Hockeyapp Internal */,
 				D06706571D51162400DED3E3 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -2882,6 +3031,7 @@
 				D0B4186D1D7E03D5004562A4 /* Debug Hockeyapp */,
 				D0B4186E1D7E03D5004562A4 /* Debug AppStore */,
 				C22069C11E8EB4A200E82730 /* Release Hockeyapp */,
+				D0924FEB1FE52C12003F693F /* Release Hockeyapp Internal */,
 				D0B4186F1D7E03D5004562A4 /* Release AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;

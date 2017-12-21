@@ -305,7 +305,16 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                                     sourceId = peer.id
                                     sourceMessageId = sourceMessage.id
                                 }
-                                forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: nil)
+                                
+                                var authorSignature: String?
+                                for attribute in sourceMessage.attributes {
+                                    if let attribute = attribute as? AuthorSignatureMessageAttribute {
+                                        authorSignature = attribute.signature
+                                        break
+                                    }
+                                }
+                                
+                                forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: authorSignature)
                             } else {
                                 forwardInfo = nil
                             }
