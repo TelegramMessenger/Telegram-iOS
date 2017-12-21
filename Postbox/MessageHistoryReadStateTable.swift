@@ -265,7 +265,7 @@ final class MessageHistoryReadStateTable: Table {
                         
                         self.markReadStatesAsUpdated(messageId.peerId, namespaces: states.namespaces)
                         
-                        states.namespaces[messageId.namespace] = .idBased(maxIncomingReadId: messageId.id, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count - Int32(deltaCount))
+                        states.namespaces[messageId.namespace] = .idBased(maxIncomingReadId: messageId.id, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: max(0, count - Int32(deltaCount)))
                         return (CombinedPeerReadState(states: states.namespaces.map({$0})), holes)
                 }
                 case .indexBased:
@@ -298,7 +298,7 @@ final class MessageHistoryReadStateTable: Table {
                         
                         self.markReadStatesAsUpdated(messageIndex.id.peerId, namespaces: states.namespaces)
                         
-                        states.namespaces[messageIndex.id.namespace] = .indexBased(maxIncomingReadIndex: messageIndex, maxOutgoingReadIndex: maxOutgoingReadIndex, count: count - Int32(deltaCount))
+                        states.namespaces[messageIndex.id.namespace] = .indexBased(maxIncomingReadIndex: messageIndex, maxOutgoingReadIndex: maxOutgoingReadIndex, count: max(0, count - Int32(deltaCount)))
                         return (CombinedPeerReadState(states: states.namespaces.map({$0})), holes, messageIds)
                     }
             }

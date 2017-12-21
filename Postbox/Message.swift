@@ -117,7 +117,15 @@ public struct MessageIndex: Comparable, Hashable {
     }
     
     public func predecessor() -> MessageIndex {
-        return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id - 1), timestamp: self.timestamp)
+        if self.id.id != 0 {
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id - 1), timestamp: self.timestamp)
+        } else if self.id.namespace != 0 {
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace - 1, id: Int32.max - 1), timestamp: self.timestamp)
+        } else if self.timestamp != 0 {
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: Int32.max - 1, id: Int32.max - 1), timestamp: self.timestamp - 1)
+        } else {
+            return self
+        }
     }
     
     public func successor() -> MessageIndex {
@@ -129,7 +137,7 @@ public struct MessageIndex: Comparable, Hashable {
     }
     
     public static func absoluteUpperBound() -> MessageIndex {
-        return MessageIndex(id: MessageId(peerId: PeerId(namespace: Int32.max, id: Int32.max), namespace: Int32.max, id: Int32.max), timestamp: Int32.max)
+        return MessageIndex(id: MessageId(peerId: PeerId(namespace: Int32(Int8.max), id: Int32.max), namespace: Int32(Int8.max), id: Int32.max), timestamp: Int32.max)
     }
     
     public static func absoluteLowerBound() -> MessageIndex {
@@ -141,11 +149,15 @@ public struct MessageIndex: Comparable, Hashable {
     }
     
     public static func upperBound(peerId: PeerId) -> MessageIndex {
-        return MessageIndex(id: MessageId(peerId: peerId, namespace: Int32.max, id: Int32.max), timestamp: Int32.max)
+        return MessageIndex(id: MessageId(peerId: peerId, namespace: Int32(Int8.max), id: Int32.max), timestamp: Int32.max)
     }
     
     public static func upperBound(peerId: PeerId, timestamp: Int32, namespace: MessageId.Namespace) -> MessageIndex {
         return MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32.max), timestamp: timestamp)
+    }
+    
+    func withPeerId(_ peerId: PeerId) -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: peerId, namespace: self.id.namespace, id: self.id.id), timestamp: self.timestamp)
     }
 }
 
@@ -321,6 +333,10 @@ public struct MessageFlags: OptionSet {
             rawValue |= MessageFlags.Sending.rawValue
         }
         
+        if flags.contains(StoreMessageFlags.CanBeGroupedIntoFeed) {
+            rawValue |= MessageFlags.CanBeGroupedIntoFeed.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -329,6 +345,7 @@ public struct MessageFlags: OptionSet {
     public static let Incoming = MessageFlags(rawValue: 4)
     public static let TopIndexable = MessageFlags(rawValue: 16)
     public static let Sending = MessageFlags(rawValue: 32)
+    public static let CanBeGroupedIntoFeed = MessageFlags(rawValue: 64)
     
 }
 
@@ -488,6 +505,10 @@ public struct StoreMessageFlags: OptionSet {
             rawValue |= StoreMessageFlags.Sending.rawValue
         }
         
+        if flags.contains(.CanBeGroupedIntoFeed) {
+            rawValue |= StoreMessageFlags.CanBeGroupedIntoFeed.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -496,6 +517,7 @@ public struct StoreMessageFlags: OptionSet {
     public static let Incoming = StoreMessageFlags(rawValue: 4)
     public static let TopIndexable = StoreMessageFlags(rawValue: 16)
     public static let Sending = StoreMessageFlags(rawValue: 32)
+    public static let CanBeGroupedIntoFeed = StoreMessageFlags(rawValue: 64)
 }
 
 public enum StoreMessageId {

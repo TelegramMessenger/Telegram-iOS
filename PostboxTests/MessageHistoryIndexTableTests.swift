@@ -277,42 +277,42 @@ class MessageHistoryIndexTableTests: XCTestCase {
     }
     
     func testFillHoleEmpty() {
-        fillHole(1, HoleFill(complete: true, direction: .UpperToLower), [])
+        fillHole(1, HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [])
         expect([])
     }
 
     func testFillHoleComplete() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: true, direction: .UpperToLower), [(100, 100, nil), (200, 200, nil)])
+        fillHole(1, HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(100, 100, nil), (200, 200, nil)])
         expect([.Message(100, 100), .Message(200, 200)])
     }
     
     func testFillHoleUpperToLowerPartial() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(100, 100, nil), (200, 200, nil)])
+        fillHole(1, HoleFill(complete: false, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(100, 100, nil), (200, 200, nil)])
         expect([.Hole(1, 99, 100), .Message(100, 100), .Message(200, 200)])
     }
     
     func testFillHoleUpperToLowerToBounds() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(1, 1, nil), (200, 200, nil)])
+        fillHole(1, HoleFill(complete: false, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(1, 1, nil), (200, 200, nil)])
         expect([.Message(1, 1), .Message(200, 200)])
     }
     
     func testFillHoleLowerToUpperToBounds() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(100, 100, nil), (Int32.max, 200, nil)])
+        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil, clippingMinIndex: nil)), [(100, 100, nil), (Int32.max, 200, nil)])
         expect([.Message(100, 100), .Message(Int32.max, 200)])
     }
     
     func testFillHoleLowerToUpperPartial() {
         addHole(100)
         
-        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(100, 100, nil), (200, 200, nil)])
+        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil, clippingMinIndex: nil)), [(100, 100, nil), (200, 200, nil)])
         expect([.Message(100, 100), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
     
@@ -322,7 +322,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(200, 200)
         
-        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150, nil)])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(150, 150, nil)])
         
         expect([.Hole(1, 99, 100), .Message(100, 100), .Hole(101, 149, 150), .Message(150, 150), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
@@ -333,7 +333,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(200, 200)
         
-        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(150, 150, nil)])
+        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil, clippingMinIndex: nil)), [(150, 150, nil)])
         
         expect([.Hole(1, 99, 100), .Message(100, 100), .Message(150, 150), .Hole(151, 199, 200), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
@@ -344,7 +344,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(200, 200)
         
-        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(150, 150, nil)])
+        fillHole(199, HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(150, 150, nil)])
         
         expect([.Hole(1, 99, 100), .Message(100, 100), .Message(150, 150), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
@@ -362,7 +362,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addHole(1)
         
-        fillHole(99, HoleFill(complete: true, direction: .UpperToLower), [])
+        fillHole(99, HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [])
         
         expect([.Message(100, 100)])
     }
@@ -371,7 +371,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(101, 101)
         
-        fillHole(100, HoleFill(complete: true, direction: .UpperToLower), [(90, 90, nil)])
+        fillHole(100, HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(90, 90, nil)])
         
         expect([.Message(90, 90), .Message(100, 100), .Message(101, 101)])
     }
@@ -381,7 +381,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(200, 200)
         addHole(150)
         
-        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150, nil), (300, 300, nil)])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(150, 150, nil), (300, 300, nil)])
         
         expect([.Message(100, 100), .Hole(101, 149, 150), .Message(150, 150), .Message(200, 200), .Message(300, 300)])
     }
@@ -533,7 +533,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addHole(1)
         expect([.Hole(1, Int32.max, Int32.max)])
         
-        fillMultipleHoles(1, HoleFill(complete: false, direction: .UpperToLower), [(5, 5), (10, 10)])
+        fillMultipleHoles(1, HoleFill(complete: false, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(5, 5), (10, 10)])
         expect([.Hole(1, 4, 5), .Message(5, 5), .Message(10, 10)])
     }
     
@@ -542,7 +542,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: false, direction: .UpperToLower), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
     }
@@ -553,7 +553,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(13, 13)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, 12, 13), .Message(13, 13), .Hole(14, Int32.max, Int32.max)])
         
-        fillMultipleHoles(20, HoleFill(complete: false, direction: .UpperToLower), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(20, HoleFill(complete: false, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(13, 13), .Message(15, 15), .Message(20, 20)])
     }
@@ -563,7 +563,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: true, direction: .UpperToLower), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
     }
@@ -573,7 +573,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil)), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: false, direction: .LowerToUpper(updatedMaxIndex: nil, clippingMinIndex: nil)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
     }
@@ -583,7 +583,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(10, 10)
         expect([.Hole(1, 9, 10), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         
-        fillMultipleHoles(12, HoleFill(complete: true, direction: .LowerToUpper(updatedMaxIndex: nil)), [(8, 8), (15, 15), (20, 20)])
+        fillMultipleHoles(12, HoleFill(complete: true, direction: .LowerToUpper(updatedMaxIndex: nil, clippingMinIndex: nil)), [(8, 8), (15, 15), (20, 20)])
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20)])
     }
