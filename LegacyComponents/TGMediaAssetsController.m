@@ -93,6 +93,7 @@
     };
     
     TGMediaGroupsController *groupsController = [[TGMediaGroupsController alloc] initWithContext:context assetsLibrary:assetsController.assetsLibrary intent:intent];
+    groupsController.pallete = assetsController.pallete;
     groupsController.openAssetGroup = ^(id group)
     {
         __strong TGMediaAssetsController *strongController = weakController;
@@ -104,6 +105,7 @@
         if ([group isKindOfClass:[TGMediaAssetGroup class]])
         {
             pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:strongController->_context assetsLibrary:strongController.assetsLibrary assetGroup:group intent:intent selectionContext:strongController->_selectionContext editingContext:strongController->_editingContext saveEditedPhotos:strongController->_saveEditedPhotos];
+            pickerController.pallete = assetsController.pallete;
         }
         else if ([group isKindOfClass:[TGMediaAssetMomentList class]])
         {
@@ -122,6 +124,7 @@
     [groupsController loadViewIfNeeded];
     
     TGMediaAssetsPickerController *pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:context assetsLibrary:assetsController.assetsLibrary assetGroup:assetGroup intent:intent selectionContext:assetsController->_selectionContext editingContext:assetsController->_editingContext saveEditedPhotos:saveEditedPhotos];
+    pickerController.pallete = assetsController.pallete;
     pickerController.catchToolbarView = catchToolbarView;
     
     [groupsController setIsFirstInStack:true];
@@ -204,6 +207,12 @@
     {
         _context = context;
         _saveEditedPhotos = saveEditedPhotos;
+     
+        if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(navigationBarPallete)])
+            [((TGNavigationBar *)self.navigationBar) setPallete:[[LegacyComponentsGlobals provider] navigationBarPallete]];
+        
+        if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
+            [self setPallete:[[LegacyComponentsGlobals provider] mediaAssetsPallete]];
         
         _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
         
@@ -326,14 +335,16 @@
     
     CGFloat inset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation].bottom;
     _toolbarView = [[TGMediaPickerToolbarView alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height - TGMediaPickerToolbarHeight - inset, self.view.frame.size.width, TGMediaPickerToolbarHeight + inset)];
+    if (_pallete != nil)
+        _toolbarView.pallete = _pallete;
     _toolbarView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation];
     _toolbarView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     if (_intent != TGMediaAssetsControllerSendFileIntent && _intent != TGMediaAssetsControllerSendMediaIntent)
         [_toolbarView setRightButtonHidden:true];
     if (_selectionContext.allowGrouping)
     {
-        [_toolbarView setCenterButtonImage:TGTintedImage(TGComponentsImageNamed(@"MediaPickerGroupPhotosIcon"), UIColorRGB(0x858e99))];
-        [_toolbarView setCenterButtonSelectedImage:TGComponentsImageNamed(@"MediaPickerGroupPhotosIcon")];
+        [_toolbarView setCenterButtonImage:TGTintedImage(TGComponentsImageNamed(@"MediaPickerGroupPhotosIcon"), _pallete != nil ? _pallete.secondaryTextColor : UIColorRGB(0x858e99))];
+        [_toolbarView setCenterButtonSelectedImage:_pallete != nil ? TGTintedImage(TGComponentsImageNamed(@"MediaPickerGroupPhotosIcon"), _pallete.accentColor) : TGComponentsImageNamed(@"MediaPickerGroupPhotosIcon")];
         [_toolbarView setCenterButtonHidden:true animated:false];
         [_toolbarView setCenterButtonSelected:_selectionContext.grouping];
         
@@ -1127,6 +1138,28 @@
 - (bool)allowGrouping
 {
     return _selectionContext.allowGrouping;
+}
+
+@end
+
+@implementation TGMediaAssetsPallete
+
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor barBackgroundColor:(UIColor *)barBackgroundColor barSeparatorColor:(UIColor *)barSeparatorColor navigationTitleColor:(UIColor *)navigationTitleColor badge:(UIImage *)badge badgeTextColor:(UIColor *)badgeTextColor
+{
+    TGMediaAssetsPallete *pallete = [[TGMediaAssetsPallete alloc] init];
+    pallete->_isDark = dark;
+    pallete->_backgroundColor = backgroundColor;
+    pallete->_selectionColor = selectionColor;
+    pallete->_separatorColor = separatorColor;
+    pallete->_textColor = textColor;
+    pallete->_secondaryTextColor = secondaryTextColor;
+    pallete->_accentColor = accentColor;
+    pallete->_barBackgroundColor = barBackgroundColor;
+    pallete->_barSeparatorColor = barSeparatorColor;
+    pallete->_navigationTitleColor = navigationTitleColor;
+    pallete->_badge = badge;
+    pallete->_badgeTextColor = badgeTextColor;
+    return pallete;
 }
 
 @end

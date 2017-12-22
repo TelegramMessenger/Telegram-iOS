@@ -6,6 +6,7 @@
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
 @class TGMediaPickerSelectionGestureRecognizer;
+@class TGMediaAssetsPallete;
 
 @interface TGMediaPickerController : TGViewController <UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout>
 {
@@ -23,6 +24,8 @@
 @property (nonatomic, assign) bool shouldStoreAssets;
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, strong) NSString *recipientName;
+
+@property (nonatomic, strong) TGMediaAssetsPallete *pallete;
 
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;

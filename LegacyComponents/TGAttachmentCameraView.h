@@ -1,10 +1,12 @@
 #import <UIKit/UIKit.h>
 
 @class TGCameraPreviewView;
+@class TGMenuSheetPallete;
 
 @interface TGAttachmentCameraView : UIView
 
 @property (nonatomic, copy) void (^pressed)(void);
+@property (nonatomic, strong) TGMenuSheetPallete *pallete;
 
 - (instancetype)initForSelfPortrait:(bool)selfPortrait;
 

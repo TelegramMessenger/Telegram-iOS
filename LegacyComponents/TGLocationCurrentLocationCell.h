@@ -3,9 +3,11 @@
 #import <SSignalKit/SSignalKit.h>
 
 @class TGMessage;
+@class TGLocationPallete;
 
 @interface TGLocationCurrentLocationCell : UITableViewCell
 
+@property (nonatomic, strong) TGLocationPallete *pallete;
 @property (nonatomic, weak) UIImageView *edgeView;
 
 - (void)configureForCurrentLocationWithAccuracy:(CLLocationAccuracy)accuracy;

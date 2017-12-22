@@ -1,6 +1,7 @@
 #import "TGLocationLiveCell.h"
 #import "TGLocationVenueCell.h"
 
+#import "TGLocationMapViewController.h"
 #import "LegacyComponentsInternal.h"
 #import "TGFont.h"
 #import "TGColor.h"
@@ -107,6 +108,22 @@ const CGFloat TGLocationLiveCellHeight = 68;
     [_wavesView invalidate];
 }
 
+- (void)setPallete:(TGLocationPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    _highlightView.backgroundColor = pallete.selectionColor;
+    _titleLabel.textColor = pallete.accentColor;
+    _subtitleLabel.textColor = pallete.secondaryTextColor;
+    _separatorView.backgroundColor = pallete.separatorColor;
+    _wavesView.color = pallete.iconColor;
+    [_elapsedView setColor:pallete.accentColor];
+}
+
 - (void)handlePress:(UILongPressGestureRecognizer *)gestureRecognizer
 {
     if (gestureRecognizer.state == UIGestureRecognizerStateBegan)
@@ -143,7 +160,7 @@ const CGFloat TGLocationLiveCellHeight = 68;
 
     CGFloat diameter = 48.0f;
     
-    static UIImage *placeholder = nil;
+    static UIImage *staticPlaceholder = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
     {
@@ -157,9 +174,11 @@ const CGFloat TGLocationLiveCellHeight = 68;
         CGContextSetLineWidth(context, 1.0f);
         CGContextStrokeEllipseInRect(context, CGRectMake(0.5f, 0.5f, diameter - 1.0f, diameter - 1.0f));
         
-        placeholder = UIGraphicsGetImageFromCurrentImageContext();
+        staticPlaceholder = UIGraphicsGetImageFromCurrentImageContext();
         UIGraphicsEndImageContext();
     });
+    
+    UIImage *placeholder = _pallete != nil ? _pallete.avatarPlaceholder : staticPlaceholder;
     
     bool isUser = [peer isKindOfClass:[TGUser class]];
     NSString *avatarUrl = isUser ? ((TGUser *)peer).photoUrlSmall : ((TGConversation *)peer).chatPhotoSmall;
@@ -181,7 +200,7 @@ const CGFloat TGLocationLiveCellHeight = 68;
         }
     }
     
-    _titleLabel.textColor = [UIColor blackColor];
+    _titleLabel.textColor = _pallete != nil ? _pallete.textColor : [UIColor blackColor];
     _titleLabel.text = isUser ? ((TGUser *)peer).displayName : ((TGConversation *)peer).chatTitle;
     
     NSString *subtitle = [TGDateUtils stringForRelativeUpdate:[message actualDate]];
@@ -206,6 +225,7 @@ const CGFloat TGLocationLiveCellHeight = 68;
     if (changed)
     {
         _elapsedView.hidden = false;
+        
         _avatarView.alpha = 1.0f;
         [self setNeedsLayout];
         
@@ -238,10 +258,14 @@ const CGFloat TGLocationLiveCellHeight = 68;
     _circleView.hidden = false;
     _elapsedView.hidden = true;
     
-    _iconView.image = TGComponentsImageNamed(@"LocationMessageLiveIcon");
-    [self setCircleColor:UIColorRGB(0xff6464)];
+    UIImage *icon = TGComponentsImageNamed(@"LocationMessageLiveIcon");
+    if (_pallete != nil)
+        icon = TGTintedImage(icon, _pallete.iconColor);
     
-    _titleLabel.textColor = TGAccentColor();
+    _iconView.image = icon;
+    [self setCircleColor:_pallete != nil ? _pallete.liveLocationColor : UIColorRGB(0xff6464)];
+    
+    _titleLabel.textColor = _pallete != nil ? _pallete.accentColor : TGAccentColor();
     _titleLabel.text = TGLocalized(@"Map.ShareLiveLocation");
     _subtitleLabel.text = TGLocalized(@"Map.ShareLiveLocationHelp");
     
@@ -262,14 +286,18 @@ const CGFloat TGLocationLiveCellHeight = 68;
     _avatarView.hidden = true;
     _circleView.hidden = false;
     
-    _iconView.image = TGComponentsImageNamed(@"LocationMessagePinIcon");
-    [self setCircleColor:UIColorRGB(0xff6464)];
+    UIImage *icon = TGComponentsImageNamed(@"LocationMessagePinIcon");
+    if (_pallete != nil)
+        icon = TGTintedImage(icon, _pallete.iconColor);
+    _iconView.image = icon;
+    [self setCircleColor:_pallete != nil ? _pallete.liveLocationColor : UIColorRGB(0xff6464)];
     
-    _titleLabel.textColor = UIColorRGB(0xff3b2f);
+    _titleLabel.textColor = _pallete != nil ? _pallete.destructiveColor : UIColorRGB(0xff3b2f);
     _titleLabel.text = TGLocalized(@"Map.StopLiveLocation");
     _subtitleLabel.text = [TGDateUtils stringForRelativeUpdate:[message actualDate]];
     
     _wavesView.hidden = false;
+    _wavesView.color = _pallete != nil ? _pallete.iconColor : [UIColor whiteColor];
     [_wavesView start];
     
     [_locationDisposable setDisposable:nil];

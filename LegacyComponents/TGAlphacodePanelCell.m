@@ -4,6 +4,8 @@
 #import "TGColor.h"
 #import "TGFont.h"
 
+#import "TGModernConversationAssociatedInputPanel.h"
+
 NSString *const TGAlphacodePanelCellKind = @"TGAlphacodePanelCell";
 
 @interface TGAlphacodePanelCell () {
@@ -15,7 +17,7 @@ NSString *const TGAlphacodePanelCellKind = @"TGAlphacodePanelCell";
 
 @implementation TGAlphacodePanelCell
 
-- (instancetype)initWithStyle:(UITableViewCellStyle)style {
+- (instancetype)initWithStyle:(TGModernConversationAssociatedInputPanelStyle)style {
     self = [super initWithStyle:UITableViewCellStyleDefault reuseIdentifier:TGAlphacodePanelCellKind];
     if (self != nil) {
         UIColor *backgroundColor = [UIColor whiteColor];
@@ -61,6 +63,21 @@ NSString *const TGAlphacodePanelCellKind = @"TGAlphacodePanelCell";
         [self.contentView addSubview:_descriptionLabel];
     }
     return self;
+}
+
+- (void)setPallete:(TGConversationAssociatedInputPanelPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    _emojiLabel.textColor = pallete.textColor;
+    _descriptionLabel.textColor = pallete.textColor;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    self.backgroundView.backgroundColor = self.backgroundColor;
+    self.selectedBackgroundView.backgroundColor = pallete.selectionColor;
 }
 
 - (void)setEmoji:(NSString *)emoji label:(NSString *)label {

@@ -1,7 +1,12 @@
 #import "TGLocationOptionsView.h"
 
+#import "TGFont.h"
+
 #import "TGModernButton.h"
 #import "TGLocationMapModeControl.h"
+
+#import "TGLocationMapViewController.h"
+#import "TGSearchBar.h"
 
 #import "LegacyComponentsInternal.h"
 #import "TGImageUtils.h"
@@ -74,6 +79,50 @@
         [self addSubview:_separatorView];
     }
     return self;
+}
+
+- (void)setPallete:(TGLocationPallete *)pallete
+{
+    _pallete = pallete;
+    
+    if (![_mapModeBackgroundView isKindOfClass:[UIVisualEffectView class]])
+        _mapModeBackgroundView.backgroundColor = pallete.backgroundColor;
+    else
+        ((UIVisualEffectView *)_mapModeBackgroundView).effect = pallete.searchBarPallete.isDark ? [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark] : [UIBlurEffect effectWithStyle:UIBlurEffectStyleExtraLight];
+    
+    if (![pallete.backgroundColor isEqual:[UIColor whiteColor]])
+    {
+        UIGraphicsBeginImageContextWithOptions(_backgroundView.image.size, false, 0.0f);
+        [_backgroundView.image drawAtPoint:CGPointZero];
+        
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        [pallete.backgroundColor setFill];
+        UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(4.0f, 4.0f, 46.5f, 46.5f) cornerRadius:10.0f];
+        CGContextAddPath(context, path.CGPath);
+        CGContextFillPath(context);
+        
+        UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        
+        _backgroundView.image = [image resizableImageWithCapInsets:UIEdgeInsetsMake(15.0f, 15.0f, 18.0f, 15.0f)];
+    }
+    
+    _separatorView.backgroundColor = pallete.separatorColor;
+    
+    [_mapModeButton setImage:TGTintedImage(TGComponentsImageNamed(@"LocationInfo.png"), pallete.accentColor) forState:UIControlStateNormal];
+    [_mapModeButton setImage:TGTintedImage(TGComponentsImageNamed(@"LocationInfo_Active.png"), pallete.accentColor) forState:UIControlStateSelected];
+    [_mapModeButton setImage:TGTintedImage(TGComponentsImageNamed(@"LocationInfo_Active.png"), pallete.accentColor) forState:UIControlStateSelected | UIControlStateHighlighted];
+    
+    [_trackButton setAccentColor:pallete.accentColor spinnerColor:pallete.secondaryTextColor];
+    
+    [_mapModeControl setBackgroundImage:pallete.searchBarPallete.segmentedControlBackgroundImage forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    [_mapModeControl setBackgroundImage:pallete.searchBarPallete.segmentedControlSelectedImage forState:UIControlStateSelected barMetrics:UIBarMetricsDefault];
+    [_mapModeControl setBackgroundImage:pallete.searchBarPallete.segmentedControlSelectedImage forState:UIControlStateSelected | UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+    [_mapModeControl setBackgroundImage:pallete.searchBarPallete.segmentedControlHighlightedImage forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+    [_mapModeControl setDividerImage:pallete.searchBarPallete.segmentedControlDividerImage forLeftSegmentState:UIControlStateNormal rightSegmentState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    
+    [_mapModeControl setTitleTextAttributes:@{UITextAttributeTextColor:pallete.searchBarPallete.accentColor, UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateNormal];
+    [_mapModeControl setTitleTextAttributes:@{UITextAttributeTextColor:pallete.searchBarPallete.accentContrastColor, UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateSelected];
 }
 
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event

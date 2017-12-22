@@ -1,8 +1,11 @@
 #import <UIKit/UIKit.h>
 
 @class TGLocationVenue;
+@class TGLocationPallete;
 
 @interface TGLocationVenueCell : UITableViewCell
+
+@property (nonatomic, strong) TGLocationPallete *pallete;
 
 - (void)configureWithVenue:(TGLocationVenue *)venue;
 

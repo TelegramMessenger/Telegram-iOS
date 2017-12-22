@@ -3,9 +3,11 @@
 
 @class TGUser;
 @class TGMessage;
+@class TGLocationPallete;
 
 @interface TGLocationLiveCell : UITableViewCell
 
+@property (nonatomic, strong) TGLocationPallete *pallete;
 @property (nonatomic, copy) void (^longPressed)(void);
 
 @property (nonatomic, readonly) int32_t messageId;

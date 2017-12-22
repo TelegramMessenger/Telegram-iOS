@@ -1,7 +1,10 @@
 #import "TGLocationTrackingButton.h"
 
+@class TGLocationPallete;
+
 @interface TGLocationOptionsView : UIView
 
+@property (nonatomic, strong) TGLocationPallete *pallete;
 @property (nonatomic, copy) void (^mapModeChanged)(NSInteger);
 @property (nonatomic, copy) void (^trackModePressed)(void);
 

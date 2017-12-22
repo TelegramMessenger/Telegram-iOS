@@ -1583,7 +1583,7 @@ static CGFloat transformRotation(CGAffineTransform transform)
         {
             itemHeaderView.alpha = alpha;
             itemHeaderView.hidden = (alpha < FLT_EPSILON);
-            if (![itemHeaderView isKindOfClass:[TGModernGalleryEmbeddedStickersHeaderView class]]) {
+            if (![itemHeaderView isKindOfClass:[TGModernGalleryEmbeddedStickersHeaderView class]] && itemHeaderView.tag != 0xbeef) {
                 titleAlpha -= alpha;
             }
         }

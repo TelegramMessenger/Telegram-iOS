@@ -5,6 +5,8 @@
 #import "TGFont.h"
 #import "TGImageUtils.h"
 
+#import "TGModernConversationAssociatedInputPanel.h"
+
 NSString *const TGHashtagPanelCellKind = @"TGHashtagPanelCell";
 
 @interface TGHashtagPanelCell ()
@@ -59,11 +61,27 @@ NSString *const TGHashtagPanelCellKind = @"TGHashtagPanelCell";
     return self;
 }
 
+- (void)setPallete:(TGConversationAssociatedInputPanelPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    _label.textColor = pallete.textColor;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    self.backgroundView.backgroundColor = self.backgroundColor;
+    self.selectedBackgroundView.backgroundColor = pallete.selectionColor;
+    
+    _separatorView.backgroundColor = pallete.separatorColor;
+}
+
 - (void)setDisplaySeparator:(bool)displaySeparator
 {
     if (displaySeparator && _separatorView == nil)
     {
-        UIColor *separatorColor = TGSeparatorColor();
+        UIColor *separatorColor = _pallete != nil ? _pallete.separatorColor : TGSeparatorColor();
         if (_style == TGModernConversationAssociatedInputPanelDarkStyle)
             separatorColor = UIColorRGB(0x292929);
         

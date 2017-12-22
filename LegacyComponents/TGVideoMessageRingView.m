@@ -32,7 +32,7 @@
         return;
     
     CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
+    CGContextSetFillColorWithColor(context, self.accentColor.CGColor);
 
     CGMutablePathRef path = CGPathCreateMutable();
     CGPoint centerPoint = CGPointMake(rect.size.width / 2.0f, rect.size.height / 2.0f);

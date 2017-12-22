@@ -1066,6 +1066,38 @@ CGSize TGNativeScreenSize()
     return size;
 }
 
+uint32_t TGColorHexCode(UIColor *color)
+{
+    CGFloat red, green, blue, alpha;
+    if ([color getRed:&red green:&green blue:&blue alpha:&alpha])
+    {
+        uint32_t redInt = (uint32_t)(red * 255 + 0.5);
+        uint32_t greenInt = (uint32_t)(green * 255 + 0.5);
+        uint32_t blueInt = (uint32_t)(blue * 255 + 0.5);
+        
+        return (redInt << 16) | (greenInt << 8) | blueInt;
+    }
+    
+    return 0;
+}
+
+uint32_t TGColorHexCodeWithAlpha(UIColor *color)
+{
+    CGFloat red, green, blue, alpha;
+    if ([color getRed:&red green:&green blue:&blue alpha:&alpha])
+    {
+        uint32_t redInt = (uint32_t)(red * 255 + 0.5);
+        uint32_t greenInt = (uint32_t)(green * 255 + 0.5);
+        uint32_t blueInt = (uint32_t)(blue * 255 + 0.5);
+        uint32_t alphaInt = (uint32_t)(alpha * 255 + 0.5);
+        
+        return (alphaInt << 24) | (redInt << 16) | (greenInt << 8) | blueInt;
+    }
+    
+    return 0;
+}
+
+
 static bool readCGFloat(NSString *string, int &position, CGFloat &result) {
     int start = position;
     bool seenDot = false;
@@ -1153,3 +1185,15 @@ void TGDrawSvgPath(CGContextRef context, NSString *path) {
         }
     }
 }
+
+@implementation TGImageBorderPallete
+
++ (instancetype)palleteWithBorderColor:(UIColor *)borderColor shadowColor:(UIColor *)shadowColor
+{
+    TGImageBorderPallete *pallete = [[TGImageBorderPallete alloc] init];
+    pallete->_borderColor = borderColor;
+    pallete->_shadowColor = shadowColor;
+    return pallete;
+}
+
+@end

@@ -45,6 +45,12 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
     CGFloat _previousTime;
 }
 
+@property (nonatomic, strong) UIColor *incomingColor;
+@property (nonatomic, strong) UIColor *outgoingColor;
+
+@property (nonatomic, strong) UIColor *incomingIconColor;
+@property (nonatomic, strong) UIColor *outgoingIconColor;
+
 @property (nonatomic) CGFloat radius;
 @property (nonatomic) int overlayStyle;
 @property (nonatomic) CGFloat progress;
@@ -434,6 +440,11 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
         progressFireIcon = TGTintedImage(fireIcon, [UIColor whiteColor]);
     });
     
+    UIColor *incomingButtonColor = self.incomingColor ?: TGAccentColor();
+    UIColor *outgoingButtonColor = self.outgoingColor ?: UIColorRGB(0x3fc33b);
+    UIColor *incomingIconColor = self.incomingIconColor ?: [UIColor whiteColor];
+    UIColor *outgoingIconColor = self.outgoingIconColor ?: UIColorRGB(0xe1ffc7);
+    
     switch (_type)
     {
         case TGMessageImageViewOverlayViewTypeDownload:
@@ -461,12 +472,12 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             }
             else if (_overlayStyle == TGMessageImageViewOverlayStyleIncoming)
             {
-                CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
+                CGContextSetFillColorWithColor(context, incomingButtonColor.CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
             }
             else if (_overlayStyle == TGMessageImageViewOverlayStyleOutgoing)
             {
-                CGContextSetFillColorWithColor(context, TGColorWithHexAndAlpha(0x3fc33b, 1.0f).CGColor);
+                CGContextSetFillColorWithColor(context, outgoingButtonColor.CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
             }
             
@@ -550,7 +561,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             else if (_overlayStyle == TGMessageImageViewOverlayStyleIncoming)
             {
                 if (true || ABS(diameter - 37.0f) < 0.1) {
-                    CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
+                    CGContextSetFillColorWithColor(context, incomingButtonColor.CGColor);
                 } else {
                     CGContextSetFillColorWithColor(context, TGColorWithHexAndAlpha(0x85baf2, 0.15f).CGColor);
                 }
@@ -559,7 +570,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             else if (_overlayStyle == TGMessageImageViewOverlayStyleOutgoing)
             {
                 if (true || ABS(diameter - 37.0f) < 0.1) {
-                    CGContextSetFillColorWithColor(context, TGColorWithHex(0x3fc33b).CGColor);
+                    CGContextSetFillColorWithColor(context, outgoingButtonColor.CGColor);
                 } else {
                     CGContextSetFillColorWithColor(context, TGColorWithHexAndAlpha(0x4fb212, 0.15f).CGColor);
                 }
@@ -586,14 +597,14 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
                 CGContextSetStrokeColorWithColor(context, [UIColor clearColor].CGColor);
             else if (_overlayStyle == TGMessageImageViewOverlayStyleIncoming) {
                 if (true || ABS(diameter - 37.0f) < 0.1) {
-                    CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
+                    CGContextSetStrokeColorWithColor(context, incomingIconColor.CGColor);
                 } else {
                     CGContextSetStrokeColorWithColor(context, TGColorWithHex(0x4f9ef3).CGColor);
                 }
             }
             else if (_overlayStyle == TGMessageImageViewOverlayStyleOutgoing) {
                 if (true || ABS(diameter - 37.0f) < 0.1) {
-                    CGContextSetStrokeColorWithColor(context, TGColorWithHex(0xe1ffc7).CGColor);
+                    CGContextSetStrokeColorWithColor(context, outgoingIconColor.CGColor);
                 } else {
                     CGContextSetStrokeColorWithColor(context, TGColorWithHex(0x64b15e).CGColor);
                 }
@@ -628,14 +639,14 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
                 CGContextSetStrokeColorWithColor(context, [UIColor clearColor].CGColor);
             else if (_overlayStyle == TGMessageImageViewOverlayStyleIncoming) {
                 if (true || ABS(diameter - 37.0f) < 0.1) {
-                    CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
+                    CGContextSetStrokeColorWithColor(context, incomingIconColor.CGColor);
                 } else {
                     CGContextSetStrokeColorWithColor(context, TGColorWithHex(0x4f9ef3).CGColor);
                 }
             }
             else if (_overlayStyle == TGMessageImageViewOverlayStyleOutgoing) {
                 if (true || ABS(diameter - 37.0f) < 0.1) {
-                    CGContextSetStrokeColorWithColor(context, TGColorWithHex(0xe1ffc7).CGColor);
+                    CGContextSetStrokeColorWithColor(context, outgoingIconColor.CGColor);
                 } else {
                     CGContextSetStrokeColorWithColor(context, TGColorWithHex(0x64b15e).CGColor);
                 }
@@ -697,18 +708,18 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             
             if (_overlayStyle == TGMessageImageViewOverlayStyleIncoming)
             {
-                CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
+                CGContextSetFillColorWithColor(context, incomingButtonColor.CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
                 
-                UIImage *iconImage = TGImageNamed(@"ModernMessageDocumentIconIncoming.png");
+                UIImage *iconImage = TGTintedImage(TGImageNamed(@"ModernMessageDocumentIconIncoming.png"), incomingIconColor);
                 [iconImage drawAtPoint:CGPointMake(floor((diameter - iconImage.size.width) / 2.0f), floor((diameter - iconImage.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:1.0f];
             }
             else if (_overlayStyle == TGMessageImageViewOverlayStyleOutgoing)
             {
-                CGContextSetFillColorWithColor(context, TGColorWithHexAndAlpha(0x3fc33b, 1.0f).CGColor);
+                CGContextSetFillColorWithColor(context, outgoingButtonColor.CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
                 
-                UIImage *iconImage = TGImageNamed(@"ModernMessageDocumentIconOutgoing.png");
+                UIImage *iconImage = TGTintedImage(TGImageNamed(@"ModernMessageDocumentIconOutgoing.png"), outgoingIconColor);
                 [iconImage drawAtPoint:CGPointMake(floor((diameter - iconImage.size.width) / 2.0f), floor((diameter - iconImage.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:1.0f];
             }
             else
@@ -738,7 +749,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             
             if (_overlayStyle == TGMessageImageViewOverlayStyleIncoming)
             {
-                CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
+                CGContextSetFillColorWithColor(context, incomingButtonColor.CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
                 
                 CGContextSetBlendMode(context, kCGBlendModeCopy);
@@ -761,7 +772,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             }
             else if (_overlayStyle == TGMessageImageViewOverlayStyleOutgoing)
             {
-                CGContextSetFillColorWithColor(context, TGColorWithHex(0x3fc33b).CGColor);
+                CGContextSetFillColorWithColor(context, outgoingButtonColor.CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
                 CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
                 CGContextSetBlendMode(context, kCGBlendModeCopy);
@@ -808,7 +819,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             
             if (_overlayStyle == TGMessageImageViewOverlayStyleIncoming)
             {
-                CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
+                CGContextSetFillColorWithColor(context, incomingButtonColor.CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
                 
                 CGContextSetBlendMode(context, kCGBlendModeCopy);
@@ -827,7 +838,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             }
             else if (_overlayStyle == TGMessageImageViewOverlayStyleOutgoing)
             {
-                CGContextSetFillColorWithColor(context, TGColorWithHex(0x3fc33b).CGColor);
+                CGContextSetFillColorWithColor(context, outgoingButtonColor.CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
                 CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
                 
@@ -914,14 +925,14 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
                 CGContextSetStrokeColorWithColor(context, [UIColor clearColor].CGColor);
             else if (_overlayStyle == TGMessageImageViewOverlayStyleIncoming) {
                 if (true || ABS(diameter - 37.0f) < 0.1) {
-                    CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
+                    CGContextSetStrokeColorWithColor(context, incomingIconColor.CGColor);
                 } else {
                     CGContextSetStrokeColorWithColor(context, TGColorWithHex(0x4f9ef3).CGColor);
                 }
             }
             else if (_overlayStyle == TGMessageImageViewOverlayStyleOutgoing) {
                 if (true || ABS(diameter - 37.0f) < 0.1) {
-                    CGContextSetStrokeColorWithColor(context, TGColorWithHex(0xe1ffc7).CGColor);
+                    CGContextSetStrokeColorWithColor(context, outgoingIconColor.CGColor);
                 } else {
                     CGContextSetStrokeColorWithColor(context, TGColorWithHex(0x64b15e).CGColor);
                 }
@@ -1157,6 +1168,34 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
         [self.layer addSublayer:_progressLayer];
     }
     return self;
+}
+
+- (void)setIncomingColor:(UIColor *)incomingColor
+{
+    _incomingColor = incomingColor;
+    _contentLayer.incomingColor = incomingColor;
+    _progressLayer.incomingColor = incomingColor;
+}
+
+- (void)setOutgoingColor:(UIColor *)outgoingColor
+{
+    _outgoingColor = outgoingColor;
+    _contentLayer.outgoingColor = outgoingColor;
+    _progressLayer.outgoingColor = outgoingColor;
+}
+
+- (void)setIncomingIconColor:(UIColor *)incomingColor
+{
+    _incomingIconColor = incomingColor;
+    _contentLayer.incomingIconColor = incomingColor;
+    _progressLayer.incomingIconColor = incomingColor;
+}
+
+- (void)setOutgoingIconColor:(UIColor *)outgoingColor
+{
+    _outgoingIconColor = outgoingColor;
+    _contentLayer.outgoingIconColor = outgoingColor;
+    _progressLayer.outgoingIconColor = outgoingColor;
 }
 
 - (void)setBlurless:(bool)blurless

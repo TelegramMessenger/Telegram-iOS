@@ -3,7 +3,11 @@
 @protocol TGVideoMessageScrubberDelegate;
 @protocol TGVideoMessageScrubberDataSource;
 
+@class TGModernConversationInputMicPallete;
+
 @interface TGVideoMessageScrubber : UIView
+
+@property (nonatomic, strong) TGModernConversationInputMicPallete *pallete;
 
 @property (nonatomic, weak) id<TGVideoMessageScrubberDelegate> delegate;
 @property (nonatomic, weak) id<TGVideoMessageScrubberDataSource> dataSource;

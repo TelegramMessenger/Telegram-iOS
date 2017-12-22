@@ -44,7 +44,9 @@
 {
     [super setBackgroundColor:backgroundColor];
     
-    if (![backgroundColor isEqual:[UIColor clearColor]])
+    if (iosMajorVersion() < 7)
+        self.backgroundView.backgroundColor = backgroundColor;
+    else if (![backgroundColor isEqual:[UIColor clearColor]])
         _whiteFooterView.backgroundColor = backgroundColor;
 }
 

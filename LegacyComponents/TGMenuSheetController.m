@@ -395,7 +395,8 @@ typedef enum
         if (self.popoverPresentationController == nil)
             return;
         
-        self.popoverPresentationController.backgroundColor = _dark ? UIColorRGB(0x161616) : [UIColor whiteColor];
+        UIColor *backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];
+        self.popoverPresentationController.backgroundColor = _dark ? UIColorRGB(0x161616) : backgroundColor;
         self.popoverPresentationController.delegate = self;
         self.popoverPresentationController.permittedArrowDirections = self.permittedArrowDirections;
         
@@ -415,6 +416,9 @@ typedef enum
     else
     {
         _popoverController = [[UIPopoverController alloc] initWithContentViewController:self];
+        
+        UIColor *backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];
+        _popoverController.backgroundColor = _dark ? UIColorRGB(0x161616) : backgroundColor;
         
         if (self.barButtonItem != nil)
         {
@@ -1160,7 +1164,7 @@ typedef enum
 
 @implementation TGMenuSheetPallete
 
-+ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor spinnerColor:(UIColor *)spinnerColor
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor spinnerColor:(UIColor *)spinnerColor badgeTextColor:(UIColor *)badgeTextColor badgeImage:(UIImage *)badgeImage cornersImage:(UIImage *)cornersImage
 {
     TGMenuSheetPallete *pallete = [[TGMenuSheetPallete alloc] init];
     pallete->_isDark = dark;
@@ -1172,6 +1176,9 @@ typedef enum
     pallete->_textColor = textColor;
     pallete->_secondaryTextColor = secondaryTextColor;
     pallete->_spinnerColor = spinnerColor;
+    pallete->_badgeTextColor = badgeTextColor;
+    pallete->_badgeImage = badgeImage;
+    pallete->_cornersImage = cornersImage;
     return pallete;
 }
 

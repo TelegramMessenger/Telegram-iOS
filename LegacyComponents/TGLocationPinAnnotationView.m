@@ -3,6 +3,8 @@
 #import "LegacyComponentsInternal.h"
 #import "TGImageUtils.h"
 
+#import "TGLocationMapViewController.h"
+
 #import "TGUser.h"
 #import "TGConversation.h"
 #import "TGLocationAnnotation.h"
@@ -214,6 +216,26 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     }
 }
 
+- (void)setPallete:(TGLocationPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(6.0f, 6.0f), false, 0.0f);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, pallete.locationColor.CGColor);
+    CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 6.0f, 6.0f));
+    
+    UIImage *dotImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    _dotView.image = dotImage;
+    
+    [self setAnnotation:self.annotation];
+}
+
 - (void)setAnnotation:(id<MKAnnotation>)annotation
 {
     [super setAnnotation:annotation];
@@ -243,15 +265,19 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             _avatarView.alpha = 1.0f;
             _iconView.hidden = false;
             
-            _backgroundView.image = TGTintedImage(TGComponentsImageNamed(@"LocationPinBackground"), UIColorRGB(0x008df2));
+            _backgroundView.image = TGTintedImage(TGComponentsImageNamed(@"LocationPinBackground"), _pallete != nil ? _pallete.locationColor : UIColorRGB(0x008df2));
             if (location.venue.type.length > 0)
             {
-                [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 64, 64, 0xffffff] withOptions:nil];
+                [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 64, 64, TGColorHexCode(_pallete != nil ? _pallete.iconColor : [UIColor whiteColor])] withOptions:nil];
             }
             else
             {
                 [_iconView reset];
-                _iconView.image = TGComponentsImageNamed(@"LocationPinIcon");
+                UIImage *image = TGComponentsImageNamed(@"LocationPinIcon");
+                if (_pallete != nil)
+                    image = TGTintedImage(image, _pallete.iconColor);
+                
+                _iconView.image = image;
             }
             
             _liveLocation = false;
@@ -452,7 +478,11 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     if (animated)
     {
         _animating = true;
-        _iconView.image = TGComponentsImageNamed(@"LocationPinIcon");
+        UIImage *image = TGComponentsImageNamed(@"LocationPinIcon");
+        if (_pallete != nil)
+            image = TGTintedImage(image, _pallete.iconColor);
+        
+        _iconView.image = image;
         [_backgroundView addSubview:_avatarView];
         _avatarView.center = CGPointMake(_backgroundView.frame.size.width / 2.0f, _backgroundView.frame.size.height / 2.0f - 5.0f);
         
@@ -460,7 +490,7 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         {
             [UIView transitionWithView:_backgroundView duration:0.2 options:UIViewAnimationOptionTransitionCrossDissolve | UIViewAnimationOptionAllowAnimatedContent animations:^
              {
-                 _backgroundView.image = customPin ? TGTintedImage(TGComponentsImageNamed(@"LocationPinBackground"), UIColorRGB(0x008df2)) : TGComponentsImageNamed(@"LocationPinBackground");
+                 _backgroundView.image = customPin ? TGTintedImage(TGComponentsImageNamed(@"LocationPinBackground"), _pallete != nil ? _pallete.locationColor : UIColorRGB(0x008df2)) : TGComponentsImageNamed(@"LocationPinBackground");
                  _avatarView.hidden = customPin;
                  _iconView.hidden = !customPin;
              } completion:^(BOOL finished)

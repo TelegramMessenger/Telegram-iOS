@@ -82,7 +82,15 @@
     
     NSDictionary *attributes = @{ NSFontAttributeName: [TGFont roundedFontOfSize:14.0f], NSForegroundColorAttributeName: _color };
     CGSize size = iosMajorVersion() >= 7 ? [_string sizeWithAttributes:attributes] : [_string sizeWithFont:attributes[NSFontAttributeName]];
-    [_string drawAtPoint:CGPointMake((allRect.size.width - size.width) / 2.0f, floor((allRect.size.height - size.height) / 2.0f)) withAttributes:attributes];
+    if (iosMajorVersion() >= 7)
+    {
+        [_string drawAtPoint:CGPointMake((allRect.size.width - size.width) / 2.0f, floor((allRect.size.height - size.height) / 2.0f)) withAttributes:attributes];
+    }
+    else
+    {
+        CGContextSetFillColorWithColor(context, _color.CGColor);
+        [_string drawAtPoint:CGPointMake((allRect.size.width - size.width) / 2.0f, floor((allRect.size.height - size.height) / 2.0f)) forWidth:FLT_MAX withFont:[TGFont roundedFontOfSize:14.0f] lineBreakMode:NSLineBreakByWordWrapping];
+    }
 }
 
 @end

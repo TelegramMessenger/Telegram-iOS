@@ -4,6 +4,8 @@
 
 #import "TGProgressSpinnerView.h"
 
+static bool TGProgressWindowIsLight = true;
+
 @interface TGProgressWindowController ()
 {
     bool _light;
@@ -19,12 +21,12 @@
 
 @implementation TGProgressWindowController
 
-- (instancetype)init:(bool)light
+- (instancetype)init
 {
     self = [super init];
     if (self != nil)
     {
-        _light = light;
+        _light = TGProgressWindowIsLight;
     }
     return self;
 }
@@ -56,7 +58,7 @@
     else
     {
         _backgroundView = [[UIView alloc] initWithFrame:_containerView.bounds];
-        _backgroundView.backgroundColor = UIColorRGBA(0xeaeaea, 0.92f);
+        _backgroundView.backgroundColor = _light ? UIColorRGBA(0xeaeaea, 0.92f) : UIColorRGBA(0x000000, 0.9f);
         [_containerView addSubview:_backgroundView];
     }
     
@@ -230,8 +232,6 @@
 
 @end
 
-static bool TGProgressWindowIsLight = true;
-
 @implementation TGProgressWindow
 
 - (instancetype)init {
@@ -246,7 +246,7 @@ static bool TGProgressWindowIsLight = true;
         self.windowLevel = UIWindowLevelStatusBar;
         self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         
-        TGProgressWindowController *controller = [[TGProgressWindowController alloc] init:TGProgressWindowIsLight];
+        TGProgressWindowController *controller = [[TGProgressWindowController alloc] init];
         controller.weakWindow = self;
         self.rootViewController = controller;
         

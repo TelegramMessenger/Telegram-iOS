@@ -4,6 +4,8 @@
 
 #import "TGSecretTimerValueControllerItemView.h"
 
+#import "TGMenuSheetController.h"
+
 @interface TGSecretTimerPickerView : UIPickerView
 
 @property (nonatomic, strong) UIColor *selectorColor;
@@ -47,6 +49,14 @@
         [_pickerView selectRow:selectedRow inComponent:0 animated:false];
     }
     return self;
+}
+
+- (void)setPallete:(TGMenuSheetPallete *)pallete
+{
+    [super setPallete:pallete];
+    
+    if (pallete.isDark)
+        _dark = true;
 }
 
 - (NSNumber *)value

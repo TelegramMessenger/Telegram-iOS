@@ -104,6 +104,8 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     
     id<LegacyComponentsContext> _context;
     bool _saveEditedPhotos;
+    
+    TGMenuSheetPallete *_pallete;
 }
 @end
 
@@ -311,6 +313,15 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     [_assetsDisposable dispose];
     [_selectionChangedDisposable dispose];
     [_itemsSizeChangedDisposable dispose];
+}
+
+- (void)setPallete:(TGMenuSheetPallete *)pallete
+{
+    _pallete = pallete;
+    
+    _cameraView.pallete = pallete;
+    [_sendMediaItemView setPallete:pallete];
+    [_sendFileItemView setPallete:pallete];
 }
 
 - (void)setRemainingHeight:(CGFloat)remainingHeight
@@ -943,6 +954,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     }
     
     TGAttachmentAssetCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:cellIdentifier forIndexPath:indexPath];
+    cell.pallete = _pallete;
     NSInteger pivotIndex = NSNotFound;
     NSInteger limit = 0;
     if (_pivotInItemIndex != NSNotFound)

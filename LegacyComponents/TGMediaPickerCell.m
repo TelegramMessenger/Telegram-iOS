@@ -6,6 +6,8 @@
 
 #import <LegacyComponents/TGModernGalleryTransitionView.h>
 
+#import <LegacyComponents/TGMediaAssetsController.h>
+
 @interface TGMediaPickerCell () <TGModernGalleryTransitionView>
 {
     SMetaDisposable *_itemSelectedDisposable;
@@ -33,6 +35,15 @@
             _imageView.accessibilityIgnoresInvertColors = true;
     }
     return self;
+}
+
+- (void)setPallete:(TGMediaAssetsPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    self.backgroundColor = pallete.backgroundColor;
 }
 
 - (void)dealloc

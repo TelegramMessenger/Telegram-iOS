@@ -504,3 +504,19 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
 }
 
 @end
+
+
+@implementation TGCheckButtonPallete
+
++ (instancetype)palleteWithDefaultBackgroundColor:(UIColor *)defaultBackgroundColor accentBackgroundColor:(UIColor *)accentBackgroundColor defaultBorderColor:(UIColor *)defaultBorderColor mediaBorderColor:(UIColor *)mediaBorderColor checkColor:(UIColor *)checkColor
+{
+    TGCheckButtonPallete *pallete = [[TGCheckButtonPallete alloc] init];
+    pallete->_defaultBackgroundColor = defaultBackgroundColor;
+    pallete->_accentBackgroundColor = accentBackgroundColor;
+    pallete->_defaultBorderColor = defaultBorderColor;
+    pallete->_mediaBorderColor = mediaBorderColor;
+    pallete->_checkColor = checkColor;
+    return pallete;
+}
+
+@end

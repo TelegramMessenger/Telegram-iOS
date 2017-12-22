@@ -12,6 +12,7 @@
 #import "TGLocationOptionsView.h"
 
 #import <LegacyComponents/TGMenuSheetController.h>
+#import "TGSearchBar.h"
 
 const MKCoordinateSpan TGLocationDefaultSpan = { 0.008, 0.008 };
 const CGFloat TGLocationMapClipHeight = 1600.0f;
@@ -29,6 +30,8 @@ const CGFloat TGLocationMapInset = 100.0f;
     
     SVariable *_userLocation;
     SPipe *_userLocationPipe;
+    
+    MKPolygon *_darkPolygon;
     
     void (^_openLiveLocationMenuBlock)(void);
 }
@@ -64,12 +67,13 @@ const CGFloat TGLocationMapInset = 100.0f;
 - (void)loadView
 {
     [super loadView];
-    self.view.backgroundColor = [UIColor whiteColor];
+    self.view.backgroundColor = self.pallete.backgroundColor;
         
     _tableView = [[TGLocationTableView alloc] initWithFrame:self.view.bounds];
     if (iosMajorVersion() >= 11)
         _tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     _tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    _tableView.backgroundColor = self.view.backgroundColor;
     _tableView.dataSource = self;
     _tableView.delegate = self;
     _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
@@ -78,6 +82,8 @@ const CGFloat TGLocationMapInset = 100.0f;
     [self.view addSubview:_tableView];
     
     _activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+    if (self.pallete != nil)
+        _activityIndicator.color = self.pallete.secondaryTextColor;
     _activityIndicator.userInteractionEnabled = false;
     [_tableView addSubview:_activityIndicator];
     
@@ -87,7 +93,7 @@ const CGFloat TGLocationMapInset = 100.0f;
     _messageLabel.font = TGSystemFontOfSize(16);
     _messageLabel.hidden = true;
     _messageLabel.textAlignment = NSTextAlignmentCenter;
-    _messageLabel.textColor = UIColorRGB(0x8e8e93);
+    _messageLabel.textColor = self.pallete != nil ? self.pallete.secondaryTextColor : UIColorRGB(0x8e8e93);
     _messageLabel.userInteractionEnabled = false;
     [_tableView addSubview:_messageLabel];
     
@@ -108,7 +114,24 @@ const CGFloat TGLocationMapInset = 100.0f;
     _mapView.showsUserLocation = true;
     [_mapViewWrapper addSubview:_mapView];
     
+    
+    if (self.pallete.searchBarPallete.isDark)
+    {
+        MKMapRect worldRect = MKMapRectWorld;
+        MKMapPoint point1 = MKMapRectWorld.origin;
+        MKMapPoint point2 = MKMapPointMake(point1.x + worldRect.size.width, point1.y);
+        MKMapPoint point3 = MKMapPointMake(point2.x, point2.y+worldRect.size.height);
+        MKMapPoint point4 = MKMapPointMake(point1.x, point3.y);
+        
+        MKMapPoint points[4] = {point1,point2,point3,point4};
+        _darkPolygon = [MKPolygon polygonWithPoints:points count:4];
+        
+        [_mapView addOverlay:_darkPolygon];
+    }
+    
     _optionsView = [[TGLocationOptionsView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 45.0f, 90.0f)];
+    if (self.pallete != nil)
+        _optionsView.pallete = self.pallete;
     _optionsView.mapModeChanged = ^(NSInteger mapMode) {
         __strong TGLocationMapViewController *strongSelf = weakSelf;
         if (strongSelf != nil)
@@ -122,15 +145,30 @@ const CGFloat TGLocationMapInset = 100.0f;
     };
     [self.view addSubview:_optionsView];
     
-    _edgeView = [[UIImageView alloc] initWithImage:[TGComponentsImageNamed(@"LocationPanelEdge") resizableImageWithCapInsets:UIEdgeInsetsMake(0.0f, 10.0f, 0.0f, 10.0f)]];
+    UIImage *edgeImage = TGComponentsImageNamed(@"LocationPanelEdge");
+    UIImage *edgeHighlightImage = TGComponentsImageNamed(@"LocationPanelEdge_Highlighted");
+    if (self.pallete != nil)
+    {
+        UIGraphicsBeginImageContextWithOptions(edgeImage.size, false, 0.0f);
+        [edgeImage drawAtPoint:CGPointZero];
+        [TGTintedImage(edgeHighlightImage, self.pallete.backgroundColor) drawAtPoint:CGPointZero];
+
+        edgeImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+    }
+    
+    _edgeView = [[UIImageView alloc] initWithImage:[edgeImage resizableImageWithCapInsets:UIEdgeInsetsMake(0.0f, 10.0f, 0.0f, 10.0f)]];
     _edgeView.frame = CGRectMake(0.0f, _tableViewTopInset - 10.0f, _mapViewWrapper.frame.size.width, _edgeView.frame.size.height);
     [_mapViewWrapper addSubview:_edgeView];
     
-    _edgeHighlightView = [[UIImageView alloc] initWithImage:[TGComponentsImageNamed(@"LocationPanelEdge_Highlighted") resizableImageWithCapInsets:UIEdgeInsetsMake(0.0f, 10.0f, 0.0f, 10.0f)]];
+    if (self.pallete != nil)
+        edgeHighlightImage = TGTintedImage(edgeHighlightImage, self.pallete.selectionColor);
+    
+    _edgeHighlightView = [[UIImageView alloc] initWithImage:[edgeHighlightImage resizableImageWithCapInsets:UIEdgeInsetsMake(0.0f, 10.0f, 0.0f, 10.0f)]];
     _edgeHighlightView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     _edgeHighlightView.frame = _edgeView.bounds;
     _edgeHighlightView.alpha = 0.0f;
-    _edgeHighlightView.image =  [TGTintedImage(TGComponentsImageNamed(@"LocationPanelEdge"), TGSelectionColor()) resizableImageWithCapInsets:UIEdgeInsetsMake(0.0f, 10.0f, 0.0f, 10.0f)];
+    _edgeHighlightView.image = [edgeHighlightImage resizableImageWithCapInsets:UIEdgeInsetsMake(0.0f, 10.0f, 0.0f, 10.0f)];
     [_edgeView addSubview:_edgeHighlightView];
     
     self.scrollViewsForAutomaticInsetsAdjustment = @[ _tableView ];
@@ -324,6 +362,30 @@ const CGFloat TGLocationMapInset = 100.0f;
 }
 
 #pragma mark -
+
+- (MKOverlayRenderer *)mapView:(MKMapView *)mapView rendererForOverlay:(id<MKOverlay>)overlay
+{
+    if (overlay == _darkPolygon)
+    {
+        MKPolygonRenderer *renderer = [[MKPolygonRenderer alloc] initWithPolygon:overlay];
+        renderer.fillColor = [[UIColor blackColor] colorWithAlphaComponent:0.3f];
+        return renderer;
+    }
+    
+    return nil;
+}
+
+- (MKOverlayView *)mapView:(MKMapView *)mapView viewForOverlay:(id <MKOverlay>)overlay
+{
+    if ([overlay isKindOfClass:[MKPolygon class]])
+    {
+        MKPolygonView *overlayView = [[MKPolygonView alloc] initWithPolygon:overlay];
+        overlayView.fillColor = [[UIColor blackColor] colorWithAlphaComponent:0.3f];
+        return overlayView;
+    }
+    
+    return nil;
+}
 
 - (void)mapView:(MKMapView *)__unused mapView didUpdateUserLocation:(MKUserLocation *)userLocation
 {
@@ -545,6 +607,30 @@ static void TGLocationTableViewAdjustContentOffsetIfNecessary(__unused id self, 
         
         freedomClassAutoDecorate(0x5bfec194, NULL, 0, instanceDecorations, sizeof(instanceDecorations) / sizeof(instanceDecorations[0]));
     }
+}
+
+@end
+
+@implementation TGLocationPallete
+
++ (instancetype)palleteWithBackgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor locationColor:(UIColor *)locationColor liveLocationColor:(UIColor *)liveLocationColor iconColor:(UIColor *)iconColor sectionHeaderBackgroundColor:(UIColor *)sectionHeaderBackgroundColor sectionHeaderTextColor:(UIColor *)sectionHeaderTextColor searchBarPallete:(TGSearchBarPallete *)searchBarPallete avatarPlaceholder:(UIImage *)avatarPlaceholder
+{
+    TGLocationPallete *pallete = [[TGLocationPallete alloc] init];
+    pallete->_backgroundColor = backgroundColor;
+    pallete->_selectionColor = selectionColor;
+    pallete->_separatorColor = separatorColor;
+    pallete->_textColor = textColor;
+    pallete->_secondaryTextColor = secondaryTextColor;
+    pallete->_accentColor = accentColor;
+    pallete->_destructiveColor = destructiveColor;
+    pallete->_locationColor = locationColor;
+    pallete->_liveLocationColor = liveLocationColor;
+    pallete->_iconColor = iconColor;
+    pallete->_sectionHeaderBackgroundColor = sectionHeaderBackgroundColor;
+    pallete->_sectionHeaderTextColor = sectionHeaderTextColor;
+    pallete->_searchBarPallete = searchBarPallete;
+    pallete->_avatarPlaceholder = avatarPlaceholder;
+    return pallete;
 }
 
 @end

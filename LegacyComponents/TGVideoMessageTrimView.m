@@ -30,7 +30,6 @@
     {
         self.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -25, -5, -25);
         
-        
         _leftSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 16, 33)];
         _leftSegmentView.exclusiveTouch = true;
         _leftSegmentView.adjustsImageWhenHighlighted = false;
@@ -74,6 +73,12 @@
     _rightSegmentView.userInteractionEnabled = trimmingEnabled;
 
     [self setNeedsLayout];
+}
+
+- (void)setLeftHandleImage:(UIImage *)leftHandleImage rightHandleImage:(UIImage *)rightHandleImage
+{
+    [_leftSegmentView setBackgroundImage:leftHandleImage forState:UIControlStateNormal];
+    [_rightSegmentView setBackgroundImage:rightHandleImage forState:UIControlStateNormal];
 }
 
 - (void)setTrimming:(bool)__unused trimming animated:(bool)__unused animated

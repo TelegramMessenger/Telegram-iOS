@@ -1,5 +1,7 @@
 #import "TGMediaPickerController.h"
 
+#import <LegacyComponents/TGMediaAssetsController.h>
+
 #import <LegacyComponents/TGMediaEditingContext.h>
 #import <LegacyComponents/TGMediaSelectionContext.h>
 #import "LegacyComponentsInternal.h"
@@ -49,7 +51,7 @@
 {
     [super loadView];
     
-    self.view.backgroundColor = [UIColor whiteColor];
+    self.view.backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];
     
     _wrapperView = [[UIView alloc] initWithFrame:self.view.bounds];
     _wrapperView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -59,7 +61,7 @@
     if (iosMajorVersion() >= 11)
         _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     _collectionView.alwaysBounceVertical = true;
-    _collectionView.backgroundColor = [UIColor whiteColor];
+    _collectionView.backgroundColor = self.view.backgroundColor;
     _collectionView.delaysContentTouches = true;
     _collectionView.canCancelContentTouches = true;
     _collectionView.delegate = self;
@@ -213,6 +215,7 @@
     NSString *cellKind = [self _cellKindForItem:item];
     
     TGMediaPickerCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:cellKind forIndexPath:indexPath];
+    cell.pallete = self.pallete;
     cell.selectionContext = self.selectionContext;
     cell.editingContext = self.editingContext;
     [cell setItem:item signal:[self _signalForItem:item]];

@@ -10,5 +10,6 @@
 @property (nonatomic, assign) bool trimmingEnabled;
 
 - (void)setTrimming:(bool)trimming animated:(bool)animated;
+- (void)setLeftHandleImage:(UIImage *)leftHandleImage rightHandleImage:(UIImage *)rightHandleImage;
 
 @end

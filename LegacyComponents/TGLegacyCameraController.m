@@ -12,7 +12,15 @@
 
 #import "TGLegacyMediaPickerTipView.h"
 
+#import "TGNavigationBar.h"
 #import <LegacyComponents/TGImagePickerController.h>
+
+@interface UINavigationBar (Border)
+
+- (void)setBottomBorderColor:(UIColor *)color;
+
+@end
+
 
 @interface TGLegacyCameraController () <UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 {
@@ -48,7 +56,17 @@
 
 - (UIStatusBarStyle)preferredStatusBarStyle
 {
-    return UIStatusBarStyleDefault;
+    if (![_context rootCallStatusBarHidden])
+    {
+        return UIStatusBarStyleLightContent;
+    }
+    else
+    {
+        if ([_context respondsToSelector:@selector(prefersLightStatusBar)])
+            return [_context prefersLightStatusBar] ? UIStatusBarStyleLightContent : UIStatusBarStyleDefault;
+        else
+            return UIStatusBarStyleDefault;
+    }
 }
 
 - (BOOL)prefersStatusBarHidden
@@ -81,17 +99,34 @@
         }
     }
     
-    if (iosMajorVersion() >= 7 && !_isInDocumentMode)
+    if (self.sourceType == UIImagePickerControllerSourceTypeCamera)
     {
-        if (animated)
+        if (iosMajorVersion() >= 7 && !_isInDocumentMode)
         {
-            [UIView animateWithDuration:0.3 animations:^
+            if (animated)
             {
+                [UIView animateWithDuration:0.3 animations:^
+                {
+                    [_context setApplicationStatusBarAlpha:0.0f];
+                }];
+            }
+            else
                 [_context setApplicationStatusBarAlpha:0.0f];
-            }];
         }
-        else
-            [_context setApplicationStatusBarAlpha:0.0f];
+    }
+    else
+    {
+        if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(navigationBarPallete)])
+        {
+            TGNavigationBarPallete *pallete = [[LegacyComponentsGlobals provider] navigationBarPallete];
+        
+            UINavigationBar *navigationBar = self.navigationBar;
+            navigationBar.translucent = false;
+            navigationBar.barTintColor = pallete.backgroundColor;
+            navigationBar.tintColor = pallete.tintColor;
+            navigationBar.titleTextAttributes = @{ NSForegroundColorAttributeName: pallete.titleColor };
+            navigationBar.bottomBorderColor = pallete.separatorColor;
+        }
     }
     
     [super viewWillAppear:animated];
@@ -99,17 +134,20 @@
 
 - (void)viewWillDisappear:(BOOL)animated
 {
-    if (iosMajorVersion() >= 7 && !_isInDocumentMode)
+    if (self.sourceType == UIImagePickerControllerSourceTypeCamera)
     {
-        if (animated)
+        if (iosMajorVersion() >= 7 && !_isInDocumentMode)
         {
-            [UIView animateWithDuration:0.3 animations:^
+            if (animated)
             {
+                [UIView animateWithDuration:0.3 animations:^
+                {
+                    [_context setApplicationStatusBarAlpha:1.0f];
+                }];
+            }
+            else
                 [_context setApplicationStatusBarAlpha:1.0f];
-            }];
         }
-        else
-            [_context setApplicationStatusBarAlpha:1.0f];
     }
     
     [super viewWillDisappear:animated];
@@ -405,25 +443,25 @@
                                         int32_t fileSize = (int32_t)[[finalFileAttributes objectForKey:NSFileSize] intValue];
                                         
                                         TGDispatchOnMainThread(^
-                                                               {
-                                                                   [_progressWindow dismiss:true];
-                                                                   _progressWindow = nil;
-                                                                   
-                                                                   id<TGLegacyCameraControllerDelegate> delegate = _completionDelegate;
-                                                                   [delegate legacyCameraControllerCapturedVideoWithTempFilePath:videoMp4FilePath fileSize:fileSize previewImage:previewImage duration:duration dimensions:naturalSize assetUrl:assetHash];
-                                                               });
+                                        {
+                                            [_progressWindow dismiss:true];
+                                            _progressWindow = nil;
+                                            
+                                            id<TGLegacyCameraControllerDelegate> delegate = _completionDelegate;
+                                            [delegate legacyCameraControllerCapturedVideoWithTempFilePath:videoMp4FilePath fileSize:fileSize previewImage:previewImage duration:duration dimensions:naturalSize assetUrl:assetHash];
+                                        });
                                     }
                                 }
                                 else
                                 {
                                     TGDispatchOnMainThread(^
-                                                           {
-                                                               [_progressWindow dismiss:true];
-                                                               _progressWindow = nil;
-                                                               
-                                                               id<TGLegacyCameraControllerDelegate> delegate = _completionDelegate;
-                                                               [delegate legacyCameraControllerCompletedWithNoResult];
-                                                           });
+                                    {
+                                        [_progressWindow dismiss:true];
+                                        _progressWindow = nil;
+                                        
+                                        id<TGLegacyCameraControllerDelegate> delegate = _completionDelegate;
+                                        [delegate legacyCameraControllerCompletedWithNoResult];
+                                    });
                                 }
                             }
                         }];
@@ -486,3 +524,16 @@
 }
 
 @end
+
+
+@implementation UINavigationBar (Helper)
+
+- (void)setBottomBorderColor:(UIColor *)color
+{
+    CGRect bottomBorderRect = CGRectMake(0, CGRectGetHeight(self.frame), CGRectGetWidth(self.frame), TGScreenPixel);
+    UIView *bottomBorder = [[UIView alloc] initWithFrame:bottomBorderRect];
+    [bottomBorder setBackgroundColor:color];
+    [self addSubview:bottomBorder];
+}
+@end
+

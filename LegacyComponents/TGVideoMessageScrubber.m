@@ -11,6 +11,8 @@
 #import "TGVideoMessageScrubberThumbnailView.h"
 #import "TGVideoMessageTrimView.h"
 
+#import "TGModernConversationInputMicButton.h"
+
 static const CGFloat TGVideoScrubberMinimumTrimDuration = 1.0f;
 static const CGFloat TGVideoScrubberZoomActivationInterval = 0.25f;
 static const CGFloat TGVideoScrubberTrimRectEpsilon = 3.0f;
@@ -295,6 +297,44 @@ typedef enum
         //[_scrubberHandle addGestureRecognizer:_panGestureRecognizer];
     }
     return self;
+}
+
+- (void)setPallete:(TGModernConversationInputMicPallete *)pallete
+{
+    _pallete = pallete;
+    if (_pallete == nil)
+        return;
+    
+    _leftCurtainView.backgroundColor = [pallete.backgroundColor colorWithAlphaComponent:0.8f];
+    _rightCurtainView.backgroundColor = [pallete.backgroundColor colorWithAlphaComponent:0.8f];
+    
+    CGSize size = _leftMaskView.image.size;
+    UIGraphicsBeginImageContextWithOptions(_leftMaskView.image.size, false, 0.0f);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, pallete.backgroundColor.CGColor);
+    CGContextFillRect(context, CGRectMake(0.0f, 0.0f, size.width, size.height));
+    CGContextSetBlendMode(context, kCGBlendModeClear);
+    CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
+    CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, size.width * 2.0f, size.height));
+    UIImage *maskView = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    _leftMaskView.image = maskView;
+    _rightMaskView.image = [UIImage imageWithCGImage:maskView.CGImage scale:maskView.scale orientation:UIImageOrientationUpMirrored];
+    
+    size = CGSizeMake(16.0f, 33.0f);
+    UIGraphicsBeginImageContextWithOptions(_leftMaskView.image.size, false, 0.0f);
+    context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, pallete.buttonColor.CGColor);
+    CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, size.width * 2.0f, size.height));
+    CGContextSetFillColorWithColor(context, pallete.iconColor.CGColor);
+    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(8.0f, 12.0f, 1.666f, 9.0f) cornerRadius:0.833f];
+    CGContextAddPath(context, path.CGPath);
+    CGContextFillPath(context);
+    UIImage *handleImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    [_trimView setLeftHandleImage:handleImage rightHandleImage:[UIImage imageWithCGImage:handleImage.CGImage scale:handleImage.scale orientation:UIImageOrientationUpMirrored]];
 }
 
 - (void)reloadThumbnails

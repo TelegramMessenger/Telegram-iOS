@@ -1,6 +1,7 @@
 #import "TGLocationInfoCell.h"
 #import "TGLocationVenueCell.h"
 
+#import "TGLocationMapViewController.h"
 #import "TGLocationSignals.h"
 #import "TGLocationUtils.h"
 #import "TGLocationReverseGeocodeResult.h"
@@ -68,17 +69,16 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
         
         static dispatch_once_t onceToken;
         static UIImage *buttonImage = nil;
-        dispatch_once(&onceToken, ^{
-            {
-                CGSize size = CGSizeMake(16.0f, 16.0f);
-                UIGraphicsBeginImageContextWithOptions(size, false, 0.0f);
-                CGContextRef context = UIGraphicsGetCurrentContext();
-                CGContextSetStrokeColorWithColor(context, TGAccentColor().CGColor);
-                CGContextSetLineWidth(context, 1.0f);
-                CGContextStrokeEllipseInRect(context, CGRectMake(0.5f, 0.5f, size.width - 1.0f, size.height - 1.0f));
-                buttonImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:(NSInteger)(size.width / 2.0f) topCapHeight:(NSInteger)(size.height / 2.0f)];
-                UIGraphicsEndImageContext();
-            }
+        dispatch_once(&onceToken, ^
+        {
+            CGSize size = CGSizeMake(16.0f, 16.0f);
+            UIGraphicsBeginImageContextWithOptions(size, false, 0.0f);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            CGContextSetStrokeColorWithColor(context, TGAccentColor().CGColor);
+            CGContextSetLineWidth(context, 1.0f);
+            CGContextStrokeEllipseInRect(context, CGRectMake(0.5f, 0.5f, size.width - 1.0f, size.height - 1.0f));
+            buttonImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:(NSInteger)(size.width / 2.0f) topCapHeight:(NSInteger)(size.height / 2.0f)];
+            UIGraphicsEndImageContext();
         });
         
         _directionsButton = [[TGModernButton alloc] init];
@@ -113,6 +113,32 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
     [_addressDisposable dispose];
 }
 
+- (void)setPallete:(TGLocationPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    [_circleView setImage:TGTintedImage([TGLocationVenueCell circleImage], _pallete.locationColor)];
+    _titleLabel.textColor = pallete.textColor;
+    _addressLabel.textColor = pallete.secondaryTextColor;
+    _directionsButtonLabel.textColor = pallete.accentColor;
+    _etaLabel.textColor = pallete.accentColor;
+    
+    CGSize size = CGSizeMake(16.0f, 16.0f);
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0f);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetStrokeColorWithColor(context, pallete.accentColor.CGColor);
+    CGContextSetLineWidth(context, 1.0f);
+    CGContextStrokeEllipseInRect(context, CGRectMake(0.5f, 0.5f, size.width - 1.0f, size.height - 1.0f));
+    UIImage *buttonImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:(NSInteger)(size.width / 2.0f) topCapHeight:(NSInteger)(size.height / 2.0f)];
+    UIGraphicsEndImageContext();
+    
+    [_directionsButton setBackgroundImage:buttonImage forState:UIControlStateNormal];
+}
+
 - (void)locateButtonPressed
 {
     if (self.locatePressed != nil)
@@ -140,7 +166,7 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
     _titleLabel.text = location.venue != nil ? location.venue.title : TGLocalized(@"Map.Location");
     
     if (location.venue.type.length > 0 && [location.venue.provider isEqualToString:@"foursquare"])
-        [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 48, 48, 0xffffff] withOptions:nil];
+        [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 48, 48, TGColorHexCode(_pallete != nil ? _pallete.iconColor : [UIColor whiteColor])] withOptions:nil];
 
     SSignal *addressSignal = [SSignal single:@""];
     if (location.venue.address.length > 0)

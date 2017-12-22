@@ -6,11 +6,13 @@
 #import "TGColor.h"
 
 #import <LegacyComponents/TGModernButton.h>
+#import "TGMediaAssetsController.h"
 
 const CGFloat TGMediaPickerToolbarHeight = 44.0f;
 
 @interface TGMediaPickerToolbarView ()
 {
+    UIView *_separatorView;
     TGModernButton *_leftButton;
     TGModernButton *_rightButton;
     TGModernButton *_centerButton;
@@ -28,10 +30,10 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
     {
         self.backgroundColor = UIColorRGBA(0xf7f7f7, 1.0f);
         
-        UIView *stripeView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, TGScreenPixel)];
-        stripeView.backgroundColor = UIColorRGB(0xb2b2b2);
-        stripeView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        [self addSubview:stripeView];
+        _separatorView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, TGScreenPixel)];
+        _separatorView.backgroundColor = UIColorRGB(0xb2b2b2);
+        _separatorView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        [self addSubview:_separatorView];
         
         _leftButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 60, 44)];
         _leftButton.exclusiveTouch = true;
@@ -84,6 +86,18 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
         [_rightButton addSubview:_countBadge];
     }
     return self;
+}
+
+- (void)setPallete:(TGMediaAssetsPallete *)pallete
+{
+    self.backgroundColor = pallete.barBackgroundColor;
+    _separatorView.backgroundColor = pallete.barSeparatorColor;
+    
+    [_leftButton setTitleColor:pallete.accentColor];
+    [_rightButton setTitleColor:pallete.accentColor];
+    
+    _countBadge.image = pallete.badge;
+    _countLabel.textColor = pallete.badgeTextColor;
 }
 
 - (void)leftButtonPressed

@@ -1213,37 +1213,6 @@ bool TGIsLocaleArabic()
     return (int)length;
 }
 
-- (BOOL)isEmoji {
-    const unichar high = [self characterAtIndex:0];
-    
-    // Surrogate pair (U+1D000-1F77F)
-    if (0xd800 <= high && high <= 0xdbff && self.length >= 2) {
-        const unichar low = [self characterAtIndex:1];
-        const int codepoint = ((high - 0xd800) * 0x400) + (low - 0xdc00) + 0x10000;
-        
-        return (0x1d000 <= codepoint && codepoint <= 0x1f77f);
-        
-        // Not surrogate pair (U+2100-27BF)
-    } else {
-        return (0x2100 <= high && high <= 0x27bf);
-    }
-}
-
-- (bool)containsSingleEmoji
-{
-    bool result = false;
-    @try {
-        __autoreleasing NSString *checkString = nil;
-        NSString *firstEmoji = [[self getEmojiFromString:true checkString:&checkString] firstObject];
-        if (firstEmoji.length != 0 && [checkString isEqualToString:self]) {
-            result = true;
-        }
-    } @catch(__unused NSException *e) {
-        
-    }
-    return result;
-}
-
 - (bool)hasNonWhitespaceCharacters
 {
     NSInteger textLength = self.length;
@@ -1333,154 +1302,67 @@ static unsigned char strToChar (char a, char b)
     return [[NSData alloc] initWithBytesNoCopy:r length:length / 2 freeWhenDone:true];
 }
 
-- (NSArray *)getEmojiFromString:(BOOL)checkColor checkString:(__autoreleasing NSString **)checkString {
+
+- (bool)containsSingleEmoji
+{
+    return self.length > 0 && self.length < 16 && [self emojiArray:true].count == 1;
+}
+
+- (bool)isEmoji
+{
+    static dispatch_once_t onceToken;
+    static NSCharacterSet *variationSelectors;
+    dispatch_once(&onceToken, ^
+    {
+        variationSelectors = [NSCharacterSet characterSetWithRange:NSMakeRange(0xFE00, 16)];
+    });
     
-    __block NSMutableDictionary *temp = [NSMutableDictionary dictionary];
+    if ([self rangeOfCharacterFromSet:variationSelectors].location != NSNotFound)
+        return true;
     
+    const unichar high = [self characterAtIndex:0];
+    if (0xd800 <= high && high <= 0xdbff)
+    {
+        if (self.length < 2)
+            return false;
+        
+        const unichar low = [self characterAtIndex:1];
+        const int codepoint = ((high - 0xd800) * 0x400) + (low - 0xdc00) + 0x10000;
+        return (0x1d000 <= codepoint && codepoint <= 0x1f77f) || (0x1F900 <= codepoint && codepoint <= 0x1f9ff);
+    }
+    else
+    {
+        return (0x2100 <= high && high <= 0x27BF);
+    }
+}
+
+- (NSArray *)emojiArray:(bool)stripModifiers
+{
+    __block NSMutableArray *emoji = [[NSMutableArray alloc] init];
     [self enumerateSubstringsInRange: NSMakeRange(0, [self length]) options:NSStringEnumerationByComposedCharacterSequences usingBlock:
-     ^(NSString *substring, __unused NSRange substringRange, __unused NSRange enclosingRange, __unused BOOL *stop){
-         
-         const unichar hs = [substring characterAtIndex: 0];
-         
-         
-         // surrogate pair
-         if (0xd800 <= hs && hs <= 0xdbff) {
-             if (substring.length > 1) {
-                 unichar ls = [substring characterAtIndex:1];
-                 int uc = ((hs - 0xd800) * 0x400) + (ls - 0xdc00) + 0x10000;
-                 if (0x1d000 <= uc && uc <= 129316) {
-                     
-                     [temp setObject:substring forKey:@(uc)];
-                 }
-             }
-         } else if (substring.length > 1) {
-             const unichar ls = [substring characterAtIndex:1];
-             if (ls == 0x20e3 || ls == 65039) {
-                 [temp setObject:substring forKey:@(ls)];
-             }
-             
-         } else {
-             // non surrogate
-             if (0x2100 <= hs && hs <= 0x27ff) {
-                 [temp setObject:substring forKey:@(hs)];
-             } else if (0x2B05 <= hs && hs <= 0x2b07) {
-                 [temp setObject:substring forKey:@(hs)];
-             } else if (0x2934 <= hs && hs <= 0x2935) {
-                 [temp setObject:substring forKey:@(hs)];
-             } else if (0x3297 <= hs && hs <= 0x3299) {
-                 [temp setObject:substring forKey:@(hs)];
-             } else if (hs == 0xa9 || hs == 0xae || hs == 0x303d || hs == 0x3030 || hs == 0x2b55 || hs == 0x2b1c || hs == 0x2b1b || hs == 0x2b50) {
-                 [temp setObject:substring forKey:@(hs)];
-             }
-         }
-         
-         //         // surrogate pair
-         //         if (0xd800 <= hs && hs <= 0xdbff) {
-         //             const unichar ls = [substring characterAtIndex: 1];
-         //             const int uc = ((hs - 0xd800) * 0x400) + (ls - 0xdc00) + 0x10000;
-         //
-         //             if((0x1d000 <= uc && uc <= 0x1f77f)) {
-         //                 [temp setObject:substring forKey:@(uc)];
-         //             }
-         //
-         //
-         //             // non surrogate
-         //         } else {
-         //             if((0x2100 <= hs && hs <= 0x26ff)) {
-         //                 [temp setObject:substring forKey:@(hs)];
-         //             }
-         //
-         //         }
-     }];
-    
-    if (checkString) {
-        NSArray *tempValues = [temp allValues];
-        if (tempValues.count > 0) {
-            *checkString = (NSString *)tempValues[0];
+     ^(NSString *substring, __unused NSRange substringRange, __unused NSRange enclosingRange, __unused BOOL *stop)
+    {
+        if ([substring isEmoji])
+        {
+            if (substring.length > 2 && stripModifiers)
+            {
+                for (int i = 1; i < substring.length - 1; i++)
+                {
+                    NSString *test = [substring substringToIndex:i];
+                    if ([test isEmoji])
+                    {
+                        [emoji addObject:test];
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                [emoji addObject:substring];
+            }
         }
-    }
-    
-    if(checkColor) {
-        NSMutableDictionary *t = [[NSMutableDictionary alloc] init];
-        
-        [temp enumerateKeysAndObjectsUsingBlock:^(id key, id obj, __unused BOOL *stop) {
-            NSString *e = [self realEmoji:obj];
-            [t setObject:e forKey:key];
-        }];
-        
-        return [t allValues];
-    }
-    
-    
-    return [temp allValues];
-    
-}
-
--(NSString *)realEmoji:(NSString *)raceEmoji {
-    NSString *e = raceEmoji;
-    
-    if(raceEmoji.length == 4) {
-        NSData *data = [raceEmoji dataUsingEncoding:NSNonLossyASCIIStringEncoding];
-        NSString *e = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-        
-        NSArray *s = [e componentsSeparatedByString:@"\\"];
-        
-        
-        
-        if(s.count == 5) {
-            e = [NSString stringWithFormat:@"\\%@",[[s subarrayWithRange:NSMakeRange(1, 2)] componentsJoinedByString:@"\\"]];
-        }
-        
-        
-        data = [e dataUsingEncoding:NSUTF8StringEncoding];
-        
-        e = [[NSString alloc] initWithData:data encoding:NSNonLossyASCIIStringEncoding];
-        
-        return e;
-        
-    }
-    
-    return e;
-}
-
--(NSString *)emojiModifier:(NSString *)emoji
-{
-    if(emoji.length == 4) {
-        NSData *data = [emoji dataUsingEncoding:NSNonLossyASCIIStringEncoding];
-        NSString *e = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-        
-        NSArray *s = [e componentsSeparatedByString:@"\\"];
-        
-        
-        
-        if(s.count == 5) {
-            e = [NSString stringWithFormat:@"\\%@",[[s subarrayWithRange:NSMakeRange(3, 2)] componentsJoinedByString:@"\\"]];
-        }
-        
-        
-        data = [e dataUsingEncoding:NSUTF8StringEncoding];
-        
-        e = [[NSString alloc] initWithData:data encoding:NSNonLossyASCIIStringEncoding];
-        
-        return e;
-        
-    }
-    
-    return nil;
-}
-
-- (NSString *)emojiWithModifier:(NSString *)modifier emoji:(NSString *)emoji
-{
-    NSData *data = [emoji dataUsingEncoding:NSNonLossyASCIIStringEncoding];
-    NSString *e = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    
-    e = [NSString stringWithFormat:@"%@%@",e,[[NSString alloc] initWithData:[modifier dataUsingEncoding:NSNonLossyASCIIStringEncoding] encoding:NSUTF8StringEncoding]];
-    
-    data = [e dataUsingEncoding:NSUTF8StringEncoding];
-    
-    e = [[NSString alloc] initWithData:data encoding:NSNonLossyASCIIStringEncoding];
-    
-    return e;
+    }];
+    return emoji;
 }
 
 @end

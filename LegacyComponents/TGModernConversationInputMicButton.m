@@ -27,6 +27,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
 }
 
 @property (nonatomic, assign) CGFloat lockness;
+@property (nonatomic, strong) UIColor *color;
 
 @end
 
@@ -145,31 +146,27 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _iconView.alpha = fadeDisabled ? 0.5f : 1.0f;
 }
 
-- (UIImage *)innerCircleImage {
-    static UIImage *image = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        UIGraphicsBeginImageContextWithOptions(CGSizeMake(innerCircleRadius, innerCircleRadius), false, 0.0f);
-        CGContextRef context = UIGraphicsGetCurrentContext();
-        CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
-        CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, innerCircleRadius, innerCircleRadius));
-        image = UIGraphicsGetImageFromCurrentImageContext();
-        UIGraphicsEndImageContext();
-    });
+- (UIImage *)innerCircleImage:(UIColor *)color
+{
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(innerCircleRadius, innerCircleRadius), false, 0.0f);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, color.CGColor);
+    CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, innerCircleRadius, innerCircleRadius));
+    
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
     return image;
 }
 
-- (UIImage *)outerCircleImage {
-    static UIImage *image = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        UIGraphicsBeginImageContextWithOptions(CGSizeMake(outerCircleRadius, outerCircleRadius), false, 0.0f);
-        CGContextRef context = UIGraphicsGetCurrentContext();
-        CGContextSetFillColorWithColor(context, [TGAccentColor() colorWithAlphaComponent:0.2f].CGColor);
-        CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, outerCircleRadius, outerCircleRadius));
-        image = UIGraphicsGetImageFromCurrentImageContext();
-        UIGraphicsEndImageContext();
-    });
+- (UIImage *)outerCircleImage:(UIColor *)color
+{
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(outerCircleRadius, outerCircleRadius), false, 0.0f);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, [color colorWithAlphaComponent:0.2f].CGColor);
+    CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, outerCircleRadius, outerCircleRadius));
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
     return image;
 }
 
@@ -273,37 +270,32 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
             };
         }
         
-        static dispatch_once_t onceToken;
-        static UIImage *panelBackgroundView;
-        dispatch_once(&onceToken, ^
-        {
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
-            CGContextRef context = UIGraphicsGetCurrentContext();
-            
-            CGRect rect = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 38.0f - TGScreenPixel, 38.0 - TGScreenPixel);
-            CGFloat radius = 38.0f / 2.0f;
-            
-            CGFloat minx = CGRectGetMinX(rect), midx = CGRectGetMidX(rect), maxx = CGRectGetMaxX(rect);
-            CGFloat miny = CGRectGetMinY(rect), midy = CGRectGetMidY(rect), maxy = CGRectGetMaxY(rect);
-            
-            CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
-            CGContextSetStrokeColorWithColor(context, TGAccentColor().CGColor);
-            CGContextSetLineWidth(context, TGScreenPixel);
-            
-            CGContextMoveToPoint(context, minx, midy);
-            CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
-            CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
-            CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
-            CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
-            CGContextClosePath(context);
-            
-            CGContextSetFillColorWithColor(context, UIColorRGB(0xf7f7f7).CGColor);
-            CGContextSetStrokeColorWithColor(context, UIColorRGB(0xb2b2b2).CGColor);
-            CGContextDrawPath(context, kCGPathFillStroke);
-            
-            panelBackgroundView = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:19 topCapHeight:19];
-            UIGraphicsEndImageContext();
-        });
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        
+        CGRect rect = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 38.0f - TGScreenPixel, 38.0 - TGScreenPixel);
+        CGFloat radius = 38.0f / 2.0f;
+        
+        CGFloat minx = CGRectGetMinX(rect), midx = CGRectGetMidX(rect), maxx = CGRectGetMaxX(rect);
+        CGFloat miny = CGRectGetMinY(rect), midy = CGRectGetMidY(rect), maxy = CGRectGetMaxY(rect);
+        
+        CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
+        CGContextSetStrokeColorWithColor(context, TGAccentColor().CGColor);
+        CGContextSetLineWidth(context, TGScreenPixel);
+        
+        CGContextMoveToPoint(context, minx, midy);
+        CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
+        CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
+        CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
+        CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
+        CGContextClosePath(context);
+        
+        CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.backgroundColor : UIColorRGB(0xf7f7f7)).CGColor);
+        CGContextSetStrokeColorWithColor(context, (self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2)).CGColor);
+        CGContextDrawPath(context, kCGPathFillStroke);
+        
+        UIImage *panelBackgroundView = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:19 topCapHeight:19];
+        UIGraphicsEndImageContext();
         
         _lockPanelWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 77.0f)];
         _lockPanelWrapperView.userInteractionEnabled = false;
@@ -313,19 +305,20 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _lockPanelView.image = panelBackgroundView;
         [_lockPanelWrapperView addSubview:_lockPanelView];
         
-        _lockArrowView = [[UIImageView alloc] initWithImage:TGTintedImage(TGComponentsImageNamed(@"VideoRecordArrow"), UIColorRGB(0x9597a0))];
+        _lockArrowView = [[UIImageView alloc] initWithImage:TGTintedImage(TGComponentsImageNamed(@"VideoRecordArrow"), self.pallete != nil ? self.pallete.lockColor : UIColorRGB(0x9597a0))];
         _lockArrowView.frame = CGRectMake(floor((_lockPanelView.frame.size.width - _lockArrowView.frame.size.width) / 2.0f), 54.0f, _lockArrowView.frame.size.width, _lockArrowView.frame.size.height);
         [_lockPanelView addSubview:_lockArrowView];
         
         _lockView = [[TGModernConversationInputLockView alloc] init];
+        _lockView.color = self.pallete.lockColor;
         _lockView.frame = CGRectMake(floor((_lockPanelView.frame.size.width - _lockView.frame.size.width) / 2.0f), 6.0f, _lockView.frame.size.width, _lockView.frame.size.height);
         [_lockPanelView addSubview:_lockView];
 
-        _innerCircleView = [[UIImageView alloc] initWithImage:[self innerCircleImage]];
+        _innerCircleView = [[UIImageView alloc] initWithImage:[self innerCircleImage:self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()]];
         _innerCircleView.alpha = 0.0f;
         [[_presentation view] addSubview:_innerCircleView];
         
-        _outerCircleView = [[UIImageView alloc] initWithImage:[self outerCircleImage]];
+        _outerCircleView = [[UIImageView alloc] initWithImage:[self outerCircleImage:self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()]];
         _outerCircleView.alpha = 0.0f;
         [[_presentation view] addSubview:_outerCircleView];
         
@@ -341,15 +334,14 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _stopButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 38.0f)];
         _stopButton.adjustsImageWhenHighlighted = false;
         _stopButton.exclusiveTouch = true;
-        static dispatch_once_t onceToken2;
-        static UIImage *stopButtonImage;
-        dispatch_once(&onceToken2, ^
+        
+        UIImage *stopButtonImage = nil;
         {
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
-            CGContextRef context = UIGraphicsGetCurrentContext();
+            context = UIGraphicsGetCurrentContext();
             
-            CGContextSetFillColorWithColor(context, UIColorRGB(0xf7f7f7).CGColor);
-            CGContextSetStrokeColorWithColor(context, UIColorRGB(0xb2b2b2).CGColor);
+            CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.backgroundColor : UIColorRGB(0xf7f7f7)).CGColor);
+            CGContextSetStrokeColorWithColor(context, (self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2)).CGColor);
             CGContextSetLineWidth(context, TGScreenPixel);
             
             CGRect rect1 = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 38.0f - TGScreenPixel, 38.0 - TGScreenPixel);
@@ -371,12 +363,12 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
             CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
             CGContextClosePath(context);
             
-            CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
+            CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()).CGColor);
             CGContextDrawPath(context, kCGPathFill);
             
             stopButtonImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:19 topCapHeight:19];
             UIGraphicsEndImageContext();
-        });
+        }
         [_stopButton setImage:stopButtonImage forState:UIControlStateNormal];
         _stopButton.userInteractionEnabled = false;
         _stopButton.alpha = 0.0f;
@@ -483,7 +475,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     [_innerIconWrapperView insertSubview:snapshotView atIndex:0];
     
     _previousIcon = _innerIconView.image;
-    [self setIcon:TGComponentsImageNamed(@"RecordSendIcon")];
+    [self setIcon:TGTintedImage(TGComponentsImageNamed(@"RecordSendIcon"), _pallete != nil ? _pallete.iconColor : [UIColor whiteColor])];
     
     _innerIconView.transform = CGAffineTransformMakeScale(0.3f, 0.3f);
     _innerIconView.alpha = 0.0f;
@@ -785,6 +777,12 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     [self setNeedsDisplay];
 }
 
+- (void)setColor:(UIColor *)color
+{
+    _color = color;
+    [self setNeedsDisplay];
+}
+
 - (void)drawRect:(CGRect)rect
 {
     CGContextRef context = UIGraphicsGetCurrentContext();
@@ -799,7 +797,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     CGFloat miny = CGRectGetMinY(rrect) + _lockness * 6.0f;
     CGFloat midy = CGRectGetMidY(rrect);
     
-    UIColor *color = UIColorRGB(0x9597a0);
+    UIColor *color = _color ?: UIColorRGB(0x9597a0);
     CGContextSetStrokeColorWithColor(context, color.CGColor);
     
     CGFloat lineWidth = 1.5f;
@@ -881,6 +879,26 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     }
     
     return nil;
+}
+
+@end
+
+
+@implementation TGModernConversationInputMicPallete
+
++ (instancetype)palleteWithDark:(bool)dark buttonColor:(UIColor *)buttonColor iconColor:(UIColor *)iconColor backgroundColor:(UIColor *)backgroundColor borderColor:(UIColor *)borderColor lockColor:(UIColor *)lockColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor recordingColor:(UIColor *)recordingColor
+{
+    TGModernConversationInputMicPallete *pallete = [[TGModernConversationInputMicPallete alloc] init];
+    pallete->_isDark = dark;
+    pallete->_buttonColor = buttonColor;
+    pallete->_iconColor = iconColor;
+    pallete->_backgroundColor = backgroundColor;
+    pallete->_borderColor = borderColor;
+    pallete->_lockColor = lockColor;
+    pallete->_textColor = textColor;
+    pallete->_secondaryTextColor = secondaryTextColor;
+    pallete->_recordingColor = recordingColor;
+    return pallete;
 }
 
 @end

@@ -1,5 +1,7 @@
 #import <MapKit/MapKit.h>
 
+@class TGLocationPallete;
+
 @interface TGLocationPinAnnotationView : MKAnnotationView
 
 - (instancetype)initWithAnnotation:(id<MKAnnotation>)annotation;
@@ -8,6 +10,8 @@
 - (void)setPinRaised:(bool)raised animated:(bool)animated completion:(void (^)(void))completion;
 
 - (void)setCustomPin:(bool)customPin animated:(bool)animated;
+
+@property (nonatomic, strong) TGLocationPallete *pallete;
 
 @end
 

@@ -269,6 +269,8 @@ typedef enum {
 @property (nonatomic, strong) TGChannelAdminRights *channelAdminRights;
 @property (nonatomic, strong) TGChannelBannedRights *channelBannedRights;
 
+@property (nonatomic) int32_t feedId;
+
 - (id)initWithConversationId:(int64_t)conversationId unreadCount:(int)unreadCount serviceUnreadCount:(int)serviceUnreadCount;
 
 - (void)mergeMessage:(TGMessage *)message;

@@ -8,6 +8,24 @@ typedef enum
     TGStickerKeyboardViewPaintDarkStyle
 } TGStickerKeyboardViewStyle;
 
+@interface TGStickerKeyboardPallete : NSObject
+
+@property (nonatomic, readonly) UIColor *backgroundColor;
+@property (nonatomic, readonly) UIColor *separatorColor;
+@property (nonatomic, readonly) UIColor *selectionColor;
+
+@property (nonatomic, readonly) UIImage *gifIcon;
+@property (nonatomic, readonly) UIImage *trendingIcon;
+@property (nonatomic, readonly) UIImage *favoritesIcon;
+@property (nonatomic, readonly) UIImage *recentIcon;
+@property (nonatomic, readonly) UIImage *settingsIcon;
+@property (nonatomic, readonly) UIImage *badge;
+@property (nonatomic, readonly) UIColor *badgeTextColor;
+
++ (instancetype)palleteWithBackgroundColor:(UIColor *)backgroundColor separatorColor:(UIColor *)separatorColor selectionColor:(UIColor *)selectionColor gifIcon:(UIImage *)gifIcon trendingIcon:(UIImage *)trendingIcon favoritesIcon:(UIImage *)favoritesIcon recentIcon:(UIImage *)recentIcon settingsIcon:(UIImage *)settingsIcon badge:(UIImage *)badge badgeTextColor:(UIColor *)badgeTextColor;
+
+@end
+
 @interface TGStickerKeyboardTabPanel : UIView
 
 @property (nonatomic, copy) void (^currentStickerPackIndexChanged)(NSUInteger);
@@ -19,6 +37,7 @@ typedef enum
 @property (nonatomic, copy) void (^toggleExpanded)(void);
 @property (nonatomic, copy) void (^expandInteraction)(CGFloat offset);
 
+@property (nonatomic, strong) TGStickerKeyboardPallete *pallete;
 @property (nonatomic, assign) UIEdgeInsets safeAreaInset;
 
 - (instancetype)initWithFrame:(CGRect)frame style:(TGStickerKeyboardViewStyle)style;

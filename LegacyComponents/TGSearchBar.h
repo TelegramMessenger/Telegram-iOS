@@ -8,7 +8,7 @@ typedef enum {
     TGSearchBarStyleLight = 2,
     TGSearchBarStyleLightPlain = 3,
     TGSearchBarStyleLightAlwaysPlain = 4,
-    TGSearchBarStyleHeader = 5,
+    TGSearchBarStyleHeader = 5
 } TGSearchBarStyle;
 
 @protocol TGSearchBarDelegate <UISearchBarDelegate>
@@ -24,10 +24,19 @@ typedef enum {
 @property (nonatomic, readonly) UIColor *highContrastBackgroundColor;
 @property (nonatomic, readonly) UIColor *textColor;
 @property (nonatomic, readonly) UIColor *placeholderColor;
-@property (nonatomic, readonly) UIColor *clearBackgroundColor;
-@property (nonatomic, readonly) UIColor *clearIconColor;
+@property (nonatomic, readonly) UIImage *clearIcon;
+@property (nonatomic, readonly) UIColor *barBackgroundColor;
+@property (nonatomic, readonly) UIColor *barSeparatorColor;
+@property (nonatomic, readonly) UIColor *plainBackgroundColor;
+@property (nonatomic, readonly) UIColor *accentColor;
+@property (nonatomic, readonly) UIColor *accentContrastColor;
+@property (nonatomic, readonly) UIColor *menuBackgroundColor;
+@property (nonatomic, readonly) UIImage *segmentedControlBackgroundImage;
+@property (nonatomic, readonly) UIImage *segmentedControlSelectedImage;
+@property (nonatomic, readonly) UIImage *segmentedControlHighlightedImage;
+@property (nonatomic, readonly) UIImage *segmentedControlDividerImage;
 
-+ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor highContrastBackgroundColor:(UIColor *)highContrastBackgroundColor textColor:(UIColor *)textColor placeholderColor:(UIColor *)placeholderColor clearBackgroundColor:(UIColor *)clearBackgroundColor clearIconColor:(UIColor *)clearIconColor;
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor highContrastBackgroundColor:(UIColor *)highContrastBackgroundColor textColor:(UIColor *)textColor placeholderColor:(UIColor *)placeholderColor clearIcon:(UIImage *)clearIcon barBackgroundColor:(UIColor *)barBackgroundColor barSeparatorColor:(UIColor *)barSeparatorColor plainBackgroundColor:(UIColor *)plainBackgroundColor accentColor:(UIColor *)accentColor accentContrastColor:(UIColor *)accentContrastColor menuBackgroundColor:(UIColor *)menuBackgroundColor segmentedControlBackgroundImage:(UIImage *)segmentedControlBackgroundImage segmentedControlSelectedImage:(UIImage *)segmentedControlSelectedImage segmentedControlHighlightedImage:(UIImage *)segmentedControlHighlightedImage segmentedControlDividerImage:(UIImage *)segmentedControlDividerImage;
 
 @end
 

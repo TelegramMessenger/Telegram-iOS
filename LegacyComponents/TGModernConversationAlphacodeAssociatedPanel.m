@@ -128,6 +128,20 @@
     [_disposable dispose];
 }
 
+- (void)setPallete:(TGConversationAssociatedInputPanelPallete *)pallete
+{
+    [super setPallete:pallete];
+    if (self.pallete == nil)
+        return;
+    
+    _bottomView.backgroundColor = pallete.barBackgroundColor;
+    _tableViewBackground.backgroundColor = pallete.backgroundColor;
+    _tableViewSeparator.backgroundColor = pallete.barSeparatorColor;
+    _tableView.separatorColor = pallete.separatorColor;
+    _stripeView.backgroundColor = pallete.barSeparatorColor;
+    _separatorView.backgroundColor = pallete.barSeparatorColor;
+}
+
 - (void)setFrame:(CGRect)frame
 {
     [super setFrame:frame];
@@ -242,9 +256,9 @@
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     TGAlphacodePanelCell *cell = (TGAlphacodePanelCell *)[tableView dequeueReusableCellWithIdentifier:TGAlphacodePanelCellKind];
-    if (cell == nil) {
+    if (cell == nil)
         cell = [[TGAlphacodePanelCell alloc] initWithStyle:self.style];
-    }
+    cell.pallete = self.pallete;
     
     TGAlphacodeEntry *entry = _codeList[indexPath.row];
     [cell setEmoji:entry.emoji label:entry.code];

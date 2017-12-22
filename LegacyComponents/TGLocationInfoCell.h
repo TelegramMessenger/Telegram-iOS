@@ -2,8 +2,11 @@
 #import <SSignalKit/SSignalKit.h>
 
 @class TGLocationMediaAttachment;
+@class TGLocationPallete;
 
 @interface TGLocationInfoCell : UITableViewCell
+
+@property (nonatomic, strong) TGLocationPallete *pallete;
 
 @property (nonatomic, copy) void (^locatePressed)(void);
 @property (nonatomic, copy) void (^directionsPressed)(void);

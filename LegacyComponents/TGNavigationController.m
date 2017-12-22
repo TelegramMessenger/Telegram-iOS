@@ -78,9 +78,14 @@
 
 + (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers navigationBarClass:(Class)navigationBarClass
 {
+    return [self navigationControllerWithControllers:controllers navigationBarClass:navigationBarClass inhibitPresentation:false];
+}
+
++ (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers navigationBarClass:(Class)navigationBarClass inhibitPresentation:(bool)inhibitPresentation
+{
     TGNavigationController *navigationController = [[TGNavigationController alloc] initWithNavigationBarClass:navigationBarClass toolbarClass:[UIToolbar class]];
     
-    if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(navigationBarPallete)])
+    if (!inhibitPresentation && [[LegacyComponentsGlobals provider] respondsToSelector:@selector(navigationBarPallete)])
         [((TGNavigationBar *)navigationController.navigationBar) setPallete:[[LegacyComponentsGlobals provider] navigationBarPallete]];
     
     bool first = true;
@@ -245,7 +250,7 @@
         return false;
     
     UIView *view = [gestureRecognizer.view hitTest:location withEvent:nil];
-    if ([view isKindOfClass:[UIControl class]] && ![view isKindOfClass:[UIButton class]])
+    if (view.tag == 0xdead || ([view isKindOfClass:[UIControl class]] && ![view isKindOfClass:[UIButton class]]))
         return false;
     
     return self.viewControllers.count > 1;
@@ -276,7 +281,11 @@
         return false;
     };
     
-    if ([otherGestureRecognizer.view isKindOfClass:[UIScrollView class]])
+    if (otherGestureRecognizer.view.tag == 0xdead)
+    {
+        return false;
+    }
+    else if ([otherGestureRecognizer.view isKindOfClass:[UIScrollView class]])
     {
         UIScrollView *scrollView = (UIScrollView *)otherGestureRecognizer.view;
         bool viewIsHorizontalScrollView = !TGIsRTL() && scrollView.contentSize.width > scrollView.contentSize.height && fabs(scrollView.contentOffset.x + scrollView.contentInset.left) < FLT_EPSILON && scrollView.tag != 0xbeef;

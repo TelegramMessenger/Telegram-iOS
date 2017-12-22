@@ -13,6 +13,7 @@
 - (void)setUrl:(NSString *)avatarUrl peerId:(int64_t)peerId title:(NSString *)title;
 
 - (void)setStyle:(TGStickerKeyboardViewStyle)style;
+- (void)setPallete:(TGStickerKeyboardPallete *)pallete;
 
 - (void)setInnerAlpha:(CGFloat)innerAlpha;
 

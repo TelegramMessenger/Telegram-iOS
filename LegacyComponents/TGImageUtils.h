@@ -37,6 +37,9 @@ UIImage *TGTintedImage(UIImage *image, UIColor *color);
     
 NSString *TGImageHash(NSData *data);
     
+uint32_t TGColorHexCode(UIColor *color);
+uint32_t TGColorHexCodeWithAlpha(UIColor *color);
+    
 #ifdef __cplusplus
 }
 #endif
@@ -89,3 +92,12 @@ void TGDrawSvgPath(CGContextRef context, NSString *path);
 #ifdef __cplusplus
 }
 #endif
+
+@interface TGImageBorderPallete : NSObject
+
+@property (nonatomic, readonly) UIColor *borderColor;
+@property (nonatomic, readonly) UIColor *shadowColor;
+
++ (instancetype)palleteWithBorderColor:(UIColor *)borderColor shadowColor:(UIColor *)shadowColor;
+
+@end

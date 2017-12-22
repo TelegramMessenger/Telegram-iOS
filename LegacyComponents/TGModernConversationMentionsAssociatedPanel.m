@@ -128,6 +128,20 @@
     [_disposable dispose];
 }
 
+- (void)setPallete:(TGConversationAssociatedInputPanelPallete *)pallete
+{
+    [super setPallete:pallete];
+    if (self.pallete == nil)
+        return;
+    
+    _bottomView.backgroundColor = pallete.barBackgroundColor;
+    _tableViewBackground.backgroundColor = pallete.backgroundColor;
+    _tableViewSeparator.backgroundColor = pallete.barSeparatorColor;
+    _tableView.separatorColor = pallete.separatorColor;
+    _stripeView.backgroundColor = pallete.barSeparatorColor;
+    _separatorView.backgroundColor = pallete.barSeparatorColor;
+}
+
 - (void)setInverted:(bool)inverted {
     if (_inverted != inverted) {
         _inverted = inverted;
@@ -264,7 +278,7 @@
             cell.transform = CGAffineTransformIdentity;
         }
     }
-    
+    cell.pallete = self.pallete;
     if (iosMajorVersion() >= 7)
     {
         if (indexPath.row == 0 && _inverted) {

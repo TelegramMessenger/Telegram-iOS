@@ -1,5 +1,6 @@
 #import "TGAttachmentMenuCell.h"
 #import <LegacyComponents/TGMenuSheetView.h>
+#import <LegacyComponents/TGMenuSheetController.h>
 #import "LegacyComponentsInternal.h"
 
 const CGFloat TGAttachmentMenuCellCornerRadius = 5.5f;
@@ -51,6 +52,14 @@ const CGFloat TGAttachmentMenuCellCornerRadius = 5.5f;
         }
     }
     return self;
+}
+
+- (void)setPallete:(TGMenuSheetPallete *)pallete
+{
+    _pallete = pallete;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    _cornersView.image = pallete.cornersImage;
 }
 
 @end

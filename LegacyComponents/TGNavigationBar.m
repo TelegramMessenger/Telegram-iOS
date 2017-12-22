@@ -131,7 +131,14 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     _barBackgroundView.backgroundColor = pallete.backgroundColor;
     _stripeView.backgroundColor = pallete.separatorColor;
     self.tintColor = pallete.tintColor;
-    [self setTitleTextAttributes:@{UITextAttributeTextColor: pallete.titleColor}];
+    
+    NSMutableDictionary *attributes = [[NSMutableDictionary alloc] init];
+    attributes[UITextAttributeTextColor] = pallete.titleColor;
+    attributes[UITextAttributeTextShadowColor] = [UIColor clearColor];
+    if (iosMajorVersion() < 7)
+        attributes[UITextAttributeFont] = TGBoldSystemFontOfSize(17.0f);
+    
+    [self setTitleTextAttributes:attributes];
 }
 
 - (void)commonInit:(UIBarStyle)barStyle

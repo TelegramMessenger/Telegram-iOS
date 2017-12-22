@@ -230,6 +230,7 @@
         if (_ownLiveLocationView == nil)
         {
             _ownLiveLocationView = [[TGLocationPinAnnotationView alloc] initWithAnnotation:annotation];
+            _ownLiveLocationView.pallete = self.pallete;
             _ownLiveLocationView.frame = CGRectOffset(_ownLiveLocationView.frame, 21.0f, 22.0f);
             [_userLocationView addSubview:_ownLiveLocationView];
             
@@ -905,10 +906,14 @@
     
     TGLocationPinAnnotationView *view = (TGLocationPinAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:TGLocationPinAnnotationKind];
     if (view == nil)
+    {
         view = [[TGLocationPinAnnotationView alloc] initWithAnnotation:annotation];
+        view.pallete = self.pallete;
+    }
     else
+    {
         view.annotation = annotation;
-    
+    }
     view.layer.zPosition = -1;
     
     return view;
@@ -979,7 +984,7 @@
         TGLocationInfoCell *cell = [tableView dequeueReusableCellWithIdentifier:TGLocationInfoCellKind];
         if (cell == nil)
             cell = [[TGLocationInfoCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:TGLocationInfoCellKind];
-        
+        cell.pallete = self.pallete;
         [cell setLocation:_locationAttachment messageId:_message.mid userLocationSignal:[self userLocationSignal]];
         cell.locatePressed = ^
         {
@@ -1003,7 +1008,7 @@
         TGLocationLiveCell *cell = [tableView dequeueReusableCellWithIdentifier:TGLocationLiveCellKind];
         if (cell == nil)
             cell = [[TGLocationLiveCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:TGLocationLiveCellKind];
-        
+        cell.pallete = self.pallete;
         cell.edgeView = indexPath.row == 0 ? _edgeHighlightView : nil;
         
         if (self.allowLiveLocationSharing && (indexPath.row == 0 || (![self isLiveLocation] && indexPath.row == 1)))
@@ -1033,7 +1038,6 @@
             
             TGLiveLocation *liveLocation = index >= 0 && index < _liveLocations.count ? _liveLocations[index] : nil;
             [cell configureWithPeer:liveLocation.peer message:liveLocation.message remaining:self.remainingTimeForMessage(liveLocation.message) userLocationSignal:[self userLocationSignal]];
-            
             
             cell.longPressed = ^
             {

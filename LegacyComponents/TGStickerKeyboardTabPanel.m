@@ -105,6 +105,13 @@
     return self;
 }
 
+- (void)setPallete:(TGStickerKeyboardPallete *)pallete
+{
+    _pallete = pallete;
+    self.backgroundColor = pallete.backgroundColor;
+    _bottomStripe.backgroundColor = pallete.separatorColor;
+}
+
 - (void)setAvatarUrl:(NSString *)avatarUrl peerId:(int64_t)peerId title:(NSString *)title
 {
     _avatarUrl = avatarUrl;
@@ -246,6 +253,7 @@
 {
     if (indexPath.section == 0) {
         TGStickerKeyboardTabSettingsCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabSettingsCell" forIndexPath:indexPath];
+        [cell setPallete:_pallete];
         [cell setStyle:_style];
         [cell setInnerAlpha:_innerAlpha];
         
@@ -263,6 +271,7 @@
         return cell;
     } else if (indexPath.section == 1 || indexPath.section == 2 || indexPath.section == 3 || indexPath.section == 4) {
         TGStickerKeyboardTabCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabCell" forIndexPath:indexPath];
+        [cell setPallete:_pallete];
         [cell setStyle:_style];
         
         if (indexPath.section == 1) {
@@ -609,3 +618,23 @@
 
 @end
 
+
+@implementation TGStickerKeyboardPallete
+
++ (instancetype)palleteWithBackgroundColor:(UIColor *)backgroundColor separatorColor:(UIColor *)separatorColor selectionColor:(UIColor *)selectionColor gifIcon:(UIImage *)gifIcon trendingIcon:(UIImage *)trendingIcon favoritesIcon:(UIImage *)favoritesIcon recentIcon:(UIImage *)recentIcon settingsIcon:(UIImage *)settingsIcon badge:(UIImage *)badge badgeTextColor:(UIColor *)badgeTextColor
+{
+    TGStickerKeyboardPallete *pallete = [[TGStickerKeyboardPallete alloc] init];
+    pallete->_backgroundColor = backgroundColor;
+    pallete->_separatorColor = separatorColor;
+    pallete->_selectionColor = selectionColor;
+    pallete->_gifIcon = gifIcon;
+    pallete->_trendingIcon = trendingIcon;
+    pallete->_favoritesIcon = favoritesIcon;
+    pallete->_recentIcon = recentIcon;
+    pallete->_settingsIcon = settingsIcon;
+    pallete->_badge = badge;
+    pallete->_badgeTextColor = badgeTextColor;
+    return pallete;
+}
+
+@end

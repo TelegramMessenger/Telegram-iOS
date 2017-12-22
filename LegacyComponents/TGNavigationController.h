@@ -30,6 +30,7 @@ typedef enum {
 
 + (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers;
 + (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers navigationBarClass:(Class)navigationBarClass;
++ (TGNavigationController *)navigationControllerWithControllers:(NSArray *)controllers navigationBarClass:(Class)navigationBarClass inhibitPresentation:(bool)inhibitPresentation;
 + (TGNavigationController *)navigationControllerWithRootController:(UIViewController *)controller;
 
 + (TGNavigationController *)makeWithRootController:(UIViewController *)controller;

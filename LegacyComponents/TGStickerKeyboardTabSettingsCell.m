@@ -19,6 +19,7 @@ static void setViewFrame(UIView *view, CGRect frame)
 
 @interface TGStickerKeyboardTabSettingsCell () {
     TGStickerKeyboardViewStyle _style;
+    TGStickerKeyboardPallete *_pallete;
     
     TGModernButton *_button;
     
@@ -56,15 +57,27 @@ static void setViewFrame(UIView *view, CGRect frame)
     return self;
 }
 
+- (void)setPallete:(TGStickerKeyboardPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    self.selectedBackgroundView.backgroundColor = pallete.selectionColor;
+    _badgeView.image = pallete.badge;
+    _badgeLabel.textColor = pallete.badgeTextColor;
+}
+
 - (void)setMode:(TGStickerKeyboardTabSettingsCellMode)mode {
     _mode = mode;
     
     if (mode == TGStickerKeyboardTabSettingsCellSettings) {
-        _imageView.image = TGComponentsImageNamed(@"StickerKeyboardSettingsIcon.png");
+        _imageView.image = _pallete != nil ? _pallete.settingsIcon : TGComponentsImageNamed(@"StickerKeyboardSettingsIcon.png");
     } else if (mode == TGStickerKeyboardTabSettingsCellGifs) {
-        _imageView.image = TGComponentsImageNamed(@"StickerKeyboardGifIcon.png");
+        _imageView.image = _pallete != nil ? _pallete.gifIcon : TGComponentsImageNamed(@"StickerKeyboardGifIcon.png");
     } else {
-        _imageView.image = TGComponentsImageNamed(@"StickerKeyboardTrendingIcon.png");
+        _imageView.image = _pallete != nil ? _pallete.trendingIcon : TGComponentsImageNamed(@"StickerKeyboardTrendingIcon.png");
     }
     _button.hidden = mode != TGStickerKeyboardTabSettingsCellSettings;
 }
@@ -108,7 +121,7 @@ static void setViewFrame(UIView *view, CGRect frame)
             
         default:
         {
-            self.selectedBackgroundView.backgroundColor = UIColorRGB(0xe6e7e9);
+            self.selectedBackgroundView.backgroundColor = _pallete != nil ? _pallete.selectionColor : UIColorRGB(0xe6e7e9);
             self.selectedBackgroundView.layer.cornerRadius = 8.0f;
             self.selectedBackgroundView.clipsToBounds = true;
         }
@@ -155,7 +168,7 @@ static void setViewFrame(UIView *view, CGRect frame)
             _badgeLabel = [[UILabel alloc] init];
             _badgeLabel.font = TGSystemFontOfSize(12.0);
             _badgeLabel.backgroundColor = [UIColor clearColor];
-            _badgeLabel.textColor = [UIColor whiteColor];
+            _badgeLabel.textColor = _pallete != nil ? _pallete.badgeTextColor : [UIColor whiteColor];
             [_wrapperView addSubview:_badgeLabel];
             
             static UIImage *badgeImage = nil;
@@ -170,7 +183,7 @@ static void setViewFrame(UIView *view, CGRect frame)
                 badgeImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:7.0f topCapHeight:0.0f];
                 UIGraphicsEndImageContext();
             });
-            _badgeView = [[UIImageView alloc] initWithImage:badgeImage];
+            _badgeView = [[UIImageView alloc] initWithImage:_pallete != nil ? _pallete.badge : badgeImage];
             
             [_wrapperView addSubview:_badgeView];
             [_wrapperView addSubview:_badgeLabel];

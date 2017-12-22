@@ -1,6 +1,9 @@
 #import "TGLocationPinView.h"
 
+#import "TGImageUtils.h"
 #import "LegacyComponentsInternal.h"
+
+#import "TGLocationMapViewController.h"
 
 const CGSize TGLocationPinSize = { 13.5f, 36 };
 const CGFloat TGLocationPinDamping = 2.0f;
@@ -40,6 +43,14 @@ const CGPoint TGLocationPinShadowRaisedOrigin = { 87, -33 };
         [self addSubview:_pinView];
     }
     return self;
+}
+
+- (void)setPallete:(TGLocationPallete *)pallete
+{
+    _pallete = pallete;
+    
+    _pinView.image = TGTintedImage(_pinView.image, pallete.locationColor);
+    _pinPointView.image = TGTintedImage(_pinPointView.image, pallete.locationColor);
 }
 
 - (void)setPinRaised:(bool)pinRaised

@@ -16,8 +16,11 @@
 @property (nonatomic, readonly) UIColor *textColor;
 @property (nonatomic, readonly) UIColor *secondaryTextColor;
 @property (nonatomic, readonly) UIColor *spinnerColor;
+@property (nonatomic, readonly) UIColor *badgeTextColor;
+@property (nonatomic, readonly) UIImage *badgeImage;
+@property (nonatomic, readonly) UIImage *cornersImage;
 
-+ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor spinnerColor:(UIColor *)spinnerColor;
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor spinnerColor:(UIColor *)spinnerColor badgeTextColor:(UIColor *)badgeTextColor badgeImage:(UIImage *)badgeImage cornersImage:(UIImage *)cornersImage;
 
 @end
 

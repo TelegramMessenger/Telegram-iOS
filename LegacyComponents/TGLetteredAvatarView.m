@@ -229,7 +229,7 @@ typedef struct
     CGSize labelSize = _label.frame.size;
     CGSize boundsSize = self.bounds.size;
     labelSize.height = boundsSize.height;
-    _label.frame = CGRectMake(TGRetinaFloor((boundsSize.width - labelSize.width) / 2.0f), CGFloor((boundsSize.height - labelSize.height) / 2.0f), labelSize.width, labelSize.height);
+    _label.frame = CGRectMake(TGScreenPixelFloor((boundsSize.width - labelSize.width) / 2.0f), TGScreenPixelFloor((boundsSize.height - labelSize.height) / 2.0f), labelSize.width, labelSize.height);
 }
 
 @end

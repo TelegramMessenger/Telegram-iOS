@@ -1,6 +1,7 @@
 #import <LegacyComponents/LegacyComponents.h>
 
 @class TGVideoEditAdjustments;
+@class TGModernConversationInputMicPallete;
 
 @interface TGVideoMessageCaptureControllerAssets : NSObject
 
@@ -14,6 +15,8 @@
 
 @interface TGVideoMessageCaptureController : TGOverlayController
 
+@property (nonatomic, strong) TGModernConversationInputMicPallete *pallete;
+
 @property (nonatomic, copy) id (^requestActivityHolder)();
 @property (nonatomic, copy) void (^micLevel)(CGFloat level);
 @property (nonatomic, copy) void(^finishedWithVideo)(NSURL *videoURL, UIImage *previewImage, NSUInteger fileSize, NSTimeInterval duration, CGSize dimensions, id liveUploadData, TGVideoEditAdjustments *adjustments);
@@ -23,6 +26,7 @@
 @property (nonatomic, copy) void(^didDismiss)(void);
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete;
 - (void)buttonInteractionUpdate:(CGPoint)value;
 - (void)setLocked;
 

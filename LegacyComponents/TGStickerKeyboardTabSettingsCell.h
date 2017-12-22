@@ -16,6 +16,7 @@ typedef enum {
 
 - (void)setBadge:(NSString *)badge;
 - (void)setStyle:(TGStickerKeyboardViewStyle)style;
+- (void)setPallete:(TGStickerKeyboardPallete *)pallete;
 
 - (void)setInnerAlpha:(CGFloat)innerAlpha;
 

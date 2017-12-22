@@ -63,9 +63,9 @@ bool TGIsLocaleArabic();
 - (int)lengthByComposedCharacterSequencesInRange:(NSRange)range;
 
 - (NSData *)dataByDecodingHexString;
-- (NSArray *)getEmojiFromString:(BOOL)checkColor checkString:(__autoreleasing NSString **)checkString;
 
 - (bool)containsSingleEmoji;
+- (NSArray *)emojiArray:(bool)stripColor;
 
 - (bool)hasNonWhitespaceCharacters;
 

@@ -78,3 +78,28 @@
 }
 
 @end
+
+
+@implementation TGConversationAssociatedInputPanelPallete
+
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor separatorColor:(UIColor *)separatorColor selectionColor:(UIColor *)selectionColor barBackgroundColor:(UIColor *)barBackgroundColor barSeparatorColor:(UIColor *)barSeparatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor placeholderBackgroundColor:(UIColor *)placeholderBackgroundColor placeholderIconColor:(UIColor *)placeholderIconColor avatarPlaceholder:(UIImage *)avatarPlaceholder closeIcon:(UIImage *)closeIcon largeCloseIcon:(UIImage *)largeCloseIcon
+{
+    TGConversationAssociatedInputPanelPallete *pallete = [[TGConversationAssociatedInputPanelPallete alloc] init];
+    pallete->_isDark = dark;
+    pallete->_backgroundColor = backgroundColor;
+    pallete->_separatorColor = separatorColor;
+    pallete->_selectionColor = selectionColor;
+    pallete->_barBackgroundColor = barBackgroundColor;
+    pallete->_barSeparatorColor = barSeparatorColor;
+    pallete->_textColor = textColor;
+    pallete->_secondaryTextColor = secondaryTextColor;
+    pallete->_accentColor = accentColor;
+    pallete->_placeholderBackgroundColor = placeholderBackgroundColor;
+    pallete->_placeholderIconColor = placeholderIconColor;
+    pallete->_avatarPlaceholder = avatarPlaceholder;
+    pallete->_closeIcon = closeIcon;
+    pallete->_largeCloseIcon = largeCloseIcon;
+    return pallete;
+}
+
+@end

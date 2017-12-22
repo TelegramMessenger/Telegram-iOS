@@ -8,6 +8,29 @@
 @class TGLocationMapView;
 @class TGLocationOptionsView;
 
+@class TGSearchBarPallete;
+
+@interface TGLocationPallete : NSObject
+
+@property (nonatomic, readonly) UIColor *backgroundColor;
+@property (nonatomic, readonly) UIColor *selectionColor;
+@property (nonatomic, readonly) UIColor *separatorColor;
+@property (nonatomic, readonly) UIColor *textColor;
+@property (nonatomic, readonly) UIColor *secondaryTextColor;
+@property (nonatomic, readonly) UIColor *accentColor;
+@property (nonatomic, readonly) UIColor *destructiveColor;
+@property (nonatomic, readonly) UIColor *locationColor;
+@property (nonatomic, readonly) UIColor *liveLocationColor;
+@property (nonatomic, readonly) UIColor *iconColor;
+@property (nonatomic, readonly) UIColor *sectionHeaderBackgroundColor;
+@property (nonatomic, readonly) UIColor *sectionHeaderTextColor;
+@property (nonatomic, readonly) TGSearchBarPallete *searchBarPallete;
+@property (nonatomic, readonly) UIImage *avatarPlaceholder;
+
++ (instancetype)palleteWithBackgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor destructiveColor:(UIColor *)destructiveColor locationColor:(UIColor *)locationColor liveLocationColor:(UIColor *)liveLocationColor iconColor:(UIColor *)iconColor sectionHeaderBackgroundColor:(UIColor *)sectionHeaderBackgroundColor sectionHeaderTextColor:(UIColor *)sectionHeaderTextColor searchBarPallete:(TGSearchBarPallete *)searchBarPallete avatarPlaceholder:(UIImage *)avatarPlaceholder;
+
+@end
+
 @interface TGLocationMapViewController : TGViewController <UITableViewDataSource, UITableViewDelegate, UIScrollViewDelegate, MKMapViewDelegate>
 {
     CLLocationManager *_locationManager;
@@ -28,6 +51,8 @@
 
 @property (nonatomic, copy) void (^liveLocationStarted)(CLLocationCoordinate2D coordinate, int32_t period);
 @property (nonatomic, copy) void (^liveLocationStopped)(void);
+
+@property (nonatomic, strong) TGLocationPallete *pallete;
 
 - (void)userLocationButtonPressed;
 

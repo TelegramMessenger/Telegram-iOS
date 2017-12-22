@@ -3,6 +3,7 @@
 
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
+@class TGMediaAssetsPallete;
 
 @interface TGMediaPickerCell : UICollectionViewCell
 
@@ -12,6 +13,8 @@
 
 @property (nonatomic, strong) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, strong) TGMediaEditingContext *editingContext;
+
+@property (nonatomic, strong) TGMediaAssetsPallete *pallete;
 
 @property (nonatomic, readonly) NSObject *item;
 - (void)setItem:(NSObject *)item signal:(SSignal *)signal;

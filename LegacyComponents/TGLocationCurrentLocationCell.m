@@ -1,6 +1,7 @@
 #import "TGLocationCurrentLocationCell.h"
 #import "TGLocationVenueCell.h"
 
+#import "TGLocationMapViewController.h"
 #import "LegacyComponentsInternal.h"
 #import "TGColor.h"
 #import "TGImageUtils.h"
@@ -94,6 +95,21 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     [_wavesView invalidate];
 }
 
+- (void)setPallete:(TGLocationPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    _highlightView.backgroundColor = pallete.selectionColor;
+    _titleLabel.textColor = pallete.accentColor;
+    _subtitleLabel.textColor = pallete.secondaryTextColor;
+    _separatorView.backgroundColor = pallete.separatorColor;
+    [_elapsedView setColor:pallete.accentColor];
+}
+
 - (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated
 {
     if (animated)
@@ -121,8 +137,13 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
 {
     _messageId = 0;
     
-    _iconView.image = TGComponentsImageNamed(@"LocationMessagePinIcon");
-    _titleLabel.textColor = TGAccentColor();
+    
+    UIImage *icon = TGComponentsImageNamed(@"LocationMessagePinIcon");
+    if (_pallete != nil)
+        icon = TGTintedImage(icon, _pallete.iconColor);
+    
+    _iconView.image = icon;
+    _titleLabel.textColor = self.pallete != nil ? self.pallete.accentColor : TGAccentColor();
     _elapsedView.hidden = true;
     
     if (!_isCurrentLocation)
@@ -176,7 +197,7 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
         }
     }
     
-    [self setCircleColor:UIColorRGB(0x008df2)];
+    [self setCircleColor:_pallete != nil ? _pallete.locationColor : UIColorRGB(0x008df2)];
     
     _separatorView.hidden = false;
     [_wavesView stop];
@@ -189,8 +210,12 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
 {
     _messageId = 0;
     
-    _iconView.image = TGComponentsImageNamed(@"LocationMessageLiveIcon");
-    _titleLabel.textColor = TGAccentColor();
+    UIImage *icon = TGComponentsImageNamed(@"LocationMessageLiveIcon");
+    if (_pallete != nil)
+        icon = TGTintedImage(icon, _pallete.iconColor);
+    
+    _iconView.image = icon;
+    _titleLabel.textColor = self.pallete != nil ? self.pallete.accentColor : TGAccentColor();
     _elapsedView.hidden = true;
     
     [UIView transitionWithView:self duration:0.2f options:UIViewAnimationOptionTransitionCrossDissolve animations:^
@@ -212,7 +237,7 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
         }
     } completion:nil];
     
-    [self setCircleColor:UIColorRGB(0xff6464)];
+    [self setCircleColor:_pallete != nil ? _pallete.liveLocationColor : UIColorRGB(0xff6464)];
     
     _separatorView.hidden = true;
     [_wavesView stop];
@@ -226,9 +251,13 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     bool changed = message.mid != _messageId;
     _messageId = message.mid;
     
-    _iconView.image = TGComponentsImageNamed(@"LocationMessagePinIcon");
+    UIImage *icon = TGComponentsImageNamed(@"LocationMessagePinIcon");
+    if (_pallete != nil)
+        icon = TGTintedImage(icon, _pallete.iconColor);
     
-    _titleLabel.textColor = UIColorRGB(0xff3b2f);
+    _iconView.image = icon;
+    
+    _titleLabel.textColor = self.pallete != nil ? self.pallete.destructiveColor : UIColorRGB(0xff3b2f);
     _titleLabel.text = TGLocalized(@"Map.StopLiveLocation");
     _subtitleLabel.text = [TGDateUtils stringForRelativeUpdate:[message actualDate]];
     
@@ -236,10 +265,11 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     _titleLabel.alpha = 1.0f;
     _subtitleLabel.alpha = 1.0f;
     
-    [self setCircleColor:UIColorRGB(0xff6464)];
+    [self setCircleColor:_pallete != nil ? _pallete.liveLocationColor : UIColorRGB(0xff6464)];
     
     _separatorView.hidden = true;
     _wavesView.hidden = false;
+    _wavesView.color = self.pallete != nil ? _pallete.iconColor : [UIColor whiteColor];
     [_wavesView start];
     
     if (changed)
@@ -273,8 +303,11 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
 {
     _messageId = 0;
     
-    _iconView.image = TGComponentsImageNamed(@"LocationMessagePinIcon");
-    _titleLabel.textColor = TGAccentColor();
+    UIImage *icon = TGComponentsImageNamed(@"LocationMessagePinIcon");
+    if (_pallete != nil)
+        icon = TGTintedImage(icon, _pallete.iconColor);
+    _iconView.image = icon;
+    _titleLabel.textColor = self.pallete != nil ? self.pallete.accentColor : TGAccentColor();
     _elapsedView.hidden = true;
     
     if (_isCurrentLocation)
@@ -299,7 +332,7 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
         } completion:nil];
     }
     
-    [self setCircleColor:UIColorRGB(0x008df2)];
+    [self setCircleColor:_pallete != nil ? _pallete.locationColor : UIColorRGB(0x008df2)];
     
     _separatorView.hidden = false;
     [_wavesView stop];

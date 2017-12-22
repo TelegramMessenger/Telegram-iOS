@@ -1,5 +1,6 @@
 #import "TGLocationTrackingButton.h"
 
+#import "TGImageUtils.h"
 #import "LegacyComponentsInternal.h"
 
 @interface TGLocationTrackingButton ()
@@ -46,6 +47,14 @@
         [self setTrackingMode:TGLocationTrackingModeNone];
     }
     return self;
+}
+
+- (void)setAccentColor:(UIColor *)accentColor spinnerColor:(UIColor *)spinnerColor
+{
+    _noneModeIconView.image = TGTintedImage(TGComponentsImageNamed(@"TrackingLocationOff.png"), accentColor);
+    _followModeIconView.image = TGTintedImage(TGComponentsImageNamed(@"TrackingLocation.png"), accentColor);
+    _followWithHeadingModeIconView.image = TGTintedImage(TGComponentsImageNamed(@"TrackingHeading.png"), accentColor);
+    _activityIndicator.color = spinnerColor;
 }
 
 - (void)setTrackingMode:(TGLocationTrackingMode)trackingMode

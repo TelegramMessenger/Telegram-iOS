@@ -190,24 +190,24 @@
             strongSelf->_livePhotoView.frame = strongSelf->_imageView.frame;
         }]];
         
-        if (item.asset.subtypes & TGMediaAssetSubtypePhotoLive)
-        {
-            _livePhotoView = [[PHLivePhotoView alloc] init];
-            _livePhotoView.muted = true;
-            _livePhotoView.contentMode = UIViewContentModeScaleAspectFill;
-            _livePhotoView.hidden = self.imageView.hidden;
-            _livePhotoView.frame = CGRectMake((self.containerView.frame.size.width - _imageSize.width) / 2.0f, (self.containerView.frame.size.height - _imageSize.height) / 2.0f, _imageSize.width, _imageSize.height);
-            [self.containerView addSubview:_livePhotoView];
-            
-            [[[TGMediaAssetImageSignals livePhotoForAsset:item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(PHLivePhoto *next)
-            {
-                __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
-                if (strongSelf == nil)
-                    return;
-                
-                strongSelf->_livePhotoView.livePhoto = next;
-            }];
-        }
+//        if (item.asset.subtypes & TGMediaAssetSubtypePhotoLive)
+//        {
+//            _livePhotoView = [[PHLivePhotoView alloc] init];
+//            _livePhotoView.muted = true;
+//            _livePhotoView.contentMode = UIViewContentModeScaleAspectFill;
+//            _livePhotoView.hidden = self.imageView.hidden;
+//            _livePhotoView.frame = CGRectMake((self.containerView.frame.size.width - _imageSize.width) / 2.0f, (self.containerView.frame.size.height - _imageSize.height) / 2.0f, _imageSize.width, _imageSize.height);
+//            [self.containerView addSubview:_livePhotoView];
+//            
+//            [[[TGMediaAssetImageSignals livePhotoForAsset:item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(PHLivePhoto *next)
+//            {
+//                __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
+//                if (strongSelf == nil)
+//                    return;
+//                
+//                strongSelf->_livePhotoView.livePhoto = next;
+//            }];
+//        }
         
         if (!item.asFile)
             return;

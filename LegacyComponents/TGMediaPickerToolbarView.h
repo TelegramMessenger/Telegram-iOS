@@ -1,5 +1,7 @@
 #import <UIKit/UIKit.h>
 
+@class TGMediaAssetsPallete;
+
 @interface TGMediaPickerToolbarView : UIView
 
 @property (nonatomic, assign) UIEdgeInsets safeAreaInset;
@@ -15,6 +17,8 @@
 @property (nonatomic, copy) void (^leftPressed)(void);
 @property (nonatomic, copy) void (^rightPressed)(void);
 @property (nonatomic, copy) void (^centerPressed)(void);
+
+- (void)setPallete:(TGMediaAssetsPallete *)pallete;
 
 - (void)setRightButtonHidden:(bool)hidden;
 - (void)setRightButtonEnabled:(bool)enabled animated:(bool)animated;

@@ -2,6 +2,7 @@
 #import <LegacyComponents/TGVideoMessageScrubber.h>
 
 @class TGVideoMessageCaptureControllerAssets;
+@class TGModernConversationInputMicPallete;
 
 @interface TGVideoMessageControls : UIView
 
@@ -16,6 +17,8 @@
 @property (nonatomic, copy) bool(^isAlreadyLocked)(void);
 
 @property (nonatomic, assign) bool positionChangeAvailable;
+
+@property (nonatomic, strong) TGModernConversationInputMicPallete *pallete;
 
 @property (nonatomic, weak) id<TGVideoMessageScrubberDelegate, TGVideoMessageScrubberDataSource> parent;
 

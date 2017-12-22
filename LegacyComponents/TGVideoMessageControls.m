@@ -9,6 +9,7 @@
 #import "LegacyComponentsInternal.h"
 #import "TGColor.h"
 
+#import "TGModernConversationInputMicButton.h"
 #import "TGVideoMessageCaptureController.h"
 
 static void setViewFrame(UIView *view, CGRect frame)
@@ -74,6 +75,18 @@ static CGRect viewFrame(UIView *view)
     } completion:nil];
 }
 
+- (void)setPallete:(TGModernConversationInputMicPallete *)pallete
+{
+    _pallete = pallete;
+    if (_pallete == nil)
+        return;
+    
+    _recordIndicatorView.image = TGCircleImage(9.0f, pallete.recordingColor);
+    _recordDurationLabel.textColor = pallete.textColor;
+    _slideToCancelLabel.textColor = pallete.secondaryTextColor;
+    [_cancelButton setTitleColor:pallete.buttonColor];
+}
+
 - (void)setShowRecordingInterface:(bool)show velocity:(CGFloat)velocity
 {
     CGFloat hideLeftOffset = 400.0f;
@@ -92,7 +105,7 @@ static CGRect viewFrame(UIView *view)
             {
                 indicatorImage = TGCircleImage(9.0f, UIColorRGB(0xF33D2B));
             });
-            _recordIndicatorView = [[UIImageView alloc] initWithImage:indicatorImage];
+            _recordIndicatorView = [[UIImageView alloc] initWithImage:_pallete != nil ? TGCircleImage(9.0f, self.pallete.recordingColor) : indicatorImage];
         }
         
         setViewFrame(_recordIndicatorView, CGRectMake(11.0f, CGFloor((self.frame.size.height - 9.0f) / 2.0f), 9.0f, 9.0f));
@@ -102,7 +115,7 @@ static CGRect viewFrame(UIView *view)
         {
             _recordDurationLabel = [[UILabel alloc] init];
             _recordDurationLabel.backgroundColor = [UIColor clearColor];
-            _recordDurationLabel.textColor = [UIColor blackColor];
+            _recordDurationLabel.textColor = self.pallete != nil ? self.pallete.textColor : [UIColor blackColor];
             _recordDurationLabel.font = TGSystemFontOfSize(15.0f);
             _recordDurationLabel.text = @"0:00,00 ";
             [_recordDurationLabel sizeToFit];
@@ -120,7 +133,7 @@ static CGRect viewFrame(UIView *view)
         {
             _slideToCancelLabel = [[UILabel alloc] init];
             _slideToCancelLabel.backgroundColor = [UIColor clearColor];
-            _slideToCancelLabel.textColor = UIColorRGB(0x9597a0);
+            _slideToCancelLabel.textColor = self.pallete != nil ? self.pallete.secondaryTextColor : UIColorRGB(0x9597a0);
             _slideToCancelLabel.font = TGSystemFontOfSize(15.0f);
             _slideToCancelLabel.text = TGLocalized(@"Conversation.SlideToCancel");
             _slideToCancelLabel.clipsToBounds = false;
@@ -129,7 +142,7 @@ static CGRect viewFrame(UIView *view)
             setViewFrame(_slideToCancelLabel, CGRectMake(CGFloor((self.frame.size.width - _slideToCancelLabel.frame.size.width) / 2.0f), CGFloor((self.frame.size.height - _slideToCancelLabel.frame.size.height) / 2.0f), _slideToCancelLabel.frame.size.width, _slideToCancelLabel.frame.size.height));
             _slideToCancelLabel.alpha = 0.0f;
             
-            _slideToCancelArrow = [[UIImageView alloc] initWithImage:TGTintedImage(_assets.slideToCancelImage, UIColorRGB(0x9597a0))];
+            _slideToCancelArrow = [[UIImageView alloc] initWithImage:TGTintedImage(_assets.slideToCancelImage, self.pallete != nil ? self.pallete.secondaryTextColor : UIColorRGB(0x9597a0))];
             CGRect slideToCancelArrowFrame = viewFrame(_slideToCancelArrow);
             setViewFrame(_slideToCancelArrow, CGRectMake(CGFloor((self.frame.size.width - _slideToCancelLabel.frame.size.width) / 2.0f) - slideToCancelArrowFrame.size.width - 7.0f, CGFloor((self.frame.size.height - _slideToCancelLabel.frame.size.height) / 2.0f), slideToCancelArrowFrame.size.width, slideToCancelArrowFrame.size.height));
             _slideToCancelArrow.alpha = 0.0f;
@@ -141,7 +154,7 @@ static CGRect viewFrame(UIView *view)
             _cancelButton = [[TGModernButton alloc] init];
             _cancelButton.titleLabel.font = TGSystemFontOfSize(17.0f);
             [_cancelButton setTitle:TGLocalized(@"Common.Cancel") forState:UIControlStateNormal];
-            [_cancelButton setTitleColor:TGAccentColor()];
+            [_cancelButton setTitleColor:self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()];
             [_cancelButton addTarget:self action:@selector(cancelPressed) forControlEvents:UIControlEventTouchUpInside];
             [_cancelButton sizeToFit];
             [self addSubview:_cancelButton];
@@ -349,6 +362,7 @@ static CGRect viewFrame(UIView *view)
     [self addSubview:_sendButton];
     
     _scrubberView = [[TGVideoMessageScrubber alloc] init];
+    _scrubberView.pallete = self.pallete;
     _scrubberView.dataSource = self.parent;
     _scrubberView.delegate = self.parent;
     [self addSubview:_scrubberView];

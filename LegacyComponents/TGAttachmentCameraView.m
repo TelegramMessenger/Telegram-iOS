@@ -9,6 +9,8 @@
 #import <LegacyComponents/TGCameraPreviewView.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 
+#import <LegacyComponents/TGMenuSheetController.h>
+
 #import <AVFoundation/AVFoundation.h>
 
 @interface TGAttachmentCameraView ()
@@ -73,7 +75,7 @@
                 UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
                 CGContextRef context = UIGraphicsGetCurrentContext();
                 
-                CGContextSetFillColorWithColor(context, UIColorRGB(0x222f40).CGColor);
+                CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
                 CGContextFillRect(context, rect);
                 
                 CGContextSetBlendMode(context, kCGBlendModeClear);
@@ -115,6 +117,14 @@
         [self stopPreview];
     
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
+}
+
+- (void)setPallete:(TGMenuSheetPallete *)pallete
+{
+    _pallete = pallete;
+    
+    _zoomedView.backgroundColor = pallete.backgroundColor;
+    _cornersView.image = pallete.cornersImage;
 }
 
 - (void)setZoomedProgress:(CGFloat)progress

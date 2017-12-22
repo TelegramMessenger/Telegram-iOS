@@ -525,6 +525,7 @@
         _channelAdminRights = [coder decodeObjectForCKey:"car"];
         _channelBannedRights = [coder decodeObjectForCKey:"cbr"];
         _messageFlags = [coder decodeInt64ForCKey:"mf"];
+        _feedId = [coder decodeInt32ForCKey:"fi"];
     }
     return self;
 }
@@ -575,6 +576,7 @@
     [coder encodeObject:_channelAdminRights forCKey:"car"];
     [coder encodeObject:_channelBannedRights forCKey:"cbr"];
     [coder encodeInt64:_messageFlags forCKey:"mf"];
+    [coder encodeInt32:_feedId forCKey:"fi"];
 }
 
 - (id)copyWithZone:(NSZone *)__unused zone
@@ -643,6 +645,8 @@
     conversation->_channelBannedRights = _channelBannedRights;
     
     conversation->_messageFlags = _messageFlags;
+    
+    conversation->_feedId = _feedId;
     
     return conversation;
 }
@@ -1027,6 +1031,7 @@
     }
     self.channelAdminRights = conversation.channelAdminRights;
     self.channelBannedRights = conversation.channelBannedRights;
+    self.feedId = conversation.feedId;
 }
 
 - (void)mergeChannel:(TGConversation *)channel {
@@ -1048,6 +1053,9 @@
         self.restrictionReason = channel.restrictionReason;
         self.channelAdminRights = channel.channelAdminRights;
         self.channelBannedRights = channel.channelBannedRights;
+        
+        if (channel.flags & (1 << 18))
+            self.feedId = channel.feedId;
     }
     self.everybodyCanAddMembers = channel.everybodyCanAddMembers;
     _channelIsReadOnly = channel.channelIsReadOnly;

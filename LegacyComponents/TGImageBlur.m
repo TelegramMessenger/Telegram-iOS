@@ -1,6 +1,7 @@
 #import "TGImageBlur.h"
 
 #import "LegacyComponentsInternal.h"
+#import "LegacyComponentsGlobals.h"
 #import "TGImageUtils.h"
 
 #import <Accelerate/Accelerate.h>
@@ -428,7 +429,7 @@ typedef enum {
 
 static void addAttachmentImageCorners(void *memory, const unsigned int width, const unsigned int height, const unsigned int stride, int position, float fract)
 {
-    const int scale = (int)TGScreenScaling(); //TGIsRetina() ? 2 : 1;
+    const int scale = (int)TGScreenScaling();
     
     const int shadowSize = 1;
     const int strokeWidth = scale;
@@ -458,9 +459,20 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
     const int contextHeight = MAX(topLeftRadius, topRightRadius) + MAX(bottomLeftRadius, bottomRightRadius) + shadowSize * 2 + strokeWidth * 2;
     const int contextStride = (4 * contextWidth + 15) & (~15);
     
-    const uint32_t shadowColorRaw = 0x7f86a9c9;
-    const uint32_t shadowColorArgb = premultipliedPixel(shadowColorRaw & 0xffffff, ((shadowColorRaw >> 24) & 0xff) - 20);
-    static uint32_t strokeColorArgb = 0xffffffff;
+    uint32_t shadowColorRaw = 0x6b86a9c9;
+    uint32_t strokeColorArgb = 0xffffffff;
+    
+    TGImageBorderPallete *pallete = nil;
+    if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(imageBorderPallete)])
+        pallete = [[LegacyComponentsGlobals provider] imageBorderPallete];
+    
+    if (pallete != nil)
+    {
+        uint32_t strokeColorRaw = TGColorHexCodeWithAlpha(pallete.borderColor);
+        strokeColorArgb = premultipliedPixel(strokeColorRaw & 0xffffff, ((strokeColorRaw >> 24) & 0xff));
+        shadowColorRaw = TGColorHexCodeWithAlpha(pallete.shadowColor);
+    }
+    const uint32_t shadowColorArgb = premultipliedPixel(shadowColorRaw & 0xffffff, MAX(0, ((shadowColorRaw >> 24) & 0xff)));
     
     static uint8_t *defaultContextMemory = NULL;
     static uint8_t *defaultAlphaMemory = NULL;
@@ -1764,7 +1776,7 @@ UIImage *TGLoadedAttachmentImage(UIImage *source, CGSize size, uint32_t *average
 
 UIImage *TGLoadedAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, int cornerRadius, int inset, int position)
 {
-    CGFloat scale = TGScreenScaling(); //TGIsRetina() ? 2.0f : 1.0f;
+    CGFloat scale = TGScreenScaling();
     if (cornerRadius < 0)
         cornerRadius = 0;
     

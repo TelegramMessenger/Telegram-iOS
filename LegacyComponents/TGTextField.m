@@ -54,6 +54,16 @@
         _movedToWindow();
 }
 
+- (BOOL)becomeFirstResponder
+{
+    return [super becomeFirstResponder];
+}
+
+- (BOOL)resignFirstResponder
+{
+    return [super resignFirstResponder];
+}
+
 - (void)deleteBackward {
     bool notify = self.text.length == 0;
     [super deleteBackward];

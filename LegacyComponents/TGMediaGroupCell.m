@@ -11,6 +11,8 @@
 #import <LegacyComponents/TGMediaAssetMomentList.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 
+#import <LegacyComponents/TGMediaAssetsController.h>
+
 NSString *const TGMediaGroupCellKind = @"TGMediaGroupCellKind";
 const CGFloat TGMediaGroupCellHeight = 86.0f;
 
@@ -56,7 +58,6 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         self.selectedBackgroundView = [[UIView alloc] init];
         self.selectedBackgroundView.backgroundColor = TGSelectionColor();
         
-        static UIImage *borderImage = nil;
         static UIImage *shadowImage = nil;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^
@@ -87,16 +88,6 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
             CFRelease(gradient);
             
             shadowImage = UIGraphicsGetImageFromCurrentImageContext();
-            UIGraphicsEndImageContext();
-            
-            
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(1, 1), true, 0.0f);
-            context = UIGraphicsGetCurrentContext();
-            
-            CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
-            CGContextFillRect(context, CGRectMake(0, 0, 1, 1));
-            
-            borderImage = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
         });
         
@@ -159,6 +150,33 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         [self.contentView addSubview:disclosureIndicator];
     }
     return self;
+}
+
+- (void)setPallete:(TGMediaAssetsPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    self.selectedBackgroundView.backgroundColor = pallete.selectionColor;
+    
+    _nameLabel.backgroundColor = self.backgroundColor;
+    _countLabel.backgroundColor = self.backgroundColor;
+    
+    _nameLabel.textColor = pallete.textColor;
+    _countLabel.textColor = pallete.textColor;
+    
+    for (TGImageView *view in _imageViews)
+    {
+        view.backgroundColor = nil;
+    }
+    
+    for (UIView *view in _borderViews)
+    {
+        view.backgroundColor = self.backgroundColor;
+    }
 }
 
 - (void)_addBorderViewForImageView:(TGImageView *)imageView

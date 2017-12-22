@@ -8,7 +8,14 @@ typedef enum {
     TGMessageImageViewOverlayStyleOutgoing = 4
 } TGMessageImageViewOverlayStyle;
 
+@class TGPresentation;
+
 @interface TGMessageImageViewOverlayView : UIView
+
+@property (nonatomic, strong) UIColor *incomingColor;
+@property (nonatomic, strong) UIColor *outgoingColor;
+@property (nonatomic, strong) UIColor *incomingIconColor;
+@property (nonatomic, strong) UIColor *outgoingIconColor;
 
 @property (nonatomic, readonly) CGFloat progress;
 

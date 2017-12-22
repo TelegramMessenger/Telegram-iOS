@@ -1,5 +1,6 @@
 #import "TGLocationVenueCell.h"
 
+#import "TGLocationMapViewController.h"
 #import "LegacyComponentsInternal.h"
 #import "TGColor.h"
 #import "TGFont.h"
@@ -60,6 +61,21 @@ const CGFloat TGLocationVenueCellHeight = 56.0f;
     return self;
 }
 
+- (void)setPallete:(TGLocationPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    self.selectedBackgroundView.backgroundColor = pallete.selectionColor;
+    [self setCircleColor:pallete.sectionHeaderBackgroundColor];
+    _titleLabel.textColor = pallete.textColor;
+    _addressLabel.textColor = pallete.secondaryTextColor;
+    _separatorView.backgroundColor = pallete.separatorColor;
+}
+
 - (void)setCircleColor:(UIColor *)color
 {
     UIImage *circleImage = [TGLocationVenueCell circleImage];
@@ -78,11 +94,15 @@ const CGFloat TGLocationVenueCellHeight = 56.0f;
     _addressLabel.text = venue.displayAddress;
     if (venue.categoryIconUrl != nil)
     {
-        [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", venue.categoryName, 48, 48, 0xa0a0a0] withOptions:nil];
+        [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", venue.categoryName, 48, 48, TGColorHexCode(_pallete != nil ? _pallete.sectionHeaderTextColor : UIColorRGB(0xa0a0a0))] withOptions:nil];
     }
     else
     {
-        UIImage *pinImage = TGTintedImage(TGComponentsImageNamed(@"LocationMessagePinIcon"), UIColorRGB(0xa0a0a0));
+        UIImage *pinImage = TGComponentsImageNamed(@"LocationMessagePinIcon");
+        if (self.pallete != nil)
+            pinImage = TGTintedImage(pinImage, self.pallete.sectionHeaderTextColor);
+        else
+            pinImage = TGTintedImage(pinImage, UIColorRGB(0xa0a0a0));
         [_iconView loadUri:@"embedded://" withOptions:@{ TGImageViewOptionEmbeddedImage:pinImage }];
     }
 }

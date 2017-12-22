@@ -7,6 +7,7 @@
 #import "TGImageUtils.h"
 
 #import "TGLetteredAvatarView.h"
+#import "TGModernConversationAssociatedInputPanel.h"
 
 NSString *const TGMentionPanelCellKind = @"TGMentionPanelCell";
 
@@ -80,6 +81,21 @@ NSString *const TGMentionPanelCellKind = @"TGMentionPanelCell";
     return self;
 }
 
+- (void)setPallete:(TGConversationAssociatedInputPanelPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    _nameLabel.textColor = pallete.textColor;
+    _usernameLabel.textColor = pallete.textColor;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    self.backgroundView.backgroundColor = self.backgroundColor;
+    self.selectedBackgroundView.backgroundColor = pallete.selectionColor;
+}
+
 - (void)setUser:(TGUser *)user
 {
     _user = user;
@@ -91,7 +107,7 @@ NSString *const TGMentionPanelCellKind = @"TGMentionPanelCell";
     
     CGFloat diameter = 32.0f;
     
-    static UIImage *placeholder = nil;
+    static UIImage *staticPlaceholder = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
     {
@@ -105,10 +121,14 @@ NSString *const TGMentionPanelCellKind = @"TGMentionPanelCell";
         CGContextSetLineWidth(context, 1.0f);
         CGContextStrokeEllipseInRect(context, CGRectMake(0.5f, 0.5f, diameter - 1.0f, diameter - 1.0f));
         
-        placeholder = UIGraphicsGetImageFromCurrentImageContext();
+        staticPlaceholder = UIGraphicsGetImageFromCurrentImageContext();
         UIGraphicsEndImageContext();
     });
     
+    UIImage *placeholder = staticPlaceholder;
+    if (self.pallete != nil)
+        placeholder = self.pallete.avatarPlaceholder;
+        
     if (avatarUrl.length != 0)
     {
         _avatarView.fadeTransitionDuration = 0.3;

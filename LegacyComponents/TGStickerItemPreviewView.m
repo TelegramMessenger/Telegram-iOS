@@ -1,6 +1,8 @@
 #import "TGStickerItemPreviewView.h"
 
+#import "TGMenuSheetController.h"
 #import "LegacyComponentsInternal.h"
+#import "LegacyComponentsGlobals.h"
 
 #import "TGStickerPack.h"
 #import "TGStickerAssociation.h"
@@ -32,7 +34,11 @@ static const CGFloat TGStickersTopMargin = 140.0f;
     
         [self insertSubview:self.dimView belowSubview:self.wrapperView];
         
-        self.dimView.backgroundColor = [UIColor colorWithWhite:1.0f alpha:0.7f];
+        bool isDark = false;
+        if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(menuSheetPallete)])
+            isDark = [[LegacyComponentsGlobals provider] menuSheetPallete].isDark;
+        
+        self.dimView.backgroundColor = [UIColor colorWithWhite:isDark ? 0.0f : 1.0f alpha:0.7f];
         
         _altWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 40.0f)];
         [self.wrapperView addSubview:_altWrapperView];

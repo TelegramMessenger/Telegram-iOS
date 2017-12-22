@@ -806,7 +806,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (CGFloat)_currentStatusBarHeight
 {
-    if (_context.safeAreaInset.top > FLT_EPSILON)
+    if (_context.safeAreaInset.top > 20.0f)
         return _context.safeAreaInset.top;
     
     CGRect statusBarFrame = [[LegacyComponentsGlobals provider] statusBarFrame];
@@ -1330,6 +1330,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     if (targetNavigationItem != nil && updated)
     {
         [[self _currentNavigationItem] setLeftBarButtonItem:_leftBarButtonItem animated:false];
+        [self _setRightBarButtonItem:_rightBarButtonItem animated:false];
         [[self _currentNavigationItem] setRightBarButtonItem:_rightBarButtonItem animated:false];
         [[self _currentNavigationItem] setTitle:_titleText];
         [[self _currentTitleController] setTitle:_titleText];
@@ -1366,7 +1367,25 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 - (void)setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem animated:(BOOL)animated
 {
     _rightBarButtonItem = rightBarButtonItem;
-    [[self _currentNavigationItem] setRightBarButtonItem:rightBarButtonItem animated:animated];
+    
+    [self _setRightBarButtonItem:rightBarButtonItem animated:animated];
+}
+
+- (void)_setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem animated:(BOOL)animated
+{
+    if (iosMajorVersion() >= 11 && rightBarButtonItem.customView != nil)
+    {
+        UIBarButtonItem *spacer = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
+        spacer.width = 8.0f;
+        [[self _currentNavigationItem] setRightBarButtonItem:nil animated:false];
+        [[self _currentNavigationItem] setRightBarButtonItems:@[spacer, rightBarButtonItem] animated:animated];
+    }
+    else
+    {
+        if (iosMajorVersion() >= 11)
+            [[self _currentNavigationItem] setRightBarButtonItems:nil animated:false];
+        [[self _currentNavigationItem] setRightBarButtonItem:rightBarButtonItem animated:animated];
+    }
 }
 
 - (void)setTitleText:(NSString *)titleText

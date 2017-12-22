@@ -111,6 +111,19 @@
     [_disposable dispose];
 }
 
+- (void)setPallete:(TGConversationAssociatedInputPanelPallete *)pallete
+{
+    [super setPallete:pallete];
+    if (self.pallete == nil)
+        return;
+    
+    self.backgroundColor = pallete.backgroundColor;
+    _bottomView.backgroundColor = pallete.barBackgroundColor;
+    _tableView.separatorColor = pallete.separatorColor;
+    _stripeView.backgroundColor = pallete.barSeparatorColor;
+    _separatorView.backgroundColor = pallete.barSeparatorColor;
+}
+
 - (void)setFrame:(CGRect)frame
 {
     [super setFrame:frame];
@@ -165,6 +178,7 @@
     TGHashtagPanelCell *cell = (TGHashtagPanelCell *)[tableView dequeueReusableCellWithIdentifier:TGHashtagPanelCellKind];
     if (cell == nil)
         cell = [[TGHashtagPanelCell alloc] initWithStyle:self.style];
+    cell.pallete = self.pallete;
     
     [cell setHashtag:_hashtagList[indexPath.row]];
     

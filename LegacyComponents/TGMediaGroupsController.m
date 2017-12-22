@@ -48,12 +48,14 @@
 {
     [super loadView];
     
+    self.view.backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];
+    
     _tableView = [[UITableView alloc] initWithFrame:self.view.bounds];
     if (iosMajorVersion() >= 11)
         _tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     _tableView.alwaysBounceVertical = true;
     _tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    _tableView.backgroundColor = [UIColor whiteColor];
+    _tableView.backgroundColor = self.view.backgroundColor;
     _tableView.delaysContentTouches = true;
     _tableView.canCancelContentTouches = true;
     _tableView.delegate = self;
@@ -167,6 +169,7 @@
     TGMediaGroupCell *cell = [tableView dequeueReusableCellWithIdentifier:TGMediaGroupCellKind];
     if (cell == nil)
         cell = [[TGMediaGroupCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:TGMediaGroupCellKind];
+    cell.pallete = self.pallete;
     
     id group = _groups[indexPath.row];
     

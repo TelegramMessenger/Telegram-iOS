@@ -1,5 +1,6 @@
 #import "TGLocationSectionHeaderCell.h"
 
+#import "TGLocationMapViewController.h"
 #import "LegacyComponentsInternal.h"
 #import "TGFont.h"
 
@@ -29,6 +30,18 @@ const CGFloat TGLocationSectionHeaderHeight = 29.0f;
         [self addSubview:_titleLabel];
     }
     return self;
+}
+
+- (void)setPallete:(TGLocationPallete *)pallete
+{
+    if (pallete == nil || _pallete == pallete)
+        return;
+    
+    _pallete = pallete;
+    
+    self.backgroundColor = pallete.sectionHeaderBackgroundColor;
+    _titleLabel.backgroundColor = self.backgroundColor;
+    _titleLabel.textColor = pallete.sectionHeaderTextColor;
 }
 
 - (void)configureWithTitle:(NSString *)title
