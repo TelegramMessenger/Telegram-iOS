@@ -127,6 +127,8 @@ extern NSInteger const ASDefaultDrawingPriority;
 + (void)drawRect:(CGRect)bounds withParameters:(nullable id)parameters
      isCancelled:(AS_NOESCAPE asdisplaynode_iscancelled_block_t)isCancelledBlock
    isRasterizing:(BOOL)isRasterizing;
++ (nullable UIImage *)displayWithParameters:(nullable id)parameters
+                                isCancelled:(AS_NOESCAPE asdisplaynode_iscancelled_block_t)isCancelledBlock;
 
 /** @name Initializing a node object */
 
