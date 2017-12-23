@@ -16,6 +16,7 @@
 @class TGMenuSheetPallete;
 @class TGMediaAssetsPallete;
 @class TGImageBorderPallete;
+@class TGCheckButtonPallete;
 
 typedef enum {
     TGAudioSessionTypePlayVoice,
@@ -88,6 +89,7 @@ typedef enum {
 - (TGMenuSheetPallete *)menuSheetPallete;
 - (TGMediaAssetsPallete *)mediaAssetsPallete;
 - (TGImageBorderPallete *)imageBorderPallete;
+- (TGCheckButtonPallete *)checkButtonPallete;
 
 @end
 

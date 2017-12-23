@@ -215,8 +215,7 @@ const CGFloat maxDiameter = 4.5f;
         }
         case TGModernConversationTitleActivityIndicatorTypeAudioRecording:
         {
-            CGFloat color[4] = {0.0f, 123.0f / 255.0f, 1.0f, 1.0f};
-            CGContextSetStrokeColor(context, color);
+            CGContextSetStrokeColorWithColor(context, _color.CGColor);
             CGContextSetLineCap(context, kCGLineCapRound);
             
             CGContextSetLineWidth(context, 2);
@@ -265,9 +264,7 @@ const CGFloat maxDiameter = 4.5f;
         }
         case TGModernConversationTitleActivityIndicatorTypeVideoRecording:
         {
-            UIColor *mainColor = [UIColor colorWithRed:0.0f green:123.0f / 255.0f blue:255.0f / 255.0f alpha:1.0f];
-            
-            CGContextSetFillColorWithColor(context, mainColor.CGColor);
+            CGContextSetFillColorWithColor(context, _color.CGColor);
             
             CGFloat animValue = _animationValue;
             if (animValue < 0.5f)

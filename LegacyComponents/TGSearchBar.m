@@ -322,6 +322,8 @@
     _prefixLabel.textColor = pallete.placeholderColor;
     _placeholderLabel.textColor = pallete.placeholderColor;
     
+    _customTextField.keyboardAppearance = _style == TGSearchBarStyleDark || _pallete.isDark ? UIKeyboardAppearanceAlert : UIKeyboardAppearanceDefault;
+    
     _customSearchIcon.image = [TGSearchBar searchBarIcon:pallete.placeholderColor];
     [_customClearButton setBackgroundImage:_pallete.clearIcon forState:UIControlStateNormal];
     

@@ -93,6 +93,12 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
     }
 }
 
+- (void)setIncomingColor:(UIColor *)incomingColor
+{
+    _incomingColor = incomingColor;
+    [self setNeedsDisplay];
+}
+
 - (void)setNone
 {
     _type = TGMessageImageViewOverlayViewTypeNone;
