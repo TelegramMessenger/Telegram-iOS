@@ -1069,16 +1069,19 @@ CGSize TGNativeScreenSize()
 uint32_t TGColorHexCode(UIColor *color)
 {
     CGFloat red, green, blue, alpha;
-    if ([color getRed:&red green:&green blue:&blue alpha:&alpha])
-    {
-        uint32_t redInt = (uint32_t)(red * 255 + 0.5);
-        uint32_t greenInt = (uint32_t)(green * 255 + 0.5);
-        uint32_t blueInt = (uint32_t)(blue * 255 + 0.5);
-        
-        return (redInt << 16) | (greenInt << 8) | blueInt;
+    if (![color getRed:&red green:&green blue:&blue alpha:&alpha]) {
+        if (![color getWhite:&red alpha:&alpha]) {
+            return 0;
+        }
+        green = red;
+        blue = red;
     }
     
-    return 0;
+    uint32_t redInt = (uint32_t)(red * 255 + 0.5);
+    uint32_t greenInt = (uint32_t)(green * 255 + 0.5);
+    uint32_t blueInt = (uint32_t)(blue * 255 + 0.5);
+    
+    return (redInt << 16) | (greenInt << 8) | blueInt;
 }
 
 uint32_t TGColorHexCodeWithAlpha(UIColor *color)
