@@ -2361,6 +2361,8 @@ NSArray *TGBlurredBackgroundImages(UIImage *source, CGSize sourceSize)
     fastBlurMore(targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow, targetMemory);
     
     brightenImage(targetMemory, targetContextSize.width, targetContextSize.height, (int)targetBytesPerRow);
+    CGContextSetFillColorWithColor(targetContext, [UIColor colorWithWhite:1.0f alpha:0.15f].CGColor);
+    CGContextFillRect(targetContext, CGRectMake(0.0f, 0.0f, targetContextSize.width, targetContextSize.height));
     CGImageRef bitmapImage = CGBitmapContextCreateImage(targetContext);
     UIImage *foregroundImage = [[UIImage alloc] initWithCGImage:bitmapImage];
     CGImageRelease(bitmapImage);

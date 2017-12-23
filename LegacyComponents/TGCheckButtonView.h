@@ -7,12 +7,13 @@ typedef enum
     TGCheckButtonStyleBar,
     TGCheckButtonStyleMedia,
     TGCheckButtonStyleGallery,
-    TGCheckButtonStyleShare
+    TGCheckButtonStyleShare,
+    TGCheckButtonStyleChat
 } TGCheckButtonStyle;
 
 @interface TGCheckButtonPallete : NSObject
 
-@property (nonatomic, readonly) UIImage *defaultBackgroundColor;
+@property (nonatomic, readonly) UIColor *defaultBackgroundColor;
 @property (nonatomic, readonly) UIColor *accentBackgroundColor;
 @property (nonatomic, readonly) UIColor *defaultBorderColor;
 @property (nonatomic, readonly) UIColor *mediaBorderColor;

@@ -96,6 +96,7 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
                 break;
                 
             case TGCheckButtonStyleMedia:
+            case TGCheckButtonStyleChat:
             {
                 insideInset = 4.0f;
                 borderOnTop = true;
@@ -147,6 +148,7 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
                     break;
                     
                 case TGCheckButtonStyleMedia:
+                case TGCheckButtonStyleChat:
                 {
                     CGRect rect = CGRectMake(0, 0, size.width, size.height);
                     UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
@@ -210,6 +212,7 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
             switch (style)
             {
                 case TGCheckButtonStyleShare:
+                case TGCheckButtonStyleChat:
                 {
                     CGRect rect = CGRectMake(0, 0, size.width, size.height);
                     UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
