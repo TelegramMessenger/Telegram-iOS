@@ -112,7 +112,7 @@
 
 #pragma mark - ASCollectionGalleryLayoutPropertiesProviding
 
-- (CGSize)sizeForElements:(ASElementMap *)elements
+- (CGSize)galleryLayoutDelegate:(ASCollectionGalleryLayoutDelegate *)delegate sizeForElements:(ASElementMap *)elements
 {
   ASDisplayNodeAssertMainThread();
   return CGSizeMake(180, 90);

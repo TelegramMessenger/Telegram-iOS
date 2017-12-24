@@ -20,10 +20,13 @@
 
 #import <FBSnapshotTestCase/FBSnapshotTestController.h>
 
-#import <AsyncDisplayKit/ASTextKitEntityAttribute.h>
 #import <AsyncDisplayKit/ASTextKitAttributes.h>
+#import <AsyncDisplayKit/ASTextKitComponents.h>
+#import <AsyncDisplayKit/ASTextKitEntityAttribute.h>
 #import <AsyncDisplayKit/ASTextKitRenderer.h>
 #import <AsyncDisplayKit/ASTextKitRenderer+Positioning.h>
+
+#import <AsyncDisplayKit/ASInternalHelpers.h>
 
 @interface ASTextKitTests : XCTestCase
 
@@ -199,6 +202,30 @@ static BOOL checkAttributes(const ASTextKitAttributes &attributes, const CGSize 
    }
    constrainedSize:{ 100, 100 }];
   XCTAssert([renderer rectsForTextRange:NSMakeRange(0, attributedString.length) measureOption:ASTextKitRendererMeasureOptionBlock].count > 0);
+}
+
+- (void)testTextKitComponentsCanCalculateSizeInBackground
+{
+  NSAttributedString *attributedString =
+  [[NSAttributedString alloc]
+   initWithString:@"90's cray photo booth tote bag bespoke Carles. Plaid wayfarers Odd Future master cleanse tattooed four dollar toast small batch kale chips leggings meh photo booth occupy irony.  " attributes:@{ASTextKitEntityAttributeName : [[ASTextKitEntityAttribute alloc] initWithEntity:@"entity"]}];
+  ASTextKitComponents *components = [ASTextKitComponents componentsWithAttributedSeedString:attributedString textContainerSize:CGSizeZero];
+  components.textView = [[ASTextKitComponentsTextView alloc] initWithFrame:CGRectZero textContainer:components.textContainer];
+  components.textView.frame = CGRectMake(0, 0, 20, 1000);
+
+  XCTestExpectation *expectation = [self expectationWithDescription:@"Components deallocated in background"];
+  
+  ASPerformBlockOnBackgroundThread(^{
+    // Use an autorelease pool here to ensure temporary components are (and can be) released in background
+    @autoreleasepool {
+      [components sizeForConstrainedWidth:100];
+      [components sizeForConstrainedWidth:50 forMaxNumberOfLines:5];
+    }
+
+    [expectation fulfill];
+  });
+
+  [self waitForExpectationsWithTimeout:1 handler:nil];
 }
 
 @end

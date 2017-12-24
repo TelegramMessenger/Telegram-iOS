@@ -50,7 +50,7 @@ typedef NSMutableDictionary<NSString *, NSMutableDictionary<NSIndexPath *, ASCol
   return [[ASElementMap alloc] initWithSections:_sections items:_sectionsOfItems supplementaryElements:_supplementaryElements];
 }
 
-- (void)removeAllSectionContexts
+- (void)removeAllSections
 {
   [_sections removeAllObjects];
 }
@@ -65,7 +65,7 @@ typedef NSMutableDictionary<NSString *, NSMutableDictionary<NSIndexPath *, ASCol
   ASDeleteElementsInTwoDimensionalArrayAtIndexPaths(_sectionsOfItems, indexPaths);
 }
 
-- (void)removeSectionContextsAtIndexes:(NSIndexSet *)indexes
+- (void)removeSectionsAtIndexes:(NSIndexSet *)indexes
 {
   [_sections removeObjectsAtIndexes:indexes];
 }

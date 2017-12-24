@@ -23,6 +23,8 @@
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASSignpost.h>
+#import <AsyncDisplayKit/ASDisplayNodeExtras.h>
+
 
 @interface ASDrawingContext : NSObject
 
@@ -318,6 +320,8 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
                                                                     isCancelledBlock:(asdisplaynode_iscancelled_block_t)isCancelledBlock
                                                                          rasterizing:(BOOL)rasterizing
 {
+  ASDisplayNodeAssertMainThread();
+
   asyncdisplaykit_async_transaction_operation_block_t displayBlock = nil;
   ASDisplayNodeFlags flags;
   
@@ -339,6 +343,9 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
   
   BOOL opaque = self.opaque;
   CGRect bounds = self.bounds;
+  UIColor *backgroundColor = self.backgroundColor;
+  CGColorRef borderColor = self.borderColor;
+  CGFloat borderWidth = self.borderWidth;
   CGFloat contentsScaleForDisplay = _contentsScaleForDisplay;
     
   __instanceLock__.unlock();
@@ -363,7 +370,7 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
     
     // If [UIColor clearColor] or another semitransparent background color is used, include alpha channel when rasterizing.
     // Unlike CALayer drawing, we include the backgroundColor as a base during rasterization.
-    opaque = opaque && CGColorGetAlpha(self.backgroundColor.CGColor) == 1.0f;
+    opaque = opaque && CGColorGetAlpha(backgroundColor.CGColor) == 1.0f;
 
     displayBlock = ^id{
       CHECK_CANCELLED_AND_RETURN_NIL();
@@ -406,22 +413,10 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
 
       CGContextRef currentContext = UIGraphicsGetCurrentContext();
       UIImage *image = nil;
-        
-      ASDisplayNodeContextModifier willDisplayNodeContentWithRenderingContext = nil;
-      ASDisplayNodeContextModifier didDisplayNodeContentWithRenderingContext = nil;
-      if (currentContext) {
-        __instanceLock__.lock();
-        willDisplayNodeContentWithRenderingContext = _willDisplayNodeContentWithRenderingContext;
-        didDisplayNodeContentWithRenderingContext = _didDisplayNodeContentWithRenderingContext;
-        __instanceLock__.unlock();
-      }
-        
-
+      
       // For -display methods, we don't have a context, and thus will not call the _willDisplayNodeContentWithRenderingContext or
       // _didDisplayNodeContentWithRenderingContext blocks. It's up to the implementation of -display... to do what it needs.
-      if (willDisplayNodeContentWithRenderingContext != nil) {
-        willDisplayNodeContentWithRenderingContext(currentContext, drawParameters);
-      }
+      [self __willDisplayNodeContentWithRenderingContext:currentContext drawParameters:drawParameters];
       
       if (usesImageDisplay) {                                   // If we are using a display method, we'll get an image back directly.
         image = [self.class displayWithParameters:drawParameters isCancelled:isCancelledBlock];
@@ -429,9 +424,7 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
         [self.class drawRect:bounds withParameters:drawParameters isCancelled:isCancelledBlock isRasterizing:rasterizing];
       }
       
-      if (didDisplayNodeContentWithRenderingContext != nil) {
-        didDisplayNodeContentWithRenderingContext(currentContext, drawParameters);
-      }
+      [self __didDisplayNodeContentWithRenderingContext:currentContext image:&image drawParameters:drawParameters backgroundColor:backgroundColor borderWidth:borderWidth borderColor:borderColor];
       
       if (shouldCreateGraphicsContext) {
         CHECK_CANCELLED_AND_RETURN_NIL( [context popCurrent]; );
@@ -465,6 +458,91 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
   return displayBlock;
 }
 
+- (void)__willDisplayNodeContentWithRenderingContext:(CGContextRef)context drawParameters:(id _Nullable)drawParameters
+{
+  if (context) {
+    __instanceLock__.lock();
+      ASCornerRoundingType cornerRoundingType = _cornerRoundingType;
+      CGFloat cornerRadius = _cornerRadius;
+      ASDisplayNodeContextModifier willDisplayNodeContentWithRenderingContext = _willDisplayNodeContentWithRenderingContext;
+    __instanceLock__.unlock();
+
+    if (cornerRoundingType == ASCornerRoundingTypePrecomposited && cornerRadius > 0.0) {
+      ASDisplayNodeAssert(context == UIGraphicsGetCurrentContext(), @"context is expected to be pushed on UIGraphics stack %@", self);
+      // TODO: This clip path should be removed if we are rasterizing.
+      CGRect boundingBox = CGContextGetClipBoundingBox(context);
+      [[UIBezierPath bezierPathWithRoundedRect:boundingBox cornerRadius:cornerRadius] addClip];
+    }
+    
+    if (willDisplayNodeContentWithRenderingContext) {
+      willDisplayNodeContentWithRenderingContext(context, drawParameters);
+    }
+  }
+
+}
+- (void)__didDisplayNodeContentWithRenderingContext:(CGContextRef)context image:(UIImage **)image drawParameters:(id _Nullable)drawParameters backgroundColor:(UIColor *)backgroundColor borderWidth:(CGFloat)borderWidth borderColor:(CGColorRef)borderColor
+{
+  if (context == NULL && *image == NULL) {
+    return;
+  }
+  
+  __instanceLock__.lock();
+    ASCornerRoundingType cornerRoundingType = _cornerRoundingType;
+    CGFloat cornerRadius = _cornerRadius;
+    CGFloat contentsScale = _contentsScaleForDisplay;
+    ASDisplayNodeContextModifier didDisplayNodeContentWithRenderingContext = _didDisplayNodeContentWithRenderingContext;
+  __instanceLock__.unlock();
+  
+  if (context != NULL) {
+    if (didDisplayNodeContentWithRenderingContext) {
+      didDisplayNodeContentWithRenderingContext(context, drawParameters);
+    }
+  }
+
+  if (cornerRoundingType == ASCornerRoundingTypePrecomposited && cornerRadius > 0.0f) {
+    CGRect bounds = CGRectZero;
+    if (context == NULL) {
+      bounds = self.threadSafeBounds;
+      bounds.size.width *= contentsScale;
+      bounds.size.height *= contentsScale;
+      CGFloat white = 0.0f, alpha = 0.0f;
+      [backgroundColor getWhite:&white alpha:&alpha];
+      UIGraphicsBeginImageContextWithOptions(bounds.size, (alpha == 1.0f), contentsScale);
+      [*image drawInRect:bounds];
+    } else {
+      bounds = CGContextGetClipBoundingBox(context);
+    }
+    
+    ASDisplayNodeAssert(UIGraphicsGetCurrentContext(), @"context is expected to be pushed on UIGraphics stack %@", self);
+    
+    UIBezierPath *roundedHole = [UIBezierPath bezierPathWithRect:bounds];
+    [roundedHole appendPath:[UIBezierPath bezierPathWithRoundedRect:bounds cornerRadius:cornerRadius * contentsScale]];
+    roundedHole.usesEvenOddFillRule = YES;
+    
+    UIBezierPath *roundedPath = nil;
+    if (borderWidth > 0.0f) {  // Don't create roundedPath and stroke if borderWidth is 0.0
+      CGFloat strokeThickness = borderWidth * contentsScale;
+      CGFloat strokeInset = ((strokeThickness + 1.0f) / 2.0f) - 1.0f;
+      roundedPath = [UIBezierPath bezierPathWithRoundedRect:CGRectInset(bounds, strokeInset, strokeInset)
+                                               cornerRadius:_cornerRadius * contentsScale];
+      roundedPath.lineWidth = strokeThickness;
+      [[UIColor colorWithCGColor:borderColor] setStroke];
+    }
+    
+    // Punch out the corners by copying the backgroundColor over them.
+    // This works for everything from clearColor to opaque colors.
+    [backgroundColor setFill];
+    [roundedHole fillWithBlendMode:kCGBlendModeCopy alpha:1.0f];
+    
+    [roundedPath stroke];  // Won't do anything if borderWidth is 0 and roundedPath is nil.
+    
+    if (*image) {
+      *image = UIGraphicsGetImageFromCurrentImageContext();
+      UIGraphicsEndImageContext();
+    }
+  }
+}
+
 - (void)displayAsyncLayer:(_ASDisplayLayer *)asyncLayer asynchronously:(BOOL)asynchronously
 {
   ASDisplayNodeAssertMainThread();
@@ -477,6 +555,7 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
   }
   
   CALayer *layer = _layer;
+  BOOL rasterizesSubtree = _flags.rasterizesSubtree;
   
   __instanceLock__.unlock();
 
@@ -507,7 +586,7 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
     return;
   }
   
-  ASDisplayNodeAssert(_layer, @"Expect _layer to be not nil");
+  ASDisplayNodeAssert(layer, @"Expect _layer to be not nil");
 
   // This block is called back on the main thread after rendering at the completion of the current async transaction, or immediately if !asynchronously
   asyncdisplaykit_async_transaction_operation_completion_block_t completionBlock = ^(id<NSObject> value, BOOL canceled){
@@ -522,11 +601,23 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
         layer.contents = (id)image.CGImage;
       }
       [self didDisplayAsyncLayer:self.asyncLayer];
+      
+      if (rasterizesSubtree) {
+        ASDisplayNodePerformBlockOnEverySubnode(self, NO, ^(ASDisplayNode * _Nonnull node) {
+          [node didDisplayAsyncLayer:node.asyncLayer];
+        });
+      }
     }
   };
 
   // Call willDisplay immediately in either case
   [self willDisplayAsyncLayer:self.asyncLayer asynchronously:asynchronously];
+  
+  if (rasterizesSubtree) {
+    ASDisplayNodePerformBlockOnEverySubnode(self, NO, ^(ASDisplayNode * _Nonnull node) {
+      [node willDisplayAsyncLayer:node.asyncLayer asynchronously:asynchronously];
+    });
+  }
 
   if (asynchronously) {
     // Async rendering operations are contained by a transaction, which allows them to proceed and concurrently

@@ -60,7 +60,7 @@ IMP ASReplaceMethodWithBlock(Class c, SEL origSEL, id block)
   }
 }
 
-void ASPerformBlockOnMainThread(void (^block)())
+void ASPerformBlockOnMainThread(void (^block)(void))
 {
   if (block == nil){
     return;
@@ -72,7 +72,7 @@ void ASPerformBlockOnMainThread(void (^block)())
   }
 }
 
-void ASPerformBlockOnBackgroundThread(void (^block)())
+void ASPerformBlockOnBackgroundThread(void (^block)(void))
 {
   if (block == nil){
     return;
@@ -84,13 +84,14 @@ void ASPerformBlockOnBackgroundThread(void (^block)())
   }
 }
 
-void ASPerformBackgroundDeallocation(id object)
+void ASPerformBackgroundDeallocation(id __strong _Nullable * _Nonnull object)
 {
   [[ASDeallocQueue sharedDeallocationQueue] releaseObjectInBackground:object];
 }
 
 BOOL ASClassRequiresMainThreadDeallocation(Class c)
 {
+  // Specific classes
   if (c == [UIImage class] || c == [UIColor class]) {
     return NO;
   }
@@ -101,8 +102,14 @@ BOOL ASClassRequiresMainThreadDeallocation(Class c)
     return YES;
   }
 
+  // Apple classes with prefix
   const char *name = class_getName(c);
   if (strncmp(name, "UI", 2) == 0 || strncmp(name, "AV", 2) == 0 || strncmp(name, "CA", 2) == 0) {
+    return YES;
+  }
+  
+  // Specific Texture classes
+  if (strncmp(name, "ASTextKitComponents", 19) == 0) {
     return YES;
   }
 
@@ -113,14 +120,14 @@ Class _Nullable ASGetClassFromType(const char  * _Nullable type)
 {
   // Class types all start with @"
   if (type == NULL || strncmp(type, "@\"", 2) != 0) {
-    return nil;
+    return Nil;
   }
 
   // Ensure length >= 3
   size_t typeLength = strlen(type);
   if (typeLength < 3) {
     ASDisplayNodeCFailAssert(@"Got invalid type-encoding: %s", type);
-    return nil;
+    return Nil;
   }
 
   // Copy type[2..(end-1)]. So @"UIImage" -> UIImage

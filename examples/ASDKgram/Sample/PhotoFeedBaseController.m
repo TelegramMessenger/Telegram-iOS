@@ -59,7 +59,7 @@
     
     [_activityIndicatorView stopAnimating];
     
-    [self insertNewRows:newPhotos];
+    [self.tableView reloadData];
     [self requestCommentsForPhotos:newPhotos];
     
     // immediately start second larger fetch
@@ -74,7 +74,8 @@
   NSMutableArray *indexPaths = [NSMutableArray array];
   
   NSInteger newTotalNumberOfPhotos = [_photoFeed numberOfItemsInFeed];
-  for (NSInteger row = newTotalNumberOfPhotos - newPhotos.count; row < newTotalNumberOfPhotos; row++) {
+  NSInteger existingNumberOfPhotos = newTotalNumberOfPhotos - newPhotos.count;
+  for (NSInteger row = existingNumberOfPhotos; row < newTotalNumberOfPhotos; row++) {
     NSIndexPath *path = [NSIndexPath indexPathForRow:row inSection:section];
     [indexPaths addObject:path];
   }

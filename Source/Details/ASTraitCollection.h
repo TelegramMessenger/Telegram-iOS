@@ -42,7 +42,7 @@ typedef struct ASPrimitiveTraitCollection {
 /**
  * Creates ASPrimitiveTraitCollection with default values.
  */
-extern ASPrimitiveTraitCollection ASPrimitiveTraitCollectionMakeDefault();
+extern ASPrimitiveTraitCollection ASPrimitiveTraitCollectionMakeDefault(void);
 
 /**
  * Creates a ASPrimitiveTraitCollection from a given UITraitCollection.
@@ -66,10 +66,6 @@ extern NSString *NSStringFromASPrimitiveTraitCollection(ASPrimitiveTraitCollecti
  */
 extern void ASTraitCollectionPropagateDown(id<ASLayoutElement> element, ASPrimitiveTraitCollection traitCollection);
 
-/// For backward compatibility reasons we redefine the old layout element trait collection struct name
-#define ASEnvironmentTraitCollection ASPrimitiveTraitCollection
-#define ASEnvironmentTraitCollectionMakeDefault ASPrimitiveTraitCollectionMakeDefault
-
 ASDISPLAYNODE_EXTERN_C_END
 
 /**
@@ -92,13 +88,6 @@ ASDISPLAYNODE_EXTERN_C_END
  */
 - (ASTraitCollection *)asyncTraitCollection;
 
-/**
- * Deprecated and should be replaced by the methods from above
- */
-- (ASEnvironmentTraitCollection)environmentTraitCollection;
-- (void)setEnvironmentTraitCollection:(ASEnvironmentTraitCollection)traitCollection;
-
-
 @end
 
 #define ASPrimitiveTraitCollectionDefaults \
@@ -109,16 +98,6 @@ ASDISPLAYNODE_EXTERN_C_END
 - (void)setPrimitiveTraitCollection:(ASPrimitiveTraitCollection)traitCollection\
 {\
   _primitiveTraitCollection = traitCollection;\
-}\
-
-#define ASPrimitiveTraitCollectionDeprecatedImplementation \
-- (ASEnvironmentTraitCollection)environmentTraitCollection\
-{\
-  return self.primitiveTraitCollection;\
-}\
-- (void)setEnvironmentTraitCollection:(ASEnvironmentTraitCollection)traitCollection\
-{\
-  [self setPrimitiveTraitCollection:traitCollection];\
 }\
 
 #define ASLayoutElementCollectionTableSetTraitCollection(lock) \

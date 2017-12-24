@@ -15,9 +15,11 @@
 #if YOGA /* YOGA */
 
 #import <AsyncDisplayKit/ASLayout.h>
+#import <AsyncDisplayKit/ASLog.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 
-#define ASYogaLog(...) //NSLog(__VA_ARGS__)
+// Should pass a string literal, not an NSString as the first argument to ASYogaLog
+#define ASYogaLog(x, ...) as_log_verbose(ASLayoutLog(), x, ##__VA_ARGS__);
 
 @interface ASDisplayNode (YogaHelpers)
 

@@ -155,28 +155,6 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
   [self addSubnode:_videoNode];
 }
 
-#pragma mark Deprecated
-
-- (instancetype)initWithUrl:(NSURL *)url
-{
-  return [self initWithURL:url];
-}
-
-- (instancetype)initWithUrl:(NSURL *)url loadAssetWhenNodeBecomesVisible:(BOOL)loadAssetWhenNodeBecomesVisible
-{
-  return [self initWithURL:url];
-}
-
-- (instancetype)initWithAsset:(AVAsset *)asset loadAssetWhenNodeBecomesVisible:(BOOL)loadAssetWhenNodeBecomesVisible
-{
-  return [self initWithAsset:asset];
-}
-
-- (instancetype)initWithAsset:(AVAsset *)asset videoComposition:(AVVideoComposition *)videoComposition audioMix:(AVAudioMix *)audioMix loadAssetWhenNodeBecomesVisible:(BOOL)loadAssetWhenNodeBecomesVisible
-{
-  return [self initWithAsset:asset videoComposition:videoComposition audioMix:audioMix];
-}
-
 #pragma mark - Setter / Getter
 
 - (void)setAssetURL:(NSURL *)assetURL

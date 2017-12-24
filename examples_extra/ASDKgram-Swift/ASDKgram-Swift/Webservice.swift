@@ -25,12 +25,13 @@ final class WebService {
 		URLSession.shared.dataTask(with: resource.url) { data, response, error in
 			// Check for errors in responses.
 			let result = self.checkForNetworkErrors(data, response, error)
-			
-			switch result {
-			case .success(let data):
-				completion(resource.parse(data))
-			case .failure(let error):
-				completion(.failure(error))
+			DispatchQueue.main.async {
+				switch result {
+				case .success(let data):
+					completion(resource.parse(data))
+				case .failure(let error):
+					completion(.failure(error))
+				}
 			}
 		}.resume()
 	}
@@ -40,15 +41,16 @@ extension WebService {
 	
 	fileprivate func checkForNetworkErrors(_ data: Data?, _ response: URLResponse?, _ error: Error?) -> Result<Data> {
 		// Check for errors in responses.
-		guard error == nil else {
-			if (error as! NSError).domain == NSURLErrorDomain && ((error as! NSError).code == NSURLErrorNotConnectedToInternet || (error as! NSError).code == NSURLErrorTimedOut) {
+		if let error = error {
+			let nsError = error as NSError
+			if nsError.domain == NSURLErrorDomain && (nsError.code == NSURLErrorNotConnectedToInternet || nsError.code == NSURLErrorTimedOut) {
 				return .failure(.noInternetConnection)
 			} else {
-				return .failure(.returnedError(error!))
+				return .failure(.returnedError(error))
 			}
 		}
 		
-		guard let statusCode = (response as? HTTPURLResponse)?.statusCode, statusCode >= 200 && statusCode <= 299 else {
+		if let response = response as? HTTPURLResponse, response.statusCode <= 200 && response.statusCode >= 299 {
 			return .failure((.invalidStatusCode("Request returned status code other than 2xx \(response)")))
 		}
 		

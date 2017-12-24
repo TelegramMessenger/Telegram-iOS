@@ -29,9 +29,11 @@ final class SearchBarNode: ASDisplayNode {
     
     init(delegate: UISearchBarDelegate?) {
         self.delegate = delegate
-        super.init(viewBlock: {
+        super.init()
+        setViewBlock {
             UISearchBar()
-        }, didLoad: nil)
+        }
+
         style.preferredSize = CGSize(width: UIScreen.main.bounds.width, height: 44)
     }
     

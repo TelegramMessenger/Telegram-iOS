@@ -148,7 +148,7 @@ typedef NS_ENUM(NSUInteger, _ASDisplayLayerTestDelegateClassModes) {
 
 // for _ASDisplayLayerTestDelegateModeClassDisplay
 @property (nonatomic, assign) NSUInteger displayCount;
-@property (nonatomic, copy) UIImage *(^displayLayerBlock)();
+@property (nonatomic, copy) UIImage *(^displayLayerBlock)(void);
 
 // for _ASDisplayLayerTestDelegateModeClassDrawInContext
 @property (nonatomic, assign) NSUInteger drawRectCount;
@@ -472,7 +472,7 @@ static _ASDisplayLayerTestDelegateClassModes _class_modes;
   layer1.displaysAsynchronously = YES;
 
   dispatch_semaphore_t displayAsyncLayer1Sema = dispatch_semaphore_create(0);
-  layer1Delegate.displayLayerBlock = ^(_ASDisplayLayer *asyncLayer) {
+  layer1Delegate.displayLayerBlock = ^UIImage *{
     dispatch_semaphore_wait(displayAsyncLayer1Sema, DISPATCH_TIME_FOREVER);
     return bogusImage();
   };

@@ -1,5 +1,5 @@
 //
-//  ASTextKitComponents.m
+//  ASTextKitComponents.mm
 //  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
@@ -16,8 +16,40 @@
 //
 
 #import <AsyncDisplayKit/ASTextKitComponents.h>
+#import <AsyncDisplayKit/ASAssert.h>
 
 #import <tgmath.h>
+
+@interface ASTextKitComponentsTextView ()
+@property (atomic, assign) CGRect threadSafeBounds;
+@end
+
+@implementation ASTextKitComponentsTextView
+
+- (instancetype)initWithFrame:(CGRect)frame textContainer:(NSTextContainer *)textContainer
+{
+  self = [super initWithFrame:frame textContainer:textContainer];
+  if (self) {
+    _threadSafeBounds = self.bounds;
+  }
+  return self;
+}
+
+- (void)setFrame:(CGRect)frame
+{
+  ASDisplayNodeAssertMainThread();
+  [super setFrame:frame];
+  self.threadSafeBounds = self.bounds;
+}
+
+- (void)setBounds:(CGRect)bounds
+{
+  ASDisplayNodeAssertMainThread();
+  [super setBounds:bounds];
+  self.threadSafeBounds = bounds;
+}
+
+@end
 
 @interface ASTextKitComponents ()
 
@@ -29,6 +61,8 @@
 @end
 
 @implementation ASTextKitComponents
+
+#pragma mark - Class
 
 + (instancetype)componentsWithAttributedSeedString:(NSAttributedString *)attributedSeedString
                                  textContainerSize:(CGSize)textContainerSize
@@ -58,13 +92,27 @@
   return components;
 }
 
+#pragma mark - Lifecycle
+
+- (void)dealloc
+{
+  // Nil out all delegates to prevent crash
+  if (_textView) {
+    ASDisplayNodeAssertMainThread();
+    _textView.delegate = nil;
+  }
+  _layoutManager.delegate = nil;
+}
+
+#pragma mark - Sizing
+
 - (CGSize)sizeForConstrainedWidth:(CGFloat)constrainedWidth
 {
   ASTextKitComponents *components = self;
 
   // If our text-view's width is already the constrained width, we can use our existing TextKit stack for this sizing calculation.
   // Otherwise, we create a temporary stack to size for `constrainedWidth`.
-  if (CGRectGetWidth(components.textView.bounds) != constrainedWidth) {
+  if (CGRectGetWidth(components.textView.threadSafeBounds) != constrainedWidth) {
     components = [ASTextKitComponents componentsWithAttributedSeedString:components.textStorage textContainerSize:CGSizeMake(constrainedWidth, CGFLOAT_MAX)];
   }
 
@@ -86,7 +134,7 @@
   
   // Always use temporary stack in case of threading issues
   components = [ASTextKitComponents componentsWithAttributedSeedString:components.textStorage textContainerSize:CGSizeMake(constrainedWidth, CGFLOAT_MAX)];
-  
+
   // Force glyph generation and layout, which may not have happened yet (and isn't triggered by - usedRectForTextContainer:).
   [components.layoutManager ensureLayoutForTextContainer:components.textContainer];
   

@@ -47,13 +47,6 @@ ASSizeRange NodeConstrainedSizeForScrollDirection(ASCollectionView *collectionVi
   } _delegateFlags;
 }
 
-#pragma mark Lifecycle
-
-- (instancetype)initWithCollectionView:(ASCollectionView *)collectionView
-{
-  return [self init];
-}
-
 #pragma mark ASCollectionViewLayoutInspecting
 
 - (void)didChangeCollectionViewDelegate:(id<ASCollectionDelegate>)delegate

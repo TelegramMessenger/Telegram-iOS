@@ -50,7 +50,8 @@
 
 @implementation ASPagerNodeTestController
 
-- (instancetype)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
+- (instancetype)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
   self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
   if (self) {
     // Populate these immediately so that they're not unexpectedly nil during tests.
@@ -74,7 +75,8 @@
 
 @implementation ASPagerNodeTests
 
-- (void)testPagerReturnsIndexOfPages {
+- (void)testPagerReturnsIndexOfPages
+{
   ASPagerNodeTestController *testController = [self testController];
   
   ASCellNode *cellNode = [testController.pagerNode nodeForPageAtIndex:0];
@@ -82,7 +84,8 @@
   XCTAssertEqual([testController.pagerNode indexOfPageWithNode:cellNode], 0);
 }
 
-- (void)testPagerReturnsNotFoundForCellThatDontExistInPager {
+- (void)testPagerReturnsNotFoundForCellThatDontExistInPager
+{
   ASPagerNodeTestController *testController = [self testController];
 
   ASCellNode *badNode = [[ASCellNode alloc] init];
@@ -90,7 +93,17 @@
   XCTAssertEqual([testController.pagerNode indexOfPageWithNode:badNode], NSNotFound);
 }
 
-- (ASPagerNodeTestController *)testController {
+- (void)testScrollPageToIndex
+{
+  ASPagerNodeTestController *testController = [self testController];
+  testController.pagerNode.frame = CGRectMake(0, 0, 500, 500);
+  [testController.pagerNode scrollToPageAtIndex:1 animated:false];
+
+  XCTAssertEqual(testController.pagerNode.currentPageIndex, 1);
+}
+
+- (ASPagerNodeTestController *)testController
+{
   ASPagerNodeTestController *testController = [[ASPagerNodeTestController alloc] initWithNibName:nil bundle:nil];
   UIWindow *window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
   [window makeKeyAndVisible];
@@ -138,7 +151,7 @@
   XCTAssertEqualObjects(NSStringFromCGRect(window.bounds), NSStringFromCGRect(node.frame));
   XCTAssertEqualObjects(NSStringFromCGRect(window.bounds), NSStringFromCGRect(cell.frame));
   XCTAssertEqual(pagerNode.contentOffset.y, 0);
-  XCTAssertEqual(pagerNode.view.contentInset.top, 0);
+  XCTAssertEqual(pagerNode.contentInset.top, 0);
   
   e = [self expectationWithDescription:@"Transition completed"];
   // Push another view controller
@@ -168,7 +181,7 @@
   XCTAssertEqualObjects(NSStringFromCGRect(window.bounds), NSStringFromCGRect(node.frame));
   XCTAssertEqualObjects(NSStringFromCGRect(window.bounds), NSStringFromCGRect(cell.frame));
   XCTAssertEqual(pagerNode.contentOffset.y, 0);
-  XCTAssertEqual(pagerNode.view.contentInset.top, 0);
+  XCTAssertEqual(pagerNode.contentInset.top, 0);
 }
 
 @end

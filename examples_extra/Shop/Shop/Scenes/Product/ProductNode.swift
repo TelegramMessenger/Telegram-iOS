@@ -50,7 +50,7 @@ class ProductNode: ASDisplayNode {
     
     private func setupImageNode() {
         self.imageNode.url = URL(string: self.product.imageURL)
-        self.imageNode.preferredFrameSize = CGSize(width: UIScreen.main.bounds.width, height: 300)
+        self.imageNode.style.preferredSize = CGSize(width: UIScreen.main.bounds.width, height: 300)
     }
     
     private func setupTitleNode() {
@@ -103,13 +103,13 @@ class ProductNode: ASDisplayNode {
     
     override func layoutSpecThatFits(_ constrainedSize: ASSizeRange) -> ASLayoutSpec {
         let spacer = ASLayoutSpec()
-        spacer.flexGrow = true
-        self.titleNode.flexShrink = true
+        spacer.style.flexGrow = 1
+        self.titleNode.style.flexShrink = 1
         let titlePriceSpec = ASStackLayoutSpec(direction: .horizontal, spacing: 2.0, justifyContent: .start, alignItems: .center, children: [self.titleNode, spacer, self.priceNode])
-        titlePriceSpec.alignSelf = .stretch
+        titlePriceSpec.style.alignSelf = .stretch
         let starRatingReviewsSpec = ASStackLayoutSpec(direction: .horizontal, spacing: 25.0, justifyContent: .start, alignItems: .center, children: [self.starRatingNode, self.reviewsNode])
         let contentSpec = ASStackLayoutSpec(direction: .vertical, spacing: 8.0, justifyContent: .start, alignItems: .stretch, children: [titlePriceSpec, starRatingReviewsSpec, self.descriptionNode])
-        contentSpec.flexShrink = true
+        contentSpec.style.flexShrink = 1
         let insetSpec = ASInsetLayoutSpec(insets: UIEdgeInsetsMake(12.0, 12.0, 12.0, 12.0), child: contentSpec)
         let finalSpec = ASStackLayoutSpec(direction: .vertical, spacing: 5.0, justifyContent: .start, alignItems: .center, children: [self.imageNode, insetSpec])
         return finalSpec

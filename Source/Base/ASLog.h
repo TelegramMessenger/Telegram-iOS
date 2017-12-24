@@ -40,31 +40,41 @@ ASDISPLAYNODE_EXTERN_C_BEGIN
  * are at the `debug` log level, which the system
  * disables in production.
  */
-void ASDisableLogging();
+void ASDisableLogging(void);
+
+/**
+ * Restore logging that has been runtime-disabled via ASDisableLogging().
+ *
+ * Logging can be disabled at runtime using the ASDisableLogging() function.
+ * This command restores logging to the level provided in the build
+ * configuration. This can be used in conjunction with ASDisableLogging()
+ * to allow logging to be toggled off and back on at runtime.
+ */
+void ASEnableLogging(void);
 
 /// Log for general node events e.g. interfaceState, didLoad.
 #define ASNodeLogEnabled 1
-os_log_t ASNodeLog();
+os_log_t ASNodeLog(void);
 
 /// Log for layout-specific events e.g. calculateLayout.
 #define ASLayoutLogEnabled 1
-os_log_t ASLayoutLog();
+os_log_t ASLayoutLog(void);
 
 /// Log for display-specific events e.g. display queue batches.
 #define ASDisplayLogEnabled 1
-os_log_t ASDisplayLog();
+os_log_t ASDisplayLog(void);
 
 /// Log for collection events e.g. reloadData, performBatchUpdates.
 #define ASCollectionLogEnabled 1
-os_log_t ASCollectionLog();
+os_log_t ASCollectionLog(void);
 
 /// Log for ASNetworkImageNode and ASMultiplexImageNode events.
 #define ASImageLoadingLogEnabled 1
-os_log_t ASImageLoadingLog();
+os_log_t ASImageLoadingLog(void);
 
 /// Specialized log for our main thread deallocation trampoline.
 #define ASMainThreadDeallocationLogEnabled 0
-os_log_t ASMainThreadDeallocationLog();
+os_log_t ASMainThreadDeallocationLog(void);
 
 ASDISPLAYNODE_EXTERN_C_END
 
@@ -119,11 +129,44 @@ ASDISPLAYNODE_EXTERN_C_END
  * The logging macros are not guarded by deployment-target checks like the activity macros are, but they are
  * only available on iOS >= 9 at runtime, so just make them conditional.
  */
-#define as_log_create(subsystem, category)  (AS_AT_LEAST_IOS9 ? os_log_create(subsystem, category) : (os_log_t)0)
-#define as_log_debug(log, format, ...)      (AS_AT_LEAST_IOS9 ? os_log_debug(log, format, ##__VA_ARGS__) : (void)0)
-#define as_log_info(log, format, ...)       (AS_AT_LEAST_IOS9 ? os_log_info(log, format, ##__VA_ARGS__) : (void)0)
-#define as_log_error(log, format, ...)      (AS_AT_LEAST_IOS9 ? os_log_error(log, format, ##__VA_ARGS__) : (void)0)
-#define as_log_fault(log, format, ...)      (AS_AT_LEAST_IOS9 ? os_log_fault(log, format, ##__VA_ARGS__) : (void)0)
+
+#define as_log_create(subsystem, category) ({     \
+os_log_t __val;                                   \
+if (AS_AVAILABLE_IOS(9)) {                        \
+  __val = os_log_create(subsystem, category);     \
+} else {                                          \
+  __val = (os_log_t)0;                            \
+}                                                 \
+__val;                                            \
+})
+
+#define as_log_debug(log, format, ...)            \
+if (AS_AVAILABLE_IOS(9)) {                        \
+  os_log_debug(log, format, ##__VA_ARGS__);       \
+} else {                                          \
+  (void)0;                                        \
+}                                                 \
+
+#define as_log_info(log, format, ...)             \
+if (AS_AVAILABLE_IOS(9)) {                        \
+  os_log_info(log, format, ##__VA_ARGS__);        \
+} else {                                          \
+  (void)0;                                        \
+}                                                 \
+
+#define as_log_error(log, format, ...)            \
+if (AS_AVAILABLE_IOS(9)) {                        \
+  os_log_error(log, format, ##__VA_ARGS__);       \
+} else {                                          \
+  (void)0;                                        \
+}                                                 \
+
+#define as_log_fault(log, format, ...)            \
+if (AS_AVAILABLE_IOS(9)) {                        \
+  os_log_fault(log, format, ##__VA_ARGS__);       \
+} else {                                          \
+  (void)0;                                        \
+}                                                 \
 
 #if ASEnableVerboseLogging
   #define as_log_verbose(log, format, ...)  as_log_debug(log, format, ##__VA_ARGS__)

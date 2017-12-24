@@ -18,6 +18,7 @@
 #ifndef ASDK_ACCESSIBILITY_DISABLE
 
 #import <AsyncDisplayKit/_ASDisplayView.h>
+#import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
@@ -83,6 +84,13 @@ static void SortAccessibilityElements(NSMutableArray *elements)
   accessibilityElement.accessibilityHint = node.accessibilityHint;
   accessibilityElement.accessibilityValue = node.accessibilityValue;
   accessibilityElement.accessibilityTraits = node.accessibilityTraits;
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_11_0
+  if (AS_AVAILABLE_IOS(11)) {
+    accessibilityElement.accessibilityAttributedLabel = node.accessibilityAttributedLabel;
+    accessibilityElement.accessibilityAttributedHint = node.accessibilityAttributedHint;
+    accessibilityElement.accessibilityAttributedValue = node.accessibilityAttributedValue;
+  }
+#endif
   return accessibilityElement;
 }
 
@@ -169,8 +177,24 @@ static void CollectAccessibilityElementsForContainer(ASDisplayNode *container, _
   }
 
   SortAccessibilityElements(labeledNodes);
-  NSArray *labels = [labeledNodes valueForKey:@"accessibilityLabel"];
-  accessiblityElement.accessibilityLabel = [labels componentsJoinedByString:@", "];
+
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_11_0
+  if (AS_AVAILABLE_IOS(11)) {
+    NSArray *attributedLabels = [labeledNodes valueForKey:@"accessibilityAttributedLabel"];
+    NSMutableAttributedString *attributedLabel = [NSMutableAttributedString new];
+    [attributedLabels enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+      if (idx != 0) {
+        [attributedLabel appendAttributedString:[[NSAttributedString alloc] initWithString:@", "]];
+      }
+      [attributedLabel appendAttributedString:(NSAttributedString *)obj];
+    }];
+    accessiblityElement.accessibilityAttributedLabel = attributedLabel;
+  } else
+#endif
+  {
+    NSArray *labels = [labeledNodes valueForKey:@"accessibilityLabel"];
+    accessiblityElement.accessibilityLabel = [labels componentsJoinedByString:@", "];
+  }
 
   SortAccessibilityElements(actions);
   accessiblityElement.accessibilityCustomActions = actions;

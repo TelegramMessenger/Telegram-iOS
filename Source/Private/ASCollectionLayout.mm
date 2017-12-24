@@ -71,18 +71,35 @@ static const ASScrollDirection kASStaticScrollDirection = (ASScrollDirectionRigh
 - (ASCollectionLayoutContext *)layoutContextWithElements:(ASElementMap *)elements
 {
   ASDisplayNodeAssertMainThread();
-  CGSize viewportSize = [self _viewportSize];
-  CGPoint contentOffset = _collectionNode.contentOffset;
+
+  Class<ASCollectionLayoutDelegate> layoutDelegateClass = [_layoutDelegate class];
+  ASCollectionLayoutCache *layoutCache = _layoutCache;
+  ASCollectionNode *collectionNode = _collectionNode;
+  if (collectionNode == nil) {
+    return [[ASCollectionLayoutContext alloc] initWithViewportSize:CGSizeZero
+                                              initialContentOffset:CGPointZero
+                                              scrollableDirections:ASScrollDirectionNone
+                                                          elements:[[ASElementMap alloc] init]
+                                               layoutDelegateClass:layoutDelegateClass
+                                                       layoutCache:layoutCache
+                                                    additionalInfo:nil];
+  }
+
+  ASScrollDirection scrollableDirections = [_layoutDelegate scrollableDirections];
+  CGSize viewportSize = [ASCollectionLayout _viewportSizeForCollectionNode:collectionNode scrollableDirections:scrollableDirections];
+  CGPoint contentOffset = collectionNode.contentOffset;
+
   id additionalInfo = nil;
   if (_layoutDelegateFlags.implementsAdditionalInfoForLayoutWithElements) {
     additionalInfo = [_layoutDelegate additionalInfoForLayoutWithElements:elements];
   }
+
   return [[ASCollectionLayoutContext alloc] initWithViewportSize:viewportSize
                                             initialContentOffset:contentOffset
-                                            scrollableDirections:[_layoutDelegate scrollableDirections]
+                                            scrollableDirections:scrollableDirections
                                                         elements:elements
-                                             layoutDelegateClass:[_layoutDelegate class]
-                                                     layoutCache:_layoutCache
+                                             layoutDelegateClass:layoutDelegateClass
+                                                     layoutCache:layoutCache
                                                   additionalInfo:additionalInfo];
 }
 
@@ -210,21 +227,41 @@ static const ASScrollDirection kASStaticScrollDirection = (ASScrollDirectionRigh
 
 - (BOOL)shouldInvalidateLayoutForBoundsChange:(CGRect)newBounds
 {
-  return (! CGSizeEqualToSize([self _viewportSize], newBounds.size));
+  return (! CGSizeEqualToSize([ASCollectionLayout _boundsForCollectionNode:_collectionNode], newBounds.size));
 }
 
 #pragma mark - Private methods
 
-- (CGSize)_viewportSize
++ (CGSize)_boundsForCollectionNode:(nonnull ASCollectionNode *)collectionNode
 {
-  ASCollectionNode *collectionNode = _collectionNode;
-  if (collectionNode != nil && !collectionNode.isNodeLoaded) {
+  if (collectionNode == nil) {
+    return CGSizeZero;
+  }
+
+  if (!collectionNode.isNodeLoaded) {
     // TODO consider calculatedSize as well
     return collectionNode.threadSafeBounds.size;
-  } else {
-    ASDisplayNodeAssertMainThread();
-    return self.collectionView.bounds.size;
   }
+
+  ASDisplayNodeAssertMainThread();
+  return collectionNode.view.bounds.size;
+}
+
++ (CGSize)_viewportSizeForCollectionNode:(nonnull ASCollectionNode *)collectionNode scrollableDirections:(ASScrollDirection)scrollableDirections
+{
+  if (collectionNode == nil) {
+    return CGSizeZero;
+  }
+
+  CGSize result = [ASCollectionLayout _boundsForCollectionNode:collectionNode];
+  // TODO: Consider using adjustedContentInset on iOS 11 and later, to include the safe area of the scroll view
+  UIEdgeInsets contentInset = collectionNode.contentInset;
+  if (ASScrollDirectionContainsHorizontalDirection(scrollableDirections)) {
+    result.height -= (contentInset.top + contentInset.bottom);
+  } else {
+    result.width -= (contentInset.left + contentInset.right);
+  }
+  return result;
 }
 
 /**

@@ -68,6 +68,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)endUpdatesAnimated:(BOOL)animated completion:(nullable void (^)(BOOL))completion ASDISPLAYNODE_DEPRECATED_MSG("Use -performBatchUpdates:completion: instead.");
 
+- (void)invalidateFlowLayoutDelegateMetrics;
+
 @end
 
 NS_ASSUME_NONNULL_END

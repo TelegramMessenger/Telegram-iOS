@@ -46,8 +46,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, assign) BOOL controlsDisabled;
 
-@property (nonatomic, assign, readonly) BOOL loadAssetWhenNodeBecomesVisible ASDISPLAYNODE_DEPRECATED_MSG("Asset is always loaded when this node enters preload state. This flag does nothing.");
-
 #pragma mark - ASVideoNode property proxy
 /**
  * When shouldAutoplay is set to true, a video node will play when it has both loaded and entered the "visible" interfaceState.
@@ -80,12 +78,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithURL:(NSURL *)URL;
 - (instancetype)initWithAsset:(AVAsset *)asset;
 - (instancetype)initWithAsset:(AVAsset *)asset videoComposition:(AVVideoComposition *)videoComposition audioMix:(AVAudioMix *)audioMix;
-
-#pragma mark Lifecycle Deprecated
-- (instancetype)initWithUrl:(NSURL *)url ASDISPLAYNODE_DEPRECATED_MSG("Asset is always loaded when this node enters preload state, therefore loadAssetWhenNodeBecomesVisible is deprecated and not used anymore.");
-- (instancetype)initWithUrl:(NSURL *)url loadAssetWhenNodeBecomesVisible:(BOOL)loadAssetWhenNodeBecomesVisible ASDISPLAYNODE_DEPRECATED_MSG("Asset is always loaded when this node enters preload state, therefore loadAssetWhenNodeBecomesVisible is deprecated and not used anymore.");
-- (instancetype)initWithAsset:(AVAsset *)asset loadAssetWhenNodeBecomesVisible:(BOOL)loadAssetWhenNodeBecomesVisible ASDISPLAYNODE_DEPRECATED_MSG("Asset is always loaded when this node enters preload state, therefore loadAssetWhenNodeBecomesVisible is deprecated and not used anymore.");
-- (instancetype)initWithAsset:(AVAsset *)asset videoComposition:(AVVideoComposition *)videoComposition audioMix:(AVAudioMix *)audioMix loadAssetWhenNodeBecomesVisible:(BOOL)loadAssetWhenNodeBecomesVisible ASDISPLAYNODE_DEPRECATED_MSG("Asset is always loaded when this node enters preload state, therefore loadAssetWhenNodeBecomesVisible is deprecated and not used anymore.");
 
 #pragma mark - Public API
 - (void)seekToTime:(CGFloat)percentComplete;

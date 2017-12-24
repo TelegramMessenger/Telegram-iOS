@@ -14,10 +14,10 @@ With all Texture nodes, enabling precompositing is as simple as:
 <span class="language-toggle"><a data-lang="swift" class="swiftButton">Swift</a><a data-lang="objective-c" class = "active objcButton">Objective-C</a></span>
 <div class = "code">
   <pre lang="objc" class="objcCode">
-rootNode.shouldRasterizeDescendants = YES;
+[rootNode enableSubtreeRasterization];
 </pre>
 <pre lang="swift" class = "swiftCode hidden">
-rootNode.shouldRasterizeDescendants = true
+rootNode.enableSubtreeRasterization()
 </pre>
 </div>
 </div>

@@ -37,10 +37,10 @@
 
 @implementation ASTestDataController
 
-- (void)relayoutAllNodes
+- (void)relayoutAllNodesWithInvalidationBlock:(nullable void (^)())invalidationBlock
 {
   _numberOfAllNodesRelayouts++;
-  [super relayoutAllNodes];
+  [super relayoutAllNodesWithInvalidationBlock:invalidationBlock];
 }
 
 @end
@@ -253,7 +253,8 @@
   tableView.asyncDelegate = delegate;
   tableView.asyncDataSource = dataSource;
   
-  [tableView reloadDataImmediately];
+  [tableView reloadData];
+  [tableView waitUntilAllUpdatesAreCommitted];
   [tableView setNeedsLayout];
   [tableView layoutIfNeeded];
   

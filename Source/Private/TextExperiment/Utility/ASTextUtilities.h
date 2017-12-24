@@ -164,13 +164,13 @@ static inline CGRect ASTextEmojiGetGlyphBoundingRectWithFontSize(CGFloat fontSiz
  Get the character set which should rotate in vertical form.
  @return The shared character set.
  */
-NSCharacterSet *ASTextVerticalFormRotateCharacterSet();
+NSCharacterSet *ASTextVerticalFormRotateCharacterSet(void);
 
 /**
  Get the character set which should rotate and move in vertical form.
  @return The shared character set.
  */
-NSCharacterSet *ASTextVerticalFormRotateAndMoveCharacterSet();
+NSCharacterSet *ASTextVerticalFormRotateAndMoveCharacterSet(void);
 
 
 /// Get the transform rotation.

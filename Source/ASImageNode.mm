@@ -42,6 +42,8 @@
 
 #include <functional>
 
+static const CGSize kMinReleaseImageOnBackgroundSize = {20.0, 20.0};
+
 typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 
 @interface ASImageNodeDrawParameters : NSObject {
@@ -249,11 +251,11 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
   if (ASObjectIsEqual(_image, image)) {
     return;
   }
-  
+
+  UIImage *oldImage = _image;
   _image = image;
   
   if (image != nil) {
-    
     // We explicitly call setNeedsDisplay in this case, although we know setNeedsDisplay will be called with lock held.
     // Therefore we have to be careful in methods that are involved with setNeedsDisplay to not run into a deadlock
     [self setNeedsDisplay];
@@ -267,9 +269,18 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
       }
       return;
     }
-
   } else {
     self.contents = nil;
+  }
+
+  // Destruction of bigger images on the main thread can be expensive
+  // and can take some time, so we dispatch onto a bg queue to
+  // actually dealloc.
+  CGSize oldImageSize = oldImage.size;
+  BOOL shouldReleaseImageOnBackgroundThread = oldImageSize.width > kMinReleaseImageOnBackgroundSize.width
+                                              || oldImageSize.height > kMinReleaseImageOnBackgroundSize.height;
+  if (shouldReleaseImageOnBackgroundThread) {
+    ASPerformBackgroundDeallocation(&oldImage);
   }
 }
 
@@ -437,12 +448,13 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 }
 
 static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
-static ASDN::Mutex cacheLock;
+// Allocate cacheLock on the heap to prevent destruction at app exit (https://github.com/TextureGroup/Texture/issues/136)
+static ASDN::StaticMutex& cacheLock = *new ASDN::StaticMutex;
 
 + (ASWeakMapEntry *)contentsForkey:(ASImageNodeContentsKey *)key drawParameters:(id)drawParameters isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled
 {
   {
-    ASDN::MutexLocker l(cacheLock);
+    ASDN::StaticMutexLocker l(cacheLock);
     if (!cache) {
       cache = [[ASWeakMap alloc] init];
     }
@@ -459,7 +471,7 @@ static ASDN::Mutex cacheLock;
   }
 
   {
-    ASDN::MutexLocker l(cacheLock);
+    ASDN::StaticMutexLocker l(cacheLock);
     return [cache setObject:contents forKey:key];
   }
 }

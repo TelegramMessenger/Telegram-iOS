@@ -60,7 +60,7 @@ All of this logic can be removed from where it previously existed in the "view" 
   </pre>
 
   <pre lang="swift" class = "swiftCode hidden">
-final class PhotoCellNodeController: ASNodeController<PhotoCellNode> {
+final class PhotoCellNodeController: ASNodeController&lt;PhotoCellNode&gt; {
     
   override func loadNode() {
     self.node = PhotoCellNode(photoObject: photoModel)

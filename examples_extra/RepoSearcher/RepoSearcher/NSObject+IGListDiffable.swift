@@ -8,11 +8,11 @@
 
 import IGListKit
 
-extension NSObject: IGListDiffable {
+extension NSObject: ListDiffable {
     public func diffIdentifier() -> NSObjectProtocol {
         return self
     }
-    public func isEqual(toDiffableObject object: IGListDiffable?) -> Bool {
+    public func isEqual(toDiffableObject object: ListDiffable?) -> Bool {
         return isEqual(object)
     }
 }

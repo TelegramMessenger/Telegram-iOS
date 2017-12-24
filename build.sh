@@ -1,7 +1,7 @@
 #!/bin/bash
 
-PLATFORM="platform=iOS Simulator,name=iPhone 7"
-SDK="iphonesimulator"
+PLATFORM="platform=iOS Simulator,OS=10.2,name=iPhone 7"
+SDK="iphonesimulator11.0"
 DERIVED_DATA_PATH="~/ASDKDerivedData"
 
 

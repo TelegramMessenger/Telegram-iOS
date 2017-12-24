@@ -52,8 +52,6 @@ typedef NS_OPTIONS(NSUInteger, ASDisplayNodeMethodOverrides)
   ASDisplayNodeMethodOverrideLayoutSpecThatFits = 1 << 4,
   ASDisplayNodeMethodOverrideCalcLayoutThatFits = 1 << 5,
   ASDisplayNodeMethodOverrideCalcSizeThatFits   = 1 << 6,
-  ASDisplayNodeMethodOverrideFetchData          = 1 << 7,
-  ASDisplayNodeMethodOverrideClearFetchedData   = 1 << 8
 };
 
 typedef NS_OPTIONS(uint_least32_t, ASDisplayNodeAtomicFlags)
@@ -175,6 +173,10 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
 
   // keeps track of nodes/subnodes that have not finished display, used with placeholders
   ASWeakSet *_pendingDisplayNodes;
+  
+  CGFloat _cornerRadius;
+  ASCornerRoundingType _cornerRoundingType;
+  CALayer *_clipCornerLayers[4];
 
   ASDisplayNodeContextModifier _willDisplayNodeContentWithRenderingContext;
   ASDisplayNodeContextModifier _didDisplayNodeContentWithRenderingContext;
@@ -182,8 +184,11 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   // Accessibility support
   BOOL _isAccessibilityElement;
   NSString *_accessibilityLabel;
+  NSAttributedString *_accessibilityAttributedLabel;
   NSString *_accessibilityHint;
+  NSAttributedString *_accessibilityAttributedHint;
   NSString *_accessibilityValue;
+  NSAttributedString *_accessibilityAttributedValue;
   UIAccessibilityTraits _accessibilityTraits;
   CGRect _accessibilityFrame;
   NSString *_accessibilityLanguage;
@@ -276,6 +281,9 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
 /// Display the node's view/layer immediately on the current thread, bypassing the background thread rendering. Will be deprecated.
 - (void)displayImmediately;
 
+/// Refreshes any precomposited or drawn clip corners, setting up state as required to transition radius or rounding type.
+- (void)updateCornerRoundingWithType:(ASCornerRoundingType)newRoundingType cornerRadius:(CGFloat)newCornerRadius;
+
 /// Alternative initialiser for backing with a custom view class.  Supports asynchronous display with _ASDisplayView subclasses.
 - (instancetype)initWithViewClass:(Class)viewClass;
 
@@ -317,6 +325,12 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
  * Called if a gesture recognizer was attached to an _ASDisplayView
  */
 - (void)nodeViewDidAddGestureRecognizer;
+
+@end
+
+@interface ASDisplayNode (InternalPropertyBridge)
+
+@property (nonatomic, assign) CGFloat layerCornerRadius;
 
 @end
 

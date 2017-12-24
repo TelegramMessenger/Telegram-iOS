@@ -1,5 +1,5 @@
 //
-//  ASRectTableTests.m
+//  ASRectMapTests.m
 //  Texture
 //
 //  Created by Adlai Holler on 2/24/17.
@@ -8,17 +8,17 @@
 
 #import <XCTest/XCTest.h>
 
-#import "ASRectTable.h"
+#import "ASRectMap.h"
 #import "ASXCTExtensions.h"
 
-@interface ASRectTableTests : XCTestCase
+@interface ASRectMapTests : XCTestCase
 @end
 
-@implementation ASRectTableTests
+@implementation ASRectMapTests
 
 - (void)testThatItStoresRects
 {
-  ASRectTable *table = [ASRectTable rectTableForWeakObjectPointers];
+  ASRectMap *table = [ASRectMap rectMapForWeakObjectPointers];
   NSObject *key0 = [[NSObject alloc] init];
   NSObject *key1 = [[NSObject alloc] init];
   ASXCTAssertEqualRects([table rectForKey:key0], CGRectNull);
@@ -35,13 +35,13 @@
 
 - (void)testCopying
 {
-  ASRectTable *table = [ASRectTable rectTableForWeakObjectPointers];
+  ASRectMap *table = [ASRectMap rectMapForWeakObjectPointers];
   NSObject *key = [[NSObject alloc] init];
   ASXCTAssertEqualRects([table rectForKey:key], CGRectNull);
   CGRect rect0 = CGRectMake(0, 0, 100, 100);
   CGRect rect1 = CGRectMake(0, 0, 50, 50);
   [table setRect:rect0 forKey:key];
-  ASRectTable *copy = [table copy];
+  ASRectMap *copy = [table copy];
   [copy setRect:rect1 forKey:key];
 
   ASXCTAssertEqualRects([table rectForKey:key], rect0);

@@ -45,7 +45,7 @@ static void runLoopSourceCallback(void *info) {
   ASDN::RecursiveMutex _queueLock;
 }
 
-+ (instancetype)sharedDeallocationQueue
++ (ASDeallocQueue *)sharedDeallocationQueue
 {
   static ASDeallocQueue *deallocQueue = nil;
   static dispatch_once_t onceToken;
@@ -55,16 +55,18 @@ static void runLoopSourceCallback(void *info) {
   return deallocQueue;
 }
 
-- (void)releaseObjectInBackground:(id)object
+- (void)releaseObjectInBackground:(id  _Nullable __strong *)objectPtr
 {
   // Disable background deallocation on iOS 8 and below to avoid crashes related to UIAXDelegateClearer (#2767).
   if (!AS_AT_LEAST_IOS9) {
     return;
   }
 
-  _queueLock.lock();
-  _queue.push_back(object);
-  _queueLock.unlock();
+  if (objectPtr != NULL && *objectPtr != nil) {
+    ASDN::MutexLocker l(_queueLock);
+    _queue.push_back(*objectPtr);
+    *objectPtr = nil;
+  }
 }
 
 - (void)threadMain
@@ -348,12 +350,12 @@ typedef enum {
   {
     ASDN::MutexLocker l(_internalQueueLock);
 
-    // Early-exit if the queue is empty.
     NSInteger internalQueueCount = _internalQueue.count;
+    // Early-exit if the queue is empty.
     if (internalQueueCount == 0) {
       return;
     }
-    
+
     ASSignpostStart(ASSignpostRunLoopQueueBatch);
 
     // Snatch the next batch of items.
@@ -380,6 +382,14 @@ typedef enum {
         }
         [_internalQueue replacePointerAtIndex:i withPointer:NULL];
       }
+    }
+
+    if (foundItemCount == 0) {
+      // If _internalQueue holds weak references, and all of them just become NULL, then the array
+      // is never marked as needsCompletion, and compact will return early, not removing the NULL's.
+      // Inserting a NULL here ensures the compaction will take place.
+      // See http://www.openradar.me/15396578 and https://stackoverflow.com/a/40274426/1136669
+      [_internalQueue addPointer:NULL];
     }
 
     [_internalQueue compact];
@@ -434,10 +444,28 @@ typedef enum {
 
   if (!foundObject) {
     [_internalQueue addPointer:(__bridge void *)object];
-    
+
     CFRunLoopSourceSignal(_runLoopSource);
     CFRunLoopWakeUp(_runLoop);
   }
+}
+
+- (BOOL)isEmpty
+{
+  ASDN::MutexLocker l(_internalQueueLock);
+  return _internalQueue.count == 0;
+}
+
+#pragma mark - NSLocking
+
+- (void)lock
+{
+  _internalQueueLock.lock();
+}
+
+- (void)unlock
+{
+  _internalQueueLock.unlock();
 }
 
 @end

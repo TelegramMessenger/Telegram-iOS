@@ -37,17 +37,17 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * UIView creation block. Used to create the backing view of a new display node.
  */
-typedef UIView * _Nonnull(^ASDisplayNodeViewBlock)();
+typedef UIView * _Nonnull(^ASDisplayNodeViewBlock)(void);
 
 /**
  * UIView creation block. Used to create the backing view of a new display node.
  */
-typedef UIViewController * _Nonnull(^ASDisplayNodeViewControllerBlock)();
+typedef UIViewController * _Nonnull(^ASDisplayNodeViewControllerBlock)(void);
 
 /**
  * CALayer creation block. Used to create the backing layer of a new display node.
  */
-typedef CALayer * _Nonnull(^ASDisplayNodeLayerBlock)();
+typedef CALayer * _Nonnull(^ASDisplayNodeLayerBlock)(void);
 
 /**
  * ASDisplayNode loaded callback block. This block is called BEFORE the -didLoad method and is always called on the main thread.
@@ -99,6 +99,12 @@ typedef NS_OPTIONS(NSUInteger, ASInterfaceState)
    * nodes contained in table views or collection views.
    */
   ASInterfaceStateInHierarchy   = ASInterfaceStateMeasureLayout | ASInterfaceStatePreload | ASInterfaceStateDisplay | ASInterfaceStateVisible,
+};
+
+typedef NS_ENUM(NSInteger, ASCornerRoundingType) {
+  ASCornerRoundingTypeDefaultSlowCALayer,
+  ASCornerRoundingTypePrecomposited,
+  ASCornerRoundingTypeClipping
 };
 
 /**
@@ -382,7 +388,6 @@ extern NSInteger const ASDefaultDrawingPriority;
 
 /** @name Drawing and Updating the View */
 
-
 /** 
  * @abstract Whether this node's view performs asynchronous rendering.
  *
@@ -638,6 +643,31 @@ extern NSInteger const ASDefaultDrawingPriority;
 @property (nonatomic, assign)           CGPoint position;                      // default=CGPointZero
 @property (nonatomic, assign)           CGFloat alpha;                         // default=1.0f
 
+/* @abstract Sets the corner rounding method to use on the ASDisplayNode.
+ * There are three types of corner rounding provided by Texture: CALayer, Precomposited, and Clipping.
+ *
+ * - ASCornerRoundingTypeDefaultSlowCALayer: uses CALayer's inefficient .cornerRadius property. Use
+ * this type of corner in situations in which there is both movement through and movement underneath
+ * the corner (very rare). This uses only .cornerRadius.
+ *
+ * - ASCornerRoundingTypePrecomposited: corners are drawn using bezier paths to clip the content in a
+ * CGContext / UIGraphicsContext. This requires .backgroundColor and .cornerRadius to be set. Use opaque
+ * background colors when possible for optimal efficiency, but transparent colors are supported and much
+ * more efficient than CALayer. The only limitation of this approach is that it cannot clip children, and
+ * thus works best for ASImageNodes or containers showing a background around their children.
+ *
+ * - ASCornerRoundingTypeClipping: overlays 4 seperate opaque corners on top of the content that needs
+ * corner rounding. Requires .backgroundColor and .cornerRadius to be set. Use clip corners in situations 
+ * in which is movement through the corner, with an opaque background (no movement underneath the corner).
+ * Clipped corners are ideal for animating / resizing views, and still outperform CALayer.
+ *
+ * For more information and examples, see http://texturegroup.org/docs/corner-rounding.html
+ *
+ * @default ASCornerRoundingTypeDefaultSlowCALayer
+ */
+@property (nonatomic, assign)           ASCornerRoundingType cornerRoundingType;  // default=Slow CALayer .cornerRadius (offscreen rendering)
+@property (nonatomic, assign)           CGFloat cornerRadius;                     // default=0.0
+
 @property (nonatomic, assign)           BOOL clipsToBounds;                    // default==NO
 @property (nonatomic, getter=isHidden)  BOOL hidden;                           // default==NO
 @property (nonatomic, getter=isOpaque)  BOOL opaque;                           // default==YES
@@ -650,7 +680,6 @@ extern NSInteger const ASDefaultDrawingPriority;
 
 @property (nonatomic, assign)           CGPoint anchorPoint;                   // default={0.5, 0.5}
 @property (nonatomic, assign)           CGFloat zPosition;                     // default=0.0
-@property (nonatomic, assign)           CGFloat cornerRadius;                  // default=0.0
 @property (nonatomic, assign)           CATransform3D transform;               // default=CATransform3DIdentity
 @property (nonatomic, assign)           CATransform3D subnodeTransform;        // default=CATransform3DIdentity
 
@@ -680,7 +709,7 @@ extern NSInteger const ASDefaultDrawingPriority;
  */
 @property (nonatomic, assign)           UIViewContentMode contentMode;         // default=UIViewContentModeScaleToFill
 @property (nonatomic, copy)             NSString *contentsGravity;             // Use .contentMode in preference when possible.
-@property (nonatomic, assign)           UISemanticContentAttribute semanticContentAttribute; // default=Unspecified
+@property (nonatomic, assign)           UISemanticContentAttribute semanticContentAttribute API_AVAILABLE(ios(9.0), tvos(9.0)); // default=Unspecified
 
 @property (nonatomic, nullable)         CGColorRef shadowColor;                // default=opaque rgb black
 @property (nonatomic, assign)           CGFloat shadowOpacity;                 // default=0.0
@@ -723,8 +752,11 @@ extern NSInteger const ASDefaultDrawingPriority;
 // Accessibility support
 @property (nonatomic, assign)           BOOL isAccessibilityElement;
 @property (nonatomic, copy, nullable)   NSString *accessibilityLabel;
+@property (nonatomic, copy, nullable)   NSAttributedString *accessibilityAttributedLabel API_AVAILABLE(ios(11.0),tvos(11.0));
 @property (nonatomic, copy, nullable)   NSString *accessibilityHint;
+@property (nonatomic, copy, nullable)   NSAttributedString *accessibilityAttributedHint API_AVAILABLE(ios(11.0),tvos(11.0));
 @property (nonatomic, copy, nullable)   NSString *accessibilityValue;
+@property (nonatomic, copy, nullable)   NSAttributedString *accessibilityAttributedValue API_AVAILABLE(ios(11.0),tvos(11.0));
 @property (nonatomic, assign)           UIAccessibilityTraits accessibilityTraits;
 @property (nonatomic, assign)           CGRect accessibilityFrame;
 @property (nonatomic, copy, nullable)   UIBezierPath *accessibilityPath;
@@ -792,7 +824,7 @@ extern NSInteger const ASDefaultDrawingPriority;
  * @abstract Return the calculated size.
  *
  * @discussion Ideal for use by subclasses in -layout, having already prompted their subnodes to calculate their size by
- * calling -measure: on them in -calculateLayoutThatFits.
+ * calling -layoutThatFits: on them in -calculateLayoutThatFits.
  *
  * @return Size already calculated by -calculateLayoutThatFits:.
  *
@@ -855,7 +887,7 @@ extern NSInteger const ASDefaultDrawingPriority;
 - (void)transitionLayoutWithSizeRange:(ASSizeRange)constrainedSize
                              animated:(BOOL)animated
                    shouldMeasureAsync:(BOOL)shouldMeasureAsync
-                measurementCompletion:(nullable void(^)())completion;
+                measurementCompletion:(nullable void(^)(void))completion;
 
 
 /**
@@ -872,7 +904,7 @@ extern NSInteger const ASDefaultDrawingPriority;
  */
 - (void)transitionLayoutWithAnimation:(BOOL)animated
                    shouldMeasureAsync:(BOOL)shouldMeasureAsync
-                measurementCompletion:(nullable void(^)())completion;
+                measurementCompletion:(nullable void(^)(void))completion;
 
 /**
  * @abstract Cancels all performing layout transitions. Can be called on any thread.

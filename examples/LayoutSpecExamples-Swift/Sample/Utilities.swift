@@ -74,7 +74,21 @@ extension UIImage {
 
     return roundedImage ?? self
   }
-
+  
+  class func draw(size: CGSize, fillColor: UIColor, shapeClosure: () -> UIBezierPath) -> UIImage {
+    UIGraphicsBeginImageContext(size)
+    
+    let path = shapeClosure()
+    path.addClip()
+    
+    fillColor.setFill()
+    path.fill()
+    
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    
+    return image!
+  }
 }
 
 extension NSAttributedString {

@@ -71,7 +71,7 @@ static ASLayout *crossChildLayout(const ASStackLayoutSpecChild &child,
                                  crossMax);
   const ASSizeRange childSizeRange = directionSizeRange(style.direction, stackMin, stackMax, childCrossMin, childCrossMax);
   ASLayout *layout = [child.element layoutThatFits:childSizeRange parentSize:parentSize];
-  ASDisplayNodeCAssertNotNil(layout, @"ASLayout returned from measureWithSizeRange: must not be nil: %@", child.element);
+  ASDisplayNodeCAssertNotNil(layout, @"ASLayout returned from -layoutThatFits:parentSize: must not be nil: %@", child.element);
   return layout ? : [ASLayout layoutWithLayoutElement:child.element size:{0, 0}];
 }
 

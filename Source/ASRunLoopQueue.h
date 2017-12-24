@@ -21,7 +21,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 AS_SUBCLASSING_RESTRICTED
-@interface ASRunLoopQueue<ObjectType> : NSObject
+@interface ASRunLoopQueue<ObjectType> : NSObject <NSLocking>
 
 /**
  * Create a new queue with the given run loop and handler.
@@ -41,6 +41,8 @@ AS_SUBCLASSING_RESTRICTED
 
 - (void)enqueue:(ObjectType)object;
 
+@property (nonatomic, readonly) BOOL isEmpty;
+
 @property (nonatomic, assign) NSUInteger batchSize;           // Default == 1.
 @property (nonatomic, assign) BOOL ensureExclusiveMembership; // Default == YES.  Set-like behavior.
 
@@ -49,11 +51,11 @@ AS_SUBCLASSING_RESTRICTED
 AS_SUBCLASSING_RESTRICTED
 @interface ASDeallocQueue : NSObject
 
-+ (instancetype)sharedDeallocationQueue;
+@property (class, atomic, readonly) ASDeallocQueue *sharedDeallocationQueue;
 
 - (void)test_drain;
 
-- (void)releaseObjectInBackground:(id)object;
+- (void)releaseObjectInBackground:(id __strong _Nullable * _Nonnull)objectPtr;
 
 @end
 

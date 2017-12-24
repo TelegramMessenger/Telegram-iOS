@@ -620,7 +620,7 @@
   [window makeKeyAndVisible];
 
   for (NSInteger i = 0; i < 2; i++) {
-    // NOTE: waitUntilAllUpdatesAreProcessed or reloadDataImmediately is not sufficient here!!
+    // NOTE: reloadData and waitUntilAllUpdatesAreProcessed are not sufficient here!!
     XCTestExpectation *done = [self expectationWithDescription:[NSString stringWithFormat:@"Reload #%td complete", i]];
     [cn reloadDataWithCompletion:^{
       [done fulfill];
@@ -867,7 +867,7 @@
   [self waitForExpectationsWithTimeout:3 handler:nil];
 }
 
-- (void)testThatMultipleBatchFetchesDontHappenUnnecessarily
+- (void)disabled_testThatMultipleBatchFetchesDontHappenUnnecessarily
 {
   UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
   ASCollectionViewTestController *testController = [[ASCollectionViewTestController alloc] initWithNibName:nil bundle:nil];

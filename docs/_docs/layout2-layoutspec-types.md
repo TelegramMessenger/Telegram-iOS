@@ -240,8 +240,8 @@ When using Automatic Subnode Management with the <code>ASOverlayLayoutSpec</code
 <pre lang="swift" class = "swiftCode hidden">
 override func layoutSpecThatFits(_ constrainedSize: ASSizeRange) -> ASLayoutSpec
 {
-  let backgroundNode = ASDisplayNodeWithBackgroundColor(UIColor.blue)
-  let foregroundNode = ASDisplayNodeWithBackgroundColor(UIColor.red)
+  let backgroundNode = ASDisplayNodeWithBackgroundColor(UIColor.red)
+  let foregroundNode = ASDisplayNodeWithBackgroundColor(UIColor.blue)
 
   return ASBackgroundLayoutSpec(child: foregroundNode, background: backgroundNode)
 }
@@ -452,7 +452,7 @@ Another use of `ASLayoutSpec` is to be used as a spacer in a `ASStackLayoutSpec`
   ...
   // ASLayoutSpec as spacer
   ASLayoutSpec *spacer = [[ASLayoutSpec alloc] init];
-  spacer.flexGrow = true;
+  spacer.style.flexGrow = true;
 
   stack.children = @[imageNode, spacer, textNode];
   ...

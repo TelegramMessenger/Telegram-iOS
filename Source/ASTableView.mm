@@ -131,6 +131,15 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   [node __setHighlightedFromUIKit:self.highlighted];
 }
 
+- (BOOL)consumesCellNodeVisibilityEvents
+{
+  ASCellNode *node = self.node;
+  if (node == nil) {
+    return NO;
+  }
+  return ASSubclassOverridesSelector([ASCellNode class], [node class], @selector(cellNodeVisibilityEvent:inScrollView:withCellFrame:));
+}
+
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated
 {
   [super setSelected:selected animated:animated];
@@ -373,8 +382,8 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   [self setAsyncDataSource:nil];
 
   // Data controller & range controller may own a ton of nodes, let's deallocate those off-main
-  ASPerformBackgroundDeallocation(_dataController);
-  ASPerformBackgroundDeallocation(_rangeController);
+  ASPerformBackgroundDeallocation(&_dataController);
+  ASPerformBackgroundDeallocation(&_rangeController);
 }
 
 #pragma mark -
@@ -545,13 +554,6 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   [self reloadDataWithCompletion:nil];
 }
 
-- (void)reloadDataImmediately
-{
-  ASDisplayNodeAssertMainThread();
-  [self reloadData];
-  [_dataController waitUntilAllUpdatesAreProcessed];
-}
-
 - (void)scrollToRowAtIndexPath:(NSIndexPath *)indexPath atScrollPosition:(UITableViewScrollPosition)scrollPosition animated:(BOOL)animated
 {
   if ([self validateIndexPath:indexPath]) {
@@ -561,7 +563,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (void)relayoutItems
 {
-  [_dataController relayoutAllNodes];
+  [_dataController relayoutAllNodesWithInvalidationBlock:nil];
 }
 
 - (void)setTuningParameters:(ASRangeTuningParameters)tuningParameters forRangeType:(ASLayoutRangeType)rangeType
@@ -596,18 +598,12 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (NSIndexPath *)convertIndexPathFromTableNode:(NSIndexPath *)indexPath waitingIfNeeded:(BOOL)wait
 {
-  // If this is a section index path, we don't currently have a method
-  // to do a mapping.
-  if (indexPath == nil || indexPath.row == NSNotFound) {
-    return indexPath;
-  } else {
-    NSIndexPath *viewIndexPath = [_dataController.visibleMap convertIndexPath:indexPath fromMap:_dataController.pendingMap];
-    if (viewIndexPath == nil && wait) {
-      [self waitUntilAllUpdatesAreCommitted];
-      return [self convertIndexPathFromTableNode:indexPath waitingIfNeeded:NO];
-    }
-    return viewIndexPath;
+  NSIndexPath *viewIndexPath = [_dataController.visibleMap convertIndexPath:indexPath fromMap:_dataController.pendingMap];
+  if (viewIndexPath == nil && wait) {
+    [self waitUntilAllUpdatesAreCommitted];
+    return [self convertIndexPathFromTableNode:indexPath waitingIfNeeded:NO];
   }
+  return viewIndexPath;
 }
 
 - (NSIndexPath *)convertIndexPathToTableNode:(NSIndexPath *)indexPath
@@ -616,13 +612,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
     return nil;
   }
 
-  // If this is a section index path, we don't currently have a method
-  // to do a mapping.
-  if (indexPath.row == NSNotFound) {
-    return indexPath;
-  } else {
-    return [_dataController.pendingMap convertIndexPath:indexPath fromMap:_dataController.visibleMap];
-  }
+  return [_dataController.pendingMap convertIndexPath:indexPath fromMap:_dataController.visibleMap];
 }
 
 - (NSArray<NSIndexPath *> *)convertIndexPathsToTableNode:(NSArray<NSIndexPath *> *)indexPaths
@@ -768,7 +758,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
     _nodesConstrainedWidth = constrainedWidth;
 
     [self beginUpdates];
-    [_dataController relayoutAllNodes];
+    [_dataController relayoutAllNodesWithInvalidationBlock:nil];
     [self endUpdatesAnimated:(ASDisplayNodeLayerHasAnimations(self.layer) == NO) completion:nil];
   } else {
     if (_cellsForLayoutUpdates.count > 0) {
@@ -991,7 +981,14 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 - (void)tableView:(UITableView *)tableView willDisplayCell:(_ASTableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
 {
   ASCollectionElement *element = cell.element;
-  [_visibleElements addObject:element];
+  if (element) {
+    ASDisplayNodeAssertTrue([_dataController.visibleMap elementForItemAtIndexPath:indexPath] == element);
+    [_visibleElements addObject:element];
+  } else {
+    ASDisplayNodeAssert(NO, @"Unexpected nil element for willDisplayCell: %@, %@, %@", cell, self, indexPath);
+    return;
+  }
+
   ASCellNode *cellNode = element.node;
   cellNode.scrollView = tableView;
 
@@ -1011,15 +1008,22 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   
   [_rangeController setNeedsUpdate];
   
-  if (ASSubclassOverridesSelector([ASCellNode class], [cellNode class], @selector(cellNodeVisibilityEvent:inScrollView:withCellFrame:))) {
+  if ([cell consumesCellNodeVisibilityEvents]) {
     [_cellsForVisibilityUpdates addObject:cell];
   }
 }
 
 - (void)tableView:(UITableView *)tableView didEndDisplayingCell:(_ASTableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
 {
+  // Retrieve the element from cell instead of visible map because at this point visible map could have been updated and no longer holds the element.
   ASCollectionElement *element = cell.element;
-  [_visibleElements removeObject:element];
+  if (element) {
+    [_visibleElements removeObject:element];
+  } else {
+    ASDisplayNodeAssert(NO, @"Unexpected nil element for didEndDisplayingCell: %@, %@, %@", cell, self, indexPath);
+    return;
+  }
+
   ASCellNode *cellNode = element.node;
 
   [_rangeController setNeedsUpdate];
@@ -1326,7 +1330,12 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (void)setLeadingScreensForBatching:(CGFloat)leadingScreensForBatching
 {
-  _leadingScreensForBatching = leadingScreensForBatching;
+  if (_leadingScreensForBatching != leadingScreensForBatching) {
+    _leadingScreensForBatching = leadingScreensForBatching;
+    ASPerformBlockOnMainThread(^{
+      [self _checkForBatchFetching];
+    });
+  }
 }
 
 - (BOOL)automaticallyAdjustsContentOffset

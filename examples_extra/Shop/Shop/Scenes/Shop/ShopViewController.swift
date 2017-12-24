@@ -77,7 +77,7 @@ extension ShopViewController: ASTableDataSource, ASTableDelegate {
     
     func tableView(_ tableView: ASTableView, constrainedSizeForRowAt indexPath: IndexPath) -> ASSizeRange {
         let width = UIScreen.main.bounds.width
-        return ASSizeRangeMakeExactSize(CGSize(width: width, height: 175))
+        return ASSizeRangeMake(CGSize(width: width, height: 175))
     }
     
 }

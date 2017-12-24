@@ -32,15 +32,15 @@ BOOL ASSubclassOverridesClassSelector(Class superclass, Class subclass, SEL sele
 IMP ASReplaceMethodWithBlock(Class c, SEL origSEL, id block);
 
 /// Dispatches the given block to the main queue if not already running on the main thread
-void ASPerformBlockOnMainThread(void (^block)());
+void ASPerformBlockOnMainThread(void (^block)(void));
 
 /// Dispatches the given block to a background queue with priority of DISPATCH_QUEUE_PRIORITY_DEFAULT if not already run on a background queue
-void ASPerformBlockOnBackgroundThread(void (^block)()); // DISPATCH_QUEUE_PRIORITY_DEFAULT
+void ASPerformBlockOnBackgroundThread(void (^block)(void)); // DISPATCH_QUEUE_PRIORITY_DEFAULT
 
 /// For deallocation of objects on a background thread without GCD overhead / thread explosion
-void ASPerformBackgroundDeallocation(id object);
+void ASPerformBackgroundDeallocation(id __strong _Nullable * _Nonnull object);
 
-CGFloat ASScreenScale();
+CGFloat ASScreenScale(void);
 
 CGSize ASFloorSizeValues(CGSize s);
 
@@ -80,7 +80,7 @@ ASDISPLAYNODE_INLINE BOOL ASImageAlphaInfoIsOpaque(CGImageAlphaInfo info) {
  @param withoutAnimation Set to `YES` to perform given block without animation
  @param block Perform UIView geometry changes within the passed block
  */
-ASDISPLAYNODE_INLINE void ASPerformBlockWithoutAnimation(BOOL withoutAnimation, void (^block)()) {
+ASDISPLAYNODE_INLINE void ASPerformBlockWithoutAnimation(BOOL withoutAnimation, void (^block)(void)) {
   if (withoutAnimation) {
     [UIView performWithoutAnimation:block];
   } else {

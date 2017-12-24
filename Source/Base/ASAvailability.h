@@ -31,9 +31,20 @@
   #define kCFCoreFoundationVersionNumber_iOS_11_0 1438.10
 #endif
 
+#ifndef __IPHONE_11_0
+  #define __IPHONE_11_0 110000
+#endif
+
 #define AS_AT_LEAST_IOS9   (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_9_0)
 #define AS_AT_LEAST_IOS10  (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_10_0)
 #define AS_AT_LEAST_IOS11  (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_11_0)
+
+// Use __builtin_available if we're on Xcode >= 9, AS_AT_LEAST otherwise.
+#if __has_builtin(__builtin_available)
+  #define AS_AVAILABLE_IOS(ver)   __builtin_available(iOS ver, *)
+#else
+  #define AS_AVAILABLE_IOS(ver)   AS_AT_LEAST_IOS##ver
+#endif
 
 // If Yoga is available, make it available anywhere we use ASAvailability.
 // This reduces Yoga-specific code in other files.

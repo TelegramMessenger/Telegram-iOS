@@ -16,10 +16,10 @@ With all Texture nodes, converting an entire subtree from views to layers is as 
 <span class="language-toggle"><a data-lang="swift" class="swiftButton">Swift</a><a data-lang="objective-c" class = "active objcButton">Objective-C</a></span>
 <div class = "code">
 <pre lang="objc" class="objcCode">
-rootNode.layerBacked = YES;
+rootNode.isLayerBacked = YES;
 </pre>
 <pre lang="swift" class = "swiftCode hidden">
-rootNode.layerBacked = true
+rootNode.isLayerBacked = true
 </pre>
 </div>
 </div>

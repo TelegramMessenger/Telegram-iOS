@@ -15,6 +15,8 @@
 #import <OCMock/OCMock.h>
 #import <objc/runtime.h>
 #import "ASTestCase.h"
+#import <AsyncDisplayKit/ASAssert.h>
+#import "debugbreak.h"
 
 @interface ASTestCase (OCMockObjectRegistering)
 
@@ -32,9 +34,18 @@
   method_exchangeImplementations(orig, new);
 
   // init <-> swizzled_init
-  Method origInit = class_getInstanceMethod([OCMockObject class], @selector(init));
-  Method newInit = class_getInstanceMethod(self, @selector(swizzled_init));
-  method_exchangeImplementations(origInit, newInit);
+  {
+    Method origInit = class_getInstanceMethod([OCMockObject class], @selector(init));
+    Method newInit = class_getInstanceMethod(self, @selector(swizzled_init));
+    method_exchangeImplementations(origInit, newInit);
+  }
+
+  // (class mock) description <-> swizzled_classMockDescription
+  {
+    Method orig = class_getInstanceMethod(OCMockObject.classMockObjectClass, @selector(description));
+    Method new = class_getInstanceMethod(self, @selector(swizzled_classMockDescription));
+    method_exchangeImplementations(orig, new);
+  }
 }
 
 /// Since OCProtocolMockObject is private, use this method to get the class.
@@ -44,6 +55,18 @@
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
     c = NSClassFromString(@"OCProtocolMockObject");
+    NSAssert(c != Nil, nil);
+  });
+  return c;
+}
+
+/// Since OCClassMockObject is private, use this method to get the class.
++ (Class)classMockObjectClass
+{
+  static Class c;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    c = NSClassFromString(@"OCClassMockObject");
     NSAssert(c != Nil, nil);
   });
   return c;
@@ -142,4 +165,77 @@
   return self;
 }
 
+- (NSString *)swizzled_classMockDescription
+{
+  NSString *orig = [self swizzled_classMockDescription];
+  __auto_type block = self.modifyDescriptionBlock;
+  if (block) {
+    return block(self, orig);
+  }
+  return orig;
+}
+
+- (void)setModifyDescriptionBlock:(NSString *(^)(OCMockObject *, NSString *))modifyDescriptionBlock
+{
+  objc_setAssociatedObject(self, @selector(modifyDescriptionBlock), modifyDescriptionBlock, OBJC_ASSOCIATION_COPY);
+}
+
+- (NSString *(^)(OCMockObject *, NSString *))modifyDescriptionBlock
+{
+  return objc_getAssociatedObject(self, _cmd);
+}
+
+@end
+
+@implementation OCMStubRecorder (ASProperties)
+
+@dynamic _ignoringNonObjectArgs;
+
+- (OCMStubRecorder *(^)(void))_ignoringNonObjectArgs
+{
+  id (^theBlock)(void) = ^ ()
+  {
+    return [self ignoringNonObjectArgs];
+  };
+  return theBlock;
+}
+
+@dynamic _onMainThread;
+
+- (OCMStubRecorder *(^)(void))_onMainThread
+{
+  id (^theBlock)(void) = ^ ()
+  {
+    return [self andDo:^(NSInvocation *invocation) {
+      ASDisplayNodeAssertMainThread();
+    }];
+  };
+  return theBlock;
+}
+
+@dynamic _offMainThread;
+
+- (OCMStubRecorder *(^)(void))_offMainThread
+{
+  id (^theBlock)(void) = ^ ()
+  {
+    return [self andDo:^(NSInvocation *invocation) {
+      ASDisplayNodeAssertNotMainThread();
+    }];
+  };
+  return theBlock;
+}
+
+@dynamic _andDebugBreak;
+
+- (OCMStubRecorder *(^)(void))_andDebugBreak
+{
+  id (^theBlock)(void) = ^ ()
+  {
+    return [self andDo:^(NSInvocation *invocation) {
+      debug_break();
+    }];
+  };
+  return theBlock;
+}
 @end

@@ -16,6 +16,7 @@
 #import <AsyncDisplayKit/ASScrollDirection.h>
 
 @class ASElementMap;
+@class ASCollectionGalleryLayoutDelegate;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -26,11 +27,13 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @discussion This method will only be called on main thread.
  *
+ * @param delegate The calling object.
+ *
  * @param elements All elements to be sized.
  *
  * @return The elements' size
  */
-- (CGSize)sizeForElements:(ASElementMap *)elements;
+- (CGSize)galleryLayoutDelegate:(ASCollectionGalleryLayoutDelegate *)delegate sizeForElements:(ASElementMap *)elements;
 
 @optional
 
@@ -44,11 +47,13 @@ NS_ASSUME_NONNULL_BEGIN
  * It is not applied between the first line and the header, or between the last line and the footer.
  * This is the same behavior as UICollectionViewFlowLayout's minimumLineSpacing.
  *
+ * @param delegate The calling object.
+ *
  * @param elements All elements in the layout.
  *
  * @return The interitem spacing
  */
-- (CGFloat)minimumLineSpacingForElements:(ASElementMap *)elements;
+- (CGFloat)galleryLayoutDelegate:(ASCollectionGalleryLayoutDelegate *)delegate minimumLineSpacingForElements:(ASElementMap *)elements;
 
 /**
  * Returns the minumum spacing to use between items in the same row or column, depending on the scroll directions.
@@ -60,22 +65,26 @@ NS_ASSUME_NONNULL_BEGIN
  * It is considered while fitting items into lines, but the actual final spacing between some items might be larger.
  * This is the same behavior as UICollectionViewFlowLayout's minimumInteritemSpacing.
  *
+ * @param delegate The calling object.
+ *
  * @param elements All elements in the layout.
  *
  * @return The interitem spacing
  */
-- (CGFloat)minimumInteritemSpacingForElements:(ASElementMap *)elements;
+- (CGFloat)galleryLayoutDelegate:(ASCollectionGalleryLayoutDelegate *)delegate minimumInteritemSpacingForElements:(ASElementMap *)elements;
 
 /**
  * Returns the margins of each section.
  *
  * @discussion This method will only be called on main thread.
  *
+ * @param delegate The calling object.
+ *
  * @param elements All elements in the layout.
  *
  * @return The margins used to layout content in a section
  */
-- (UIEdgeInsets)sectionInsetForElements:(ASElementMap *)elements;
+- (UIEdgeInsets)galleryLayoutDelegate:(ASCollectionGalleryLayoutDelegate *)delegate sectionInsetForElements:(ASElementMap *)elements;
 
 @end
 

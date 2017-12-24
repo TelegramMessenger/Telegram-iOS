@@ -33,6 +33,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, weak) id<ASTableDelegate>   asyncDelegate;
 @property (nonatomic, weak) id<ASTableDataSource> asyncDataSource;
+@property (nonatomic, assign) UIEdgeInsets contentInset;
 @property (nonatomic, assign) CGPoint contentOffset;
 @property (nonatomic, assign) BOOL automaticallyAdjustsContentOffset;
 @property (nonatomic, assign) BOOL inverted;
@@ -145,7 +146,7 @@ NS_ASSUME_NONNULL_BEGIN
  * the main thread.
  * @warning This method is substantially more expensive than UITableView's version.
  */
--(void)reloadDataWithCompletion:(void (^ _Nullable)())completion;
+-(void)reloadDataWithCompletion:(void (^ _Nullable)(void))completion;
 
 /**
  * Reload everything from scratch, destroying the working range and all cached nodes.
@@ -153,14 +154,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @warning This method is substantially more expensive than UITableView's version.
  */
 - (void)reloadData;
-
-/**
- * Reload everything from scratch entirely on the main thread, destroying the working range and all cached nodes.
- *
- * @warning This method is substantially more expensive than UITableView's version and will block the main thread while
- * all the cells load.
- */
-- (void)reloadDataImmediately;
 
 /**
  * Triggers a relayout of all nodes.

@@ -76,6 +76,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, weak) id<ASCollectionViewLayoutInspecting> layoutInspector;
 
+@property (nonatomic, assign) UIEdgeInsets contentInset;
+
 @property (nonatomic, assign) CGPoint contentOffset;
 
 /**
@@ -153,7 +155,7 @@ NS_ASSUME_NONNULL_BEGIN
  *                    Boolean parameter that contains the value YES if all of the related animations completed successfully or
  *                    NO if they were interrupted. This parameter may be nil. If supplied, the block is run on the main thread.
  */
-- (void)performBatchAnimated:(BOOL)animated updates:(nullable AS_NOESCAPE void (^)())updates completion:(nullable void (^)(BOOL finished))completion;
+- (void)performBatchAnimated:(BOOL)animated updates:(nullable AS_NOESCAPE void (^)(void))updates completion:(nullable void (^)(BOOL finished))completion;
 
 /**
  *  Perform a batch of updates asynchronously.  This method must be called from the main thread.
@@ -164,7 +166,7 @@ NS_ASSUME_NONNULL_BEGIN
  *                    Boolean parameter that contains the value YES if all of the related animations completed successfully or
  *                    NO if they were interrupted. This parameter may be nil. If supplied, the block is run on the main thread.
  */
-- (void)performBatchUpdates:(nullable AS_NOESCAPE void (^)())updates completion:(nullable void (^)(BOOL finished))completion;
+- (void)performBatchUpdates:(nullable AS_NOESCAPE void (^)(void))updates completion:(nullable void (^)(BOOL finished))completion;
 
 /**
  * Triggers a relayout of all nodes.
@@ -294,6 +296,11 @@ NS_ASSUME_NONNULL_BEGIN
  *    collection node instead.
  */
 - (nullable NSIndexPath *)indexPathForNode:(ASCellNode *)cellNode AS_WARN_UNUSED_RESULT;
+
+/**
+ *  Invalidates and recalculates the cached sizes stored for pass-through cells used in interop mode.
+ */
+- (void)invalidateFlowLayoutDelegateMetrics;
 
 - (void)setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated;
 

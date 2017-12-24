@@ -2,8 +2,6 @@
 //  ASDisplayNodeImplicitHierarchyTests.m
 //  Texture
 //
-//  Created by Levi McCallum on 2/1/16.
-//
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under the BSD-style license found in the
 //  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
@@ -20,6 +18,7 @@
 #import <XCTest/XCTest.h>
 
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import "ASDisplayNodeTestsHelper.h"
 
 @interface ASSpecTestDisplayNode : ASDisplayNode
@@ -99,6 +98,47 @@
   XCTAssertEqual(node.subnodes[2], node3);
   XCTAssertEqual(node.subnodes[3], node4);
   XCTAssertEqual(node.subnodes[4], node5);
+}
+
+- (void)testInitialNodeInsertionWhenEnterPreloadState
+{
+  static CGSize kSize = {100, 100};
+
+  static NSInteger subnodeCount = 5;
+  NSMutableArray<ASDisplayNode *> *subnodes = [NSMutableArray arrayWithCapacity:subnodeCount];
+  for (NSInteger i = 0; i < subnodeCount; i++) {
+    ASDisplayNode *subnode = [[ASDisplayNode alloc] init];
+    // As we will involve a stack spec we have to give the nodes an intrinsic content size
+    subnode.style.preferredSize = kSize;
+    [subnodes addObject:subnode];
+  }
+
+  ASSpecTestDisplayNode *node = [[ASSpecTestDisplayNode alloc] init];
+  node.automaticallyManagesSubnodes = YES;
+  node.layoutSpecBlock = ^(ASDisplayNode *weakNode, ASSizeRange constrainedSize) {
+    ASAbsoluteLayoutSpec *absoluteLayout = [ASAbsoluteLayoutSpec absoluteLayoutSpecWithChildren:@[subnodes[3]]];
+
+    ASStackLayoutSpec *stack1 = [[ASStackLayoutSpec alloc] init];
+    [stack1 setChildren:@[subnodes[0], subnodes[1]]];
+
+    ASStackLayoutSpec *stack2 = [[ASStackLayoutSpec alloc] init];
+    [stack2 setChildren:@[subnodes[2], absoluteLayout]];
+
+    return [ASAbsoluteLayoutSpec absoluteLayoutSpecWithChildren:@[stack1, stack2, subnodes[4]]];
+  };
+
+  ASDisplayNodeSizeToFitSizeRange(node, ASSizeRangeMake(CGSizeZero, CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)));
+  [node recursivelySetInterfaceState:ASInterfaceStatePreload];
+
+  // No premature view allocation
+  XCTAssertFalse(node.isNodeLoaded);
+  // Subnodes should be inserted, laid out and entered preload state
+  XCTAssertTrue([subnodes isEqualToArray:node.subnodes]);
+  for (NSInteger i = 0; i < subnodeCount; i++) {
+    ASDisplayNode *subnode = subnodes[i];
+    XCTAssertTrue(CGSizeEqualToSize(kSize, subnode.bounds.size));
+    XCTAssertTrue(ASInterfaceStateIncludesPreload(subnode.interfaceState));
+  }
 }
 
 - (void)testCalculatedLayoutHierarchyTransitions

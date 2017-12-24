@@ -16,14 +16,14 @@ static pthread_mutex_t _sharedDebugLock;
 static CFMutableSetRef _sharedDebugTargets = nil;
 static ASTextDebugOption *_sharedDebugOption = nil;
 
-static const void* _sharedDebugSetRetain(CFAllocatorRef allocator, const void *value) {
+static const void* _as_sharedDebugSetRetain(CFAllocatorRef allocator, const void *value) {
   return value;
 }
 
-static void _sharedDebugSetRelease(CFAllocatorRef allocator, const void *value) {
+static void _as_sharedDebugSetRelease(CFAllocatorRef allocator, const void *value) {
 }
 
-void _sharedDebugSetFunction(const void *value, void *context) {
+void _as_sharedDebugSetFunction(const void *value, void *context) {
   id<ASTextDebugTarget> target = (__bridge id<ASTextDebugTarget>)(value);
   [target setDebugOption:_sharedDebugOption];
 }
@@ -33,8 +33,8 @@ static void _initSharedDebug() {
   dispatch_once(&onceToken, ^{
     pthread_mutex_init(&_sharedDebugLock, NULL);
     CFSetCallBacks callbacks = kCFTypeSetCallBacks;
-    callbacks.retain = _sharedDebugSetRetain;
-    callbacks.release = _sharedDebugSetRelease;
+    callbacks.retain = _as_sharedDebugSetRetain;
+    callbacks.release = _as_sharedDebugSetRelease;
     _sharedDebugTargets = CFSetCreateMutable(CFAllocatorGetDefault(), 0, &callbacks);
   });
 }
@@ -43,7 +43,7 @@ static void _setSharedDebugOption(ASTextDebugOption *option) {
   _initSharedDebug();
   pthread_mutex_lock(&_sharedDebugLock);
   _sharedDebugOption = option.copy;
-  CFSetApplyFunction(_sharedDebugTargets, _sharedDebugSetFunction, NULL);
+  CFSetApplyFunction(_sharedDebugTargets, _as_sharedDebugSetFunction, NULL);
   pthread_mutex_unlock(&_sharedDebugLock);
 }
 

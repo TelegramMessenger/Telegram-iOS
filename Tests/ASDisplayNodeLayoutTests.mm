@@ -44,7 +44,7 @@
   ASXCTAssertEqualSizes(displayNode.calculatedSize, CGSizeZero, @"Calculated size before measurement and layout should be 0");
   ASXCTAssertEqualSizes(buttonNode.calculatedSize, CGSizeZero, @"Calculated size before measurement and layout should be 0");
   
-  // Trigger view creation and layout pass without a manual measure: call before so the automatic measurement
+  // Trigger view creation and layout pass without a manual -layoutThatFits: call before so the automatic measurement
   // pass will trigger in the layout pass
   [displayNode.view layoutIfNeeded];
   

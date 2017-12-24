@@ -42,9 +42,9 @@ static ASLayout *layout(id<ASLayoutElement> element, NSArray<ASLayout *> *sublay
     NSMutableArray<ASLayoutSpec *> *layoutSpecs = [NSMutableArray array];
     NSMutableArray<ASDisplayNode *> *indirectSubnodes = [NSMutableArray array];
     
-    ASDisplayNode *(^subnode)() = ^ASDisplayNode *() { [subnodes addObject:[[ASDisplayNode alloc] init]]; return [subnodes lastObject]; };
-    ASLayoutSpec *(^layoutSpec)() = ^ASLayoutSpec *() { [layoutSpecs addObject:[[ASLayoutSpec alloc] init]]; return [layoutSpecs lastObject]; };
-    ASDisplayNode *(^indirectSubnode)() = ^ASDisplayNode *() { [indirectSubnodes addObject:[[ASDisplayNode alloc] init]]; return [indirectSubnodes lastObject]; };
+    ASDisplayNode *(^subnode)(void) = ^ASDisplayNode *() { [subnodes addObject:[[ASDisplayNode alloc] init]]; return [subnodes lastObject]; };
+    ASLayoutSpec *(^layoutSpec)(void) = ^ASLayoutSpec *() { [layoutSpecs addObject:[[ASLayoutSpec alloc] init]]; return [layoutSpecs lastObject]; };
+    ASDisplayNode *(^indirectSubnode)(void) = ^ASDisplayNode *() { [indirectSubnodes addObject:[[ASDisplayNode alloc] init]]; return [indirectSubnodes lastObject]; };
     
     NSArray<ASLayout *> *sublayouts = @[
                                         layout(subnode(), @[
@@ -118,7 +118,7 @@ static ASLayout *layout(id<ASLayoutElement> element, NSArray<ASLayout *> *sublay
   @autoreleasepool {
     ASDisplayNode *rootNode = [[ASDisplayNode alloc] init];
     NSMutableArray<ASDisplayNode *> *subnodes = [NSMutableArray array];
-    ASDisplayNode *(^subnode)() = ^ASDisplayNode *() { [subnodes addObject:[[ASDisplayNode alloc] init]]; return [subnodes lastObject]; };
+    ASDisplayNode *(^subnode)(void) = ^ASDisplayNode *() { [subnodes addObject:[[ASDisplayNode alloc] init]]; return [subnodes lastObject]; };
     ASLayout *originalLayout = layoutWithCustomPosition(ASPointNull,
                                                         rootNode,
                                                         @[
@@ -148,9 +148,9 @@ static ASLayout *layout(id<ASLayoutElement> element, NSArray<ASLayout *> *sublay
     NSMutableArray<ASDisplayNode *> *indirectSubnodes = [NSMutableArray array];
     NSMutableArray<ASLayout *> *reusedLayouts = [NSMutableArray array];
     
-    ASDisplayNode *(^subnode)() = ^ASDisplayNode *() { [subnodes addObject:[[ASDisplayNode alloc] init]]; return [subnodes lastObject]; };
-    ASLayoutSpec *(^layoutSpec)() = ^ASLayoutSpec *() { [layoutSpecs addObject:[[ASLayoutSpec alloc] init]]; return [layoutSpecs lastObject]; };
-    ASDisplayNode *(^indirectSubnode)() = ^ASDisplayNode *() { [indirectSubnodes addObject:[[ASDisplayNode alloc] init]]; return [indirectSubnodes lastObject]; };
+    ASDisplayNode *(^subnode)(void) = ^ASDisplayNode *() { [subnodes addObject:[[ASDisplayNode alloc] init]]; return [subnodes lastObject]; };
+    ASLayoutSpec *(^layoutSpec)(void) = ^ASLayoutSpec *() { [layoutSpecs addObject:[[ASLayoutSpec alloc] init]]; return [layoutSpecs lastObject]; };
+    ASDisplayNode *(^indirectSubnode)(void) = ^ASDisplayNode *() { [indirectSubnodes addObject:[[ASDisplayNode alloc] init]]; return [indirectSubnodes lastObject]; };
     ASLayout *(^reusedLayout)(ASDisplayNode *) = ^ASLayout *(ASDisplayNode *subnode) { [reusedLayouts addObject:layout(subnode, @[])]; return [reusedLayouts lastObject]; };
     
     /*

@@ -10,8 +10,6 @@
 		050E7C7419D22E19004363C2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050E7C7319D22E19004363C2 /* AppDelegate.swift */; };
 		050E7C7619D22E19004363C2 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050E7C7519D22E19004363C2 /* ViewController.swift */; };
 		05DDD8DB19D2336300013C30 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 05DDD8DA19D2336300013C30 /* Default-568h@2x.png */; };
-		34566CAA1BC1204100715E6B /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34566CA91BC1202A00715E6B /* AsyncDisplayKit.framework */; };
-		34566CAB1BC1204100715E6B /* AsyncDisplayKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 34566CA91BC1202A00715E6B /* AsyncDisplayKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		6C5053DB19EE266A00E385DE /* Default-667h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C5053D919EE266A00E385DE /* Default-667h@2x.png */; };
 		6C5053DC19EE266A00E385DE /* Default-736h@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C5053DA19EE266A00E385DE /* Default-736h@3x.png */; };
 /* End PBXBuildFile section */
@@ -38,13 +36,6 @@
 			remoteGlobalIDString = 057D02BF1AC0A66700C7AC3C;
 			remoteInfo = AsyncDisplayKitTestHost;
 		};
-		34566CA81BC1202A00715E6B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 34566C9B1BC1202A00715E6B /* AsyncDisplayKit.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = B35061DA1B010EDF0018CF92;
-			remoteInfo = "AsyncDisplayKit-iOS";
-		};
 		34566CAC1BC1204100715E6B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 34566C9B1BC1202A00715E6B /* AsyncDisplayKit.xcodeproj */;
@@ -61,7 +52,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				34566CAB1BC1204100715E6B /* AsyncDisplayKit.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -86,7 +76,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				34566CAA1BC1204100715E6B /* AsyncDisplayKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -150,7 +139,6 @@
 				34566CA31BC1202A00715E6B /* libAsyncDisplayKit.a */,
 				34566CA51BC1202A00715E6B /* AsyncDisplayKitTests.xctest */,
 				34566CA71BC1202A00715E6B /* AsyncDisplayKitTestHost.app */,
-				34566CA91BC1202A00715E6B /* AsyncDisplayKit.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -189,7 +177,7 @@
 				TargetAttributes = {
 					050E7C6D19D22E19004363C2 = {
 						CreatedOnToolsVersion = 6.0.1;
-						LastSwiftMigration = 0800;
+						LastSwiftMigration = 0830;
 					};
 				};
 			};
@@ -220,8 +208,8 @@
 /* Begin PBXReferenceProxy section */
 		34566CA31BC1202A00715E6B /* libAsyncDisplayKit.a */ = {
 			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libAsyncDisplayKit.a;
+			fileType = wrapper.framework;
+			path = AsyncDisplayKit.framework;
 			remoteRef = 34566CA21BC1202A00715E6B /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
@@ -237,13 +225,6 @@
 			fileType = wrapper.application;
 			path = AsyncDisplayKitTestHost.app;
 			remoteRef = 34566CA61BC1202A00715E6B /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		34566CA91BC1202A00715E6B /* AsyncDisplayKit.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = AsyncDisplayKit.framework;
-			remoteRef = 34566CA81BC1202A00715E6B /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -369,7 +350,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.AsyncDisplayKit.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
-				SWIFT_VERSION = 2.3;
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -382,7 +363,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.AsyncDisplayKit.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
-				SWIFT_VERSION = 2.3;
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};

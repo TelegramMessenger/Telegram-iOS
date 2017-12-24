@@ -88,9 +88,6 @@ extern ASSizeRange NodeConstrainedSizeForScrollDirection(ASCollectionView *colle
  * @warning This class is not meant to be subclassed and will be restricted in the future.
  */
 @interface ASCollectionViewLayoutInspector : NSObject <ASCollectionViewLayoutInspecting>
-
-- (instancetype)initWithCollectionView:(ASCollectionView *)collectionView ASDISPLAYNODE_DEPRECATED_MSG("Use -init instead.");
-
 @end
 
 

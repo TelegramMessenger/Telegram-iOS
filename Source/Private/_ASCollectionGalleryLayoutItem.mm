@@ -40,7 +40,6 @@
 
 ASLayoutElementStyleExtensibilityForwarding
 ASPrimitiveTraitCollectionDefaults
-ASPrimitiveTraitCollectionDeprecatedImplementation
 
 - (ASTraitCollection *)asyncTraitCollection
 {

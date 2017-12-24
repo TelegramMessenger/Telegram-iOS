@@ -68,9 +68,9 @@
     _propertiesProviderFlags = {};
   } else {
     _propertiesProvider = propertiesProvider;
-    _propertiesProviderFlags.minimumLineSpacingForElements = [_propertiesProvider respondsToSelector:@selector(minimumLineSpacingForElements:)];
-    _propertiesProviderFlags.minimumInteritemSpacingForElements = [_propertiesProvider respondsToSelector:@selector(minimumInteritemSpacingForElements:)];
-    _propertiesProviderFlags.sectionInsetForElements = [_propertiesProvider respondsToSelector:@selector(sectionInsetForElements:)];
+    _propertiesProviderFlags.minimumLineSpacingForElements = [_propertiesProvider respondsToSelector:@selector(galleryLayoutDelegate:minimumLineSpacingForElements:)];
+    _propertiesProviderFlags.minimumInteritemSpacingForElements = [_propertiesProvider respondsToSelector:@selector(galleryLayoutDelegate:minimumInteritemSpacingForElements:)];
+    _propertiesProviderFlags.sectionInsetForElements = [_propertiesProvider respondsToSelector:@selector(galleryLayoutDelegate:sectionInsetForElements:)];
   }
 }
 
@@ -82,10 +82,10 @@
     return nil;
   }
 
-  CGSize itemSize = [propertiesProvider sizeForElements:elements];
-  UIEdgeInsets sectionInset = _propertiesProviderFlags.sectionInsetForElements ? [propertiesProvider sectionInsetForElements:elements] : UIEdgeInsetsZero;
-  CGFloat lineSpacing = _propertiesProviderFlags.minimumLineSpacingForElements ? [propertiesProvider minimumLineSpacingForElements:elements] : 0.0;
-  CGFloat interitemSpacing = _propertiesProviderFlags.minimumInteritemSpacingForElements ? [propertiesProvider minimumInteritemSpacingForElements:elements] : 0.0;
+  CGSize itemSize = [propertiesProvider galleryLayoutDelegate:self sizeForElements:elements];
+  UIEdgeInsets sectionInset = _propertiesProviderFlags.sectionInsetForElements ? [propertiesProvider galleryLayoutDelegate:self sectionInsetForElements:elements] : UIEdgeInsetsZero;
+  CGFloat lineSpacing = _propertiesProviderFlags.minimumLineSpacingForElements ? [propertiesProvider galleryLayoutDelegate:self minimumLineSpacingForElements:elements] : 0.0;
+  CGFloat interitemSpacing = _propertiesProviderFlags.minimumInteritemSpacingForElements ? [propertiesProvider galleryLayoutDelegate:self minimumInteritemSpacingForElements:elements] : 0.0;
   return [[_ASCollectionGalleryLayoutInfo alloc] initWithItemSize:itemSize
                                                minimumLineSpacing:lineSpacing
                                           minimumInteritemSpacing:interitemSpacing

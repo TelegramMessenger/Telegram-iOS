@@ -20,6 +20,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@interface ASTextKitComponentsTextView : UITextView
+- (instancetype)initWithFrame:(CGRect)frame textContainer:(nullable NSTextContainer *)textContainer NS_DESIGNATED_INITIALIZER;
+- (nullable instancetype)initWithCoder:(NSCoder *)aDecoder __unavailable;
+- (instancetype)init __unavailable;
+@end
+
 AS_SUBCLASSING_RESTRICTED
 @interface ASTextKitComponents : NSObject
 
@@ -52,14 +58,13 @@ AS_SUBCLASSING_RESTRICTED
  */
 - (CGSize)sizeForConstrainedWidth:(CGFloat)constrainedWidth;
 
-
 - (CGSize)sizeForConstrainedWidth:(CGFloat)constrainedWidth
               forMaxNumberOfLines:(NSInteger)numberOfLines;
 
 @property (nonatomic, strong, readonly) NSTextStorage *textStorage;
 @property (nonatomic, strong, readonly) NSTextContainer *textContainer;
 @property (nonatomic, strong, readonly) NSLayoutManager *layoutManager;
-@property (nullable, nonatomic, strong) UITextView *textView;
+@property (nonatomic, strong, nullable) ASTextKitComponentsTextView *textView;
 
 @end
 

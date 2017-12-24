@@ -85,6 +85,18 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nullable, nonatomic, strong, readwrite) NSURL *URL;
 
 /**
+  * An array of URLs of increasing cost to download.
+  *
+  * @discussion By setting an array of URLs, the image property of this node will be managed internally. This means previously
+  * directly set images to the image property will be cleared out and replaced by the placeholder (<defaultImage>) image
+  * while loading and the final image after the new image data was downloaded and processed.
+  *
+  * @deprecated This API has been removed for now due to the increased complexity to the class that it brought.
+  * Please use .URL instead.
+  */
+@property (nullable, nonatomic, strong, readwrite) NSArray <NSURL *> *URLs ASDISPLAYNODE_DEPRECATED_MSG("Please use URL instead.");
+
+/**
  * Download and display a new image.
  *
  * @param URL The URL of a new image to download and display.
@@ -123,12 +135,39 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 #pragma mark -
+
+typedef NS_ENUM(NSInteger, ASNetworkImageSource) {
+  ASNetworkImageSourceUnspecified = 0,
+  ASNetworkImageSourceSynchronousCache,
+  ASNetworkImageSourceAsynchronousCache,
+  ASNetworkImageSourceFileURL,
+  ASNetworkImageSourceDownload,
+};
+
+/// A struct that carries details about ASNetworkImageNode's image loads.
+typedef struct {
+  /// The source from which the image was loaded.
+  ASNetworkImageSource imageSource;
+} ASNetworkImageNodeDidLoadInfo;
+
 /**
  * The methods declared by the ASNetworkImageNodeDelegate protocol allow the adopting delegate to respond to
  * notifications such as finished decoding and downloading an image.
  */
 @protocol ASNetworkImageNodeDelegate <NSObject>
 @optional
+
+/**
+ * Notification that the image node finished downloading an image, with additional info.
+ * If implemented, this method will be called instead of `imageNode:didLoadImage:`.
+ *
+ * @param imageNode The sender.
+ * @param image The newly-loaded image.
+ * @param info Misc information about the image load.
+ *
+ * @discussion Called on a background queue.
+ */
+- (void)imageNode:(ASNetworkImageNode *)imageNode didLoadImage:(UIImage *)image info:(ASNetworkImageNodeDidLoadInfo)info;
 
 /**
  * Notification that the image node finished downloading an image.

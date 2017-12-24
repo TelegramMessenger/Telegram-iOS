@@ -23,8 +23,7 @@
 #import <queue>
 #import <AsyncDisplayKit/ASRunLoopQueue.h>
 
-extern void ASPerformMainThreadDeallocation(_Nullable id object)
-{
+extern void ASPerformMainThreadDeallocation(id _Nullable __strong * _Nonnull objectPtr) {
   /**
    * UIKit components must be deallocated on the main thread. We use this shared
    * run loop queue to gradually deallocate them across many turns of the main run loop.
@@ -35,8 +34,14 @@ extern void ASPerformMainThreadDeallocation(_Nullable id object)
     queue = [[ASRunLoopQueue alloc] initWithRunLoop:CFRunLoopGetMain() retainObjects:YES handler:nil];
     queue.batchSize = 10;
   });
-  if (object != nil) {
-  	[queue enqueue:object];
+
+  if (objectPtr != NULL && *objectPtr != nil) {
+    // Lock queue while enqueuing and releasing, so that there's no risk
+    // that the queue will release before we get a chance to release.
+    [queue lock];
+    [queue enqueue:*objectPtr];   // Retain, +1
+    *objectPtr = nil;             // Release, +0
+    [queue unlock];               // (After queue drains), release, -1
   }
 }
 

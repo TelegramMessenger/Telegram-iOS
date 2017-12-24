@@ -97,7 +97,7 @@
 
 - (void)dealloc
 {
-  ASPerformBackgroundDeallocation(_node);
+  ASPerformBackgroundDeallocation(&_node);
 }
 
 - (void)loadView
@@ -147,12 +147,9 @@
       [self propagateNewTraitCollection:traitCollection];
     }];
   } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     // Call layoutThatFits: to let the node prepare for a layout that will happen shortly in the layout pass of the view.
     // If the node's constrained size didn't change between the last layout pass it's a no-op
     [_node layoutThatFits:[self nodeConstrainedSize]];
-#pragma clang diagnostic pop
   }
 }
 
@@ -297,13 +294,10 @@ ASVisibilityDepthImplementation;
       ASTraitCollectionPropagateDown(child, traitCollection);
     }
     
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     // Once we've propagated all the traits, layout this node.
     // Remeasure the node with the latest constrained size – old constrained size may be incorrect.
     as_activity_scope_verbose(as_activity_create("Layout ASViewController node with new traits", AS_ACTIVITY_CURRENT, OS_ACTIVITY_FLAG_DEFAULT));
     [_node layoutThatFits:[self nodeConstrainedSize]];
-#pragma clang diagnostic pop
   }
 }
 

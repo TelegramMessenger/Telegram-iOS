@@ -42,7 +42,7 @@ class ProductsTableViewController: ASViewController<ASTableNode> {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        if let indexPath = self.tableNode.view.indexPathForSelectedRow {
+        if let indexPath = self.tableNode.indexPathForSelectedRow {
             self.tableNode.view.deselectRow(at: indexPath, animated: true)
         }
     }

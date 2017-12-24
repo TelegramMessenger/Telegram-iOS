@@ -59,20 +59,7 @@
 
 - (void)addYogaChild:(ASDisplayNode *)child
 {
-  if (child == nil) {
-    return;
-  }
-  if (_yogaChildren == nil) {
-    _yogaChildren = [NSMutableArray array];
-  }
-
-  // Clean up state in case this child had another parent.
-  [self removeYogaChild:child];
-
-  [_yogaChildren addObject:child];
-
-  // YGNodeRef insertion is done in setParent:
-  child.yogaParent = self;
+  [self insertYogaChild:child atIndex:_yogaChildren.count];
 }
 
 - (void)removeYogaChild:(ASDisplayNode *)child
@@ -85,6 +72,24 @@
 
   // YGNodeRef removal is done in setParent:
   child.yogaParent = nil;
+}
+
+- (void)insertYogaChild:(ASDisplayNode *)child atIndex:(NSUInteger)index
+{
+  if (child == nil) {
+    return;
+  }
+  if (_yogaChildren == nil) {
+    _yogaChildren = [NSMutableArray array];
+  }
+
+  // Clean up state in case this child had another parent.
+  [self removeYogaChild:child];
+
+  [_yogaChildren insertObject:child atIndex:index];
+
+  // YGNodeRef insertion is done in setParent:
+  child.yogaParent = self;
 }
 
 - (void)semanticContentAttributeDidChange:(UISemanticContentAttribute)attribute
@@ -168,28 +173,72 @@
   CGSize size = CGSizeMake(YGNodeLayoutGetWidth(yogaNode), YGNodeLayoutGetHeight(yogaNode));
   ASLayout *layout = [ASLayout layoutWithLayoutElement:self size:size sublayouts:sublayouts];
 
-  self.yogaCalculatedLayout = layout;
+#if ASDISPLAYNODE_ASSERTIONS_ENABLED
+  // Assert that the sublayout is already flattened.
+  for (ASLayout *sublayout in layout.sublayouts) {
+    if (sublayout.sublayouts.count > 0 || ASDynamicCast(sublayout.layoutElement, ASDisplayNode) == nil) {
+      ASDisplayNodeAssert(NO, @"Yoga sublayout is not flattened! %@, %@", self, sublayout);
+    }
+  }
+#endif
+
+  // Because this layout won't go through the rest of the logic in calculateLayoutThatFits:, flatten it now.
+  layout = [layout filteredNodeLayoutTree];
+
+  if ([self.yogaCalculatedLayout isEqual:layout] == NO) {
+    self.yogaCalculatedLayout = layout;
+  } else {
+    layout = self.yogaCalculatedLayout;
+    ASYogaLog("-setupYogaCalculatedLayout: applying identical ASLayout: %@", layout);
+  }
+
+  // Setup _pendingDisplayNodeLayout to reference the Yoga-calculated ASLayout, *unless* we are a leaf node.
+  // Leaf yoga nodes may have their own .sublayouts, if they use a layout spec (such as ASButtonNode).
+  // Their _pending variable is set after passing the Yoga checks at the start of -calculateLayoutThatFits:
+
+  // For other Yoga nodes, there is no code that will set _pending unless we do it here. Why does it need to be set?
+  // When CALayer triggers the -[ASDisplayNode __layout] call, we will check if our current _pending layout
+  // has a size which matches our current bounds size. If it does, that layout will be used without recomputing it.
+
+  // NOTE: Yoga does not make the constrainedSize available to intermediate nodes in the tree (e.g. not root or leaves).
+  // Although the size range provided here is not accurate, this will only affect caching of calls to layoutThatFits:
+  // These calls will behave as if they are not cached, starting a new Yoga layout pass, but this will tap into Yoga's
+  // own internal cache.
+
+  if ([self shouldHaveYogaMeasureFunc] == NO) {
+    YGNodeRef parentNode = YGNodeGetParent(yogaNode);
+    CGSize parentSize = CGSizeZero;
+    if (parentNode) {
+      parentSize.width = YGNodeLayoutGetWidth(parentNode);
+      parentSize.height = YGNodeLayoutGetHeight(parentNode);
+    }
+    _pendingDisplayNodeLayout = std::make_shared<ASDisplayNodeLayout>(layout, ASSizeRangeUnconstrained, parentSize, 0);
+  }
 }
 
-- (void)updateYogaMeasureFuncIfNeeded
+- (BOOL)shouldHaveYogaMeasureFunc
 {
   // Size calculation via calculateSizeThatFits: or layoutSpecThatFits:
   // This will be used for ASTextNode, as well as any other node that has no Yoga children
   BOOL isLeafNode = (self.yogaChildren.count == 0);
   BOOL definesCustomLayout = [self implementsLayoutMethod];
+  return (isLeafNode && definesCustomLayout);
+}
 
+- (void)updateYogaMeasureFuncIfNeeded
+{
   // We set the measure func only during layout. Otherwise, a cycle is created:
   // The YGNodeRef Context will retain the ASDisplayNode, which retains the style, which owns the YGNodeRef.
-  BOOL shouldHaveMeasureFunc = (isLeafNode && definesCustomLayout && checkFlag(YogaLayoutInProgress));
+  BOOL shouldHaveMeasureFunc = ([self shouldHaveYogaMeasureFunc] && checkFlag(YogaLayoutInProgress));
 
   ASLayoutElementYogaUpdateMeasureFunc(self.style.yogaNode, shouldHaveMeasureFunc ? self : nil);
 }
 
 - (void)invalidateCalculatedYogaLayout
 {
-  // Yoga internally asserts that this method may only be called on nodes with a measurement function.
   YGNodeRef yogaNode = self.style.yogaNode;
   if (yogaNode && YGNodeGetMeasureFunc(yogaNode)) {
+    // Yoga internally asserts that MarkDirty() may only be called on nodes with a measurement function.
     YGNodeMarkDirty(yogaNode);
   }
   self.yogaCalculatedLayout = nil;
@@ -200,7 +249,7 @@
   ASDisplayNode *yogaParent = self.yogaParent;
 
   if (yogaParent) {
-    ASYogaLog(@"ESCALATING to Yoga root: %@", self);
+    ASYogaLog("ESCALATING to Yoga root: %@", self);
     // TODO(appleguy): Consider how to get the constrainedSize for the yogaRoot when escalating manually.
     [yogaParent calculateLayoutFromYogaRoot:ASSizeRangeUnconstrained];
     return;
@@ -217,7 +266,7 @@
     rootConstrainedSize = [self _locked_constrainedSizeForLayoutPass];
   }
 
-  ASYogaLog(@"CALCULATING at Yoga root with constraint = {%@, %@}: %@",
+  ASYogaLog("CALCULATING at Yoga root with constraint = {%@, %@}: %@",
             NSStringFromCGSize(rootConstrainedSize.min), NSStringFromCGSize(rootConstrainedSize.max), self);
 
   YGNodeRef rootYogaNode = self.style.yogaNode;
@@ -258,7 +307,7 @@
       NSLog(@"node = %@", node);
       NSLog(@"style = %@", node.style);
       NSLog(@"layout = %@", node.yogaCalculatedLayout);
-      YGNodePrint(node.yogaNode, (YGPrintOptions)(YGPrintOptionsStyle | YGPrintOptionsLayout));
+      YGNodePrint(node.style.yogaNode, (YGPrintOptions)(YGPrintOptionsStyle | YGPrintOptionsLayout));
     });
   }
 #endif /* YOGA_LAYOUT_LOGGING */

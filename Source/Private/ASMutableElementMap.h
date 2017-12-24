@@ -39,10 +39,10 @@ AS_SUBCLASSING_RESTRICTED
 
 - (void)insertSection:(ASSection *)section atIndex:(NSInteger)index;
 
-- (void)removeAllSectionContexts;
+- (void)removeAllSections;
 
 /// Only modifies the array of ASSection * objects
-- (void)removeSectionContextsAtIndexes:(NSIndexSet *)indexes;
+- (void)removeSectionsAtIndexes:(NSIndexSet *)indexes;
 
 - (void)removeAllElements;
 

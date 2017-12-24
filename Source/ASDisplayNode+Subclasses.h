@@ -116,12 +116,12 @@ NS_ASSUME_NONNULL_BEGIN
  * @discussion For node subclasses that implement manual layout (e.g., they have a custom -layout method), 
  * calculatedLayout may be accessed on subnodes to retrieved cached information about their size.  
  * This allows -layout to be very fast, saving time on the main thread.  
- * Note: .calculatedLayout will only be set for nodes that have had -measure: called on them.  
- * For manual layout, make sure you call -measure: in your implementation of -calculateSizeThatFits:.
+ * Note: .calculatedLayout will only be set for nodes that have had -layoutThatFits: called on them.
+ * For manual layout, make sure you call -layoutThatFits: in your implementation of -calculateSizeThatFits:.
  *
  * For node subclasses that use automatic layout (e.g., they implement -layoutSpecThatFits:), 
  * it is typically not necessary to use .calculatedLayout at any point.  For these nodes, 
- * the ASLayoutSpec implementation will automatically call -measureWithSizeRange: on all of the subnodes,
+ * the ASLayoutSpec implementation will automatically call -layoutThatFits: on all of the subnodes,
  * and the ASDisplayNode base class implementation of -layout will automatically make use of .calculatedLayout on the subnodes.
  *
  * @return Layout that wraps calculated size returned by -calculateSizeThatFits: (in manual layout mode),
@@ -183,7 +183,7 @@ NS_ASSUME_NONNULL_BEGIN
  * or -calculateSizeThatFits:, whichever method is overriden. Subclasses rarely need to override this method,
  * override -layoutSpecThatFits: or -calculateSizeThatFits: instead.
  *
- * @note This method should not be called directly outside of ASDisplayNode; use -measure: or -calculatedLayout instead.
+ * @note This method should not be called directly outside of ASDisplayNode; use -layoutThatFits: or -calculatedLayout instead.
  */
 - (ASLayout *)calculateLayoutThatFits:(ASSizeRange)constrainedSize;
 
@@ -318,12 +318,23 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * @abstract Indicates that the receiver is about to display.
  *
+ * @discussion Deprecated in 2.5.
+ *
  * @discussion Subclasses may override this method to be notified when display (asynchronous or synchronous) is
  * about to begin.
  *
  * @note Called on the main thread only
  */
-- (void)displayWillStart ASDISPLAYNODE_REQUIRES_SUPER;
+- (void)displayWillStart ASDISPLAYNODE_REQUIRES_SUPER ASDISPLAYNODE_DEPRECATED_MSG("Use displayWillStartAsynchronously: instead.");
+
+/**
+ * @abstract Indicates that the receiver is about to display.
+ *
+ * @discussion Subclasses may override this method to be notified when display (asynchronous or synchronous) is
+ * about to begin.
+ *
+ * @note Called on the main thread only
+ */
 - (void)displayWillStartAsynchronously:(BOOL)asynchronously ASDISPLAYNODE_REQUIRES_SUPER;
 
 /**

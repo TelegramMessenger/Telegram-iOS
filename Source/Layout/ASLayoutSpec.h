@@ -104,10 +104,4 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-@interface ASLayoutSpec (Deprecated)
-
-ASLayoutElementStyleForwardingDeclaration
-
-@end
-
 NS_ASSUME_NONNULL_END

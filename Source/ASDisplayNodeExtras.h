@@ -35,13 +35,7 @@
 #endif
 
 /// For deallocation of objects on the main thread across multiple run loops.
-#ifdef __cplusplus
-extern "C" {
-#endif
-extern void ASPerformMainThreadDeallocation(_Nullable id object);
-#ifdef __cplusplus
-}
-#endif
+extern void ASPerformMainThreadDeallocation(id _Nullable __strong * _Nonnull objectPtr);
 
 // Because inline methods can't be extern'd and need to be part of the translation unit of code
 // that compiles with them to actually inline, we both declare and define these in the header.
@@ -214,8 +208,8 @@ extern __kindof ASDisplayNode * _Nullable ASDisplayNodeFindFirstSubnode(ASDispla
  */
 extern __kindof ASDisplayNode * _Nullable ASDisplayNodeFindFirstSubnodeOfClass(ASDisplayNode *start, Class c) AS_WARN_UNUSED_RESULT;
 
-extern UIColor *ASDisplayNodeDefaultPlaceholderColor() AS_WARN_UNUSED_RESULT;
-extern UIColor *ASDisplayNodeDefaultTintColor() AS_WARN_UNUSED_RESULT;
+extern UIColor *ASDisplayNodeDefaultPlaceholderColor(void) AS_WARN_UNUSED_RESULT;
+extern UIColor *ASDisplayNodeDefaultTintColor(void) AS_WARN_UNUSED_RESULT;
 
 /**
  Disable willAppear / didAppear / didDisappear notifications for a sub-hierarchy, then re-enable when done. Nested calls are supported.

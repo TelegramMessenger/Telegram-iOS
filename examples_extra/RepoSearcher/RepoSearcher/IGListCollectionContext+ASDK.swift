@@ -10,8 +10,8 @@ import Foundation
 import IGListKit
 import AsyncDisplayKit
 
-extension IGListCollectionContext {
-    func nodeForItem(at index: Int, sectionController: IGListSectionController) -> ASCellNode? {
+extension ListCollectionContext {
+    func nodeForItem(at index: Int, sectionController: ListSectionController) -> ASCellNode? {
         return (cellForItem(at: index, sectionController: sectionController) as? _ASCollectionViewCell)?.node
     }
 }

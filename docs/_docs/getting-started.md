@@ -42,7 +42,7 @@ Texture's layout engine is both one of its most powerful and one of its most uni
 
 <h2><a href = "/docs/layout-engine.html">Advanced Developer Features</a></h2>
 
-Texture offers a variety of advanced developer features that cannot be found in UIKit or Foundation.  Our developers have found that AsyncDisplyKit allows simplifications in their architecture and improves developer velocity. 
+Texture offers a variety of advanced developer features that cannot be found in UIKit or Foundation.  Our developers have found that Texture allows simplifications in their architecture and improves developer velocity. 
 
 (Full list coming soon!)
 

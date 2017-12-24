@@ -345,13 +345,11 @@
   }
 }
 
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_6_0
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
 {
   ASDisplayNode *node = _asyncdisplaykit_node; // Create strong reference to weak ivar.
   return [node gestureRecognizerShouldBegin:gestureRecognizer];
 }
-#endif
 
 - (void)tintColorDidChange
 {

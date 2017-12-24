@@ -37,9 +37,9 @@ extern int32_t const ASLayoutElementContextDefaultTransitionID;
 // Does not currently support nesting – there must be no current context.
 extern void ASLayoutElementPushContext(ASLayoutElementContext * context);
 
-extern ASLayoutElementContext * _Nullable ASLayoutElementGetCurrentContext();
+extern ASLayoutElementContext * _Nullable ASLayoutElementGetCurrentContext(void);
 
-extern void ASLayoutElementPopContext();
+extern void ASLayoutElementPopContext(void);
 
 NS_ASSUME_NONNULL_END
 
@@ -47,11 +47,6 @@ NS_ASSUME_NONNULL_END
 
 #define ASLayoutElementLayoutCalculationDefaults \
 - (ASLayout *)layoutThatFits:(ASSizeRange)constrainedSize\
-{\
-  return [self layoutThatFits:constrainedSize parentSize:constrainedSize.max];\
-}\
-\
-- (ASLayout *)measureWithSizeRange:(ASSizeRange)constrainedSize\
 {\
   return [self layoutThatFits:constrainedSize parentSize:constrainedSize.max];\
 }\
@@ -117,134 +112,3 @@ typedef struct ASLayoutElementStyleExtensions {
   return [self.style layoutOptionExtensionEdgeInsetsAtIndex:idx];\
 }\
 
-#pragma mark ASLayoutElementStyleForwardingDeclaration (Deprecated)
-
-#define ASLayoutElementStyleForwardingDeclaration \
-@property (nonatomic, readwrite) CGFloat spacingBefore ASDISPLAYNODE_DEPRECATED_MSG("Use style.spacingBefore"); \
-@property (nonatomic, readwrite) CGFloat spacingAfter ASDISPLAYNODE_DEPRECATED_MSG("Use style.spacingAfter"); \
-@property (nonatomic, readwrite) CGFloat flexGrow ASDISPLAYNODE_DEPRECATED_MSG("Use style.flexGrow"); \
-@property (nonatomic, readwrite) CGFloat flexShrink ASDISPLAYNODE_DEPRECATED_MSG("Use style.flexShrink"); \
-@property (nonatomic, readwrite) ASDimension flexBasis ASDISPLAYNODE_DEPRECATED_MSG("Use style.flexBasis"); \
-@property (nonatomic, readwrite) ASStackLayoutAlignSelf alignSelf ASDISPLAYNODE_DEPRECATED_MSG("Use style.alignSelf"); \
-@property (nonatomic, readwrite) CGFloat ascender ASDISPLAYNODE_DEPRECATED_MSG("Use style.ascender"); \
-@property (nonatomic, readwrite) CGFloat descender ASDISPLAYNODE_DEPRECATED_MSG("Use style.descender"); \
-@property (nonatomic, assign) ASRelativeSizeRange sizeRange ASDISPLAYNODE_DEPRECATED_MSG("Don't use sizeRange anymore instead set style.width or style.height"); \
-@property (nonatomic, assign) CGPoint layoutPosition ASDISPLAYNODE_DEPRECATED_MSG("Use style.layoutPosition"); \
-
-
-#pragma mark - ASLayoutElementStyleForwarding (Deprecated)
-
-// For the time beeing we are forwading all style related properties on ASDisplayNode and ASLayoutSpec. This define
-// help us to not have duplicate code while moving from 1.x to 2.0s
-#define ASLayoutElementStyleForwarding \
-\
-@dynamic spacingBefore, spacingAfter, flexGrow, flexShrink, flexBasis, alignSelf, ascender, descender, sizeRange, layoutPosition;\
-\
-_Pragma("mark - ASStackLayoutElement")\
-\
-- (void)setSpacingBefore:(CGFloat)spacingBefore\
-{\
-  self.style.spacingBefore = spacingBefore;\
-}\
-\
-- (CGFloat)spacingBefore\
-{\
-  return self.style.spacingBefore;\
-}\
-\
-- (void)setSpacingAfter:(CGFloat)spacingAfter\
-{\
-  self.style.spacingAfter = spacingAfter;\
-}\
-\
-- (CGFloat)spacingAfter\
-{\
-  return self.style.spacingAfter;\
-}\
-\
-- (void)setFlexGrow:(CGFloat)flexGrow\
-{\
-  self.style.flexGrow = flexGrow;\
-}\
-\
-- (CGFloat)flexGrow\
-{\
-  return self.style.flexGrow;\
-}\
-\
-- (void)setFlexShrink:(CGFloat)flexShrink\
-{\
-  self.style.flexShrink = flexShrink;\
-}\
-\
-- (CGFloat)flexShrink\
-{\
-  return self.style.flexShrink;\
-}\
-\
-- (void)setFlexBasis:(ASDimension)flexBasis\
-{\
-  self.style.flexBasis = flexBasis;\
-}\
-\
-- (ASDimension)flexBasis\
-{\
-  return self.style.flexBasis;\
-}\
-\
-- (void)setAlignSelf:(ASStackLayoutAlignSelf)alignSelf\
-{\
-  self.style.alignSelf = alignSelf;\
-}\
-\
-- (ASStackLayoutAlignSelf)alignSelf\
-{\
-  return self.style.alignSelf;\
-}\
-\
-- (void)setAscender:(CGFloat)ascender\
-{\
-  self.style.ascender = ascender;\
-}\
-\
-- (CGFloat)ascender\
-{\
-  return self.style.ascender;\
-}\
-\
-- (void)setDescender:(CGFloat)descender\
-{\
-  self.style.descender = descender;\
-}\
-\
-- (CGFloat)descender\
-{\
-  return self.style.descender;\
-}\
-\
-_Pragma("mark - ASAbsoluteLayoutElement")\
-\
-- (void)setLayoutPosition:(CGPoint)layoutPosition\
-{\
-  self.style.layoutPosition = layoutPosition;\
-}\
-\
-- (CGPoint)layoutPosition\
-{\
-  return self.style.layoutPosition;\
-}\
-\
-_Pragma("clang diagnostic push")\
-_Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")\
-\
-- (void)setSizeRange:(ASRelativeSizeRange)sizeRange\
-{\
-  self.style.sizeRange = sizeRange;\
-}\
-\
-- (ASRelativeSizeRange)sizeRange\
-{\
-  return self.style.sizeRange;\
-}\
-\
-_Pragma("clang diagnostic pop")\

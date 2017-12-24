@@ -26,7 +26,9 @@ class OverviewViewController: ASViewController<ASTableNode> {
       HeaderWithRightAndLeftItems.self,
       PhotoWithInsetTextOverlay.self,
       PhotoWithOutsetIconOverlay.self,
-      FlexibleSeparatorSurroundingContent.self
+      FlexibleSeparatorSurroundingContent.self,
+      CornerLayoutSample.self,
+      UserProfileSample.self
     ]
 
     super.init(node: tableNode)
