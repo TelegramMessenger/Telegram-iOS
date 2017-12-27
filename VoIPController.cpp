@@ -232,6 +232,7 @@ VoIPController::VoIPController() : activeNetItfName(""),
 	udpSocket=NetworkSocket::Create(PROTO_UDP);
 	realUdpSocket=udpSocket;
 	udpConnectivityState=UDP_UNKNOWN;
+	echoCancellationStrength=1;
 
 	outputAGC=NULL;
 	outputAGCEnabled=false;
@@ -1147,6 +1148,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 					audioOutput=tgvoip::audio::AudioOutput::Create(currentAudioOutput);
 					audioOutput->Configure(48000, 16, 1);
 					echoCanceller=new EchoCanceller(config.enableAEC, config.enableNS, config.enableAGC);
+					echoCanceller->SetAECStrength(echoCancellationStrength);
 					encoder=new OpusEncoder(audioInput);
 					encoder->SetCallback(AudioInputCallback, this);
 					encoder->SetOutputFrameDuration(outgoingAudioStream->frameDuration);
@@ -2470,6 +2472,12 @@ void VoIPController::SetAudioOutputGainControlEnabled(bool enabled){
 	outputAGCEnabled=enabled;
 	if(outputAGC)
 		outputAGC->SetPassThrough(!enabled);
+}
+
+void VoIPController::SetEchoCancellationStrength(int strength){
+	echoCancellationStrength=strength;
+	if(echoCanceller)
+		echoCanceller->SetAECStrength(strength);
 }
 
 Endpoint::Endpoint(int64_t id, uint16_t port, IPv4Address& _address, IPv6Address& _v6address, char type, unsigned char peerTag[16]) : address(_address), v6address(_v6address){

@@ -23,6 +23,7 @@ public:
 	void SpeakerOutCallback(unsigned char* data, size_t len);
 	void Enable(bool enabled);
 	void ProcessInput(unsigned char* data, unsigned char* out, size_t len);
+	void SetAECStrength(int strength);
 
 private:
 	bool enableAEC;
