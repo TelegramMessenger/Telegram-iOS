@@ -454,9 +454,22 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -
 private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, layer: SecretChatLayer) -> BoxedDecryptedMessage {
     var media: Media? = message.media.first
     var messageAutoremoveTimeout: Int32 = 0
+    var replyGlobalId:Int64? = nil
+    var flags:Int32 = 0
+    for attribute in message.attributes {
+        if let attribute = attribute as? ReplyMessageAttribute {
+            if let message = message.associatedMessages[attribute.messageId] {
+                replyGlobalId = message.globallyUniqueId
+                flags |= (1 << 3)
+                break
+            }
+        }
+    }
+    
     for attribute in message.attributes {
         if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
             messageAutoremoveTimeout = attribute.timeout
+            break
         }
     }
     
@@ -473,8 +486,8 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
                     return .layer8(.decryptedMessage(randomId: globallyUniqueId, randomBytes: randomBytes, message: message.text, media: decryptedMedia))
                 case .layer46:
                     let decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: Buffer(), thumbW: 90, thumbH: 90, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
-                    
-                    return .layer46(.decryptedMessage(flags: (1 << 9), randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: nil))
+                    flags |= (1 << 9)
+                    return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: replyGlobalId))
             }
         } else if let file = media as? TelegramMediaFile {
             switch layer {
@@ -514,7 +527,8 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
                     }
                     
                     if let decryptedMedia = decryptedMedia {
-                        return .layer46(.decryptedMessage(flags: (1 << 9), randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: nil))
+                        flags |= (1 << 9)
+                        return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: replyGlobalId))
                     }
             }
         }
@@ -528,7 +542,7 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
             
             return .layer8(.decryptedMessage(randomId: globallyUniqueId, randomBytes: randomBytes, message: message.text, media: .decryptedMessageMediaEmpty))
         case .layer46:
-            return .layer46(.decryptedMessage(flags: 0, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: .decryptedMessageMediaEmpty, entities: nil, viaBotName: nil, replyToRandomId: nil))
+            return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: .decryptedMessageMediaEmpty, entities: nil, viaBotName: nil, replyToRandomId: replyGlobalId))
     }
 }
 
