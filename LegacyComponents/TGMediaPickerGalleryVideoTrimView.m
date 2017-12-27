@@ -5,6 +5,8 @@
 #import <LegacyComponents/TGImageUtils.h>
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 
+#import "TGPhotoEditorInterfaceAssets.h"
+
 @interface TGMediaPickerGalleryVideoTrimView () <UIGestureRecognizerDelegate>
 {
     UIButton *_leftSegmentView;
@@ -33,7 +35,7 @@
         self.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -25, -5, -25);
         
         UIColor *normalColor = UIColorRGB(0x4d4d4d);
-        UIColor *accentColor = UIColorRGB(0x5ecdff);
+        UIColor *accentColor = [TGPhotoEditorInterfaceAssets accentColor];
         
         static dispatch_once_t onceToken;
         static UIImage *handle;

@@ -4,7 +4,6 @@
 
 @interface TGColorWallpaperInfo ()
 {
-    uint32_t _color;
     int _tintColor;
     
     CGFloat _systemAlpha;

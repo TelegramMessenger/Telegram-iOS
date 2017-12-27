@@ -725,7 +725,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
                 CGContextSetFillColorWithColor(context, outgoingButtonColor.CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
                 
-                UIImage *iconImage = TGTintedImage(TGImageNamed(@"ModernMessageDocumentIconOutgoing.png"), outgoingIconColor);
+                UIImage *iconImage = TGTintedImage(TGImageNamed(@"ModernMessageDocumentIconIncoming.png"), outgoingIconColor);
                 [iconImage drawAtPoint:CGPointMake(floor((diameter - iconImage.size.width) / 2.0f), floor((diameter - iconImage.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:1.0f];
             }
             else

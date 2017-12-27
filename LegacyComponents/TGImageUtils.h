@@ -25,9 +25,6 @@ UIImage *TGRotateAndScaleImageToPixelSize(UIImage *image, CGSize size);
 UIImage *TGFixOrientationAndCrop(UIImage *source, CGRect cropFrame, CGSize imageSize);
 UIImage *TGRotateAndCrop(UIImage *source, CGRect cropFrame, CGSize imageSize);
     
-UIImage *TGAttachmentImage(UIImage *source, CGSize sourceSize, CGSize size, bool incoming, bool location);
-UIImage *TGSecretAttachmentImage(UIImage *source, CGSize sourceSize, CGSize size);
-    
 UIImage *TGIdenticonImage(NSData *data, NSData *additionalData, CGSize size);
     
 UIImage *TGCircleImage(CGFloat radius, UIColor *color);

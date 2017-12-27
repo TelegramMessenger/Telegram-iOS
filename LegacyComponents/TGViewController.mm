@@ -1373,7 +1373,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (void)_setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem animated:(BOOL)animated
 {
-    if (iosMajorVersion() >= 11 && rightBarButtonItem.customView != nil)
+    if (iosMajorVersion() >= 11 && !TGIsPad() && rightBarButtonItem.customView != nil)
     {
         UIBarButtonItem *spacer = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
         spacer.width = 8.0f;
@@ -1382,7 +1382,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     }
     else
     {
-        if (iosMajorVersion() >= 11)
+        if (iosMajorVersion() >= 11 && !TGIsPad())
             [[self _currentNavigationItem] setRightBarButtonItems:nil animated:false];
         [[self _currentNavigationItem] setRightBarButtonItem:rightBarButtonItem animated:animated];
     }

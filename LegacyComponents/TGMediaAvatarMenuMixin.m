@@ -187,7 +187,6 @@
     [itemViews addObject:cancelItem];
     
     [controller setItemViews:itemViews];
-    
     [controller presentInViewController:_parentController sourceView:nil animated:true];
     return controller;
 }
@@ -210,7 +209,7 @@
     [actions addObject:[[LegacyComponentsActionSheetAction alloc] initWithTitle:TGLocalized(@"Common.Cancel") action:@"cancel" type:LegacyComponentsActionSheetActionTypeCancel]];
     
     __weak TGMediaAvatarMenuMixin *weakSelf = self;
-    [_context presentActionSheet:actions view:_parentController.view completion:^(LegacyComponentsActionSheetAction *actionData) {
+    [_context presentActionSheet:actions view:_parentController.view sourceRect:self.sourceRect completion:^(LegacyComponentsActionSheetAction *actionData) {
         __strong TGMediaAvatarMenuMixin *controller = weakSelf;
         if (controller != nil) {
             NSString *action = actionData.action;

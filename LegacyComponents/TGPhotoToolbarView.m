@@ -6,6 +6,8 @@
 #import "TGModernButton.h"
 #import "TGPhotoEditorButton.h"
 
+#import "TGMediaAssetsController.h"
+
 @interface TGPhotoToolbarView ()
 {
     UIView *_backgroundView;
@@ -66,8 +68,14 @@
                 break;
                 
             default:
-                doneImage = TGComponentsImageNamed(@"PhotoPickerSendIcon");
+            {
+                TGMediaAssetsPallete *pallete = nil;
+                if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
+                    pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
+                
+                doneImage = pallete != nil ? pallete.sendIconImage : TGComponentsImageNamed(@"PhotoPickerSendIcon");
                 //buttonSize = CGSizeMake(52.0f, 52.0f);
+            }
                 break;
         }
         

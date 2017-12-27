@@ -1153,6 +1153,9 @@ bool TGIsRTL()
         value = ([NSLocale characterDirectionForLanguage:[[NSLocale preferredLanguages] objectAtIndex:0]] == NSLocaleLanguageDirectionRightToLeft);
     });
     
+    if (!value && iosMajorVersion() >= 9)
+        value = [UIView appearance].semanticContentAttribute == UISemanticContentAttributeForceRightToLeft;
+    
     return value;
 }
 

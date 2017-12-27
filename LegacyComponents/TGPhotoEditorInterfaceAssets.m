@@ -4,6 +4,8 @@
 #import "TGImageUtils.h"
 #import "TGFont.h"
 
+#import "TGMediaAssetsController.h"
+
 @implementation TGPhotoEditorInterfaceAssets
 
 + (UIColor *)toolbarBackgroundColor
@@ -23,7 +25,11 @@
 
 + (UIColor *)accentColor
 {
-    return UIColorRGB(0x65b3ff);
+    TGMediaAssetsPallete *pallete = nil;
+    if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
+        pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
+    
+    return pallete.maybeAccentColor ?: UIColorRGB(0x65b3ff);
 }
 
 + (UIColor *)panelBackgroundColor

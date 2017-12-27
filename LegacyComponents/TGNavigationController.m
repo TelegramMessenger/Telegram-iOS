@@ -134,7 +134,7 @@
         self.navigationBar.prefersLargeTitles = false;
     }
     
-    if (iosMajorVersion() >= 8)
+    if (iosMajorVersion() >= 8 && !TGIsRTL())
     {
         object_setClass(self.interactivePopGestureRecognizer, [TGNavigationPanGestureRecognizer class]);
         self.interactivePopGestureRecognizer.delaysTouchesBegan = false;
@@ -198,39 +198,7 @@
                 }
             }];
         }
-
     }
-//    if (iosMajorVersion() >= 8) {
-//        SEL selector = NSSelectorFromString(TGEncodeText(@"`tdsffoFehfQboHftuvsfSfdphoj{fs", -1));
-//        if ([self respondsToSelector:selector])
-//        {
-//#pragma clang diagnostic push
-//#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-//            UIScreenEdgePanGestureRecognizer *screenPanRecognizer = [self performSelector:selector];
-//#pragma clang diagnostic pop
-//
-//            screenPanRecognizer.enabled = false;
-//
-//            Ivar targetsIvar = class_getInstanceVariable([UIGestureRecognizer class], "_targets");
-//            id targetActionPairs = object_getIvar(screenPanRecognizer, targetsIvar);
-//
-//            Class targetActionPairClass = NSClassFromString(@"UIGestureRecognizerTarget");
-//            Ivar targetIvar = class_getInstanceVariable(targetActionPairClass, "_target");
-//            Ivar actionIvar = class_getInstanceVariable(targetActionPairClass, "_action");
-//
-//            for (id targetActionPair in targetActionPairs)
-//            {
-//                id target = object_getIvar(targetActionPair, targetIvar);
-//                SEL action = (__bridge void *)object_getIvar(targetActionPair, actionIvar);
-//
-//                _panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:target action:action];
-//                _panGestureRecognizer.delegate = self;
-//                [screenPanRecognizer.view addGestureRecognizer:_panGestureRecognizer];
-//
-//                break;
-//            }
-//        }
-//    }
 }
 
 - (bool)_gestureRecognizerShouldBegin:(UIPanGestureRecognizer *)gestureRecognizer
@@ -288,7 +256,7 @@
     else if ([otherGestureRecognizer.view isKindOfClass:[UIScrollView class]])
     {
         UIScrollView *scrollView = (UIScrollView *)otherGestureRecognizer.view;
-        bool viewIsHorizontalScrollView = !TGIsRTL() && scrollView.contentSize.width > scrollView.contentSize.height && fabs(scrollView.contentOffset.x + scrollView.contentInset.left) < FLT_EPSILON && scrollView.tag != 0xbeef;
+        bool viewIsHorizontalScrollView = !TGIsRTL() && scrollView.contentSize.height > FLT_EPSILON && scrollView.contentSize.width > scrollView.contentSize.height && fabs(scrollView.contentOffset.x + scrollView.contentInset.left) < FLT_EPSILON && scrollView.tag != 0xbeef;
         bool viewIsDeceleratingScrollView = scrollView.contentSize.height > scrollView.contentSize.width && scrollView.isDecelerating;
         if (viewIsHorizontalScrollView || viewIsDeceleratingScrollView)
         {
@@ -840,7 +808,7 @@ static UIView *findDimmingView(UIView *view)
     UIViewController *result = [super popViewControllerAnimated:animated];
     _isInPopTransition = false;
     
-    if (iosMajorVersion() >= 8 && [self.interactivePopGestureRecognizer isKindOfClass:[UIScreenEdgePanGestureRecognizer class]])
+    if (iosMajorVersion() >= 8 && !TGIsRTL() && [self.interactivePopGestureRecognizer isKindOfClass:[UIScreenEdgePanGestureRecognizer class]])
         object_setClass(self.interactivePopGestureRecognizer, [TGNavigationPanGestureRecognizer class]);
     
     return result;

@@ -17,10 +17,12 @@ typedef enum
 @property (nonatomic, readonly) UIColor *accentBackgroundColor;
 @property (nonatomic, readonly) UIColor *defaultBorderColor;
 @property (nonatomic, readonly) UIColor *mediaBorderColor;
+@property (nonatomic, readonly) UIColor *chatBorderColor;
 @property (nonatomic, readonly) UIColor *checkColor;
 @property (nonatomic, readonly) UIColor *blueColor;
+@property (nonatomic, readonly) UIColor *barBackgroundColor;
 
-+ (instancetype)palleteWithDefaultBackgroundColor:(UIColor *)defaultBackgroundColor accentBackgroundColor:(UIColor *)accentBackgroundColor defaultBorderColor:(UIColor *)defaultBorderColor mediaBorderColor:(UIColor *)mediaBorderColor checkColor:(UIColor *)checkColor blueColor:(UIColor *)blueColor;
++ (instancetype)palleteWithDefaultBackgroundColor:(UIColor *)defaultBackgroundColor accentBackgroundColor:(UIColor *)accentBackgroundColor defaultBorderColor:(UIColor *)defaultBorderColor mediaBorderColor:(UIColor *)mediaBorderColor chatBorderColor:(UIColor *)chatBorderColor checkColor:(UIColor *)checkColor blueColor:(UIColor *)blueColor barBackgroundColor:(UIColor *)barBackgroundColor;
 
 @end
 
