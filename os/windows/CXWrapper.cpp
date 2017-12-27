@@ -41,7 +41,6 @@ VoIPControllerWrapper::VoIPControllerWrapper(){
 	controller->implData=(void*)this;
 	controller->SetStateCallback(VoIPControllerWrapper::OnStateChanged);
 	controller->SetSignalBarsCountCallback(VoIPControllerWrapper::OnSignalBarsChanged);
-	stateCallback=nullptr;
 }
 
 VoIPControllerWrapper::~VoIPControllerWrapper(){
@@ -84,10 +83,6 @@ void VoIPControllerWrapper::SetPublicEndpoints(const Platform::Array<libtgvoip::
 
 void VoIPControllerWrapper::SetNetworkType(NetworkType type){
 	controller->SetNetworkType((int)type);
-}
-
-void VoIPControllerWrapper::SetStateCallback(IStateCallback^ callback){
-	stateCallback=callback;
 }
 
 void VoIPControllerWrapper::SetMicMute(bool mute){
@@ -142,13 +137,11 @@ void VoIPControllerWrapper::OnSignalBarsChanged(VoIPController* c, int count){
 }
 
 void VoIPControllerWrapper::OnStateChangedInternal(int state){
-	if(stateCallback)
-		stateCallback->OnCallStateChanged((CallState)state);
+	CallStateChanged(this, (CallState)state);
 }
 
 void VoIPControllerWrapper::OnSignalBarsChangedInternal(int count){
-	if(stateCallback)
-		stateCallback->OnSignalBarsChanged(count);
+	SignalBarsChanged(this, count);
 }
 
 void VoIPControllerWrapper::SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath){

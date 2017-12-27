@@ -80,6 +80,8 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		running=true;
 
 		start_thread(bufferFarendThread, EchoCanceller::StartBufferFarendThread, this);
+	}else{
+		aec=NULL;
 	}
 
 	if(enableNS){
@@ -92,6 +94,8 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		WebRtcNs_Init((NsHandle*)ns, 48000);
 		WebRtcNs_set_policy((NsHandle*)ns, 1);
 #endif*/
+	}else{
+		ns=NULL;
 	}
 
 	if(enableAGC){
@@ -103,6 +107,8 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		WebRtcAgc_Init(agc, 0, 255, kAgcModeAdaptiveDigital, 48000);
 		WebRtcAgc_set_config(agc, agcConfig);
 		agcMicLevel=0;
+	}else{
+		agc=NULL;
 	}
 #endif
 }
@@ -352,6 +358,17 @@ void EchoCanceller::ProcessInput(unsigned char* data, unsigned char* out, size_t
 	((webrtc::SplittingFilter*)splittingFilter)->Synthesis(bufOut, bufIn);
 	
 	memcpy(samplesOut, bufIn->ibuf_const()->bands(0)[0], 960*2);
+}
+
+void EchoCanceller::SetAECStrength(int strength){
+	if(aec){
+#ifndef TGVOIP_USE_DESKTOP_DSP
+		AecmConfig cfg;
+		cfg.cngMode=AecmFalse;
+		cfg.echoMode=(int16_t) strength;
+		WebRtcAecm_set_config(aec, cfg);
+#endif
+	}
 }
 
 AudioEffect::~AudioEffect(){
