@@ -8,5 +8,6 @@
 - (UIImage *)imageForKey:(NSString *)key attributes:(__autoreleasing NSDictionary **)attributes;
 - (void)setAverageColor:(uint32_t)color forKey:(NSString *)key;
 - (bool)averageColorForKey:(NSString *)key color:(uint32_t *)color;
+- (void)clearCache;
 
 @end

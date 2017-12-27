@@ -480,7 +480,8 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
     uint8_t *contextMemory = NULL;
     uint8_t *alphaMemory = NULL;
 
-    if (position == TGAttachmentPositionNone)
+    static uint32_t cachedColor = UINT32_MAX;
+    if (position == TGAttachmentPositionNone && (cachedColor == UINT32_MAX || cachedColor == strokeColorArgb))
     {
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^
@@ -518,6 +519,8 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
             CGContextStrokeEllipseInRect(targetContext, CGRectMake(shadowSize + strokeWidth / 2.0f + 0.5f, shadowSize + strokeWidth / 2.0f - 0.5f, contextWidth - (shadowSize + strokeWidth / 2.0f) * 2.0f, contextHeight - (shadowSize + strokeWidth / 2.0f) * 2.0f));
             
             CFRelease(targetContext);
+            
+            cachedColor = strokeColorArgb;
         });
         
         contextMemory = defaultContextMemory;

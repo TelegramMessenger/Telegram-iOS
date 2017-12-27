@@ -90,6 +90,15 @@
     _cacheSize += size;
 }
 
+- (void)clearCache
+{
+    [_queue dispatch:^
+    {
+        [_cache removeAllObjects];
+        _cacheSize = 0;
+    }];
+}
+
 - (UIImage *)imageForKey:(NSString *)key attributes:(__autoreleasing NSDictionary **)attributes
 {
     if (key == nil)
