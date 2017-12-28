@@ -366,35 +366,28 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
             
-            let seedAddressList: [Int: String]
+            let seedAddressList: [Int: [String]]
             
             if testingEnvironment {
                 seedAddressList = [
-                    1: "149.154.175.10",
-                    2: "149.154.167.40"
+                    1: ["149.154.175.10"],
+                    2: ["149.154.167.40"]
                 ]
             } else {
                 seedAddressList = [
-                    1: "149.154.175.50",
-                    2: "149.154.167.50",
-                    3: "149.154.175.100",
-                    4: "149.154.167.91",
-                    5: "149.154.171.5"
+                    1: ["149.154.175.50", "2001:b28:f23d:f001::a"],
+                    2: ["149.154.167.50", "2001:67c:4e8:f002::a"],
+                    3: ["149.154.175.100", "2001:b28:f23d:f003::a"],
+                    4: ["149.154.167.91", "2001:67c:4e8:f004::a"],
+                    5: ["149.154.171.5", "2001:b28:f23f:f005::a"]
                 ]
             }
             
-            for (id, ip) in seedAddressList {
-                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false)]))
+            for (id, ips) in seedAddressList {
+                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: ips.map { MTDatacenterAddress(ip: $0, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false) }))
             }
             
             context.keychain = keychain
-            
-            /*if testingEnvironment {
-                for (id, ip) in seedAddressList {
-                    context.updateAddressSetForDatacenter(withId: id, addressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false)]), forceUpdateSchemes: true)
-                }
-            }*/
-            
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context))
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!

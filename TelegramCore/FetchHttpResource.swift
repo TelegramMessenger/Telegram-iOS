@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-func fetchHttpResource(url: String) -> Signal<MediaResourceDataFetchResult, NoError> {
+public func fetchHttpResource(url: String) -> Signal<MediaResourceDataFetchResult, NoError> {
     if let url = URL(string: url) {
         let signal = MTHttpRequestOperation.data(forHttpUrl: url)!
         return Signal { subscriber in

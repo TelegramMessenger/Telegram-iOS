@@ -534,7 +534,8 @@ public class Account {
             }
         }
         
-        let networkStateSignal = combineLatest(self.stateManager.isUpdating, network.connectionStatus)
+        let networkStateQueue = Queue()
+        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue))
             |> map { isUpdating, connectionStatus -> AccountNetworkState in
                 switch connectionStatus {
                     case .waitingForNetwork:
