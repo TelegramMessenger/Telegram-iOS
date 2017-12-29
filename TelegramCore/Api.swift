@@ -461,7 +461,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1056001329] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsSaved($0) }
     dict[873977640] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentials($0) }
     dict[178373535] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsApplePay($0) }
-    dict[2035705766] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsAndroidPay($0) }
+    dict[-905587442] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsAndroidPay($0) }
     dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
     dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
@@ -572,7 +572,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[646922073] = { return Api.ContactLink.parse_contactLinkHasPhone($0) }
     dict[-721239344] = { return Api.ContactLink.parse_contactLinkContact($0) }
     dict[-971322408] = { return Api.WebDocument.parse_webDocument($0) }
-    dict[446822276] = { return Api.contacts.Found.parse_found($0) }
+    dict[-1290580579] = { return Api.contacts.Found.parse_found($0) }
     dict[-368018716] = { return Api.ChannelAdminLogEventsFilter.parse_channelAdminLogEventsFilter($0) }
     dict[1889961234] = { return Api.PeerNotifySettings.parse_peerNotifySettingsEmpty($0) }
     dict[-1697798976] = { return Api.PeerNotifySettings.parse_peerNotifySettings($0) }
@@ -12430,7 +12430,7 @@ public struct Api {
         case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
         case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
         case inputPaymentCredentialsApplePay(paymentData: Api.DataJSON)
-        case inputPaymentCredentialsAndroidPay(paymentToken: Api.DataJSON)
+        case inputPaymentCredentialsAndroidPay(paymentToken: Api.DataJSON, googleTransactionId: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -12454,11 +12454,12 @@ public struct Api {
                     }
                     paymentData.serialize(buffer, true)
                     break
-                case .inputPaymentCredentialsAndroidPay(let paymentToken):
+                case .inputPaymentCredentialsAndroidPay(let paymentToken, let googleTransactionId):
                     if boxed {
-                        buffer.appendInt32(2035705766)
+                        buffer.appendInt32(-905587442)
                     }
                     paymentToken.serialize(buffer, true)
+                    serializeString(googleTransactionId, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -12511,9 +12512,12 @@ public struct Api {
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
             }
+            var _2: String?
+            _2 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsAndroidPay(paymentToken: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputPaymentCredentials.inputPaymentCredentialsAndroidPay(paymentToken: _1!, googleTransactionId: _2!)
             }
             else {
                 return nil
@@ -16702,13 +16706,18 @@ public struct Api {
         }
     
         public enum Found {
-            case found(results: [Api.Peer], chats: [Api.Chat], users: [Api.User])
+            case found(myResults: [Api.Peer], results: [Api.Peer], chats: [Api.Chat], users: [Api.User])
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
-                    case .found(let results, let chats, let users):
+                    case .found(let myResults, let results, let chats, let users):
                         if boxed {
-                            buffer.appendInt32(446822276)
+                            buffer.appendInt32(-1290580579)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(myResults.count))
+                        for item in myResults {
+                            item.serialize(buffer, true)
                         }
                         buffer.appendInt32(481674261)
                         buffer.appendInt32(Int32(results.count))
@@ -16734,19 +16743,24 @@ public struct Api {
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
                 }
-                var _2: [Api.Chat]?
+                var _2: [Api.Peer]?
                 if let _ = reader.readInt32() {
-                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
                 }
-                var _3: [Api.User]?
+                var _3: [Api.Chat]?
                 if let _ = reader.readInt32() {
-                    _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                    _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                }
+                var _4: [Api.User]?
+                if let _ = reader.readInt32() {
+                    _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
                 }
                 let _c1 = _1 != nil
                 let _c2 = _2 != nil
                 let _c3 = _3 != nil
-                if _c1 && _c2 && _c3 {
-                    return Api.contacts.Found.found(results: _1!, chats: _2!, users: _3!)
+                let _c4 = _4 != nil
+                if _c1 && _c2 && _c3 && _c4 {
+                    return Api.contacts.Found.found(myResults: _1!, results: _2!, chats: _3!, users: _4!)
                 }
                 else {
                     return nil
@@ -20038,21 +20052,6 @@ public struct Api {
                     })
                 }
             
-                public static func exportMessageLink(channel: Api.InputChannel, id: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.ExportedMessageLink?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-934882771)
-                    channel.serialize(buffer, true)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(channels.exportMessageLink channel: \(channel), id: \(id))"}), buffer, { (buffer: Buffer) -> Api.ExportedMessageLink? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.ExportedMessageLink?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.ExportedMessageLink
-                        }
-                        return result
-                    })
-                }
-            
                 public static func toggleSignatures(channel: Api.InputChannel, enabled: Api.Bool) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
                     let buffer = Buffer()
                     buffer.appendInt32(527021574)
@@ -20232,6 +20231,22 @@ public struct Api {
                         var result: Api.channels.ChannelParticipants?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.channels.ChannelParticipants
+                        }
+                        return result
+                    })
+                }
+            
+                public static func exportMessageLink(channel: Api.InputChannel, id: Int32, grouped: Api.Bool) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.ExportedMessageLink?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-826838685)
+                    channel.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    grouped.serialize(buffer, true)
+                    return (FunctionDescription({return "(channels.exportMessageLink channel: \(channel), id: \(id), grouped: \(grouped))"}), buffer, { (buffer: Buffer) -> Api.ExportedMessageLink? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.ExportedMessageLink?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.ExportedMessageLink
                         }
                         return result
                     })

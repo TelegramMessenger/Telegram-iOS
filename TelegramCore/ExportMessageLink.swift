@@ -13,7 +13,7 @@ public func exportMessageLink(account:Account, peerId:PeerId, messageId:MessageI
         return modifier.getPeer(peerId)
         } |> mapToSignal { peer -> Signal<String?, Void> in
             if let peer = peer, let input = apiInputChannel(peer) {
-                return account.network.request(Api.functions.channels.exportMessageLink(channel: input, id: messageId.id)) |> mapError {_ in return } |> map { res in
+                return account.network.request(Api.functions.channels.exportMessageLink(channel: input, id: messageId.id, grouped: Api.Bool.boolTrue)) |> mapError {_ in return } |> map { res in
                     switch res {
                     case .exportedMessageLink(let link):
                         return link
