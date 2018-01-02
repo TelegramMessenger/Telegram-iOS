@@ -33,8 +33,7 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
         |> mapToSignal { result -> Signal<([FoundPeer], [FoundPeer]), NoError> in
             if let result = result {
                 switch result {
-                    /*%FEED */
-                case let .found(results, chats, users):
+                case let .found(myResults, results, chats, users):
                     return account.postbox.modify { modifier -> ([FoundPeer], [FoundPeer]) in
                         var peers: [PeerId: Peer] = [:]
                         var subscribers:[PeerId : Int32] = [:]
@@ -48,7 +47,7 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                 peers[groupOrChannel.id] = groupOrChannel
                                 switch chat {
-                                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
                                     if let participantsCount = participantsCount {
                                         subscribers[groupOrChannel.id] = participantsCount
                                     }
@@ -59,7 +58,6 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                         }
                         
                         var renderedMyPeers: [FoundPeer] = []
-                        /*%FEED
                         for result in myResults {
                             let peerId: PeerId
                             switch result {
@@ -73,7 +71,7 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                             if let peer = peers[peerId] {
                                 renderedMyPeers.append(FoundPeer(peer: peer, subscribers: subscribers[peerId]))
                             }
-                        }*/
+                        }
                         
                         var renderedPeers: [FoundPeer] = []
                         for result in results {

@@ -15,7 +15,7 @@ public func exportMessageLink(account:Account, peerId:PeerId, messageId:MessageI
             if let peer = peer, let input = apiInputChannel(peer) {
                 return account.network.request(Api.functions.channels.exportMessageLink(channel: input, id: messageId.id)) |> mapError {_ in return } |> map { res in
                     switch res {
-                        case let .exportedMessageLink(link):
+                        case let .exportedMessageLink(link, _):
                             return link
                     }
                     } |> `catch` { _ -> Signal<String?, NoError> in

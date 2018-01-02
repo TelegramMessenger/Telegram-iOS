@@ -226,7 +226,7 @@ private func synchronizeConsumeMessageContents(modifier: Modifier, postbox: Post
 private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
-            return network.request(Api.functions.messages.getPeerDialogs(peers: [inputPeer]))
+            return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeer(peer: inputPeer)]))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
                     return .single(nil)
@@ -242,9 +242,9 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                         case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _):
                                             apiTopMessage = topMessage
                                             apiUnreadMentionsCount = unreadMentionsCount
-                                        /*%FEED case .dialogFeed:
+                                        case .dialogFeed:
                                             assertionFailure()
-                                            return .complete()*/
+                                            return .complete()
                                     }
                                     
                                     return postbox.modify { modifier -> Void in

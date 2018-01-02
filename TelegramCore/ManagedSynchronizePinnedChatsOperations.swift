@@ -168,9 +168,9 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                 apiUnreadCount = unreadCount
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
-                            /*%FEED case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+                            case let .dialogFeed(_, _, _, feedId, _, _, _, _):
                                 remoteItemIds.append(.group(PeerGroupId(rawValue: feedId)))
-                                continue loop*/
+                                continue loop
                         }
                         
                         let peerId: PeerId
@@ -261,19 +261,19 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 if remoteItemIds == resultingItemIds {
                     return .complete()
                 } else {
-                    var inputPeers: [Api.InputPeer] = []
+                    var inputDialogPeers: [Api.InputDialogPeer] = []
                     for itemId in resultingItemIds {
                         switch itemId {
                             case let .peer(peerId):
                                 if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-                                    inputPeers.append(inputPeer)
+                                    inputDialogPeers.append(Api.InputDialogPeer.inputDialogPeer(peer: inputPeer))
                                 }
-                            case .group:
-                                break
+                            case let .group(groupId):
+                                inputDialogPeers.append(.inputDialogPeerFeed(feedId: groupId.rawValue))
                         }
                     }
                     
-                    return network.request(Api.functions.messages.reorderPinnedDialogs(flags: 1 << 0, order: inputPeers))
+                    return network.request(Api.functions.messages.reorderPinnedDialogs(flags: 1 << 0, order: inputDialogPeers))
                         |> `catch` { _ -> Signal<Api.Bool, NoError> in
                             return .single(Api.Bool.boolFalse)
                         }

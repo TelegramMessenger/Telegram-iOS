@@ -89,9 +89,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     }
                 }
         case let .group(groupId):
-            /*%FEED remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
-                |> mapError { _ in } |> map(Optional.init)*/
-            remoteSearchResult = .single(nil)
+            remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
+                |> mapError { _ in } |> map(Optional.init)
         case .general:
             remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
                 |> mapError { _ in } |> map(Optional.init)

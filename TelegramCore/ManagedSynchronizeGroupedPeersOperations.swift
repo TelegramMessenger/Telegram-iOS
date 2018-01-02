@@ -126,7 +126,7 @@ private func hashForIds(_ ids: [Int32]) -> Int32 {
 }
 
 private func synchronizeGroupedPeers(modifier: Modifier, postbox: Postbox, network: Network, operation: SynchronizeGroupedPeersOperation) -> Signal<Void, NoError> {
-    /*%FEED let initialRemotePeerIds = operation.initialPeerIds
+    let initialRemotePeerIds = operation.initialPeerIds
     let localPeerIds = modifier.getPeerIdsInGroup(operation.groupId)
     
     return network.request(Api.functions.channels.getFeedSources(flags: 1 << 0, feedId: operation.groupId.rawValue, hash: hashForIds(localPeerIds.map({ $0.id }).sorted())))
@@ -206,7 +206,6 @@ private func synchronizeGroupedPeers(modifier: Modifier, postbox: Postbox, netwo
                     }
                 } |> switchToLatest
         }
-    }*/
-    return .complete()
+    }
 }
 

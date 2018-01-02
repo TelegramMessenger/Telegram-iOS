@@ -106,9 +106,9 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 }
                 
                 notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
-            /*%FEED case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+            case let .dialogFeed(_, _, _, feedId, _, _, _, _):
                 itemIds.append(.group(PeerGroupId(rawValue: feedId)))
-                referencedFeeds.insert(PeerGroupId(rawValue: feedId))*/
+                referencedFeeds.insert(PeerGroupId(rawValue: feedId))
         }
     }
     
@@ -212,11 +212,10 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
             case .general:
                 break
             case let .group(groupId):
-                break
-                /*%FEED requestFeedId = groupId.rawValue
-                flags |= 1 << 1*/
+                requestFeedId = groupId.rawValue
+                flags |= 1 << 1
         }
-        let requestChats = network.request(Api.functions.messages.getDialogs(flags: flags, offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: 100))
+        let requestChats = network.request(Api.functions.messages.getDialogs(flags: flags, feedId: requestFeedId, offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: 100))
             |> retryRequest
         
         return combineLatest(requestChats, additionalPinnedChats)
@@ -237,7 +236,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
             
             var feedSignals: [Signal<(PeerGroupId, ParsedDialogs), NoError>] = []
             if case .general = location {
-                /*%FEED for groupId in combinedReferencedFeeds {
+                for groupId in combinedReferencedFeeds {
                     let flags: Int32 = 1 << 1
                     let requestFeed = network.request(Api.functions.messages.getDialogs(flags: flags, feedId: groupId.rawValue, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 4))
                         |> retryRequest
@@ -247,7 +246,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                             return (groupId, parsedChats)
                         }
                     feedSignals.append(requestFeed)
-                }*/
+                }
             }
             
             return combineLatest(feedSignals)

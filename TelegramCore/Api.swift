@@ -60,7 +60,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-652419756] = { return Api.Chat.parse_chat($0) }
     dict[120753115] = { return Api.Chat.parse_chatForbidden($0) }
     dict[681420594] = { return Api.Chat.parse_channelForbidden($0) }
-    dict[1158377749] = { return Api.Chat.parse_channel($0) }
+    dict[-930515796] = { return Api.Chat.parse_channel($0) }
     dict[1516793212] = { return Api.ChatInvite.parse_chatInviteAlready($0) }
     dict[-613092008] = { return Api.ChatInvite.parse_chatInvite($0) }
     dict[1678812626] = { return Api.StickerSetCovered.parse_stickerSetCovered($0) }
@@ -111,7 +111,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[767652808] = { return Api.InputEncryptedFile.parse_inputEncryptedFileBigUploaded($0) }
     dict[1443858741] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedMessage($0) }
     dict[-1802240206] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedFile($0) }
-    dict[524838915] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
+    dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
     dict[-855308010] = { return Api.auth.Authorization.parse_authorization($0) }
     dict[-181407105] = { return Api.InputFile.parse_inputFile($0) }
     dict[-95482955] = { return Api.InputFile.parse_inputFileBig($0) }
@@ -126,6 +126,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[129960444] = { return Api.UserStatus.parse_userStatusLastWeek($0) }
     dict[2011940674] = { return Api.UserStatus.parse_userStatusLastMonth($0) }
     dict[-455150117] = { return Api.Dialog.parse_dialog($0) }
+    dict[906521922] = { return Api.Dialog.parse_dialogFeed($0) }
+    dict[1330637553] = { return Api.FeedBroadcasts.parse_feedBroadcasts($0) }
+    dict[-1704428358] = { return Api.FeedBroadcasts.parse_feedBroadcastsUngrouped($0) }
     dict[381645902] = { return Api.SendMessageAction.parse_sendMessageTypingAction($0) }
     dict[-44119819] = { return Api.SendMessageAction.parse_sendMessageCancelAction($0) }
     dict[-1584933265] = { return Api.SendMessageAction.parse_sendMessageRecordVideoAction($0) }
@@ -195,8 +198,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1574314746] = { return Api.Update.parse_updateConfig($0) }
     dict[861169551] = { return Api.Update.parse_updatePtsChanged($0) }
     dict[1081547008] = { return Api.Update.parse_updateChannelWebPage($0) }
-    dict[-686710068] = { return Api.Update.parse_updateDialogPinned($0) }
-    dict[-657787251] = { return Api.Update.parse_updatePinnedDialogs($0) }
     dict[-2095595325] = { return Api.Update.parse_updateBotWebhookJSON($0) }
     dict[-1684914010] = { return Api.Update.parse_updateBotWebhookJSONQuery($0) }
     dict[-523384512] = { return Api.Update.parse_updateBotShippingQuery($0) }
@@ -208,6 +209,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1987495099] = { return Api.Update.parse_updateChannelReadMessagesContents($0) }
     dict[1887741886] = { return Api.Update.parse_updateContactsReset($0) }
     dict[1893427255] = { return Api.Update.parse_updateChannelAvailableMessages($0) }
+    dict[-1723313495] = { return Api.Update.parse_updateReadFeed($0) }
+    dict[433225532] = { return Api.Update.parse_updateDialogPinned($0) }
+    dict[-364071333] = { return Api.Update.parse_updatePinnedDialogs($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
@@ -216,6 +220,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[573315206] = { return Api.ChannelParticipant.parse_channelParticipantBanned($0) }
     dict[471043349] = { return Api.contacts.Blocked.parse_blocked($0) }
     dict[-1878523231] = { return Api.contacts.Blocked.parse_blockedSlice($0) }
+    dict[741914831] = { return Api.InputDialogPeer.parse_inputDialogPeerFeed($0) }
+    dict[-55902537] = { return Api.InputDialogPeer.parse_inputDialogPeer($0) }
     dict[-994444869] = { return Api.Error.parse_error($0) }
     dict[-1560655744] = { return Api.KeyboardButton.parse_keyboardButton($0) }
     dict[629866245] = { return Api.KeyboardButton.parse_keyboardButtonUrl($0) }
@@ -295,6 +301,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[396093539] = { return Api.InputPeer.parse_inputPeerChat($0) }
     dict[2072935910] = { return Api.InputPeer.parse_inputPeerUser($0) }
     dict[548253432] = { return Api.InputPeer.parse_inputPeerChannel($0) }
+    dict[888128301] = { return Api.InputPeer.parse_inputPeerFeed($0) }
     dict[568808380] = { return Api.upload.WebFile.parse_webFile($0) }
     dict[-116274796] = { return Api.Contact.parse_contact($0) }
     dict[-1679053127] = { return Api.BotInlineResult.parse_botInlineResult($0) }
@@ -304,6 +311,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1800845601] = { return Api.payments.PaymentResult.parse_paymentVerficationNeeded($0) }
     dict[1694474197] = { return Api.messages.Chats.parse_chats($0) }
     dict[-1663561404] = { return Api.messages.Chats.parse_chatsSlice($0) }
+    dict[1348066419] = { return Api.FeedPosition.parse_feedPosition($0) }
     dict[1588230153] = { return Api.InputSingleMedia.parse_inputSingleMedia($0) }
     dict[218751099] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowContacts($0) }
     dict[407582158] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowAll($0) }
@@ -329,6 +337,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-714643696] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionParticipantToggleAdmin($0) }
     dict[-1312568665] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangeStickerSet($0) }
     dict[1599903217] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionTogglePreHistoryHidden($0) }
+    dict[1182322895] = { return Api.messages.FeedMessages.parse_feedMessagesNotModified($0) }
+    dict[1438884273] = { return Api.messages.FeedMessages.parse_feedMessages($0) }
     dict[-543777747] = { return Api.auth.ExportedAuthorization.parse_exportedAuthorization($0) }
     dict[-1269012015] = { return Api.messages.AffectedHistory.parse_affectedHistory($0) }
     dict[-2037289493] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
@@ -461,7 +471,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1056001329] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsSaved($0) }
     dict[873977640] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentials($0) }
     dict[178373535] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsApplePay($0) }
-    dict[2035705766] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsAndroidPay($0) }
+    dict[-905587442] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsAndroidPay($0) }
     dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
     dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
@@ -486,6 +496,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1816636575] = { return Api.LangPackString.parse_langPackStringPluralized($0) }
     dict[695856818] = { return Api.LangPackString.parse_langPackStringDeleted($0) }
     dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
+    dict[-2001655273] = { return Api.channels.FeedSources.parse_feedSourcesNotModified($0) }
+    dict[-1903441347] = { return Api.channels.FeedSources.parse_feedSources($0) }
     dict[1436466797] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
     dict[1474492012] = { return Api.MessagesFilter.parse_inputMessagesFilterEmpty($0) }
@@ -567,12 +579,14 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1355435489] = { return Api.PhoneCall.parse_phoneCallDiscarded($0) }
     dict[-1378534221] = { return Api.PeerNotifyEvents.parse_peerNotifyEventsEmpty($0) }
     dict[1830677896] = { return Api.PeerNotifyEvents.parse_peerNotifyEventsAll($0) }
+    dict[-633170927] = { return Api.DialogPeer.parse_dialogPeerFeed($0) }
+    dict[-445792507] = { return Api.DialogPeer.parse_dialogPeer($0) }
     dict[1599050311] = { return Api.ContactLink.parse_contactLinkUnknown($0) }
     dict[-17968211] = { return Api.ContactLink.parse_contactLinkNone($0) }
     dict[646922073] = { return Api.ContactLink.parse_contactLinkHasPhone($0) }
     dict[-721239344] = { return Api.ContactLink.parse_contactLinkContact($0) }
     dict[-971322408] = { return Api.WebDocument.parse_webDocument($0) }
-    dict[446822276] = { return Api.contacts.Found.parse_found($0) }
+    dict[-1290580579] = { return Api.contacts.Found.parse_found($0) }
     dict[-368018716] = { return Api.ChannelAdminLogEventsFilter.parse_channelAdminLogEventsFilter($0) }
     dict[1889961234] = { return Api.PeerNotifySettings.parse_peerNotifySettingsEmpty($0) }
     dict[-1697798976] = { return Api.PeerNotifySettings.parse_peerNotifySettings($0) }
@@ -739,6 +753,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Dialog:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.FeedBroadcasts:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.SendMessageAction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PrivacyKey:
@@ -750,6 +766,8 @@ public struct Api {
             case let _1 as Api.ChannelParticipant:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Blocked:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputDialogPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Error:
                 _1.serialize(buffer, boxed)
@@ -815,6 +833,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Chats:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.FeedPosition:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputSingleMedia:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputPrivacyRule:
@@ -822,6 +842,8 @@ public struct Api {
             case let _1 as Api.messages.DhConfig:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelAdminLogEventAction:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.FeedMessages:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.auth.ExportedAuthorization:
                 _1.serialize(buffer, boxed)
@@ -991,6 +1013,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputWebFileLocation:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.channels.FeedSources:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageFwdHeader:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.Support:
@@ -1034,6 +1058,8 @@ public struct Api {
             case let _1 as Api.PhoneCall:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PeerNotifyEvents:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.DialogPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ContactLink:
                 _1.serialize(buffer, boxed)
@@ -1525,6 +1551,92 @@ public struct Api {
                 let _c4 = _4 != nil
                 if _c1 && _c2 && _c3 && _c4 {
                     return Api.messages.DhConfig.dhConfig(g: _1!, p: _2!, version: _3!, random: _4!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+        }
+    
+        public enum FeedMessages {
+            case feedMessagesNotModified
+            case feedMessages(flags: Int32, maxPosition: Api.FeedPosition?, minPosition: Api.FeedPosition?, readMaxPosition: Api.FeedPosition?, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+        switch self {
+                    case .feedMessagesNotModified:
+                        if boxed {
+                            buffer.appendInt32(1182322895)
+                        }
+                        
+                        break
+                    case .feedMessages(let flags, let maxPosition, let minPosition, let readMaxPosition, let messages, let chats, let users):
+                        if boxed {
+                            buffer.appendInt32(1438884273)
+                        }
+                        serializeInt32(flags, buffer: buffer, boxed: false)
+                        if Int(flags) & Int(1 << 0) != 0 {maxPosition!.serialize(buffer, true)}
+                        if Int(flags) & Int(1 << 1) != 0 {minPosition!.serialize(buffer, true)}
+                        if Int(flags) & Int(1 << 2) != 0 {readMaxPosition!.serialize(buffer, true)}
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(messages.count))
+                        for item in messages {
+                            item.serialize(buffer, true)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(chats.count))
+                        for item in chats {
+                            item.serialize(buffer, true)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(users.count))
+                        for item in users {
+                            item.serialize(buffer, true)
+                        }
+                        break
+        }
+        }
+        
+            fileprivate static func parse_feedMessagesNotModified(_ reader: BufferReader) -> FeedMessages? {
+                return Api.messages.FeedMessages.feedMessagesNotModified
+            }
+            fileprivate static func parse_feedMessages(_ reader: BufferReader) -> FeedMessages? {
+                var _1: Int32?
+                _1 = reader.readInt32()
+                var _2: Api.FeedPosition?
+                if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                    _2 = Api.parse(reader, signature: signature) as? Api.FeedPosition
+                } }
+                var _3: Api.FeedPosition?
+                if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                    _3 = Api.parse(reader, signature: signature) as? Api.FeedPosition
+                } }
+                var _4: Api.FeedPosition?
+                if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.FeedPosition
+                } }
+                var _5: [Api.Message]?
+                if let _ = reader.readInt32() {
+                    _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+                }
+                var _6: [Api.Chat]?
+                if let _ = reader.readInt32() {
+                    _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                }
+                var _7: [Api.User]?
+                if let _ = reader.readInt32() {
+                    _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                }
+                let _c1 = _1 != nil
+                let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+                let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+                let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+                let _c5 = _5 != nil
+                let _c6 = _6 != nil
+                let _c7 = _7 != nil
+                if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                    return Api.messages.FeedMessages.feedMessages(flags: _1!, maxPosition: _2, minPosition: _3, readMaxPosition: _4, messages: _5!, chats: _6!, users: _7!)
                 }
                 else {
                     return nil
@@ -3341,7 +3453,7 @@ public struct Api {
         case chat(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?)
         case chatForbidden(id: Int32, title: String)
         case channelForbidden(flags: Int32, id: Int32, accessHash: Int64, title: String, untilDate: Int32?)
-        case channel(flags: Int32, id: Int32, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, version: Int32, restrictionReason: String?, adminRights: Api.ChannelAdminRights?, bannedRights: Api.ChannelBannedRights?, participantsCount: Int32?)
+        case channel(flags: Int32, id: Int32, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, version: Int32, restrictionReason: String?, adminRights: Api.ChannelAdminRights?, bannedRights: Api.ChannelBannedRights?, participantsCount: Int32?, feedId: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -3381,9 +3493,9 @@ public struct Api {
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 16) != 0 {serializeInt32(untilDate!, buffer: buffer, boxed: false)}
                     break
-                case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights, let participantsCount):
+                case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights, let participantsCount, let feedId):
                     if boxed {
-                        buffer.appendInt32(1158377749)
+                        buffer.appendInt32(-930515796)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -3397,6 +3509,7 @@ public struct Api {
                     if Int(flags) & Int(1 << 14) != 0 {adminRights!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 15) != 0 {bannedRights!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 17) != 0 {serializeInt32(participantsCount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 18) != 0 {serializeInt32(feedId!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -3516,6 +3629,8 @@ public struct Api {
             } }
             var _12: Int32?
             if Int(_1!) & Int(1 << 17) != 0 {_12 = reader.readInt32() }
+            var _13: Int32?
+            if Int(_1!) & Int(1 << 18) != 0 {_13 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 13) == 0) || _3 != nil
@@ -3528,8 +3643,9 @@ public struct Api {
             let _c10 = (Int(_1!) & Int(1 << 14) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 15) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 17) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.Chat.channel(flags: _1!, id: _2!, accessHash: _3, title: _4!, username: _5, photo: _6!, date: _7!, version: _8!, restrictionReason: _9, adminRights: _10, bannedRights: _11, participantsCount: _12)
+            let _c13 = (Int(_1!) & Int(1 << 18) == 0) || _13 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
+                return Api.Chat.channel(flags: _1!, id: _2!, accessHash: _3, title: _4!, username: _5, photo: _6!, date: _7!, version: _8!, restrictionReason: _9, adminRights: _10, bannedRights: _11, participantsCount: _12, feedId: _13)
             }
             else {
                 return nil
@@ -4369,15 +4485,16 @@ public struct Api {
     }
 
     public enum ExportedMessageLink {
-        case exportedMessageLink(link: String)
+        case exportedMessageLink(link: String, html: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .exportedMessageLink(let link):
+                case .exportedMessageLink(let link, let html):
                     if boxed {
-                        buffer.appendInt32(524838915)
+                        buffer.appendInt32(1571494644)
                     }
                     serializeString(link, buffer: buffer, boxed: false)
+                    serializeString(html, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -4385,9 +4502,12 @@ public struct Api {
         fileprivate static func parse_exportedMessageLink(_ reader: BufferReader) -> ExportedMessageLink? {
             var _1: String?
             _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ExportedMessageLink.exportedMessageLink(link: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ExportedMessageLink.exportedMessageLink(link: _1!, html: _2!)
             }
             else {
                 return nil
@@ -4660,6 +4780,7 @@ public struct Api {
 
     public enum Dialog {
         case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?)
+        case dialogFeed(flags: Int32, peer: Api.Peer, topMessage: Int32, feedId: Int32, feedOtherChannels: [Int32], readMaxPosition: Api.FeedPosition?, unreadCount: Int32, unreadMutedCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4677,6 +4798,23 @@ public struct Api {
                     notifySettings.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(pts!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {draft!.serialize(buffer, true)}
+                    break
+                case .dialogFeed(let flags, let peer, let topMessage, let feedId, let feedOtherChannels, let readMaxPosition, let unreadCount, let unreadMutedCount):
+                    if boxed {
+                        buffer.appendInt32(906521922)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(topMessage, buffer: buffer, boxed: false)
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(feedOtherChannels.count))
+                    for item in feedOtherChannels {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    if Int(flags) & Int(1 << 3) != 0 {readMaxPosition!.serialize(buffer, true)}
+                    serializeInt32(unreadCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadMutedCount, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -4720,6 +4858,106 @@ public struct Api {
             let _c10 = (Int(_1!) & Int(1 << 1) == 0) || _10 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
                 return Api.Dialog.dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, notifySettings: _8!, pts: _9, draft: _10)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_dialogFeed(_ reader: BufferReader) -> Dialog? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: [Int32]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _6: Api.FeedPosition?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.FeedPosition
+            } }
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: Int32?
+            _8 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.Dialog.dialogFeed(flags: _1!, peer: _2!, topMessage: _3!, feedId: _4!, feedOtherChannels: _5!, readMaxPosition: _6, unreadCount: _7!, unreadMutedCount: _8!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+
+    public enum FeedBroadcasts {
+        case feedBroadcasts(feedId: Int32, channels: [Int32])
+        case feedBroadcastsUngrouped(channels: [Int32])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .feedBroadcasts(let feedId, let channels):
+                    if boxed {
+                        buffer.appendInt32(1330637553)
+                    }
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(channels.count))
+                    for item in channels {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
+                case .feedBroadcastsUngrouped(let channels):
+                    if boxed {
+                        buffer.appendInt32(-1704428358)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(channels.count))
+                    for item in channels {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
+    }
+    }
+    
+        fileprivate static func parse_feedBroadcasts(_ reader: BufferReader) -> FeedBroadcasts? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.FeedBroadcasts.feedBroadcasts(feedId: _1!, channels: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_feedBroadcastsUngrouped(_ reader: BufferReader) -> FeedBroadcasts? {
+            var _1: [Int32]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.FeedBroadcasts.feedBroadcastsUngrouped(channels: _1!)
             }
             else {
                 return nil
@@ -4994,8 +5232,6 @@ public struct Api {
         case updateConfig
         case updatePtsChanged
         case updateChannelWebPage(channelId: Int32, webpage: Api.WebPage, pts: Int32, ptsCount: Int32)
-        case updateDialogPinned(flags: Int32, peer: Api.Peer)
-        case updatePinnedDialogs(flags: Int32, order: [Api.Peer]?)
         case updateBotWebhookJSON(data: Api.DataJSON)
         case updateBotWebhookJSONQuery(queryId: Int64, data: Api.DataJSON, timeout: Int32)
         case updateBotShippingQuery(queryId: Int64, userId: Int32, payload: Buffer, shippingAddress: Api.PostAddress)
@@ -5007,6 +5243,9 @@ public struct Api {
         case updateChannelReadMessagesContents(channelId: Int32, messages: [Int32])
         case updateContactsReset
         case updateChannelAvailableMessages(channelId: Int32, availableMinId: Int32)
+        case updateReadFeed(feedId: Int32, maxPosition: Api.FeedPosition)
+        case updateDialogPinned(flags: Int32, peer: Api.DialogPeer)
+        case updatePinnedDialogs(flags: Int32, order: [Api.DialogPeer]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5452,24 +5691,6 @@ public struct Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
-                case .updateDialogPinned(let flags, let peer):
-                    if boxed {
-                        buffer.appendInt32(-686710068)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    break
-                case .updatePinnedDialogs(let flags, let order):
-                    if boxed {
-                        buffer.appendInt32(-657787251)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(order!.count))
-                    for item in order! {
-                        item.serialize(buffer, true)
-                    }}
-                    break
                 case .updateBotWebhookJSON(let data):
                     if boxed {
                         buffer.appendInt32(-2095595325)
@@ -5553,6 +5774,31 @@ public struct Api {
                     }
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     serializeInt32(availableMinId, buffer: buffer, boxed: false)
+                    break
+                case .updateReadFeed(let feedId, let maxPosition):
+                    if boxed {
+                        buffer.appendInt32(-1723313495)
+                    }
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    maxPosition.serialize(buffer, true)
+                    break
+                case .updateDialogPinned(let flags, let peer):
+                    if boxed {
+                        buffer.appendInt32(433225532)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    break
+                case .updatePinnedDialogs(let flags, let order):
+                    if boxed {
+                        buffer.appendInt32(-364071333)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(order!.count))
+                    for item in order! {
+                        item.serialize(buffer, true)
+                    }}
                     break
     }
     }
@@ -6460,38 +6706,6 @@ public struct Api {
                 return nil
             }
         }
-        fileprivate static func parse_updateDialogPinned(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Peer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateDialogPinned(flags: _1!, peer: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        fileprivate static func parse_updatePinnedDialogs(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.Peer]?
-            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
-            } }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updatePinnedDialogs(flags: _1!, order: _2)
-            }
-            else {
-                return nil
-            }
-        }
         fileprivate static func parse_updateBotWebhookJSON(_ reader: BufferReader) -> Update? {
             var _1: Api.DataJSON?
             if let signature = reader.readInt32() {
@@ -6640,6 +6854,54 @@ public struct Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateChannelAvailableMessages(channelId: _1!, availableMinId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_updateReadFeed(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.FeedPosition?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.FeedPosition
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateReadFeed(feedId: _1!, maxPosition: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_updateDialogPinned(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.DialogPeer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.DialogPeer
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateDialogPinned(flags: _1!, peer: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_updatePinnedDialogs(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.DialogPeer]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogPeer.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updatePinnedDialogs(flags: _1!, order: _2)
             }
             else {
                 return nil
@@ -6824,6 +7086,54 @@ public struct Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.ChannelParticipant.channelParticipantBanned(flags: _1!, userId: _2!, kickedBy: _3!, date: _4!, bannedRights: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+
+    public enum InputDialogPeer {
+        case inputDialogPeerFeed(feedId: Int32)
+        case inputDialogPeer(peer: Api.InputPeer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputDialogPeerFeed(let feedId):
+                    if boxed {
+                        buffer.appendInt32(741914831)
+                    }
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    break
+                case .inputDialogPeer(let peer):
+                    if boxed {
+                        buffer.appendInt32(-55902537)
+                    }
+                    peer.serialize(buffer, true)
+                    break
+    }
+    }
+    
+        fileprivate static func parse_inputDialogPeerFeed(_ reader: BufferReader) -> InputDialogPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputDialogPeer.inputDialogPeerFeed(feedId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_inputDialogPeer(_ reader: BufferReader) -> InputDialogPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputDialogPeer.inputDialogPeer(peer: _1!)
             }
             else {
                 return nil
@@ -8576,6 +8886,7 @@ public struct Api {
         case inputPeerChat(chatId: Int32)
         case inputPeerUser(userId: Int32, accessHash: Int64)
         case inputPeerChannel(channelId: Int32, accessHash: Int64)
+        case inputPeerFeed(feedId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -8610,6 +8921,12 @@ public struct Api {
                     }
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+                case .inputPeerFeed(let feedId):
+                    if boxed {
+                        buffer.appendInt32(888128301)
+                    }
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -8654,6 +8971,17 @@ public struct Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputPeer.inputPeerChannel(channelId: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_inputPeerFeed(_ reader: BufferReader) -> InputPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputPeer.inputPeerFeed(feedId: _1!)
             }
             else {
                 return nil
@@ -8818,6 +9146,44 @@ public struct Api {
             let _c8 = _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
                 return Api.BotInlineResult.botInlineMediaResult(flags: _1!, id: _2!, type: _3!, photo: _4, document: _5, title: _6, description: _7, sendMessage: _8!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+
+    public enum FeedPosition {
+        case feedPosition(date: Int32, peer: Api.Peer, id: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .feedPosition(let date, let peer, let id):
+                    if boxed {
+                        buffer.appendInt32(1348066419)
+                    }
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+        fileprivate static func parse_feedPosition(_ reader: BufferReader) -> FeedPosition? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.FeedPosition.feedPosition(date: _1!, peer: _2!, id: _3!)
             }
             else {
                 return nil
@@ -12430,7 +12796,7 @@ public struct Api {
         case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
         case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
         case inputPaymentCredentialsApplePay(paymentData: Api.DataJSON)
-        case inputPaymentCredentialsAndroidPay(paymentToken: Api.DataJSON)
+        case inputPaymentCredentialsAndroidPay(paymentToken: Api.DataJSON, googleTransactionId: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -12454,11 +12820,12 @@ public struct Api {
                     }
                     paymentData.serialize(buffer, true)
                     break
-                case .inputPaymentCredentialsAndroidPay(let paymentToken):
+                case .inputPaymentCredentialsAndroidPay(let paymentToken, let googleTransactionId):
                     if boxed {
-                        buffer.appendInt32(2035705766)
+                        buffer.appendInt32(-905587442)
                     }
                     paymentToken.serialize(buffer, true)
+                    serializeString(googleTransactionId, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -12511,9 +12878,12 @@ public struct Api {
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
             }
+            var _2: String?
+            _2 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsAndroidPay(paymentToken: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputPaymentCredentials.inputPaymentCredentialsAndroidPay(paymentToken: _1!, googleTransactionId: _2!)
             }
             else {
                 return nil
@@ -14690,6 +15060,54 @@ public struct Api {
     
     }
 
+    public enum DialogPeer {
+        case dialogPeerFeed(feedId: Int32)
+        case dialogPeer(peer: Api.Peer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .dialogPeerFeed(let feedId):
+                    if boxed {
+                        buffer.appendInt32(-633170927)
+                    }
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    break
+                case .dialogPeer(let peer):
+                    if boxed {
+                        buffer.appendInt32(-445792507)
+                    }
+                    peer.serialize(buffer, true)
+                    break
+    }
+    }
+    
+        fileprivate static func parse_dialogPeerFeed(_ reader: BufferReader) -> DialogPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.DialogPeer.dialogPeerFeed(feedId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_dialogPeer(_ reader: BufferReader) -> DialogPeer? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.DialogPeer.dialogPeer(peer: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+
     public enum ContactLink {
         case contactLinkUnknown
         case contactLinkNone
@@ -15765,6 +16183,78 @@ public struct Api {
         
         }
     
+        public enum FeedSources {
+            case feedSourcesNotModified
+            case feedSources(flags: Int32, newlyJoinedFeed: Int32?, feeds: [Api.FeedBroadcasts], chats: [Api.Chat], users: [Api.User])
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+        switch self {
+                    case .feedSourcesNotModified:
+                        if boxed {
+                            buffer.appendInt32(-2001655273)
+                        }
+                        
+                        break
+                    case .feedSources(let flags, let newlyJoinedFeed, let feeds, let chats, let users):
+                        if boxed {
+                            buffer.appendInt32(-1903441347)
+                        }
+                        serializeInt32(flags, buffer: buffer, boxed: false)
+                        if Int(flags) & Int(1 << 0) != 0 {serializeInt32(newlyJoinedFeed!, buffer: buffer, boxed: false)}
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(feeds.count))
+                        for item in feeds {
+                            item.serialize(buffer, true)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(chats.count))
+                        for item in chats {
+                            item.serialize(buffer, true)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(users.count))
+                        for item in users {
+                            item.serialize(buffer, true)
+                        }
+                        break
+        }
+        }
+        
+            fileprivate static func parse_feedSourcesNotModified(_ reader: BufferReader) -> FeedSources? {
+                return Api.channels.FeedSources.feedSourcesNotModified
+            }
+            fileprivate static func parse_feedSources(_ reader: BufferReader) -> FeedSources? {
+                var _1: Int32?
+                _1 = reader.readInt32()
+                var _2: Int32?
+                if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+                var _3: [Api.FeedBroadcasts]?
+                if let _ = reader.readInt32() {
+                    _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.FeedBroadcasts.self)
+                }
+                var _4: [Api.Chat]?
+                if let _ = reader.readInt32() {
+                    _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                }
+                var _5: [Api.User]?
+                if let _ = reader.readInt32() {
+                    _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                }
+                let _c1 = _1 != nil
+                let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+                let _c3 = _3 != nil
+                let _c4 = _4 != nil
+                let _c5 = _5 != nil
+                if _c1 && _c2 && _c3 && _c4 && _c5 {
+                    return Api.channels.FeedSources.feedSources(flags: _1!, newlyJoinedFeed: _2, feeds: _3!, chats: _4!, users: _5!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+        }
+    
         public enum AdminLogResults {
             case adminLogResults(events: [Api.ChannelAdminLogEvent], chats: [Api.Chat], users: [Api.User])
         
@@ -16702,13 +17192,18 @@ public struct Api {
         }
     
         public enum Found {
-            case found(results: [Api.Peer], chats: [Api.Chat], users: [Api.User])
+            case found(myResults: [Api.Peer], results: [Api.Peer], chats: [Api.Chat], users: [Api.User])
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
-                    case .found(let results, let chats, let users):
+                    case .found(let myResults, let results, let chats, let users):
                         if boxed {
-                            buffer.appendInt32(446822276)
+                            buffer.appendInt32(-1290580579)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(myResults.count))
+                        for item in myResults {
+                            item.serialize(buffer, true)
                         }
                         buffer.appendInt32(481674261)
                         buffer.appendInt32(Int32(results.count))
@@ -16734,19 +17229,24 @@ public struct Api {
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
                 }
-                var _2: [Api.Chat]?
+                var _2: [Api.Peer]?
                 if let _ = reader.readInt32() {
-                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
                 }
-                var _3: [Api.User]?
+                var _3: [Api.Chat]?
                 if let _ = reader.readInt32() {
-                    _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                    _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                }
+                var _4: [Api.User]?
+                if let _ = reader.readInt32() {
+                    _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
                 }
                 let _c1 = _1 != nil
                 let _c2 = _2 != nil
                 let _c3 = _3 != nil
-                if _c1 && _c2 && _c3 {
-                    return Api.contacts.Found.found(results: _1!, chats: _2!, users: _3!)
+                let _c4 = _4 != nil
+                if _c1 && _c2 && _c3 && _c4 {
+                    return Api.contacts.Found.found(myResults: _1!, results: _2!, chats: _3!, users: _4!)
                 }
                 else {
                     return nil
@@ -18154,24 +18654,6 @@ public struct Api {
                     })
                 }
             
-                public static func getDialogs(flags: Int32, offsetDate: Int32, offsetId: Int32, offsetPeer: Api.InputPeer, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Dialogs?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(421243333)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(offsetDate, buffer: buffer, boxed: false)
-                    serializeInt32(offsetId, buffer: buffer, boxed: false)
-                    offsetPeer.serialize(buffer, true)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.getDialogs flags: \(flags), offsetDate: \(offsetDate), offsetId: \(offsetId), offsetPeer: \(offsetPeer), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.messages.Dialogs? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Dialogs?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Dialogs
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getHistory(peer: Api.InputPeer, offsetId: Int32, offsetDate: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1347868602)
@@ -19118,24 +19600,6 @@ public struct Api {
                     })
                 }
             
-                public static func getPeerDialogs(peers: [Api.InputPeer]) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.PeerDialogs?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(764901049)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(peers.count))
-                    for item in peers {
-                        item.serialize(buffer, true)
-                    }
-                    return (FunctionDescription({return "(messages.getPeerDialogs peers: \(peers))"}), buffer, { (buffer: Buffer) -> Api.messages.PeerDialogs? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.PeerDialogs?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.PeerDialogs
-                        }
-                        return result
-                    })
-                }
-            
                 public static func saveDraft(flags: Int32, replyToMsgId: Int32?, peer: Api.InputPeer, message: String, entities: [Api.MessageEntity]?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1137057461)
@@ -19408,40 +19872,6 @@ public struct Api {
                     })
                 }
             
-                public static func toggleDialogPin(flags: Int32, peer: Api.InputPeer) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(847887978)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    return (FunctionDescription({return "(messages.toggleDialogPin flags: \(flags), peer: \(peer))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                public static func reorderPinnedDialogs(flags: Int32, order: [Api.InputPeer]) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1784678844)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(order.count))
-                    for item in order {
-                        item.serialize(buffer, true)
-                    }
-                    return (FunctionDescription({return "(messages.reorderPinnedDialogs flags: \(flags), order: \(order))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getPinnedDialogs() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.PeerDialogs?) {
                     let buffer = Buffer()
                     buffer.appendInt32(-497756594)
@@ -19700,6 +20130,77 @@ public struct Api {
                         var result: Api.EncryptedFile?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.EncryptedFile
+                        }
+                        return result
+                    })
+                }
+            
+                public static func toggleDialogPin(flags: Int32, peer: Api.InputDialogPeer) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1489903017)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription({return "(messages.toggleDialogPin flags: \(flags), peer: \(peer))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func reorderPinnedDialogs(flags: Int32, order: [Api.InputDialogPeer]) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1532089919)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(order.count))
+                    for item in order {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription({return "(messages.reorderPinnedDialogs flags: \(flags), order: \(order))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getPeerDialogs(peers: [Api.InputDialogPeer]) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.PeerDialogs?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-462373635)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(peers.count))
+                    for item in peers {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription({return "(messages.getPeerDialogs peers: \(peers))"}), buffer, { (buffer: Buffer) -> Api.messages.PeerDialogs? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.PeerDialogs?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.PeerDialogs
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getDialogs(flags: Int32, feedId: Int32?, offsetDate: Int32, offsetId: Int32, offsetPeer: Api.InputPeer, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Dialogs?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(96533218)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(feedId!, buffer: buffer, boxed: false)}
+                    serializeInt32(offsetDate, buffer: buffer, boxed: false)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    offsetPeer.serialize(buffer, true)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(messages.getDialogs flags: \(flags), feedId: \(String(describing: feedId)), offsetDate: \(offsetDate), offsetId: \(offsetId), offsetPeer: \(offsetPeer), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.messages.Dialogs? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Dialogs?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Dialogs
                         }
                         return result
                     })
@@ -20232,6 +20733,114 @@ public struct Api {
                         var result: Api.channels.ChannelParticipants?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.channels.ChannelParticipants
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getFeed(flags: Int32, feedId: Int32, offsetPosition: Api.FeedPosition?, addOffset: Int32, limit: Int32, maxPosition: Api.FeedPosition?, minPosition: Api.FeedPosition?, sourcesHash: Int32, hash: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.FeedMessages?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(403799538)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {offsetPosition!.serialize(buffer, true)}
+                    serializeInt32(addOffset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {maxPosition!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {minPosition!.serialize(buffer, true)}
+                    serializeInt32(sourcesHash, buffer: buffer, boxed: false)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(channels.getFeed flags: \(flags), feedId: \(feedId), offsetPosition: \(String(describing: offsetPosition)), addOffset: \(addOffset), limit: \(limit), maxPosition: \(String(describing: maxPosition)), minPosition: \(String(describing: minPosition)), sourcesHash: \(sourcesHash), hash: \(hash))"}), buffer, { (buffer: Buffer) -> Api.messages.FeedMessages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.FeedMessages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.FeedMessages
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getFeedSources(flags: Int32, feedId: Int32?, hash: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.channels.FeedSources?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-657579154)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(feedId!, buffer: buffer, boxed: false)}
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(channels.getFeedSources flags: \(flags), feedId: \(String(describing: feedId)), hash: \(hash))"}), buffer, { (buffer: Buffer) -> Api.channels.FeedSources? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.channels.FeedSources?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.channels.FeedSources
+                        }
+                        return result
+                    })
+                }
+            
+                public static func changeFeedBroadcast(flags: Int32, channel: Api.InputChannel, feedId: Int32?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(623413022)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(feedId!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription({return "(channels.changeFeedBroadcast flags: \(flags), channel: \(channel), feedId: \(String(describing: feedId)))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setFeedBroadcasts(feedId: Int32, channels: [Api.InputChannel], alsoNewlyJoined: Api.Bool) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2123479282)
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(channels.count))
+                    for item in channels {
+                        item.serialize(buffer, true)
+                    }
+                    alsoNewlyJoined.serialize(buffer, true)
+                    return (FunctionDescription({return "(channels.setFeedBroadcasts feedId: \(feedId), channels: \(channels), alsoNewlyJoined: \(alsoNewlyJoined))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func readFeed(feedId: Int32, maxPosition: Api.FeedPosition) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(163774749)
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    maxPosition.serialize(buffer, true)
+                    return (FunctionDescription({return "(channels.readFeed feedId: \(feedId), maxPosition: \(maxPosition))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func searchFeed(feedId: Int32, q: String, offsetDate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2009967767)
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    serializeInt32(offsetDate, buffer: buffer, boxed: false)
+                    offsetPeer.serialize(buffer, true)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(channels.searchFeed feedId: \(feedId), q: \(q), offsetDate: \(offsetDate), offsetPeer: \(offsetPeer), offsetId: \(offsetId), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
                         }
                         return result
                     })
