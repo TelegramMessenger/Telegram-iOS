@@ -418,7 +418,8 @@ typedef enum
         _popoverController = [[UIPopoverController alloc] initWithContentViewController:self];
         
         UIColor *backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];
-        _popoverController.backgroundColor = _dark ? UIColorRGB(0x161616) : backgroundColor;
+        if ([_popoverController respondsToSelector:@selector(setBackgroundColor:)])
+            _popoverController.backgroundColor = _dark ? UIColorRGB(0x161616) : backgroundColor;
         
         if (self.barButtonItem != nil)
         {

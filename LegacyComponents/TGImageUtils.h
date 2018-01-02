@@ -31,6 +31,7 @@ UIImage *TGCircleImage(CGFloat radius, UIColor *color);
 
 UIImage *TGImageNamed(NSString *name);
 UIImage *TGTintedImage(UIImage *image, UIColor *color);
+UIImage *TGTintedWithAlphaImage(UIImage *image, UIColor *color);
     
 NSString *TGImageHash(NSData *data);
     

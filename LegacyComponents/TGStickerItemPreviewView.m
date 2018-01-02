@@ -201,6 +201,7 @@ static const CGFloat TGStickersTopMargin = 140.0f;
     for (NSString *alt in alts)
     {
         UILabel *altView = [[UILabel alloc] initWithFrame:CGRectZero];
+        altView.backgroundColor = [UIColor clearColor];
         altView.font = TGSystemFontOfSize(32);
         altView.text = alt;
         [altView sizeToFit];

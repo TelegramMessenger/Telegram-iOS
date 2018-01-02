@@ -217,7 +217,7 @@
         _flashActiveView = [[TGCameraFlashActiveView alloc] initWithFrame:CGRectMake((frame.size.width - 40) / 2, frame.size.height - _bottomPanelHeight - 37, 40, 21)];
         [self addSubview:_flashActiveView];
         
-        _zoomView = [[TGCameraZoomView alloc] initWithFrame:CGRectMake(10, frame.size.height - _bottomPanelHeight - 18, frame.size.width - 20, 1.5f)];
+        _zoomView = [[TGCameraZoomView alloc] initWithFrame:CGRectMake(10, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18, frame.size.width - 20, 1.5f)];
         _zoomView.activityChanged = ^(bool active)
         {
             __strong TGCameraMainPhoneView *strongSelf = weakSelf;

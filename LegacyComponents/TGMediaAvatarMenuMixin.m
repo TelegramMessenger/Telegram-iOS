@@ -185,7 +185,7 @@
         [strongController dismissAnimated:true manual:true];
     }];
     [itemViews addObject:cancelItem];
-    
+    controller.permittedArrowDirections = (UIPopoverArrowDirectionUp | UIPopoverArrowDirectionDown);
     [controller setItemViews:itemViews];
     [controller presentInViewController:_parentController sourceView:nil animated:true];
     return controller;

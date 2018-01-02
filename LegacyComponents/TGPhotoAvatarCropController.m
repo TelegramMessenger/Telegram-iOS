@@ -628,7 +628,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 
 - (TGPhotoEditorTab)availableTabs
 {
-    return TGPhotoEditorPaintTab | TGPhotoEditorToolsTab;
+    return iosMajorVersion() >= 7 ? (TGPhotoEditorPaintTab | TGPhotoEditorToolsTab) : TGPhotoEditorNoneTab;
 }
 
 @end

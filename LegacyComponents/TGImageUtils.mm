@@ -466,6 +466,27 @@ UIImage *TGTintedImage(UIImage *image, UIColor *color)
     return tintedImage;
 }
 
+UIImage *TGTintedWithAlphaImage(UIImage *image, UIColor *color)
+{
+    CGFloat alpha = 1.0f;
+    if (![color getRed:nil green:nil blue:nil alpha:&alpha])
+        [color getWhite:nil alpha:&alpha];
+    
+    UIImage *tintedImage = TGTintedImage(image, [color colorWithAlphaComponent:1.0f]);
+    if (alpha > 1.0f - FLT_EPSILON)
+    {
+        return tintedImage;
+    }
+    else
+    {
+        UIGraphicsBeginImageContextWithOptions(tintedImage.size, false, 0.0f);
+        [tintedImage drawAtPoint:CGPointZero blendMode:kCGBlendModeNormal alpha:alpha];
+        UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        return image;
+    }
+}
+
 NSString *TGImageHash(NSData *data)
 {    
     CC_MD5_CTX md5;

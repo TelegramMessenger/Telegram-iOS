@@ -1501,6 +1501,9 @@
 
 - (void)doneButtonLongPressed:(UIButton *)sender
 {
+    if (_intent == TGPhotoEditorControllerVideoIntent)
+        return;
+    
     if (_menuContainerView != nil)
     {
         [_menuContainerView removeFromSuperview];

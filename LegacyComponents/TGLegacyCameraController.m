@@ -121,11 +121,14 @@
             TGNavigationBarPallete *pallete = [[LegacyComponentsGlobals provider] navigationBarPallete];
         
             UINavigationBar *navigationBar = self.navigationBar;
-            navigationBar.translucent = false;
-            navigationBar.barTintColor = pallete.backgroundColor;
-            navigationBar.tintColor = pallete.tintColor;
-            navigationBar.titleTextAttributes = @{ NSForegroundColorAttributeName: pallete.titleColor };
-            navigationBar.bottomBorderColor = pallete.separatorColor;
+            if (iosMajorVersion() >= 7)
+            {
+                navigationBar.translucent = false;
+                navigationBar.barTintColor = pallete.backgroundColor;
+                navigationBar.tintColor = pallete.tintColor;
+                navigationBar.titleTextAttributes = @{ NSForegroundColorAttributeName: pallete.titleColor };
+                navigationBar.bottomBorderColor = pallete.separatorColor;
+            }
         }
     }
     
