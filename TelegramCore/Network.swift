@@ -465,6 +465,8 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     public let shouldKeepConnection = Promise<Bool>(false)
     private let shouldKeepConnectionDisposable = MetaDisposable()
     
+    public let shouldExplicitelyKeepWorkerConnections = Promise<Bool>(false)
+    
     public var mockConnectionStatus: ConnectionStatus? {
         didSet {
             if let mockConnectionStatus = self.mockConnectionStatus {
@@ -550,7 +552,12 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     func download(datacenterId: Int, isCdn: Bool = false, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                subscriber.putNext(Download(queue: strongSelf.queue, datacenterId: datacenterId, isCdn: isCdn, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: strongSelf.shouldKeepConnection.get()))
+                let shouldKeepWorkerConnection: Signal<Bool, NoError> = combineLatest(strongSelf.shouldKeepConnection.get(), strongSelf.shouldExplicitelyKeepWorkerConnections.get())
+                |> map { shouldKeepConnection, shouldExplicitelyKeepWorkerConnections -> Bool in
+                    return shouldKeepConnection || shouldExplicitelyKeepWorkerConnections
+                }
+                |> distinctUntilChanged
+                subscriber.putNext(Download(queue: strongSelf.queue, datacenterId: datacenterId, isCdn: isCdn, context: strongSelf.context, masterDatacenterId: strongSelf.datacenterId, usageInfo: usageCalculationInfo(basePath: strongSelf.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection))
             }
             subscriber.putCompletion()
             

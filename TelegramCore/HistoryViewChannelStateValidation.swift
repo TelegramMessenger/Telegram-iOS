@@ -43,6 +43,7 @@ final class HistoryViewChannelStateValidationContexts {
     }
     
     func updateView(id: Int32, view: MessageHistoryView?) {
+        assert(self.queue.isCurrent())
         if let view = view {
             var channelState: ChannelState?
             for entry in view.additionalData {

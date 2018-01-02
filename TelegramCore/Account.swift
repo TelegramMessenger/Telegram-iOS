@@ -490,6 +490,7 @@ public class Account {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
+    public let shouldExplicitelyKeepWorkerConnections = Promise<Bool>(false)
     
     private let networkStateValue = Promise<AccountNetworkState>(.waitingForNetwork)
     public var networkState: Signal<AccountNetworkState, NoError> {
@@ -640,6 +641,7 @@ public class Account {
             |> distinctUntilChanged
         
         self.network.shouldKeepConnection.set(shouldBeMaster)
+        self.network.shouldExplicitelyKeepWorkerConnections.set(self.shouldExplicitelyKeepWorkerConnections.get())
         
         let serviceTasksMaster = shouldBeMaster
             |> deliverOn(self.serviceQueue)

@@ -13,6 +13,8 @@ public enum AuthorizationCodeRequestError {
     case invalidPhoneNumber
     case limitExceeded
     case generic
+    case phoneLimitExceeded
+    case phoneBanned
 }
 
 public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
@@ -43,6 +45,10 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
                 return .limitExceeded
             } else if error.errorDescription == "PHONE_NUMBER_INVALID" {
                 return .invalidPhoneNumber
+            } else if error.errorDescription == "PHONE_NUMBER_FLOOD" {
+                return .phoneLimitExceeded
+            } else if error.errorDescription == "PHONE_NUMBER_BANNED" {
+                return .phoneBanned
             } else {
                 return .generic
             }
@@ -77,6 +83,10 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
                                     return .limitExceeded
                                 } else if error.errorDescription == "PHONE_NUMBER_INVALID" {
                                     return .invalidPhoneNumber
+                                } else if error.errorDescription == "PHONE_NUMBER_FLOOD" {
+                                    return .phoneLimitExceeded
+                                } else if error.errorDescription == "PHONE_NUMBER_BANNED" {
+                                    return .phoneBanned
                                 } else {
                                     return .generic
                                 }
@@ -119,9 +129,9 @@ public enum AuthorizationCodeVerificationError {
 }
 
 private enum AuthorizationCodeResult {
-    case Authorization(Api.auth.Authorization)
-    case Password(String)
-    case SignUp
+    case authorization(Api.auth.Authorization)
+    case password(hint: String)
+    case signUp
 }
 
 public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Signal<Void, AuthorizationCodeVerificationError> {
@@ -130,7 +140,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
             switch state.contents {
                 case let .confirmationCodeEntry(number, _, hash, _, _):
                     return account.network.request(Api.functions.auth.signIn(phoneNumber: number, phoneCodeHash: hash, phoneCode: code), automaticFloodWait: false) |> map { authorization in
-                            return AuthorizationCodeResult.Authorization(authorization)
+                            return .authorization(authorization)
                         } |> `catch` { error -> Signal<AuthorizationCodeResult, AuthorizationCodeVerificationError> in
                             switch (error.errorCode, error.errorDescription) {
                                 case (401, "SESSION_PASSWORD_NEEDED"):
@@ -147,7 +157,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                                                 case .noPassword:
                                                     return .fail(.generic)
                                                 case let .password(_, _, hint, _, _):
-                                                    return .single(.Password(hint))
+                                                    return .single(.password(hint: hint))
                                             }
                                         }
                                 case let (_, errorDescription):
@@ -156,7 +166,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                                     } else if errorDescription == "PHONE_CODE_INVALID" {
                                         return .fail(.invalidCode)
                                     } else if errorDescription == "PHONE_NUMBER_UNOCCUPIED" {
-                                        return .single(.SignUp)
+                                        return .single(.signUp)
                                     } else {
                                         return .fail(.generic)
                                     }
@@ -165,11 +175,11 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                         |> mapToSignal { result -> Signal<Void, AuthorizationCodeVerificationError> in
                             return account.postbox.modify { modifier -> Void in
                                 switch result {
-                                    case .SignUp:
+                                    case .signUp:
                                         modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .signUp(number: number, codeHash: hash, code: code, firstName: "", lastName: "")))
-                                    case let .Password(hint):
+                                    case let .password(hint):
                                         modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
-                                    case let .Authorization(authorization):
+                                    case let .authorization(authorization):
                                         switch authorization {
                                             case let .authorization(_, _, user):
                                                 let user = TelegramUser(user: user)
@@ -229,6 +239,105 @@ public func authorizeWithPassword(account: UnauthorizedAccount, password: String
             |> mapError { _ -> AuthorizationPasswordVerificationError in
                 return .generic
             }
+        }
+}
+
+public enum PasswordRecoveryRequestError {
+    case limitExceeded
+    case generic
+}
+
+public enum PasswordRecoveryOption {
+    case none
+    case email(pattern: String)
+}
+
+public func requestPasswordRecovery(account: UnauthorizedAccount) -> Signal<PasswordRecoveryOption, PasswordRecoveryRequestError> {
+    return account.network.request(Api.functions.auth.requestPasswordRecovery())
+        |> map(Optional.init)
+        |> `catch` { error -> Signal<Api.auth.PasswordRecovery?, PasswordRecoveryRequestError> in
+            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                return .fail(.limitExceeded)
+            } else if error.errorDescription.hasPrefix("PASSWORD_RECOVERY_NA") {
+                return .single(nil)
+            } else {
+                return .fail(.generic)
+            }
+        }
+        |> map { result -> PasswordRecoveryOption in
+            if let result = result {
+                switch result {
+                    case let .passwordRecovery(emailPattern):
+                        return .email(pattern: emailPattern)
+                }
+            } else {
+                return .none
+            }
+        }
+}
+
+public enum PasswordRecoveryError {
+    case invalidCode
+    case limitExceeded
+    case expired
+}
+
+public func performPasswordRecovery(account: UnauthorizedAccount, code: String) -> Signal<Void, PasswordRecoveryError> {
+    return account.network.request(Api.functions.auth.recoverPassword(code: code))
+    |> mapError { error -> PasswordRecoveryError in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .limitExceeded
+        } else if error.errorDescription.hasPrefix("PASSWORD_RECOVERY_EXPIRED") {
+            return .expired
+        } else {
+            return .invalidCode
+        }
+    }
+    |> mapToSignal { result -> Signal<Void, PasswordRecoveryError> in
+        return account.postbox.modify { modifier -> Void in
+            switch result {
+                case let .authorization(_, _, user):
+                    let user = TelegramUser(user: user)
+                    let state = AuthorizedAccountState(masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                    /*modifier.updatePeersInternal([user], update: { current, peer -> Peer? in
+                     return peer
+                     })*/
+                    modifier.setState(state)
+            }
+        } |> mapError { _ in return PasswordRecoveryError.expired }
+    }
+}
+
+public enum AccountResetError {
+    case generic
+}
+
+public func performAccountReset(account: UnauthorizedAccount) -> Signal<Void, AccountResetError> {
+    return account.network.request(Api.functions.account.deleteAccount(reason: ""))
+        |> map { _ -> Int32? in return nil }
+        |> `catch` { error -> Signal<Int32?, AccountResetError> in
+            if error.errorDescription.hasPrefix("2FA_CONFIRM_WAIT_") {
+                let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "2FA_CONFIRM_WAIT_".count)...])
+                if let value = Int32(timeout) {
+                    return .single(value)
+                } else {
+                    return .fail(.generic)
+                }
+            } else {
+                return .fail(.generic)
+            }
+        }
+        |> mapToSignal { timeout -> Signal<Void, AccountResetError> in
+            return account.postbox.modify { modifier -> Void in
+                if let state = modifier.getState() as? UnauthorizedAccountState, case let .passwordEntry(_, number, _) = state.contents {
+                    if let timeout = timeout {
+                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: state.masterDatacenterId, contents: .awaitingAccountReset(protectedUntil: timestamp + timeout, number: number)))
+                    } else {
+                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: state.masterDatacenterId, contents: .empty))
+                    }
+                }
+            } |> mapError { _ in return AccountResetError.generic }
         }
 }
 

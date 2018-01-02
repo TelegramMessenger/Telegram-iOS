@@ -548,22 +548,26 @@ public final class AccountViewTracker {
             }
         }, next: { [weak self] next, viewId in
             if let strongSelf = self {
-                let messageIds = pendingWebpages(entries: next.0.entries)
-                strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds)
-                if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
-                    strongSelf.historyViewChannelStateValidationContexts.updateView(id: viewId, view: next.0)
+                strongSelf.queue.async {
+                    let messageIds = pendingWebpages(entries: next.0.entries)
+                    strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds)
+                    if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
+                        strongSelf.historyViewChannelStateValidationContexts.updateView(id: viewId, view: next.0)
+                    }
                 }
             }
         }, disposed: { [weak self] viewId in
             if let strongSelf = self {
-                strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [])
-                switch chatLocation {
-                    case let .peer(peerId):
-                        if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            strongSelf.historyViewChannelStateValidationContexts.updateView(id: viewId, view: nil)
-                        }
-                    case .group:
-                        break
+                strongSelf.queue.async {
+                    strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [])
+                    switch chatLocation {
+                        case let .peer(peerId):
+                            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                strongSelf.historyViewChannelStateValidationContexts.updateView(id: viewId, view: nil)
+                            }
+                        case .group:
+                            break
+                    }
                 }
             }
         })

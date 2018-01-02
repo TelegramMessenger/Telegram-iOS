@@ -92,6 +92,8 @@ private enum UnauthorizedAccountStateContentsValue: Int32 {
     case confirmationCodeEntry = 2
     case passwordEntry = 3
     case signUp = 5
+    case passwordRecovery = 6
+    case awaitingAccountReset = 7
 }
 
 public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
@@ -99,6 +101,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
     case phoneEntry(countryCode: Int32, number: String)
     case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?)
     case passwordEntry(hint: String, number: String?, code: String?)
+    case passwordRecovery(hint: String, number: String?, code: String?, emailPattern: String)
+    case awaitingAccountReset(protectedUntil: Int32, number: String?)
     case signUp(number: String, codeHash: String, code: String, firstName: String, lastName: String)
     
     public init(decoder: PostboxDecoder) {
@@ -115,6 +119,10 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType)
             case UnauthorizedAccountStateContentsValue.passwordEntry.rawValue:
                 self = .passwordEntry(hint: decoder.decodeStringForKey("h", orElse: ""), number: decoder.decodeOptionalStringForKey("n"), code: decoder.decodeOptionalStringForKey("c"))
+            case UnauthorizedAccountStateContentsValue.passwordRecovery.rawValue:
+                self = .passwordRecovery(hint: decoder.decodeStringForKey("hint", orElse: ""), number: decoder.decodeOptionalStringForKey("number"), code: decoder.decodeOptionalStringForKey("code"), emailPattern: decoder.decodeStringForKey("emailPattern", orElse: ""))
+            case UnauthorizedAccountStateContentsValue.awaitingAccountReset.rawValue:
+                self = .awaitingAccountReset(protectedUntil: decoder.decodeInt32ForKey("protectedUntil", orElse: 0), number: decoder.decodeOptionalStringForKey("number"))
             case UnauthorizedAccountStateContentsValue.signUp.rawValue:
                 self = .signUp(number: decoder.decodeStringForKey("n", orElse: ""), codeHash: decoder.decodeStringForKey("h", orElse: ""), code: decoder.decodeStringForKey("c", orElse: ""), firstName: decoder.decodeStringForKey("f", orElse: ""), lastName: decoder.decodeStringForKey("l", orElse: ""))
             default:
@@ -158,6 +166,28 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                     encoder.encodeString(code, forKey: "c")
                 } else {
                     encoder.encodeNil(forKey: "c")
+                }
+            case let .passwordRecovery(hint, number, code, emailPattern):
+                encoder.encodeInt32(UnauthorizedAccountStateContentsValue.passwordRecovery.rawValue, forKey: "v")
+                encoder.encodeString(hint, forKey: "hint")
+                if let number = number {
+                    encoder.encodeString(number, forKey: "number")
+                } else {
+                    encoder.encodeNil(forKey: "number")
+                }
+                if let code = code {
+                    encoder.encodeString(code, forKey: "code")
+                } else {
+                    encoder.encodeNil(forKey: "code")
+                }
+                encoder.encodeString(emailPattern, forKey: "emailPattern")
+            case let .awaitingAccountReset(protectedUntil, number):
+                encoder.encodeInt32(UnauthorizedAccountStateContentsValue.awaitingAccountReset.rawValue, forKey: "v")
+                encoder.encodeInt32(protectedUntil, forKey: "protectedUntil")
+                if let number = number {
+                    encoder.encodeString(number, forKey: "number")
+                } else {
+                    encoder.encodeNil(forKey: "number")
                 }
             case let .signUp(number, codeHash, code, firstName, lastName):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.signUp.rawValue, forKey: "v")
@@ -207,6 +237,18 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
             case let .passwordEntry(lhsHint, lhsNumber, lhsCode):
                 if case let .passwordEntry(rhsHint, rhsNumber, rhsCode) = rhs {
                     return lhsHint == rhsHint && lhsNumber == rhsNumber && lhsCode == rhsCode
+                } else {
+                    return false
+                }
+            case let .passwordRecovery(lhsHint, lhsNumber, lhsCode, lhsEmailPattern):
+                if case let .passwordRecovery(rhsHint, rhsNumber, rhsCode, rhsEmailPattern) = rhs {
+                    return lhsHint == rhsHint && lhsNumber == rhsNumber && lhsCode == rhsCode && lhsEmailPattern == rhsEmailPattern
+                } else {
+                    return false
+                }
+            case let .awaitingAccountReset(lhsProtectedUntil, lhsNumber):
+                if case let .awaitingAccountReset(rhsProtectedUntil, rhsNumber) = rhs {
+                    return lhsProtectedUntil == rhsProtectedUntil && lhsNumber == rhsNumber
                 } else {
                     return false
                 }
