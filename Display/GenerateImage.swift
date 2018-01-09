@@ -297,6 +297,9 @@ public class DrawingContext {
         self.provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
             free(bytes)
         })
+        
+        assert(self.bytesPerRow % 16 == 0)
+        assert(unsafeBitCast(self.bytes, to: Int64.self) % 16 == 0)
     }
     
     public func generateImage() -> UIImage? {

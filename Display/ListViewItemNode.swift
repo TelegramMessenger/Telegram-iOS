@@ -1,6 +1,10 @@
 import Foundation
+#if os(macOS)
+import SwiftSignalKitMac
+#else
 import AsyncDisplayKit
 import SwiftSignalKit
+#endif
 
 var testSpringFrictionLimits: (CGFloat, CGFloat) = (3.0, 60.0)
 var testSpringFriction: CGFloat = 31.8211269378662
@@ -25,12 +29,6 @@ struct ListViewItemSpring {
         self.damping = damping
         self.mass = mass
     }
-}
-
-private class ListViewItemView: UIView {
-    /*override class var layerClass: AnyClass {
-        return ASTransformLayer.self
-    }*/
 }
 
 public struct ListViewItemNodeLayout {
@@ -58,15 +56,28 @@ public enum ListViewItemNodeVisibility {
     case visible
 }
 
+public struct ListViewItemLayoutParams {
+    public let width: CGFloat
+    public let leftInset: CGFloat
+    public let rightInset: CGFloat
+    
+    public init(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat) {
+        self.width = width
+        self.leftInset = leftInset
+        self.rightInset = rightInset
+    }
+}
+
 open class ListViewItemNode: ASDisplayNode {
     let rotated: Bool
     final var index: Int?
     
-    public final var accessoryItemNode: ListViewAccessoryItemNode? {
-        didSet {
-            if let accessoryItemNode = self.accessoryItemNode {
-                self.layoutAccessoryItemNode(accessoryItemNode)
-            }
+    public private(set) var accessoryItemNode: ListViewAccessoryItemNode?
+
+    func setAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode?, leftInset: CGFloat, rightInset: CGFloat) {
+        self.accessoryItemNode = accessoryItemNode
+        if let accessoryItemNode = accessoryItemNode {
+            self.layoutAccessoryItemNode(accessoryItemNode, leftInset: leftInset, rightInset: rightInset)
         }
     }
     
@@ -95,18 +106,27 @@ open class ListViewItemNode: ASDisplayNode {
         return true
     }
     
+    open var canBeLongTapped: Bool {
+        return false
+    }
+    
+    open var preventsTouchesToOtherItems: Bool {
+        return false
+    }
+    
+    open func touchesToOtherItemsPrevented() {
+        
+    }
+    
+    open func longTapped() {
+    }
+    
     public final var insets: UIEdgeInsets = UIEdgeInsets() {
         didSet {
             let effectiveInsets = self.insets
             self.frame = CGRect(origin: self.frame.origin, size: CGSize(width: self.contentSize.width, height: self.contentSize.height + effectiveInsets.top + effectiveInsets.bottom))
             let bounds = self.bounds
             self.bounds = CGRect(origin: CGPoint(x: bounds.origin.x, y: -effectiveInsets.top + self.contentOffset + self.transitionOffset), size: bounds.size)
-            
-            if oldValue != self.insets {
-                if let accessoryItemNode = self.accessoryItemNode {
-                    self.layoutAccessoryItemNode(accessoryItemNode)
-                }
-            }
         }
     }
 
@@ -167,22 +187,6 @@ open class ListViewItemNode: ASDisplayNode {
         
         self.rotated = rotated
         
-        //super.init()
-        
-        //self.layerBacked = layerBacked
-        
-        /*if layerBacked {
-            super.init(layerBlock: {
-                return ASTransformLayer()
-            })
-        } else {
-            super.init()
-        
-        self.setViewBlock({
-                return ListViewItemView()
-            })
-        }*/
-        
         if seeThrough {
             if (layerBacked) {
                 super.init()
@@ -203,12 +207,6 @@ open class ListViewItemNode: ASDisplayNode {
         }
     }
     
-    /*deinit {
-        if Thread.isMainThread {
-            print("deallocating on main thread")
-        }
-    }*/
-    
     var apparentHeight: CGFloat = 0.0
     private var _bounds: CGRect = CGRect()
     private var _position: CGPoint = CGPoint()
@@ -226,9 +224,6 @@ open class ListViewItemNode: ASDisplayNode {
             self._contentSize = CGSize(width: value.size.width, height: value.size.height - effectiveInsets.top - effectiveInsets.bottom)
             
             if previousSize != value.size {
-                if let accessoryItemNode = self.accessoryItemNode {
-                    self.layoutAccessoryItemNode(accessoryItemNode)
-                }
                 if let headerAccessoryItemNode = self.headerAccessoryItemNode {
                     self.layoutHeaderAccessoryItemNode(headerAccessoryItemNode)
                 }
@@ -248,9 +243,6 @@ open class ListViewItemNode: ASDisplayNode {
             self._contentSize = CGSize(width: value.size.width, height: value.size.height - effectiveInsets.top - effectiveInsets.bottom)
             
             if previousSize != value.size {
-                if let accessoryItemNode = self.accessoryItemNode {
-                    self.layoutAccessoryItemNode(accessoryItemNode)
-                }
                 if let headerAccessoryItemNode = self.headerAccessoryItemNode {
                     self.layoutHeaderAccessoryItemNode(headerAccessoryItemNode)
                 }
@@ -279,13 +271,21 @@ open class ListViewItemNode: ASDisplayNode {
         return frame
     }
     
+    public final var apparentContentFrame: CGRect {
+        var frame = self.frame
+        let insets = self.insets
+        frame.origin.y += insets.top
+        frame.size.height = self.apparentHeight - insets.top - insets.bottom
+        return frame
+    }
+    
     public final var apparentBounds: CGRect {
         var bounds = self.bounds
         bounds.size.height = self.apparentHeight
         return bounds
     }
     
-    open func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+    open func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode, leftInset: CGFloat, rightInset: CGFloat) {
     }
     
     open func layoutHeaderAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
@@ -371,7 +371,7 @@ open class ListViewItemNode: ASDisplayNode {
         return continueAnimations
     }
     
-    open func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    open func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
     }
     
     public func animationForKey(_ key: String) -> ListViewAnimation? {
@@ -415,6 +415,19 @@ open class ListViewItemNode: ASDisplayNode {
             }
         })
         self.setAnimationForKey("insets", animation: animation)
+    }
+    
+    public func addHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat, CGFloat) -> Void)? = nil) {
+        let animation = ListViewAnimation(from: self.bounds.height, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] progress, currentValue in
+            if let strongSelf = self {
+                let frame = strongSelf.frame
+                strongSelf.frame = CGRect(origin: frame.origin, size: CGSize(width: frame.width, height: currentValue))
+                if let update = update {
+                    update(progress, currentValue)
+                }
+            }
+        })
+        self.setAnimationForKey("height", animation: animation)
     }
     
     public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat, CGFloat) -> Void)? = nil) {
@@ -468,7 +481,7 @@ open class ListViewItemNode: ASDisplayNode {
     open func animateRemoved(_ currentTimestamp: Double, duration: Double) {
     }
     
-    open func setHighlighted(_ highlighted: Bool, animated: Bool) {
+    open func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
     }
     
     open func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {

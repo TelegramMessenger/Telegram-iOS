@@ -91,6 +91,7 @@ public let listViewAnimationCurveLinear: (CGFloat) -> CGFloat = { t in
     return t
 }
 
+#if os(iOS)
 public func listViewAnimationCurveFromAnimationOptions(animationOptions: UIViewAnimationOptions) -> (CGFloat) -> CGFloat {
     if animationOptions.rawValue == UInt(7 << 16) {
         return listViewAnimationCurveSystem
@@ -98,6 +99,7 @@ public func listViewAnimationCurveFromAnimationOptions(animationOptions: UIViewA
         return listViewAnimationCurveLinear
     }
 }
+#endif
 
 public final class ListViewAnimation {
     let from: Interpolatable

@@ -1,5 +1,8 @@
 import Foundation
-import AsyncDisplayKit
+#if os(macOS)
+#else
+    import AsyncDisplayKit
+#endif
 
 open class ListViewAccessoryItemNode: ASDisplayNode {
     var transitionOffset: CGPoint = CGPoint() {
@@ -36,5 +39,14 @@ open class ListViewAccessoryItemNode: ASDisplayNode {
         }
     
         return false
+    }
+    
+    override open func layout() {
+        super.layout()
+        
+        self.updateLayout(size: self.bounds.size, leftInset: 0.0, rightInset: 0.0)
+    }
+    
+    open func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
     }
 }

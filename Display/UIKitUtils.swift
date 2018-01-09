@@ -148,7 +148,34 @@ private func makeSubtreeSnapshot(layer: CALayer) -> UIView? {
             let subtree = makeSubtreeSnapshot(layer: sublayer)
             if let subtree = subtree {
                 subtree.frame = sublayer.frame
+                subtree.bounds = sublayer.bounds
                 view.addSubview(subtree)
+            } else {
+                return nil
+            }
+        }
+    }
+    return view
+}
+
+private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
+    let view = CALayer()
+    //view.layer.isHidden = layer.isHidden
+    view.opacity = layer.opacity
+    view.contents = layer.contents
+    view.contentsRect = layer.contentsRect
+    view.contentsScale = layer.contentsScale
+    view.contentsCenter = layer.contentsCenter
+    view.contentsGravity = layer.contentsGravity
+    view.masksToBounds = layer.masksToBounds
+    view.cornerRadius = layer.cornerRadius
+    if let sublayers = layer.sublayers {
+        for sublayer in sublayers {
+            let subtree = makeLayerSubtreeSnapshot(layer: sublayer)
+            if let subtree = subtree {
+                subtree.frame = sublayer.frame
+                subtree.bounds = sublayer.bounds
+                layer.addSublayer(subtree)
             } else {
                 return nil
             }
@@ -160,6 +187,17 @@ private func makeSubtreeSnapshot(layer: CALayer) -> UIView? {
 public extension UIView {
     public func snapshotContentTree() -> UIView? {
         if let snapshot = makeSubtreeSnapshot(layer: self.layer) {
+            snapshot.frame = self.frame
+            return snapshot
+        } else {
+            return nil
+        }
+    }
+}
+
+public extension CALayer {
+    public func snapshotContentTree() -> CALayer? {
+        if let snapshot = makeLayerSubtreeSnapshot(layer: self) {
             snapshot.frame = self.frame
             return snapshot
         } else {

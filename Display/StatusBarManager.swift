@@ -79,13 +79,13 @@ class StatusBarManager {
         self.host = host
     }
     
-    func updateState(surfaces: [StatusBarSurface], forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, animated: Bool) {
+    func updateState(surfaces: [StatusBarSurface], withSafeInsets: Bool, forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, animated: Bool) {
         let previousSurfaces = self.surfaces
         self.surfaces = surfaces
-        self.updateSurfaces(previousSurfaces, forceInCallStatusBarText: forceInCallStatusBarText, forceHiddenBySystemWindows: forceHiddenBySystemWindows, animated: animated)
+        self.updateSurfaces(previousSurfaces, withSafeInsets: withSafeInsets, forceInCallStatusBarText: forceInCallStatusBarText, forceHiddenBySystemWindows: forceHiddenBySystemWindows, animated: animated)
     }
     
-    private func updateSurfaces(_ previousSurfaces: [StatusBarSurface], forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, animated: Bool) {
+    private func updateSurfaces(_ previousSurfaces: [StatusBarSurface], withSafeInsets: Bool, forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, animated: Bool) {
         let statusBarFrame = self.host.statusBarFrame
         guard let statusBarView = self.host.statusBarView else {
             return
@@ -197,7 +197,7 @@ class StatusBarManager {
         for surface in previousSurfaces {
             for statusBar in surface.statusBars {
                 if !visibleStatusBars.contains(where: {$0 === statusBar}) {
-                    statusBar.updateState(statusBar: nil, inCallText: forceInCallStatusBarText, animated: animated)
+                    statusBar.updateState(statusBar: nil, withSafeInsets: withSafeInsets, inCallText: forceInCallStatusBarText, animated: animated)
                 }
             }
         }
@@ -206,13 +206,13 @@ class StatusBarManager {
             for statusBar in surface.statusBars {
                 statusBar.inCallNavigate = self.inCallNavigate
                 if !visibleStatusBars.contains(where: {$0 === statusBar}) {
-                    statusBar.updateState(statusBar: nil, inCallText: forceInCallStatusBarText, animated: animated)
+                    statusBar.updateState(statusBar: nil, withSafeInsets: withSafeInsets, inCallText: forceInCallStatusBarText, animated: animated)
                 }
             }
         }
         
         for statusBar in visibleStatusBars {
-            statusBar.updateState(statusBar: statusBarView, inCallText: forceInCallStatusBarText, animated: animated)
+            statusBar.updateState(statusBar: statusBarView, withSafeInsets: withSafeInsets, inCallText: forceInCallStatusBarText, animated: animated)
         }
         
         if let globalStatusBar = globalStatusBar, !forceHiddenBySystemWindows {

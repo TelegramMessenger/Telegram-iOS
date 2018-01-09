@@ -4,6 +4,7 @@ import AsyncDisplayKit
 public enum TextAlertActionType {
     case genericAction
     case defaultAction
+    case destructiveAction
 }
 
 public struct TextAlertAction {
@@ -34,7 +35,15 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
         super.init()
         
         self.titleNode.maximumNumberOfLines = 2
-        self.setAttributedTitle(NSAttributedString(string: action.title, font: Font.regular(17.0), textColor: UIColor(rgb: 0x007ee5), paragraphAlignment: .center), for: [])
+        let font = Font.regular(17.0)
+        var color = UIColor(rgb: 0x007ee5)
+        switch action.type {
+            case .defaultAction, .genericAction:
+                break
+            case .destructiveAction:
+                color = UIColor(rgb: 0xff3b30)
+        }
+        self.setAttributedTitle(NSAttributedString(string: action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
         
         self.highligthedChanged = { [weak self] value in
             if let strongSelf = self {
@@ -154,7 +163,8 @@ final class TextAlertContentNode: AlertContentNode {
         let resultSize: CGSize
         
         if let titleNode = titleNode, let titleSize = titleSize {
-            let contentWidth = max(max(titleSize.width, textSize.width), minActionsWidth)
+            var contentWidth = max(max(titleSize.width, textSize.width), minActionsWidth)
+            contentWidth = max(contentWidth, 150.0)
             
             let spacing: CGFloat = 6.0
             let titleFrame = CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - titleSize.width) / 2.0), y: insets.top), size: titleSize)
@@ -165,10 +175,13 @@ final class TextAlertContentNode: AlertContentNode {
             
             resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: titleSize.height + spacing + textSize.height + actionsHeight + insets.top + insets.bottom)
         } else {
-            let textFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: textSize)
+            var contentWidth = max(textSize.width, minActionsWidth)
+            contentWidth = max(contentWidth, 150.0)
+            
+            let textFrame = CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - textSize.width) / 2.0), y: insets.top), size: textSize)
             transition.updateFrame(node: self.textNode, frame: textFrame)
             
-            resultSize = CGSize(width: textSize.width + insets.left + insets.right, height: textSize.height + actionsHeight + insets.top + insets.bottom)
+            resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: textSize.height + actionsHeight + insets.top + insets.bottom)
         }
         
         self.actionNodesSeparator.frame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel))

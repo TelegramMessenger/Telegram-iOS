@@ -1,5 +1,7 @@
 import Foundation
+#if !os(macOS)
 import AsyncDisplayKit
+#endif
 
 public enum ListViewItemHeaderStickDirection {
     case top
@@ -33,21 +35,6 @@ open class ListViewItemHeaderNode: ASDisplayNode {
             self.isFlashingOnScrolling = isFlashingOnScrolling
             self.updateFlashingOnScrolling(isFlashingOnScrolling, animated: animated)
         }
-        /*if self.isFlashing {
-            if self.alpha.isZero {
-                self.alpha = 1.0
-                if animated {
-                    self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                }
-            }
-        } else {
-            if !self.alpha.isZero {
-                self.alpha = 0.0
-                if animated {
-                    self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-                }
-            }
-        }*/
     }
     
     open func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
@@ -138,5 +125,25 @@ open class ListViewItemHeaderNode: ASDisplayNode {
         self.alpha = 0.0
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
         self.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+    }
+    
+    private var cachedLayout: (CGSize, CGFloat, CGFloat)?
+    
+    func updateLayoutInternal(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        var update = false
+        if let cachedLayout = self.cachedLayout {
+            if cachedLayout.0 != size || cachedLayout.1 != leftInset || cachedLayout.2 != rightInset {
+                update = true
+            }
+        } else {
+            update = true
+        }
+        if update {
+            self.cachedLayout = (size, leftInset, rightInset)
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+        }
+    }
+    
+    open func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
     }
 }

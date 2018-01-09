@@ -35,6 +35,13 @@ class KeyboardManager {
         self.host = host
     }
     
+    func getCurrentKeyboardHeight() -> CGFloat {
+        guard let keyboardView = self.host.keyboardView else {
+            return 0.0
+        }
+        return keyboardView.bounds.height
+    }
+    
     func updateInteractiveInputOffset(_ offset: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         guard let keyboardView = self.host.keyboardView else {
             return
@@ -60,24 +67,31 @@ class KeyboardManager {
         }
         
         var firstResponderView: UIView?
-        var firstResponderDisablesAutomaticKeyboardHandling = false
+        var firstResponderDisableAutomaticKeyboardHandling: UIResponderDisableAutomaticKeyboardHandling = []
         for surface in self.surfaces {
             if let view = getFirstResponder(surface.host) {
                 firstResponderView = surface.host
-                firstResponderDisablesAutomaticKeyboardHandling = view.disablesAutomaticKeyboardHandling
+                firstResponderDisableAutomaticKeyboardHandling = view.disableAutomaticKeyboardHandling
                 break
             }
         }
         
         if let firstResponderView = firstResponderView {
             let containerOrigin = firstResponderView.convert(CGPoint(), to: nil)
-            let horizontalTranslation = CATransform3DMakeTranslation(firstResponderDisablesAutomaticKeyboardHandling ? 0.0 : containerOrigin.x, 0.0, 0.0)
+            var filteredTranslation = containerOrigin.x
+            if firstResponderDisableAutomaticKeyboardHandling.contains(.forward) {
+                filteredTranslation = max(0.0, filteredTranslation)
+            }
+            if firstResponderDisableAutomaticKeyboardHandling.contains(.backward) {
+                filteredTranslation = min(0.0, filteredTranslation)
+            }
+            let horizontalTranslation = CATransform3DMakeTranslation(filteredTranslation, 0.0, 0.0)
             let currentTransform = keyboardWindow.layer.sublayerTransform
             if !CATransform3DEqualToTransform(horizontalTranslation, currentTransform) {
                 //print("set to \(CGPoint(x: containerOrigin.x, y: self.interactiveInputOffset))")
                 keyboardWindow.layer.sublayerTransform = horizontalTranslation
             }
-            if let tracingLayer = firstResponderView.layer as? CATracingLayer, !firstResponderDisablesAutomaticKeyboardHandling {
+            if let tracingLayer = firstResponderView.layer as? CATracingLayer, firstResponderDisableAutomaticKeyboardHandling.isEmpty {
                 if let previousPositionAnimationMirrorSource = self.previousPositionAnimationMirrorSource, previousPositionAnimationMirrorSource !== tracingLayer {
                     previousPositionAnimationMirrorSource.setPositionAnimationMirrorTarget(nil)
                 }

@@ -35,7 +35,7 @@ static const void *UIViewControllerNavigationControllerKey = &UIViewControllerNa
 static const void *UIViewControllerPresentingControllerKey = &UIViewControllerPresentingControllerKey;
 static const void *UIViewControllerPresentingProxyControllerKey = &UIViewControllerPresentingProxyControllerKey;
 static const void *disablesInteractiveTransitionGestureRecognizerKey = &disablesInteractiveTransitionGestureRecognizerKey;
-static const void *disablesAutomaticKeyboardHandlingKey = &disablesAutomaticKeyboardHandlingKey;
+static const void *disableAutomaticKeyboardHandlingKey = &disableAutomaticKeyboardHandlingKey;
 static const void *setNeedsStatusBarAppearanceUpdateKey = &setNeedsStatusBarAppearanceUpdateKey;
 static const void *inputAccessoryHeightProviderKey = &inputAccessoryHeightProviderKey;
 
@@ -218,12 +218,12 @@ static bool notyfyingShiftState = false;
     [self setAssociatedObject:@(disablesInteractiveTransitionGestureRecognizer) forKey:disablesInteractiveTransitionGestureRecognizerKey];
 }
 
-- (bool)disablesAutomaticKeyboardHandling {
-    return [[self associatedObjectForKey:disablesAutomaticKeyboardHandlingKey] boolValue];
+- (UIResponderDisableAutomaticKeyboardHandling)disableAutomaticKeyboardHandling {
+    return (UIResponderDisableAutomaticKeyboardHandling)[[self associatedObjectForKey:disableAutomaticKeyboardHandlingKey] unsignedIntegerValue];
 }
 
-- (void)setDisablesAutomaticKeyboardHandling:(bool)disablesAutomaticKeyboardHandling {
-    [self setAssociatedObject:@(disablesAutomaticKeyboardHandling) forKey:disablesAutomaticKeyboardHandlingKey];
+- (void)setDisableAutomaticKeyboardHandling:(UIResponderDisableAutomaticKeyboardHandling)disableAutomaticKeyboardHandling {
+    [self setAssociatedObject:@(disableAutomaticKeyboardHandling) forKey:disableAutomaticKeyboardHandlingKey];
 }
 
 - (void)input_setInputAccessoryHeightProvider:(CGFloat (^_Nullable)())block {

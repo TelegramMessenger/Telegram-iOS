@@ -32,8 +32,8 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
     let hostView = WindowHostView(view: view, isRotating: {
         return false
     }, updateSupportedInterfaceOrientations: { orientations in
-        //rootViewController.orientations = orientations
     }, updateDeferScreenEdgeGestures: { edges in
+    }, updatePreferNavigationUIHidden: { value in
     })
     
     view.updateSize = { [weak hostView] size in

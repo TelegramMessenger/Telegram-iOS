@@ -120,7 +120,7 @@ public final class StatusBar: ASDisplayNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func updateState(statusBar: UIView?, inCallText: String?, animated: Bool) {
+    func updateState(statusBar: UIView?, withSafeInsets: Bool, inCallText: String?, animated: Bool) {
         if let statusBar = statusBar {
             self.removeProxyNodeScheduled = false
             let resolvedStyle: StatusBarStyle
@@ -166,7 +166,9 @@ public final class StatusBar: ASDisplayNode {
         
         if (resolvedInCallText != nil) != (self.inCallText != nil) {
             if let _ = resolvedInCallText {
-                self.addSubnode(self.inCallLabel)
+                if !withSafeInsets {
+                    self.addSubnode(self.inCallLabel)
+                }
                 addInCallAnimation(self.inCallLabel.layer)
                 
                 self.inCallBackgroundNode.layer.backgroundColor = inCallBackgroundColor.cgColor

@@ -1,4 +1,8 @@
-import UIKit
+#if os(macOS)
+    import Cocoa
+#else
+    import UIKit
+#endif
 
 @objc private class CALayerAnimationDelegate: NSObject, CAAnimationDelegate {
     var completion: ((Bool) -> Void)?

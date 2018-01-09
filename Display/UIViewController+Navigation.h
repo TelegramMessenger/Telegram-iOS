@@ -1,5 +1,10 @@
 #import <UIKit/UIKit.h>
 
+typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
+    UIResponderDisableAutomaticKeyboardHandlingForward = 1 << 0,
+    UIResponderDisableAutomaticKeyboardHandlingBackward = 1 << 1
+};
+
 @interface UIViewController (Navigation)
 
 - (void)setIgnoreAppearanceMethodInvocations:(BOOL)ignoreAppearanceMethodInvocations;
@@ -14,7 +19,7 @@
 @interface UIView (Navigation)
 
 @property (nonatomic) bool disablesInteractiveTransitionGestureRecognizer;
-@property (nonatomic) bool disablesAutomaticKeyboardHandling;
+@property (nonatomic) UIResponderDisableAutomaticKeyboardHandling disableAutomaticKeyboardHandling;
 
 - (void)input_setInputAccessoryHeightProvider:(CGFloat (^_Nullable)())block;
 - (CGFloat)input_getInputAccessoryHeight;

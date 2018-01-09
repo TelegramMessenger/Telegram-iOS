@@ -1,5 +1,9 @@
 import Foundation
+#if os(macOS)
+import SwiftSignalKitMac
+#else
 import SwiftSignalKit
+#endif
 
 public enum ListViewItemUpdateAnimation {
     case None
@@ -29,8 +33,8 @@ public struct ListViewItemConfigureNodeFlags: OptionSet {
 }
 
 public protocol ListViewItem {
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void)
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void)
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void)
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void)
     
     var accessoryItem: ListViewAccessoryItem? { get }
     var headerAccessoryItem: ListViewAccessoryItem? { get }

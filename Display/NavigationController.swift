@@ -73,7 +73,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.loadView()
         }
         self.containerLayout = layout
-        self.view.frame = CGRect(origin: self.view.frame.origin, size: layout.size)
+        transition.updateFrame(view: self.view, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
         
         let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging)
         
@@ -81,7 +81,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             if let topViewController = topViewController as? ContainableController {
                 topViewController.containerLayoutUpdated(containedLayout, transition: transition)
             } else {
-                topViewController.view.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
+                transition.updateFrame(view: topViewController.view, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height))
             }
         }
         
@@ -89,7 +89,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             if let presentedViewController = presentedViewController as? ContainableController {
                 presentedViewController.containerLayoutUpdated(containedLayout, transition: transition)
             } else {
-                presentedViewController.view.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
+                transition.updateFrame(view: presentedViewController.view, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height))
             }
         }
         
@@ -109,6 +109,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
         panRecognizer.delegate = self
+        panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(panRecognizer)
         
@@ -349,9 +350,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
                 
-                bottomController.viewWillDisappear(true)
+                bottomController.viewWillAppear(true)
                 let bottomView = bottomController.view!
-                topController.viewWillAppear(true)
+                topController.viewWillDisappear(true)
                 let topView = topController.view!
                 
                 let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.view, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar)

@@ -61,6 +61,9 @@ private func backArrowImage(color: UIColor) -> UIImage? {
 open class NavigationBar: ASDisplayNode {
     private var theme: NavigationBarTheme
     
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var requestedLayout: Bool = false
+    
     var backPressed: () -> () = { }
     
     private var collapsed: Bool {
@@ -156,7 +159,7 @@ open class NavigationBar: ASDisplayNode {
                         
                         strongSelf.updateLeftButton(animated: animated)
                         strongSelf.invalidateCalculatedLayout()
-                        strongSelf.setNeedsLayout()
+                        strongSelf.requestLayout()
                     }
                 }
                 
@@ -177,7 +180,7 @@ open class NavigationBar: ASDisplayNode {
                         
                         strongSelf.updateRightButton(animated: animated)
                         strongSelf.invalidateCalculatedLayout()
-                        strongSelf.setNeedsLayout()
+                        strongSelf.requestLayout()
                     }
                 }
                 
@@ -196,6 +199,7 @@ open class NavigationBar: ASDisplayNode {
                 self.updateRightButton(animated: false)
             }
             self.invalidateCalculatedLayout()
+            self.requestLayout()
         }
     }
     
@@ -211,7 +215,7 @@ open class NavigationBar: ASDisplayNode {
             }
             
             self.invalidateCalculatedLayout()
-            self.setNeedsLayout()
+            self.requestLayout()
         }
     }
     
@@ -226,7 +230,7 @@ open class NavigationBar: ASDisplayNode {
             }
             
             self.invalidateCalculatedLayout()
-            self.setNeedsLayout()
+            self.requestLayout()
         }
     }
     
@@ -261,6 +265,7 @@ open class NavigationBar: ASDisplayNode {
                             strongSelf.backButtonNode.text = previousItem.title ?? ""
                         }
                         strongSelf.invalidateCalculatedLayout()
+                        strongSelf.requestLayout()
                     }
                 }
                 
@@ -272,12 +277,14 @@ open class NavigationBar: ASDisplayNode {
                             strongSelf.backButtonNode.text = previousItem.title ?? ""
                         }
                         strongSelf.invalidateCalculatedLayout()
+                        strongSelf.requestLayout()
                     }
                 }
             }
             self.updateLeftButton(animated: false)
             
             self.invalidateCalculatedLayout()
+            self.requestLayout()
         }
     }
     
@@ -288,13 +295,13 @@ open class NavigationBar: ASDisplayNode {
             self.badgeNode.isHidden = actualText.isEmpty
             
             self.invalidateCalculatedLayout()
-            self.setNeedsLayout()
+            self.requestLayout()
         }
     }
     
     private func updateLeftButton(animated: Bool) {
         if let item = self.item {
-            if let leftBarButtonItem = item.leftBarButtonItem {
+            if let leftBarButtonItem = item.leftBarButtonItem, !leftBarButtonItem.backButtonAppearance {
                 if animated {
                     if self.leftButtonNode.view.superview != nil {
                         if let snapshotView = self.leftButtonNode.view.snapshotContentTree() {
@@ -365,13 +372,19 @@ open class NavigationBar: ASDisplayNode {
                 }
                 self.leftButtonNode.removeFromSupernode()
                 
-                if let previousItem = self.previousItem {
+                var backTitle: String?
+                if let leftBarButtonItem = item.leftBarButtonItem, leftBarButtonItem.backButtonAppearance {
+                    backTitle = leftBarButtonItem.title
+                } else if let previousItem = self.previousItem {
                     if let backBarButtonItem = previousItem.backBarButtonItem {
-                        self.backButtonNode.text = backBarButtonItem.title ?? "Back"
+                        backTitle = backBarButtonItem.title ?? "Back"
                     } else {
-                        self.backButtonNode.text = previousItem.title ?? "Back"
+                        backTitle = previousItem.title ?? "Back"
                     }
-                    
+                }
+                
+                if let backTitle = backTitle {
+                    self.backButtonNode.text = backTitle
                     if self.backButtonNode.supernode == nil {
                         self.clippingNode.addSubnode(self.backButtonNode)
                         self.clippingNode.addSubnode(self.backButtonArrow)
@@ -500,6 +513,7 @@ open class NavigationBar: ASDisplayNode {
                 }
             }
             
+            self.requestedLayout = true
             self.layout()
         }
     }
@@ -557,7 +571,13 @@ open class NavigationBar: ASDisplayNode {
             }
         }
         self.backButtonNode.pressed = { [weak self] in
-            self?.backPressed()
+            if let strongSelf = self {
+                if let leftBarButtonItem = strongSelf.item?.leftBarButtonItem, leftBarButtonItem.backButtonAppearance {
+                    leftBarButtonItem.performActionOnTarget()
+                } else {
+                    strongSelf.backPressed()
+                }
+            }
         }
         
         self.leftButtonNode.pressed = { [weak self] in
@@ -592,25 +612,41 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
-    open override func layout() {
-        let size = self.bounds.size
+    private func requestLayout() {
+        self.requestedLayout = true
+        self.setNeedsLayout()
+    }
+    
+    override open func layout() {
+        super.layout()
         
-        let leftButtonInset: CGFloat = 16.0
-        let backButtonInset: CGFloat = 27.0
+        if let validLayout = self.validLayout, self.requestedLayout {
+            self.requestedLayout = false
+            self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: .immediate)
+        }
+    }
+    
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, leftInset, rightInset)
         
-        self.clippingNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.contentNode?.frame = CGRect(origin: CGPoint(), size: size)
+        let leftButtonInset: CGFloat = leftInset + 16.0
+        let backButtonInset: CGFloat = leftInset + 27.0
         
-        self.stripeNode.frame = CGRect(x: 0.0, y: size.height, width: size.width, height: UIScreenPixel)
+        transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: size))
+        if let contentNode = self.contentNode {
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: size.width - leftInset - rightInset, height: size.height)))
+        }
+        
+        transition.updateFrame(node: self.stripeNode, frame: CGRect(x: 0.0, y: size.height, width: size.width, height: UIScreenPixel))
         
         let nominalHeight: CGFloat = self.collapsed ? 32.0 : 44.0
         let contentVerticalOrigin = size.height - nominalHeight
         
-        var leftTitleInset: CGFloat = 8.0
-        var rightTitleInset: CGFloat = 8.0
+        var leftTitleInset: CGFloat = leftInset + 4.0
+        var rightTitleInset: CGFloat = rightInset + 4.0
         if self.backButtonNode.supernode != nil {
             let backButtonSize = self.backButtonNode.measure(CGSize(width: size.width, height: nominalHeight))
-            leftTitleInset += backButtonSize.width + backButtonInset + 8.0 + 8.0
+            leftTitleInset += backButtonSize.width + backButtonInset + 4.0 + 4.0
             
             let topHitTestSlop = (nominalHeight - backButtonSize.height) * 0.5
             self.backButtonNode.hitTestSlop = UIEdgeInsetsMake(-topHitTestSlop, -27.0, -topHitTestSlop, -8.0)
@@ -636,21 +672,21 @@ open class NavigationBar: ASDisplayNode {
                             transitionTitleNode.alpha = progress * progress
                         }
                     
-                        self.backButtonArrow.frame = CGRect(origin: CGPoint(x: 8.0 - progress * size.width, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
+                        self.backButtonArrow.frame = CGRect(origin: CGPoint(x: leftInset + 8.0 - progress * size.width, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
                         self.backButtonArrow.alpha = max(0.0, 1.0 - progress * 1.3)
                         self.badgeNode.alpha = max(0.0, 1.0 - progress * 1.3)
                     case .bottom:
                         self.backButtonNode.alpha = 1.0
                         self.backButtonNode.frame = CGRect(origin: CGPoint(x: backButtonInset, y: contentVerticalOrigin + floor((nominalHeight - backButtonSize.height) / 2.0)), size: backButtonSize)
                         self.backButtonArrow.alpha = 1.0
-                        self.backButtonArrow.frame = CGRect(origin: CGPoint(x: 8.0, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
+                        self.backButtonArrow.frame = CGRect(origin: CGPoint(x: leftInset + 8.0, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
                         self.badgeNode.alpha = 1.0
                 }
             } else {
                 self.backButtonNode.alpha = 1.0
                 self.backButtonNode.frame = CGRect(origin: CGPoint(x: backButtonInset, y: contentVerticalOrigin + floor((nominalHeight - backButtonSize.height) / 2.0)), size: backButtonSize)
                 self.backButtonArrow.alpha = 1.0
-                self.backButtonArrow.frame = CGRect(origin: CGPoint(x: 8.0, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
+                self.backButtonArrow.frame = CGRect(origin: CGPoint(x: leftInset + 8.0, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
                 self.badgeNode.alpha = 1.0
             }
         } else if self.leftButtonNode.supernode != nil {
@@ -689,8 +725,8 @@ open class NavigationBar: ASDisplayNode {
                     }
                 
                     if let transitionBackArrowNode = self.transitionBackArrowNode {
-                        let initialX: CGFloat = 8.0 + size.width * 0.3
-                        let finalX: CGFloat = 8.0
+                        let initialX: CGFloat = leftInset + 8.0 + size.width * 0.3
+                        let finalX: CGFloat = leftInset + 8.0
                         
                         transitionBackArrowNode.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floor((nominalHeight - 22.0) / 2.0)), size: CGSize(width: 13.0, height: 22.0))
                         transitionBackArrowNode.alpha = max(0.0, 1.0 - progress * 1.3)
@@ -739,7 +775,7 @@ open class NavigationBar: ASDisplayNode {
         }
         
         if let titleView = self.titleView {
-            let titleSize = CGSize(width: max(1.0, size.width - leftTitleInset - leftTitleInset), height: nominalHeight)
+            let titleSize = CGSize(width: max(1.0, size.width - max(leftTitleInset, rightTitleInset) * 2.0), height: nominalHeight)
             titleView.frame = CGRect(origin: CGPoint(x: leftTitleInset, y: contentVerticalOrigin), size: titleSize)
             
             if let transitionState = self.transitionState, let otherNavigationBar = transitionState.navigationBar {
@@ -859,9 +895,10 @@ open class NavigationBar: ASDisplayNode {
                 }
                 
                 if !self.bounds.size.width.isZero {
+                    self.requestedLayout = true
                     self.layout()
                 } else {
-                    self.setNeedsLayout()
+                    self.requestLayout()
                 }
             } else if self.clippingNode.alpha.isZero {
                 self.clippingNode.alpha = 1.0

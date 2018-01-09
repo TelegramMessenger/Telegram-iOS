@@ -36,6 +36,16 @@ private class WindowRootViewController: UIViewController {
         }
     }
     
+    var preferNavigationUIHidden: Bool = false {
+        didSet {
+            if oldValue != self.preferNavigationUIHidden {
+                if #available(iOSApplicationExtension 11.0, *) {
+                    self.setNeedsUpdateOfHomeIndicatorAutoHidden()
+                }
+            }
+        }
+    }
+    
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .default
     }
@@ -51,6 +61,10 @@ private class WindowRootViewController: UIViewController {
     override func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
         return self.gestureEdges
     }
+    
+    override func prefersHomeIndicatorAutoHidden() -> Bool {
+        return self.preferNavigationUIHidden
+    }
 }
 
 private final class NativeWindow: UIWindow, WindowHost {
@@ -62,6 +76,8 @@ private final class NativeWindow: UIWindow, WindowHost {
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     var presentNativeImpl: ((UIViewController) -> Void)?
     var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
+    var invalidatePreferNavigationUIHiddenImpl: (() -> Void)?
+    var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
     
     private var frameTransition: ContainedViewLayoutTransition?
     
@@ -96,6 +112,20 @@ private final class NativeWindow: UIWindow, WindowHost {
                 self.updateSize?(value.size)
             }
         }
+    }
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        if let gestureRecognizers = self.gestureRecognizers {
+            for recognizer in gestureRecognizers {
+                recognizer.delaysTouchesBegan = false
+            }
+        }
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     override func layoutSubviews() {
@@ -147,6 +177,14 @@ private final class NativeWindow: UIWindow, WindowHost {
     func invalidateDeferScreenEdgeGestures() {
         self.invalidateDeferScreenEdgeGestureImpl?()
     }
+    
+    func invalidatePreferNavigationUIHidden() {
+        self.invalidatePreferNavigationUIHiddenImpl?()
+    }
+    
+    func cancelInteractiveKeyboardGestures() {
+        self.cancelInteractiveKeyboardGesturesImpl?()
+    }
 }
 
 public func nativeWindowHostView() -> WindowHostView {
@@ -164,6 +202,8 @@ public func nativeWindowHostView() -> WindowHostView {
         rootViewController.orientations = orientations
     }, updateDeferScreenEdgeGestures: { edges in
         rootViewController.gestureEdges = edges
+    }, updatePreferNavigationUIHidden: { value in
+        rootViewController.preferNavigationUIHidden = value
     })
     
     window.updateSize = { [weak hostView] size in
@@ -196,6 +236,14 @@ public func nativeWindowHostView() -> WindowHostView {
     
     window.invalidateDeferScreenEdgeGestureImpl = { [weak hostView] in
         return hostView?.invalidateDeferScreenEdgeGesture?()
+    }
+    
+    window.invalidatePreferNavigationUIHiddenImpl = { [weak hostView] in
+        return hostView?.invalidatePreferNavigationUIHidden?()
+    }
+    
+    window.cancelInteractiveKeyboardGesturesImpl = { [weak hostView] in
+        hostView?.cancelInteractiveKeyboardGestures?()
     }
     
     rootViewController.presentController = { [weak hostView] controller, level, animated, completion in

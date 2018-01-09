@@ -46,8 +46,16 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    override open func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
-        return .bottom
+    public final var preferNavigationUIHidden: Bool = false {
+        didSet {
+            if self.preferNavigationUIHidden != oldValue {
+                self.window?.invalidatePreferNavigationUIHidden()
+            }
+        }
+    }
+    
+    override open func prefersHomeIndicatorAutoHidden() -> Bool {
+        return self.preferNavigationUIHidden
     }
     
     public private(set) var presentationArguments: Any?
@@ -196,6 +204,7 @@ open class ViewControllerPresentationArguments {
         
         if let navigationBar = self.navigationBar {
             transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
+            navigationBar.updateLayout(size: navigationBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
         }
         
         self.presentationContext.containerLayoutUpdated(layout, transition: transition)

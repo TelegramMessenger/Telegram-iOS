@@ -55,6 +55,7 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         self.label.isLayerBacked = true
         self.label.maximumNumberOfLines = 1
         self.label.displaysAsynchronously = false
+        self.label.truncationMode = .byTruncatingTail
         
         super.init(theme: theme)
         
@@ -108,7 +109,7 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
-        let labelSize = self.label.measure(size)
+        let labelSize = self.label.measure(CGSize(width: max(1.0, size.width - 10.0), height: size.height))
         self.label.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
     }
     
