@@ -75,6 +75,7 @@ NSInteger indentation_level = 0;
   }
   [logString appendString:string];
   NSLog(@"%@ %@", NSStringFromClass([self class]), logString);
+  printf("%s %s\n", NSStringFromClass([self class]).UTF8String, logString.UTF8String);
 }
 
 // TOBO BW Perf, make updates perform only when necessarry. Currently everything in a node is updated
