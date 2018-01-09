@@ -53,6 +53,12 @@ public struct MediaResourceData {
     public let path: String
     public let size: Int
     public let complete: Bool
+    
+    public init(path: String, size: Int, complete: Bool) {
+        self.path = path
+        self.size = size
+        self.complete = complete
+    }
 }
 
 public enum MediaResourceDataFetchResult {

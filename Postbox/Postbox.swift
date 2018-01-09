@@ -537,6 +537,11 @@ public final class Modifier {
         return self.postbox?.messageHistoryTable.findClosestMessageId(peerId: peerId, timestamp: timestamp)
     }
     
+    public func findRandomMessage(peerId: PeerId, tagMask: MessageTags, ignoreId: MessageId) -> MessageIndex? {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryTable.findRandomMessage(peerId: peerId, tagMask: tagMask, ignoreId: ignoreId)
+    }
+    
     public func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
         assert(!self.disposed)
         if let postbox = self.postbox {

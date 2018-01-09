@@ -2902,6 +2902,16 @@ final class MessageHistoryTable: Table {
         return result
     }
     
+    func findRandomMessage(peerId: PeerId, tagMask: MessageTags, ignoreId: MessageId) -> MessageIndex? {
+        if let index = self.tagsTable.findRandomIndex(peerId: peerId, tagMask: tagMask, ignoreId: ignoreId, isMessage: { index in
+            return self.getMessage(index) != nil
+        }) {
+            return self.getMessage(index).flatMap(MessageIndex.init)
+        } else {
+            return nil
+        }
+    }
+    
     func incomingMessageStatsInIndices(_ peerId: PeerId, namespace: MessageId.Namespace, indices: [MessageIndex]) -> (Int, Bool) {
         var count: Int = 0
         var holes = false

@@ -166,6 +166,27 @@ class MessageHistoryTagsTable: Table {
         return count
     }
     
+    func findRandomIndex(peerId: PeerId, tagMask: MessageTags, ignoreId: MessageId, isMessage: (MessageIndex) -> Bool) -> MessageIndex? {
+        var indices: [MessageIndex] = []
+        self.valueBox.range(self.table, start: self.lowerBound(tagMask, peerId: peerId), end: self.upperBound(tagMask, peerId: peerId), keys: { key in
+            indices.append(MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4)))
+            return true
+        }, limit: 0)
+        var checkedIndices = Set<Int>()
+        loop: while checkedIndices.count < indices.count {
+            let i = Int(arc4random_uniform(UInt32(indices.count)))
+            if checkedIndices.contains(i) {
+                continue loop
+            }
+            checkedIndices.insert(i)
+            let index = indices[i]
+            if isMessage(index) && ignoreId != index.id {
+                return index
+            }
+        }
+        return nil
+    }
+    
     func debugGetAllIndices() -> [MessageIndex] {
         var indices: [MessageIndex] = []
         self.valueBox.scan(self.table, values: { key, value in

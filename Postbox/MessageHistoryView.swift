@@ -1550,7 +1550,6 @@ public final class MessageHistoryView {
             }
             if let groupStart = groupStart, laterId != nil {
                 entries.removeSubrange(groupStart.0 ..< entries.count)
-                laterId = nil
             }
             
             groupStart = nil
@@ -1579,7 +1578,6 @@ public final class MessageHistoryView {
             }
             if let groupStart = groupStart, earlierId != nil {
                 entries.removeSubrange(0 ..< groupStart.0 + 1)
-                earlierId = nil
             }
         }
         self.entries = entries
