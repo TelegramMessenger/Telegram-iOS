@@ -19,13 +19,15 @@ final class ShareControllerGridSection: GridSection {
     let height: CGFloat = 33.0
     
     private let title: String
+    private let theme: PresentationTheme
     
     var hashValue: Int {
         return 1
     }
     
-    init(title: String) {
+    init(title: String, theme: PresentationTheme) {
         self.title = title
+        self.theme = theme
     }
     
     func isEqual(to: GridSection) -> Bool {
@@ -37,7 +39,7 @@ final class ShareControllerGridSection: GridSection {
     }
     
     func node() -> ASDisplayNode {
-        return ShareControllerGridSectionNode(title: self.title)
+        return ShareControllerGridSectionNode(title: self.title, theme: self.theme)
     }
 }
 
@@ -47,14 +49,14 @@ final class ShareControllerGridSectionNode: ASDisplayNode {
     let backgroundNode: ASDisplayNode
     let titleNode: ASTextNode
     
-    init(title: String) {
+    init(title: String, theme: PresentationTheme) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = UIColor(rgb: 0xf7f7f7)
+        self.backgroundNode.backgroundColor = theme.chatList.sectionHeaderFillColor
         
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
-        self.titleNode.attributedText = NSAttributedString(string: title.uppercased(), font: sectionTitleFont, textColor: UIColor(rgb: 0x8e8e93))
+        self.titleNode.attributedText = NSAttributedString(string: title.uppercased(), font: sectionTitleFont, textColor: theme.list.sectionHeaderTextColor)
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail
         
@@ -72,26 +74,30 @@ final class ShareControllerGridSectionNode: ASDisplayNode {
         self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: bounds.size.width, height: 27.0))
         
         let titleSize = self.titleNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 6.0), size: titleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 7.0), size: titleSize)
     }
 }
 
 final class ShareControllerPeerGridItem: GridItem {
     let account: Account
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let peer: Peer
     let chatPeer: Peer?
     let controllerInteraction: ShareControllerInteraction
     
     let section: GridSection?
     
-    init(account: Account, peer: Peer, chatPeer: Peer?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: Peer, chatPeer: Peer?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil) {
         self.account = account
+        self.theme = theme
+        self.strings = strings
         self.peer = peer
         self.chatPeer = chatPeer
         self.controllerInteraction = controllerInteraction
         
         if let sectionTitle = sectionTitle {
-            self.section = ShareControllerGridSection(title: sectionTitle)
+            self.section = ShareControllerGridSection(title: sectionTitle, theme: self.theme)
         } else {
             self.section = nil
         }
@@ -100,7 +106,7 @@ final class ShareControllerPeerGridItem: GridItem {
     func node(layout: GridNodeLayout) -> GridItemNode {
         let node = ShareControllerPeerGridItemNode()
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, peer: self.peer, chatPeer: self.chatPeer)
+        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: self.chatPeer)
         return node
     }
     
@@ -110,7 +116,7 @@ final class ShareControllerPeerGridItem: GridItem {
             return
         }
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, peer: self.peer, chatPeer: self.chatPeer)
+        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: self.chatPeer)
     }
 }
 
@@ -136,9 +142,11 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         self.addSubnode(self.peerNode)
     }
     
-    func setup(account: Account, peer: Peer, chatPeer: Peer?) {
+    func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: Peer, chatPeer: Peer?) {
         if self.currentState == nil || self.currentState!.0 !== account || !arePeersEqual(self.currentState!.1, peer) {
-            self.peerNode.setup(account: account, peer: peer, chatPeer: chatPeer)
+            let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: .green, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.opaqueItemBackgroundColor)
+            self.peerNode.theme = itemTheme
+            self.peerNode.setup(account: account, strings: strings, peer: peer, chatPeer: chatPeer)
             self.currentState = (account, peer, chatPeer)
             self.setNeedsLayout()
         }

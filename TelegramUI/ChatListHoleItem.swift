@@ -8,24 +8,27 @@ import SwiftSignalKit
 private let titleFont = Font.regular(17.0)
 
 class ChatListHoleItem: ListViewItem {
+    let theme: PresentationTheme
+    
     let selectable: Bool = false
     
-    init() {
+    init(theme: PresentationTheme) {
+        self.theme = theme
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatListHoleItemNode()
             node.relativePosition = (first: previousItem == nil, last: nextItem == nil)
             node.insets = ChatListItemNode.insets(first: false, last: false, firstWithHeader: false)
-            node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
+            node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
             completion(node, {
                 return (nil, {})
             })
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         assert(node is ChatListHoleItemNode)
         if let node = node as? ChatListHoleItemNode {
             Queue.mainQueue().async {
@@ -34,7 +37,7 @@ class ChatListHoleItem: ListViewItem {
                     let first = previousItem == nil
                     let last = nextItem == nil
                     
-                    let (nodeLayout, apply) = layout(width, first, last)
+                    let (nodeLayout, apply) = layout(self, params, first, last)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { [weak node] in
                             apply()
@@ -68,26 +71,28 @@ class ChatListHoleItemNode: ListViewItemNode {
         self.addSubnode(self.labelNode)
     }
     
-    override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         let layout = self.asyncLayout()
-        let (_, apply) = layout(width, self.relativePosition.first, self.relativePosition.last)
+        let (_, apply) = layout(item as! ChatListHoleItem, params, self.relativePosition.first, self.relativePosition.last)
         apply()
     }
     
-    func asyncLayout() -> (_ width: CGFloat, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ChatListHoleItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let labelNodeLayout = TextNode.asyncLayout(self.labelNode)
         
-        return { width, first, last in
-            let (labelLayout, labelApply) = labelNodeLayout(NSAttributedString(string: "", font: titleFont, textColor: UIColor(rgb: 0xc8c7cc)), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+        return { item, params, first, last in
+            let baseWidth = params.width - params.leftInset - params.rightInset
+            
+            let (labelLayout, labelApply) = labelNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "", font: titleFont, textColor: item.theme.chatList.messageTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: baseWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: false)
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 68.0), insets: insets)
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 68.0), insets: insets)
             
             let separatorInset: CGFloat
             if last {
                 separatorInset = 0.0
             } else {
-                separatorInset = 80.0
+                separatorInset = 80.0 + params.leftInset
             }
             
             return (layout, { [weak self] in
@@ -96,9 +101,11 @@ class ChatListHoleItemNode: ListViewItemNode {
                     
                     let _ = labelApply()
                     
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: floor((width - labelLayout.size.width) / 2.0), y: floor((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                    strongSelf.separatorNode.backgroundColor = item.theme.chatList.itemSeparatorColor
                     
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: separatorInset, y: 68.0 - separatorHeight), size: CGSize(width: width - separatorInset, height: separatorHeight))
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: floor((params.width - labelLayout.size.width) / 2.0), y: floor((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                    
+                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: separatorInset, y: 68.0 - separatorHeight), size: CGSize(width: params.width - separatorInset, height: separatorHeight))
                     
                     strongSelf.contentSize = layout.contentSize
                     strongSelf.insets = layout.insets

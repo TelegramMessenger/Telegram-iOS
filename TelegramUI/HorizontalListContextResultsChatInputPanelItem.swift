@@ -18,13 +18,13 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
         self.resultSelected = resultSelected
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = HorizontalListContextResultsChatInputPanelItemNode()
             
             let nodeLayout = node.asyncLayout()
             let (top, bottom) = (previousItem != nil, nextItem != nil)
-            let (layout, apply) = nodeLayout(self, width, top, bottom)
+            let (layout, apply) = nodeLayout(self, params, top, bottom)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -42,7 +42,7 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? HorizontalListContextResultsChatInputPanelItemNode {
             Queue.mainQueue().async {
                 let nodeLayout = node.asyncLayout()
@@ -50,7 +50,7 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
                 async {
                     let (top, bottom) = (previousItem != nil, nextItem != nil)
                     
-                    let (layout, apply) = nodeLayout(self, width, top, bottom)
+                    let (layout, apply) = nodeLayout(self, params, top, bottom)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
@@ -76,9 +76,63 @@ private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radiu
 final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
-    private let videoNode: ManagedVideoNode
+    private var videoLayer: (SoftwareVideoThumbnailLayer, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     private var currentImageResource: TelegramMediaResource?
-    private var currentVideoResource: TelegramMediaResource?
+    private var currentVideoFile: TelegramMediaFile?
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            switch visibility {
+                case .visible:
+                    self.ticking = true
+                default:
+                    self.ticking = false
+            }
+        }
+    }
+    
+    private let timebase: CMTimebase
+    
+    private var displayLink: CADisplayLink?
+    private var ticking: Bool = false {
+        didSet {
+            if self.ticking != oldValue {
+                if self.ticking {
+                    class DisplayLinkProxy: NSObject {
+                        weak var target: HorizontalListContextResultsChatInputPanelItemNode?
+                        init(target: HorizontalListContextResultsChatInputPanelItemNode) {
+                            self.target = target
+                        }
+                        
+                        @objc func displayLinkEvent() {
+                            self.target?.displayLinkEvent()
+                        }
+                    }
+                    
+                    let displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
+                    self.displayLink = displayLink
+                    displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+                    if #available(iOS 10.0, *) {
+                        displayLink.preferredFramesPerSecond = 25
+                    } else {
+                        displayLink.frameInterval = 2
+                    }
+                    displayLink.isPaused = false
+                    CMTimebaseSetRate(self.timebase, 1.0)
+                } else if let displayLink = self.displayLink {
+                    self.displayLink = nil
+                    displayLink.isPaused = true
+                    displayLink.invalidate()
+                    CMTimebaseSetRate(self.timebase, 0.0)
+                }
+            }
+        }
+    }
+    
+    private func displayLinkEvent() {
+        let timestamp = CMTimebaseGetTime(self.timebase).seconds
+        self.videoLayer?.1.tick(timestamp: timestamp)
+    }
     
     init() {
         self.imageNodeBackground = ASDisplayNode()
@@ -86,58 +140,69 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         self.imageNodeBackground.backgroundColor = UIColor(white: 0.9, alpha: 1.0)
         
         self.imageNode = TransformImageNode()
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         self.imageNode.isLayerBacked = true
         self.imageNode.displaysAsynchronously = false
         
-        self.videoNode = ManagedVideoNode()
+        var timebase: CMTimebase?
+        CMTimebaseCreateWithMasterClock(nil, CMClockGetHostTimeClock(), &timebase)
+        CMTimebaseSetRate(timebase!, 0.0)
+        self.timebase = timebase!
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.backgroundColor = .white
-        
         self.addSubnode(self.imageNodeBackground)
         
-        self.imageNode.transform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
-        self.imageNode.alphaTransitionOnFirstUpdate = true
+        self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+        self.imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
         self.addSubnode(self.imageNode)
-        
-        self.videoNode.transform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
-        self.videoNode.clipsToBounds = true
-        self.addSubnode(self.videoNode)
     }
     
-    override public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    deinit {
+        if let displayLink = self.displayLink {
+            displayLink.isPaused = true
+            displayLink.invalidate()
+        }
+    }
+    
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? HorizontalListContextResultsChatInputPanelItem {
             let doLayout = self.asyncLayout()
             let merged = (top: previousItem != nil, bottom: nextItem != nil)
-            let (layout, apply) = doLayout(item, width, merged.top, merged.bottom)
+            let (layout, apply) = doLayout(item, params, merged.top, merged.bottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
             apply(.None)
         }
     }
     
-    func asyncLayout() -> (_ item: HorizontalListContextResultsChatInputPanelItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    func asyncLayout() -> (_ item: HorizontalListContextResultsChatInputPanelItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let imageLayout = self.imageNode.asyncLayout()
         let currentImageResource = self.currentImageResource
-        let currentVideoResource = self.currentVideoResource
+        let currentVideoFile = self.currentVideoFile
         
-        return { [weak self] item, height, mergedTop, mergedBottom in
+        return { [weak self] item, params, mergedTop, mergedBottom in
+            let height = params.width
+            
             let sideInset: CGFloat = 4.0
             
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             
             var imageResource: TelegramMediaResource?
-            var videoResource: TelegramMediaResource?
+            var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
-                case let .externalReference(_, _, title, _, url, thumbnailUrl, contentUrl, _, dimensions, _, _):
+                case let .externalReference(_, type, title, _, url, thumbnailUrl, contentUrl, _, dimensions, _, _):
                     if let contentUrl = contentUrl {
                         imageResource = HttpReferenceMediaResource(url: contentUrl, size: nil)
                     } else if let thumbnailUrl = thumbnailUrl {
                         imageResource = HttpReferenceMediaResource(url: thumbnailUrl, size: nil)
                     }
                     imageDimensions = dimensions
+                    if type == "gif", let contentUrl = contentUrl, let thumbnailResource = imageResource, let dimensions = dimensions {
+                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), resource: HttpReferenceMediaResource(url: contentUrl, size: nil), previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                        imageResource = nil
+                    }
                 case let .internalReference(_, _, title, _, image, file, _):
                     if let image = image {
                         if let largestRepresentation = largestImageRepresentation(image.representations) {
@@ -155,7 +220,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                 
                     if let file = file {
                         if file.isVideo && file.isAnimated {
-                            videoResource = file.resource
+                            videoFile = file
+                            imageResource = nil
                         }
                     }
             }
@@ -170,11 +236,9 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             croppedImageDimensions = fittedImageDimensions.cropped(CGSize(width: floor(height * 4.0 / 3.0), height: 1000.0))
             
             var imageApply: (() -> Void)?
-            var transformArguments: TransformImageArguments?
-            if let imageResource = imageResource {
+            if let _ = imageResource {
                 let imageCorners = ImageCorners()
                 let arguments = TransformImageArguments(corners: imageCorners, imageSize: fittedImageDimensions, boundingSize: croppedImageDimensions, intrinsicInsets: UIEdgeInsets())
-                transformArguments = arguments
                 imageApply = imageLayout(arguments)
             }
             
@@ -187,21 +251,21 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                 updatedImageResource = true
             }
             
-            var updatedVideoResource = false
-            if let currentVideoResource = currentVideoResource, let videoResource = videoResource {
-                if !currentVideoResource.isEqual(to: videoResource) {
-                    updatedVideoResource = true
+            var updatedVideoFile = false
+            if let currentVideoFile = currentVideoFile, let videoFile = videoFile {
+                if !currentVideoFile.isEqual(videoFile) {
+                    updatedVideoFile = true
                 }
-            } else if (currentVideoResource != nil) != (videoResource != nil) {
-                updatedVideoResource = true
+            } else if (currentVideoFile != nil) != (videoFile != nil) {
+                updatedVideoFile = true
             }
             
             if updatedImageResource {
                 if let imageResource = imageResource {
                     let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0), resource: imageResource)
-                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation])
+                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil)
                     //updateImageSignal = chatWebpageSnippetPhoto(account: item.account, photo: tmpImage)
-                    updateImageSignal = chatMessagePhoto(account: item.account, photo: tmpImage)
+                    updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photo: tmpImage)
                 } else {
                     updateImageSignal = .complete()
                 }
@@ -212,34 +276,56 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             return (nodeLayout, { _ in
                 if let strongSelf = self {
                     strongSelf.currentImageResource = imageResource
-                    strongSelf.currentVideoResource = videoResource
+                    strongSelf.currentVideoFile = videoFile
                     
                     if let imageApply = imageApply {
                         if let updateImageSignal = updateImageSignal {
-                            strongSelf.imageNode.setSignal(account: item.account, signal: updateImageSignal)
+                            strongSelf.imageNode.setSignal(updateImageSignal)
                         }
                         
                         strongSelf.imageNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
                         strongSelf.imageNode.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
                         
-                        strongSelf.videoNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
-                        strongSelf.videoNode.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
-                        
                         strongSelf.imageNodeBackground.frame = CGRect(origin: CGPoint(x: sideInset, y: sideInset), size: CGSize(width: croppedImageDimensions.height, height: croppedImageDimensions.width))
+                        imageApply()
+                    }
                         
-                        if updatedVideoResource {
-                            if let videoResource = videoResource {
-                                if let applicationContext = item.account.applicationContext as? TelegramApplicationContext {
-                                    strongSelf.videoNode.acquireContext(account: item.account, mediaManager: applicationContext.mediaManager, id: ChatContextResultManagedMediaId(result: item.result), resource: videoResource, priority: 1)
-                                }
-                            } else {
-                                strongSelf.videoNode.clearContext()
-                            }
+                    if updatedVideoFile {
+                        if let (thumbnailLayer, _, layer) = strongSelf.videoLayer {
+                            strongSelf.videoLayer = nil
+                            thumbnailLayer.removeFromSuperlayer()
+                            layer.layer.removeFromSuperlayer()
                         }
                         
-                        imageApply()
-                        
-                        strongSelf.videoNode.transformArguments = transformArguments
+                        if let videoFile = videoFile {
+                            let thumbnailLayer = SoftwareVideoThumbnailLayer(account: item.account, file: videoFile)
+                            thumbnailLayer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                            strongSelf.layer.addSublayer(thumbnailLayer)
+                            let layerHolder = takeSampleBufferLayer()
+                            layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
+                            layerHolder.layer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                            strongSelf.layer.addSublayer(layerHolder.layer)
+                            let manager = SoftwareVideoLayerFrameManager(account: item.account, resource: videoFile.resource, layerHolder: layerHolder)
+                            strongSelf.videoLayer = (thumbnailLayer, manager, layerHolder)
+                            thumbnailLayer.ready = { [weak thumbnailLayer, weak manager] in
+                                if let strongSelf = self, let thumbnailLayer = thumbnailLayer, let manager = manager {
+                                    if strongSelf.videoLayer?.0 === thumbnailLayer && strongSelf.videoLayer?.1 === manager {
+                                        manager.start()
+                                    }
+                                }
+                            }
+                            
+                            /*if let applicationContext = item.account.applicationContext as? TelegramApplicationContext {
+                                strongSelf.videoNode.acquireContext(account: item.account, mediaManager: applicationContext.mediaManager, id: ChatContextResultManagedMediaId(result: item.result), resource: videoResource, priority: 1)
+                            }*/
+                        }
+                    }
+                    
+                    if let (thumbnailLayer, _, layer) = strongSelf.videoLayer {
+                        thumbnailLayer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
+                        thumbnailLayer.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
+                        layer.layer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
+                        layer.layer.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
                     }
                 }
             })

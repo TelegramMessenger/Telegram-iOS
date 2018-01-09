@@ -137,7 +137,7 @@ public func groupsInCommonController(account: Account, peerId: PeerId) -> ViewCo
     var pushControllerImpl: ((ViewController) -> Void)?
     
     let arguments = GroupsInCommonControllerArguments(account: account, openPeer: { memberId in
-        pushControllerImpl?(ChatController(account: account, peerId: memberId))
+        pushControllerImpl?(ChatController(account: account, chatLocation: .peer(memberId)))
     })
     
     let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(groupsInCommon(account: account, peerId: peerId) |> mapToSignal { peerIds -> Signal<[Peer], NoError> in
@@ -162,7 +162,7 @@ public func groupsInCommonController(account: Account, peerId: PeerId) -> ViewCo
         |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<GroupsInCommonEntry>, GroupsInCommonEntry.ItemGenerationArguments)) in
             var emptyStateItem: ItemListControllerEmptyStateItem?
             if peers == nil {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
+                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
             
             let previous = previousPeers

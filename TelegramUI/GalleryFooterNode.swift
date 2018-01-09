@@ -23,6 +23,7 @@ final class GalleryFooterNode: ASDisplayNode {
     
     func updateLayout(_ layout: ContainerViewLayout, footerContentNode: GalleryFooterContentNode?, transition: ContainedViewLayoutTransition) {
         self.currentLayout = layout
+        let cleanInsets = layout.insets(options: [])
         
         var removeCurrentFooterContentNode: GalleryFooterContentNode?
         if self.currentFooterContentNode !== footerContentNode {
@@ -48,7 +49,7 @@ final class GalleryFooterNode: ASDisplayNode {
         
         var backgroundHeight: CGFloat = 0.0
         if let footerContentNode = self.currentFooterContentNode {
-            backgroundHeight = footerContentNode.updateLayout(width: layout.size.width, transition: transition)
+            backgroundHeight = footerContentNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, transition: transition)
             transition.updateFrame(node: footerContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - backgroundHeight), size: CGSize(width: layout.size.width, height: backgroundHeight)))
         }
         

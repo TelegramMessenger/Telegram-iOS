@@ -22,19 +22,83 @@ private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     layer.add(basicAnimation, forKey: "clockFrameAnimation")
 }
 
-enum ChatMessageDateAndStatusOutgoingType {
+enum ChatMessageDateAndStatusOutgoingType: Equatable {
     case Sent(read: Bool)
     case Sending
     case Failed
+    
+    static func ==(lhs: ChatMessageDateAndStatusOutgoingType, rhs: ChatMessageDateAndStatusOutgoingType) -> Bool {
+        switch lhs {
+            case let .Sent(read):
+                if case .Sent(read) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Sending:
+                if case .Sending = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Failed:
+                if case .Failed = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
-enum ChatMessageDateAndStatusType {
+enum ChatMessageDateAndStatusType: Equatable {
     case BubbleIncoming
     case BubbleOutgoing(ChatMessageDateAndStatusOutgoingType)
     case ImageIncoming
     case ImageOutgoing(ChatMessageDateAndStatusOutgoingType)
     case FreeIncoming
     case FreeOutgoing(ChatMessageDateAndStatusOutgoingType)
+    
+    static func ==(lhs: ChatMessageDateAndStatusType, rhs: ChatMessageDateAndStatusType) -> Bool {
+        switch lhs {
+            case .BubbleIncoming:
+                if case .BubbleIncoming = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .BubbleOutgoing(type):
+                if case .BubbleOutgoing(type) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .ImageIncoming:
+                if case .ImageIncoming = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .ImageOutgoing(type):
+                if case .ImageOutgoing(type) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .FreeIncoming:
+                if case .FreeIncoming = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .FreeOutgoing(type):
+                if case .FreeOutgoing(type) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 class ChatMessageDateAndStatusNode: ASDisplayNode {
@@ -46,6 +110,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     private let dateNode: TextNode
     private var impressionIcon: ASImageNode?
     
+    private var type: ChatMessageDateAndStatusType?
+    private var theme: PresentationTheme?
+    
     override init() {
         self.dateNode = TextNode()
         self.dateNode.isLayerBacked = true
@@ -53,10 +120,12 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         
         super.init()
         
+        self.isUserInteractionEnabled = false
+        
         self.addSubnode(self.dateNode)
     }
     
-    func asyncLayout() -> (_ theme: PresentationTheme, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -67,7 +136,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var currentBackgroundNode = self.backgroundNode
         var currentImpressionIcon = self.impressionIcon
         
-        return { theme, edited, impressionCount, dateText, type, constrainedSize in
+        let currentType = self.type
+        let currentTheme = self.theme
+        
+        return { theme, strings, edited, impressionCount, dateText, type, constrainedSize in
             let dateColor: UIColor
             var backgroundImage: UIImage?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
@@ -78,6 +150,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let clockFrameImage: UIImage?
             let clockMinImage: UIImage?
             var impressionImage: UIImage?
+            
+            let themeUpdated = theme !== currentTheme || type != currentType
             
             let graphics = PresentationResourcesChat.principalGraphics(theme)
             
@@ -127,7 +201,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.mediaImpressionIcon
                     }
                 case .FreeIncoming:
-                    dateColor = theme.chat.bubble.mediaDateAndStatusTextColor
+                    dateColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
                     loadedCheckFullImage = graphics.checkMediaFullImage
@@ -138,7 +212,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.mediaImpressionIcon
                     }
                 case let .FreeOutgoing(status):
-                    dateColor = theme.chat.bubble.mediaDateAndStatusTextColor
+                    dateColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
@@ -157,10 +231,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             }
             
             if edited {
-                updatedDateText = "edited " + updatedDateText
+                updatedDateText = "\(strings.Conversation_MessageEditedLabel) \(updatedDateText)"
             }
             
-            let (date, dateApply) = dateLayout(NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), nil, 1, .end, constrainedSize, .natural, nil, UIEdgeInsets())
+            let (date, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let statusWidth: CGFloat
             
@@ -193,7 +267,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             clockFrameNode?.isLayerBacked = true
                             clockFrameNode?.displaysAsynchronously = false
                             clockFrameNode?.displayWithoutProcessing = true
-                            clockFrameNode?.image = clockFrameImage
                             clockFrameNode?.frame = CGRect(origin: CGPoint(), size: clockFrameImage?.size ?? CGSize())
                         }
                         
@@ -202,7 +275,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             clockMinNode?.isLayerBacked = true
                             clockMinNode?.displaysAsynchronously = false
                             clockMinNode?.displayWithoutProcessing = true
-                            clockMinNode?.image = clockMinImage
                             clockMinNode?.frame = CGRect(origin: CGPoint(), size: clockMinImage?.size ?? CGSize())
                         }
                         clockPosition = CGPoint(x: leftInset + date.size.width + 8.5, y: 7.5)
@@ -266,7 +338,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     backgroundNode.isLayerBacked = true
                     backgroundNode.displayWithoutProcessing = true
                     backgroundNode.displaysAsynchronously = false
-                    backgroundNode.image = backgroundImage
                     currentBackgroundNode = backgroundNode
                 }
                 backgroundInsets = UIEdgeInsets(top: 2.0, left: 7.0, bottom: 2.0, right: 7.0)
@@ -292,11 +363,17 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             return (layoutSize, { [weak self] animated in
                 if let strongSelf = self {
+                    strongSelf.theme = theme
+                    strongSelf.type = type
+                    
                     if backgroundImage != nil {
                         if let currentBackgroundNode = currentBackgroundNode {
                             if currentBackgroundNode.supernode == nil {
                                 strongSelf.backgroundNode = currentBackgroundNode
+                                currentBackgroundNode.image = backgroundImage
                                 strongSelf.insertSubnode(currentBackgroundNode, at: 0)
+                            } else if themeUpdated {
+                                currentBackgroundNode.image = backgroundImage
                             }
                         }
                         strongSelf.backgroundNode?.frame = CGRect(origin: CGPoint(), size: layoutSize)
@@ -323,12 +400,15 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         strongSelf.impressionIcon = nil
                     }
                     
-                    strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left + impressionWidth, y: backgroundInsets.top), size: date.size)
+                    strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left + impressionWidth, y: backgroundInsets.top + 1.0), size: date.size)
                     
                     if let clockFrameNode = clockFrameNode {
                         if strongSelf.clockFrameNode == nil {
                             strongSelf.clockFrameNode = clockFrameNode
+                            clockFrameNode.image = clockFrameImage
                             strongSelf.addSubnode(clockFrameNode)
+                        } else if themeUpdated {
+                            clockFrameNode.image = clockFrameImage
                         }
                         clockFrameNode.position = CGPoint(x: backgroundInsets.left + clockPosition.x, y: backgroundInsets.top + clockPosition.y)
                         if let clockFrameNode = strongSelf.clockFrameNode {
@@ -342,7 +422,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     if let clockMinNode = clockMinNode {
                         if strongSelf.clockMinNode == nil {
                             strongSelf.clockMinNode = clockMinNode
+                            clockMinNode.image = clockMinImage
                             strongSelf.addSubnode(clockMinNode)
+                        } else if themeUpdated {
+                            clockMinNode.image = clockMinImage
                         }
                         clockMinNode.position = CGPoint(x: backgroundInsets.left + clockPosition.x, y: backgroundInsets.top + clockPosition.y)
                         if let clockMinNode = strongSelf.clockMinNode {
@@ -360,6 +443,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             strongSelf.checkSentNode = checkSentNode
                             strongSelf.addSubnode(checkSentNode)
                             animateSentNode = animated
+                        } else if themeUpdated {
+                            checkSentNode.image = loadedCheckFullImage
                         }
                         
                         if let checkSentFrame = checkSentFrame {
@@ -378,6 +463,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             checkReadNode.image = loadedCheckPartialImage
                             strongSelf.checkReadNode = checkReadNode
                             strongSelf.addSubnode(checkReadNode)
+                        } else if themeUpdated {
+                            checkReadNode.image = loadedCheckPartialImage
                         }
                     
                         if let checkReadFrame = checkReadFrame {

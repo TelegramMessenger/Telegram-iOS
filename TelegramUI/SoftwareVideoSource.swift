@@ -31,14 +31,16 @@ private final class SoftwareVideoStream {
     let duration: CMTime
     let decoder: FFMpegMediaVideoFrameDecoder
     let rotationAngle: Double
+    let aspect: Double
     
-    init(index: Int, fps: CMTime, timebase: CMTime, duration: CMTime, decoder: FFMpegMediaVideoFrameDecoder, rotationAngle: Double) {
+    init(index: Int, fps: CMTime, timebase: CMTime, duration: CMTime, decoder: FFMpegMediaVideoFrameDecoder, rotationAngle: Double, aspect: Double) {
         self.index = index
         self.fps = fps
         self.timebase = timebase
         self.duration = duration
         self.decoder = decoder
         self.rotationAngle = rotationAngle
+        self.aspect = aspect
     }
 }
 
@@ -116,7 +118,9 @@ final class SoftwareVideoSource {
                                     }
                                 }
                                 
-                                videoStream = SoftwareVideoStream(index: streamIndex, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle)
+                                let aspect = Double(codecPar.pointee.width) / Double(codecPar.pointee.height)
+                                
+                                videoStream = SoftwareVideoStream(index: streamIndex, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle, aspect: aspect)
                                 break
                             } else {
                                 var codecContextRef: UnsafeMutablePointer<AVCodecContext>? = codecContext
@@ -212,7 +216,7 @@ final class SoftwareVideoSource {
         return (frames.first, endOfStream)
     }
     
-    func readFrame(maxPts: CMTime?) -> (MediaTrackFrame?, Bool) {
+    func readFrame(maxPts: CMTime?) -> (MediaTrackFrame?, CGFloat, CGFloat, Bool) {
         if let videoStream = self.videoStream {
             let (decodableFrame, loop) = self.readDecodableFrame()
             if let decodableFrame = decodableFrame {
@@ -220,12 +224,12 @@ final class SoftwareVideoSource {
                 if let maxPts = maxPts, CMTimeCompare(decodableFrame.pts, maxPts) < 0 {
                     ptsOffset = maxPts
                 }
-                return (videoStream.decoder.decode(frame: decodableFrame, ptsOffset: ptsOffset), loop)
+                return (videoStream.decoder.decode(frame: decodableFrame, ptsOffset: ptsOffset), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
             } else {
-                return (nil, loop)
+                return (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
             }
         } else {
-            return (nil, false)
+            return (nil, 0.0, 1.0, false)
         }
     }
 }

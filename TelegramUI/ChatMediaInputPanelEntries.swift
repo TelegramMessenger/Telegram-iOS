@@ -8,6 +8,7 @@ enum ChatMediaInputPanelAuxiliaryNamespace: Int32 {
     case savedStickers = 2
     case recentStickers = 4
     case trending = 5
+    case settings = 6
 }
 
 enum ChatMediaInputPanelEntryStableId: Hashable {
@@ -15,6 +16,8 @@ enum ChatMediaInputPanelEntryStableId: Hashable {
     case savedStickers
     case recentPacks
     case stickerPack(Int64)
+    case trending
+    case settings
     
     static func ==(lhs: ChatMediaInputPanelEntryStableId, rhs: ChatMediaInputPanelEntryStableId) -> Bool {
         switch lhs {
@@ -42,6 +45,18 @@ enum ChatMediaInputPanelEntryStableId: Hashable {
                 } else {
                     return false
                 }
+            case .trending:
+                if case .trending = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .settings:
+                if case .settings = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -53,6 +68,10 @@ enum ChatMediaInputPanelEntryStableId: Hashable {
                 return 1
             case .recentPacks:
                 return 2
+            case .trending:
+                return 2
+            case .settings:
+                return 2
             case let .stickerPack(id):
                 return id.hashValue
         }
@@ -63,6 +82,8 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
     case recentGifs(PresentationTheme)
     case savedStickers(PresentationTheme)
     case recentPacks(PresentationTheme)
+    case trending(Bool, PresentationTheme)
+    case settings(PresentationTheme)
     case stickerPack(index: Int, info: StickerPackCollectionInfo, topItem: StickerPackItem?, theme: PresentationTheme)
     
     var stableId: ChatMediaInputPanelEntryStableId {
@@ -73,6 +94,10 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 return .savedStickers
             case .recentPacks:
                 return .recentPacks
+            case .trending:
+                return .trending
+            case .settings:
+                return .settings
             case let .stickerPack(_, info, _, _):
                 return .stickerPack(info.id.id)
         }
@@ -94,6 +119,18 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 }
             case let .recentPacks(lhsTheme):
                 if case let .recentPacks(rhsTheme) = rhs, lhsTheme === rhsTheme {
+                    return true
+                } else {
+                    return false
+                }
+            case let .trending(lhsElevated, lhsTheme):
+                if case let .trending(rhsElevated, rhsTheme) = rhs, lhsTheme === rhsTheme, lhsElevated == rhsElevated {
+                    return true
+                } else {
+                    return false
+                }
+            case let .settings(lhsTheme):
+                if case let .settings(rhsTheme) = rhs, lhsTheme === rhsTheme {
                     return true
                 } else {
                     return false
@@ -120,12 +157,16 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 switch rhs {
                     case .recentGifs, savedStickers:
                         return false
+                    case let .trending(elevated, _) where elevated:
+                        return false
                     default:
                         return true
                 }
             case .recentPacks:
                 switch rhs {
                     case .recentGifs, .savedStickers, recentPacks:
+                        return false
+                    case let .trending(elevated, _) where elevated:
                         return false
                     default:
                         return true
@@ -134,6 +175,14 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 switch rhs {
                     case .recentGifs, .savedStickers, .recentPacks:
                         return false
+                    case let .trending(elevated, _):
+                        if elevated {
+                            return false
+                        } else {
+                            return true
+                        }
+                    case .settings:
+                        return true
                     case let .stickerPack(rhsIndex, rhsInfo, _, _):
                         if lhsIndex == rhsIndex {
                             return lhsInfo.id.id < rhsInfo.id.id
@@ -141,6 +190,23 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                             return lhsIndex <= rhsIndex
                         }
                 }
+            case let .trending(elevated, _):
+                if elevated {
+                    switch rhs {
+                        case .recentGifs, .trending:
+                            return false
+                        default:
+                            return true
+                    }
+                } else {
+                    if case .settings = rhs {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+            case .settings:
+                return false
         }
     }
     
@@ -160,6 +226,15 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 return ChatMediaInputMetaSectionItem(inputNodeInteraction: inputNodeInteraction, type: .recentStickers, theme: theme, selected: {
                     let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
                     inputNodeInteraction.navigateToCollectionId(collectionId)
+                })
+            case let .trending(_, theme):
+                return ChatMediaInputTrendingItem(inputNodeInteraction: inputNodeInteraction, theme: theme, selected: {
+                    let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0)
+                    inputNodeInteraction.navigateToCollectionId(collectionId)
+                })
+            case let .settings(theme):
+                return ChatMediaInputSettingsItem(inputNodeInteraction: inputNodeInteraction, theme: theme, selected: {
+                    inputNodeInteraction.openSettings()
                 })
             case let .stickerPack(index, info, topItem, theme):
                 return ChatMediaInputStickerPackItem(account: account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, stickerPackItem: topItem, index: index, theme: theme, selected: {

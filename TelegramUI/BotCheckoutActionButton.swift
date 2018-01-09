@@ -129,7 +129,7 @@ final class BotCheckoutActionButton: HighlightTrackingButtonNode {
                     case let .active(title):
                         if case .active = previousState {
                             let makeLayout = TextNode.asyncLayout(self.labelNode)
-                            let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), nil, 1, .end, validLayout, .natural, nil, UIEdgeInsets())
+                            let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: validLayout, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                             self.labelNode.frame = CGRect(origin: CGPoint(x: floor((validLayout.width - labelLayout.size.width) / 2.0), y: floor((validLayout.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                             let _ = labelApply()
                         } else {
@@ -142,7 +142,7 @@ final class BotCheckoutActionButton: HighlightTrackingButtonNode {
                             self.activeBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         
                             let makeLayout = TextNode.asyncLayout(self.labelNode)
-                            let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), nil, 1, .end, validLayout, .natural, nil, UIEdgeInsets())
+                            let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: validLayout, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                             self.labelNode.frame = CGRect(origin: CGPoint(x: floor((validLayout.width - labelLayout.size.width) / 2.0), y: floor((validLayout.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                             let _ = labelApply()
                             self.labelNode.alpha = 1.0
@@ -151,7 +151,7 @@ final class BotCheckoutActionButton: HighlightTrackingButtonNode {
                     case let .inactive(title):
                         if case .inactive = previousState {
                             let makeLayout = TextNode.asyncLayout(self.labelNode)
-                            let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: title, font: titleFont, textColor: self.activeFillColor), nil, 1, .end, validLayout, .natural, nil, UIEdgeInsets())
+                            let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: self.activeFillColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: validLayout, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                             self.labelNode.frame = CGRect(origin: CGPoint(x: floor((validLayout.width - labelLayout.size.width) / 2.0), y: floor((validLayout.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                             let _ = labelApply()
                         } else {
@@ -162,7 +162,7 @@ final class BotCheckoutActionButton: HighlightTrackingButtonNode {
                             self.activeBackgroundNode.alpha = 0.0
                             
                             let makeLayout = TextNode.asyncLayout(self.labelNode)
-                            let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), nil, 1, .end, validLayout, .natural, nil, UIEdgeInsets())
+                            let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: validLayout, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                             self.labelNode.frame = CGRect(origin: CGPoint(x: floor((validLayout.width - labelLayout.size.width) / 2.0), y: floor((validLayout.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                             let _ = labelApply()
                             self.labelNode.alpha = 1.0
@@ -233,12 +233,12 @@ final class BotCheckoutActionButton: HighlightTrackingButtonNode {
             switch state {
                 case let .active(title):
                     let makeLayout = TextNode.asyncLayout(self.labelNode)
-                    let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), nil, 1, .end, size, .natural, nil, UIEdgeInsets())
+                    let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: size, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     let _ = labelApply()
                     labelSize = labelLayout.size
                 case let .inactive(title):
                     let makeLayout = TextNode.asyncLayout(self.labelNode)
-                    let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: title, font: titleFont, textColor: self.activeFillColor), nil, 1, .end, size, .natural, nil, UIEdgeInsets())
+                    let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: self.activeFillColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: size, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     let _ = labelApply()
                     labelSize = labelLayout.size
                 default:

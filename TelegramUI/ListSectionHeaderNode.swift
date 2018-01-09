@@ -65,17 +65,15 @@ final class ListSectionHeaderNode: ASDisplayNode {
         }
     }
     
-    override func layout() {
-        let size = self.bounds.size
-        
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         let makeLayout = TextNode.asyncLayout(self.label)
-        let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: self.title ?? "", font: Font.medium(12.0), textColor: self.theme.chatList.sectionHeaderTextColor), self.backgroundColor, 1, .end, CGSize(width: max(0.0, size.width - 18.0), height: size.height), .natural, nil, UIEdgeInsets())
+        let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.title ?? "", font: Font.medium(12.0), textColor: self.theme.chatList.sectionHeaderTextColor), backgroundColor: self.backgroundColor, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, size.width - leftInset - rightInset - 18.0), height: size.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = labelApply()
-        self.label.frame = CGRect(origin: CGPoint(x: 9.0, y: 6.0), size: labelLayout.size)
+        self.label.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 7.0), size: labelLayout.size)
         
         if let actionButton = self.actionButton {
             let buttonSize = actionButton.measure(CGSize(width: size.width, height: size.height))
-            actionButton.frame = CGRect(origin: CGPoint(x: size.width - 9.0 - buttonSize.width, y: 6.0), size: buttonSize)
+            actionButton.frame = CGRect(origin: CGPoint(x: size.width - rightInset - 9.0 - buttonSize.width, y: 7.0), size: buttonSize)
         }
     }
     

@@ -85,7 +85,7 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
         let currentIconColor = self.iconColor
         
         return { placeholderString, constrainedSize, iconColor, foregroundColor, backgroundColor in
-            let (labelLayoutResult, labelApply) = labelLayout(placeholderString, foregroundColor, 1, .end, constrainedSize, .natural, nil, UIEdgeInsets())
+            let (labelLayoutResult, labelApply) = labelLayout(TextNodeLayoutArguments(attributedString: placeholderString, backgroundColor: foregroundColor, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var updatedBackgroundImage: UIImage?
             var updatedIconImage: UIImage?
@@ -113,13 +113,14 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
                     
                     strongSelf.placeholderString = placeholderString
                     
-                    let labelFrame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - labelLayoutResult.size.width) / 2.0), y: floor((28.0 - labelLayoutResult.size.height) / 2.0) - UIScreenPixel), size: labelLayoutResult.size)
+                    let labelFrame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - labelLayoutResult.size.width) / 2.0), y: floorToScreenPixels((28.0 - labelLayoutResult.size.height) / 2.0)), size: labelLayoutResult.size)
                     strongSelf.labelNode.frame = labelFrame
                     if let iconImage = strongSelf.iconNode.image {
                         let iconSize = iconImage.size
-                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: labelFrame.minX - 4.0 - iconSize.width, y: floor((28.0 - iconSize.height) / 2.0) + UIScreenPixel), size: iconSize)
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: labelFrame.minX - 4.0 - iconSize.width, y: floorToScreenPixels((28.0 - iconSize.height) / 2.0)), size: iconSize)
                     }
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: 28.0))
+                    strongSelf.backgroundColor = backgroundColor
                 }
             }
         }

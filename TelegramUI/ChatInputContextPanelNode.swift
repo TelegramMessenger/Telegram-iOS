@@ -13,13 +13,13 @@ class ChatInputContextPanelNode: ASDisplayNode {
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     var placement: ChatInputContextPanelPlacement = .overPanels
     
-    init(account: Account) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
         
         super.init()
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
     }
     
     func animateOut(completion: @escaping () -> Void) {

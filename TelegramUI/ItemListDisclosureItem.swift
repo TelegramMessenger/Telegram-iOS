@@ -10,6 +10,7 @@ enum ItemListDisclosureStyle {
 
 class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
+    let icon: UIImage?
     let title: String
     let label: String
     let sectionId: ItemListSectionId
@@ -17,12 +18,9 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let disclosureStyle: ItemListDisclosureStyle
     let action: (() -> Void)?
     
-    init(theme: PresentationTheme? = nil, title: String, label: String, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
-        if let theme = theme {
-            self.theme = theme
-        } else {
-            self.theme = defaultPresentationTheme
-        }
+    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, label: String, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
+        self.theme = theme
+        self.icon = icon
         self.title = title
         self.label = label
         self.sectionId = sectionId
@@ -31,10 +29,10 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
         self.action = action
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ItemListDisclosureItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -45,13 +43,13 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ItemListDisclosureItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -78,6 +76,7 @@ class ItemListDisclosureItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
+    let iconNode: ASImageNode
     let titleNode: TextNode
     let labelNode: TextNode
     let arrowNode: ASImageNode
@@ -103,6 +102,10 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
+        self.iconNode = ASImageNode()
+        self.iconNode.isLayerBacked = true
+        self.iconNode.displaysAsynchronously = false
+        
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
         
@@ -124,20 +127,19 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         self.addSubnode(self.arrowNode)
     }
     
-    func asyncLayout() -> (_ item: ItemListDisclosureItem, _ width: CGFloat, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ItemListDisclosureItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
         let currentItem = self.item
         
-        return { item, width, neighbors in
-            var rightInset: CGFloat = 34.0
-            
+        return { item, params, neighbors in
+            let rightInset: CGFloat
             switch item.disclosureStyle {
                 case .none:
-                    rightInset = 16.0
+                    rightInset = 16.0 + params.rightInset
                 case .arrow:
-                    rightInset = 34.0
+                    rightInset = 34.0 + params.rightInset
             }
             
             var updateArrowImage: UIImage?
@@ -148,21 +150,40 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                 updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.theme)
             }
             
+            var updateIcon = false
+            if currentItem?.icon != item.icon {
+                updateIcon = true
+            }
+            
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
+            let itemBackgroundColor: UIColor
+            let itemSeparatorColor: UIColor
+            
+            var leftInset: CGFloat = params.leftInset
             
             switch item.style {
                 case .plain:
-                    contentSize = CGSize(width: width, height: 44.0)
+                    leftInset += 35.0
+                    itemBackgroundColor = item.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                    contentSize = CGSize(width: params.width, height: 44.0)
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
-                    contentSize = CGSize(width: width, height: 44.0)
+                    leftInset += 16.0
+                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+                    contentSize = CGSize(width: params.width, height: 44.0)
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
-            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: titleFont, textColor: item.theme.list.itemSecondaryTextColor), nil, 1, .end, CGSize(width: width - 40 - titleLayout.size.width - 10.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            if let _ = item.icon {
+                leftInset += 43.0
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: titleFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset - 40.0 - titleLayout.size.width - 10.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -171,26 +192,35 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
+                    if let icon = item.icon {
+                        if strongSelf.iconNode.supernode == nil {
+                            strongSelf.addSubnode(strongSelf.iconNode)
+                        }
+                        if updateIcon {
+                            strongSelf.iconNode.image = icon
+                        }
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - icon.size.width) / 2.0), y: floor((layout.contentSize.height - icon.size.height) / 2.0)), size: icon.size)
+                    } else if strongSelf.iconNode.supernode != nil {
+                        strongSelf.iconNode.image = nil
+                        strongSelf.iconNode.removeFromSupernode()
+                    }
+                    
                     if let updateArrowImage = updateArrowImage {
                         strongSelf.arrowNode.image = updateArrowImage
                     }
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = titleApply()
                     let _ = labelApply()
                     
-                    let leftInset: CGFloat
-                    
                     switch item.style {
                         case .plain:
-                            leftInset = 35.0
-                            
                             if strongSelf.backgroundNode.supernode != nil {
                                 strongSelf.backgroundNode.removeFromSupernode()
                             }
@@ -201,10 +231,8 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                                 strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
                             }
                             
-                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: width - leftInset, height: separatorHeight))
+                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                         case .blocks:
-                            leftInset = 16.0
-                            
                             if strongSelf.backgroundNode.supernode == nil {
                                 strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
                             }
@@ -223,21 +251,21 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                             let bottomStripeInset: CGFloat
                             switch neighbors.bottom {
                                 case .sameSection(false):
-                                    bottomStripeInset = 16.0
+                                    bottomStripeInset = leftInset
                                 default:
                                     bottomStripeInset = 0.0
                             }
                             
-                            strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                            strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                            strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                            strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
+                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: width - rightInset - labelLayout.size.width, y: 11.0), size: labelLayout.size)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: 11.0), size: labelLayout.size)
                     
                     if let arrowImage = strongSelf.arrowNode.image {
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: width - 15.0 - arrowImage.size.width, y: 15.0), size: arrowImage.size)
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 15.0 - arrowImage.size.width, y: 15.0), size: arrowImage.size)
                     }
                     
                     switch item.disclosureStyle {
@@ -247,14 +275,14 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                             strongSelf.arrowNode.isHidden = false
                     }
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: 44.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel))
                 }
             })
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
             self.highlightedBackgroundNode.alpha = 1.0

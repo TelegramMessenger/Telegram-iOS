@@ -67,7 +67,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
         self.titleNode.isOpaque = false
         self.titleNode.isUserInteractionEnabled = false
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.secondaryTextColor), speed: .slow)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.secondaryTextColor, 22.0), speed: .slow)
         let activityIndicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         self.activityIndicator.frame = CGRect(origin: CGPoint(), size: activityIndicatorSize)
         

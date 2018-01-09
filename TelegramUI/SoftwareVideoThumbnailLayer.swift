@@ -18,12 +18,12 @@ final class SoftwareVideoThumbnailLayer: CALayer {
     init(account: Account, file: TelegramMediaFile) {
         super.init()
         
-        self.backgroundColor = UIColor.black.cgColor
+        self.backgroundColor = UIColor.white.cgColor
         self.contentsGravity = "resizeAspectFill"
         self.masksToBounds = true
         
         if let dimensions = file.dimensions {
-            self.disposable = (mediaGridMessageVideo(account: account, video: file) |> deliverOn(account.graphicsThreadPool)).start(next: { [weak self] transform in
+            self.disposable = (mediaGridMessageVideo(postbox: account.postbox, video: file) |> deliverOn(account.graphicsThreadPool)).start(next: { [weak self] transform in
                 
                 var boundingSize = dimensions.aspectFilled(CGSize(width: 93.0, height: 93.0))
                 let imageSize = boundingSize

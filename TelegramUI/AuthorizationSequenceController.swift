@@ -5,17 +5,28 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import MtProtoKitDynamic
+import MessageUI
 
 public final class AuthorizationSequenceController: NavigationController {
-    static let navigationBarTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007ee5), primaryTextColor: .black, backgroundColor: .clear, separatorColor: .clear)
+    static func navigationBarTheme(_ theme: AuthorizationTheme) -> NavigationBarTheme {
+        return NavigationBarTheme(buttonColor: theme.accentColor, primaryTextColor: .black, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
+    }
     
     private var account: UnauthorizedAccount
+    private let apiId: Int32
+    private let apiHash: String
+    private let strings: PresentationStrings
+    private let theme: AuthorizationTheme
     
     private var stateDisposable: Disposable?
     private let actionDisposable = MetaDisposable()
     
-    public init(account: UnauthorizedAccount) {
+    public init(account: UnauthorizedAccount, strings: PresentationStrings, apiId: Int32, apiHash: String) {
         self.account = account
+        self.apiId = apiId
+        self.apiHash = apiHash
+        self.strings = strings
+        self.theme = defaultAuthorizationTheme
         
         super.init(nibName: nil, bundle: nil)
         
@@ -45,7 +56,7 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSplashController()
+            controller = AuthorizationSequenceSplashController(theme: self.theme)
             controller.nextPressed = { [weak self] in
                 if let strongSelf = self {
                     let masterDatacenterId = strongSelf.account.masterDatacenterId
@@ -70,30 +81,34 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePhoneEntryController()
+            controller = AuthorizationSequencePhoneEntryController(strings: self.strings, theme: self.theme)
             controller.loginWithNumber = { [weak self, weak controller] number in
                 if let strongSelf = self {
                     controller?.inProgress = true
-                    strongSelf.actionDisposable.set((sendAuthorizationCode(account: strongSelf.account, phoneNumber: number, apiId: 10840, apiHash: "33c45224029d59cb3ad0c16134215aeb") |> deliverOnMainQueue).start(next: { [weak self] account in
+                    strongSelf.actionDisposable.set((sendAuthorizationCode(account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash) |> deliverOnMainQueue).start(next: { [weak self] account in
                         if let strongSelf = self {
                             controller?.inProgress = false
                             strongSelf.account = account
                         }
                     }, error: { error in
-                        if let controller = controller {
+                        if let strongSelf = self, let controller = controller {
                             controller.inProgress = false
                             
                             let text: String
                             switch error {
                                 case .limitExceeded:
-                                    text = "You have requested authorization code too many times. Please try again later."
+                                    text = strongSelf.strings.Login_CodeFloodError
                                 case .invalidPhoneNumber:
-                                    text = "The phone number you entered is not valid. Please enter the correct number along with your area code."
+                                    text = strongSelf.strings.Login_InvalidPhoneError
+                                case .phoneLimitExceeded:
+                                    text = strongSelf.strings.Login_PhoneFloodError
+                                case .phoneBanned:
+                                    text = strongSelf.strings.Login_PhoneBannedError
                                 case .generic:
-                                    text = "An error occurred. Please try again later."
+                                    text = strongSelf.strings.Login_UnknownError
                             }
                             
-                            controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+                            controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                         }
                     }))
                 }
@@ -115,30 +130,75 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceCodeEntryController()
+            controller = AuthorizationSequenceCodeEntryController(strings: self.strings, theme: self.theme)
             controller.loginWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
                     strongSelf.actionDisposable.set((authorizeWithCode(account: strongSelf.account, code: code) |> deliverOnMainQueue).start(error: { error in
                         Queue.mainQueue().async {
-                            if let controller = controller {
+                            if let strongSelf = self, let controller = controller {
                                 controller.inProgress = false
                                 
                                 let text: String
                                 switch error {
                                     case .limitExceeded:
-                                        text = "You have entered invalid code too many times. Please try again later."
+                                        text = strongSelf.strings.Login_CodeFloodError
                                     case .invalidCode:
-                                        text = "Invalid code. Please try again."
+                                        text = strongSelf.strings.Login_InvalidCodeError
                                     case .generic:
-                                        text = "An error occured."
+                                        text = strongSelf.strings.Login_UnknownError
                                 }
                                 
-                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }
                     }))
+                }
+            }
+        }
+        controller.requestNextOption = { [weak self, weak controller] in
+            if let strongSelf = self {
+                if nextType == nil {
+                    if MFMailComposeViewController.canSendMail() {
+                        let phoneFormatted = formatPhoneNumber(number)
+                        
+                        let composeController = MFMailComposeViewController()
+                        //composeController.mailComposeDelegate = strongSelf
+                        composeController.setToRecipients(["sms@stel.com"])
+                        composeController.setSubject(strongSelf.strings.Login_EmailCodeSubject(phoneFormatted).0)
+                        composeController.setMessageBody(strongSelf.strings.Login_EmailCodeBody(phoneFormatted).0, isHTML: false)
+                        
+                        controller?.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
+                    } else {
+                        controller?.present(standardTextAlertController(title: nil, text: strongSelf.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                    }
+                } else {
+                    controller?.inProgress = true
+                    strongSelf.actionDisposable.set((resendAuthorizationCode(account: strongSelf.account)
+                        |> deliverOnMainQueue).start(next: { result in
+                            controller?.inProgress = false
+                        }, error: { error in
+                            if let strongSelf = self, let controller = controller {
+                                controller.inProgress = false
+                                
+                                let text: String
+                                switch error {
+                                    case .limitExceeded:
+                                        text = strongSelf.strings.Login_CodeFloodError
+                                    case .invalidPhoneNumber:
+                                        text = strongSelf.strings.Login_InvalidPhoneError
+                                    case .phoneLimitExceeded:
+                                        text = strongSelf.strings.Login_PhoneFloodError
+                                    case .phoneBanned:
+                                        text = strongSelf.strings.Login_PhoneBannedError
+                                    case .generic:
+                                        text = strongSelf.strings.Login_UnknownError
+                                }
+                                
+                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                            }
+                        }))
                 }
             }
         }
@@ -158,34 +218,194 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePasswordEntryController()
+            controller = AuthorizationSequencePasswordEntryController(strings: self.strings, theme: self.theme)
             controller.loginWithPassword = { [weak self, weak controller] password in
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
                     strongSelf.actionDisposable.set((authorizeWithPassword(account: strongSelf.account, password: password) |> deliverOnMainQueue).start(error: { error in
                         Queue.mainQueue().async {
-                            if let controller = controller {
+                            if let strongSelf = self, let controller = controller {
                                 controller.inProgress = false
                                 
                                 let text: String
                                 switch error {
                                     case .limitExceeded:
-                                        text = "You have entered invalid password too many times. Please try again later."
+                                        text = strongSelf.strings.LoginPassword_FloodError
                                     case .invalidPassword:
-                                        text = "Invalid password. Please try again."
+                                        text = strongSelf.strings.LoginPassword_InvalidPasswordError
                                     case .generic:
-                                        text = "An error occured. Please try again later."
+                                        text = strongSelf.strings.Login_UnknownError
                                 }
                                 
-                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }
                     }))
                 }
             }
         }
+        controller.forgot = { [weak self, weak controller] in
+            if let strongSelf = self, let strongController = controller {
+                strongController.inProgress = true
+                strongSelf.actionDisposable.set((requestPasswordRecovery(account: strongSelf.account)
+                |> deliverOnMainQueue).start(next: { option in
+                    if let strongSelf = self, let strongController = controller {
+                        strongController.inProgress = false
+                        switch option {
+                            case let .email(pattern):
+                                let _ = (strongSelf.account.postbox.modify { modifier -> Void in
+                                    if let state = modifier.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code) = state.contents {
+                                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern)))
+                                    }
+                                }).start()
+                            case .none:
+                                strongController.present(standardTextAlertController(title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongController.didForgotWithNoRecovery = true
+                        }
+                    }
+                }, error: { error in
+                    if let strongSelf = self, let strongController = controller {
+                        strongController.inProgress = false
+                    }
+                }))
+            }
+        }
+        controller.reset = { [weak self, weak controller] in
+            if let strongSelf = self, let strongController = controller {
+                strongController.present(standardTextAlertController(title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [
+                    TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {}),
+                    TextAlertAction(type: .destructiveAction, title: strongSelf.strings.Login_ResetAccountProtected_Reset, action: {
+                        if let strongSelf = self, let strongController = controller {
+                            strongController.inProgress = true
+                            strongSelf.actionDisposable.set((performAccountReset(account: strongSelf.account)
+                            |> deliverOnMainQueue).start(next: {
+                                if let strongController = controller {
+                                    strongController.inProgress = false
+                                }
+                            }, error: { error in
+                                if let strongSelf = self, let strongController = controller {
+                                    strongController.inProgress = false
+                                    let text: String
+                                    switch error {
+                                        case .generic:
+                                            text = strongSelf.strings.Login_UnknownError
+                                    }
+                                    strongController.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                }
+                            }))
+                        }
+                    })]), in: .window(.root))
+            }
+        }
         controller.updateData(hint: hint)
+        return controller
+    }
+    
+    private func passwordRecoveryController(emailPattern: String) -> AuthorizationSequencePasswordRecoveryController {
+        var currentController: AuthorizationSequencePasswordRecoveryController?
+        for c in self.viewControllers {
+            if let c = c as? AuthorizationSequencePasswordRecoveryController {
+                currentController = c
+                break
+            }
+        }
+        let controller: AuthorizationSequencePasswordRecoveryController
+        if let currentController = currentController {
+            controller = currentController
+        } else {
+            controller = AuthorizationSequencePasswordRecoveryController(strings: self.strings, theme: self.theme)
+            controller.recoverWithCode = { [weak self, weak controller] code in
+                if let strongSelf = self {
+                    controller?.inProgress = true
+                    
+                    strongSelf.actionDisposable.set((performPasswordRecovery(account: strongSelf.account, code: code) |> deliverOnMainQueue).start(error: { error in
+                        Queue.mainQueue().async {
+                            if let strongSelf = self, let controller = controller {
+                                controller.inProgress = false
+                                
+                                let text: String
+                                switch error {
+                                    case .limitExceeded:
+                                        text = strongSelf.strings.LoginPassword_FloodError
+                                    case .invalidCode:
+                                        text = strongSelf.strings.Login_InvalidCodeError
+                                    case .expired:
+                                        text = strongSelf.strings.Login_CodeExpiredError
+                                }
+                                
+                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                            }
+                        }
+                    }))
+                }
+            }
+            controller.noAccess = { [weak self, weak controller] in
+                if let strongSelf = self, let controller = controller {
+                    controller.present(standardTextAlertController(title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                    let account = strongSelf.account
+                    let _ = (strongSelf.account.postbox.modify { modifier -> Void in
+                        if let state = modifier.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _) = state.contents {
+                            modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
+                        }
+                    }).start()
+                }
+            }
+        }
+        controller.updateData(emailPattern: emailPattern)
+        return controller
+    }
+    
+    private func awaitingAccountResetController(protectedUntil: Int32, number: String?) -> AuthorizationSequenceAwaitingAccountResetController {
+        var currentController: AuthorizationSequenceAwaitingAccountResetController?
+        for c in self.viewControllers {
+            if let c = c as? AuthorizationSequenceAwaitingAccountResetController {
+                currentController = c
+                break
+            }
+        }
+        let controller: AuthorizationSequenceAwaitingAccountResetController
+        if let currentController = currentController {
+            controller = currentController
+        } else {
+            controller = AuthorizationSequenceAwaitingAccountResetController(strings: self.strings, theme: self.theme)
+            controller.reset = { [weak self, weak controller] in
+                if let strongSelf = self, let strongController = controller {
+                    strongController.present(standardTextAlertController(title: nil, text: strongSelf.strings.TwoStepAuth_ResetAccountConfirmation, actions: [
+                        TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {}),
+                        TextAlertAction(type: .destructiveAction, title: strongSelf.strings.Login_ResetAccountProtected_Reset, action: {
+                            if let strongSelf = self, let strongController = controller {
+                                strongController.inProgress = true
+                                strongSelf.actionDisposable.set((performAccountReset(account: strongSelf.account)
+                                    |> deliverOnMainQueue).start(next: {
+                                        if let strongController = controller {
+                                            strongController.inProgress = false
+                                        }
+                                    }, error: { error in
+                                        if let strongSelf = self, let strongController = controller {
+                                            strongController.inProgress = false
+                                            let text: String
+                                            switch error {
+                                            case .generic:
+                                                text = strongSelf.strings.Login_UnknownError
+                                            }
+                                            strongController.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                        }
+                                    }))
+                            }
+                        })]), in: .window(.root))
+                }
+            }
+            controller.logout = { [weak self] in
+                if let strongSelf = self {
+                    let account = strongSelf.account
+                    let _ = (strongSelf.account.postbox.modify { modifier -> Void in
+                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .empty))
+                    }).start()
+                }
+            }
+        }
+        controller.updateData(protectedUntil: protectedUntil, number: number ?? "")
         return controller
     }
     
@@ -201,31 +421,31 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSignUpController()
+            controller = AuthorizationSequenceSignUpController(strings: self.strings, theme: self.theme)
             controller.signUpWithName = { [weak self, weak controller] firstName, lastName in
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
                     strongSelf.actionDisposable.set((signUpWithName(account: strongSelf.account, firstName: firstName, lastName: lastName) |> deliverOnMainQueue).start(error: { error in
                         Queue.mainQueue().async {
-                            if let controller = controller {
+                            if let strongSelf = self, let controller = controller {
                                 controller.inProgress = false
                                 
                                 let text: String
                                 switch error {
                                     case .limitExceeded:
-                                        text = "You have entered invalid password too many times. Please try again later."
+                                        text = strongSelf.strings.Login_CodeFloodError
                                     case .codeExpired:
-                                        text = "Authorization code has expired. Please start again."
+                                        text = strongSelf.strings.Login_CodeExpiredError
                                     case .invalidFirstName:
-                                        text = "Please enter valid first name"
+                                        text = strongSelf.strings.Login_InvalidFirstNameError
                                     case .invalidLastName:
-                                        text = "Please enter valid last name"
+                                        text = strongSelf.strings.Login_InvalidLastNameError
                                     case .generic:
-                                        text = "An error occured. Please try again later."
+                                        text = strongSelf.strings.Login_UnknownError
                                 }
                                 
-                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }
                     }))
@@ -250,6 +470,10 @@ public final class AuthorizationSequenceController: NavigationController {
                     self.setViewControllers([self.splashController(), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout)], animated: !self.viewControllers.isEmpty)
                 case let .passwordEntry(hint, _, _):
                     self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint)], animated: !self.viewControllers.isEmpty)
+                case let .passwordRecovery(_, _, _, emailPattern):
+                    self.setViewControllers([self.splashController(), self.passwordRecoveryController(emailPattern: emailPattern)], animated: !self.viewControllers.isEmpty)
+                case let .awaitingAccountReset(protectedUntil, number):
+                    self.setViewControllers([self.splashController(), self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number)], animated: !self.viewControllers.isEmpty)
                 case let .signUp(_, _, _, firstName, lastName):
                     self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName)], animated: !self.viewControllers.isEmpty)
             }

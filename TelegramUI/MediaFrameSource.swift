@@ -7,9 +7,14 @@ enum MediaTrackEvent {
     case endOfStream
 }
 
-struct MediaFrameSourceSeekResult {
+final class MediaFrameSourceSeekResult {
     let buffers: MediaPlaybackBuffers
     let timestamp: CMTime
+    
+    init(buffers: MediaPlaybackBuffers, timestamp: CMTime) {
+        self.buffers = buffers
+        self.timestamp = timestamp
+    }
 }
 
 enum MediaFrameSourceSeekError {
@@ -20,5 +25,5 @@ protocol MediaFrameSource {
     func addEventSink(_ f: @escaping (MediaTrackEvent) -> Void) -> Int
     func removeEventSink(_ index: Int)
     func generateFrames(until timestamp: Double)
-    func seek(timestamp: Double) -> Signal<MediaFrameSourceSeekResult, MediaFrameSourceSeekError>
+    func seek(timestamp: Double) -> Signal<QueueLocalObject<MediaFrameSourceSeekResult>, MediaFrameSourceSeekError>
 }

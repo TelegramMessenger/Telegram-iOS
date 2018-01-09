@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import AsyncDisplayKit
 
 final class InstantPageSlideshowItem: InstantPageItem {
     var frame: CGRect
@@ -12,7 +13,7 @@ final class InstantPageSlideshowItem: InstantPageItem {
         self.medias = medias
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageSlideshowNode(account: account, medias: self.medias, openMedia: openMedia)
     }
     

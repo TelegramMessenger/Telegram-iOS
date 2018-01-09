@@ -5,13 +5,17 @@ import Display
 final class ProgressNavigationButtonNode: ASDisplayNode {
     private var indicatorNode: ASImageNode
     
-    init(theme: PresentationTheme = defaultPresentationTheme) {
+    convenience init(theme: PresentationTheme) {
+        self.init(color: theme.rootController.navigationBar.accentTextColor)
+    }
+    
+    init(color: UIColor) {
         self.indicatorNode = ASImageNode()
         self.indicatorNode.isLayerBacked = true
         self.indicatorNode.displayWithoutProcessing = true
         self.indicatorNode.displaysAsynchronously = false
         
-        self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
+        self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color)
         
         super.init()
         

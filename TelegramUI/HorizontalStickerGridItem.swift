@@ -8,19 +8,21 @@ import Postbox
 final class HorizontalStickerGridItem: GridItem {
     let account: Account
     let file: TelegramMediaFile
+    let stickersInteraction: HorizontalStickersChatContextPanelInteraction
     let interfaceInteraction: ChatPanelInterfaceInteraction
     
     let section: GridSection? = nil
     
-    init(account: Account, file: TelegramMediaFile, interfaceInteraction: ChatPanelInterfaceInteraction) {
+    init(account: Account, file: TelegramMediaFile, stickersInteraction: HorizontalStickersChatContextPanelInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) {
         self.account = account
         self.file = file
+        self.stickersInteraction = stickersInteraction
         self.interfaceInteraction = interfaceInteraction
     }
     
     func node(layout: GridNodeLayout) -> GridItemNode {
         let node = HorizontalStickerGridItemNode()
-        node.setup(account: self.account, file: self.file)
+        node.setup(account: self.account, item: self)
         node.interfaceInteraction = self.interfaceInteraction
         return node
     }
@@ -30,25 +32,35 @@ final class HorizontalStickerGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, file: self.file)
+        node.setup(account: self.account, item: self)
         node.interfaceInteraction = self.interfaceInteraction
     }
 }
 
 final class HorizontalStickerGridItemNode: GridItemNode {
-    private var currentState: (Account, TelegramMediaFile, CGSize)?
+    private var currentState: (Account, HorizontalStickerGridItem, CGSize)?
     private let imageNode: TransformImageNode
     
     private let stickerFetchedDisposable = MetaDisposable()
     
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     
+    private var currentIsPreviewing: Bool = false
+    
+    var stickerItem: StickerPackItem? {
+        if let (_, item, _) = self.currentState {
+            return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: item.file, indexKeys: [])
+        } else {
+            return nil
+        }
+    }
+    
     override init() {
         self.imageNode = TransformImageNode()
         
         super.init()
         
-        self.imageNode.transform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
+        self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         self.addSubnode(self.imageNode)
     }
     
@@ -62,19 +74,18 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, file: TelegramMediaFile) {
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1.id != file.id {
-            if let dimensions = file.dimensions {
-                self.imageNode.setSignal(account: account, signal: chatMessageSticker(account: account, file: file, small: true))
-                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: file).start())
+    func setup(account: Account, item: HorizontalStickerGridItem) {
+        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1.file.id != item.file.id {
+            if let dimensions = item.file.dimensions {
+                self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true))
+                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: item.file).start())
                 
-                self.currentState = (account, file, dimensions)
+                self.currentState = (account, item, dimensions)
                 self.setNeedsLayout()
             }
         }
         
-        //self.updateSelectionState(animated: false)
-        //self.updateHiddenMedia()
+        self.updatePreviewing(animated: false)
     }
     
     override func layout() {
@@ -92,20 +103,35 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         }
     }
     
-    /*func transitionNode(id: MessageId, media: Media) -> ASDisplayNode? {
-     if self.messageId == id {
-     return self.imageNode
-     } else {
-     return nil
-     }
-     }*/
-    
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(item)
+            interfaceInteraction.sendSticker(item.file)
         }
-        /*if let controllerInteraction = self.controllerInteraction, let messageId = self.messageId, case .ended = recognizer.state {
-         controllerInteraction.openMessage(messageId)
-         }*/
+    }
+    
+    func transitionNode() -> ASDisplayNode? {
+        return self.imageNode
+    }
+    
+    func updatePreviewing(animated: Bool) {
+        var isPreviewing = false
+        if let (_, item, _) = self.currentState {
+            isPreviewing = item.stickersInteraction.previewedStickerItem == self.stickerItem
+        }
+        if self.currentIsPreviewing != isPreviewing {
+            self.currentIsPreviewing = isPreviewing
+            
+            if isPreviewing {
+                self.layer.sublayerTransform = CATransform3DMakeScale(0.8, 0.8, 1.0)
+                if animated {
+                    self.layer.animateSpring(from: 1.0 as NSNumber, to: 0.8 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.4)
+                }
+            } else {
+                self.layer.sublayerTransform = CATransform3DIdentity
+                if animated {
+                    self.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5)
+                }
+            }
+        }
     }
 }

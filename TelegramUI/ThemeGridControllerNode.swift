@@ -84,7 +84,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.backgroundColor = presentationData.theme.list.itemBackgroundColor
+        self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         
         self.addSubnode(self.gridNode)
         
@@ -128,7 +128,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.backgroundColor = presentationData.theme.list.itemBackgroundColor
+        self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
     }
     
     private func enqueueTransition(_ transition: ThemeGridEntryTransition) {

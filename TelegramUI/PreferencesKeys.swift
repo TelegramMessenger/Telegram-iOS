@@ -10,6 +10,9 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case voiceCallSettings = 4
     case presentationThemeSettings = 5
     case instantPagePresentationSettings = 6
+    case callListSettings = 7
+    case experimentalSettings = 8
+    case musicPlaybackSettings = 9
 }
 
 public struct ApplicationSpecificPreferencesKeys {
@@ -20,4 +23,7 @@ public struct ApplicationSpecificPreferencesKeys {
     public static let voiceCallSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.voiceCallSettings.rawValue)
     public static let presentationThemeSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.presentationThemeSettings.rawValue)
     public static let instantPagePresentationSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.instantPagePresentationSettings.rawValue)
+    public static let callListSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.callListSettings.rawValue)
+    public static let experimentalSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.experimentalSettings.rawValue)
+    public static let musicPlaybackSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.musicPlaybackSettings.rawValue)
 }

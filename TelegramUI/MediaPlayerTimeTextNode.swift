@@ -55,6 +55,7 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
     var alignment: NSTextAlignment = .left
     var mode: MediaPlayerTimeTextNodeMode = .normal
     private let textColor: UIColor
+    var defaultDuration: Double?
     
     private var statusValue: MediaPlayerStatus? {
         didSet {
@@ -114,6 +115,9 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
                     let timestamp = abs(Int32(statusValue.timestamp - statusValue.duration))
                     self.state = MediaPlayerTimeTextNodeState(hours: timestamp / (60 * 60), minutes: timestamp % (60 * 60) / 60, seconds: timestamp % 60)
             }
+        } else if let defaultDuration = self.defaultDuration {
+            let timestamp = Int32(defaultDuration)
+            self.state = MediaPlayerTimeTextNodeState(hours: timestamp / (60 * 60), minutes: timestamp % (60 * 60) / 60, seconds: timestamp % 60)
         } else {
             self.state = MediaPlayerTimeTextNodeState()
         }

@@ -41,7 +41,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         
         self.addSubnode(self.listNode)
         
-        self.disposable = (channelMembers(account: account, peerId: peerId)
+        self.disposable = (channelMembers(postbox: account.postbox, network: account.network, peerId: peerId)
             |> deliverOnMainQueue).start(next: { [weak self] participants in
                 if let strongSelf = self {
                     var items: [ListViewItem] = []
@@ -52,7 +52,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     }))
                     
                     for participant in participants {
-                        items.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peer: participant.peer, chatPeer: nil, status: .none, selection: .none, hasActiveRevealControls: false, index: nil, header: nil, action: { peer in
+                        items.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peer: participant.peer, chatPeer: nil, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { peer in
                             if let strongSelf = self {
                                 strongSelf.requestOpenPeerFromSearch?(peer)
                             }

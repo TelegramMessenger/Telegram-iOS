@@ -8,9 +8,7 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
     
     var close: (() -> Void)?
     var togglePlayPause: (() -> Void)?
-    var previous: (() -> Void)?
-    var next: (() -> Void)?
-    var seek: ((Double) -> Void)?
+    var tapAction: (() -> Void)?
     
     init(account: Account) {
         self.containerNode = MediaNavigationAccessoryContainerNode(account: account)
@@ -29,20 +27,9 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
                 togglePlayPause()
             }
         }
-        containerNode.headerNode.previous = { [weak self] in
-            if let strongSelf = self, let previous = strongSelf.previous {
-                previous()
-            }
-        }
-        containerNode.headerNode.next = { [weak self] in
-            if let strongSelf = self, let next = strongSelf.next {
-                next()
-            }
-        }
-        
-        containerNode.headerNode.seek = { [weak self] timestamp in
-            if let strongSelf = self, let seek = strongSelf.seek {
-                seek(timestamp)
+        containerNode.headerNode.tapAction = { [weak self] in
+            if let strongSelf = self, let tapAction = strongSelf.tapAction {
+                tapAction()
             }
         }
     }

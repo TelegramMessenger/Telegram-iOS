@@ -9,6 +9,15 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
     return OngoingCallConnectionDescription(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
 }
 
+private let setupLogs: Bool = {
+    OngoingCallThreadLocalContext.setupLoggingFunction({ value in
+        if let value = value {
+            Logger.shared.log("TGVOIP", value)
+        }
+    })
+    return true
+}()
+
 final class OngoingCallContext {
     let internalId: CallSessionInternalId
     
@@ -22,6 +31,8 @@ final class OngoingCallContext {
     private let audioSessionDisposable = MetaDisposable()
     
     init(callSessionManager: CallSessionManager, internalId: CallSessionInternalId) {
+        let _ = setupLogs
+        
         self.internalId = internalId
         self.callSessionManager = callSessionManager
         

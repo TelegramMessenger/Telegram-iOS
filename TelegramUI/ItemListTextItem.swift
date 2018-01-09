@@ -20,21 +20,17 @@ class ItemListTextItem: ListViewItem, ItemListItem {
     
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme? = nil, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
-        if let theme = theme {
-            self.theme = theme
-        } else {
-            self.theme = defaultPresentationTheme
-        }
+    init(theme: PresentationTheme, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
+        self.theme = theme
         self.text = text
         self.sectionId = sectionId
         self.linkAction = linkAction
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ItemListTextItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -45,7 +41,7 @@ class ItemListTextItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         guard let node = node as? ItemListTextItemNode else {
             assertionFailure()
             return
@@ -55,7 +51,7 @@ class ItemListTextItem: ListViewItem, ItemListItem {
             let makeLayout = node.asyncLayout()
             
             async {
-                let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                 Queue.mainQueue().async {
                     completion(layout, {
                         apply()
@@ -95,11 +91,11 @@ class ItemListTextItemNode: ListViewItemNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    func asyncLayout() -> (_ item: ItemListTextItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ItemListTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
-        return { item, width, neighbors in
-            let leftInset: CGFloat = 15.0
+        return { item, params, neighbors in
+            let leftInset: CGFloat = 15.0 + params.leftInset
             let verticalInset: CGFloat = 7.0
             
             let attributedText: NSAttributedString
@@ -111,11 +107,11 @@ class ItemListTextItemNode: ListViewItemNode {
                         return (TextNode.UrlAttribute, contents)
                     }))
             }
-            let (titleLayout, titleApply) = makeTitleLayout(attributedText, nil, 0, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             
-            contentSize = CGSize(width: width, height: titleLayout.size.height + verticalInset + verticalInset)
+            contentSize = CGSize(width: params.width, height: titleLayout.size.height + verticalInset + verticalInset)
             let insets = itemListNeighborsGroupedInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

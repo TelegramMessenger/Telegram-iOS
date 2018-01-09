@@ -59,6 +59,7 @@ private final class ChatListInputActivitiesDotsNode: ASDisplayNode {
         animation.duration = 0.54
         animation.repeatCount = Float.infinity
         animation.calculationMode = kCAAnimationDiscrete
+        animation.beginTime = 1.0
         self.layer.add(animation, forKey: "image")
     }
     
@@ -116,11 +117,44 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
         return { [weak self] boundingSize, strings, color, peerId, activities in
             let string: NSAttributedString?
             if !activities.isEmpty {
+                var commonKey: Int32? = activities[0].1.key
+                for i in 1 ..< activities.count {
+                    if activities[i].1.key != commonKey {
+                        commonKey = nil
+                        break
+                    }
+                }
+                
                 if activities.count == 1 {
                     if activities[0].0.id == peerId {
-                        string = NSAttributedString(string: strings.DialogList_Typing, font: textFont, textColor: color)
+                        let text: String
+                        switch activities[0].1 {
+                            case .uploadingVideo:
+                                text = strings.Activity_UploadingVideo
+                            case .uploadingInstantVideo:
+                                text = strings.Activity_UploadingVideoMessage
+                            case .uploadingPhoto:
+                                text = strings.Activity_UploadingPhoto
+                            case .uploadingFile:
+                                text = strings.Activity_UploadingDocument
+                            case .recordingVoice:
+                                text = strings.Activity_RecordingAudio
+                            case .recordingInstantVideo:
+                                text = strings.Activity_RecordingVideoMessage
+                            case .playingGame:
+                                text = strings.Activity_PlayingGame
+                            case .typingText:
+                                text = strings.DialogList_Typing
+                        }
+                        string = NSAttributedString(string: text, font: textFont, textColor: color)
                     } else {
-                        string = NSAttributedString(string: strings.DialogList_SingleTypingSuffix(activities[0].0.compactDisplayTitle).0, font: textFont, textColor: color)
+                        let text: String
+                        if let _ = commonKey, case .typingText = activities[0].1 {
+                            text = strings.DialogList_SingleTypingSuffix(activities[0].0.compactDisplayTitle).0
+                        } else {
+                            text = activities[0].0.compactDisplayTitle
+                        }
+                        string = NSAttributedString(string: text, font: textFont, textColor: color)
                     }
                 } else {
                     string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).0, font: textFont, textColor: color)
@@ -128,7 +162,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
             } else {
                 string = nil
             }
-            let (textLayout, textApply) = makeTextLayout(string, nil, 1, .end, CGSize(width: boundingSize.width - 12.0, height: boundingSize.height), .left, nil, UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: boundingSize.width - 12.0, height: boundingSize.height), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
             
             let dots = getDotsImage(color: color)
             

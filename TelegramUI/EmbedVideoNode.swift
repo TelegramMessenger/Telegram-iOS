@@ -103,7 +103,7 @@ private final class SharedEmbedVideoContext: SharedVideoContext {
         })
         
         if let image = webpage.image {
-            self.thumbnailDisposable = (rawMessagePhoto(account: account, photo: image) |> deliverOnMainQueue).start(next: { [weak self] image in
+            self.thumbnailDisposable = (rawMessagePhoto(postbox: account.postbox, photo: image) |> deliverOnMainQueue).start(next: { [weak self] image in
                 if let strongSelf = self {
                     strongSelf.thumbnail.set(.single(image))
                     strongSelf._ready.set(.single(Void()))
@@ -112,38 +112,6 @@ private final class SharedEmbedVideoContext: SharedVideoContext {
         } else {
             self._ready.set(.single(Void()))
         }
-        
-        /*self.playerView.requestAudioSession = { [weak self] in
-            assert(Queue.mainQueue().isCurrent())
-            if let strongSelf = self, !strongSelf.hasAudioSession {
-                strongSelf.audioSessionDisposable.set(audioSessionManager.push(audioSessionType: .play, overrideSpeaker: false, once: false, activate: {
-                    if let strongSelf = self {
-                        strongSelf.hasAudioSession = true
-                    }
-                }, deactivate: {
-                    return Signal { subscriber in
-                        Queue.mainQueue().async {
-                            if let strongSelf = self, strongSelf.hasAudioSession {
-                                strongSelf.hasAudioSession = false
-                                strongSelf.audioSessionDisposable.set(nil)
-                                strongSelf.playerView.pauseVideo()
-                            }
-                            subscriber.putCompletion()
-                        }
-                        
-                        return EmptyDisposable
-                    }
-                }))
-            }
-        }
-        
-        self.playerView.disposeAudioSession = { [weak self] in
-            assert(Queue.mainQueue().isCurrent())
-            if let strongSelf = self {
-                strongSelf.hasAudioSession = false
-                strongSelf.audioSessionDisposable.set(nil)
-            }
-        }*/
         
         self.playerView.stateSignal()
     }
@@ -332,7 +300,7 @@ final class EmbedVideoNode: OverlayMediaItemNode {
         }
         
         if let image = source.image {
-            self.imageNode.setSignal(account: account, signal: chatMessagePhoto(account: account, photo: image))
+            self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photo: image))
         }
     }
     
@@ -521,11 +489,11 @@ final class EmbedVideoNode: OverlayMediaItemNode {
                                 if next.playing {
                                     status = .playing
                                 } else if next.downloadProgress.isEqual(to: 1.0) {
-                                    status = .buffering(whilePlaying: next.playing)
+                                    status = .buffering(initial: false, whilePlaying: next.playing)
                                 } else {
                                     status = .paused
                                 }
-                                subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: next.duration, timestamp: next.position, status: status))
+                                subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: next.duration, timestamp: next.position, seekId: 0, status: status))
                             }
                         })
                         return ActionDisposable {

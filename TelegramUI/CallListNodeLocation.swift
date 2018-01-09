@@ -34,9 +34,17 @@ struct CallListNodeLocationAndType: Equatable {
     }
 }
 
+enum CallListNodeViewUpdateType {
+    case Initial
+    case Generic
+    case Reload
+    case ReloadAnimated
+    case UpdateVisible
+}
+
 struct CallListNodeViewUpdate {
     let view: CallListView
-    let type: ViewUpdateType
+    let type: CallListNodeViewUpdateType
     let scrollPosition: CallListNodeViewScrollPosition?
 }
 
@@ -48,14 +56,12 @@ func callListViewForLocationAndType(locationAndType: CallListNodeLocationAndType
             }
         case let .changeType(index):
             return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> CallListNodeViewUpdate in
-                let genericType: ViewUpdateType
-                genericType = .Generic
-                return CallListNodeViewUpdate(view: view, type: genericType, scrollPosition: nil)
+                return CallListNodeViewUpdate(view: view, type: .ReloadAnimated, scrollPosition: nil)
             }
         case let .navigation(index):
             var first = true
             return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> CallListNodeViewUpdate in
-                let genericType: ViewUpdateType
+                let genericType: CallListNodeViewUpdateType
                 if first {
                     first = false
                     genericType = .UpdateVisible
@@ -69,7 +75,7 @@ func callListViewForLocationAndType(locationAndType: CallListNodeLocationAndType
             let callScrollPosition: CallListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
             return account.viewTracker.callListView(type: locationAndType.type, index: index, count: 120) |> map { view -> CallListNodeViewUpdate in
-                let genericType: ViewUpdateType
+                let genericType: CallListNodeViewUpdateType
                 let scrollPosition: CallListNodeViewScrollPosition? = first ? callScrollPosition : nil
                 if first {
                     first = false

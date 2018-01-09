@@ -7,7 +7,6 @@ import TelegramCore
 
 private enum ContactListNodeEntryId: Hashable {
     case search
-    case vcard
     case option(index: Int)
     case peerId(Int64)
     
@@ -15,8 +14,6 @@ private enum ContactListNodeEntryId: Hashable {
         switch self {
             case .search:
                 return 0
-            case .vcard:
-                return 1
             case let .option(index):
                 return (index + 2).hashValue
             case let .peerId(peerId):
@@ -33,13 +30,6 @@ private enum ContactListNodeEntryId: Hashable {
             case .search:
                 switch rhs {
                     case .search:
-                        return true
-                    default:
-                        return false
-                }
-            case .vcard:
-                switch rhs {
-                    case .vcard:
                         return true
                     default:
                         return false
@@ -73,7 +63,6 @@ private final class ContactListNodeInteraction {
 
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
-    case vcard(Peer, PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
     case peer(Int, Peer, PeerPresence?, ContactListNameIndexHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings)
     
@@ -81,8 +70,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
         switch self {
             case .search:
                 return .search
-            case .vcard:
-                return .vcard
             case let .option(index, _, _, _):
                 return .option(index: index)
             case let .peer(_, peer, _, _, _, _, _):
@@ -96,10 +83,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     interaction.activateSearch()
                 })
-            case let .vcard(peer, theme, strings):
-                return ContactsVCardItem(theme: theme, strings: strings, account: account, peer: peer, action: { peer in
-                    interaction.openPeer(peer)
-                })
             case let .option(_, option, theme, strings):
                 return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
             case let .peer(_, peer, presence, header, selection, theme, strings):
@@ -109,7 +92,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 } else {
                     status = .none
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: status, selection: selection, hasActiveRevealControls: false, index: nil, header: header, action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     interaction.openPeer(peer)
                 })
         }
@@ -119,12 +102,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
         switch lhs {
             case let .search(lhsTheme, lhsStrings):
                 if case let .search(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
-                    return true
-                } else {
-                    return false
-                }
-            case let .vcard(lhsPeer, lhsTheme, lhsStrings):
-                if case let .vcard(rhsPeer, rhsTheme, rhsStrings) = rhs, arePeersEqual(lhsPeer, rhsPeer), lhsTheme === rhsTheme, lhsStrings === rhsStrings {
                     return true
                 } else {
                     return false
@@ -174,16 +151,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
         switch lhs {
             case .search:
                 return true
-            case .vcard:
-                switch rhs {
-                    case .search, .vcard:
-                        return false
-                    case .peer, .option:
-                        return true
-                }
             case let .option(lhsIndex, _, _, _):
                 switch rhs {
-                    case .search, .vcard:
+                    case .search:
                         return false
                     case let .option(rhsIndex, _, _, _):
                         return lhsIndex < rhsIndex
@@ -192,7 +162,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 }
             case let .peer(lhsIndex, _, _, _, _, _, _):
                 switch rhs {
-                    case .search, .vcard, .option:
+                    case .search, .option:
                         return false
                     case let .peer(rhsIndex, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -244,13 +214,8 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
     var headers: [PeerId: ContactListNameIndexHeader] = [:]
     
     switch presentation {
-        case let .orderedByPresence(displayVCard):
+        case .orderedByPresence:
             entries.append(.search(theme, strings))
-            if displayVCard {
-                if let peer = accountPeer {
-                    entries.append(.vcard(peer, theme, strings))
-                }
-            }
             orderedPeers = peers.sorted(by: { lhs, rhs in
                 let lhsPresence = presences[lhs.id]
                 let rhsPresence = presences[rhs.id]
@@ -318,7 +283,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
                     removeIndices.append(i)
                 }
             case let .personName(first, last, _, _):
-                if first.isEmpty || last.isEmpty {
+                if first.isEmpty && last.isEmpty {
                     removeIndices.append(i)
                 }
         }
@@ -359,18 +324,18 @@ private struct ContactsListNodeTransition {
     let animated: Bool
 }
 
-struct ContactListAdditionalOption: Equatable {
-    let title: String
-    let icon: UIImage?
-    let action: () -> Void
+public struct ContactListAdditionalOption: Equatable {
+    public let title: String
+    public let icon: UIImage?
+    public let action: () -> Void
     
-    static func ==(lhs: ContactListAdditionalOption, rhs: ContactListAdditionalOption) -> Bool {
+    public static func ==(lhs: ContactListAdditionalOption, rhs: ContactListAdditionalOption) -> Bool {
         return lhs.title == rhs.title && lhs.icon === rhs.icon
     }
 }
 
 enum ContactListPresentation {
-    case orderedByPresence(displayVCard: Bool)
+    case orderedByPresence
     case natural(displaySearch: Bool, options: [ContactListAdditionalOption])
     case search(Signal<String, NoError>)
 }
@@ -562,7 +527,9 @@ final class ContactListNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        let insets = layout.insets(options: [.input])
+        var insets = layout.insets(options: [.input])
+        insets.left += layout.safeInsets.left
+        insets.right += layout.safeInsets.right
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)

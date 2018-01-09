@@ -126,13 +126,13 @@ private struct ChangePhoneNumberCodeControllerState: Equatable {
     }
 }
 
-private func changePhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?) -> [ChangePhoneNumberCodeEntry] {
+private func changePhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?, strings: PresentationStrings, theme: AuthorizationTheme) -> [ChangePhoneNumberCodeEntry] {
     var entries: [ChangePhoneNumberCodeEntry] = []
     
     entries.append(.codeEntry(presentationData.theme, state.codeText))
-    var text = authorizationCurrentOptionText(codeData.type).string
+    var text = authorizationCurrentOptionText(codeData.type, strings: presentationData.strings, theme: defaultLightAuthorizationTheme).string
     if let nextType = codeData.nextType {
-        text += "\n\n" + authorizationNextOptionText(nextType, timeout: timeout).string
+        text += "\n\n" + authorizationNextOptionText(nextType, timeout: timeout, strings: presentationData.strings, theme: defaultAuthorizationTheme).0.string
     }
     entries.append(.codeInfo(presentationData.theme, text))
     
@@ -277,7 +277,7 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(formatPhoneNumber(phoneNumber)), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: changePhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, codeData: data, timeout: timeout), style: .blocks, focusItemTag: ChangePhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(entries: changePhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, codeData: data, timeout: timeout, strings: presentationData.strings, theme: defaultLightAuthorizationTheme), style: .blocks, focusItemTag: ChangePhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

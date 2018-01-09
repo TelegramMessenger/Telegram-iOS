@@ -12,12 +12,8 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     let updated: (Bool) -> Void
     
-    init(theme: PresentationTheme? = nil, title: String, value: Bool, enabled: Bool = true, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
-        if let theme = theme {
-            self.theme = theme
-        } else {
-            self.theme = defaultPresentationTheme
-        }
+    init(theme: PresentationTheme, title: String, value: Bool, enabled: Bool = true, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
+        self.theme = theme
         self.title = title
         self.value = value
         self.enabled = enabled
@@ -26,10 +22,10 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
         self.updated = updated
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ItemListSwitchItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -40,13 +36,13 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ItemListSwitchItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             var animated = true
@@ -102,16 +98,18 @@ class ItemListSwitchItemNode: ListViewItemNode {
         (self.switchNode.view as? UISwitch)?.addTarget(self, action: #selector(self.switchValueChanged(_:)), for: .valueChanged)
     }
     
-    func asyncLayout() -> (_ item: ItemListSwitchItem, _ width: CGFloat, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ItemListSwitchItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         let currentItem = self.item
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
-        return { item, width, neighbors in
+        return { item, params, neighbors in
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
+            let itemBackgroundColor: UIColor
+            let itemSeparatorColor: UIColor
             
             var updatedTheme: PresentationTheme?
             
@@ -121,19 +119,23 @@ class ItemListSwitchItemNode: ListViewItemNode {
             
             switch item.style {
                 case .plain:
-                    contentSize = CGSize(width: width, height: 44.0)
+                    itemBackgroundColor = item.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                    contentSize = CGSize(width: params.width, height: 44.0)
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
-                    contentSize = CGSize(width: width, height: 44.0)
+                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+                    contentSize = CGSize(width: params.width, height: 44.0)
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), nil, 1, .end, CGSize(width: width - 80, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 80.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
                     currentDisabledOverlayNode = ASDisplayNode()
-                    currentDisabledOverlayNode?.backgroundColor = item.theme.list.itemBackgroundColor.withAlphaComponent(0.5)
+                    currentDisabledOverlayNode?.backgroundColor = itemBackgroundColor.withAlphaComponent(0.5)
                 }
             } else {
                 currentDisabledOverlayNode = nil
@@ -171,9 +173,9 @@ class ItemListSwitchItemNode: ListViewItemNode {
                     }
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         
                         strongSelf.switchNode.frameColor = item.theme.list.itemSwitchColors.frameColor
                         strongSelf.switchNode.contentColor = item.theme.list.itemSwitchColors.contentColor
@@ -186,7 +188,7 @@ class ItemListSwitchItemNode: ListViewItemNode {
                     
                     switch item.style {
                         case .plain:
-                            leftInset = 35.0
+                            leftInset = 35.0 + params.leftInset
                             
                             if strongSelf.backgroundNode.supernode != nil {
                                 strongSelf.backgroundNode.removeFromSupernode()
@@ -198,9 +200,9 @@ class ItemListSwitchItemNode: ListViewItemNode {
                                 strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
                             }
                             
-                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: width - leftInset, height: separatorHeight))
+                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                         case .blocks:
-                            leftInset = 16.0
+                            leftInset = 16.0 + params.leftInset
                             
                             if strongSelf.backgroundNode.supernode == nil {
                                 strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -220,12 +222,12 @@ class ItemListSwitchItemNode: ListViewItemNode {
                             let bottomStripeInset: CGFloat
                             switch neighbors.bottom {
                                 case .sameSection(false):
-                                    bottomStripeInset = 16.0
+                                    bottomStripeInset = 16.0 + params.leftInset
                                 default:
                                     bottomStripeInset = 0.0
                             }
                             
-                            strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                            strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                             strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     }
@@ -237,7 +239,7 @@ class ItemListSwitchItemNode: ListViewItemNode {
                         }
                         let switchSize = switchView.bounds.size
                         
-                        strongSelf.switchNode.frame = CGRect(origin: CGPoint(x: width - switchSize.width - 15.0, y:6.0), size: switchSize)
+                        strongSelf.switchNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - switchSize.width - 15.0, y:6.0), size: switchSize)
                         if switchView.isOn != item.value {
                             switchView.setOn(item.value, animated: animated)
                         }

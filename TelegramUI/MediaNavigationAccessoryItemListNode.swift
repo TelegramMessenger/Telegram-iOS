@@ -64,10 +64,11 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                                     }
                                 }
                             }
-                            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessageSelection: { _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, openMessageShareMenu: { _ in
-                        }, presentController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, automaticMediaDownloadSettings: .none)
+                            return false
+                            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, openMessageShareMenu: { _ in
+                        }, presentController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in }, canSetupReply: { return false },  automaticMediaDownloadSettings: .none)
                         
-                        let listNode = ChatHistoryListNode(account: account, peerId: updatedPlaylistPeerId, tagMask: .music, messageId: nil, controllerInteraction: controllerInteraction, mode: .list)
+                        let listNode = ChatHistoryListNode(account: account, chatLocation: .peer(updatedPlaylistPeerId), tagMask: .music, messageId: nil, controllerInteraction: controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: false))
                         listNode.preloadPages = true
                         self.listNode = listNode
                         self.contentNode.addSubnode(listNode)
@@ -90,7 +91,7 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                             if let foundItemNode = foundItemNode {
                                 listNode.ensureItemNodeVisible(foundItemNode)
                             } else if let message = listNode.messageInCurrentHistoryView(updatedPlaylistMessageId) {
-                                listNode.scrollToMessage(from: MessageIndex(message), to: MessageIndex(message))
+                                listNode.scrollToMessage(from: MessageIndex(message), to: MessageIndex(message), animated: true)
                             }
                         }
                     }

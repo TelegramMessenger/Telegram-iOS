@@ -3,21 +3,18 @@ import UIKit
 import Display
 
 private func generateCheckImage(partial: Bool, color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 11.0, height: 9.0), contextGenerator: { size, context in
-        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-        context.scaleBy(x: 1.0, y: -1.0)
-        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-        
+    return generateImage(CGSize(width: 11.0, height: 9.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.scaleBy(x: 0.5, y: 0.5)
+        context.translateBy(x: 1.0, y: 1.0)
         context.setStrokeColor(color.cgColor)
-        context.setLineWidth(2.5)
+        context.setLineWidth(0.99)
+        context.setLineCap(.round)
+        context.setLineJoin(.round)
         if partial {
-            let _ = try? drawSvgPath(context, path: "M1,14.5 L2.5,16 L16.4985125,1 ")
+            let _ = try? drawSvgPath(context, path: "M0.5,7 L7,0 S ")
         } else {
-            let _ = try? drawSvgPath(context, path: "M1,10 L7,16 L20.9985125,1 ")
+            let _ = try? drawSvgPath(context, path: "M0,4 L2.95157047,6.95157047 L2.95157047,6.95157047 C2.97734507,6.97734507 3.01913396,6.97734507 3.04490857,6.95157047 C3.04548448,6.95099456 3.04604969,6.95040803 3.04660389,6.9498112 L9.5,0 S ")
         }
-        context.strokePath()
     })
 }
 
@@ -51,6 +48,8 @@ public final class PrincipalThemeEssentialGraphics {
     public let chatMessageBackgroundIncomingMergedBottomHighlightedImage: UIImage
     public let chatMessageBackgroundIncomingMergedBothImage: UIImage
     public let chatMessageBackgroundIncomingMergedBothHighlightedImage: UIImage
+    public let chatMessageBackgroundIncomingMergedSideImage: UIImage
+    public let chatMessageBackgroundIncomingMergedSideHighlightedImage: UIImage
     
     public let chatMessageBackgroundOutgoingImage: UIImage
     public let chatMessageBackgroundOutgoingHighlightedImage: UIImage
@@ -60,6 +59,8 @@ public final class PrincipalThemeEssentialGraphics {
     public let chatMessageBackgroundOutgoingMergedBottomHighlightedImage: UIImage
     public let chatMessageBackgroundOutgoingMergedBothImage: UIImage
     public let chatMessageBackgroundOutgoingMergedBothHighlightedImage: UIImage
+    public let chatMessageBackgroundOutgoingMergedSideImage: UIImage
+    public let chatMessageBackgroundOutgoingMergedSideHighlightedImage: UIImage
     
     public let checkBubbleFullImage: UIImage
     public let checkBubblePartialImage: UIImage
@@ -102,6 +103,11 @@ public final class PrincipalThemeEssentialGraphics {
         self.chatMessageBackgroundOutgoingMergedBottomHighlightedImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillHighlightedColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .bottom)
         self.chatMessageBackgroundOutgoingMergedBothImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .both)
         self.chatMessageBackgroundOutgoingMergedBothHighlightedImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillHighlightedColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .both)
+
+        self.chatMessageBackgroundIncomingMergedSideImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillColor, strokeColor: bubble.incomingStrokeColor, neighbors: .side)
+        self.chatMessageBackgroundOutgoingMergedSideImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .side)
+        self.chatMessageBackgroundIncomingMergedSideHighlightedImage = messageBubbleImage(incoming: true, fillColor: bubble.incomingFillHighlightedColor, strokeColor: bubble.incomingStrokeColor, neighbors: .side)
+        self.chatMessageBackgroundOutgoingMergedSideHighlightedImage = messageBubbleImage(incoming: false, fillColor: bubble.outgoingFillHighlightedColor, strokeColor: bubble.outgoingStrokeColor, neighbors: .side)
         
         self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.bubble.outgoingCheckColor)!
         self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.bubble.outgoingCheckColor)!

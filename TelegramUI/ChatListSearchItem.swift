@@ -20,7 +20,7 @@ class ChatListSearchItem: ListViewItem {
         self.activate = activate
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatListSearchItemNode()
             node.placeholder = self.placeholder
@@ -30,7 +30,7 @@ class ChatListSearchItem: ListViewItem {
             if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
                 nextIsPinned = true
             }
-            let (layout, apply) = makeLayout(self, width, nextIsPinned)
+            let (layout, apply) = makeLayout(self, params, nextIsPinned)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -44,7 +44,7 @@ class ChatListSearchItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ChatListSearchItemNode {
             Queue.mainQueue().async {
                 let layout = node.asyncLayout()
@@ -53,7 +53,7 @@ class ChatListSearchItem: ListViewItem {
                     if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
                         nextIsPinned = true
                     }
-                    let (nodeLayout, apply) = layout(self, width, nextIsPinned)
+                    let (nodeLayout, apply) = layout(self, params, nextIsPinned)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply(animation.isAnimated)
@@ -83,28 +83,30 @@ class ChatListSearchItemNode: ListViewItemNode {
         self.addSubnode(self.searchBarNode)
     }
     
-    override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         let makeLayout = self.asyncLayout()
         var nextIsPinned = false
         if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
             nextIsPinned = true
         }
-        let (layout, apply) = makeLayout(item as! ChatListSearchItem, width, nextIsPinned)
+        let (layout, apply) = makeLayout(item as! ChatListSearchItem, params, nextIsPinned)
         apply(false)
         self.contentSize = layout.contentSize
         self.insets = layout.insets
     }
     
-    func asyncLayout() -> (_ item: ChatListSearchItem, _ width: CGFloat, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ChatListSearchItem, _ params: ListViewItemLayoutParams, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let searchBarNodeLayout = self.searchBarNode.asyncLayout()
         let placeholder = self.placeholder
         
-        return { item, width, nextIsPinned in
+        return { item, params, nextIsPinned in
+            let baseWidth = params.width - params.leftInset - params.rightInset
+            
             let backgroundColor = nextIsPinned ? item.theme.chatList.pinnedItemBackgroundColor : item.theme.chatList.itemBackgroundColor
             
-            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: UIColor(rgb: 0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude), UIColor(rgb: 0x8e8e93), nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, backgroundColor)
+            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth - 16.0, height: CGFloat.greatestFiniteMagnitude), UIColor(rgb: 0x8e8e93), nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, backgroundColor)
             
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 44.0 + 4.0), insets: UIEdgeInsets())
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 44.0), insets: UIEdgeInsets())
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
@@ -115,10 +117,10 @@ class ChatListSearchItemNode: ListViewItemNode {
                         transition = .immediate
                     }
                     
-                    strongSelf.searchBarNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 8.0), size: CGSize(width: width - 16.0, height: 28.0))
+                    strongSelf.searchBarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 8.0, y: 8.0), size: CGSize(width: baseWidth - 16.0, height: 28.0))
                     searchBarApply()
                     
-                    strongSelf.searchBarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: width - 16.0, height: 28.0))
+                    strongSelf.searchBarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: baseWidth - 16.0, height: 28.0))
                     
                     transition.updateBackgroundColor(node: strongSelf, color: backgroundColor)
                 }

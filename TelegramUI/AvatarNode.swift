@@ -6,17 +6,21 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 
+private let savedMessagesIcon = UIImage(bundleImageName: "Avatar/SavedMessagesIcon")?.precomposed()
+
 private class AvatarNodeParameters: NSObject {
     let accountPeerId: PeerId?
     let peerId: PeerId?
     let letters: [String]
     let font: UIFont
+    let savedMessagesIcon: Bool
     
-    init(accountPeerId: PeerId?, peerId: PeerId?, letters: [String], font: UIFont) {
+    init(accountPeerId: PeerId?, peerId: PeerId?, letters: [String], font: UIFont, savedMessagesIcon: Bool) {
         self.accountPeerId = accountPeerId
         self.peerId = peerId
         self.letters = letters
         self.font = font
+        self.savedMessagesIcon = savedMessagesIcon
         
         super.init()
     }
@@ -25,14 +29,19 @@ private class AvatarNodeParameters: NSObject {
 private let gradientColors: [NSArray] = [
     [UIColor(rgb: 0xff516a).cgColor, UIColor(rgb: 0xff885e).cgColor],
     [UIColor(rgb: 0xffa85c).cgColor, UIColor(rgb: 0xffcd6a).cgColor],
-    [UIColor(rgb: 0x54cb68).cgColor, UIColor(rgb: 0xa0de7e).cgColor],
-    [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor],
     [UIColor(rgb: 0x665fff).cgColor, UIColor(rgb: 0x82b1ff).cgColor],
+    [UIColor(rgb: 0x54cb68).cgColor, UIColor(rgb: 0xa0de7e).cgColor],
+    [UIColor(rgb: 0x4acccd).cgColor, UIColor(rgb: 0x00fcfd).cgColor],
+    [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor],
     [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
 ]
 
 private let grayscaleColors: NSArray = [
     UIColor(rgb: 0xefefef).cgColor, UIColor(rgb: 0xeeeeee).cgColor
+]
+    
+private let savedMessagesColors: NSArray = [
+    UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor
 ]
 
 private enum AvatarNodeState: Equatable {
@@ -54,12 +63,18 @@ private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
     }
 }
 
+public enum AvatarNodeImageOverride {
+    case none
+    case image(TelegramMediaImageRepresentation)
+    case savedMessagesIcon
+}
+
 public final class AvatarNode: ASDisplayNode {
     var font: UIFont {
         didSet {
             if oldValue !== font {
                 if let parameters = self.parameters {
-                    self.parameters = AvatarNodeParameters(accountPeerId: parameters.accountPeerId, peerId: parameters.peerId, letters: parameters.letters, font: self.font)
+                    self.parameters = AvatarNodeParameters(accountPeerId: parameters.accountPeerId, peerId: parameters.peerId, letters: parameters.letters, font: self.font, savedMessagesIcon: parameters.savedMessagesIcon)
                 }
                 
                 if !self.displaySuspended {
@@ -111,10 +126,19 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func setPeer(account: Account, peer: Peer, temporaryRepresentation: TelegramMediaImageRepresentation? = nil) {
+    public func setPeer(account: Account, peer: Peer, overrideImage: AvatarNodeImageOverride? = nil) {
         var representation: TelegramMediaImageRepresentation?
-        if let temporaryRepresentation = temporaryRepresentation {
-            representation = temporaryRepresentation
+        var savedMessagesIcon = false
+        if let overrideImage = overrideImage {
+            switch overrideImage {
+                case .none:
+                    representation = nil
+                case let .image(image):
+                    representation = image
+                case .savedMessagesIcon:
+                    representation = nil
+                    savedMessagesIcon = true
+            }
         } else {
             representation = peer.smallProfileImage
         }
@@ -122,17 +146,20 @@ public final class AvatarNode: ASDisplayNode {
         if updatedState != self.state {
             self.state = updatedState
             
-            let parameters = AvatarNodeParameters(accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font)
+            let parameters = AvatarNodeParameters(accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, savedMessagesIcon: savedMessagesIcon)
             
             self.displaySuspended = true
             self.contents = nil
             
-            if let signal = peerAvatarImage(account: account, peer: peer, temporaryRepresentation: temporaryRepresentation) {
+            if let signal = peerAvatarImage(account: account, representation: representation) {
                 self.imageReady.set(self.imageNode.ready)
                 self.imageNode.setSignal(signal)
             } else {
                 self.imageReady.set(.single(true))
                 self.displaySuspended = false
+                if self.isNodeLoaded {
+                    self.imageNode.contents = nil
+                }
             }
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters
@@ -146,7 +173,7 @@ public final class AvatarNode: ASDisplayNode {
         if updatedState != self.state {
             self.state = updatedState
             
-            let parameters = AvatarNodeParameters(accountPeerId: nil, peerId: nil, letters: letters, font: self.font)
+            let parameters = AvatarNodeParameters(accountPeerId: nil, peerId: nil, letters: letters, font: self.font, savedMessagesIcon: false)
             
             self.displaySuspended = true
             self.contents = nil
@@ -193,7 +220,9 @@ public final class AvatarNode: ASDisplayNode {
         }
         
         let colorsArray: NSArray
-        if colorIndex == -1 {
+        if let parameters = parameters as? AvatarNodeParameters, parameters.savedMessagesIcon {
+            colorsArray = savedMessagesColors
+        } else if colorIndex == -1 {
             colorsArray = grayscaleColors
         } else {
             colorsArray = gradientColors[colorIndex % gradientColors.count]
@@ -209,23 +238,34 @@ public final class AvatarNode: ASDisplayNode {
         context.setBlendMode(.normal)
         
         if let parameters = parameters as? AvatarNodeParameters {
-            let letters = parameters.letters
-            let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
-            let attributedString = NSAttributedString(string: string, attributes: [NSAttributedStringKey.font: parameters.font, NSAttributedStringKey.foregroundColor: UIColor.white])
-            
-            let line = CTLineCreateWithAttributedString(attributedString)
-            let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
-            
-            let lineOffset = CGPoint(x: string == "B" ? 1.0 : 0.0, y: 0.0)
-            let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (bounds.size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (bounds.size.height - lineBounds.size.height) / 2.0))
-            
-            context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
-            context.scaleBy(x: 1.0, y: -1.0)
-            context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
-            
-            context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
-            CTLineDraw(line, context)
-            context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+            if parameters.savedMessagesIcon {
+                let factor = bounds.size.width / 60.0
+                context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                context.scaleBy(x: factor, y: -factor)
+                context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                
+                if let savedMessagesIcon = savedMessagesIcon {
+                    context.draw(savedMessagesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - savedMessagesIcon.size.width) / 2.0), y: floor((bounds.size.height - savedMessagesIcon.size.height) / 2.0)), size: savedMessagesIcon.size))
+                }
+            } else {
+                let letters = parameters.letters
+                let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
+                let attributedString = NSAttributedString(string: string, attributes: [NSAttributedStringKey.font: parameters.font, NSAttributedStringKey.foregroundColor: UIColor.white])
+                
+                let line = CTLineCreateWithAttributedString(attributedString)
+                let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+                
+                let lineOffset = CGPoint(x: string == "B" ? 1.0 : 0.0, y: 0.0)
+                let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (bounds.size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (bounds.size.height - lineBounds.size.height) / 2.0))
+                
+                context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                
+                context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
+                CTLineDraw(line, context)
+                context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+            }
         }
     }
     

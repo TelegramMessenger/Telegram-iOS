@@ -507,7 +507,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                             }
                         }
                     } else {
-                        emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
+                        emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
                     }
                 case .manage:
                     title = presentationData.strings.PrivacySettings_TwoStepAuth

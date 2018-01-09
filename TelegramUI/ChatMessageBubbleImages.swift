@@ -6,6 +6,7 @@ enum MessageBubbleImageNeighbors {
     case top
     case bottom
     case both
+    case side
 }
 
 func messageSingleBubbleLikeImage(fillColor: UIColor, strokeColor: UIColor) -> UIImage {
@@ -30,7 +31,7 @@ func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor
         
         let additionalOffset: CGFloat
         switch neighbors {
-            case .none, .bottom:
+            case .none, .side, .bottom:
                 additionalOffset = 0.0
             case .both, .top:
                 additionalOffset = 6.0
@@ -48,6 +49,11 @@ func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor
         
         switch neighbors {
             case .none:
+                let _ = try? drawSvgPath(context, path: "M6,17.5 C6,7.83289181 13.8350169,0 23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41102995e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
+                context.strokePath()
+                let _ = try? drawSvgPath(context, path: "M6,17.5 C6,7.83289181 13.8350169,0 23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41102995e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
+                context.fillPath()
+            case .side:
                 let _ = try? drawSvgPath(context, path: "M6,17.5 C6,7.83289181 13.8350169,0 23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41102995e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
                 context.strokePath()
                 let _ = try? drawSvgPath(context, path: "M6,17.5 C6,7.83289181 13.8350169,0 23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41102995e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
@@ -78,7 +84,7 @@ enum MessageBubbleActionButtonPosition {
     case bottomSingle
 }
 
-func messageBubbleActionButtonImage(color: UIColor, position: MessageBubbleActionButtonPosition) -> UIImage {
+func messageBubbleActionButtonImage(color: UIColor, strokeColor: UIColor, position: MessageBubbleActionButtonPosition) -> UIImage {
     let largeRadius: CGFloat = 17.0
     let smallRadius: CGFloat = 6.0
     let size: CGSize
@@ -96,11 +102,28 @@ func messageBubbleActionButtonImage(color: UIColor, position: MessageBubbleActio
             context.scaleBy(x: 1.0, y: -1.0)
         }
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-        context.setFillColor(color.cgColor)
         context.setBlendMode(.copy)
+        var effectiveStrokeColor: UIColor?
+        var strokeAlpha: CGFloat = 0.0
+        strokeColor.getRed(nil, green: nil, blue: nil, alpha: &strokeAlpha)
+        if !strokeAlpha.isZero {
+            effectiveStrokeColor = strokeColor
+        }
+        context.setFillColor(color.cgColor)
+        let lineWidth: CGFloat = 1.0
+        let halfLineWidth = lineWidth / 2.0
+        if let effectiveStrokeColor = effectiveStrokeColor {
+            context.setStrokeColor(effectiveStrokeColor.cgColor)
+            context.setLineWidth(lineWidth)
+        }
         switch position {
             case .middle:
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                if effectiveStrokeColor != nil {
+                    context.setBlendMode(.normal)
+                    context.strokeEllipse(in: CGRect(origin: CGPoint(x: halfLineWidth, y: halfLineWidth), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
+                    context.setBlendMode(.copy)
+                }
             case .bottomLeft, .bottomRight:
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: smallRadius + smallRadius, height: smallRadius + smallRadius)))
@@ -114,12 +137,45 @@ func messageBubbleActionButtonImage(color: UIColor, position: MessageBubbleActio
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - smallRadius - smallRadius, y: size.height - smallRadius - smallRadius), size: CGSize(width: smallRadius + smallRadius, height: smallRadius + smallRadius)))
                 context.fill(CGRect(origin: CGPoint(x: largeRadius, y: size.height - largeRadius - largeRadius), size: CGSize(width: size.width - smallRadius - largeRadius, height: largeRadius + largeRadius)))
                 context.fill(CGRect(origin: CGPoint(x: size.width - smallRadius, y: size.height - largeRadius), size: CGSize(width: smallRadius, height: largeRadius - smallRadius)))
+                if effectiveStrokeColor != nil {
+                    context.setBlendMode(.normal)
+                    context.beginPath()
+                    context.move(to: CGPoint(x: halfLineWidth, y: smallRadius + halfLineWidth))
+                    context.addArc(tangent1End: CGPoint(x: halfLineWidth, y: halfLineWidth), tangent2End: CGPoint(x: halfLineWidth + smallRadius, y: halfLineWidth), radius: smallRadius)
+                    context.addLine(to: CGPoint(x: size.width - smallRadius, y: halfLineWidth))
+                    context.addArc(tangent1End: CGPoint(x: size.width - halfLineWidth, y: halfLineWidth), tangent2End: CGPoint(x: size.width - halfLineWidth, y: halfLineWidth + smallRadius), radius: smallRadius)
+                    context.addLine(to: CGPoint(x: size.width - halfLineWidth, y: size.height - halfLineWidth - smallRadius))
+                    context.addArc(tangent1End: CGPoint(x: size.width - halfLineWidth, y: size.height - halfLineWidth), tangent2End: CGPoint(x: size.width - halfLineWidth - smallRadius, y: size.height - halfLineWidth), radius: smallRadius)
+                    context.addLine(to: CGPoint(x: halfLineWidth + largeRadius, y: size.height - halfLineWidth))
+                    context.addArc(tangent1End: CGPoint(x: halfLineWidth, y: size.height - halfLineWidth), tangent2End: CGPoint(x: halfLineWidth, y: size.height - halfLineWidth - largeRadius), radius: largeRadius)
+                    
+                    context.closePath()
+                    context.strokePath()
+                    context.setBlendMode(.copy)
+                }
             case .bottomSingle:
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: smallRadius + smallRadius, height: smallRadius + smallRadius)))
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - smallRadius - smallRadius, y: 0.0), size: CGSize(width: smallRadius + smallRadius, height: smallRadius + smallRadius)))
                 context.fill(CGRect(origin: CGPoint(x: smallRadius, y: 0.0), size: CGSize(width: size.width - smallRadius - smallRadius, height: smallRadius + smallRadius)))
                 context.fill(CGRect(origin: CGPoint(x: 0.0, y: smallRadius), size: CGSize(width: size.width, height: size.height - largeRadius - smallRadius)))
+            
+                if effectiveStrokeColor != nil {
+                    context.setBlendMode(.normal)
+                    context.beginPath()
+                    context.move(to: CGPoint(x: halfLineWidth, y: smallRadius + halfLineWidth))
+                    context.addArc(tangent1End: CGPoint(x: halfLineWidth, y: halfLineWidth), tangent2End: CGPoint(x: halfLineWidth + smallRadius, y: halfLineWidth), radius: smallRadius)
+                    context.addLine(to: CGPoint(x: size.width - smallRadius, y: halfLineWidth))
+                    context.addArc(tangent1End: CGPoint(x: size.width - halfLineWidth, y: halfLineWidth), tangent2End: CGPoint(x: size.width - halfLineWidth, y: halfLineWidth + smallRadius), radius: smallRadius)
+                    context.addLine(to: CGPoint(x: size.width - halfLineWidth, y: size.height - halfLineWidth - largeRadius))
+                    context.addArc(tangent1End: CGPoint(x: size.width - halfLineWidth, y: size.height - halfLineWidth), tangent2End: CGPoint(x: size.width - halfLineWidth - largeRadius, y: size.height - halfLineWidth), radius: largeRadius)
+                    context.addLine(to: CGPoint(x: halfLineWidth + largeRadius, y: size.height - halfLineWidth))
+                    context.addArc(tangent1End: CGPoint(x: halfLineWidth, y: size.height - halfLineWidth), tangent2End: CGPoint(x: halfLineWidth, y: size.height - halfLineWidth - largeRadius), radius: largeRadius)
+                    
+                    context.closePath()
+                    context.strokePath()
+                    context.setBlendMode(.copy)
+                }
         }
     })!.stretchableImage(withLeftCapWidth: Int(size.width / 2.0), topCapHeight: Int(size.height / 2.0))
 }

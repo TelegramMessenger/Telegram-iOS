@@ -183,7 +183,7 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
     
-    func seek(timestamp: Double) -> Signal<MediaFrameSourceSeekResult, MediaFrameSourceSeekError> {
+    func seek(timestamp: Double) -> Signal<QueueLocalObject<MediaFrameSourceSeekResult>, MediaFrameSourceSeekError> {
         assert(self.queue.isCurrent())
         
         return Signal { subscriber in
@@ -202,19 +202,25 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                 context.seek(timestamp: timestamp, completed: { streamDescriptions, timestamp in
                     queue.async {
                         if let strongSelf = self {
-                            var audioBuffer: MediaTrackFrameBuffer?
-                            var videoBuffer: MediaTrackFrameBuffer?
-                            
-                            if let audio = streamDescriptions.audio {
-                                audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, duration: audio.duration, rotationAngle: 0.0)
-                            }
-                            
-                            if let video = streamDescriptions.video {
-                                videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, duration: video.duration, rotationAngle: video.rotationAngle)
-                            }
-                            
                             strongSelf.requestedFrameGenerationTimestamp = nil
-                            subscriber.putNext(MediaFrameSourceSeekResult(buffers: MediaPlaybackBuffers(audioBuffer: audioBuffer, videoBuffer: videoBuffer), timestamp: timestamp))
+                            subscriber.putNext(QueueLocalObject(queue: queue, generate: {
+                                if let strongSelf = self {
+                                    var audioBuffer: MediaTrackFrameBuffer?
+                                    var videoBuffer: MediaTrackFrameBuffer?
+                                    
+                                    if let audio = streamDescriptions.audio {
+                                        audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, duration: audio.duration, rotationAngle: 0.0, aspect: 1.0)
+                                    }
+                                    
+                                    if let video = streamDescriptions.video {
+                                        videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect)
+                                    }
+                                    
+                                    return MediaFrameSourceSeekResult(buffers: MediaPlaybackBuffers(audioBuffer: audioBuffer, videoBuffer: videoBuffer), timestamp: timestamp)
+                                } else {
+                                    return MediaFrameSourceSeekResult(buffers: MediaPlaybackBuffers(audioBuffer: nil, videoBuffer: nil), timestamp: timestamp)
+                                }
+                            }))
                             subscriber.putCompletion()
                         }
                     }

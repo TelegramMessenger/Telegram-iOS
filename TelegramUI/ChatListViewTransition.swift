@@ -53,7 +53,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
         if let fromView = fromView {
             previousCount = fromView.filteredEntries.count
         } else {
-            previousCount = 0;
+            previousCount = 0
         }
         for index in deleteIndices {
             adjustedDeleteIndices.append(ListViewDeleteItem(index: previousCount - 1 - index, directionHint: nil))
@@ -79,20 +79,22 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                     }
                 }
             
-                var minTimestamp: Int32 = Int32.max
-                var maxTimestamp: Int32 = 0
+                var minTimestamp: Int32?
+                var maxTimestamp: Int32?
                 for (_, item, _) in indicesAndItems {
-                    let timestamp = item.index.messageIndex.timestamp
-                    
-                    if timestamp < minTimestamp {
-                        minTimestamp = timestamp
-                    }
-                    if timestamp > maxTimestamp {
-                        maxTimestamp = timestamp
+                    if case .PeerEntry = item {
+                        let timestamp = item.index.messageIndex.timestamp
+                        
+                        if minTimestamp == nil || timestamp < minTimestamp! {
+                            minTimestamp = timestamp
+                        }
+                        if maxTimestamp == nil || timestamp > maxTimestamp! {
+                            maxTimestamp = timestamp
+                        }
                     }
                 }
             
-                if abs(maxTimestamp - minTimestamp) > 60 * 60 {
+                if let minTimestamp = minTimestamp, let maxTimestamp = maxTimestamp, abs(maxTimestamp - minTimestamp) > 60 * 60 {
                     let _ = options.insert(.AnimateCrossfade)
                 } else {
                     let _ = options.insert(.AnimateAlpha)
@@ -122,7 +124,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                         }
                     case .UpperToLower:
                         break
-                    case .AroundIndex:
+                    case .AroundId, .AroundIndex:
                         break
                     }
                 }

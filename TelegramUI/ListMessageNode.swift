@@ -15,12 +15,12 @@ class ListMessageNode: ListViewItemNode {
         self.item = item
     }
     
-    override public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
     }
     
-    func asyncLayout() -> (_ item: ListMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
-        return { _, width, _, _, _ in
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 1.0), insets: UIEdgeInsets()), { _ in
+    func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+        return { _, params, _, _, _ in
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 1.0), insets: UIEdgeInsets()), { _ in
                 
             })
         }

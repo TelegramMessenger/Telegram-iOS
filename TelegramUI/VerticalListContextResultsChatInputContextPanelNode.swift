@@ -36,28 +36,28 @@ private enum VerticalChatContextResultsEntryStableId: Hashable {
 }
 
 private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, Identifiable {
-    case action(String)
-    case result(Int, ChatContextResult)
+    case action(PresentationTheme, String)
+    case result(Int, PresentationTheme, ChatContextResult)
     
     var stableId: VerticalChatContextResultsEntryStableId {
         switch self {
             case .action:
                 return .action
-            case let .result(_, result):
+            case let .result(_, _, result):
                 return .result(result)
         }
     }
     
     static func ==(lhs: VerticalListContextResultsChatInputContextPanelEntry, rhs: VerticalListContextResultsChatInputContextPanelEntry) -> Bool {
         switch lhs {
-            case let .action(title):
-                if case .action(title) = rhs {
+        case let .action(lhsTheme, lhsTitle):
+                if case let .action(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme && lhsTitle == rhsTitle {
                     return true
                 } else {
                     return false
                 }
-            case let .result(index, result):
-                if case .result(index, result) = rhs {
+            case let .result(lhsIndex, lhsTheme, lhsResult):
+                if case let .result(rhsIndex, rhsTheme, rhsResult) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsResult == rhsResult {
                     return true
                 } else {
                     return false
@@ -69,11 +69,11 @@ private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, I
         switch lhs {
             case .action:
                 return true
-            case let .result(index, _):
+            case let .result(index, _, _):
                 switch rhs {
                     case .action:
                         return false
-                    case let .result(rhsIndex, _):
+                    case let .result(rhsIndex, _, _):
                         return index < rhsIndex
                 }
         }
@@ -81,10 +81,10 @@ private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, I
     
     func item(account: Account, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult) -> Void) -> ListViewItem {
         switch self {
-            case let .action(title):
-                return VerticalListContextResultsChatInputPanelButtonItem(title: title, pressed: actionSelected)
-            case let .result(_, result):
-                return VerticalListContextResultsChatInputPanelItem(account: account, result: result, resultSelected: resultSelected)
+            case let .action(theme, title):
+                return VerticalListContextResultsChatInputPanelButtonItem(theme: theme, title: title, pressed: actionSelected)
+            case let .result(_, theme, result):
+                return VerticalListContextResultsChatInputPanelItem(account: account, theme: theme, result: result, resultSelected: resultSelected)
         }
     }
 }
@@ -111,17 +111,21 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private var currentEntries: [VerticalListContextResultsChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(VerticalListContextResultsChatInputContextPanelTransition, Bool)] = []
-    private var hasValidLayout = false
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(account: Account) {
+    private var theme: PresentationTheme
+    
+    override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
-        self.listView.keepBottomItemOverscrollBackground = .white
+        self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
         self.listView.isHidden = true
         
-        super.init(account: account)
+        super.init(account: account, theme: theme, strings: strings)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -135,12 +139,12 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         var index = 0
         var resultIds = Set<VerticalChatContextResultsEntryStableId>()
         if let switchPeer = results.switchPeer {
-            let entry: VerticalListContextResultsChatInputContextPanelEntry = .action(switchPeer.text)
+            let entry: VerticalListContextResultsChatInputContextPanelEntry = .action(self.theme, switchPeer.text)
             entries.append(entry)
             resultIds.insert(entry.stableId)
         }
         for result in results.results {
-            let entry: VerticalListContextResultsChatInputContextPanelEntry = .result(index, result)
+            let entry: VerticalListContextResultsChatInputContextPanelEntry = .result(index, self.theme, result)
             if resultIds.contains(entry.stableId) {
                 continue
             } else {
@@ -167,7 +171,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private func enqueueTransition(_ transition: VerticalListContextResultsChatInputContextPanelTransition, firstTime: Bool) {
         enqueuedTransitions.append((transition, firstTime))
         
-        if self.hasValidLayout {
+        if self.validLayout != nil {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
@@ -175,7 +179,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     }
     
     private func dequeueTransition() {
-        if let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let validLayout = self.validLayout, let (transition, firstTime) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
@@ -188,7 +192,9 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             }
             
             var insets = UIEdgeInsets()
-            insets.top = topInsetForLayout(size: self.listView.bounds.size, hasSwitchPeer: self.currentResults?.switchPeer != nil)
+            insets.top = topInsetForLayout(size: validLayout.0, hasSwitchPeer: self.currentResults?.switchPeer != nil)
+            insets.left = validLayout.1
+            insets.right = validLayout.2
             
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default)
             
@@ -221,9 +227,14 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         return max(size.height - minimumItemHeights, 0.0)
     }
     
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+        let hadValidLayout = self.validLayout != nil
+        self.validLayout = (size, leftInset, rightInset)
+        
         var insets = UIEdgeInsets()
         insets.top = self.topInsetForLayout(size: size, hasSwitchPeer: self.currentResults?.switchPeer != nil)
+        insets.left = leftInset
+        insets.right = rightInset
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         
@@ -253,8 +264,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        if !hasValidLayout {
-            hasValidLayout = true
+        if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }

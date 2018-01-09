@@ -22,7 +22,9 @@ final class HashtagSearchController: TelegramController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(account: account)
+        super.init(account: account, navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), enableMediaAccessoryPanel: true)
+        
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         if let peerName = peerName {
             self.title = query + "@" + peerName
@@ -39,10 +41,18 @@ final class HashtagSearchController: TelegramController {
             peerId = .single(nil)
         }
         
+        let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat)
         let foundMessages: Signal<[ChatListSearchEntry], NoError> = peerId
             |> mapToSignal { peerId -> Signal<[ChatListSearchEntry], NoError> in
-                return searchMessages(account: account, peerId: peerId, query: query)
-                    |> map { return $0.map({ .message($0, defaultPresentationTheme, defaultPresentationStrings) }) }
+                let location: SearchMessagesLocation
+                if let peerId = peerId {
+                    location = .peer(peerId: peerId, fromId: nil, tags: nil)
+                } else {
+                    location = .general
+                }
+                let search = searchMessages(account: account, location: location, query: query)
+                return search
+                    |> map { return $0.map({ .message($0, chatListPresentationData) }) }
             }
         
         let interaction = ChatListNodeInteraction(activateSearch: {
@@ -53,16 +63,18 @@ final class HashtagSearchController: TelegramController {
                 if let peer = message.peers[message.id.peerId] {
                     strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(completed: {
                         if let strongSelf = self {
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: message.id.peerId, messageId: message.id))
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(message.id.peerId), messageId: message.id))
                         }
                     }))
                 }
                 strongSelf.controllerNode.listNode.clearHighlightAnimated(true)
             }
+        }, groupSelected: { _ in
         }, setPeerIdWithRevealedOptions: { _, _ in
-        }, setPeerPinned: { _, _ in
+        }, setItemPinned: { _, _ in
         }, setPeerMuted: { _, _ in
         }, deletePeer: { _ in
+        }, updatePeerGrouping: { _, _ in
         })
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
@@ -71,7 +83,7 @@ final class HashtagSearchController: TelegramController {
                 let previousEntries = previousSearchItems.swap(entries)
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, enableHeaders: false, interaction: interaction)
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, account: account, enableHeaders: false, onlyWriteable: false, interaction: interaction)
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })
@@ -87,7 +99,7 @@ final class HashtagSearchController: TelegramController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = HashtagSearchControllerNode(account: self.account)
+        self.displayNode = HashtagSearchControllerNode(account: self.account, theme: self.presentationData.theme)
         
         self.displayNodeDidLoad()
     }

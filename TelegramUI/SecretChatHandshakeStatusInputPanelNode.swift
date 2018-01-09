@@ -39,7 +39,7 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.unblockPeer()
     }
     
-    override func updateLayout(width: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
             
@@ -57,7 +57,7 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
         
         let panelHeight: CGFloat = 47.0
         
-        self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
         return panelHeight
     }

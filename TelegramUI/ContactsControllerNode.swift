@@ -23,7 +23,7 @@ final class ContactsControllerNode: ASDisplayNode {
     
     init(account: Account) {
         self.account = account
-        self.contactListNode = ContactListNode(account: account, presentation: .orderedByPresence(displayVCard: true))
+        self.contactListNode = ContactListNode(account: account, presentation: .orderedByPresence)
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
@@ -75,7 +75,7 @@ final class ContactsControllerNode: ASDisplayNode {
             }
         }
         
-        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), transition: transition)
+        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), transition: transition)
         
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
     }
@@ -97,7 +97,7 @@ final class ContactsControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, openPeer: { [weak self] peerId in
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, openPeer: { [weak self] peerId in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peerId)
                 }

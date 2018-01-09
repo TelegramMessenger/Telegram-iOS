@@ -12,23 +12,25 @@ class ChatListRecentPeersListItem: ListViewItem {
     let account: Account
     let peers: [Peer]
     let peerSelected: (Peer) -> Void
+    let peerLongTapped: (Peer) -> Void
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peers: [Peer], peerSelected: @escaping (Peer) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peers: [Peer], peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void) {
         self.theme = theme
         self.strings = strings
         self.account = account
         self.peers = peers
         self.peerSelected = peerSelected
+        self.peerLongTapped = peerLongTapped
         self.header = nil
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatListRecentPeersListItemNode()
             let makeLayout = node.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(self, width, nextItem != nil)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem != nil)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -36,12 +38,12 @@ class ChatListRecentPeersListItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ChatListRecentPeersListItemNode {
             Queue.mainQueue().async {
                 let layout = node.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(self, width, nextItem != nil)
+                    let (nodeLayout, apply) = layout(self, params, nextItem != nil)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply().1()
@@ -75,21 +77,21 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
         self.addSubnode(self.separatorNode)
     }
     
-    override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = self.item {
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, width, nextItem == nil)
+            let (nodeLayout, nodeApply) = makeLayout(item, params, nextItem == nil)
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply()
         }
     }
     
-    func asyncLayout() -> (_ item: ChatListRecentPeersListItem, _ width: CGFloat, _ last: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, () -> Void)) {
+    func asyncLayout() -> (_ item: ChatListRecentPeersListItem, _ params: ListViewItemLayoutParams, _ last: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, () -> Void)) {
         let currentItem = self.item
         
-        return { [weak self] item, width, last in
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 130.0), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+        return { [weak self] item, params, last in
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 130.0), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
             return (nodeLayout, { [weak self] in
                 var updatedTheme: PresentationTheme?
@@ -102,8 +104,8 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                         strongSelf.item = item
                         
                         if let _ = updatedTheme {
-                            strongSelf.separatorNode.backgroundColor = item.theme.list.itemSeparatorColor
-                            strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                            strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                            strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
                         }
                         
                         let peersNode: ChatListSearchRecentPeersNode
@@ -113,6 +115,8 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                         } else {
                             peersNode = ChatListSearchRecentPeersNode(account: item.account, theme: item.theme, mode: .list, strings: item.strings, peerSelected: { peer in
                                 self?.item?.peerSelected(peer)
+                            }, peerLongTapped: { peer in
+                                self?.item?.peerLongTapped(peer)
                             }, isPeerSelected: { _ in
                                 return false
                             })
@@ -123,6 +127,7 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                         let separatorHeight = UIScreenPixel
                         
                         peersNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
+                        peersNode.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
                         strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))

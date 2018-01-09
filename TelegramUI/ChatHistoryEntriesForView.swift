@@ -2,43 +2,72 @@ import Foundation
 import Postbox
 import TelegramCore
 
-func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, theme: PresentationTheme, strings: PresentationStrings) -> [ChatHistoryEntry] {
+func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData) -> [ChatHistoryEntry] {
     var entries: [ChatHistoryEntry] = []
     
+    var groupBucket: [(Message, Bool, ChatHistoryMessageSelection)] = []
     for entry in view.entries {
         switch entry {
             case let .HoleEntry(hole, _):
+                if !groupBucket.isEmpty {
+                    entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+                    groupBucket.removeAll()
+                }
                 if view.tagMask == nil {
-                    entries.append(.HoleEntry(hole, theme, strings))
+                    entries.append(.HoleEntry(hole, presentationData.theme, presentationData.strings))
                 }
             case let .MessageEntry(message, read, _, monthLocation):
-                var isClearHistory = false
-                if !message.media.isEmpty {
-                    if let action = message.media[0] as? TelegramMediaAction, case .historyCleared = action.action {
-                        isClearHistory = true
+                if groupMessages {
+                    if !groupBucket.isEmpty && message.groupInfo != groupBucket[0].0.groupInfo {
+                        entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+                        groupBucket.removeAll()
                     }
-                }
-                if !isClearHistory {
-                    entries.append(.MessageEntry(message, theme, strings, read, monthLocation))
+                    if let _ = message.groupInfo {
+                        let selection: ChatHistoryMessageSelection
+                        if let selectedMessages = selectedMessages {
+                            selection = .selectable(selected: selectedMessages.contains(message.id))
+                        } else {
+                            selection = .none
+                        }
+                        groupBucket.append((message, read, selection))
+                    } else {
+                        let selection: ChatHistoryMessageSelection
+                        if let selectedMessages = selectedMessages {
+                            selection = .selectable(selected: selectedMessages.contains(message.id))
+                        } else {
+                            selection = .none
+                        }
+                        entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection))
+                    }
+                } else {
+                    let selection: ChatHistoryMessageSelection
+                    if let selectedMessages = selectedMessages {
+                        selection = .selectable(selected: selectedMessages.contains(message.id))
+                    } else {
+                        selection = .none
+                    }
+                    entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection))
                 }
         }
     }
     
+    if !groupBucket.isEmpty {
+        assert(groupMessages)
+        entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+    }
+    
     if let maxReadIndex = view.maxReadIndex, includeUnreadEntry {
-        var inserted = false
         var i = 0
-        let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, theme, strings)
+        let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, presentationData.theme, presentationData.strings)
         for entry in entries {
             if entry > unreadEntry {
-                entries.insert(unreadEntry, at: i)
-                inserted = true
-                
+                if i == 0, case .HoleEntry = entry {
+                } else {
+                    entries.insert(unreadEntry, at: i)
+                }
                 break
             }
             i += 1
-        }
-        if !inserted {
-            //entries.append(.UnreadEntry(maxReadIndex))
         }
     }
     
@@ -52,9 +81,9 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
                 }
             }
             if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
-                entries.insert(.ChatInfoEntry(botInfo.description, theme, strings), at: 0)
+                entries.insert(.ChatInfoEntry(botInfo.description, presentationData.theme, presentationData.strings), at: 0)
             } else if view.entries.isEmpty && includeEmptyEntry {
-                entries.insert(.EmptyChatInfoEntry(theme, strings, view.tagMask), at: 0)
+                entries.insert(.EmptyChatInfoEntry(presentationData.theme, presentationData.strings, view.tagMask), at: 0)
             }
         }
     } else if includeSearchEntry {
@@ -67,14 +96,14 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
                 }
             }
             if hasMessages {
-                entries.append(.SearchEntry(theme, strings))
-            } else if view.entries.isEmpty {
-                if view.tagMask != nil {
-                    entries.insert(.EmptyChatInfoEntry(theme, strings, view.tagMask), at: 0)
-                }
+                entries.append(.SearchEntry(presentationData.theme, presentationData.strings))
             }
         }
     }
     
-    return entries
+    if reverse {
+        return entries.reversed()
+    } else {
+        return entries
+    }
 }

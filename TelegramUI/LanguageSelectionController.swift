@@ -157,7 +157,7 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
         super.init(nibName: nil, bundle: nil)
         
         self.title = self.presentationData.strings.Settings_AppLanguage
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.definesPresentationContext = true
         
@@ -175,7 +175,7 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
                 }
         })
         
-        self.languagesDisposable = (availableLocalizations(network: account.network)
+        self.languagesDisposable = (availableLocalizations(postbox: account.postbox, network: account.network, allowCached: true)
             |> deliverOnMainQueue).start(next: { [weak self] languages in
                 if let strongSelf = self {
                     strongSelf.languages = languages
@@ -198,7 +198,7 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
     
     private func updateThemeAndStrings() {
         self.title = self.presentationData.strings.Settings_AppLanguage
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         if self.isViewLoaded {
             self.searchController.searchBar.placeholder = self.presentationData.strings.Common_Search
@@ -240,7 +240,7 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
         self.searchController.searchBar.barTintColor = self.presentationData.theme.chatList.backgroundColor
         self.searchController.searchBar.tintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
         self.searchController.searchBar.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-        self.searchController.searchBar.setTextColor(self.presentationData.theme.chatList.titleColor)
+    self.searchController.searchBar.setTextColor(self.presentationData.theme.chatList.titleColor)
         
         let searchImage = generateImage(CGSize(width: 8.0, height: 28.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))

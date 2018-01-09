@@ -4,18 +4,23 @@ import Postbox
 import TelegramCore
 import Display
 
-func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: ChatHistoryCombinedInitialReadStateData?) -> Signal<ChatHistoryViewTransition, NoError> {
+func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?) -> Signal<ChatHistoryViewTransition, NoError> {
     return Signal { subscriber in
-        let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
+        let mergeResult: (deleteIndices: [Int], indicesAndItems: [(Int, ChatHistoryEntry, Int?)], updateIndices: [(Int, ChatHistoryEntry, Int)])
+        if reverse {
+            mergeResult = mergeListsStableWithUpdatesReversed(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
+        } else {
+            mergeResult = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
+        }
         
         var adjustedDeleteIndices: [ListViewDeleteItem] = []
         let previousCount: Int
         if let fromView = fromView {
             previousCount = fromView.filteredEntries.count
         } else {
-            previousCount = 0;
+            previousCount = 0
         }
-        for index in deleteIndices {
+        for index in mergeResult.deleteIndices {
             adjustedDeleteIndices.append(ListViewDeleteItem(index: previousCount - 1 - index, directionHint: nil))
         }
         
@@ -41,14 +46,14 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                 let _ = options.insert(.AnimateAlpha)
                 let _ = options.insert(.AnimateInsertion)
                 
-                for (index, _, _) in indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
+                for (index, _, _) in mergeResult.indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
                     let adjustedIndex = updatedCount - 1 - index
                     if adjustedIndex == maxAnimatedInsertionIndex + 1 {
                         maxAnimatedInsertionIndex += 1
                     }
                 }
             case .Reload:
-                break
+                stationaryItemRange = (0, Int.max)
             case let .HoleChanges(filledHoleDirections, removeHoleDirections):
                 if let (_, removeDirection) = removeHoleDirections.first {
                     switch removeDirection {
@@ -71,13 +76,13 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                             }
                         case .UpperToLower:
                             break
-                        case .AroundIndex:
+                        case .AroundId, .AroundIndex:
                             break
                     }
                 }
         }
         
-        for (index, entry, previousIndex) in indicesAndItems {
+        for (index, entry, previousIndex) in mergeResult.indicesAndItems {
             let adjustedIndex = updatedCount - 1 - index
             
             let adjustedPrevousIndex: Int?
@@ -95,7 +100,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
             adjustedIndicesAndItems.append(ChatHistoryViewTransitionInsertEntry(index: adjustedIndex, previousIndex: adjustedPrevousIndex, entry: entry, directionHint: directionHint))
         }
         
-        for (index, entry, previousIndex) in updateIndices {
+        for (index, entry, previousIndex) in mergeResult.updateIndices {
             let adjustedIndex = updatedCount - 1 - index
             let adjustedPreviousIndex = previousCount - 1 - previousIndex
             
@@ -103,7 +108,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
             adjustedUpdateItems.append(ChatHistoryViewTransitionUpdateEntry(index: adjustedIndex, previousIndex: adjustedPreviousIndex, entry: entry, directionHint: directionHint))
         }
         
-        var scrolledToIndex: MessageIndex?
+        var scrolledToIndex: MessageHistoryAnchorIndex?
         
         if let scrollPosition = scrollPosition {
             switch scrollPosition {
@@ -164,7 +169,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     }
                     var index = toView.filteredEntries.count - 1
                     for entry in toView.filteredEntries {
-                        if entry.index >= scrollIndex {
+                        if scrollIndex.isLessOrEqual(to: entry.index) {
                             scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default, directionHint: directionHint)
                             break
                         }
@@ -174,7 +179,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     if scrollToItem == nil {
                         var index = 0
                         for entry in toView.filteredEntries.reversed() {
-                            if entry.index < scrollIndex {
+                            if !scrollIndex.isLess(than: entry.index) {
                                 scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default, directionHint: directionHint)
                                 break
                             }

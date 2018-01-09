@@ -30,7 +30,7 @@ private final class VideoConversionWatcher: TGMediaVideoFileWatcher {
     }
 }
 
-func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, NoError> {
+public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, NoError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)
         
@@ -156,6 +156,53 @@ func fetchLocalFileVideoMediaResource(resource: LocalFileVideoMediaResource) -> 
         }
         
         return ActionDisposable {
+            disposable.dispose()
+        }
+    }
+}
+
+public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResource) -> Signal<Data?, NoError> {
+    return Signal { subscriber in
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [resource.localIdentifier], options: nil)
+        var requestId: PHImageRequestID?
+        let disposable = MetaDisposable()
+        if fetchResult.count != 0 {
+            let asset = fetchResult.object(at: 0)
+            let option = PHVideoRequestOptions()
+            option.deliveryMode = .highQualityFormat
+            
+            let alreadyReceivedAsset = Atomic<Bool>(value: false)
+            requestId = PHImageManager.default().requestAVAsset(forVideo: asset, options: option, resultHandler: { avAsset, _, _ in
+                if alreadyReceivedAsset.swap(true) {
+                    return
+                }
+                
+                var adjustments: TGVideoEditAdjustments?
+                if let videoAdjustments = resource.adjustments {
+                    if let dict = NSKeyedUnarchiver.unarchiveObject(with: videoAdjustments.data.makeData()) as? [AnyHashable : Any] {
+                        adjustments = TGVideoEditAdjustments(dictionary: dict)
+                    }
+                }
+                let signal = TGMediaVideoConverter.hash(for: avAsset, adjustments: adjustments)!
+                let signalDisposable = signal.start(next: { next in
+                    if let next = next as? String, let data = next.data(using: .utf8) {
+                        subscriber.putNext(data)
+                    } else {
+                        subscriber.putNext(nil)
+                    }
+                    subscriber.putCompletion()
+                }, error: { _ in
+                }, completed: nil)
+                disposable.set(ActionDisposable {
+                    signalDisposable?.dispose()
+                })
+            })
+        }
+        
+        return ActionDisposable {
+            if let requestId = requestId {
+                PHImageManager.default().cancelImageRequest(requestId)
+            }
             disposable.dispose()
         }
     }

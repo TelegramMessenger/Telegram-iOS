@@ -5,49 +5,37 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 
-private let iconImage = generateImage(CGSize(width: 26.0, height: 26.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(rgb: 0x9099A2).cgColor)
-    context.setLineWidth(2.0)
-    context.setLineCap(.round)
-    let diameter: CGFloat = 22.0
-    context.strokeEllipse(in: CGRect(origin: CGPoint(x: floor((size.width - diameter) / 2.0), y: floor((size.width - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter)))
-    context.setFillColor(UIColor(rgb: 0x9099A2).cgColor)
-    UIGraphicsPushContext(context)
-    
-    context.setTextDrawingMode(.stroke)
-    context.setLineWidth(0.65)
-    
-    UIGraphicsPopContext()
-})
-
 final class ChatMediaInputTrendingItem: ListViewItem {
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     let selectedItem: () -> Void
+    let theme: PresentationTheme
     
     var selectable: Bool {
         return true
     }
     
-    init(inputNodeInteraction: ChatMediaInputNodeInteraction, selected: @escaping () -> Void) {
+    init(inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
         self.inputNodeInteraction = inputNodeInteraction
         self.selectedItem = selected
+        self.theme = theme
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatMediaInputTrendingItemNode()
             node.contentSize = CGSize(width: 41.0, height: 41.0)
             node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             node.inputNodeInteraction = self.inputNodeInteraction
+            node.updateTheme(theme: self.theme)
             completion(node, {
                 return (nil, {})
             })
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
+            (node as? ChatMediaInputTrendingItemNode)?.updateTheme(theme: self.theme)
         })
     }
     
@@ -61,8 +49,6 @@ private let boundingImageSize = CGSize(width: 30.0, height: 30.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
 private let verticalOffset: CGFloat = 3.0 + UIScreenPixel
 
-private let highlightBackground = generateStretchableFilledCircleImage(radius: 9.0, color: UIColor(rgb: 0x9099A2, alpha: 0.2))
-
 final class ChatMediaInputTrendingItemNode: ListViewItemNode {
     private let imageNode: ASImageNode
     private let highlightNode: ASImageNode
@@ -70,10 +56,11 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
     var currentCollectionId: ItemCollectionId?
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
     
+    var theme: PresentationTheme?
+    
     init() {
         self.highlightNode = ASImageNode()
         self.highlightNode.isLayerBacked = true
-        self.highlightNode.image = highlightBackground
         self.highlightNode.isHidden = true
         
         self.imageNode = ASImageNode()
@@ -81,7 +68,6 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
         
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)
         
-        self.imageNode.image = iconImage
         self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -98,9 +84,13 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
     deinit {
     }
     
-    func updateStickerPackItem(account: Account, item: StickerPackItem?, collectionId: ItemCollectionId) {
-        self.currentCollectionId = collectionId
-        self.updateIsHighlighted()
+    func updateTheme(theme: PresentationTheme) {
+        if self.theme !== theme {
+            self.theme = theme
+            
+            self.highlightNode.image = PresentationResourcesChat.chatMediaInputPanelHighlightedIconImage(theme)
+            self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingIconImage(theme)
+        }
     }
     
     func updateIsHighlighted() {
@@ -109,3 +99,4 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
         }
     }
 }
+

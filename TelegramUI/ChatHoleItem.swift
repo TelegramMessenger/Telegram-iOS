@@ -11,26 +11,26 @@ class ChatHoleItem: ListViewItem {
     let index: MessageIndex
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let header: ChatMessageDateHeader
+    //let header: ChatMessageDateHeader
     
     init(index: MessageIndex, theme: PresentationTheme, strings: PresentationStrings) {
         self.index = index
         self.theme = theme
         self.strings = strings
-        self.header = ChatMessageDateHeader(timestamp: index.timestamp, theme: theme, strings: strings)
+        //self.header = ChatMessageDateHeader(timestamp: index.timestamp, theme: theme, strings: strings)
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatHoleItemNode()
-            node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
+            node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
             completion(node, {
                 return (nil, {})
             })
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
         })
     }
@@ -61,31 +61,31 @@ class ChatHoleItemNode: ListViewItemNode {
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
     }
     
-    override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? ChatHoleItem {
-            let dateAtBottom = !chatItemsHaveCommonDateHeader(item, nextItem)
-            let (layout, apply) = self.asyncLayout()(item, width, dateAtBottom)
+            let dateAtBottom = false//!chatItemsHaveCommonDateHeader(item, nextItem)
+            let (layout, apply) = self.asyncLayout()(item, params, dateAtBottom)
             apply()
             self.contentSize = layout.contentSize
             self.insets = layout.insets
         }
     }
     
-    func asyncLayout() -> (_ item: ChatHoleItem, _ width: CGFloat, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ChatHoleItem, _ params: ListViewItemLayoutParams, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let layoutConstants = self.layoutConstants
         let currentItem = self.item
-        return { item, width, dateAtBottom in
+        return { item, params, dateAtBottom in
             var updatedBackground: UIImage?
             if item.theme !== currentItem?.theme {
                 updatedBackground = PresentationResourcesChat.chatServiceBubbleFillImage(item.theme)
             }
             
-            let (size, apply) = labelLayout(NSAttributedString(string: item.strings.Channel_NotificationLoading, font: titleFont, textColor: item.theme.chat.serviceMessage.serviceMessagePrimaryTextColor), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Channel_NotificationLoading, font: titleFont, textColor: item.theme.chat.serviceMessage.serviceMessagePrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let backgroundSize = CGSize(width: size.size.width + 8.0 + 8.0, height: 20.0)
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 20.0), insets: UIEdgeInsets(top: 4.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 4.0, right: 0.0)), { [weak self] in
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 20.0), insets: UIEdgeInsets(top: 4.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 4.0, right: 0.0)), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
                     
@@ -95,20 +95,20 @@ class ChatHoleItemNode: ListViewItemNode {
                     
                     let _ = apply()
                     
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - backgroundSize.width) / 2.0), y: 0.0), size: backgroundSize)
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.backgroundNode.frame.origin.x + 8.0, y: floorToScreenPixels((backgroundSize.height - size.size.height) / 2.0) - 1.0), size: size.size)
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - backgroundSize.width) / 2.0), y: 0.0), size: backgroundSize)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.backgroundNode.frame.origin.x + 8.0, y: floorToScreenPixels((backgroundSize.height - size.size.height) / 2.0)), size: size.size)
                 }
             })
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
+    /*override public func header() -> ListViewItemHeader? {
         if let item = self.item {
             return item.header
         } else {
             return nil
         }
-    }
+    }*/
     
     override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

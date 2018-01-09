@@ -12,7 +12,7 @@
 
 #define IPAD ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
 
-- (id)initWithFrame:(CGRect)frame headline:(NSString*)headline description:(NSString*)description
+- (id)initWithFrame:(CGRect)frame headline:(NSString*)headline description:(NSString*)description color:(UIColor *)color
 {
     self = [super initWithFrame:frame];
     if (self) {
@@ -26,6 +26,7 @@
         UILabel *headlineLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, frame.size.width, 64+8)];
         headlineLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:IPAD ? 96/2 : 36];
         headlineLabel.text = _headline;
+        headlineLabel.textColor = color;
         headlineLabel.textAlignment = NSTextAlignmentCenter;
         headlineLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleWidth;
         
@@ -72,6 +73,7 @@
         [_description addAttribute:NSParagraphStyleAttributeName
                              value:style
                              range:NSMakeRange(0, _description.length)];
+        [_description addAttribute:NSForegroundColorAttributeName value:color range:NSMakeRange(0, _description.length)];
         
         UILabel *descriptionLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 25 + (IPAD ? 22 : 0), frame.size.width, 120+8+5)];
         descriptionLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:IPAD ? 44/2 : 17];

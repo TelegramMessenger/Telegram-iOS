@@ -26,9 +26,9 @@ private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyCo
     private var controller: LegacyController?
     private var boundController = false
     
-    init(parentController: ViewController?) {
+    init(parentController: ViewController?, theme: PresentationTheme?) {
         self.parentController = parentController
-        self.controller = LegacyController(presentation: .custom)
+        self.controller = LegacyController(presentation: .custom, theme: theme)
         
         super.init()
         
@@ -46,6 +46,18 @@ private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyCo
     
     func bindController(_ controller: UIViewController!) {
         self.contentController = controller
+        controller.state_setNeedsStatusBarAppearanceUpdate({ [weak self, weak controller] in
+            if let parentController = self?.parentController, let controller = controller {
+                if parentController.statusBar.statusBarStyle != .Hide {
+                    self?.controller?.statusBar.statusBarStyle = StatusBarStyle(systemStyle: controller.preferredStatusBarStyle)
+                }
+            }
+        })
+        if let parentController = self.parentController {
+            if parentController.statusBar.statusBarStyle != .Hide {
+                self.controller?.statusBar.statusBarStyle = StatusBarStyle(systemStyle: controller.preferredStatusBarStyle)
+            }
+        }
     }
     
     func context() -> LegacyComponentsContext! {
@@ -68,9 +80,11 @@ private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyCo
 
 final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     private weak var controller: ViewController?
+    private let theme: PresentationTheme?
     
-    init(controller: ViewController?) {
+    init(controller: ViewController?, theme: PresentationTheme?) {
         self.controller = controller
+        self.theme = theme
         
         super.init()
     }
@@ -177,11 +191,16 @@ final class LegacyControllerContext: NSObject, LegacyComponentsContext {
         return nil
     }
     
-    public func presentActionSheet(_ actions: [LegacyComponentsActionSheetAction]!, view: UIView!, completion: ((LegacyComponentsActionSheetAction?) -> Swift.Void)!) {
+    public func presentActionSheet(_ actions: [LegacyComponentsActionSheetAction]!, view: UIView!, completion: ((LegacyComponentsActionSheetAction?) -> Void)!) {
+        
+    }
+    
+    public func presentActionSheet(_ actions: [LegacyComponentsActionSheetAction]!, view: UIView!, sourceRect: (() -> CGRect)!, completion: ((LegacyComponentsActionSheetAction?) -> Void)!) {
+        
     }
     
     func makeOverlayWindowManager() -> LegacyComponentsOverlayWindowManager! {
-        return LegacyComponentsOverlayWindowManagerImpl(parentController: self.controller)
+        return LegacyComponentsOverlayWindowManagerImpl(parentController: self.controller, theme: self.theme)
     }
     
     func applicationStatusBarAlpha() -> CGFloat {
@@ -207,10 +226,32 @@ final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     
     func animateApplicationStatusBarStyleTransition(withDuration duration: TimeInterval) {
     }
+    
+    func safeAreaInset() -> UIEdgeInsets {
+        if let controller = self.controller as? LegacyController, let validLayout = controller.validLayout {
+            return validLayout.safeInsets
+        }
+        return UIEdgeInsets()
+    }
+    
+    func prefersLightStatusBar() -> Bool {
+        if let controller = self.controller {
+            switch controller.statusBar.statusBarStyle {
+                case .Black:
+                    return false
+                case .White:
+                    return true
+                default:
+                    return false
+            }
+        } else {
+            return false
+        }
+    }
 }
 
 public class LegacyController: ViewController {
-    private var legacyController: UIViewController!
+    public private(set) var legacyController: UIViewController!
     private let presentation: LegacyControllerPresentation
     
     private var controllerNode: LegacyControllerNode {
@@ -222,15 +263,21 @@ public class LegacyController: ViewController {
         return self.contextImpl!
     }
     
+    fileprivate var validLayout: ContainerViewLayout?
+    
     var controllerLoaded: (() -> Void)?
     public var presentationCompleted: (() -> Void)?
     
-    public init(presentation: LegacyControllerPresentation) {
+    public init(presentation: LegacyControllerPresentation, theme: PresentationTheme?) {
         self.presentation = presentation
         
         super.init(navigationBarTheme: nil)
         
-        let contextImpl = LegacyControllerContext(controller: self)
+        if let theme = theme {
+            self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        }
+        
+        let contextImpl = LegacyControllerContext(controller: self, theme: theme)
         self.contextImpl = contextImpl
     }
     
@@ -255,9 +302,19 @@ public class LegacyController: ViewController {
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
+        if self.ignoreAppearanceMethodInvocations() {
+            return
+        }
+        
         if self.controllerNode.controllerView == nil {
             self.controllerNode.controllerView = self.legacyController.view
+            if let legacyController = self.legacyController as? TGViewController {
+                legacyController.ignoreAppearEvents = true
+            }
             self.controllerNode.view.insertSubview(self.legacyController.view, at: 0)
+            if let legacyController = self.legacyController as? TGViewController {
+                legacyController.ignoreAppearEvents = false
+            }
             
             if let controllerLoaded = self.controllerLoaded {
                 controllerLoaded()
@@ -270,11 +327,19 @@ public class LegacyController: ViewController {
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
+        if self.ignoreAppearanceMethodInvocations() {
+            return
+        }
+        
         self.legacyController.viewWillDisappear(animated && passControllerAppearanceAnimated(in: false, presentation: self.presentation))
     }
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        
+        if self.ignoreAppearanceMethodInvocations() {
+            return
+        }
         
         switch self.presentation {
             case let .modal(animateIn):
@@ -295,10 +360,16 @@ public class LegacyController: ViewController {
     override public func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
+        if self.ignoreAppearanceMethodInvocations() {
+            return
+        }
+        
         self.legacyController.viewDidDisappear(animated && passControllerAppearanceAnimated(in: false, presentation: self.presentation))
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
+        
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)

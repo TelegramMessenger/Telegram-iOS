@@ -524,7 +524,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         var updatedInsets = layout.intrinsicInsets
         updatedInsets.bottom += BotCheckoutActionButton.diameter + 20.0
-        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: updatedInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight), navigationBarHeight: navigationBarHeight, transition: transition)
+        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), navigationBarHeight: navigationBarHeight, transition: transition)
         
         let actionButtonFrame = CGRect(origin: CGPoint(x: 10.0, y: layout.size.height - 10.0 - BotCheckoutActionButton.diameter), size: CGSize(width: layout.size.width - 20.0, height: BotCheckoutActionButton.diameter))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
@@ -743,7 +743,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
     private func requestPassword(cardTitle: String) {
         let period: Int32
         let requiresBiometrics: Bool
-        if LocalAuth.isTouchIDAvailable {
+        if LocalAuth.biometricAuthentication != nil {
             period = 5 * 60 * 60
             requiresBiometrics = true
         } else {

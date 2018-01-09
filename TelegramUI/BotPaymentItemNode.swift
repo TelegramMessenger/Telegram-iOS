@@ -34,9 +34,9 @@ class BotPaymentItemNode: ASDisplayNode {
     final func updateLayout(theme: PresentationTheme, width: CGFloat, measuredInset: CGFloat, previousItemNode: BotPaymentItemNode?, nextItemNode: BotPaymentItemNode?, transition: ContainedViewLayoutTransition) -> CGFloat {
         if self.theme !== theme {
             self.theme = theme
-            self.backgroundNode.backgroundColor = theme.list.itemBackgroundColor
-            self.topSeparatorNode.backgroundColor = theme.list.itemSeparatorColor
-            self.bottomSeparatorNode.backgroundColor = theme.list.itemSeparatorColor
+            self.backgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
+            self.topSeparatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
+            self.bottomSeparatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
         }
         
         let height = self.layoutContents(theme: theme, width: width, measuredInset: measuredInset, transition: transition)

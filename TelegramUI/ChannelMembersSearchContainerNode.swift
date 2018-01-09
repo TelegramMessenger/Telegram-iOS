@@ -47,7 +47,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
     
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
         let peer = self.peer
-        return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: self.peer, chatPeer: self.peer, status: .none, selection: .none, hasActiveRevealControls: false, index: nil, header: ChatListSearchItemHeader(type: self.section.chatListHeaderType, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+        return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: self.peer, chatPeer: self.peer, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: self.section.chatListHeaderType, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
             peerSelected(peer)
         })
     }
@@ -104,9 +104,9 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         let foundItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ChannelMembersSearchEntry]?, NoError> in
                 if let query = query, !query.isEmpty {
-                    let foundMembers = channelMembers(account: account, peerId: peerId, filter: .search(query))
+                    let foundMembers = channelMembers(postbox: account.postbox, network: account.network, peerId: peerId, filter: .search(query))
                     let foundContacts = account.postbox.searchContacts(query: query.lowercased())
-                    let foundRemotePeers: Signal<[Peer], NoError> = .single([]) |> then(searchPeers(account: account, query: query)
+                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], [])) |> then(searchPeers(account: account, query: query)
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                     
                     return combineLatest(foundMembers, foundContacts, foundRemotePeers, themeAndStringsPromise.get())
@@ -132,7 +132,17 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 }
                             }
                             
-                            for peer in foundRemotePeers {
+                            for foundPeer in foundRemotePeers.0 {
+                                let peer = foundPeer.peer
+                                if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
+                                    existingPeerIds.insert(peer.id)
+                                    entries.append(ChannelMembersSearchEntry(index: index, peer: peer, section: .global))
+                                    index += 1
+                                }
+                            }
+                            
+                            for foundPeer in foundRemotePeers.1 {
+                                let peer = foundPeer.peer
                                 if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                                     existingPeerIds.insert(peer.id)
                                     entries.append(ChannelMembersSearchEntry(index: index, peer: peer, section: .global))

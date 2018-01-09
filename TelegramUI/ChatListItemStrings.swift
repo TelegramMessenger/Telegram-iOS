@@ -89,7 +89,7 @@ public func chatListItemStrings(strings: PresentationStrings, message: Message?,
                     hideAuthor = true
                     switch action.action {
                     case .phoneCall:
-                        if message.effectivelyIncoming {
+                        if message.flags.contains(.Incoming) {
                             messageText = strings.Notification_CallIncoming
                         } else {
                             messageText = strings.Notification_CallOutgoing
@@ -115,13 +115,18 @@ public func chatListItemStrings(strings: PresentationStrings, message: Message?,
             if let secretChat = chatPeer.peers[chatPeer.peerId] as? TelegramSecretChat {
                 switch secretChat.embeddedState {
                     case .active:
-                        messageText = strings.Notification_EncryptedChatAccepted
+                        switch secretChat.role {
+                            case .creator:
+                                messageText = strings.DialogList_EncryptedChatStartedOutgoing(peer?.compactDisplayTitle ?? "").0
+                            case .participant:
+                                messageText = strings.DialogList_EncryptedChatStartedIncoming(peer?.compactDisplayTitle ?? "").0
+                        }
                     case .terminated:
                         messageText = strings.DialogList_EncryptionRejected
                     case .handshake:
                         switch secretChat.role {
                             case .creator:
-                                messageText = strings.Notification_EncryptedChatRequested
+                                messageText = strings.DialogList_AwaitingEncryption(peer?.compactDisplayTitle ?? "").0
                             case .participant:
                                 messageText = strings.DialogList_EncryptionProcessing
                         }

@@ -1,12 +1,14 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import Lottie
 
 struct ItemListRevealOption: Equatable {
     let key: Int32
     let title: String
     let icon: UIImage?
     let color: UIColor
+    let textColor: UIColor
     
     static func ==(lhs: ItemListRevealOption, rhs: ItemListRevealOption) -> Bool {
         if lhs.key != rhs.key {
@@ -16,6 +18,9 @@ struct ItemListRevealOption: Equatable {
             return false
         }
         if !lhs.color.isEqual(rhs.color) {
+            return false
+        }
+        if !lhs.textColor.isEqual(rhs.textColor) {
             return false
         }
         if lhs.icon !== rhs.icon {
@@ -32,13 +37,15 @@ final class ItemListRevealOptionNode: ASDisplayNode {
     private let titleNode: ASTextNode
     private let iconNode: ASImageNode?
     
-    init(title: String, icon: UIImage?, color: UIColor) {
+    private var animView: LOTView?
+    
+    init(title: String, icon: UIImage?, color: UIColor, textColor: UIColor) {
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: title, font: icon == nil ? titleFontWithoutIcon : titleFontWithIcon, textColor: .white)
+        self.titleNode.attributedText = NSAttributedString(string: title, font: icon == nil ? titleFontWithoutIcon : titleFontWithIcon, textColor: textColor)
         
         if let icon = icon {
             let iconNode = ASImageNode()
-            iconNode.image = icon
+            iconNode.image = generateTintedImage(image: icon, color: textColor)
             self.iconNode = iconNode
         } else {
             self.iconNode = nil
@@ -51,6 +58,23 @@ final class ItemListRevealOptionNode: ASDisplayNode {
             self.addSubnode(iconNode)
         }
         self.backgroundColor = color
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        if let url = frameworkBundle.url(forResource: "mute", withExtension: "json") {
+            let animView = LOTAnimationView(contentsOf: url)
+            animView.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
+            self.animView = animView
+            self.view.addSubview(animView)
+            animView.loopAnimation = true
+            animView.logHierarchyKeypaths()
+            animView.setValue(UIColor.green, forKeypath: "Outlines.Group 1.Fill 1.Color", atFrame: 0)
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
+                animView.play()
+            })
+        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -84,6 +108,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
     
     private var optionNodes: [ItemListRevealOptionNode] = []
     private var revealOffset: CGFloat = 0.0
+    private var rightInset: CGFloat = 0.0
     
     init(optionSelected: @escaping (ItemListRevealOption) -> Void) {
         self.optionSelected = optionSelected
@@ -104,7 +129,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
                 node.removeFromSupernode()
             }
             self.optionNodes = options.map { option in
-                return ItemListRevealOptionNode(title: option.title, icon: option.icon, color: option.color)
+                return ItemListRevealOptionNode(title: option.title, icon: option.icon, color: option.color, textColor: option.textColor)
             }
             for node in self.optionNodes {
                 self.addSubnode(node)
@@ -122,14 +147,9 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         return CGSize(width: maxWidth * CGFloat(self.optionNodes.count), height: constrainedSize.height)
     }
     
-    override func layout() {
-        super.layout()
-        
-        self.updateNodesLayout(transition: .immediate)
-    }
-    
-    func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateRevealOffset(offset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.revealOffset = offset
+        self.rightInset = rightInset
         self.updateNodesLayout(transition: transition)
     }
     
@@ -140,7 +160,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         }
         let basicNodeWidth = floorToScreenPixels(size.width / CGFloat(self.optionNodes.count))
         let lastNodeWidth = size.width - basicNodeWidth * CGFloat(self.optionNodes.count - 1)
-        let revealFactor = self.revealOffset / size.width
+        let revealFactor = min(1.0, self.revealOffset / (size.width + self.rightInset))
         var leftOffset: CGFloat = 0.0
         for i in 0 ..< self.optionNodes.count {
             let node = self.optionNodes[i]

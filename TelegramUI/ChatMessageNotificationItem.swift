@@ -7,17 +7,21 @@ import SwiftSignalKit
 
 public final class ChatMessageNotificationItem: NotificationItem {
     let account: Account
+    let strings: PresentationStrings
     let message: Message
-    let tapAction: () -> Void
+    let tapAction: () -> Bool
+    let expandAction: (@escaping () -> (ASDisplayNode?, () -> Void)) -> Void
     
     public var groupingKey: AnyHashable? {
         return message.id.peerId
     }
     
-    public init(account: Account, message: Message, tapAction: @escaping () -> Void) {
+    public init(account: Account, strings: PresentationStrings, message: Message, tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
         self.account = account
+        self.strings = strings
         self.message = message
         self.tapAction = tapAction
+        self.expandAction = expandAction
     }
     
     public func node() -> NotificationItemNode {
@@ -26,8 +30,18 @@ public final class ChatMessageNotificationItem: NotificationItem {
         return node
     }
     
-    public func tapped() {
-        self.tapAction()
+    public func tapped(_ take: @escaping () -> (ASDisplayNode?, () -> Void)) {
+        if self.tapAction() {
+            self.expandAction(take)
+        }
+    }
+    
+    public func canBeExpanded() -> Bool {
+        return true
+    }
+    
+    public func expand(_ take: @escaping () -> (ASDisplayNode?, () -> Void)) {
+        self.expandAction(take)
     }
 }
 
@@ -37,20 +51,23 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     private var item: ChatMessageNotificationItem?
     
     private let avatarNode: AvatarNode
-    private let titleNode: ASTextNode
-    private let textNode: ASTextNode
+    private let titleNode: TextNode
+    private let textNode: TextNode
     private let imageNode: TransformImageNode
+    
+    private var titleAttributedText: NSAttributedString?
+    private var textAttributedText: NSAttributedString?
+    
+    private var validLayout: CGFloat?
     
     override init() {
         self.avatarNode = AvatarNode(font: avatarFont)
         
-        self.titleNode = ASTextNode()
+        self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
-        self.titleNode.maximumNumberOfLines = 1
         
-        self.textNode = ASTextNode()
+        self.textNode = TextNode()
         self.textNode.isLayerBacked = true
-        self.textNode.maximumNumberOfLines = 2
         
         self.imageNode = TransformImageNode()
         
@@ -64,16 +81,17 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     
     func setupItem(_ item: ChatMessageNotificationItem) {
         self.item = item
+        let presentationData = item.account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         if let peer = messageMainPeer(item.message) {
             self.avatarNode.setPeer(account: item.account, peer: peer)
             
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.semibold(16.0), textColor: .black)
+                self.titleAttributedText = NSAttributedString(string: peer.displayTitle, font: Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
             } else if let author = item.message.author, author.id != peer.id {
-                self.titleNode.attributedText = NSAttributedString(string: author.displayTitle + "@" + peer.displayTitle, font: Font.semibold(16.0), textColor: .black)
+                self.titleAttributedText = NSAttributedString(string: author.displayTitle + "@" + peer.displayTitle, font: Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
             } else {
-                self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.semibold(16.0), textColor: .black)
+                self.titleAttributedText = NSAttributedString(string: peer.displayTitle, font: Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
             }
         }
         
@@ -110,59 +128,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 if file.isSticker {
                     updateImageSignal = chatMessageSticker(account: item.account, file: file, small: true, fetched: true)
                 } else if file.isVideo {
-                    updateImageSignal = mediaGridMessageVideo(account: item.account, video: file)
+                    updateImageSignal = mediaGridMessageVideo(postbox: item.account.postbox, video: file)
                 }
             }
         }
         
-        var messageText = item.message.text
-        for media in item.message.media {
-            switch media {
-                case _ as TelegramMediaImage:
-                    if messageText.isEmpty {
-                        messageText = "Photo"
-                    }
-                case let file as TelegramMediaFile:
-                    var selectedText = false
-                    loop: for attribute in file.attributes {
-                        switch attribute {
-                            case let .Audio(isVoice, _, title, performer, _):
-                                if isVoice {
-                                    messageText = "Voice Message"
-                                } else {
-                                    if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                                        messageText = title + " — " + performer
-                                    } else if let title = title, !title.isEmpty {
-                                        messageText = title
-                                    } else if let performer = performer, !performer.isEmpty {
-                                        messageText = performer
-                                    } else {
-                                        messageText = "Audio"
-                                    }
-                                }
-                                selectedText = true
-                                break loop
-                            case let .Sticker(displayText, _, _):
-                                messageText = "\(displayText) Sticker"
-                                selectedText = true
-                                break loop
-                            case .Video:
-                                if messageText.isEmpty {
-                                    messageText = "Video"
-                                }
-                                selectedText = true
-                                break loop
-                            default:
-                                break
-                        }
-                    }
-                    if !selectedText {
-                        messageText = file.fileName ?? "File"
-                    }
-                default:
-                    break
-            }
-        }
+        let messageText = descriptionStringForMessage(item.message, strings: item.strings, accountPeerId: item.account.peerId)
         
         if let applyImage = applyImage {
             applyImage()
@@ -172,13 +143,19 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         }
         
         if let updateImageSignal = updateImageSignal {
-            self.imageNode.setSignal(account: item.account, signal: updateImageSignal)
+            self.imageNode.setSignal(updateImageSignal)
         }
         
-        self.textNode.attributedText = NSAttributedString(string: messageText, font: Font.regular(16.0), textColor: .black)
+        self.textAttributedText = NSAttributedString(string: messageText, font: Font.regular(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
+        
+        if let validLayout = self.validLayout {
+            let _ = self.updateLayout(width: validLayout, transition: .immediate)
+        }
     }
     
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = width
+        
         let panelHeight: CGFloat = 74.0
         let leftInset: CGFloat = 77.0
         var rightInset: CGFloat = 8.0
@@ -189,13 +166,21 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: CGSize(width: 54.0, height: 54.0)))
         
-        let textSize = self.textNode.measure(CGSize(width: width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
-        let textSpacing: CGFloat = -2.0
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: self.titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let _ = titleApply()
         
-        let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 1.0 + floor((panelHeight - textSize.height - 22.0) / 2.0)), size: CGSize(width: width - leftInset - rightInset, height: 22.0))
+        let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: self.textAttributedText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let _ = titleApply()
+        let _ = textApply()
+        
+        let textSpacing: CGFloat = 1.0
+        
+        let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 1.0 + floor((panelHeight - textLayout.size.height - titleLayout.size.height - textSpacing) / 2.0)), size: titleLayout.size)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textLayout.size))
         
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: width - 9.0 - 55.0, y: 9.0), size: CGSize(width: 55.0, height: 55.0)))
         

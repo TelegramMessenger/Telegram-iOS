@@ -7,6 +7,9 @@ final class AuthorizationSequenceSignUpController: ViewController {
         return self.displayNode as! AuthorizationSequenceSignUpControllerNode
     }
     
+    private let strings: PresentationStrings
+    private let theme: AuthorizationTheme
+    
     var initialName: (String, String) = ("", "")
     var signUpWithName: ((String, String) -> Void)?
     
@@ -15,7 +18,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode())
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accentColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
                 self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
@@ -24,8 +27,11 @@ final class AuthorizationSequenceSignUpController: ViewController {
         }
     }
     
-    init() {
-        super.init(navigationBarTheme: AuthorizationSequenceController.navigationBarTheme)
+    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+        self.strings = strings
+        self.theme = theme
+        
+        super.init(navigationBarTheme: AuthorizationSequenceController.navigationBarTheme(theme))
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
     }

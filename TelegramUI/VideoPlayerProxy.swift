@@ -24,7 +24,7 @@ private final class VideoPlayerProxyContext {
         }
     }
     
-    var state: (timebase: CMTimebase, requestFrames: Bool, rotationAngle: Double)? {
+    var state: (timebase: CMTimebase, requestFrames: Bool, rotationAngle: Double, aspect: Double)? {
         didSet {
             self.node?.state = self.state
         }
@@ -49,7 +49,7 @@ final class VideoPlayerProxy {
         }
     }
     
-    var state: (timebase: CMTimebase, requestFrames: Bool, rotationAngle: Double)? {
+    var state: (timebase: CMTimebase, requestFrames: Bool, rotationAngle: Double, aspect: Double)? {
         didSet {
             let updatedState = self.state
             self.withContext { context in

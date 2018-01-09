@@ -40,8 +40,8 @@ final class PeerMediaCollectionSectionsNode: ASDisplayNode {
         self.segmentedControl.addTarget(self, action: #selector(indexChanged), for: .valueChanged)
     }
     
-    func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        let panelHeight: CGFloat = 39.0
+    func updateLayout(width: CGFloat, additionalInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let panelHeight: CGFloat = 39.0 + additionalInset
         
         let controlHeight: CGFloat = 29.0
         let sideInset: CGFloat = 8.0

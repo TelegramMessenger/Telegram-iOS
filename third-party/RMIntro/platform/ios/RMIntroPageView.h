@@ -14,6 +14,6 @@
     NSMutableAttributedString *_description;
 }
 
-- (id)initWithFrame:(CGRect)frame headline:(NSString*)headline description:(NSString*)description;
+- (id)initWithFrame:(CGRect)frame headline:(NSString*)headline description:(NSString*)description color:(UIColor *)color;
 
 @end

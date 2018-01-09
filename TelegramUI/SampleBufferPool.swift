@@ -38,8 +38,9 @@ func takeSampleBufferLayer() -> SampleBufferLayer {
         layer = SampleBufferLayerImpl()
     }
     return SampleBufferLayer(layer: layer!, enqueue: { layer in
-        Queue.concurrentDefaultQueue().async {
+        Queue.mainQueue().async {
             layer.flushAndRemoveImage()
+            layer.setAffineTransform(CGAffineTransform.identity)
             let _ = pool.modify { list in
                 var list = list
                 list.append(layer)

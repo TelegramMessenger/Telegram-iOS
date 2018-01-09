@@ -71,7 +71,7 @@ private func mediaForMessage(message: Message) -> Media? {
     return nil
 }
 
-func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: PresentationStrings, entry: MessageHistoryEntry) -> GalleryItem {
+func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: PresentationStrings, entry: MessageHistoryEntry, streamVideos: Bool) -> GalleryItem? {
     switch entry {
         case let .MessageEntry(message, _, location, _):
             if let media = mediaForMessage(message: message) {
@@ -79,24 +79,32 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
                     return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo || file.mimeType.hasPrefix("video/") {
-                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(file: file), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, caption: message.text)
+                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: .message(message.id, file.fileId), file: file, streamVideo: streamVideos), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: message.text)
                     } else {
-                        if file.mimeType.hasPrefix("image/") {
+                        if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" && (file.size == nil || file.size! < 5 * 1024 * 1024) {
                             return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                         } else {
                             return ChatDocumentGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                         }
                     }
                 } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = webpage.content {
-                    if let content = WebEmbedVideoContent(webpageContent: webpageContent) {
-                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, caption: message.text)
+                    switch websiteType(of: webpageContent) {
+                        case .instagram where webpageContent.file != nil && webpageContent.image != nil && webpageContent.file!.isVideo:
+                            return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: NativeVideoContentId.message(message.id, webpage.webpageId), file: webpageContent.file!, streamVideo: true, enableSound: true), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")
+                            //return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: SystemVideoContent(url: webpageContent.embedUrl!, image: webpageContent.image!, dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")
+                        /*case .twitter where webpageContent.embedUrl != nil && webpageContent.image != nil:
+                            return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: SystemVideoContent(url: webpageContent.embedUrl!, image: webpageContent.image!, dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")*/
+                        default:
+                            if let content = WebEmbedVideoContent(webpageContent: webpageContent) {
+                                return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")
+                            }
                     }
                 }
             }
         default:
             break
     }
-    return ChatHoleGalleryItem()
+    return nil
 }
 
 final class GalleryTransitionArguments {
@@ -132,8 +140,8 @@ private enum GalleryMessageHistoryView {
 }
 
 class GalleryController: ViewController {
-    static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), separatorColor: UIColor(white: 0.0, alpha: 0.8))
-    static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007ee5), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0))
+    static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
+    static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007ee5), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
@@ -142,16 +150,20 @@ class GalleryController: ViewController {
     private let account: Account
     private var presentationData: PresentationData
     
+    private let streamVideos: Bool
+    
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
         return self._ready
     }
     private var didSetReady = false
     
+    var temporaryDoNotWaitForReady = false
+    
     private let disposable = MetaDisposable()
     
     private var entries: [MessageHistoryEntry] = []
-    private var centralEntryIndex: Int?
+    private var centralEntryStableId: UInt32?
     
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
@@ -161,23 +173,24 @@ class GalleryController: ViewController {
     private let centralItemAttributesDisposable = DisposableSet();
     
     private let _hiddenMedia = Promise<(MessageId, Media)?>(nil)
-    var hiddenMedia: Signal<(MessageId, Media)?, NoError> {
-        return self._hiddenMedia.get()
-    }
     
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
-    init(account: Account, messageId: MessageId, invertItemOrder: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+    private var hiddenMediaManagerIndex: Int?
+    
+    init(account: Account, messageId: MessageId, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
         self.account = account
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
+        self.streamVideos = streamSingleVideo
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarTheme: GalleryController.darkNavigationTheme)
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+        let backItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: self, action: #selector(self.donePressed))
+        self.navigationItem.leftBarButtonItem = backItem
         
         self.statusBar.statusBarStyle = .White
         
@@ -186,8 +199,8 @@ class GalleryController: ViewController {
         let messageView = message
             |> filter({ $0 != nil })
             |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, Void> in
-                if let tags = tagsForMessage(message!) {
-                    let view = account.postbox.aroundMessageHistoryViewForPeerId(messageId.peerId, index: MessageIndex(message!), count: 50, clipHoles: false, anchorIndex: MessageIndex(message!), fixedCombinedReadState: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
+                if !streamSingleVideo, let tags = tagsForMessage(message!) {
+                    let view = account.postbox.aroundMessageHistoryViewForLocation(.peer(messageId.peerId), index: .message(MessageIndex(message!)), anchorIndex: .message(MessageIndex(message!)), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
                         
                     return view
                         |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, Void> in
@@ -204,23 +217,54 @@ class GalleryController: ViewController {
         self.disposable.set(messageView.start(next: { [weak self] view in
             if let strongSelf = self {
                 if let view = view {
-                    strongSelf.entries = view.entries
-                        loop: for i in 0 ..< strongSelf.entries.count {
-                        switch strongSelf.entries[i] {
+                    let entries = view.entries.filter { entry in
+                        if case .MessageEntry = entry {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    var centralEntryStableId: UInt32?
+                    loop: for i in 0 ..< entries.count {
+                        switch entries[i] {
                             case let .MessageEntry(message, _, _, _) where message.id == messageId:
-                                strongSelf.centralEntryIndex = i
+                                centralEntryStableId = message.stableId
                                 break loop
                             default:
                                 break
                         }
                     }
-                    if strongSelf.isViewLoaded {
-                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ galleryItemForEntry(account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, entry: $0) }), centralItemIndex: strongSelf.centralEntryIndex)
-                        
-                        let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
-                            strongSelf?.didSetReady = true
+                    if invertItemOrder {
+                        strongSelf.entries = entries.reversed()
+                        if let centralEntryStableId = centralEntryStableId {
+                            strongSelf.centralEntryStableId = centralEntryStableId
                         }
-                        strongSelf._ready.set(ready |> map { true })
+                    } else {
+                        strongSelf.entries = entries
+                        strongSelf.centralEntryStableId = centralEntryStableId
+                    }
+                    if strongSelf.isViewLoaded {
+                        var items: [GalleryItem] = []
+                        var centralItemIndex: Int?
+                        for entry in strongSelf.entries {
+                            if let item = galleryItemForEntry(account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, entry: entry, streamVideos: streamSingleVideo) {
+                                if case let .MessageEntry(message, _, _, _) = entry, message.stableId == strongSelf.centralEntryStableId {
+                                    centralItemIndex = items.count
+                                }
+                                items.append(item)
+                            }
+                        }
+                        
+                        strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
+                        
+                        if strongSelf.temporaryDoNotWaitForReady {
+                            strongSelf._ready.set(.single(true))
+                        } else {
+                            let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
+                                strongSelf?.didSetReady = true
+                            }
+                            strongSelf._ready.set(ready |> map { true })
+                        }
                     }
                 }
             }
@@ -260,6 +304,14 @@ class GalleryController: ViewController {
                 }
             }
         }))
+        
+        self.hiddenMediaManagerIndex = account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get() |> map { messageIdAndMedia in
+            if let (messageId, media) = messageIdAndMedia {
+                return .chat(messageId, media)
+            } else {
+                return nil
+            }
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -269,6 +321,9 @@ class GalleryController: ViewController {
     deinit {
         self.disposable.dispose()
         self.centralItemAttributesDisposable.dispose()
+        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex {
+            self.account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
+        }
     }
     
     @objc func donePressed() {
@@ -352,18 +407,6 @@ class GalleryController: ViewController {
                     }
                 }
                 
-                /*if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
-                    if case let .MessageEntry(message, _, _, _) = self.entries[centralItemNode.index] {
-                        if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {
-                            animatedOutNode = false
-                            centralItemNode.animateOut(to: transitionArguments.transitionNode, completion: {
-                                animatedOutNode = true
-                                completion()
-                            })
-                        }
-                    }
-                }*/
-                
                 strongSelf.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
                     animatedOutInterface = true
                     //completion()
@@ -381,7 +424,18 @@ class GalleryController: ViewController {
             return baseNavigationController
         }
         
-        self.galleryNode.pager.replaceItems(self.entries.map({ galleryItemForEntry(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, entry: $0) }), centralItemIndex: self.centralEntryIndex)
+        var items: [GalleryItem] = []
+        var centralItemIndex: Int?
+        for entry in self.entries {
+            if let item = galleryItemForEntry(account: account, theme: self.presentationData.theme, strings: self.presentationData.strings, entry: entry, streamVideos: self.streamVideos) {
+                if case let .MessageEntry(message, _, _, _) = entry, message.stableId == self.centralEntryStableId {
+                    centralItemIndex = items.count
+                }
+                items.append(item)
+            }
+        }
+        
+        self.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {

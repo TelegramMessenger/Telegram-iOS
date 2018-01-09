@@ -105,6 +105,7 @@ private func extensionImage(fileExtension: String?) -> UIImage? {
 }
 
 private let titleFont = Font.medium(16.0)
+private let audioTitleFont = Font.regular(16.0)
 private let descriptionFont = Font.regular(13.0)
 private let extensionFont = Font.medium(13.0)
 
@@ -113,9 +114,34 @@ private struct FetchControls {
     let cancel: () -> Void
 }
 
+private enum FileIconImage: Equatable {
+    case imageRepresentation(TelegramMediaImageRepresentation)
+    case albumArt(SharedMediaPlaybackAlbumArt)
+    
+    static func ==(lhs: FileIconImage, rhs: FileIconImage) -> Bool {
+        switch lhs {
+            case let .imageRepresentation(value):
+                if case .imageRepresentation(value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .albumArt(value):
+                if case .albumArt(value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 final class ListMessageFileItemNode: ListMessageNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
+    
+    private var selectionNode: ItemListSelectableControlNode?
+    
     private let titleNode: TextNode
     private let descriptionNode: TextNode
     
@@ -123,7 +149,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     private let extensionIconText: TextNode
     private let iconImageNode: TransformImageNode
     
-    private var currentIconImageRepresentation: TelegramMediaImageRepresentation?
+    private var currentIconImage: FileIconImage?
     private var currentMedia: Media?
     
     private let statusDisposable = MetaDisposable()
@@ -135,11 +161,18 @@ final class ListMessageFileItemNode: ListMessageNode {
     private var linearProgressNode: ASDisplayNode
     
     private let progressNode: RadialProgressNode
+    private var playbackOverlayNode: ListMessagePlaybackOverlayNode?
     
     private var account: Account?
     private (set) var message: Message?
     
     private var appliedItem: ListMessageItem?
+    private var layoutParams: ListViewItemLayoutParams?
+    private var currentLeftOffet: CGFloat = 0.0
+    
+    override var canBeLongTapped: Bool {
+        return true
+    }
     
     public required init() {
         self.separatorNode = ASDisplayNode()
@@ -165,6 +198,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         
         self.iconImageNode = TransformImageNode()
         self.iconImageNode.displaysAsynchronously = false
+        self.iconImageNode.contentAnimations = .subsequentUpdates
         
         self.downloadStatusIconNode = ASImageNode()
         self.downloadStatusIconNode.isLayerBacked = true
@@ -199,11 +233,11 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.item = item
     }
     
-    override public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? ListMessageItem {
             let doLayout = self.asyncLayout()
-            let merged = (top: false, bottom: false, dateAtBottom: false)//item.mergedWithItems(top: previousItem, bottom: nextItem)
-            let (layout, apply) = doLayout(item, width, merged.top, merged.bottom, merged.dateAtBottom)
+            let merged = (top: false, bottom: false, dateAtBottom: item.getDateAtBottom(top: previousItem, bottom: nextItem))
+            let (layout, apply) = doLayout(item, params, merged.top, merged.bottom, merged.dateAtBottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
             apply(.None)
@@ -218,7 +252,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         //self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height * 1.4, to: 0.0, duration: duration)
     }
     
-    override func asyncLayout() -> (_ item: ListMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
         let descriptionNodeMakeLayout = TextNode.asyncLayout(self.descriptionNode)
         let extensionIconTextMakeLayout = TextNode.asyncLayout(self.extensionIconText)
@@ -226,25 +260,36 @@ final class ListMessageFileItemNode: ListMessageNode {
         
         let currentMedia = self.currentMedia
         let currentMessage = self.message
-        let currentIconImageRepresentation = self.currentIconImageRepresentation
+        let currentIconImage = self.currentIconImage
         
         let currentItem = self.appliedItem
         
-        return { [weak self] item, width, mergedTop, _, _ in
+        let selectionNodeLayout = ItemListSelectableControlNode.asyncLayout(self.selectionNode)
+        
+        return { [weak self] item, params, _, _, dateHeaderAtBottom in
             var updatedTheme: PresentationTheme?
             
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
             }
             
-            let leftInset: CGFloat = 65.0
+            var leftInset: CGFloat = 65.0 + params.leftInset
+            let rightInset: CGFloat = 8.0 + params.rightInset
+            
+            var leftOffset: CGFloat = 0.0
+            var selectionNodeWidthAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
+            if case let .selectable(selected) = item.selection {
+                let (selectionWidth, selectionApply) = selectionNodeLayout(item.theme.list.itemCheckColors.strokeColor, item.theme.list.itemCheckColors.fillColor, item.theme.list.itemCheckColors.foregroundColor, selected)
+                selectionNodeWidthAndApply = (selectionWidth, selectionApply)
+                leftOffset += selectionWidth
+            }
             
             var extensionIconImage: UIImage?
             var titleText: NSAttributedString?
             var descriptionText: NSAttributedString?
             var extensionText: NSAttributedString?
             
-            var iconImageRepresentation: TelegramMediaImageRepresentation?
+            var iconImage: FileIconImage?
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             var updatedStatusSignal: Signal<FileMediaResourceStatus, NoError>?
             var updatedFetchControls: FetchControls?
@@ -259,10 +304,10 @@ final class ListMessageFileItemNode: ListMessageNode {
                     selectedMedia = file
                     
                     for attribute in file.attributes {
-                        if case let .Audio(voice, duration, title, performer, waveform) = attribute {
+                        if case let .Audio(voice, _, title, performer, _) = attribute {
                             isAudio = true
                             
-                            titleText = NSAttributedString(string: title ?? "Unknown Track", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                            titleText = NSAttributedString(string: title ?? "Unknown Track", font: audioTitleFont, textColor: item.theme.list.itemPrimaryTextColor)
                             
                             let descriptionString: String
                             if let performer = performer {
@@ -274,6 +319,10 @@ final class ListMessageFileItemNode: ListMessageNode {
                             }
                             
                             descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
+                            
+                            if !voice {
+                                iconImage = .albumArt(SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
+                            }
                         }
                     }
                     
@@ -283,19 +332,18 @@ final class ListMessageFileItemNode: ListMessageNode {
                         
                         var fileExtension: String?
                         if let range = fileName.range(of: ".", options: [.backwards]) {
-                            fileExtension = fileName.substring(from: range.upperBound).lowercased()
+                            fileExtension = fileName[range.upperBound...].lowercased()
                         }
                         extensionIconImage = extensionImage(fileExtension: fileExtension)
                         if let fileExtension = fileExtension {
                             extensionText = NSAttributedString(string: fileExtension, font: extensionFont, textColor: UIColor.white)
                         }
                         
-                        iconImageRepresentation = smallestImageRepresentation(file.previewRepresentations)
+                        if let representation = smallestImageRepresentation(file.previewRepresentations) {
+                            iconImage = .imageRepresentation(representation)
+                        }
                         
-                        let dateFormatter = DateFormatter()
-                        dateFormatter.dateFormat = "MMM d, yyyy 'at' h a"
-                        
-                        let dateString = dateFormatter.string(from: Date(timeIntervalSince1970: Double(item.message.timestamp)))
+                        let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.strings, timeFormat: .regular)
                         
                         let descriptionString: String
                         if let size = file.size {
@@ -309,6 +357,10 @@ final class ListMessageFileItemNode: ListMessageNode {
                     
                     break
                 }
+            }
+            
+            if isAudio {
+                leftInset += 14.0
             }
             
             var mediaUpdated = false
@@ -347,10 +399,10 @@ final class ListMessageFileItemNode: ListMessageNode {
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
                             updatedStatusSignal = currentUpdatedStatusSignal |> map { status in
                                 switch status {
-                                case .fetchStatus:
-                                    return .fetchStatus(.Local)
-                                case .playbackStatus:
-                                    return status
+                                    case .fetchStatus:
+                                        return .fetchStatus(.Local)
+                                    case .playbackStatus:
+                                        return status
                                 }
                             }
                         }
@@ -358,60 +410,98 @@ final class ListMessageFileItemNode: ListMessageNode {
                 }
             }
             
-            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(titleText, nil, 1, .middle, CGSize(width: width - leftInset - 8.0, height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
+            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: titleText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(descriptionText, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - 12.0, height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
+            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 12.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (extensionTextLayout, extensionTextApply) = extensionIconTextMakeLayout(extensionText, nil, 1, .end, CGSize(width: 38.0, height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
+            let (extensionTextLayout, extensionTextApply) = extensionIconTextMakeLayout(TextNodeLayoutArguments(attributedString: extensionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var iconImageApply: (() -> Void)?
-            if let iconImageRepresentation = iconImageRepresentation {
-                let iconSize = CGSize(width: 42.0, height: 42.0)
-                let imageCorners = ImageCorners(topLeft: .Corner(4.0), topRight: .Corner(4.0), bottomLeft: .Corner(4.0), bottomRight: .Corner(4.0))
-                let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconImageRepresentation.dimensions.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets())
-                iconImageApply = iconImageLayout(arguments)
+            if let iconImage = iconImage {
+                switch iconImage {
+                    case let .imageRepresentation(representation):
+                        let iconSize = CGSize(width: 42.0, height: 42.0)
+                        let imageCorners = ImageCorners(topLeft: .Corner(4.0), topRight: .Corner(4.0), bottomLeft: .Corner(4.0), bottomRight: .Corner(4.0))
+                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: representation.dimensions.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets())
+                        iconImageApply = iconImageLayout(arguments)
+                    case .albumArt:
+                        let iconSize = CGSize(width: 46.0, height: 46.0)
+                        let imageCorners = ImageCorners(topLeft: .Corner(4.0), topRight: .Corner(4.0), bottomLeft: .Corner(4.0), bottomRight: .Corner(4.0))
+                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets())
+                        iconImageApply = iconImageLayout(arguments)
+                }
             }
             
-            if currentIconImageRepresentation != iconImageRepresentation {
-                if let iconImageRepresentation = iconImageRepresentation {
-                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [iconImageRepresentation])
-                    updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photo: tmpImage)
+            if currentIconImage != iconImage {
+                if let iconImage = iconImage {
+                    switch iconImage {
+                        case let .imageRepresentation(representation):
+                            let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [representation], reference: nil)
+                            updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photo: tmpImage)
+                        case let .albumArt(albumArt):
+                            updateIconImageSignal = playerAlbumArt(postbox: item.account.postbox, albumArt: albumArt, thumbnail: true)
+                        
+                    }
                 } else {
                     updateIconImageSignal = .complete()
                 }
             }
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: isAudio ? 54.0 : 52.0), insets: UIEdgeInsets(top: mergedTop ? 0.0 : 2.0, left: 0.0, bottom: 0.0, right: 0.0))
+            var insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+            if dateHeaderAtBottom, let header = item.header {
+                insets.top += header.height
+            }
             
-            return (nodeLayout, { _ in
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: isAudio ? 56.0 : 52.0), insets: insets)
+            
+            return (nodeLayout, { animation in
                 if let strongSelf = self {
+                    let transition: ContainedViewLayoutTransition
+                    if animation.isAnimated {
+                        transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                    } else {
+                        transition = .immediate
+                    }
+                    
                     strongSelf.currentMedia = selectedMedia
                     strongSelf.message = message
                     strongSelf.account = item.account
                     strongSelf.appliedItem = item
+                    strongSelf.layoutParams = params
+                    strongSelf.currentLeftOffet = leftOffset
                     
                     if let _ = updatedTheme {
-                        strongSelf.separatorNode.backgroundColor = item.theme.list.itemSeparatorColor
+                        strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                         
-                        strongSelf.progressNode.updateTheme(RadialProgressTheme(backgroundColor: item.theme.list.itemAccentColor, foregroundColor: item.theme.list.itemBackgroundColor, icon: nil))
+                        strongSelf.progressNode.updateTheme(RadialProgressTheme(backgroundColor: item.theme.list.itemAccentColor, foregroundColor: item.theme.list.plainBackgroundColor, icon: nil))
                         strongSelf.linearProgressNode.backgroundColor = item.theme.list.itemAccentColor
                     }
                     
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: width - leftInset, height: UIScreenPixel))
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - nodeLayout.insets.top), size: CGSize(width: width, height: nodeLayout.size.height + UIScreenPixel))
-                    
-                    if isAudio {
-                        if strongSelf.progressNode.supernode == nil {
-                            strongSelf.addSubnode(strongSelf.progressNode)
-                            strongSelf.progressNode.state = .Play
+                    if let (selectionWidth, selectionApply) = selectionNodeWidthAndApply {
+                        let selectionFrame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: selectionWidth, height: nodeLayout.contentSize.height))
+                        let selectionNode = selectionApply(selectionFrame.size, transition.isAnimated)
+                        if selectionNode !== strongSelf.selectionNode {
+                            strongSelf.selectionNode?.removeFromSupernode()
+                            strongSelf.selectionNode = selectionNode
+                            strongSelf.addSubnode(selectionNode)
+                            selectionNode.frame = selectionFrame
+                            transition.animatePosition(node: selectionNode, from: CGPoint(x: -selectionFrame.size.width / 2.0, y: selectionFrame.midY))
+                        } else {
+                            transition.updateFrame(node: selectionNode, frame: selectionFrame)
                         }
-                        strongSelf.progressNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 6.0), size: CGSize(width: 42.0, height: 42.0))
-                    } else if strongSelf.progressNode.supernode != nil {
-                        strongSelf.progressNode.removeFromSupernode()
+                    } else if let selectionNode = strongSelf.selectionNode {
+                        strongSelf.selectionNode = nil
+                        let selectionFrame = selectionNode.frame
+                        transition.updatePosition(node: selectionNode, position: CGPoint(x: -selectionFrame.size.width / 2.0, y: selectionFrame.midY), completion: { [weak selectionNode] _ in
+                            selectionNode?.removeFromSupernode()
+                        })
                     }
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 9.0), size: titleNodeLayout.size)
+                    transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: leftInset + leftOffset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset - leftOffset, height: UIScreenPixel)))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - nodeLayout.insets.top), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
+                    
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 8.0), size: titleNodeLayout.size))
                     let _ = titleNodeApply()
                     
                     var descriptionOffset: CGFloat = 0.0
@@ -429,24 +519,31 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }
                     
-                    strongSelf.descriptionNode.frame = CGRect(origin: CGPoint(x: leftInset + descriptionOffset, y: 29.0), size: descriptionNodeLayout.size)
+                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: isAudio ? 32.0 : 29.0), size: descriptionNodeLayout.size))
                     let _ = descriptionNodeApply()
                     
-                    let iconFrame = CGRect(origin: CGPoint(x: 9.0, y: 5.0), size: CGSize(width: 42.0, height: 42.0))
-                    strongSelf.extensionIconNode.frame = iconFrame
+                    let iconFrame: CGRect
+                    if isAudio {
+                        let iconSize = CGSize(width: 48.0, height: 48.0)
+                        iconFrame = CGRect(origin: CGPoint(x: params.leftInset + leftOffset + 20.0, y: 5.0), size: iconSize)
+                    } else {
+                        let iconSize = CGSize(width: 42.0, height: 42.0)
+                        iconFrame = CGRect(origin: CGPoint(x: params.leftInset + leftOffset + 9.0, y: 5.0), size: iconSize)
+                    }
+                    transition.updateFrame(node: strongSelf.extensionIconNode, frame:  iconFrame)
                     strongSelf.extensionIconNode.image = extensionIconImage
-                    strongSelf.extensionIconText.frame = CGRect(origin: CGPoint(x: 9.0 + floor((42.0 - extensionTextLayout.size.width) / 2.0), y: 5.0 + floor((42.0 - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size)
+                    transition.updateFrame(node: strongSelf.extensionIconText, frame: CGRect(origin: CGPoint(x: leftOffset + 9.0 + floor((42.0 - extensionTextLayout.size.width) / 2.0), y: 5.0 + floor((42.0 - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size))
                     
                     let _ = extensionTextApply()
                     
-                    strongSelf.currentIconImageRepresentation = iconImageRepresentation
+                    strongSelf.currentIconImage = iconImage
                     
                     if let iconImageApply = iconImageApply {
                         if let updateImageSignal = updateIconImageSignal {
-                            strongSelf.iconImageNode.setSignal(account: item.account, signal: updateImageSignal)
+                            strongSelf.iconImageNode.setSignal(updateImageSignal)
                         }
                         
-                        strongSelf.iconImageNode.frame = iconFrame
+                        transition.updateFrame(node: strongSelf.iconImageNode, frame: iconFrame)
                         if strongSelf.iconImageNode.supernode == nil {
                             strongSelf.addSubnode(strongSelf.iconImageNode)
                         }
@@ -470,14 +567,21 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }
                     
+                    if let playbackOverlayNode = strongSelf.playbackOverlayNode {
+                        transition.updateFrame(node: playbackOverlayNode, frame: iconFrame)
+                    }
+                    
                     if let updatedStatusSignal = updatedStatusSignal {
                         strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
                             displayLinkDispatcher.dispatch {
                                 if let strongSelf = strongSelf {
                                     strongSelf.resourceStatus = status
+                                    var musicIsPlaying: Bool?
                                     
                                     if !isAudio {
-                                        strongSelf.updateProgressFrame(size: strongSelf.bounds.size)
+                                        if let layoutParams = strongSelf.layoutParams {
+                                            strongSelf.updateProgressFrame(size: nodeLayout.contentSize, leftInset: layoutParams.leftInset, rightInset: layoutParams.rightInset, transition: .immediate)
+                                        }
                                     } else {
                                         switch status {
                                             case let .fetchStatus(fetchStatus):
@@ -504,19 +608,33 @@ final class ListMessageFileItemNode: ListMessageNode {
                                             case let .playbackStatus(playbackStatus):
                                                 switch playbackStatus {
                                                     case .playing:
+                                                        musicIsPlaying = true
                                                         strongSelf.progressNode.state = .Pause
                                                     case .paused:
+                                                        musicIsPlaying = false
                                                         strongSelf.progressNode.state = .Play
                                                 }
                                         }
+                                    }
+                                    if let musicIsPlaying = musicIsPlaying {
+                                        if strongSelf.playbackOverlayNode == nil {
+                                            let playbackOverlayNode = ListMessagePlaybackOverlayNode()
+                                            playbackOverlayNode.frame = strongSelf.iconImageNode.frame
+                                            strongSelf.playbackOverlayNode = playbackOverlayNode
+                                            strongSelf.addSubnode(playbackOverlayNode)
+                                        }
+                                        strongSelf.playbackOverlayNode?.isPlaying = musicIsPlaying
+                                    } else if let playbackOverlayNode = strongSelf.playbackOverlayNode {
+                                        strongSelf.playbackOverlayNode = nil
+                                        playbackOverlayNode.removeFromSupernode()
                                     }
                                 }
                             }
                         }))
                     }
                     
-                    strongSelf.updateProgressFrame(size: CGSize(width: width, height: 52.0))
-                    strongSelf.downloadStatusIconNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 32.0), size: CGSize(width: 11.0, height: 11.0))
+                    strongSelf.updateProgressFrame(size: CGSize(width: params.width, height: 52.0), leftInset: params.leftInset, rightInset: params.rightInset, transition: transition)
+                    transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 31.0), size: CGSize(width: 11.0, height: 11.0)))
                     
                     if let updatedFetchControls = updatedFetchControls {
                         let _ = strongSelf.fetchControls.swap(updatedFetchControls)
@@ -526,10 +644,10 @@ final class ListMessageFileItemNode: ListMessageNode {
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if highlighted {
+        if highlighted, let item = self.item, case .none = item.selection {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
@@ -570,7 +688,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     override func updateSelectionState(animated: Bool) {
     }
     
-    private func updateProgressFrame(size: CGSize) {
+    private func updateProgressFrame(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var descriptionOffset: CGFloat = 0.0
         
         if let resourceStatus = self.resourceStatus, let item = self.appliedItem {
@@ -590,13 +708,11 @@ final class ListMessageFileItemNode: ListMessageNode {
             
             switch maybeFetchStatus {
                 case let .Fetching(_, progress):
-                    let progressFrame = CGRect(x: 65.0, y: size.height - 2.0, width: floor((size.width - 65.0) * CGFloat(progress)), height: 2.0)
+                    let progressFrame = CGRect(x: self.currentLeftOffet + leftInset + 65.0, y: size.height - 2.0, width: floor((size.width - 65.0 - leftInset - rightInset) * CGFloat(progress)), height: 2.0)
                     if self.linearProgressNode.supernode == nil {
                         self.addSubnode(self.linearProgressNode)
                     }
-                    if !self.linearProgressNode.frame.equalTo(progressFrame) {
-                        self.linearProgressNode.frame = progressFrame
-                    }
+                    transition.updateFrame(node: self.linearProgressNode, frame: progressFrame)
                     if self.downloadStatusIconNode.supernode == nil {
                         self.addSubnode(self.downloadStatusIconNode)
                     }
@@ -628,9 +744,10 @@ final class ListMessageFileItemNode: ListMessageNode {
         }
         
         var descriptionFrame = self.descriptionNode.frame
-        if !descriptionFrame.origin.x.isEqual(to: 65.0 + descriptionOffset) {
-            descriptionFrame.origin.x = 65.0 + descriptionOffset
-            self.descriptionNode.frame = descriptionFrame
+        let originX = self.titleNode.frame.minX + descriptionOffset
+        if !descriptionFrame.origin.x.isEqual(to: originX) {
+            descriptionFrame.origin.x = originX
+            transition.updateFrame(node: self.descriptionNode, frame: descriptionFrame)
         }
     }
     
@@ -653,14 +770,33 @@ final class ListMessageFileItemNode: ListMessageNode {
                     }
                 case .Local:
                     if let item = self.item, let controllerInteraction = self.controllerInteraction {
-                        controllerInteraction.openMessage(item.message.id)
+                        let _ = controllerInteraction.openMessage(item.message.id)
                     }
                 }
             case .playbackStatus:
                 if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext {
-                    applicationContext.mediaManager.playlistPlayerControl(.playback(.togglePlayPause))
+                    applicationContext.mediaManager.playlistControl(.playback(.togglePlayPause))
                 }
             }
+        }
+    }
+    
+    override func header() -> ListViewItemHeader? {
+        return self.item?.header
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let item = self.item, case .selectable = item.selection {
+            if self.bounds.contains(point) {
+                return self.view
+            }
+        }
+        return super.hitTest(point, with: event)
+    }
+    
+    override func longTapped() {
+        if let item = self.item {
+            item.controllerInteraction.openMessageContextMenu(item.message.id, self, self.bounds)
         }
     }
 }

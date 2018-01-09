@@ -33,8 +33,9 @@ private let atScalar = makeScalar("@")
 private let slashScalar = makeScalar("/")
 private let alphanumerics = CharacterSet.alphanumerics
 
-func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) -> (Range<String.Index>, PossibleContextQueryTypes, Range<String.Index>?)? {
+func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) -> [(Range<String.Index>, PossibleContextQueryTypes, Range<String.Index>?)] {
     let inputText = inputState.inputText
+    var results: [(Range<String.Index>, PossibleContextQueryTypes, Range<String.Index>?)] = []
     if !inputText.isEmpty {
         if inputText.hasPrefix("@") && inputText != "@" {
             let startIndex = inputText.index(after: inputText.startIndex)
@@ -67,23 +68,23 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
             }
             
             if let contextAddressRange = contextAddressRange {
-                return (contextAddressRange, [.contextRequest], index ..< inputText.endIndex)
+                results.append((contextAddressRange, [.contextRequest], index ..< inputText.endIndex))
             }
         }
         
         let maxUtfIndex = inputText.utf16.index(inputText.utf16.startIndex, offsetBy: inputState.selectionRange.lowerBound)
         guard let maxIndex = maxUtfIndex.samePosition(in: inputText) else {
-            return nil
+            return results
         }
         if maxIndex == inputText.startIndex {
-            return nil
+            return results
         }
         var index = inputText.index(before: maxIndex)
         
         var possibleQueryRange: Range<String.Index>?
         
         if inputText.isSingleEmoji {
-            return (inputText.startIndex ..< inputText.endIndex, [.emoji], nil)
+            return [(inputText.startIndex ..< inputText.endIndex, [.emoji], nil)]
         }
         
         var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag])
@@ -123,50 +124,61 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
         }
         
         if let possibleQueryRange = possibleQueryRange, definedType && !possibleTypes.isEmpty {
-            return (possibleQueryRange, possibleTypes, nil)
+            results.append((possibleQueryRange, possibleTypes, nil))
         }
     }
-    return nil
+    return results
 }
 
-func inputContextQueryForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> ChatPresentationInputQuery? {
+func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> [ChatPresentationInputQuery] {
     let inputState = chatPresentationInterfaceState.interfaceState.effectiveInputState
-    if let (possibleQueryRange, possibleTypes, additionalStringRange) = textInputStateContextQueryRangeAndType(inputState) {
+    var result: [ChatPresentationInputQuery] = []
+    for (possibleQueryRange, possibleTypes, additionalStringRange) in textInputStateContextQueryRangeAndType(inputState) {
         let query = String(inputState.inputText[possibleQueryRange])
         if possibleTypes == [.emoji] {
-            return .emoji(query)
+            result.append(.emoji(query))
         } else if possibleTypes == [.hashtag] {
-            return .hashtag(query)
+            result.append(.hashtag(query))
         } else if possibleTypes == [.mention] {
-            return .mention(query)
+            var types: ChatInputQueryMentionTypes = [.members]
+            if possibleQueryRange.lowerBound == inputState.inputText.index(after: inputState.inputText.startIndex) {
+                types.insert(.contextBots)
+            }
+            result.append(.mention(query: query, types: types))
         } else if possibleTypes == [.command] {
-            return .command(query)
+            result.append(.command(query))
         } else if possibleTypes == [.contextRequest], let additionalStringRange = additionalStringRange {
             let additionalString = String(inputState.inputText[additionalStringRange])
-            return .contextRequest(addressName: query, query: additionalString)
+            result.append(.contextRequest(addressName: query, query: additionalString))
         }
-        return nil
-    } else {
-        return nil
     }
+    return result
 }
 
 func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account) -> ChatTextInputPanelState {
     var contextPlaceholder: NSAttributedString?
-    if let inputQueryResult = chatPresentationInterfaceState.inputQueryResult {
-        if case let .contextRequestResult(peer, _) = inputQueryResult, let botUser = peer as? TelegramUser, let botInfo = botUser.botInfo, let inlinePlaceholder = botInfo.inlinePlaceholder {
-            if let inputQuery = inputContextQueryForChatPresentationIntefaceState(chatPresentationInterfaceState) {
+    loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
+        if case let .contextRequestResult(peer, _) = result, let botUser = peer as? TelegramUser, let botInfo = botUser.botInfo, let inlinePlaceholder = botInfo.inlinePlaceholder {
+            let inputQueries = inputContextQueriesForChatPresentationIntefaceState(chatPresentationInterfaceState)
+            for inputQuery in inputQueries {
                 if case let .contextRequest(addressName, query) = inputQuery, query.isEmpty {
                     let string = NSMutableAttributedString()
                     string.append(NSAttributedString(string: "@" + addressName, font: Font.regular(17.0), textColor: UIColor.clear))
-                    string.append(NSAttributedString(string: " " + inlinePlaceholder, font: Font.regular(17.0), textColor: UIColor(rgb: 0xC8C8CE)))
+                    string.append(NSAttributedString(string: " " + inlinePlaceholder, font: Font.regular(17.0), textColor: chatPresentationInterfaceState.theme.chat.inputPanel.inputPlaceholderColor))
                     contextPlaceholder = string
                 }
             }
+            
+            break loop
         }
     }
     switch chatPresentationInterfaceState.inputMode {
-        case .media, .inputButtons:
+        case .media:
+            if contextPlaceholder == nil && chatPresentationInterfaceState.interfaceState.editMessage == nil && chatPresentationInterfaceState.interfaceState.composeInputState.inputText.isEmpty && chatPresentationInterfaceState.inputMode == .media(.gif) {
+                contextPlaceholder = NSAttributedString(string: "@gif", font: Font.regular(17.0), textColor: chatPresentationInterfaceState.theme.chat.inputPanel.inputPlaceholderColor)
+            }
+            return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
+        case .inputButtons:
             return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .none, .text:
             if let _ = chatPresentationInterfaceState.interfaceState.editMessage {

@@ -2,23 +2,28 @@ import Foundation
 import Display
 
 private func generateArrowImage(_ theme: PresentationTheme) -> UIImage? {
-    return generateImage(CGSize(width: 8.0, height: 14.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 7.0, height: 13.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(theme.list.disclosureArrowColor.cgColor)
+        context.setStrokeColor(theme.list.disclosureArrowColor.cgColor)
+        context.setLineWidth(1.98)
+        context.setLineCap(.round)
+        context.setLineJoin(.round)
+        context.translateBy(x: 1.0, y: 1.0)
         
-        let _ = try? drawSvgPath(context, path: "M5.41663691,6.58336309 L0,12 L1.16672619,13.1667262 L7.75008928,6.58336309 L1.16672619,0 L0,1.16672619 Z ")
+        let _ = try? drawSvgPath(context, path: "M0,0 L4.79819816,5.27801798 L4.79819816,5.27801798 C4.91262453,5.40388698 4.91262453,5.59611302 4.79819816,5.72198202 L0,11 S ")
     })
 }
 
 private func generateCheckIcon(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 14.0, height: 11.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 12.0, height: 10.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setStrokeColor(color.cgColor)
-        context.setLineWidth(2.0)
-        context.move(to: CGPoint(x: 12.0, y: 1.0))
-        context.addLine(to: CGPoint(x: 4.16482734, y: 9.0))
-        context.addLine(to: CGPoint(x: 1.0, y: 5.81145833))
-        context.strokePath()
+        context.setLineWidth(1.98)
+        context.setLineCap(.round)
+        context.setLineJoin(.round)
+        context.translateBy(x: 1.0, y: 1.0)
+        
+        let _ = try? drawSvgPath(context, path: "M0.215053763,4.36080467 L3.31621263,7.70466293 L3.31621263,7.70466293 C3.35339229,7.74475231 3.41603123,7.74711109 3.45612061,7.70993143 C3.45920681,7.70706923 3.46210733,7.70401312 3.46480451,7.70078171 L9.89247312,0 S ")
     })
 }
 
@@ -62,6 +67,26 @@ struct PresentationResourcesItemList {
     static func verifiedPeerIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListVerifiedPeerIcon.rawValue, { theme in
             return UIImage(bundleImageName: "Item List/PeerVerifiedIcon")?.precomposed()
+        })
+    }
+    
+    static func itemListDeleteIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListDeleteIndicatorIcon.rawValue, { theme in
+            generateImage(CGSize(width: 22.0, height: 26.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor(white: 0.0, alpha: 0.06).cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 22.0, height: 22.0)))
+                context.setFillColor(theme.list.itemDisclosureActions.destructive.fillColor.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: CGSize(width: 22.0, height: 22.0)))
+                context.setFillColor(theme.list.itemDisclosureActions.destructive.foregroundColor.cgColor)
+                context.fill(CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - 11.0) / 2.0), y: 2.0 + floorToScreenPixels((size.width - 1.0) / 2.0)), size: CGSize(width: 11.0, height: 1.0)))
+            })
+        })
+    }
+    
+    static func addPersonIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListAddPersonIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Contact List/AddMemberIcon"), color: theme.list.itemAccentColor)
         })
     }
 }

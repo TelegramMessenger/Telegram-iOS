@@ -9,15 +9,15 @@ enum ChatHistoryInitialSearchLocation {
 enum ChatHistoryLocation: Equatable {
     case Initial(count: Int)
     case InitialSearch(location: ChatHistoryInitialSearchLocation, count: Int)
-    case Navigation(index: MessageIndex, anchorIndex: MessageIndex)
-    case Scroll(index: MessageIndex, anchorIndex: MessageIndex, sourceIndex: MessageIndex, scrollPosition: ListViewScrollPosition, animated: Bool)
+    case Navigation(index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int)
+    case Scroll(index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, sourceIndex: MessageHistoryAnchorIndex, scrollPosition: ListViewScrollPosition, animated: Bool)
 }
 
 func ==(lhs: ChatHistoryLocation, rhs: ChatHistoryLocation) -> Bool {
     switch lhs {
-        case let .Navigation(lhsIndex, lhsAnchorIndex):
+        case let .Navigation(lhsIndex, lhsAnchorIndex, lhsCount):
             switch rhs {
-                case let .Navigation(rhsIndex, rhsAnchorIndex) where lhsIndex == rhsIndex && lhsAnchorIndex == rhsAnchorIndex:
+                case let .Navigation(rhsIndex, rhsAnchorIndex, rhsCount) where lhsIndex == rhsIndex && lhsAnchorIndex == rhsAnchorIndex && lhsCount == rhsCount:
                     return true
                 default:
                     return false

@@ -49,11 +49,11 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
             }
             
             switch action.action {
-                case .groupCreated:
+                case let .groupCreated(title):
                     if isChannel {
                         attributedString = NSAttributedString(string: strings.Notification_CreatedChannel, font: titleFont, textColor: primaryTextColor)
                     } else {
-                        attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_CreatedChatWithTitle(authorName, title), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }
                 case let .addedMembers(peerIds):
                     if let peerId = peerIds.first, peerId == message.author?.id {
@@ -99,11 +99,7 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                     }
                 case let .titleUpdated(title):
                     if authorName.isEmpty || isChannel {
-                        if isChannel {
-                            attributedString = NSAttributedString(string: strings.Channel_MessageTitleUpdated(title).0, font: titleFont, textColor: primaryTextColor)
-                        } else {
-                            attributedString = NSAttributedString(string: strings.Group_MessageTitleUpdated(title).0, font: titleFont, textColor: primaryTextColor)
-                        }
+                        attributedString = NSAttributedString(string: strings.Channel_MessageTitleUpdated(title).0, font: titleFont, textColor: primaryTextColor)
                     } else {
                         attributedString = addAttributesToStringWithRanges(strings.Notification_ChangedGroupName(authorName, title), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }
@@ -341,9 +337,27 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                     } else {
                         attributedString = NSAttributedString(string: strings.Message_PaymentSent(formatCurrencyAmount(totalAmount, currency: currency)).0, font: titleFont, textColor: primaryTextColor)
                     }
-                case .phoneCall:
-                    break
-                default:
+                case let .phoneCall(_, discardReason, _):
+                    var titleString: String
+                    if message.flags.contains(.Incoming) {
+                        titleString = strings.Notification_CallIncoming
+                    } else {
+                        titleString = strings.Notification_CallOutgoing
+                    }
+                    if let discardReason = discardReason {
+                        switch discardReason {
+                            case .busy, .disconnect:
+                                titleString = strings.Notification_CallCanceled
+                            case .missed:
+                                titleString = strings.Notification_CallMissed
+                            case .hangup:
+                                break
+                        }
+                    }
+                    attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                case let .customText(text):
+                    attributedString = NSAttributedString(string: text, font: titleFont, textColor: primaryTextColor)
+                case .unknown:
                     attributedString = nil
             }
             
@@ -406,16 +420,16 @@ class ChatMessageActionItemNode: ChatMessageItemView {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let layoutConstants = self.layoutConstants
         
         let backgroundLayout = self.filledBackgroundNode.asyncLayout()
         
-        return { item, width, mergedTop, mergedBottom, dateHeaderAtBottom in
-            let attributedString = attributedServiceMessageString(theme: item.theme, strings: item.strings, message: item.message, accountPeerId: item.account.peerId)
+        return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+            let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, message: item.message, accountPeerId: item.account.peerId)
             
-            let (labelLayout, apply) = makeLabelLayout(attributedString, nil, 0, .end, CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), .center, nil, UIEdgeInsets())
+            let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             var labelRects = labelLayout.linesRects()
             if labelRects.count > 1 {
@@ -447,7 +461,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                 labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
             }
             
-            let backgroundApply = backgroundLayout(item.theme.chat.serviceMessage.serviceMessageFillColor, labelRects, 10.0, 10.0, 0.0)
+            let backgroundApply = backgroundLayout(item.presentationData.theme.chat.serviceMessage.serviceMessageFillColor, labelRects, 10.0, 10.0, 0.0)
             
             let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
             var layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
@@ -455,14 +469,14 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
             }
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: labelLayout.size.height + 4.0), insets: layoutInsets), { [weak self] animation in
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: labelLayout.size.height + 4.0), insets: layoutInsets), { [weak self] animation in
                 if let strongSelf = self {
                     strongSelf.appliedItem = item
                     
                     let _ = apply()
                     let _ = backgroundApply()
                     
-                    let labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - labelLayout.size.width) / 2.0), y: floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
+                    let labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - labelLayout.size.width) / 2.0), y: floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
                     strongSelf.labelNode.frame = labelFrame
                     strongSelf.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
                 }
@@ -503,47 +517,37 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                                     break
                                 case let .url(url):
                                     foundTapAction = true
-                                    if let controllerInteraction = self.controllerInteraction {
-                                        controllerInteraction.openUrl(url)
-                                    }
+                                    self.item?.controllerInteraction.openUrl(url)
                                 case let .peerMention(peerId, _):
                                     foundTapAction = true
-                                    if let controllerInteraction = self.controllerInteraction {
-                                        controllerInteraction.openPeer(peerId, .chat(textInputState: nil), nil)
-                                    }
+                                    self.item?.controllerInteraction.openPeer(peerId, .info, nil)
                                 case let .textMention(name):
                                     foundTapAction = true
-                                    if let controllerInteraction = self.controllerInteraction {
-                                        controllerInteraction.openPeerMention(name)
-                                    }
+                                    self.item?.controllerInteraction.openPeerMention(name)
                                 case let .botCommand(command):
                                     foundTapAction = true
-                                    if let item = self.item, let controllerInteraction = self.controllerInteraction {
-                                        controllerInteraction.sendBotCommand(item.message.id, command)
+                                    if let item = self.item {
+                                        item.controllerInteraction.sendBotCommand(item.message.id, command)
                                     }
                                 case let .hashtag(peerName, hashtag):
                                     foundTapAction = true
-                                    if let controllerInteraction = self.controllerInteraction {
-                                        controllerInteraction.openHashtag(peerName, hashtag)
-                                    }
+                                    self.item?.controllerInteraction.openHashtag(peerName, hashtag)
                                 case .instantPage:
                                     foundTapAction = true
-                                    if let item = self.item, let controllerInteraction = self.controllerInteraction {
-                                        controllerInteraction.openInstantPage(item.message.id)
+                                    if let item = self.item {
+                                        item.controllerInteraction.openInstantPage(item.message.id)
                                     }
                                 case .holdToPreviewSecretMedia:
                                     foundTapAction = true
                                 case let .call(peerId):
                                     foundTapAction = true
-                                    if let controllerInteraction = self.controllerInteraction {
-                                        controllerInteraction.callPeer(peerId)
-                                    }
+                                    self.item?.controllerInteraction.callPeer(peerId)
                             }
                             if !foundTapAction {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {
                                         if let attribute = attribute as? ReplyMessageAttribute {
-                                            self.controllerInteraction?.navigateToMessage(item.message.id, attribute.messageId)
+                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
                                             foundTapAction = true
                                             break
                                         }
@@ -551,7 +555,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                                 }
                             }
                             if !foundTapAction {
-                                self.controllerInteraction?.clickThroughMessage()
+                                self.item?.controllerInteraction.clickThroughMessage()
                             }
                         case .longTap, .doubleTap:
                             if let item = self.item, self.labelNode.frame.contains(location) {
@@ -562,29 +566,19 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                                         break
                                     case let .url(url):
                                         foundTapAction = true
-                                        if let controllerInteraction = self.controllerInteraction {
-                                            controllerInteraction.longTap(.url(url))
-                                        }
+                                        item.controllerInteraction.longTap(.url(url))
                                     case let .peerMention(peerId, mention):
                                         foundTapAction = true
-                                        if let controllerInteraction = self.controllerInteraction {
-                                            controllerInteraction.longTap(.peerMention(peerId, mention))
-                                        }
+                                        item.controllerInteraction.longTap(.peerMention(peerId, mention))
                                     case let .textMention(name):
                                         foundTapAction = true
-                                        if let controllerInteraction = self.controllerInteraction {
-                                            controllerInteraction.longTap(.mention(name))
-                                        }
+                                        item.controllerInteraction.longTap(.mention(name))
                                     case let .botCommand(command):
                                         foundTapAction = true
-                                        if let _ = self.item, let controllerInteraction = self.controllerInteraction {
-                                            controllerInteraction.longTap(.command(command))
-                                        }
+                                        item.controllerInteraction.longTap(.command(command))
                                     case let .hashtag(_, hashtag):
                                         foundTapAction = true
-                                        if let controllerInteraction = self.controllerInteraction {
-                                            controllerInteraction.longTap(.hashtag(hashtag))
-                                        }
+                                        item.controllerInteraction.longTap(.hashtag(hashtag))
                                     case .instantPage:
                                         break
                                     case .holdToPreviewSecretMedia:
@@ -594,7 +588,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                                 }
                                 
                                 if !foundTapAction {
-                                    self.controllerInteraction?.openMessageContextMenu(item.message.id, self, self.filledBackgroundNode.frame)
+                                    item.controllerInteraction.openMessageContextMenu(item.message.id, self, self.filledBackgroundNode.frame)
                                 }
                             }
                         case .hold:
@@ -643,7 +637,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.theme.chat.serviceMessage.serviceMessageLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.chat.serviceMessage.serviceMessageLinkHighlightColor)
                     linkHighlightingNode.inset = 2.5
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.labelNode)

@@ -8,8 +8,8 @@ final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContainerNode 
     
     private let activityIndicator: ActivityIndicator
     
-    override init() {
-        self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(UIColor(rgb: 0x007ee5)))
+    init(theme: PresentationTheme) {
+        self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(theme.actionSheet.controlAccentColor, 50.0))
         
         super.init()
         

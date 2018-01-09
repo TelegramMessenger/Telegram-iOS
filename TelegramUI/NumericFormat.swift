@@ -31,10 +31,8 @@ func timeIntervalString(strings: PresentationStrings, value: Int32) -> String {
         return strings.MessageTimer_Days(max(1, value / (60 * 60 * 24)))
     } else if value < 60 * 60 * 24 * 30 {
         return strings.MessageTimer_Weeks(max(1, value / (60 * 60 * 24 * 7)))
-    } else if value < 60 * 60 * 24 * 360 {
-        return strings.MessageTimer_Months(max(1, value / (60 * 60 * 24 * 30)))
     } else {
-        return strings.MessageTimer_Years(max(1, value / (60 * 60 * 24 * 365)))
+        return strings.MessageTimer_Months(max(1, value / (60 * 60 * 24 * 30)))
     }
 }
 
@@ -53,14 +51,10 @@ func shortTimeIntervalString(strings: PresentationStrings, value: Int32) -> Stri
 }
 
 func muteForIntervalString(strings: PresentationStrings, value: Int32) -> String {
-    if value < 60 * 60 {
-        return strings.MuteFor_Minutes(max(1, value / 60))
-    } else if value < 60 * 60 * 24 {
+    if value < 60 * 60 * 24 {
         return strings.MuteFor_Hours(max(1, value / (60 * 60)))
-    } else if value < 60 * 60 * 24 * 7 {
-        return strings.MuteFor_Days(max(1, value / (60 * 60 * 24)))
     } else {
-        return strings.MuteFor_Weeks(max(1, value / (60 * 60 * 24 * 7)))
+        return strings.MuteFor_Days(max(1, value / (60 * 60 * 24)))
     }
 }
 

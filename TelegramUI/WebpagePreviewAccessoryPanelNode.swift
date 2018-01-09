@@ -9,16 +9,21 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()
     
     private(set) var webpage: TelegramMediaWebpage
+    private(set) var url: String
     
     let closeButton: ASButtonNode
     let lineNode: ASImageNode
-    let titleNode: ASTextNode
-    let textNode: ASTextNode
+    let titleNode: TextNode
+    private var titleString: NSAttributedString?
+    
+    let textNode: TextNode
+    private var textString: NSAttributedString?
     
     var theme: PresentationTheme
     var strings: PresentationStrings
     
-    init(account: Account, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
+        self.url = url
         self.webpage = webpage
         self.theme = theme
         self.strings = strings
@@ -33,14 +38,10 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
         
-        self.titleNode = ASTextNode()
-        self.titleNode.truncationMode = .byTruncatingTail
-        self.titleNode.maximumNumberOfLines = 1
+        self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
         
-        self.textNode = ASTextNode()
-        self.textNode.truncationMode = .byTruncatingTail
-        self.textNode.maximumNumberOfLines = 1
+        self.textNode = TextNode()
         self.textNode.displaysAsynchronously = false
         
         super.init()
@@ -70,12 +71,12 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                 self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
             }
             
-            if let text = self.titleNode.attributedText?.string {
-                self.titleNode.attributedText = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
+            if let text = self.titleString?.string {
+                titleString = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
             }
             
-            if let text = self.textNode.attributedText?.string {
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
+            if let text = self.textString?.string {
+                textString = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
             
             self.updateWebpage()
@@ -84,8 +85,9 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    func replaceWebpage(_ webpage: TelegramMediaWebpage) {
-        if !self.webpage.isEqual(webpage) {
+    func replaceWebpage(url: String, webpage: TelegramMediaWebpage) {
+        if self.url != url || !self.webpage.isEqual(webpage) {
+            self.url = url
             self.webpage = webpage
             self.updateWebpage()
         }
@@ -97,6 +99,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         switch self.webpage.content {
             case .Pending:
                 authorName = self.strings.Channel_NotificationLoading
+                text = self.url
             case let .Loaded(content):
                 if let title = content.title {
                     authorName = title
@@ -108,8 +111,8 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                 text = content.text ?? ""
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: authorName, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
+        self.titleString = NSAttributedString(string: authorName, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
+        self.textString = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
         
         self.setNeedsLayout()
     }
@@ -132,11 +135,19 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
         
-        let titleSize = self.titleNode.measure(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset, height: bounds.size.height))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 7.0), size: titleSize)
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
-        let textSize = self.textNode.measure(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset, height: bounds.size.height))
-        self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 25.0), size: textSize)
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: self.titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset, height: bounds.size.height), alignment: .natural, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        
+        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: self.textString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset, height: bounds.size.height), alignment: .natural, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        
+        self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 7.0), size: titleLayout.size)
+        
+        self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 25.0), size: textLayout.size)
+        
+        let _ = titleApply()
+        let _ = textApply()
     }
     
     @objc func closePressed() {

@@ -16,7 +16,7 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.enableBiometrics = decoder.decodeInt32ForKey("b", orElse: 0) != 0
+        self.enableBiometrics = decoder.decodeInt32ForKey("s", orElse: 0) != 0
         self.autolockTimeout = decoder.decodeOptionalInt32ForKey("al")
     }
     
@@ -52,14 +52,18 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
 
 func updatePresentationPasscodeSettingsInteractively(postbox: Postbox, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationPasscodeSettings, { entry in
-            let currentSettings: PresentationPasscodeSettings
-            if let entry = entry as? PresentationPasscodeSettings {
-                currentSettings = entry
-            } else {
-                currentSettings = PresentationPasscodeSettings.defaultSettings
-            }
-            return f(currentSettings)
-        })
+        updatePresentationPasscodeSettingsInternal(modifier: modifier, f)
     }
+}
+
+func updatePresentationPasscodeSettingsInternal(modifier: Modifier, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) {
+    modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationPasscodeSettings, { entry in
+        let currentSettings: PresentationPasscodeSettings
+        if let entry = entry as? PresentationPasscodeSettings {
+            currentSettings = entry
+        } else {
+            currentSettings = PresentationPasscodeSettings.defaultSettings
+        }
+        return f(currentSettings)
+    })
 }

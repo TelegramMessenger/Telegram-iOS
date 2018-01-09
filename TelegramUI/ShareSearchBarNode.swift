@@ -2,10 +2,6 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let searchIconImage = UIImage(bundleImageName: "Share/SearchBarSearchIcon")?.precomposed()
-private let backgroundImage = generateStretchableFilledCircleImage(diameter: 6.0, color: UIColor(rgb: 0xe2e2e2))
-private let placeholderColor = UIColor(rgb: 0x7b7b81)
-
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
@@ -20,35 +16,37 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     var textUpdated: ((String) -> Void)?
     
-    init(placeholder: String) {
+    init(theme: PresentationTheme, placeholder: String) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = backgroundImage
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 6.0, color: theme.actionSheet.inputBackgroundColor)
         
         self.searchIconNode = ASImageNode()
         self.searchIconNode.isLayerBacked = true
         self.searchIconNode.displaysAsynchronously = false
         self.searchIconNode.displayWithoutProcessing = true
-        self.searchIconNode.image = searchIconImage
+        self.searchIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Share/SearchBarSearchIcon"), color: theme.actionSheet.inputPlaceholderColor)
         
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
         self.clearButton.displaysAsynchronously = false
-        self.clearButton.setImage(generateClearIcon(color: UIColor(rgb: 0x7b7b81)), for: [])
+        self.clearButton.setImage(generateClearIcon(color: theme.actionSheet.inputClearButtonColor), for: [])
         self.clearButton.isHidden = true
         
         self.textInputNode = TextFieldNode()
         self.textInputNode.fixOffset = false
-        let textColor: UIColor = .black
+        let textColor: UIColor = theme.actionSheet.inputTextColor
         let keyboardAppearance: UIKeyboardAppearance = UIKeyboardAppearance.default
         textInputNode.textField.font = Font.regular(16.0)
+        textInputNode.textField.textColor = textColor
         textInputNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(16.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
         textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
         textInputNode.textField.keyboardAppearance = keyboardAppearance
-        textInputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(16.0), textColor: placeholderColor)
+        textInputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(16.0), textColor: theme.actionSheet.inputPlaceholderColor)
+        textInputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
         
         super.init()
         

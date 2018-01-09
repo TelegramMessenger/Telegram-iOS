@@ -116,7 +116,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
             case let .keepMediaInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
             case let .collecting(theme, text):
-                return ItemListActivityTextItem(displayActivity: true, text: NSAttributedString(string: text, textColor: theme.list.freeTextColor), sectionId: self.section)
+                return CalculatingCacheSizeItem(theme: theme, title: text, sectionId: self.section, style: .blocks)
             case let .peersHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .peer(_, theme, strings, peer, value):

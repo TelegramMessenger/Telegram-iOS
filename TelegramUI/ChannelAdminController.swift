@@ -172,7 +172,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
     func item(_ arguments: ChannelAdminControllerArguments) -> ListViewItem {
         switch self {
             case let .info(theme, strings, peer, presence):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rightItem(theme, _, text, right, flags, value, enabled):
@@ -229,7 +229,7 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChannel
     } else if right.contains(.canInviteUsers) {
         return strings.Channel_EditAdmin_PermissionInviteUsers
     } else if right.contains(.canChangeInviteLink) {
-        return strings.Channel_EditAdmin_PermissionChangeInviteLink
+        return ""
     } else if right.contains(.canPinMessages) {
         return strings.Channel_EditAdmin_PermissionPinMessages
     } else if right.contains(.canAddAdmins) {

@@ -21,10 +21,18 @@ final class instantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
             self.webView.loadHTMLString(html, baseURL: nil)
         } else if let url = url, let parsedUrl = URL(string: url) {
             var request = URLRequest(url: parsedUrl)
-            let referrer = "\(parsedUrl.scheme)://\(parsedUrl.host)"
-            request.setValue(referrer, forHTTPHeaderField: "Referer")
+            if let scheme = parsedUrl.scheme, let host = parsedUrl.host {
+                let referrer = "\(scheme)://\(host)"
+                request.setValue(referrer, forHTTPHeaderField: "Referer")
+            }
             self.webView.load(request)
         }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addSubview(self.webView)
     }
     
     override func layout() {

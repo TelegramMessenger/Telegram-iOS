@@ -1,25 +1,18 @@
 import Foundation
 import AsyncDisplayKit
 
-private let checkedImage = UIImage(bundleImageName: "Chat/Message/SelectionChecked")?.precomposed()
-private let uncheckedImage = UIImage(bundleImageName: "Chat/Message/SelectionUnchecked")?.precomposed()
-
 final class ChatMessageSelectionNode: ASDisplayNode {
-    private let toggle: () -> Void
+    private let toggle: (Bool) -> Void
     
     private var selected = false
-    private let checkNode: ASImageNode
+    private let checkNode: CheckNode
     
-    init(toggle: @escaping () -> Void) {
+    init(theme: PresentationTheme, toggle: @escaping (Bool) -> Void) {
         self.toggle = toggle
-        self.checkNode = ASImageNode()
-        self.checkNode.displaysAsynchronously = false
-        self.checkNode.displayWithoutProcessing = true
-        self.checkNode.isLayerBacked = true
+        self.checkNode = CheckNode(strokeColor: theme.list.itemCheckColors.strokeColor, fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, style: .overlay)
         
         super.init()
         
-        self.checkNode.image = uncheckedImage
         self.addSubnode(self.checkNode)
         
         self.hitTestSlop = UIEdgeInsetsMake(0.0, 42.0, 0.0, 0.0)
@@ -34,23 +27,20 @@ final class ChatMessageSelectionNode: ASDisplayNode {
     func updateSelected(_ selected: Bool, animated: Bool) {
         if self.selected != selected {
             self.selected = selected
-            self.checkNode.image = selected ? checkedImage : uncheckedImage
-            if animated {
-                self.checkNode.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
-            }
+            self.checkNode.setIsChecked(selected, animated: animated)
         }
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.toggle()
+            self.toggle(!self.selected)
         }
     }
     
     override func layout() {
         super.layout()
         
-        let checkSize = self.checkNode.measure(CGSize(width: 200.0, height: 200.0))
+        let checkSize = CGSize(width: 32.0, height: 32.0)
         self.checkNode.frame = CGRect(origin: CGPoint(x: 4.0, y: floor((self.bounds.size.height - checkSize.height) / 2.0)), size: checkSize)
     }
 }

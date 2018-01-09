@@ -31,14 +31,14 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         
         super.init()
         
-        self.imageNode.alphaTransitionOnFirstUpdate = true
         self.addSubnode(self.imageNode)
         
         if let image = media.media as? TelegramMediaImage {
-            self.imageNode.setSignal(account: account, signal: chatMessagePhoto(account: account, photo: image))
+            self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox
+                , photo: image))
             self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photo: image).start())
         } else if let file = media.media as? TelegramMediaFile {
-            self.imageNode.setSignal(account: account, signal: chatMessageVideo(account: account, video: file))
+            self.imageNode.setSignal(chatMessageVideo(postbox: account.postbox, video: file))
         }
     }
     

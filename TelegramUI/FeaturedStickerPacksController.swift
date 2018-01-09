@@ -44,7 +44,7 @@ private enum FeaturedStickerPacksEntryId: Hashable {
 }
 
 private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
-    case pack(Int32, PresentationTheme, StickerPackCollectionInfo, Bool, StickerPackItem?, String, Bool)
+    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, Bool, StickerPackItem?, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -55,19 +55,22 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     
     var stableId: FeaturedStickerPacksEntryId {
         switch self {
-            case let .pack(_, _, info, _, _, _, _):
+            case let .pack(_, _, _, info, _, _, _, _):
                 return .pack(info.id)
         }
     }
     
     static func ==(lhs: FeaturedStickerPacksEntry, rhs: FeaturedStickerPacksEntry) -> Bool {
         switch lhs {
-            case let .pack(lhsIndex, lhsTheme, lhsInfo, lhsUnread, lhsTopItem, lhsCount, lhsInstalled):
-                if case let .pack(rhsIndex, rhsTheme, rhsInfo, rhsUnread, rhsTopItem, rhsCount, rhsInstalled) = rhs {
+            case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsUnread, lhsTopItem, lhsCount, lhsInstalled):
+                if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsUnread, rhsTopItem, rhsCount, rhsInstalled) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
                     if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
                         return false
                     }
                     if lhsInfo != rhsInfo {
@@ -94,9 +97,9 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     
     static func <(lhs: FeaturedStickerPacksEntry, rhs: FeaturedStickerPacksEntry) -> Bool {
         switch lhs {
-            case let .pack(lhsIndex, _, _, _, _, _, _):
+            case let .pack(lhsIndex, _, _, _, _, _, _, _):
                 switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _, _):
+                    case let .pack(rhsIndex, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                 }
         }
@@ -104,8 +107,8 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     
     func item(_ arguments: FeaturedStickerPacksControllerArguments) -> ListViewItem {
         switch self {
-            case let .pack(_, theme, info, unread, topItem, count, installed):
-                return ItemListStickerPackItem(theme: theme, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false), enabled: true, sectionId: self.section, action: {
+            case let .pack(_, theme, strings, info, unread, topItem, count, installed):
+                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false), enabled: true, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { _, _ in
                 }, addPack: {
@@ -148,7 +151,7 @@ private func featuredStickerPacksControllerEntries(presentationData: Presentatio
                 if let value = unreadPacks[item.info.id] {
                     unread = value
                 }
-                entries.append(.pack(index, presentationData.theme, item.info, unread, item.topItems.first, stringForStickerCount(item.info.count), installedPacks.contains(item.info.id)))
+                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, unread, item.topItems.first, stringForStickerCount(item.info.count), installedPacks.contains(item.info.id)))
                 index += 1
             }
         }
@@ -217,7 +220,7 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
         var unreadIds: [ItemCollectionId] = []
         for entry in entries {
             switch entry {
-                case let .pack(_, _, info, unread, _, _, _):
+                case let .pack(_, _, _, info, unread, _, _, _):
                     if unread && !alreadyReadIds.contains(info.id) {
                         unreadIds.append(info.id)
                     }

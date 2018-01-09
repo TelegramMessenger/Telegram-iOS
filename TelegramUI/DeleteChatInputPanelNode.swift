@@ -33,18 +33,18 @@ final class DeleteChatInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.deleteChat()
     }
     
-    override func updateLayout(width: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
             
             self.button.setAttributedTitle(NSAttributedString(string: interfaceState.strings.GroupInfo_DeleteAndExit, font: Font.regular(17.0), textColor: interfaceState.theme.chat.inputPanel.panelControlDestructiveColor), for: [])
         }
         
-        let buttonSize = self.button.measure(CGSize(width: width - 10.0, height: 100.0))
+        let buttonSize = self.button.measure(CGSize(width: width - leftInset - rightInset - 10.0, height: 100.0))
         
         let panelHeight: CGFloat = 47.0
         
-        self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
         return panelHeight
     }

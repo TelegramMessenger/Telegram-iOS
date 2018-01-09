@@ -54,6 +54,8 @@ final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognizer {
 }
 
 class ItemListRevealOptionsItemNode: ListViewItemNode {
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    
     private var revealNode: ItemListRevealOptionsNode?
     private var revealOptions: [ItemListRevealOption] = []
     
@@ -104,12 +106,15 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
     }
     
     @objc func revealGesture(_ recognizer: ItemListRevealOptionsGestureRecognizer) {
+        guard let (size, leftInset, rightInset) = self.validLayout else {
+            return
+        }
         switch recognizer.state {
             case .began:
                 if let revealNode = self.revealNode {
                     let revealSize = revealNode.calculatedSize
                     let location = recognizer.location(in: self.view)
-                    if location.x > self.bounds.size.width - revealSize.width {
+                    if location.x > size.width - revealSize.width {
                         recognizer.becomeCancelled()
                     } else {
                         self.initialRevealOffset = self.revealOffset
@@ -170,29 +175,38 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
             revealNode.setOptions(self.revealOptions)
             self.revealNode = revealNode
             
-            let revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: self.bounds.size.height))
-            revealNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
+            if let (size, _, rightInset) = self.validLayout {
+                let revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
+                
+                revealNode.frame = CGRect(origin: CGPoint(x: size.width + max(self.revealOffset, -revealSize.width - rightInset), y: 0.0), size: revealSize)
+                revealNode.updateRevealOffset(offset: 0.0, rightInset: rightInset, transition: .immediate)
+            }
             
             self.addSubnode(revealNode)
         }
     }
     
-    override func layout() {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        self.validLayout = (size, leftInset, rightInset)
+        
         if let revealNode = self.revealNode {
-            let height = self.contentSize.height
-            let revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: height))
-            revealNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
+            let revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
+            revealNode.frame = CGRect(origin: CGPoint(x: size.width - rightInset + max(self.revealOffset, -revealSize.width - rightInset), y: 0.0), size: revealSize)
         }
     }
     
     func updateRevealOffsetInternal(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.revealOffset = offset
+        guard let (size, _, rightInset) = self.validLayout else {
+            return
+        }
+        
         if let revealNode = self.revealNode {
             let revealSize = revealNode.calculatedSize
             
-            let revealFrame = CGRect(origin: CGPoint(x: self.bounds.size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
-            let revealNodeOffset = -max(self.revealOffset, -revealSize.width)
-            revealNode.updateRevealOffset(offset: revealNodeOffset, transition: transition)
+            let revealFrame = CGRect(origin: CGPoint(x: size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
+            let revealNodeOffset = -max(self.revealOffset, -revealSize.width - rightInset)
+            revealNode.updateRevealOffset(offset: revealNodeOffset, rightInset: rightInset, transition: transition)
             
             if CGFloat(0.0).isLessThanOrEqualTo(offset) {
                 self.revealNode = nil
@@ -239,10 +253,10 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
             if value {
                 if self.revealNode == nil {
                     self.setupAndAddRevealNode()
-                    if let revealNode = self.revealNode {
+                    if let revealNode = self.revealNode, revealNode.isNodeLoaded, let (_, _, rightInset) = self.validLayout {
                         revealNode.layout()
                         let revealSize = revealNode.calculatedSize
-                        self.updateRevealOffsetInternal(offset: -revealSize.width, transition: transition)
+                        self.updateRevealOffsetInternal(offset: -revealSize.width - rightInset, transition: transition)
                     }
                 }
             } else if !self.revealOffset.isZero {
@@ -252,5 +266,15 @@ class ItemListRevealOptionsItemNode: ListViewItemNode {
     }
     
     func revealOptionSelected(_ option: ItemListRevealOption) {
+    }
+    
+    override var preventsTouchesToOtherItems: Bool {
+        return self.isDisplayingRevealedOptions
+    }
+    
+    override func touchesToOtherItemsPrevented() {
+        if self.isDisplayingRevealedOptions {
+            self.setRevealOptionsOpened(false, animated: true)
+        }
     }
 }

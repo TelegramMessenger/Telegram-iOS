@@ -77,7 +77,7 @@ func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[Avatar
             for photo in photos {
                 let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
                 if result.isEmpty, let first = initialEntries.first {
-                    let image = TelegramMediaImage(imageId: photo.image.imageId, representations: first.representations)
+                    let image = TelegramMediaImage(imageId: photo.image.imageId, representations: first.representations, reference: photo.reference)
                     result.append(.image(image, indexData))
                 } else {
                     result.append(.image(photo.image, indexData))
@@ -129,7 +129,8 @@ class AvatarGalleryController: ViewController {
         
         super.init(navigationBarTheme: GalleryController.darkNavigationTheme)
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+        let backItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.donePressed))
+        self.navigationItem.leftBarButtonItem = backItem
         
         self.statusBar.statusBarStyle = .White
         

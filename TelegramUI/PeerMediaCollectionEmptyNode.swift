@@ -43,7 +43,7 @@ final class PeerMediaCollectionEmptyNode: ASDisplayNode {
         self.textNode.isLayerBacked = true
         self.textNode.displaysAsynchronously = false
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.list.itemSecondaryTextColor), speed: .regular)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.list.itemSecondaryTextColor, 22.0), speed: .regular)
         
         let icon: UIImage?
         let text: NSAttributedString

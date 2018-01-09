@@ -4,7 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-final class ChannelMembersSearchController: TelegramController {
+final class ChannelMembersSearchController: ViewController {
     private let queue = Queue()
     
     private let account: Account
@@ -26,7 +26,7 @@ final class ChannelMembersSearchController: TelegramController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(account: account)
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
         
         self.title = self.presentationData.strings.Channel_Members_Title
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))

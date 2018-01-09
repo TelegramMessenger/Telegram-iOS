@@ -43,7 +43,7 @@ final class CallControllerKeyPreviewNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapResture(_:))))
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -98,7 +98,7 @@ final class CallControllerKeyPreviewNode: ASDisplayNode {
         })
     }
     
-    @objc func tapResture(_ recognizer: UITapGestureRecognizer) {
+    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.dismiss()
         }

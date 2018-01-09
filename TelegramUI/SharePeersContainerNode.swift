@@ -5,13 +5,11 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 
-private let separatorColor: UIColor = UIColor(rgb: 0xbcbbc1)
-
 private let subtitleFont = Font.regular(12.0)
-private let subtitleColor = UIColor(rgb: 0x7b7b81)
 
 final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let account: Account
+    private let theme: PresentationTheme
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
     var peers: [Peer]?
@@ -32,8 +30,9 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    init(account: Account, strings: PresentationStrings, peers: [Peer], controllerInteraction: ShareControllerInteraction, externalShare: Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peers: [Peer], controllerInteraction: ShareControllerInteraction, externalShare: Bool) {
         self.account = account
+        self.theme = theme
         self.strings = strings
         self.controllerInteraction = controllerInteraction
         self.peers = peers
@@ -41,26 +40,26 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentGridNode = GridNode()
         
         self.contentTitleNode = ASTextNode()
-        self.contentTitleNode.attributedText = NSAttributedString(string: strings.ShareMenu_ShareTo, font: Font.medium(20.0), textColor: .black)
+        self.contentTitleNode.attributedText = NSAttributedString(string: strings.ShareMenu_ShareTo, font: Font.medium(20.0), textColor: self.theme.actionSheet.primaryTextColor)
         
         self.contentSubtitleNode = ASTextNode()
         self.contentSubtitleNode.maximumNumberOfLines = 1
         self.contentSubtitleNode.isLayerBacked = true
         self.contentSubtitleNode.displaysAsynchronously = false
         self.contentSubtitleNode.truncationMode = .byTruncatingTail
-        self.contentSubtitleNode.attributedText = NSAttributedString(string: strings.ShareMenu_SelectChats, font: subtitleFont, textColor: subtitleColor)
+        self.contentSubtitleNode.attributedText = NSAttributedString(string: strings.ShareMenu_SelectChats, font: subtitleFont, textColor: self.theme.actionSheet.secondaryTextColor)
         
         self.searchButtonNode = HighlightableButtonNode()
-        self.searchButtonNode.setImage(UIImage(bundleImageName: "Share/SearchIcon")?.precomposed(), for: [])
+        self.searchButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/SearchIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
         
         self.shareButtonNode = HighlightableButtonNode()
-        self.shareButtonNode.setImage(UIImage(bundleImageName: "Share/ShareIcon")?.precomposed(), for: [])
+        self.shareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
         self.shareButtonNode.isHidden = !externalShare
         
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true
         self.contentSeparatorNode.displaysAsynchronously = false
-        self.contentSeparatorNode.backgroundColor = separatorColor
+        self.contentSeparatorNode.backgroundColor = self.theme.actionSheet.opaqueItemSeparatorColor
         
         super.init()
         
@@ -74,7 +73,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         var insertItems: [GridNodeInsertItem] = []
         for i in 0 ..< peers.count {
-            insertItems.append(GridNodeInsertItem(index: i, item: ShareControllerPeerGridItem(account: self.account, peer: peers[i], chatPeer: nil, controllerInteraction: self.controllerInteraction), previousIndex: nil))
+            insertItems.append(GridNodeInsertItem(index: i, item: ShareControllerPeerGridItem(account: self.account, theme: self.theme, strings: self.strings, peer: peers[i], chatPeer: nil, controllerInteraction: self.controllerInteraction), previousIndex: nil))
         }
         
         self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
@@ -234,7 +233,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                 }
             })
         }
-        self.contentSubtitleNode.attributedText = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: subtitleColor)
+        self.contentSubtitleNode.attributedText = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.actionSheet.secondaryTextColor)
         
         self.contentGridNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ShareControllerPeerGridItemNode {

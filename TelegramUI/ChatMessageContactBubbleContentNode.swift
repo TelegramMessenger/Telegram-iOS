@@ -16,7 +16,6 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     private let titleNode: TextNode
     private let textNode: TextNode
     
-    private var item: ChatMessageItem?
     private var contact: TelegramMediaContact?
     private var contactPhone: String?
     
@@ -44,7 +43,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -52,7 +51,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         let previousContact = self.contact
         let previousContactPhone = self.contactPhone
         
-        return { item, layoutConstants, position, constrainedSize in
+        return { item, layoutConstants, _, _, constrainedSize in
             var selectedContact: TelegramMediaContact?
             for media in item.message.media {
                 if let media = media as? TelegramMediaContact {
@@ -73,7 +72,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     displayName = selectedContact.lastName
                 }
-                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming ? item.theme.chat.bubble.incomingAccentColor : item.theme.chat.bubble.outgoingAccentColor)
+                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.chat.bubble.outgoingAccentTextColor)
                 
                 let phone: String
                 if let previousContact = previousContact, previousContact.isEqual(selectedContact), let contactPhone = previousContactPhone {
@@ -82,21 +81,19 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     phone = formatPhoneNumber(selectedContact.phoneNumber)
                 }
                 updatedPhone = phone
-                textString = NSAttributedString(string: phone, font: textFont, textColor: item.message.effectivelyIncoming ? item.theme.chat.bubble.incomingPrimaryTextColor : item.theme.chat.bubble.outgoingPrimaryTextColor)
+                textString = NSAttributedString(string: phone, font: textFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingPrimaryTextColor : item.presentationData.theme.chat.bubble.outgoingPrimaryTextColor)
             } else {
                 updatedPhone = nil
             }
             
-            return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackgroundForEmptyWallpapers: false, forceFullCorners: false)
+            
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let avatarSize = CGSize(width: 40.0, height: 40.0)
                 
                 let maxTextWidth = max(1.0, constrainedSize.width - avatarSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right)
-                let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .end, CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
-                let (textLayout, textApply) = makeTextLayout(textString, nil, 2, .end, CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
-                
-                var t = Int(item.message.timestamp)
-                var timeinfo = tm()
-                localtime_r(&t, &timeinfo)
+                let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 var edited = false
                 var sentViaBot = false
@@ -111,7 +108,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                var dateText = stringForMessageTimestamp(timestamp: item.message.timestamp, timeFormat: item.presentationData.timeFormat)
                 
                 if let author = item.message.author as? TelegramUser {
                     if author.botInfo != nil {
@@ -123,27 +120,28 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 let statusType: ChatMessageDateAndStatusType?
-                if case .None = position.bottom {
-                    if item.message.effectivelyIncoming {
-                        statusType = .BubbleIncoming
-                    } else {
-                        if item.message.flags.contains(.Failed) {
-                            statusType = .BubbleOutgoing(.Failed)
-                        } else if item.message.flags.isSending {
-                            statusType = .BubbleOutgoing(.Sending)
+                switch position {
+                    case .linear(_, .None):
+                        if item.message.effectivelyIncoming(item.account.peerId) {
+                            statusType = .BubbleIncoming
                         } else {
-                            statusType = .BubbleOutgoing(.Sent(read: item.read))
+                            if item.message.flags.contains(.Failed) {
+                                statusType = .BubbleOutgoing(.Failed)
+                            } else if item.message.flags.isSending {
+                                statusType = .BubbleOutgoing(.Sending)
+                            } else {
+                                statusType = .BubbleOutgoing(.Sent(read: item.read))
+                            }
                         }
-                    }
-                } else {
-                    statusType = nil
+                    default:
+                        statusType = nil
                 }
                 
                 var statusSize = CGSize()
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.theme, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude))
+                    let (size, apply) = statusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude))
                     statusSize = size
                     statusApply = apply
                 }
@@ -248,7 +246,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     @objc func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                self.controllerInteraction?.openMessage(item.message.id)
+                item.controllerInteraction.openMessage(item.message.id)
             }
         }
     }

@@ -32,6 +32,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private let share: Bool
     
     private let peerSelected: (Peer) -> Void
+    private let peerLongTapped: (Peer) -> Void
     private let isPeerSelected: (PeerId) -> Bool
     
     private let disposable = MetaDisposable()
@@ -39,12 +40,13 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private var items: [ListViewItem] = []
     private var itemCustomWidth: CGFloat?
     
-    init(account: Account, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false) {
+    init(account: Account, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false) {
         self.theme = theme
         self.strings = strings
         self.mode = mode
         self.share = share
         self.peerSelected = peerSelected
+        self.peerLongTapped = peerLongTapped
         self.isPeerSelected = isPeerSelected
         
         self.sectionHeaderNode = ListSectionHeaderNode(theme: theme)
@@ -62,7 +64,9 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
             if let strongSelf = self {
                 var items: [ListViewItem] = []
                 for peer in peers {
-                    items.append(HorizontalPeerItem(theme: strongSelf.theme, strings: strongSelf.strings, mode: mode, account: account, peer: peer, action: peerSelected, isPeerSelected: isPeerSelected, customWidth: strongSelf.itemCustomWidth))
+                    items.append(HorizontalPeerItem(theme: strongSelf.theme, strings: strongSelf.strings, mode: mode, account: account, peer: peer, action: peerSelected, longTapAction: { peer in
+                        peerLongTapped(peer)
+                    }, isPeerSelected: isPeerSelected, customWidth: strongSelf.itemCustomWidth))
                 }
                 strongSelf.items = items
                 strongSelf.listView.transaction(deleteIndices: [], insertIndicesAndItems: (0 ..< items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [], updateOpaqueState: nil)
@@ -88,22 +92,20 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
         return CGSize(width: constrainedSize.width, height: 120.0)
     }
     
-    override func layout() {
-        super.layout()
-        
-        let bounds = self.bounds
-        
-        self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.size.width, height: 29.0))
-        self.sectionHeaderNode.layout()
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 29.0))
+        self.sectionHeaderNode.updateLayout(size: CGSize(width: size.width, height: 29.0), leftInset: leftInset, rightInset: rightInset)
         
         var insets = UIEdgeInsets()
+        insets.top += leftInset
+        insets.bottom += rightInset
         
         var itemCustomWidth: CGFloat?
         if self.share {
             insets.top = 7.0
             insets.bottom = 7.0
             
-            itemCustomWidth = calculateItemCustomWidth(width: bounds.size.width)
+            itemCustomWidth = calculateItemCustomWidth(width: size.width)
         }
         
         var updateItems: [ListViewUpdateItem] = []
@@ -112,15 +114,15 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
             
             for i in 0 ..< self.items.count {
                 if let item = self.items[i] as? HorizontalPeerItem {
-                    self.items[i] = HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: self.mode, account: item.account, peer: item.peer, action: self.peerSelected, isPeerSelected: self.isPeerSelected, customWidth: itemCustomWidth)
+                    self.items[i] = HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: self.mode, account: item.account, peer: item.peer, action: self.peerSelected, longTapAction: self.peerLongTapped, isPeerSelected: self.isPeerSelected, customWidth: itemCustomWidth)
                     updateItems.append(ListViewUpdateItem(index: i, previousIndex: i, item: self.items[i], directionHint: nil))
                 }
             }
         }
         
-        self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 92.0, height: bounds.size.width)
-        self.listView.position = CGPoint(x: bounds.size.width / 2.0, y: 92.0 / 2.0 + 29.0)
-        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: updateItems, options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: 92.0, height: bounds.size.width), insets: insets, duration: 0.0, curve: .Default), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 92.0, height: size.width)
+        self.listView.position = CGPoint(x: size.width / 2.0, y: 92.0 / 2.0 + 29.0)
+        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: updateItems, options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: 92.0, height: size.width), insets: insets, duration: 0.0, curve: .Default), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
     
     func viewAndPeerAtPoint(_ point: CGPoint) -> (UIView, PeerId)? {

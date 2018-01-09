@@ -23,6 +23,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
         switch entity.type {
             case .Url:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
+                string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
@@ -33,6 +34,12 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                     nsString = text as NSString
                 }
                 string.addAttribute(NSAttributedStringKey(rawValue: TextNode.UrlAttribute), value: "mailto:\(nsString!.substring(with: range))", range: range)
+            case .PhoneNumber:
+                string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
+                if nsString == nil {
+                    nsString = text as NSString
+                }
+                string.addAttribute(NSAttributedStringKey(rawValue: TextNode.UrlAttribute), value: "tel:\(nsString!.substring(with: range))", range: range)
             case let .TextUrl(url):
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if nsString == nil {

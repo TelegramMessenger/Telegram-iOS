@@ -35,10 +35,10 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.action = action
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ItemListSingleLineInputItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -49,13 +49,13 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ItemListSingleLineInputItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -117,29 +117,29 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
     }
     
-    func asyncLayout() -> (_ item: ItemListSingleLineInputItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ItemListSingleLineInputItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         let currentItem = self.item
         
-        return { item, width, neighbors in
+        return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
             
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
             }
             
-            let leftInset: CGFloat = 16.0
+            let leftInset: CGFloat = 16.0 + params.leftInset
             
             let titleString = NSMutableAttributedString(attributedString: item.title)
             titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
             titleString.addAttributes([NSAttributedStringKey.font: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 0, .end, CGSize(width: width - 32 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
-            let contentSize = CGSize(width: width, height: 44.0)
+            let contentSize = CGSize(width: params.width, height: 44.0)
             let insets = itemListNeighborsGroupedInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -152,9 +152,9 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     strongSelf.item = item
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                         
                         strongSelf.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
                         strongSelf.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
@@ -204,7 +204,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                         strongSelf.textNode.textField.text = item.text
                     }
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: floor((layout.contentSize.height - 40.0) / 2.0)), size: CGSize(width: max(1.0, width - (leftInset + titleLayout.size.width + item.spacing)), height: 40.0))
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: floor((layout.contentSize.height - 40.0) / 2.0)), size: CGSize(width: max(1.0, params.width - (leftInset + titleLayout.size.width + item.spacing)), height: 40.0))
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -228,7 +228,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                         default:
                             bottomStripeInset = 0.0
                     }
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     

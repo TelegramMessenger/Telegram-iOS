@@ -1,10 +1,11 @@
 import Foundation
-import LegacyComponents
 import UIKit
 import TelegramCore
 import SwiftSignalKit
 import MtProtoKitDynamic
 import Display
+
+import LegacyComponents
 
 var legacyComponentsApplication: UIApplication!
 private var legacyComponentsAccount: Account?
@@ -13,6 +14,10 @@ private var legacyLocalization = TGLocalization(version: 0, code: "en", dict: [:
 
 func updateLegacyLocalization(strings: PresentationStrings) {
     legacyLocalization = TGLocalization(version: 0, code: strings.languageCode, dict: strings.dict, isActive: true)
+    
+    let languages: [String] = [strings.languageCode]
+    UserDefaults.standard.set(languages, forKey: "AppleLanguages")
+    UserDefaults.standard.synchronize()
 }
 
 public func updateLegacyComponentsAccount(_ account: Account?) {
@@ -186,6 +191,24 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func request(_ type: TGAudioSessionType, interrupted: (() -> Void)!) -> SDisposable! {
+        if let legacyAccount = legacyAccount {
+            let convertedType: ManagedAudioSessionType
+            switch type {
+                case TGAudioSessionTypePlayAndRecord, TGAudioSessionTypePlayAndRecordHeadphones:
+                    convertedType = .playAndRecord
+                default:
+                    convertedType = .play
+            }
+            let disposable = legacyAccount.telegramApplicationContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
+            }, deactivate: {
+                interrupted?()
+                return .complete()
+            })
+            
+            return SBlockDisposable(block: {
+                disposable.dispose()
+            })
+        }
         return nil
     }
     
@@ -217,7 +240,11 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                     return nil
                 case let .color(color):
                     return generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-                        context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
+                        if color == 0 {
+                            context.setFillColor(UIColor(rgb: 0x222222).cgColor)
+                        } else {
+                            context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
+                        }
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     })
                 case let .image(representations):
@@ -283,7 +310,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func makeHTTPRequestOperation(with request: URLRequest!) -> (Operation & LegacyHTTPRequestOperation)! {
-        return nil
+        return LegacyHTTPOperationImpl(request: request)
     }
     
     public func pausePictureInPicturePlayback() {
@@ -296,6 +323,47 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     
     public func maybeReleaseVolumeOverlay() {
         
+    }
+    
+    func navigationBarPallete() -> TGNavigationBarPallete! {
+        if let account = legacyComponentsAccount {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let theme = presentationData.theme.rootController.navigationBar
+            return TGNavigationBarPallete(backgroundColor: theme.backgroundColor, separatorColor: theme.separatorColor, titleColor: theme.primaryTextColor, tintColor: theme.accentTextColor)
+        } else {
+            return nil
+        }
+    }
+    
+    func menuSheetPallete() -> TGMenuSheetPallete! {
+        if let account = legacyComponentsAccount {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let theme = presentationData.theme.actionSheet
+            return TGMenuSheetPallete(dark: presentationData.theme.overallDarkAppearance, backgroundColor: theme.opaqueItemBackgroundColor, selectionColor: theme.opaqueItemHighlightedBackgroundColor, separatorColor: theme.opaqueItemSeparatorColor, accentColor: theme.controlAccentColor, destructiveColor: theme.destructiveActionTextColor, textColor: theme.primaryTextColor, secondaryTextColor: theme.secondaryTextColor, spinnerColor: theme.secondaryTextColor, badgeTextColor: theme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: theme.opaqueItemBackgroundColor))
+        } else {
+            return nil
+        }
+    }
+    
+    func mediaAssetsPallete() -> TGMediaAssetsPallete! {
+        if let account = legacyComponentsAccount {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let theme = presentationData.theme.list
+            let navigationBar = presentationData.theme.rootController.navigationBar
+            return TGMediaAssetsPallete(dark: presentationData.theme.overallDarkAppearance, backgroundColor: theme.plainBackgroundColor, selectionColor: theme.itemHighlightedBackgroundColor, separatorColor: theme.itemPlainSeparatorColor, textColor: theme.itemPrimaryTextColor, secondaryTextColor: theme.controlSecondaryColor, accentColor: theme.itemAccentColor, barBackgroundColor: navigationBar.backgroundColor, barSeparatorColor: navigationBar.separatorColor, navigationTitleColor: navigationBar.primaryTextColor, badge: generateStretchableFilledCircleImage(diameter: 22.0, color: navigationBar.accentTextColor), badgeTextColor: navigationBar.backgroundColor, sendIconImage: PresentationResourcesChat.chatInputPanelSendButtonImage(presentationData.theme), maybeAccentColor: navigationBar.accentTextColor)
+        } else {
+            return nil
+        }
+    }
+    
+    func checkButtonPallete() -> TGCheckButtonPallete! {
+        if let account = legacyComponentsAccount {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let theme = presentationData.theme
+            return TGCheckButtonPallete(defaultBackgroundColor: theme.chat.bubble.selectionControlFillColor, accentBackgroundColor: theme.chat.bubble.selectionControlFillColor, defaultBorderColor: theme.chat.bubble.selectionControlBorderColor, mediaBorderColor: theme.chat.bubble.selectionControlBorderColor, chatBorderColor: theme.chat.bubble.selectionControlBorderColor, check: theme.chat.bubble.selectionControlForegroundColor, blueColor: theme.chat.bubble.selectionControlFillColor, barBackgroundColor: theme.chat.bubble.selectionControlFillColor)
+        } else {
+            return nil
+        }
     }
 }
 

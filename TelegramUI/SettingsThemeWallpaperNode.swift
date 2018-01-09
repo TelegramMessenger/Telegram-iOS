@@ -15,6 +15,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
     var pressed: (() -> Void)?
     
     override init() {
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         super.init()
         
         self.addSubnode(self.backgroundNode)
@@ -35,7 +36,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                 case .builtin:
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
-                    self.imageNode.setSignal(account: account, signal: settingsBuiltinWallpaperImage(account: account))
+                    self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: account))
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .color(color):
@@ -45,7 +46,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                 case let .image(representations):
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
-                    self.imageNode.setSignal(account: account, signal: chatAvatarGalleryPhoto(account: account, representations: representations, autoFetchFullSize: true))
+                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: representations, autoFetchFullSize: true))
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: largestImageRepresentation(representations)!.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
             }

@@ -54,9 +54,9 @@ private enum GroupAdminsEntryStableId: Hashable {
 }
 
 private enum GroupAdminsEntry: ItemListNodeEntry {
-    case allAdmins(Bool)
-    case allAdminsInfo(String)
-    case peerItem(Int32, Peer, PeerPresence?, Bool, Bool)
+    case allAdmins(PresentationTheme, String, Bool)
+    case allAdminsInfo(PresentationTheme, String)
+    case peerItem(Int32, PresentationTheme, PresentationStrings, Peer, PeerPresence?, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -73,28 +73,34 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
                 return .index(0)
             case .allAdminsInfo:
                 return .index(1)
-            case let .peerItem(_, peer, _, _, _):
+            case let .peerItem(_, _, _, peer, _, _, _):
                 return .peer(peer.id)
         }
     }
     
     static func ==(lhs: GroupAdminsEntry, rhs: GroupAdminsEntry) -> Bool {
         switch lhs {
-            case let .allAdmins(value):
-                if case .allAdmins(value) = rhs {
+            case let .allAdmins(lhsTheme, lhsText, lhsValue):
+                if case let .allAdmins(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .allAdminsInfo(text):
-                if case .allAdminsInfo(text) = rhs {
+            case let .allAdminsInfo(lhsTheme, lhsText):
+                if case let .allAdminsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .peerItem(lhsIndex, lhsPeer, lhsPresence, lhsToggled, lhsEnabled):
-                if case let .peerItem(rhsIndex, rhsPeer, rhsPresence, rhsToggled, rhsEnabled) = rhs {
+            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsPresence, lhsToggled, lhsEnabled):
+                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsPresence, rhsToggled, rhsEnabled) = rhs {
                     if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
                         return false
                     }
                     if !lhsPeer.isEqual(rhsPeer) {
@@ -131,9 +137,9 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .peerItem(index, _, _, _, _):
+            case let .peerItem(index, _, _, _, _, _, _):
                 switch rhs {
-                    case let .peerItem(rhsIndex, _, _, _, _):
+                    case let .peerItem(rhsIndex, _, _, _, _, _, _):
                         return index < rhsIndex
                     case .allAdmins, .allAdminsInfo:
                         return false
@@ -143,16 +149,16 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
     
     func item(_ arguments: GroupAdminsControllerArguments) -> ListViewItem {
         switch self {
-        case let .allAdmins(value):
-            return ItemListSwitchItem(title: "All Members Are Admins", value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                arguments.updateAllAreAdmins(updatedValue)
-            })
-        case let .allAdminsInfo(text):
-            return ItemListTextItem(text: .plain(text), sectionId: self.section)
-        case let .peerItem(_, peer, presence, toggled, enabled):
-            return ItemListPeerItem(account: arguments.account, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: toggled, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: { value in
-                arguments.updatePeerIsAdmin(peer.id, value)
-            })
+            case let .allAdmins(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                    arguments.updateAllAreAdmins(updatedValue)
+                })
+            case let .allAdminsInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .peerItem(_, theme, strings, peer, presence, toggled, enabled):
+                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: toggled, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: { value in
+                    arguments.updatePeerIsAdmin(peer.id, value)
+                })
         }
     }
 }
@@ -202,7 +208,7 @@ private struct GroupAdminsControllerState: Equatable {
     }
 }
 
-private func groupAdminsControllerEntries(account: Account, view: PeerView, state: GroupAdminsControllerState) -> [GroupAdminsEntry] {
+private func groupAdminsControllerEntries(account: Account, presentationData: PresentationData, view: PeerView, state: GroupAdminsControllerState) -> [GroupAdminsEntry] {
     var entries: [GroupAdminsEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramGroup, let cachedData = view.cachedData as? CachedGroupData, let participants = cachedData.participants {
@@ -213,11 +219,11 @@ private func groupAdminsControllerEntries(account: Account, view: PeerView, stat
             effectiveAdminsEnabled = peer.flags.contains(.adminsEnabled)
         }
         
-        entries.append(.allAdmins(!effectiveAdminsEnabled))
+        entries.append(.allAdmins(presentationData.theme, presentationData.strings.ChatAdmins_AllMembersAreAdmins, !effectiveAdminsEnabled))
         if effectiveAdminsEnabled {
-            entries.append(.allAdminsInfo("Only admins can add and remove members, edit name and photo of this group."))
+            entries.append(.allAdminsInfo(presentationData.theme, presentationData.strings.ChatAdmins_AllMembersAreAdminsOnHelp))
         } else {
-            entries.append(.allAdminsInfo("Group members can add new members, edit name and photo of this group."))
+            entries.append(.allAdminsInfo(presentationData.theme, presentationData.strings.ChatAdmins_AllMembersAreAdminsOffHelp))
         }
         
         let sortedParticipants = participants.participants.sorted(by: { lhs, rhs in
@@ -270,7 +276,7 @@ private func groupAdminsControllerEntries(account: Account, view: PeerView, stat
                             }
                     }
                 }
-                entries.append(.peerItem(index, peer, view.peerPresences[participant.peerId], isAdmin, isEnabled))
+                entries.append(.peerItem(index, presentationData.theme, presentationData.strings, peer, view.peerPresences[participant.peerId], isAdmin, isEnabled))
                 index += 1
             }
         }
@@ -353,7 +359,7 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
             
             var emptyStateItem: ItemListControllerEmptyStateItem?
             if view.cachedData == nil {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
+                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
             
             var rightNavigationButton: ItemListNavigationButton?
@@ -361,8 +367,8 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Admins"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: true)
-            let listState = ItemListNodeState(entries: groupAdminsControllerEntries(account: account, view: view, state: state), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: true)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatAdmins_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+            let listState = ItemListNodeState(entries: groupAdminsControllerEntries(account: account, presentationData: presentationData, view: view, state: state), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: true)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

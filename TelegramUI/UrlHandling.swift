@@ -12,6 +12,7 @@ private enum ParsedInternalPeerUrlParameter {
 private enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case stickerPack(String)
+    case join(String)
 }
 
 private enum ParsedUrl {
@@ -26,6 +27,8 @@ enum ResolvedUrl {
     case groupBotStart(peerId: PeerId, payload: String)
     case channelMessage(peerId: PeerId, messageId: MessageId)
     case stickerPack(name: String)
+    case instantView(TelegramMediaWebpage, String?)
+    case join(String)
 }
 
 private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
@@ -54,6 +57,8 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
             } else if pathComponents.count == 2 {
                 if pathComponents[0] == "addstickers" {
                     return .stickerPack(pathComponents[1])
+                } else if pathComponents[0] == "joinchat" || pathComponents[0] == "joinchannel" {
+                    return .join(pathComponents[1])
                 } else if let value = Int(pathComponents[1]) {
                     return .peerName(peerName, .channelMessage(Int32(value)))
                 } else {
@@ -92,13 +97,15 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                 }
         case let .stickerPack(name):
             return .single(.stickerPack(name: name))
+        case let .join(link):
+            return .single(.join(link))
     }
 }
 
 func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
     let schemes = ["http://", "https://", ""]
-    let basePaths = ["telegram.me", "t.me"]
-    for basePath in basePaths {
+    let baseTelegramMePaths = ["telegram.me", "t.me"]
+    for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
@@ -114,6 +121,29 @@ func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
                 } else {
                     return .single(.externalUrl(url))
                 }
+            }
+        }
+    }
+    let baseTelegraPhPaths = ["telegra.ph"]
+    for basePath in baseTelegraPhPaths {
+        for scheme in schemes {
+            let basePrefix = scheme + basePath + "/"
+            if url.lowercased().hasPrefix(basePrefix) {
+                return webpagePreview(account: account, url: url)
+                    |> map { webpage -> ResolvedUrl in
+                        if let webpage = webpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
+                            var anchorValue: String?
+                            if let anchorRange = url.range(of: "#") {
+                                let anchor = url[anchorRange.upperBound...]
+                                if !anchor.isEmpty {
+                                    anchorValue = String(anchor)
+                                }
+                            }
+                            return .instantView(webpage, anchorValue)
+                        } else {
+                            return .externalUrl(url)
+                        }
+                    }
             }
         }
     }

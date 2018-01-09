@@ -1,20 +1,51 @@
 import Foundation
 import Display
 import AsyncDisplayKit
+import TelegramCore
+import SwiftSignalKit
 
 public final class NotificationContainerController: ViewController {
     private var controllerNode: NotificationContainerControllerNode {
         return self.displayNode as! NotificationContainerControllerNode
     }
     
-    public init() {
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
+    public init(account: Account) {
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
         super.init(navigationBarTheme: nil)
         
         self.statusBar.statusBarStyle = .Ignore
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings()
+                    }
+                }
+            })
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func updateThemeAndStrings() {
+        if self.isNodeLoaded {
+            self.controllerNode.updatePresentationData(self.presentationData)
+        }
     }
     
     override public func loadView() {
@@ -22,12 +53,17 @@ public final class NotificationContainerController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = NotificationContainerControllerNode()
+        self.displayNode = NotificationContainerControllerNode(presentationData: self.presentationData)
         self.displayNodeDidLoad()
         
         self.controllerNode.displayingItemsUpdated = { [weak self] value in
             if let strongSelf = self {
                 strongSelf.statusBar.statusBarStyle = value ? .Hide : .Ignore
+                if value {
+                    strongSelf.deferScreenEdgeGestures = [.top]
+                } else {
+                    strongSelf.deferScreenEdgeGestures = []
+                }
             }
         }
     }

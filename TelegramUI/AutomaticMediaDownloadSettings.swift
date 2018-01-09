@@ -203,7 +203,8 @@ func updateMediaDownloadSettingsInteractively(postbox: Postbox, _ f: @escaping (
             } else {
                 currentSettings = AutomaticMediaDownloadSettings.defaultSettings
             }
-            return f(currentSettings)
+            let updated = f(currentSettings)
+            return updated
         })
     }
 }

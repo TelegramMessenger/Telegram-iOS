@@ -20,18 +20,22 @@ private enum AutomaticDownloadPeers {
 private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void
     let openNetworkUsage: () -> Void
+    let openProxy: () -> Void
     let toggleAutomaticDownload: (AutomaticDownloadCategory, AutomaticDownloadPeers, Bool) -> Void
     let openVoiceUseLessData: () -> Void
     let toggleSaveIncomingPhotos: (Bool) -> Void
     let toggleSaveEditedPhotos: (Bool) -> Void
+    let toggleAutoplayGifs: (Bool) -> Void
     
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, toggleAutomaticDownload: @escaping (AutomaticDownloadCategory, AutomaticDownloadPeers, Bool) -> Void, openVoiceUseLessData: @escaping () -> Void, toggleSaveIncomingPhotos: @escaping (Bool) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void, toggleAutomaticDownload: @escaping (AutomaticDownloadCategory, AutomaticDownloadPeers, Bool) -> Void, openVoiceUseLessData: @escaping () -> Void, toggleSaveIncomingPhotos: @escaping (Bool) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
+        self.openProxy = openProxy
         self.toggleAutomaticDownload = toggleAutomaticDownload
         self.openVoiceUseLessData = openVoiceUseLessData
         self.toggleSaveIncomingPhotos = toggleSaveIncomingPhotos
         self.toggleSaveEditedPhotos = toggleSaveEditedPhotos
+        self.toggleAutoplayGifs = toggleAutoplayGifs
     }
 }
 
@@ -42,6 +46,7 @@ private enum DataAndStorageSection: Int32 {
     case automaticInstantVideoDownload
     case voiceCalls
     case other
+    case connection
 }
 
 private enum DataAndStorageEntry: ItemListNodeEntry {
@@ -61,6 +66,9 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case otherHeader(PresentationTheme, String)
     case saveIncomingPhotos(PresentationTheme, String, Bool)
     case saveEditedPhotos(PresentationTheme, String, Bool)
+    case autoplayGifs(PresentationTheme, String, Bool)
+    case connectionHeader(PresentationTheme, String)
+    case connectionProxy(PresentationTheme, String, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -74,8 +82,10 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.automaticInstantVideoDownload.rawValue
             case .voiceCallsHeader, .useLessVoiceData:
                 return DataAndStorageSection.voiceCalls.rawValue
-            case .otherHeader, .saveIncomingPhotos, .saveEditedPhotos:
+            case .otherHeader, .saveIncomingPhotos, .saveEditedPhotos, .autoplayGifs:
                 return DataAndStorageSection.other.rawValue
+            case .connectionHeader, .connectionProxy:
+                return DataAndStorageSection.connection.rawValue
         }
     }
     
@@ -113,6 +123,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 14
             case .saveEditedPhotos:
                 return 15
+            case .autoplayGifs:
+                return 16
+            case .connectionHeader:
+                return 17
+            case .connectionProxy:
+                return 18
         }
     }
     
@@ -214,6 +230,24 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .autoplayGifs(lhsTheme, lhsText, lhsValue):
+                if case let .autoplayGifs(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .connectionHeader(lhsTheme, lhsText):
+                if case let .connectionHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .connectionProxy(lhsTheme, lhsText, lhsValue):
+                if case let .connectionProxy(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -277,6 +311,16 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSaveEditedPhotos(value)
                 })
+            case let .autoplayGifs(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleAutoplayGifs(value)
+                })
+            case let .connectionHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .connectionProxy(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                    arguments.openProxy()
+                })
         }
     }
 }
@@ -291,15 +335,17 @@ private struct DataAndStorageData: Equatable {
     let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
     let generatedMediaStoreSettings: GeneratedMediaStoreSettings
     let voiceCallSettings: VoiceCallSettings
+    let proxySettings: ProxySettings?
     
-    init(automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, generatedMediaStoreSettings: GeneratedMediaStoreSettings, voiceCallSettings: VoiceCallSettings) {
+    init(automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, generatedMediaStoreSettings: GeneratedMediaStoreSettings, voiceCallSettings: VoiceCallSettings, proxySettings: ProxySettings?) {
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         self.generatedMediaStoreSettings = generatedMediaStoreSettings
         self.voiceCallSettings = voiceCallSettings
+        self.proxySettings = proxySettings
     }
     
     static func ==(lhs: DataAndStorageData, rhs: DataAndStorageData) -> Bool {
-        return lhs.automaticMediaDownloadSettings == rhs.automaticMediaDownloadSettings && lhs.generatedMediaStoreSettings == rhs.generatedMediaStoreSettings && lhs.voiceCallSettings == rhs.voiceCallSettings
+        return lhs.automaticMediaDownloadSettings == rhs.automaticMediaDownloadSettings && lhs.generatedMediaStoreSettings == rhs.generatedMediaStoreSettings && lhs.voiceCallSettings == rhs.voiceCallSettings && lhs.proxySettings == rhs.proxySettings
     }
 }
 
@@ -340,15 +386,24 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.useLessVoiceData(presentationData.theme, presentationData.strings.CallSettings_UseLessData, stringForUseLessDataSetting(strings: presentationData.strings, settings: data.voiceCallSettings)))
     
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
-    entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos, data.automaticMediaDownloadSettings.saveIncomingPhotos))
+    //entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos, data.automaticMediaDownloadSettings.saveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
+    entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayAnimations, data.automaticMediaDownloadSettings.categories.gif.privateChats))
+    
+    let proxyValue: String
+    if let _ = data.proxySettings {
+        proxyValue = presentationData.strings.ChatSettings_ConnectionType_UseSocks5
+    } else {
+        proxyValue = presentationData.strings.GroupInfo_SharedMediaNone
+    }
+    entries.append(.connectionHeader(presentationData.theme, presentationData.strings.ChatSettings_ConnectionType_Title.uppercased()))
+    entries.append(.connectionProxy(presentationData.theme, presentationData.strings.SocksProxySetup_Title, proxyValue))
     
     return entries
 }
 
 func dataAndStorageController(account: Account) -> ViewController {
     let initialState = DataAndStorageControllerState()
-    
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     
     var pushControllerImpl: ((ViewController) -> Void)?
@@ -356,7 +411,8 @@ func dataAndStorageController(account: Account) -> ViewController {
     let actionsDisposable = DisposableSet()
     
     let dataAndStorageDataPromise = Promise<DataAndStorageData>()
-    dataAndStorageDataPromise.set(account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings, ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings, ApplicationSpecificPreferencesKeys.voiceCallSettings])
+    dataAndStorageDataPromise.set(account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings, ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings, ApplicationSpecificPreferencesKeys.voiceCallSettings,
+        PreferencesKeys.proxySettings])
         |> map { view -> DataAndStorageData in
             let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
             if let value = view.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
@@ -379,13 +435,24 @@ func dataAndStorageController(account: Account) -> ViewController {
                 voiceCallSettings = VoiceCallSettings.defaultSettings
             }
             
-            return DataAndStorageData(automaticMediaDownloadSettings: automaticMediaDownloadSettings, generatedMediaStoreSettings: generatedMediaStoreSettings, voiceCallSettings: voiceCallSettings)
+            var proxySettings: ProxySettings?
+            if let value = view.values[PreferencesKeys.proxySettings] as? ProxySettings {
+                proxySettings = value
+            }
+            
+            return DataAndStorageData(automaticMediaDownloadSettings: automaticMediaDownloadSettings, generatedMediaStoreSettings: generatedMediaStoreSettings, voiceCallSettings: voiceCallSettings, proxySettings: proxySettings)
         })
     
     let arguments = DataAndStorageControllerArguments(openStorageUsage: {
         pushControllerImpl?(storageUsageController(account: account))
     }, openNetworkUsage: {
         pushControllerImpl?(networkUsageStatsController(account: account))
+    }, openProxy: {
+        let _ = (account.postbox.modify { modifier -> ProxySettings? in
+            return modifier.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings
+        } |> deliverOnMainQueue).start(next: { settings in
+            pushControllerImpl?(proxySettingsController(account: account, currentSettings: settings))
+        })
     }, toggleAutomaticDownload: { category, peers, value in
         let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { current in
             switch category {
@@ -428,6 +495,12 @@ func dataAndStorageController(account: Account) -> ViewController {
     }, toggleSaveEditedPhotos: { value in
         let _ = updateGeneratedMediaStoreSettingsInteractively(postbox: account.postbox, { current in
             return current.withUpdatedStoreEditedPhotos(value)
+        }).start()
+    }, toggleAutoplayGifs: { value in
+        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { current in
+            var updated = current.withUpdatedCategories(current.categories.withUpdatedGif(current.categories.gif.withUpdatedPrivateChats(value)))
+            updated = updated.withUpdatedCategories(updated.categories.withUpdatedGif(updated.categories.gif.withUpdatedGroupsAndChannels(value)))
+            return updated
         }).start()
     })
     

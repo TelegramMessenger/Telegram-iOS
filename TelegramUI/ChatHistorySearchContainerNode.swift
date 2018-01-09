@@ -75,7 +75,7 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
     func item(account: Account, peerId: PeerId, interaction: ChatControllerInteraction) -> ListViewItem {
         switch self {
             case let .message(message, theme, strings):
-                return ListMessageItem(theme: theme, account: account, peerId: peerId, controllerInteraction: interaction, message: message)
+                return ListMessageItem(theme: theme, strings: strings, account: account, chatLocation: .peer(peerId), controllerInteraction: interaction, message: message, selection: .none, displayHeader: true)
         }
     }
 }
@@ -141,7 +141,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         let searchItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ChatHistorySearchEntry]?, NoError> in
                 if let query = query, !query.isEmpty {
-                    let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: account, peerId: peerId, query: query, tagMask: tagMask)
+                    let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: account, location: .peer(peerId: peerId, fromId: nil, tags: tagMask), query: query)
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     
                     return combineLatest(foundRemoteMessages, themeAndStringsPromise.get())
@@ -206,7 +206,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
         
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: topInset + 2.0, left: 0.0, bottom: 0.0, right: 0.0), duration: 0.0, curve: .Default), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0), duration: 0.0, curve: .Default), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         
         if firstValidLayout {
@@ -242,7 +242,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
                     if displayingResults != !strongSelf.listNode.isHidden {
                         strongSelf.listNode.isHidden = !displayingResults
                         strongSelf.dimNode.isHidden = displayingResults
-                        strongSelf.backgroundColor = displayingResults ? UIColor.white : nil
+                        strongSelf.backgroundColor = displayingResults ? strongSelf.presentationData.theme.list.plainBackgroundColor : nil
                     }
                 }
             })

@@ -6,14 +6,15 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-func legacyAttachmentMenu(account: Account, peer: Peer, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+func legacyAttachmentMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
     controller.dismissesByOutsideTap = true
     controller.hasSwipeGesture = true
-    controller.maxHeight = 445.0 - TGMenuSheetButtonItemViewHeight
+    controller.maxHeight = 445.0// - TGMenuSheetButtonItemViewHeight
     
     var itemViews: [Any] = []
-    let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: false)!
+    let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping)!
+    //carouselItem.defaultStatusBarStyle = theme.rootController.statusBar.style.style.systemStyle
     carouselItem.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
     carouselItem.recipientName = peer.displayTitle
     carouselItem.cameraPressed = { [weak controller] cameraView in
@@ -28,7 +29,7 @@ func legacyAttachmentMenu(account: Account, peer: Peer, theme: PresentationTheme
         if let controller = controller, let carouselItem = carouselItem {
             controller.dismiss(animated: true)
             let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
-            let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: true)
+            let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: saveEditedPhotos)
             sendMessagesWithSignals(signals)
         }
     };
@@ -85,4 +86,31 @@ func legacyAttachmentMenu(account: Account, peer: Peer, theme: PresentationTheme
     controller.setItemViews(itemViews)
     
     return controller
+}
+
+func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void) -> ViewController {
+    
+    let legacyController = LegacyController(presentation: .custom, theme: theme)
+    legacyController.statusBar.statusBarStyle = .Hide
+    let baseController = TGViewController(context: legacyController.context)!
+    legacyController.bind(controller: baseController)
+    var hasTimer = false
+    if peer is TelegramUser || peer is TelegramSecretChat {
+        hasTimer = true
+    }
+    let recipientName = peer.displayTitle
+    
+    legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
+        if let strongLegacyController = legacyController, let baseController = baseController {
+            TGClipboardMenu.present(inParentController: baseController, context: strongLegacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, completed: { selectionContext, editingContext, currentItem in
+                let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: legacyAssetPickerItemGenerator())
+                sendMessagesWithSignals(signals)
+            }, dismissed: {
+                if let strongLegacyController = legacyController {
+                    strongLegacyController.dismiss()
+                }
+            }, sourceView: baseController.view, sourceRect: nil)
+        }
+    }
+    return legacyController
 }

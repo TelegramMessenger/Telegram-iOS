@@ -16,6 +16,25 @@ private enum CreateGroupSection: Int32 {
     case members
 }
 
+private enum CreateGroupEntryTag: ItemListItemTag {
+    case info
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? CreateGroupEntryTag {
+            switch self {
+                case .info:
+                    if case .info = other {
+                        return true
+                    } else {
+                        return false
+                    }
+            }
+        } else {
+            return false
+        }
+    }
+}
+
 private enum CreateGroupEntry: ItemListNodeEntry {
     case groupInfo(PresentationTheme, PresentationStrings, Peer?, ItemListAvatarAndNameInfoItemState)
     case setProfilePhoto(PresentationTheme, String)
@@ -107,10 +126,10 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     func item(_ arguments: CreateGroupArguments) -> ListViewItem {
         switch self {
             case let .groupInfo(theme, strings, peer, state):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
-                })
+                }, tag: CreateGroupEntryTag.info)
             case let .setProfilePhoto(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     
@@ -182,7 +201,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
 }
 
 public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewController {
-    let initialState = CreateGroupState(creating: false, editingName: .title(title: ""))
+    let initialState = CreateGroupState(creating: false, editingName: .title(title: "", type: .group))
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((CreateGroupState) -> CreateGroupState) -> Void = { f in
@@ -214,7 +233,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                 }
             }).start(next: { peerId in
                 if let peerId = peerId {
-                    let controller = ChatController(account: account, peerId: peerId)
+                    let controller = ChatController(account: account, chatLocation: .peer(peerId))
                     replaceControllerImpl?(controller)
                 }
             }))
@@ -228,13 +247,13 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
             if state.creating {
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: "Create", style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Compose_Create, style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
                     arguments.done()
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Create Group"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"))
-            let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view), style: .blocks)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Compose_NewGroup), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view), style: .blocks, focusItemTag: CreateGroupEntryTag.info)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

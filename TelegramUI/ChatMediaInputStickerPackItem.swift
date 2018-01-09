@@ -28,7 +28,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
         self.theme = theme
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatMediaInputStickerPackItemNode()
             node.contentSize = CGSize(width: 41.0, height: 41.0)
@@ -41,7 +41,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
             (node as? ChatMediaInputStickerPackItemNode)?.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
         })
@@ -79,7 +79,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)
         
         self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
-        self.imageNode.alphaTransitionOnFirstUpdate = true
+        self.imageNode.contentAnimations = [.firstUpdate]
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -107,7 +107,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 let imageSize = dimensions.aspectFitted(boundingImageSize)
                 let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
                 imageApply()
-                self.imageNode.setSignal(account: account, signal: chatMessageSticker(account: account, file: item.file, small: true))
+                self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true))
                 self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: item.file).start())
                 self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
             }

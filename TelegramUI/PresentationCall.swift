@@ -178,7 +178,7 @@ public final class PresentationCall {
         }
         
         if let audioSessionControl = audioSessionControl, previous == nil || previousControl == nil {
-            audioSessionControl.setSpeaker(self.speakerModeValue)
+            audioSessionControl.setOutputMode(self.speakerModeValue ? .custom(.speaker) : .system)
             audioSessionControl.setup(synchronous: true)
         }
         
@@ -222,14 +222,14 @@ public final class PresentationCall {
                     if let callKitIntegration = self.callKitIntegration {
                         audioSessionActive = callKitIntegration.audioSessionActive |> filter { $0 } |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { [weak self] subscriber in
                             if let strongSelf = self, let audioSessionControl = strongSelf.audioSessionControl {
-                                audioSessionControl.activate()
+                                audioSessionControl.activate({ _ in })
                             }
                             subscriber.putNext(true)
                             subscriber.putCompletion()
                             return EmptyDisposable
                         })
                     } else {
-                        audioSessionControl.activate()
+                        audioSessionControl.activate({ _ in })
                         audioSessionActive = .single(true)
                     }
                     
@@ -281,7 +281,7 @@ public final class PresentationCall {
         self.speakerModeValue = !self.speakerModeValue
         self.speakerModePromise.set(self.speakerModeValue)
         if let audioSessionControl = self.audioSessionControl {
-            audioSessionControl.setSpeaker(self.speakerModeValue)
+            audioSessionControl.setOutputMode(self.speakerModeValue ? .speakerIfNoHeadphones : .system)
         }
     }
 }

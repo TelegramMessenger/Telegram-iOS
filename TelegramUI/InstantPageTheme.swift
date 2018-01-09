@@ -177,7 +177,20 @@ private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFont
     }
 }
 
-func instantPageThemeForSettings(_ settings: InstantPagePresentationSettings) -> InstantPageTheme {
+func instantPageThemeForSettingsAndTime(settings: InstantPagePresentationSettings, time: Date) -> InstantPageTheme {
+    if settings.autoNightMode {
+        switch settings.themeType {
+            case .light, .sepia, .gray:
+                let calendar = Calendar.current
+                let hour = calendar.component(.hour, from: time)
+                if hour <= 8 || hour >= 22 {
+                    return darkTheme.withUpdatedFontStyles(sizeMultiplier: fontSizeMultiplierForVariant(settings.fontSize), forceSerif: settings.forceSerif)
+                }
+            case .dark:
+                break
+        }
+    }
+    
     switch settings.themeType {
         case .light:
             return lightTheme.withUpdatedFontStyles(sizeMultiplier: fontSizeMultiplierForVariant(settings.fontSize), forceSerif: settings.forceSerif)

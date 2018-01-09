@@ -9,13 +9,13 @@ final class ListMessageHoleItem: ListViewItem {
     public init() {
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = ListMessageHoleItemNode()
             
             let nodeLayout = node.asyncLayout()
             let (top, bottom, dateAtBottom) = (false, false, false)
-            let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
+            let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom)
             
             node.updateSelectionState(animated: false)
             
@@ -35,7 +35,7 @@ final class ListMessageHoleItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ListMessageHoleItemNode {
             Queue.mainQueue().async {
                 node.updateSelectionState(animated: false)
@@ -45,7 +45,7 @@ final class ListMessageHoleItem: ListViewItem {
                 async {
                     let (top, bottom, dateAtBottom) = (false, false, false) //self.mergedWithItems(top: previousItem, bottom: nextItem)
                     
-                    let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
+                    let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
@@ -77,22 +77,22 @@ final class ListMessageHoleItemNode: ListViewItemNode {
         activityIndicator.startAnimating()
     }
     
-    override public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? ListMessageHoleItem {
             let doLayout = self.asyncLayout()
-            let merged = (top: false, bottom: false, dateAtBottom: false)//item.mergedWithItems(top: previousItem, bottom: nextItem)
-            let (layout, apply) = doLayout(item, width, merged.top, merged.bottom, merged.dateAtBottom)
+            let merged = (top: false, bottom: false, dateAtBottom: false)
+            let (layout, apply) = doLayout(item, params, merged.top, merged.bottom, merged.dateAtBottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
             apply(.None)
         }
     }
     
-    func asyncLayout() -> (_ item: ListMessageHoleItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
-        return { [weak self] _, width, _, _, _ in
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 50.0), insets: UIEdgeInsets()), { _ in
+    func asyncLayout() -> (_ item: ListMessageHoleItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+        return { [weak self] _, params, _, _, _ in
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 50.0), insets: UIEdgeInsets()), { _ in
                 if let strongSelf = self, let activityIndicator = strongSelf.activityIndicator {
-                    let boundsSize = CGSize(width: width, height: 50.0)
+                    let boundsSize = CGSize(width: params.width, height: 50.0)
                     let size = activityIndicator.bounds.size
                     activityIndicator.frame = CGRect(origin: CGPoint(x: floor((boundsSize.width - size.width) / 2.0), y: floor((boundsSize.height - size.height) / 2.0)), size: size)
                 }

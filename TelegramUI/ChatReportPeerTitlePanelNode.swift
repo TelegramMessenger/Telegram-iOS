@@ -43,7 +43,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.addSubnode(self.closeButton)
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         if interfaceState.theme !== self.theme {
             self.theme = interfaceState.theme
             
@@ -54,10 +54,10 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let panelHeight: CGFloat = 40.0
         
-        let rightInset: CGFloat = 18.0
+        let contentRightInset: CGFloat = 18.0 + rightInset
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - rightInset - closeButtonSize.width, y: 14.0), size: closeButtonSize))
+        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: 14.0), size: closeButtonSize))
         
         let updatedButtons: [ChatReportPeerTitleButton]
         if let _ = interfaceState.peer {
@@ -96,8 +96,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         if !self.buttons.isEmpty {
-            let buttonWidth = floor(width / CGFloat(self.buttons.count))
-            var nextButtonOrigin: CGFloat = 0.0
+            let buttonWidth = floor((width - leftInset - rightInset) / CGFloat(self.buttons.count))
+            var nextButtonOrigin: CGFloat = leftInset
             for (_, view) in self.buttons {
                 view.frame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
                 nextButtonOrigin += buttonWidth

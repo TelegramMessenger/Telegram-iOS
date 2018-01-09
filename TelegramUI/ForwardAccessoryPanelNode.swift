@@ -5,25 +5,22 @@ import Postbox
 import SwiftSignalKit
 import Display
 
-func textStringForForwardedMessage(_ message: Message) -> (String, Bool) {
-    if !message.text.isEmpty {
-        return (message.text, false)
-    } else {
-        for media in message.media {
-            switch media {
+func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
+    for media in message.media {
+        switch media {
             case _ as TelegramMediaImage:
-                return ("Forwarded photo", true)
+                return (strings.ForwardedPhotos(1), true)
             case let file as TelegramMediaFile:
-                var fileName: String = "Forwarded file"
+                var fileName: String = strings.ForwardedFiles(1)
                 for attribute in file.attributes {
                     switch attribute {
                     case .Sticker:
-                        return ("Forwarded sticker", true)
+                        return (strings.ForwardedStickers(1), true)
                     case let .FileName(name):
                         fileName = name
                     case let .Audio(isVoice, _, title, performer, _):
                         if isVoice {
-                            return ("Forwarded voice Message", true)
+                            return (strings.ForwardedAudios(1), true)
                         } else {
                             if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
                                 return (title + " — " + performer, true)
@@ -32,14 +29,14 @@ func textStringForForwardedMessage(_ message: Message) -> (String, Bool) {
                             } else if let performer = performer, !performer.isEmpty {
                                 return (performer, true)
                             } else {
-                                return ("Forwarded audio", true)
+                                return (strings.ForwardedAudios(1), true)
                             }
                         }
                     case .Video:
                         if file.isAnimated {
-                            return ("Forwarded gIF", true)
+                            return (strings.ForwardedGifs(1), true)
                         } else {
-                            return ("Forwarded video", true)
+                            return (strings.ForwardedVideos(1), true)
                         }
                     default:
                         break
@@ -47,19 +44,18 @@ func textStringForForwardedMessage(_ message: Message) -> (String, Bool) {
                 }
                 return (fileName, true)
             case _ as TelegramMediaContact:
-                return ("Forwarded contact", true)
+                return (strings.ForwardedContacts(1), true)
             case let game as TelegramMediaGame:
                 return (game.title, true)
             case _ as TelegramMediaMap:
-                return ("Forwarded map", true)
-            case let action as TelegramMediaAction:
+                return (strings.ForwardedLocations(1), true)
+            case _ as TelegramMediaAction:
                 return ("", true)
             default:
                 break
-            }
         }
-        return ("", false)
     }
+    return (message.text, false)
 }
 
 final class ForwardAccessoryPanelNode: AccessoryPanelNode {
@@ -122,14 +118,14 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                         }
                     }
                     if messages.count == 1 {
-                        let (string, _) = textStringForForwardedMessage(messages[0])
+                        let (string, _) = textStringForForwardedMessage(messages[0], strings: strings)
                         text = string
                     } else {
-                        text = "\(messages.count) messages"
+                        text = strings.ForwardedMessages(Int32(messages.count))
                     }
                     
                     strongSelf.titleNode.attributedText = NSAttributedString(string: authors, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                    strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.primaryTextColor)
+                    strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
                     
                     strongSelf.setNeedsLayout()
                 }

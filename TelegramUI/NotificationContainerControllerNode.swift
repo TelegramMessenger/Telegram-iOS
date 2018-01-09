@@ -19,7 +19,11 @@ final class NotificationContainerControllerNode: ASDisplayNode {
     
     private var timeoutTimer: SwiftSignalKit.Timer?
     
-    override init() {
+    private var presentationData: PresentationData
+    
+    init(presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
         super.init()
         
         self.setViewBlock({
@@ -28,6 +32,10 @@ final class NotificationContainerControllerNode: ASDisplayNode {
         
         self.backgroundColor = nil
         self.isOpaque = false
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
     }
     
     override func didLoad() {
@@ -49,6 +57,7 @@ final class NotificationContainerControllerNode: ASDisplayNode {
         self.validLayout = layout
         
         if let (_, topItemNode) = self.topItemAndNode {
+            transition.updateFrame(node: topItemNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             topItemNode.updateLayout(layout: layout, transition: transition)
         }
     }
@@ -83,17 +92,33 @@ final class NotificationContainerControllerNode: ASDisplayNode {
         }
         
         let itemNode = item.node()
-        let containerNode = NotificationItemContainerNode()
+        let containerNode = NotificationItemContainerNode(theme: self.presentationData.theme)
         containerNode.item = item
         containerNode.contentNode = itemNode
         containerNode.dismissed = { [weak self] item in
             if let strongSelf = self {
                 if let (topItem, topItemNode) = strongSelf.topItemAndNode, topItem.groupingKey != nil && topItem.groupingKey == item.groupingKey {
                     topItemNode.removeFromSupernode()
+                    strongSelf.topItemAndNode = nil
                     
                     if let strongSelf = self, strongSelf.topItemAndNode == nil {
                         strongSelf.displayingItemsUpdated?(false)
                     }
+                }
+            }
+        }
+        containerNode.cancelTimeout = { [weak self] item in
+            if let strongSelf = self {
+                if let (topItem, topItemNode) = strongSelf.topItemAndNode, topItem.groupingKey != nil && topItem.groupingKey == item.groupingKey {
+                    strongSelf.timeoutTimer?.invalidate()
+                    strongSelf.timeoutTimer = nil
+                }
+            }
+        }
+        containerNode.resumeTimeout = { [weak self] item in
+            if let strongSelf = self {
+                if let (topItem, _) = strongSelf.topItemAndNode, topItem.groupingKey != nil && topItem.groupingKey == item.groupingKey {
+                    strongSelf.resetTimeoutTimer()
                 }
             }
         }
@@ -102,6 +127,7 @@ final class NotificationContainerControllerNode: ASDisplayNode {
         
         if let validLayout = self.validLayout {
             containerNode.updateLayout(layout: validLayout, transition: .immediate)
+            containerNode.frame = CGRect(origin: CGPoint(), size: validLayout.size)
             containerNode.animateIn()
         }
         
@@ -109,7 +135,17 @@ final class NotificationContainerControllerNode: ASDisplayNode {
             self.displayingItemsUpdated?(true)
         }
         
+        self.resetTimeoutTimer()
+    }
+    
+    private func resetTimeoutTimer() {
         self.timeoutTimer?.invalidate()
+        let timeout: Double
+        #if DEBUG
+            timeout = 6.0
+        #else
+            timeout = 5.0
+        #endif
         let timeoutTimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: false, completion: { [weak self] in
             if let strongSelf = self {
                 if let (_, topItemNode) = strongSelf.topItemAndNode {

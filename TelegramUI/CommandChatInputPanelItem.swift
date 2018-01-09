@@ -7,24 +7,26 @@ import Postbox
 
 final class CommandChatInputPanelItem: ListViewItem {
     fileprivate let account: Account
+    fileprivate let theme: PresentationTheme
     fileprivate let command: PeerCommand
     fileprivate let commandSelected: (PeerCommand, Bool) -> Void
     
     let selectable: Bool = true
     
-    public init(account: Account, command: PeerCommand, commandSelected: @escaping (PeerCommand, Bool) -> Void) {
+    public init(account: Account, theme: PresentationTheme, command: PeerCommand, commandSelected: @escaping (PeerCommand, Bool) -> Void) {
         self.account = account
+        self.theme = theme
         self.command = command
         self.commandSelected = commandSelected
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = CommandChatInputPanelItemNode()
             
             let nodeLayout = node.asyncLayout()
             let (top, bottom) = (previousItem != nil, nextItem != nil)
-            let (layout, apply) = nodeLayout(self, width, top, bottom)
+            let (layout, apply) = nodeLayout(self, params, top, bottom)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -42,7 +44,7 @@ final class CommandChatInputPanelItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? CommandChatInputPanelItemNode {
             Queue.mainQueue().async {
                 let nodeLayout = node.asyncLayout()
@@ -50,7 +52,7 @@ final class CommandChatInputPanelItem: ListViewItem {
                 async {
                     let (top, bottom) = (previousItem != nil, nextItem != nil)
                     
-                    let (layout, apply) = nodeLayout(self, width, top, bottom)
+                    let (layout, apply) = nodeLayout(self, params, top, bottom)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
@@ -71,30 +73,6 @@ final class CommandChatInputPanelItem: ListViewItem {
 private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 16.0)!
 private let textFont = Font.medium(14.0)
 private let descriptionFont = Font.regular(14.0)
-private let descriptionColor = UIColor(rgb: 0x9099A2)
-
-private let arrowImage = generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-    context.scaleBy(x: 1.0, y: -1.0)
-    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-    
-    context.setStrokeColor(UIColor(rgb: 0xC7CCD0).cgColor)
-    context.setLineCap(.round)
-    context.setLineWidth(2.0)
-    context.setLineJoin(.round)
-    
-    context.beginPath()
-    context.move(to: CGPoint(x: 1.0, y: 2.0))
-    context.addLine(to: CGPoint(x: 1.0, y: 10.0))
-    context.addLine(to: CGPoint(x: 9.0, y: 10.0))
-    context.strokePath()
-    
-    context.beginPath()
-    context.move(to: CGPoint(x: 1.0, y: 10.0))
-    context.addLine(to: CGPoint(x: 10.0, y: 1.0))
-    context.strokePath()
-})
 
 final class CommandChatInputPanelItemNode: ListViewItemNode {
     static let itemHeight: CGFloat = 42.0
@@ -112,23 +90,17 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
         self.textNode = TextNode()
         
         self.topSeparatorNode = ASDisplayNode()
-        self.topSeparatorNode.backgroundColor = UIColor(rgb: 0xC9CDD1)
         self.topSeparatorNode.isLayerBacked = true
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(rgb: 0xD6D6DA)
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.arrowNode = HighlightableButtonNode()
-        self.arrowNode.setImage(arrowImage, for: [])
         
         super.init(layerBacked: false, dynamicBounce: false)
-        
-        self.backgroundColor = .white
         
         self.addSubnode(self.topSeparatorNode)
         self.addSubnode(self.separatorNode)
@@ -140,62 +112,72 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
         self.arrowNode.addTarget(self, action: #selector(self.arrowButtonPressed), forControlEvents: [.touchUpInside])
     }
     
-    override public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? CommandChatInputPanelItem {
             let doLayout = self.asyncLayout()
             let merged = (top: previousItem != nil, bottom: nextItem != nil)
-            let (layout, apply) = doLayout(item, width, merged.top, merged.bottom)
+            let (layout, apply) = doLayout(item, params, merged.top, merged.bottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
             apply(.None)
         }
     }
     
-    func asyncLayout() -> (_ item: CommandChatInputPanelItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    func asyncLayout() -> (_ item: CommandChatInputPanelItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
-        return { [weak self] item, width, mergedTop, mergedBottom in
-            let leftInset: CGFloat = 55.0
-            let rightInset: CGFloat = 10.0
+        
+        return { [weak self] item, params, mergedTop, mergedBottom in
+            let leftInset: CGFloat = 55.0 + params.leftInset
+            let rightInset: CGFloat = 10.0 + params.rightInset
             
             let commandString = NSMutableAttributedString()
-            commandString.append(NSAttributedString(string: "/" + item.command.command.text, font: textFont, textColor: .black))
+            commandString.append(NSAttributedString(string: "/" + item.command.command.text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor))
             
             if !item.command.command.description.isEmpty {
-                commandString.append(NSAttributedString(string: "  " + item.command.command.description, font: descriptionFont, textColor: descriptionColor))
+                commandString.append(NSAttributedString(string: "  " + item.command.command.description, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor))
             }
             
-            let (textLayout, textApply) = makeTextLayout(commandString, nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil, UIEdgeInsets())
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: commandString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 40.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: HashtagChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: HashtagChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
+            
+            let iconImage = PresentationResourcesChat.chatCommandPanelArrowImage(item.theme)
             
             return (nodeLayout, { _ in
                 if let strongSelf = self {
                     strongSelf.item = item
                     
+                    strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                    strongSelf.topSeparatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                    strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
+                    strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    
+                    strongSelf.arrowNode.setImage(iconImage, for: [])
+                    
                     strongSelf.avatarNode.setPeer(account: item.account, peer: item.command.peer)
                     
-                    textApply()
+                    let _ = textApply()
                     
-                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 12.0, y: floor((nodeLayout.contentSize.height - 30.0) / 2.0)), size: CGSize(width: 30.0, height: 30.0))
+                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 12.0, y: floor((nodeLayout.contentSize.height - 30.0) / 2.0)), size: CGSize(width: 30.0, height: 30.0))
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((nodeLayout.contentSize.height - textLayout.size.height) / 2.0)), size: textLayout.size)
                     
                     let arrowSize = CGSize(width: 42.0, height: nodeLayout.contentSize.height)
-                    strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: nodeLayout.size.width - arrowSize.width, y: 0.0), size: arrowSize)
+                    strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: nodeLayout.size.width - arrowSize.width - params.rightInset, y: 0.0), size: arrowSize)
                     
                     strongSelf.topSeparatorNode.isHidden = mergedTop
                     strongSelf.separatorNode.isHidden = !mergedBottom
                     
-                    strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel))
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: width - leftInset, height: UIScreenPixel))
+                    strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: UIScreenPixel))
+                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: nodeLayout.size.height + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
                 }
             })
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
             self.highlightedBackgroundNode.alpha = 1.0

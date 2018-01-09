@@ -20,13 +20,13 @@ func rightNavigationButtonForPeerMediaCollectionInterfaceState(_ interfaceState:
         if let currentButton = currentButton, currentButton.action == .cancelMessageSelection {
             return currentButton
         } else {
-            return PeerMediaCollectionNavigationButton(action: .cancelMessageSelection, buttonItem: UIBarButtonItem(title: "Cancel", style: .plain, target: target, action: selector))
+            return PeerMediaCollectionNavigationButton(action: .cancelMessageSelection, buttonItem: UIBarButtonItem(title: interfaceState.strings.Common_Cancel, style: .plain, target: target, action: selector))
         }
     } else {
         if let currentButton = currentButton, currentButton.action == .beginMessageSelection {
             return currentButton
         } else {
-            return PeerMediaCollectionNavigationButton(action: .beginMessageSelection, buttonItem: UIBarButtonItem(title: "Select", style: .plain, target: target, action: selector))
+            return PeerMediaCollectionNavigationButton(action: .beginMessageSelection, buttonItem: UIBarButtonItem(title: interfaceState.strings.Common_Select, style: .plain, target: target, action: selector))
         }
     }
 }

@@ -54,6 +54,9 @@ class ChatDocumentGalleryItem: GalleryItem {
 class ChatDocumentGalleryItemNode: GalleryItemNode {
     fileprivate let _title = Promise<String>()
     
+    private let statusNodeContainer: HighlightableButtonNode
+    private let statusNode: RadialStatusNode
+    
     private let webView: UIView
     
     private var accountAndFile: (Account, TelegramMediaFile)?
@@ -64,6 +67,10 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
     private var message: Message?
     
     private let footerContentNode: ChatItemGalleryFooterContentNode
+    
+    private var fetchDisposable = MetaDisposable()
+    private let statusDisposable = MetaDisposable()
+    private var status: MediaResourceStatus?
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         if #available(iOS 9.0, *) {
@@ -78,19 +85,36 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
         }
         self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
         
+        self.statusNodeContainer = HighlightableButtonNode()
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+        self.statusNode.isHidden = true
+        
         super.init()
         
         self.view.addSubview(self.webView)
+        
+        self.statusNodeContainer.addSubnode(self.statusNode)
+        self.addSubnode(self.statusNodeContainer)
+        
+        self.statusNodeContainer.addTarget(self, action: #selector(self.statusPressed), forControlEvents: .touchUpInside)
+        
+        self.statusNodeContainer.isUserInteractionEnabled = false
     }
     
     deinit {
         self.dataDisposable.dispose()
+        self.fetchDisposable.dispose()
+        self.statusDisposable.dispose()
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
-        self.webView.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight))
+        self.webView.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - 44.0 - layout.insets(options: []).bottom))
+        
+        let statusSize = CGSize(width: 50.0, height: 50.0)
+        transition.updateFrame(node: self.statusNodeContainer, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - statusSize.width) / 2.0), y: floor((layout.size.height - statusSize.height) / 2.0)), size: statusSize))
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(), size: statusSize))
     }
     
     fileprivate func setMessage(_ message: Message) {
@@ -98,7 +122,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
     }
     
     override func navigationStyle() -> Signal<GalleryItemNodeNavigationStyle, NoError> {
-        return .single(.light)
+        return .single(.dark)
     }
     
     func setFile(account: Account, file: TelegramMediaFile) {
@@ -106,7 +130,56 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
         self.accountAndFile = (account, file)
         if updateFile {
             self.maybeLoadContent()
+            self.setupStatus(account: account, resource: file.resource)
         }
+    }
+    
+    private func setupStatus(account: Account, resource: MediaResource) {
+        self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(resource)
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let strongSelf = self {
+                    let previousStatus = strongSelf.status
+                    strongSelf.status = status
+                    switch status {
+                    case .Remote:
+                        strongSelf.statusNode.isHidden = false
+                        strongSelf.statusNode.alpha = 1.0
+                        strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                        strongSelf.statusNode.transitionToState(.download(.white), completion: {})
+                    case let .Fetching(isActive, progress):
+                        strongSelf.statusNode.isHidden = false
+                        strongSelf.statusNode.alpha = 1.0
+                        strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                        var actualProgress = progress
+                        if isActive {
+                            actualProgress = max(actualProgress, 0.027)
+                        }
+                        strongSelf.statusNode.transitionToState(.progress(color: .white, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
+                    case .Local:
+                        if let previousStatus = previousStatus, case .Fetching = previousStatus {
+                            strongSelf.statusNode.transitionToState(.progress(color: .white, value: 1.0, cancelEnabled: true), completion: {
+                                if let strongSelf = self {
+                                    strongSelf.statusNode.alpha = 0.0
+                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                                    strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                        if let strongSelf = self {
+                                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                        }
+                                    })
+                                }
+                            })
+                        } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
+                            strongSelf.statusNode.alpha = 0.0
+                            strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                            strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                if let strongSelf = self {
+                                    strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                }
+                            })
+                        }
+                    }
+                }
+            }))
     }
     
     private func maybeLoadContent() {
@@ -119,7 +192,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
                 |> deliverOnMainQueue
             self.dataDisposable.set(data.start(next: { [weak self] data in
                 if let strongSelf = self {
-                    if data.size == file.size {
+                    if data.complete {
                         if let webView = strongSelf.webView as? WKWebView {
                             if #available(iOS 9.0, *) {
                                 webView.loadFileURL(URL(fileURLWithPath: data.path), allowingReadAccessTo: URL(fileURLWithPath: data.path))
@@ -143,15 +216,14 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
         
-        /*if self.isVisible != isVisible {
-            self.isVisible = isVisible
+        if self.itemIsVisible != isVisible {
+            self.itemIsVisible = isVisible
             
             if isVisible {
-                self.maybeLoadContent()
             } else {
-                self.unloadContent()
+                self.fetchDisposable.set(nil)
             }
-        }*/
+        }
     }
     
     override func title() -> Signal<String, NoError> {
@@ -168,6 +240,10 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
         
         let transform = CATransform3DScale(self.webView.layer.transform, transformedFrame.size.width / self.webView.layer.bounds.size.width, transformedFrame.size.height / self.webView.layer.bounds.size.height, 1.0)
         self.webView.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.webView.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+        
+        self.statusNodeContainer.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.statusNodeContainer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        self.statusNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        self.statusNodeContainer.layer.animateScale(from: 0.5, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
     override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
@@ -215,9 +291,25 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
             boundsCompleted = true
             intermediateCompletion()
         })
+        
+        self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
     }
     
     override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
         return .single(self.footerContentNode)
+    }
+    
+    @objc func statusPressed() {
+        if let (account, file) = self.accountAndFile, let status = self.status {
+            switch status {
+                case .Fetching:
+                    account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
+                case .Remote:
+                    self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                default:
+                    break
+            }
+        }
     }
 }

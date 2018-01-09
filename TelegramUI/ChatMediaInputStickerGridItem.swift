@@ -57,7 +57,7 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
         let bounds = self.bounds
         
         let titleSize = self.titleNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 8.0), size: titleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 9.0), size: titleSize)
     }
 }
 
@@ -139,7 +139,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     func setup(account: Account, stickerItem: StickerPackItem) {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
             if let dimensions = stickerItem.file.dimensions {
-                self.imageNode.setSignal(account: account, signal: chatMessageSticker(account: account, file: stickerItem.file, small: true))
+                self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
                 self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: stickerItem.file).start())
                 
                 self.currentState = (account, stickerItem, dimensions)

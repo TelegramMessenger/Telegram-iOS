@@ -18,10 +18,53 @@ private func callDurationString(strings: PresentationStrings, duration: Int32) -
     }
 }
 
+private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, bottomItem: ListViewItem?) -> ItemListNeighbors {
+    let topNeighbor: ItemListNeighbor
+    if let topItem = topItem {
+        if let item = item as? ItemListItem, let topItem = topItem as? ItemListItem {
+            if topItem.sectionId != item.sectionId {
+                topNeighbor = .otherSection(requestsNoInset: topItem.requestsNoInset)
+            } else {
+                topNeighbor = .sameSection(alwaysPlain: topItem.isAlwaysPlain)
+            }
+        } else {
+            if item is CallListCallItem && topItem is CallListCallItem {
+                topNeighbor = .sameSection(alwaysPlain: false)
+            } else {
+                topNeighbor = .otherSection(requestsNoInset: false)
+            }
+        }
+    } else {
+        topNeighbor = .none
+    }
+    
+    let bottomNeighbor: ItemListNeighbor
+    if let bottomItem = bottomItem {
+        if let item = item as? ItemListItem, let bottomItem = bottomItem as? ItemListItem {
+            if bottomItem.sectionId != item.sectionId {
+                bottomNeighbor = .otherSection(requestsNoInset: bottomItem.requestsNoInset)
+            } else {
+                bottomNeighbor = .sameSection(alwaysPlain: bottomItem.isAlwaysPlain)
+            }
+        } else {
+            if item is CallListCallItem && bottomItem is CallListCallItem {
+                bottomNeighbor = .sameSection(alwaysPlain: false)
+            } else {
+                bottomNeighbor = .otherSection(requestsNoInset: false)
+            }
+        }
+    } else {
+        bottomNeighbor = .none
+    }
+    
+    return ItemListNeighbors(top: topNeighbor, bottom: bottomNeighbor)
+}
+
 class CallListCallItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let account: Account
+    let style: ItemListStyle
     let topMessage: Message
     let messages: [Message]
     let editing: Bool
@@ -32,10 +75,11 @@ class CallListCallItem: ListViewItem {
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
         self.theme = theme
         self.strings = strings
         self.account = account
+        self.style = style
         self.topMessage = topMessage
         self.messages = messages
         self.editing = editing
@@ -46,12 +90,12 @@ class CallListCallItem: ListViewItem {
         self.header = nil
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = CallListCallItemNode()
             let makeLayout = node.asyncLayout()
             let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-            let (nodeLayout, nodeApply) = makeLayout(self, width, first, last, firstWithHeader)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, topItem: previousItem, bottomItem: nextItem))
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -63,13 +107,13 @@ class CallListCallItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? CallListCallItemNode {
             Queue.mainQueue().async {
                 let layout = node.asyncLayout()
                 async {
                     let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-                    let (nodeLayout, apply) = layout(self, width, first, last, firstWithHeader)
+                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, topItem: previousItem, bottomItem: nextItem))
                     var animated = true
                     if case .None = animation {
                         animated = false
@@ -126,7 +170,8 @@ private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 15.0)!
 
 class CallListCallItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
-    private let separatorNode: ASDisplayNode
+    private let topStripeNode: ASDisplayNode
+    private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
     private let avatarNode: AvatarNode
@@ -139,14 +184,17 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     var editableControlNode: ItemListEditableControlNode?
     
     private var avatarState: (Account, Peer?)?
-    private var layoutParams: (CallListCallItem, CGFloat, Bool, Bool, Bool)?
+    private var layoutParams: (CallListCallItem, ListViewItemLayoutParams, Bool, Bool, Bool)?
     
     required init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         
-        self.separatorNode = ASDisplayNode()
-        self.separatorNode.isLayerBacked = true
+        self.topStripeNode = ASDisplayNode()
+        self.topStripeNode.isLayerBacked = true
+        
+        self.bottomStripeNode = ASDisplayNode()
+        self.bottomStripeNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
@@ -169,7 +217,6 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.separatorNode)
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.typeIconNode)
         self.addSubnode(self.titleNode)
@@ -180,25 +227,29 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         self.infoButtonNode.addTarget(self, action: #selector(self.infoPressed), forControlEvents: .touchUpInside)
     }
     
-    override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let (item, _, _, _, _) = self.layoutParams {
             let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
-            self.layoutParams = (item, width, first, last, firstWithHeader)
+            self.layoutParams = (item, params, first, last, firstWithHeader)
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, width, first, last, firstWithHeader)
+            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, callListNeighbors(item: item, topItem: previousItem, bottomItem: nextItem))
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply()
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
-                self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
+                if self.backgroundNode.supernode != nil {
+                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.backgroundNode)
+                } else {
+                    self.insertSubnode(self.highlightedBackgroundNode, at: 0)
+                }
             }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
@@ -218,14 +269,14 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: CallListCallItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool) -> Void)) {
+    func asyncLayout() -> (_ item: CallListCallItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool) -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let makeDateLayout = TextNode.asyncLayout(self.dateNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         let currentItem = self.layoutParams?.0
         
-        return { [weak self] item, width, first, last, firstWithHeader in
+        return { [weak self] item, params, first, last, firstWithHeader, neighbors in
             var updatedTheme: PresentationTheme?
             var updatedInfoIcon = false
             
@@ -238,18 +289,34 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             let editingOffset: CGFloat
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
             if item.editing {
-                let sizeAndApply = editableControlLayout(56.0)
+                let sizeAndApply = editableControlLayout(56.0, item.theme, false)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0.width
             } else {
                 editingOffset = 0.0
             }
             
-            var leftInset: CGFloat = 86.0
-            let rightInset: CGFloat = 13.0
+            var leftInset: CGFloat = 86.0 + params.leftInset
+            let rightInset: CGFloat = 13.0 + params.rightInset
             var infoIconRightInset: CGFloat = rightInset
             
-            var dateRightInset: CGFloat = 43.0
+            let insets: UIEdgeInsets
+            let separatorHeight = UIScreenPixel
+            let itemBackgroundColor: UIColor
+            let itemSeparatorColor: UIColor
+            
+            switch item.style {
+                case .plain:
+                    itemBackgroundColor = item.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                    insets = itemListNeighborsPlainInsets(neighbors)
+                case .blocks:
+                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+                    insets = itemListNeighborsGroupedInsets(neighbors)
+            }
+            
+            var dateRightInset: CGFloat = 43.0 + params.rightInset
             if item.editing {
                 leftInset += editingOffset
                 dateRightInset += 5.0
@@ -341,18 +408,20 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             localtime_r(&t, &timeinfo)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.topMessage.timestamp, relativeTo: timestamp)
+            let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.topMessage.timestamp, relativeTo: timestamp, timeFormat: .regular)
             
-            let (dateLayout, dateApply) = makeDateLayout(NSAttributedString(string: dateText, font: dateFont, textColor: item.theme.list.itemSecondaryTextColor), nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset), height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
+            let (dateLayout, dateApply) = makeDateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dateText, font: dateFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - dateRightInset - dateLayout.size.width - 10.0), height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - dateRightInset - dateLayout.size.width - 10.0), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset), height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 56.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 56.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
             let outgoingIcon = PresentationResourcesCallList.outgoingIcon(item.theme)
             let infoIcon = PresentationResourcesCallList.infoButton(item.theme)
+            
+            let contentSize = nodeLayout.contentSize
             
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
@@ -362,7 +431,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                     
                     return (strongSelf.avatarNode.ready, { [weak strongSelf] animated in
                         if let strongSelf = strongSelf {
-                            strongSelf.layoutParams = (item, width, first, last, firstWithHeader)
+                            strongSelf.layoutParams = (item, params, first, last, firstWithHeader)
                             
                             let revealOffset = strongSelf.revealOffset
                             
@@ -374,9 +443,52 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             if let _ = updatedTheme {
-                                strongSelf.separatorNode.backgroundColor = item.theme.list.itemSeparatorColor
-                                strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                                strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
+                                strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
+                                strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                                 strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                            }
+                            
+                            switch item.style {
+                                case .plain:
+                                    if strongSelf.backgroundNode.supernode != nil {
+                                        strongSelf.backgroundNode.removeFromSupernode()
+                                    }
+                                    if strongSelf.topStripeNode.supernode != nil {
+                                        strongSelf.topStripeNode.removeFromSupernode()
+                                    }
+                                    if strongSelf.bottomStripeNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
+                                    }
+                                    
+                                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
+                                case .blocks:
+                                    if strongSelf.backgroundNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
+                                    }
+                                    if strongSelf.topStripeNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                                    }
+                                    if strongSelf.bottomStripeNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                                    }
+                                    switch neighbors.top {
+                                        case .sameSection(false):
+                                            strongSelf.topStripeNode.isHidden = true
+                                        default:
+                                            strongSelf.topStripeNode.isHidden = false
+                                    }
+                                    let bottomStripeInset: CGFloat
+                                    switch neighbors.bottom {
+                                        case .sameSection(false):
+                                            bottomStripeInset = leftInset
+                                        default:
+                                            bottomStripeInset = 0.0
+                                    }
+                                    
+                                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                                    strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
+                                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width - bottomStripeInset, height: separatorHeight))
                             }
                             
                             if let editableControlSizeAndApply = editableControlSizeAndApply {
@@ -390,9 +502,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                     }
                                     strongSelf.editableControlNode = editableControlNode
                                     strongSelf.addSubnode(editableControlNode)
-                                    let editableControlFrame = CGRect(origin: CGPoint(x: revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
+                                    let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
                                     editableControlNode.frame = editableControlFrame
-                                    transition.animatePosition(node: editableControlNode, from: CGPoint(x: editableControlFrame.midX - editableControlFrame.size.width, y: editableControlFrame.midY))
+                                    transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                                     editableControlNode.alpha = 0.0
                                     transition.updateAlpha(node: editableControlNode, alpha: 1.0)
                                 }
@@ -415,7 +527,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 30.0), size: statusLayout.size))
                             
                             let _ = dateApply()
-                            transition.updateFrame(node: strongSelf.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + width - dateRightInset - dateLayout.size.width, y: floor((nodeLayout.contentSize.height - dateLayout.size.height) / 2.0) + 2.0), size: dateLayout.size))
+                            transition.updateFrame(node: strongSelf.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + params.width - dateRightInset - dateLayout.size.width, y: floor((nodeLayout.contentSize.height - dateLayout.size.height) / 2.0) + 2.0), size: dateLayout.size))
                             
                             if let outgoingIcon = outgoingIcon {
                                 if strongSelf.typeIconNode.image !== outgoingIcon {
@@ -429,17 +541,17 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 if updatedInfoIcon {
                                     strongSelf.infoButtonNode.setImage(infoIcon, for: [])
                                 }
-                                transition.updateFrame(node: strongSelf.infoButtonNode, frame: CGRect(origin: CGPoint(x: revealOffset + width - infoIconRightInset - infoIcon.size.width, y: floor((nodeLayout.contentSize.height - infoIcon.size.height) / 2.0)), size: infoIcon.size))
+                                transition.updateFrame(node: strongSelf.infoButtonNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - infoIconRightInset - infoIcon.size.width, y: floor((nodeLayout.contentSize.height - infoIcon.size.height) / 2.0)), size: infoIcon.size))
                             }
                             transition.updateAlpha(node: strongSelf.infoButtonNode, alpha: item.editing ? 0.0 : 1.0)
                             
                             let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
                             strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
-                            transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - 65.0), height: separatorHeight)))
-                            strongSelf.separatorNode.isHidden = last
                             
-                            strongSelf.setRevealOptions([ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: UIColor(rgb: 0xff3824))])
+                            strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                            
+                            strongSelf.setRevealOptions([ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)])
                         }
                     })
                 } else {
@@ -491,24 +603,24 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        if let item = self.layoutParams?.0 {
+        if let (item, params, _, _, _) = self.layoutParams {
             let revealOffset = offset
             
             let editingOffset: CGFloat
             if let editableControlNode = self.editableControlNode {
                 editingOffset = editableControlNode.bounds.size.width
                 var editableControlFrame = editableControlNode.frame
-                editableControlFrame.origin.x = offset
+                editableControlFrame.origin.x = params.leftInset + offset
                 transition.updateFrame(node: editableControlNode, frame: editableControlFrame)
             } else {
                 editingOffset = 0.0
             }
             
-            let leftInset: CGFloat = 86.0 + editingOffset
-            let rightInset: CGFloat = 13.0
+            let leftInset: CGFloat = 86.0 + params.leftInset + editingOffset
+            let rightInset: CGFloat = 13.0 + params.rightInset
             var infoIconRightInset: CGFloat = rightInset
             
-            var dateRightInset: CGFloat = 43.0
+            var dateRightInset: CGFloat = 43.0 + params.rightInset
             if item.editing {
                 dateRightInset += 5.0
                 infoIconRightInset -= 36.0

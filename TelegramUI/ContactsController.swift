@@ -34,7 +34,7 @@ public class ContactsController: ViewController {
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
-        self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconContactsSelected")
+        self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
@@ -87,7 +87,7 @@ public class ContactsController: ViewController {
         
         self.contactsNode.requestOpenPeerFromSearch = { [weak self] peerId in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId))
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)))
             }
         }
         
@@ -98,7 +98,7 @@ public class ContactsController: ViewController {
         self.contactsNode.contactListNode.openPeer = { [weak self] peer in
             if let strongSelf = self {
                 strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peer.id))
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peer.id)))
             }
         }
         

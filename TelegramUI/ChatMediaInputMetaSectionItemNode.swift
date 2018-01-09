@@ -27,7 +27,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
         self.theme = theme
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatMediaInputMetaSectionItemNode()
             node.contentSize = CGSize(width: 41.0, height: 41.0)
@@ -43,7 +43,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
             (node as? ChatMediaInputMetaSectionItemNode)?.setItem(item: self)
             (node as? ChatMediaInputMetaSectionItemNode)?.updateTheme(theme: self.theme)

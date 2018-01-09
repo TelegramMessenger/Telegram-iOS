@@ -3,11 +3,13 @@ import AsyncDisplayKit
 import Display
 
 final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
-    private let navigationBackgroundNode: ASDisplayNode
-    private let stripeNode: ASDisplayNode
+    private let strings: PresentationStrings
+    private let theme: AuthorizationTheme
+    
     private let titleNode: ASTextNode
-    private let currentOptionNode: ASTextNode
-    private let nextOptionNode: ASTextNode
+    private let noticeNode: ASTextNode
+    private let forgotNode: HighlightableButtonNode
+    private let resetNode: HighlightableButtonNode
     
     private let codeField: TextFieldNode
     private let codeSeparatorNode: ASDisplayNode
@@ -19,7 +21,10 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     }
     
     var loginWithCode: ((String) -> Void)?
-    var requestNextOption: (() -> Void)?
+    var forgot: (() -> Void)?
+    var reset: (() -> Void)?
+    
+    var didForgotWithNoRecovery = false
     
     var inProgress: Bool = false {
         didSet {
@@ -27,39 +32,41 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         }
     }
     
-    override init() {
-        self.navigationBackgroundNode = ASDisplayNode()
-        self.navigationBackgroundNode.isLayerBacked = true
-        self.navigationBackgroundNode.backgroundColor = UIColor(rgb: 0xefefef)
-        
-        self.stripeNode = ASDisplayNode()
-        self.stripeNode.isLayerBacked = true
-        self.stripeNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
+    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+        self.strings = strings
+        self.theme = theme
         
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: "Your Password", font: Font.light(30.0), textColor: UIColor.black)
+        self.titleNode.attributedText = NSAttributedString(string: strings.LoginPassword_Title, font: Font.light(30.0), textColor: self.theme.primaryColor)
         
-        self.currentOptionNode = ASTextNode()
-        self.currentOptionNode.isLayerBacked = true
-        self.currentOptionNode.displaysAsynchronously = false
-        self.currentOptionNode.attributedText = NSAttributedString(string: "Two-step verification enabled.\nYour account is protected with an\nadditional password.", font: Font.regular(16.0), textColor: UIColor.black, paragraphAlignment: .center)
+        self.noticeNode = ASTextNode()
+        self.noticeNode.isLayerBacked = true
+        self.noticeNode.displaysAsynchronously = false
+        self.noticeNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_EnterPasswordHelp, font: Font.regular(16.0), textColor: self.theme.primaryColor, paragraphAlignment: .center)
         
-        self.nextOptionNode = ASTextNode()
-        self.nextOptionNode.isLayerBacked = true
-        self.nextOptionNode.displaysAsynchronously = false
-        self.nextOptionNode.attributedText = NSAttributedString(string: "Forgot password?", font: Font.regular(16.0), textColor: UIColor(rgb: 0x007ee5), paragraphAlignment: .center)
+        self.forgotNode = HighlightableButtonNode()
+        self.forgotNode.displaysAsynchronously = false
+        self.forgotNode.setAttributedTitle(NSAttributedString(string: self.strings.TwoStepAuth_EnterPasswordForgot, font: Font.regular(16.0), textColor: self.theme.accentColor, paragraphAlignment: .center), for: [])
+        
+        self.resetNode = HighlightableButtonNode()
+        self.resetNode.displaysAsynchronously = false
+        self.resetNode.setAttributedTitle(NSAttributedString(string: self.strings.LoginPassword_ResetAccount, font: Font.regular(16.0), textColor: self.theme.destructiveColor, paragraphAlignment: .center), for: [])
         
         self.codeSeparatorNode = ASDisplayNode()
         self.codeSeparatorNode.isLayerBacked = true
-        self.codeSeparatorNode.backgroundColor = UIColor(rgb: 0xbcbbc1)
+        self.codeSeparatorNode.backgroundColor = self.theme.separatorColor
         
         self.codeField = TextFieldNode()
         self.codeField.textField.font = Font.regular(20.0)
+        self.codeField.textField.textColor = self.theme.primaryColor
         self.codeField.textField.textAlignment = .natural
         self.codeField.textField.isSecureTextEntry = true
         self.codeField.textField.returnKeyType = .done
+        self.codeField.textField.keyboardAppearance = self.theme.keyboardAppearance
+        self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
+        self.codeField.textField.tintColor = self.theme.accentColor
         
         super.init()
         
@@ -67,101 +74,64 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
             return UITracingLayerView()
         })
         
-        self.backgroundColor = UIColor.white
+        self.backgroundColor = self.theme.backgroundColor
         
         self.codeField.textField.delegate = self
         
-        self.addSubnode(self.navigationBackgroundNode)
-        self.addSubnode(self.stripeNode)
         self.addSubnode(self.codeSeparatorNode)
         self.addSubnode(self.codeField)
         self.addSubnode(self.titleNode)
-        self.addSubnode(self.currentOptionNode)
-        self.addSubnode(self.nextOptionNode)
+        self.addSubnode(self.forgotNode)
+        self.addSubnode(self.resetNode)
+        self.addSubnode(self.noticeNode)
+        
+        self.forgotNode.addTarget(self, action: #selector(self.forgotPressed), forControlEvents: .touchUpInside)
+        self.resetNode.addTarget(self, action: #selector(self.resetPressed), forControlEvents: .touchUpInside)
     }
     
-    func updateData(hint: String) {
-        self.codeField.textField.attributedPlaceholder = NSAttributedString(string: hint, font: Font.regular(20.0), textColor: UIColor(rgb: 0xbcbcc3))
+    func updateData(hint: String, didForgotWithNoRecovery: Bool) {
+        self.didForgotWithNoRecovery = didForgotWithNoRecovery
+        self.codeField.textField.attributedPlaceholder = NSAttributedString(string: hint, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
+        if let (layout, navigationHeight) = self.layoutArguments {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.layoutArguments = (layout, navigationBarHeight)
         
-        let insets = layout.insets(options: [.statusBar, .input])
-        let availableHeight = max(1.0, layout.size.height - insets.top - insets.bottom)
+        var insets = layout.insets(options: [.input])
+        insets.top = navigationBarHeight
         
         if max(layout.size.width, layout.size.height) > 1023.0 {
-            self.titleNode.attributedText = NSAttributedString(string: "Your Password", font: Font.light(30.0), textColor: UIColor.black)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.LoginPassword_Title, font: Font.light(40.0), textColor: self.theme.primaryColor)
         } else {
-            self.titleNode.attributedText = NSAttributedString(string: "Your Password", font: Font.regular(20.0), textColor: UIColor.black)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.LoginPassword_Title, font: Font.light(30.0), textColor: self.theme.primaryColor)
         }
         
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
-        let additionalTitleSpacing: CGFloat
-        if titleSize.width > layout.size.width - 160.0 {
-            additionalTitleSpacing = 44.0
+        
+        let noticeSize = self.noticeNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        let forgotSize = self.forgotNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
+        let resetSize = self.resetNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
+        
+        var items: [AuthorizationLayoutItem] = []
+        items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        
+        items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 32.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 88.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        
+        items.append(AuthorizationLayoutItem(node: self.forgotNode, size: forgotSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 48.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        
+        if self.didForgotWithNoRecovery {
+            self.resetNode.isHidden = false
+            items.append(AuthorizationLayoutItem(node: self.resetNode, size: resetSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         } else {
-            additionalTitleSpacing = 0.0
+            self.resetNode.isHidden = true
         }
         
-        let minimalTitleSpacing: CGFloat = 10.0
-        let maxTitleSpacing: CGFloat = 22.0
-        let inputFieldsHeight: CGFloat = 60.0
-        
-        let minimalNoticeSpacing: CGFloat = 11.0
-        let maxNoticeSpacing: CGFloat = 35.0
-        let noticeSize = self.currentOptionNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
-        let minimalTermsOfServiceSpacing: CGFloat = 6.0
-        let maxTermsOfServiceSpacing: CGFloat = 20.0
-        let termsOfServiceSize = self.nextOptionNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
-        let minTrailingSpacing: CGFloat = 10.0
-        
-        let inputHeight = inputFieldsHeight
-        let essentialHeight = additionalTitleSpacing + titleSize.height + minimalTitleSpacing + inputHeight + minimalNoticeSpacing + noticeSize.height
-        let additionalHeight = minimalTermsOfServiceSpacing + termsOfServiceSize.height + minTrailingSpacing
-        
-        let navigationHeight: CGFloat
-        if essentialHeight + additionalHeight > availableHeight || availableHeight * 0.66 - inputHeight < additionalHeight {
-            navigationHeight = min(floor(availableHeight * 0.3), availableHeight - inputFieldsHeight)
-        } else {
-            navigationHeight = floor(availableHeight * 0.3)
-        }
-        
-        transition.updateFrame(node: self.navigationBackgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: navigationHeight)))
-        transition.updateFrame(node: self.stripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
-        
-        let titleOffset: CGFloat
-        if navigationHeight * 0.5 < titleSize.height + minimalTitleSpacing {
-            titleOffset = floor((navigationHeight - titleSize.height) / 2.0)
-        } else {
-            titleOffset = max(navigationHeight * 0.5, navigationHeight - maxTitleSpacing - titleSize.height)
-        }
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: titleOffset), size: titleSize))
-        
-        let codeFieldFrame = CGRect(origin: CGPoint(x: 22.0, y: navigationHeight + 3.0), size: CGSize(width: layout.size.width - 44.0, height: 60.0))
-        transition.updateFrame(node: self.codeField, frame: codeFieldFrame)
-        transition.updateFrame(node: self.codeSeparatorNode, frame: CGRect(origin: CGPoint(x: 22.0, y: navigationHeight + 60.0), size: CGSize(width: layout.size.width - 44.0, height: UIScreenPixel)))
-        
-        let additionalAvailableHeight = max(1.0, availableHeight - codeFieldFrame.maxY)
-        let additionalAvailableSpacing = max(1.0, additionalAvailableHeight - noticeSize.height - termsOfServiceSize.height)
-        let noticeSpacingFactor = maxNoticeSpacing / (maxNoticeSpacing + maxTermsOfServiceSpacing + minTrailingSpacing)
-        let termsOfServiceSpacingFactor = maxTermsOfServiceSpacing / (maxNoticeSpacing + maxTermsOfServiceSpacing + minTrailingSpacing)
-        
-        let noticeSpacing: CGFloat
-        let termsOfServiceSpacing: CGFloat
-        if additionalAvailableHeight <= maxNoticeSpacing + noticeSize.height + maxTermsOfServiceSpacing + termsOfServiceSize.height + minTrailingSpacing {
-            termsOfServiceSpacing = min(floor(termsOfServiceSpacingFactor * additionalAvailableSpacing), maxTermsOfServiceSpacing)
-            noticeSpacing = floor((additionalAvailableHeight - termsOfServiceSpacing - noticeSize.height - termsOfServiceSize.height) / 2.0)
-        } else {
-            noticeSpacing = min(floor(noticeSpacingFactor * additionalAvailableSpacing), maxNoticeSpacing)
-            termsOfServiceSpacing = min(floor(termsOfServiceSpacingFactor * additionalAvailableSpacing), maxTermsOfServiceSpacing)
-        }
-        
-        let currentOptionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - noticeSize.width) / 2.0), y: codeFieldFrame.maxY + noticeSpacing), size: noticeSize)
-        let nextOptionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - termsOfServiceSize.width) / 2.0), y: currentOptionFrame.maxY + termsOfServiceSpacing), size: termsOfServiceSize)
-        
-        transition.updateFrame(node: self.currentOptionNode, frame: currentOptionFrame)
-        transition.updateFrame(node: self.nextOptionNode, frame: nextOptionFrame)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 20.0)), items: items, transition: transition, failIfDoesNotFit: false)
     }
     
     func activateInput() {
@@ -179,5 +149,13 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         self.loginWithCode?(self.currentPassword)
         return false
+    }
+    
+    @objc func forgotPressed() {
+        self.forgot?()
+    }
+    
+    @objc func resetPressed() {
+        self.reset?()
     }
 }

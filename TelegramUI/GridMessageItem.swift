@@ -31,9 +31,9 @@ private let timezoneOffset: Int32 = {
 }()
 
 final class GridMessageItemSection: GridSection {
-    let height: CGFloat = 44.0
+    let height: CGFloat = 36.0
     
-    private let theme: PresentationTheme
+    fileprivate let theme: PresentationTheme
     private let strings: PresentationStrings
     
     private let roundedTimestamp: Int32
@@ -70,7 +70,7 @@ final class GridMessageItemSection: GridSection {
     }
 }
 
-private let sectionTitleFont = Font.regular(17.0)
+private let sectionTitleFont = Font.regular(14.0)
 
 final class GridMessageItemSectionNode: ASDisplayNode {
     var theme: PresentationTheme
@@ -101,12 +101,12 @@ final class GridMessageItemSectionNode: ASDisplayNode {
         let bounds = self.bounds
         
         let titleSize = self.titleNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 18.0), size: titleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 8.0), size: titleSize)
     }
 }
 
 final class GridMessageItem: GridItem {
-    private let theme: PresentationTheme
+    fileprivate let theme: PresentationTheme
     private let strings: PresentationStrings
     private let account: Account
     private let message: Message
@@ -126,7 +126,7 @@ final class GridMessageItem: GridItem {
     func node(layout: GridNodeLayout) -> GridItemNode {
         let node = GridMessageItemNode()
         if let media = mediaForMessage(self.message) {
-            node.setup(account: self.account, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
+            node.setup(account: self.account, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
         }
         return node
     }
@@ -137,7 +137,7 @@ final class GridMessageItem: GridItem {
             return
         }
         if let media = mediaForMessage(self.message) {
-            node.setup(account: self.account, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
+            node.setup(account: self.account, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
         }
     }
 }
@@ -146,8 +146,9 @@ final class GridMessageItemNode: GridItemNode {
     private var currentState: (Account, Media, CGSize)?
     private let imageNode: TransformImageNode
     private var messageId: MessageId?
+    private var item: GridMessageItem?
     private var controllerInteraction: ChatControllerInteraction?
-    private var progressNode: RadialProgressNode
+    private var statusNode: RadialStatusNode
     
     private var selectionNode: GridMessageSelectionNode?
     
@@ -157,8 +158,8 @@ final class GridMessageItemNode: GridItemNode {
     
     override init() {
         self.imageNode = TransformImageNode()
-        self.progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(white: 0.0, alpha: 0.6), foregroundColor: UIColor.white, icon: nil))
-        self.progressNode.isUserInteractionEnabled = false
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
+        self.statusNode.isUserInteractionEnabled = false
         
         super.init()
         
@@ -173,47 +174,63 @@ final class GridMessageItemNode: GridItemNode {
     override func didLoad() {
         super.didLoad()
         
-        self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { _ in
+            return .waitForSingleTap
+        }
+        self.imageNode.view.addGestureRecognizer(recognizer)
     }
     
-    func setup(account: Account, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction) {
+    func setup(account: Account, item: GridMessageItem, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction) {
         if self.currentState == nil || self.currentState!.0 !== account || !self.currentState!.1.isEqual(media) {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
                 mediaDimensions = largestSize
-                self.imageNode.setSignal(account: account, signal: mediaGridMessagePhoto(account: account, photo: image), dispatchOnDisplayLink: true)
+                self.imageNode.setSignal(mediaGridMessagePhoto(account: account, photo: image), dispatchOnDisplayLink: true)
                 
                 self.fetchStatusDisposable.set(nil)
-                self.progressNode.removeFromSupernode()
-                self.progressNode.isHidden = true
+                self.statusNode.transitionToState(.none, completion: { [weak self] in
+                    self?.statusNode.isHidden = true
+                })
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions
-                self.imageNode.setSignal(account: account, signal: mediaGridMessageVideo(account: account, video: file))
+                self.imageNode.setSignal(mediaGridMessageVideo(postbox: account.postbox, video: file))
                 
                 self.resourceStatus = nil
-                self.fetchStatusDisposable.set((account.postbox.mediaBox.resourceStatus(file.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
+                self.fetchStatusDisposable.set((messageMediaFileStatus(account: account, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
                     if let strongSelf = self {
                         strongSelf.resourceStatus = status
+                        let statusState: RadialStatusNodeState
                         switch status {
                             case let .Fetching(isActive, progress):
                                 var adjustedProgress = progress
                                 if isActive {
                                     adjustedProgress = max(adjustedProgress, 0.027)
                                 }
-                                strongSelf.progressNode.state = .Fetching(progress: adjustedProgress)
-                                strongSelf.progressNode.isHidden = false
+                                statusState = .progress(color: .white, value: CGFloat(adjustedProgress), cancelEnabled: true)
                             case .Local:
-                                strongSelf.progressNode.state = .None
-                                strongSelf.progressNode.isHidden = true
+                                statusState = .play(.white)
                             case .Remote:
-                                strongSelf.progressNode.state = .Remote
-                                strongSelf.progressNode.isHidden = false
+                                statusState = .download(.white)
                         }
+                        switch statusState {
+                            case .none:
+                                 break
+                            default:
+                                strongSelf.statusNode.isHidden = false
+                        }
+                        strongSelf.statusNode.transitionToState(statusState, animated: true, completion: {
+                            if let strongSelf = self {
+                                if case .none = statusState {
+                                    strongSelf.statusNode.isHidden = true
+                                }
+                            }
+                        })
                     }
                 }))
-                if self.progressNode.supernode == nil {
-                    self.addSubnode(self.progressNode)
+                if self.statusNode.supernode == nil {
+                    self.imageNode.addSubnode(self.statusNode)
                 }
             }
             
@@ -224,6 +241,7 @@ final class GridMessageItemNode: GridItemNode {
         }
         
         self.messageId = messageId
+        self.item = item
         self.controllerInteraction = controllerInteraction
         
         self.updateSelectionState(animated: false)
@@ -243,21 +261,25 @@ final class GridMessageItemNode: GridItemNode {
         
         self.selectionNode?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
         let progressDiameter: CGFloat = 40.0
-        self.progressNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floor((imageFrame.size.width - progressDiameter) / 2.0), y: imageFrame.minY + floor((imageFrame.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
+        self.statusNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - progressDiameter) / 2.0), y: floor((imageFrame.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
     }
     
     func updateSelectionState(animated: Bool) {
         if let messageId = self.messageId, let controllerInteraction = self.controllerInteraction {
             if let selectionState = controllerInteraction.selectionState {
+                guard let item = self.item else {
+                    return
+                }
+                
                 let selected = selectionState.selectedIds.contains(messageId)
                 
                 if let selectionNode = self.selectionNode {
                     selectionNode.updateSelected(selected, animated: animated)
                     selectionNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
                 } else {
-                    let selectionNode = GridMessageSelectionNode(toggle: { [weak self] in
+                    let selectionNode = GridMessageSelectionNode(theme: item.theme, toggle: { [weak self] value in
                         if let strongSelf = self, let messageId = strongSelf.messageId {
-                            strongSelf.controllerInteraction?.toggleMessageSelection(messageId)
+                            strongSelf.controllerInteraction?.toggleMessagesSelection([messageId], value)
                         }
                     })
                     
@@ -300,24 +322,40 @@ final class GridMessageItemNode: GridItemNode {
         }
     }
     
-    @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
-        if let controllerInteraction = self.controllerInteraction, let messageId = self.messageId, case .ended = recognizer.state {
-            if let (account, media, _) = self.currentState {
-                if let file = media as? TelegramMediaFile {
-                    if let resourceStatus = self.resourceStatus {
-                        switch resourceStatus {
-                            case .Fetching:
-                                messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: file)
-                            case .Local:
-                                controllerInteraction.openMessage(messageId)
-                            case .Remote:
-                                self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: file).start())
-                        }
+    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        guard let controllerInteraction = self.controllerInteraction, let messageId = self.messageId else {
+            return
+        }
+        
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            if let (account, media, _) = self.currentState {
+                                if let file = media as? TelegramMediaFile {
+                                    if let resourceStatus = self.resourceStatus {
+                                        switch resourceStatus {
+                                        case .Fetching:
+                                            messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: file)
+                                        case .Local:
+                                            controllerInteraction.openMessage(messageId)
+                                        case .Remote:
+                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: file).start())
+                                        }
+                                    }
+                                } else {
+                                    controllerInteraction.openMessage(messageId)
+                                }
+                            }
+                        case .longTap:
+                            controllerInteraction.openMessageContextMenu(messageId, self, self.bounds)
+                        default:
+                            break
                     }
-                } else {
-                    controllerInteraction.openMessage(messageId)
                 }
-            }
+            default:
+                break
         }
     }
 }

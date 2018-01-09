@@ -6,7 +6,8 @@ import TelegramCore
 import Postbox
 
 func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
-    let legacyController = LegacyController(presentation: .custom)
+    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = .portrait
     legacyController.statusBar.statusBarStyle = .Hide
     

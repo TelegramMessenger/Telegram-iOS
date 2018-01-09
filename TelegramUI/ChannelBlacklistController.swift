@@ -136,7 +136,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
     func item(_ arguments: ChannelBlacklistControllerArguments) -> ListViewItem {
         switch self {
             case let .add(theme, text):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.addPeer()
                 })
             case let .peerItem(theme, strings, _, participant, editing, enabled):
@@ -364,7 +364,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             
             var emptyStateItem: ItemListControllerEmptyStateItem?
             if blacklist == nil {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
+                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
             
             let previous = previousBlacklist

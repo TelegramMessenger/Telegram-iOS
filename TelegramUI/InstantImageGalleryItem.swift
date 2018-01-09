@@ -91,9 +91,8 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(image) {
             if let largestSize = largestRepresentationForPhoto(image) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
-                self.imageNode.alphaTransitionOnFirstUpdate = false
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(account: account, signal: chatMessagePhoto(account: account, photo: image), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photo: image), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                 self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
             } else {
@@ -106,10 +105,9 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     func setFile(account: Account, file: TelegramMediaFile) {
         if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(file) {
             if let largestSize = file.dimensions {
-                self.imageNode.alphaTransitionOnFirstUpdate = false
                 let displaySize = largestSize.dividedByScreenScale()
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(account: account, signal: chatMessageImageFile(account: account, file: file, progressive: false), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessageImageFile(account: account, file: file, thumbnail: false), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize, self.imageNode)
             } else {
                 self._ready.set(.single(Void()))

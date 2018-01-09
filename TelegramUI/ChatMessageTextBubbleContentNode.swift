@@ -4,16 +4,38 @@ import Display
 import TelegramCore
 import Postbox
 
-private let messageFont: UIFont = UIFont.systemFont(ofSize: 17.0)
-private let messageBoldFont: UIFont = UIFont.boldSystemFont(ofSize: 17.0)
-private let messageFixedFont: UIFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFont.systemFont(ofSize: 17.0)
+private final class CachedChatMessageText {
+    let text: String
+    let inputEntities: [MessageTextEntity]?
+    let entities: [MessageTextEntity]?
+    
+    init(text: String, inputEntities: [MessageTextEntity]?, entities: [MessageTextEntity]?) {
+        self.text = text
+        self.inputEntities = inputEntities
+        self.entities = entities
+    }
+    
+    func matches(text: String, inputEntities: [MessageTextEntity]?) -> Bool {
+        if self.text != text {
+            return false
+        }
+        if let current = self.inputEntities, let inputEntities = inputEntities {
+            if current != inputEntities {
+                return false
+            }
+        } else if (self.inputEntities != nil) != (inputEntities != nil) {
+            return false
+        }
+        return true
+    }
+}
 
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
-    private var item: ChatMessageItem?
+    private var cachedChatMessageText: CachedChatMessageText?
     
     required init() {
         self.textNode = TextNode()
@@ -32,22 +54,22 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let textLayout = TextNode.asyncLayout(self.textNode)
         let statusLayout = self.statusNode.asyncLayout()
         
-        return { item, layoutConstants, position, _ in
-            return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
+        let currentCachedChatMessageText = self.cachedChatMessageText
+        
+        return { item, layoutConstants, _, _, _ in
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackgroundForEmptyWallpapers: false, forceFullCorners: false)
+            
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message = item.message
                 
-                let incoming = item.message.effectivelyIncoming
+                let incoming = item.message.effectivelyIncoming(item.account.peerId)
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
-                
-                var t = Int(item.message.timestamp)
-                var timeinfo = tm()
-                localtime_r(&t, &timeinfo)
                 
                 var edited = false
                 var sentViaBot = false
@@ -62,7 +84,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                var dateText = stringForMessageTimestamp(timestamp: item.message.timestamp, timeFormat: item.presentationData.timeFormat)
                 
                 if let author = item.message.author as? TelegramUser {
                     if author.botInfo != nil {
@@ -74,64 +96,80 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 let statusType: ChatMessageDateAndStatusType?
-                if case .None = position.bottom {
-                    if incoming {
-                        statusType = .BubbleIncoming
-                    } else {
-                        if message.flags.contains(.Failed) {
-                            statusType = .BubbleOutgoing(.Failed)
-                        } else if message.flags.isSending {
-                            statusType = .BubbleOutgoing(.Sending)
+                switch position {
+                    case .linear(_, .None):
+                        if incoming {
+                            statusType = .BubbleIncoming
                         } else {
-                            statusType = .BubbleOutgoing(.Sent(read: item.read))
+                            if message.flags.contains(.Failed) {
+                                statusType = .BubbleOutgoing(.Failed)
+                            } else if message.flags.isSending {
+                                statusType = .BubbleOutgoing(.Sending)
+                            } else {
+                                statusType = .BubbleOutgoing(.Sent(read: item.read))
+                            }
                         }
-                    }
-                } else {
-                    statusType = nil
+                    default:
+                        statusType = nil
                 }
                 
                 var statusSize: CGSize?
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.theme, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                    let (size, apply) = statusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
                     statusSize = size
                     statusApply = apply
                 }
                 
                 let attributedText: NSAttributedString
-                var entities: TextEntitiesMessageAttribute?
+                var messageEntities: [MessageTextEntity]?
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? TextEntitiesMessageAttribute {
-                        entities = attribute
+                        messageEntities = attribute.entities
                         break
                     }
                 }
-                if entities == nil {
-                    var generateEntities = false
-                    for media in message.media {
-                        if media is TelegramMediaImage || media is TelegramMediaFile {
-                            generateEntities = true
-                            break
+                
+                var entities: [MessageTextEntity]?
+                
+                var updatedCachedChatMessageText: CachedChatMessageText?
+                if let cached = currentCachedChatMessageText, cached.matches(text: message.text, inputEntities: messageEntities) {
+                    entities = cached.entities
+                } else {
+                    entities = messageEntities
+                    if let entitiesValue = entities {
+                        if let result = addLocallyGeneratedEntities(message.text, enabledTypes: .all, entities: entitiesValue) {
+                            entities = result
+                        }
+                    } else {
+                        var generateEntities = false
+                        for media in message.media {
+                            if media is TelegramMediaImage || media is TelegramMediaFile {
+                                generateEntities = true
+                                break
+                            }
+                        }
+                        if generateEntities {
+                            let parsedEntities = generateTextEntities(message.text, enabledTypes: .all)
+                            if !parsedEntities.isEmpty {
+                                entities = parsedEntities
+                            }
                         }
                     }
-                    if generateEntities {
-                        let parsedEntities = generateTextEntities(message.text)
-                        if !parsedEntities.isEmpty {
-                            entities = TextEntitiesMessageAttribute(entities: parsedEntities)
-                        }
-                    }
+                    updatedCachedChatMessageText = CachedChatMessageText(text: message.text, inputEntities: messageEntities, entities: entities)
                 }
                 
-                let bubbleTheme = item.theme.chat.bubble
+                
+                let bubbleTheme = item.presentationData.theme.chat.bubble
                 
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(message.text, entities: entities.entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: messageFont, boldFont: messageBoldFont, fixedFont: messageFixedFont)
+                    attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: item.presentationData.messageFont, boldFont: item.presentationData.messageBoldFont, fixedFont: item.presentationData.messageFixedFont)
                 } else {
-                    attributedText = NSAttributedString(string: message.text, font: messageFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
+                    attributedText = NSAttributedString(string: message.text, font: item.presentationData.messageFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
                 }
                 
-                let (textLayout, textApply) = textLayout(attributedText, nil, 0, .end, textConstrainedSize, .natural, nil, UIEdgeInsets())
+                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 var textFrame = CGRect(origin: CGPoint(), size: textLayout.size)
                 let textSize = textLayout.size
@@ -172,6 +210,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     return (boundingSize, { [weak self] animation in
                         if let strongSelf = self {
                             strongSelf.item = item
+                            if let updatedCachedChatMessageText = updatedCachedChatMessageText {
+                                strongSelf.cachedChatMessageText = updatedCachedChatMessageText
+                            }
+                            
                             let cachedLayout = strongSelf.textNode.cachedLayout
                             
                             if case .System = animation {
@@ -288,7 +330,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming ? item.theme.chat.bubble.incomingLinkHighlightColor : item.theme.chat.bubble.outgoingLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.chat.bubble.incomingLinkHighlightColor : item.presentationData.theme.chat.bubble.outgoingLinkHighlightColor)
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }

@@ -15,7 +15,7 @@ extern float scale_factor;
 extern int width, height;
 extern int y_offset_absolute;
 
-typedef enum {NORMAL, NORMAL_ONE, RED, BLUE, LIGHT_RED, LIGHT_BLUE} texture_program_type;
+typedef enum {NORMAL, NORMAL_ONE, RED, BLUE, LIGHT_RED, LIGHT_BLUE, DARK, LIGHT} texture_program_type;
 
 typedef struct {
     float x;
@@ -127,6 +127,7 @@ void setup_shaders();
 
 
 void draw_shape(const Shape* shape, mat4x4 view_projection_matrix);
+void draw_colored_shape(const Shape* shape, mat4x4 view_projection_matrix, vec4 color);
 
 void draw_textured_shape(const TexturedShape* shape, mat4x4 view_projection_matrix, texture_program_type program_type);
 

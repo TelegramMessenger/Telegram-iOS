@@ -20,10 +20,10 @@ class BotCheckoutPriceItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = BotCheckoutPriceItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -34,13 +34,13 @@ class BotCheckoutPriceItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? BotCheckoutPriceItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -93,14 +93,14 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
         self.addSubnode(self.labelNode)
     }
     
-    func asyncLayout() -> (_ item: BotCheckoutPriceItem, _ width: CGFloat, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: BotCheckoutPriceItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
-        return { item, width, neighbors in
-            let rightInset: CGFloat = 16.0
+        return { item, params, neighbors in
+            let rightInset: CGFloat = 16.0 + params.rightInset
             
-            let contentSize = CGSize(width: width, height: 34.0)
+            let contentSize = CGSize(width: params.width, height: 34.0)
             let insets = priceItemInsets(neighbors)
             
             let textFont: UIFont
@@ -113,8 +113,8 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
                 textColor = item.theme.list.itemSecondaryTextColor
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: textFont, textColor: textColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
-            let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: textFont, textColor: textColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
@@ -123,10 +123,10 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
                     let _ = titleApply()
                     let _ = labelApply()
                     
-                    let leftInset: CGFloat = 16.0
+                    let leftInset: CGFloat = 16.0 + params.leftInset
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: width - rightInset - labelLayout.size.width, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                 }
             })
         }

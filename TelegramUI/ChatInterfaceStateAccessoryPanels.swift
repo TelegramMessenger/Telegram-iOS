@@ -6,8 +6,24 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
     if let _ = chatPresentationInterfaceState.interfaceState.selectionState {
         return nil
     }
+    if chatPresentationInterfaceState.search != nil {
+        return nil
+    }
     
     if let editMessage = chatPresentationInterfaceState.interfaceState.editMessage {
+        if let editingUrlPreview = chatPresentationInterfaceState.editingUrlPreview, editMessage.disableUrlPreview != editingUrlPreview.0 {
+            if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode {
+                previewPanelNode.interfaceInteraction = interfaceInteraction
+                previewPanelNode.replaceWebpage(url: editingUrlPreview.0, webpage: editingUrlPreview.1)
+                previewPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                return previewPanelNode
+            } else {
+                let panelNode = WebpagePreviewAccessoryPanelNode(account: account, url: editingUrlPreview.0, webpage: editingUrlPreview.1, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                panelNode.interfaceInteraction = interfaceInteraction
+                return panelNode
+            }
+        }
+        
         if let editPanelNode = currentPanel as? EditAccessoryPanelNode, editPanelNode.messageId == editMessage.messageId {
             editPanelNode.interfaceInteraction = interfaceInteraction
             editPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
@@ -38,13 +54,13 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             return panelNode
         }
     } else if let urlPreview = chatPresentationInterfaceState.urlPreview, chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != urlPreview.0 {
-        if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode, previewPanelNode.webpage.id == urlPreview.1.id {
+        if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode {
             previewPanelNode.interfaceInteraction = interfaceInteraction
-            previewPanelNode.replaceWebpage(urlPreview.1)
+            previewPanelNode.replaceWebpage(url: urlPreview.0, webpage: urlPreview.1)
             previewPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return previewPanelNode
         } else {
-            let panelNode = WebpagePreviewAccessoryPanelNode(account: account, webpage: urlPreview.1, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+            let panelNode = WebpagePreviewAccessoryPanelNode(account: account, url: urlPreview.0, webpage: urlPreview.1, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }

@@ -16,6 +16,7 @@ enum PresentationResourceKey: Int32 {
     case navigationComposeIcon
     case navigationCallIcon
     case navigationShareIcon
+    case navigationSearchIcon
     case navigationPlayerCloseButton
     
     case navigationPlayerPlayIcon
@@ -32,6 +33,8 @@ enum PresentationResourceKey: Int32 {
     case itemListCheckIcon
     case itemListSecondaryCheckIcon
     case itemListPlusIcon
+    case itemListDeleteIndicatorIcon
+    case itemListAddPersonIcon
     
     case itemListStickerItemUnreadDot
     case itemListVerifiedPeerIcon
@@ -40,6 +43,7 @@ enum PresentationResourceKey: Int32 {
     case chatListLockBottomLockedImage
     case chatListLockTopUnlockedImage
     case chatListLockBottomUnlockedImage
+    case chatListPending
     case chatListSingleCheck
     case chatListDoubleCheck
     case chatListBadgeBackgroundActive
@@ -48,10 +52,12 @@ enum PresentationResourceKey: Int32 {
     case chatListBadgeBackgroundPinned
     case chatListMutedIcon
     case chatListVerifiedIcon
+    case chatListSecretIcon
 
     case chatPrincipalThemeEssentialGraphics
     case chatBubbleVerticalLineIncomingImage
     case chatBubbleVerticalLineOutgoingImage
+    case chatServiceVerticalLineImage
     
     case chatBubbleCheckBubbleFullImage
     case chatBubbleBubblePartialImage
@@ -63,8 +69,10 @@ enum PresentationResourceKey: Int32 {
     
     case chatBubbleConsumableContentIncomingIcon
     case chatBubbleConsumableContentOutgoingIcon
+    case chatMediaConsumableContentIcon
     
     case chatBubbleShareButtonImage
+    case chatBubbleNavigateButtonImage
     
     case chatBubbleMediaOverlayControlSecret
     
@@ -78,10 +86,15 @@ enum PresentationResourceKey: Int32 {
     case chatInstantVideoBackgroundImage
     case chatUnreadBarBackgroundImage
     
-    case chatBubbleActionButtonMiddleImage
-    case chatBubbleActionButtonBottomLeftImage
-    case chatBubbleActionButtonBottomRightImage
-    case chatBubbleActionButtonBottomSingleImage
+    case chatBubbleActionButtonIncomingMiddleImage
+    case chatBubbleActionButtonIncomingBottomLeftImage
+    case chatBubbleActionButtonIncomingBottomRightImage
+    case chatBubbleActionButtonIncomingBottomSingleImage
+    
+    case chatBubbleActionButtonOutgoingMiddleImage
+    case chatBubbleActionButtonOutgoingBottomLeftImage
+    case chatBubbleActionButtonOutgoingBottomRightImage
+    case chatBubbleActionButtonOutgoingBottomSingleImage
     
     case chatBubbleReplyThumbnailPlayImage
     
@@ -96,6 +109,8 @@ enum PresentationResourceKey: Int32 {
     case chatInputMediaPanelSavedStickersIconImage
     case chatInputMediaPanelRecentStickersIconImage
     case chatInputMediaPanelRecentGifsIconImage
+    case chatInputMediaPanelTrendingIconImage
+    case chatInputMediaPanelSettingsIconImage
     
     case chatInputButtonPanelButtonImage
     case chatInputButtonPanelButtonHighlightedImage
@@ -103,6 +118,7 @@ enum PresentationResourceKey: Int32 {
     case chatInputTextFieldBackgroundImage
     case chatInputTextFieldClearImage
     case chatInputPanelSendButtonImage
+    case chatInputPanelApplyButtonImage
     case chatInputPanelVoiceButtonImage
     case chatInputPanelVideoButtonImage
     case chatInputPanelVoiceActiveButtonImage
@@ -120,6 +136,7 @@ enum PresentationResourceKey: Int32 {
     case chatInputSearchPanelDownImage
     case chatInputSearchPanelDownDisabledImage
     case chatInputSearchPanelCalendarImage
+    case chatInputSearchPanelMembersImage
     
     case chatTitlePanelInfoImage
     case chatTitlePanelSearchImage
@@ -142,19 +159,29 @@ enum PresentationResourceKey: Int32 {
     case chatMessageAttachedContentButtonIconInstantOutgoing
     case chatMessageAttachedContentHighlightedButtonIconInstantOutgoing
     
+    case chatCommandPanelArrowImage
+    
     case sharedMediaFileDownloadStartIcon
     case sharedMediaFileDownloadPauseIcon
     
     case chatInfoCallButtonImage
     
+    case chatInstantMessageInfoBackgroundImage
     case chatInstantMessageMuteIconImage
     
     case chatBubbleIncomingCallButtonImage
     case chatBubbleOutgoingCallButtonImage
+    
+    case chatBubbleMapPinImage
+    
+    case chatSelectionButtonChecked
+    case chatSelectionButtonUnchecked
     
     case callListOutgoingIcon
     case callListInfoButton
     
     case genericSearchBarLoupeImage
     case genericSearchBar
+    
+    case inAppNotificationBackground
 }

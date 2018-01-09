@@ -26,8 +26,9 @@ final class ChatMediaInputGifPane: ASDisplayNode, UIScrollViewDelegate {
         self.disposable.dispose()
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
+        self.multiplexedNode?.bottomInset = bottomInset
         self.multiplexedNode?.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height))
     }
     

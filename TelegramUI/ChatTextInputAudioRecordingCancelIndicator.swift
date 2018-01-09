@@ -23,6 +23,7 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
         self.arrowNode.image = PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)
         
         self.labelNode = TextNode()
+        self.labelNode.displaysAsynchronously = false
         self.labelNode.isLayerBacked = true
         
         self.cancelButton = HighlightableButtonNode()
@@ -36,14 +37,14 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
         self.addSubnode(self.cancelButton)
         
         let makeLayout = TextNode.asyncLayout(self.labelNode)
-        let (labelLayout, labelApply) = makeLayout(NSAttributedString(string: strings.Conversation_SlideToCancel, font: Font.regular(14.0), textColor: theme.chat.inputPanel.panelControlColor), nil, 1, .end, CGSize(width: 200.0, height: 100.0), .natural, nil, UIEdgeInsets())
+        let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: strings.Conversation_SlideToCancel, font: Font.regular(14.0), textColor: theme.chat.inputPanel.panelControlColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 200.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = labelApply()
         
         let arrowSize = self.arrowNode.image?.size ?? CGSize()
         let height = max(arrowSize.height, labelLayout.size.height)
         self.frame = CGRect(origin: CGPoint(), size: CGSize(width: arrowSize.width + 12.0 + labelLayout.size.width, height: height))
         self.arrowNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((height - arrowSize.height) / 2.0)), size: arrowSize)
-        self.labelNode.frame = CGRect(origin: CGPoint(x: arrowSize.width + 6.0, y: floor((height - labelLayout.size.height) / 2.0) - UIScreenPixel), size: labelLayout.size)
+        self.labelNode.frame = CGRect(origin: CGPoint(x: arrowSize.width + 6.0, y: 1.0 + floor((height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
         
         let cancelSize = self.cancelButton.measure(CGSize(width: 200.0, height: 100.0))
         self.cancelButton.frame = CGRect(origin: CGPoint(x: floor((self.bounds.size.width - cancelSize.width) / 2.0), y: floor((height - cancelSize.height) / 2.0)), size: cancelSize)

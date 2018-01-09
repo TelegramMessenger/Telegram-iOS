@@ -88,6 +88,9 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
         }
     }
     
+    func updateContentNodeSnapshot(_ snapshot: UIView?) {
+    }
+    
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayoutSize = size
         
@@ -133,7 +136,7 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
             if let value = value {
                 return value
             } else {
-                return MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, timestamp: 0.0, status: .paused)
+                return MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, timestamp: 0.0, seekId: 0, status: .paused)
             }
         }
     }

@@ -6,7 +6,9 @@ public protocol NotificationItem {
     var groupingKey: AnyHashable? { get }
     
     func node() -> NotificationItemNode
-    func tapped()
+    func tapped(_ take: @escaping () -> (ASDisplayNode?, () -> Void))
+    func canBeExpanded() -> Bool
+    func expand(_ take: @escaping () -> (ASDisplayNode?, () -> Void))
 }
 
 public class NotificationItemNode: ASDisplayNode {

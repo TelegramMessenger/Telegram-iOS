@@ -68,7 +68,7 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
     case archived(PresentationTheme, String)
     case masks(PresentationTheme, String)
     case packsTitle(PresentationTheme, String)
-    case pack(Int32, PresentationTheme, StickerPackCollectionInfo, StickerPackItem?, String, Bool, ItemListStickerPackItemEditing)
+    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, StickerPackItem?, String, Bool, ItemListStickerPackItemEditing)
     case packsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -90,7 +90,7 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return .index(2)
             case .packsTitle:
                 return .index(3)
-            case let .pack(_, _, info, _, _, _, _):
+            case let .pack(_, _, _, info, _, _, _, _):
                 return .pack(info.id)
             case .packsInfo:
                 return .index(4)
@@ -123,12 +123,15 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .pack(lhsIndex, lhsTheme, lhsInfo, lhsTopItem, lhsCount, lhsEnabled, lhsEditing):
-                if case let .pack(rhsIndex, rhsTheme, rhsInfo, rhsTopItem, rhsCount, rhsEnabled, rhsEditing) = rhs {
+            case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsTopItem, lhsCount, lhsEnabled, lhsEditing):
+                if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsTopItem, rhsCount, rhsEnabled, rhsEditing) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
                     if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
                         return false
                     }
                     if lhsInfo != rhsInfo {
@@ -189,9 +192,9 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .pack(lhsIndex, _, _, _, _, _, _):
+            case let .pack(lhsIndex, _, _, _, _, _, _, _):
                 switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _, _):
+                    case let .pack(rhsIndex, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                     case .packsInfo:
                         return true
@@ -224,8 +227,8 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 })
             case let .packsTitle(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .pack(_, theme, info, topItem, count, enabled, editing):
-                return ItemListStickerPackItem(theme: theme, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .none, editing: editing, enabled: enabled, sectionId: self.section, action: {
+            case let .pack(_, theme, strings, info, topItem, count, enabled, editing):
+                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .none, editing: editing, enabled: enabled, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
@@ -277,7 +280,7 @@ private struct InstalledStickerPacksControllerState: Equatable {
 
 private func namespaceForMode(_ mode: InstalledStickerPacksControllerMode) -> ItemCollectionId.Namespace {
     switch mode {
-        case .general:
+        case .general, .modal:
             return Namespaces.ItemCollection.CloudStickerPacks
         case .masks:
             return Namespaces.ItemCollection.CloudMaskPacks
@@ -309,7 +312,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
             entries.append(.archived(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedPacks))
             entries.append(.masks(presentationData.theme, presentationData.strings.MaskStickerSettings_Title))
             entries.append(.packsTitle(presentationData.theme, presentationData.strings.StickerPacksSettings_StickerPacksSection))
-        case .masks:
+        case .masks, .modal:
             break
     }
     
@@ -318,7 +321,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
             var index: Int32 = 0
             for entry in packsEntries {
                 if let info = entry.info as? StickerPackCollectionInfo {
-                    entries.append(.pack(index, presentationData.theme, info, entry.firstItem as? StickerPackItem, stringForStickerCount(info.count == 0 ? entry.count : info.count), true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id)))
+                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, stringForStickerCount(info.count == 0 ? entry.count : info.count), true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id)))
                     index += 1
                 }
             }
@@ -326,7 +329,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
     }
     
     switch mode {
-        case .general:
+        case .general, .modal:
             entries.append(.packsInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_ManagingHelp))
         case .masks:
             entries.append(.packsInfo(presentationData.theme, presentationData.strings.MaskStickerSettings_Info))
@@ -337,12 +340,14 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
 
 public enum InstalledStickerPacksControllerMode {
     case general
+    case modal
     case masks
 }
 
 public func installedStickerPacksController(account: Account, mode: InstalledStickerPacksControllerMode) -> ViewController {
-    let statePromise = ValuePromise(InstalledStickerPacksControllerState(), ignoreRepeated: true)
-    let stateValue = Atomic(value: InstalledStickerPacksControllerState())
+    let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal)
+    let statePromise = ValuePromise(initialState, ignoreRepeated: true)
+    let stateValue = Atomic(value: initialState)
     let updateState: ((InstalledStickerPacksControllerState) -> InstalledStickerPacksControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -350,6 +355,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var navigateToChatControllerImpl: ((PeerId) -> Void)?
+    var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -374,12 +380,12 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Remove", color: .destructive, action: {
+                ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: {
                     dismissAction()
                     let _ = removeStickerPackInteractively(postbox: account.postbox, id: id).start()
                 })
             ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: "Cancel", action: { dismissAction() })])
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openStickersBot: {
@@ -402,7 +408,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     switch mode {
         case .general:
             featured.set(account.viewTracker.featuredStickerPacks())
-        case .masks:
+        case .masks, .modal:
             featured.set(.single([]))
     }
     
@@ -414,6 +420,13 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             var packCount: Int? = nil
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView, let entries = stickerPacksView.entriesByNamespace[namespaceForMode(mode)] {
                 packCount = entries.count
+            }
+            
+            var leftNavigationButton: ItemListNavigationButton?
+            if case .modal = mode {
+                leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+                    dismissImpl?()
+                })
             }
             
             var rightNavigationButton: ItemListNavigationButton?
@@ -436,7 +449,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             let previous = previousPackCount
             previousPackCount = packCount
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(mode == .general ? "Stickers" : "Masks"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(mode == .general ? presentationData.strings.StickerPacksSettings_Title : presentationData.strings.MaskStickerSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             
             let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, featured: featured), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
             return (controllerState, (listState, arguments))
@@ -455,8 +468,11 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     }
     navigateToChatControllerImpl = { [weak controller] peerId in
         if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-            navigateToChatController(navigationController: navigationController, account: account, peerId: peerId)
+            navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
         }
+    }
+    dismissImpl = { [weak controller] in
+        controller?.dismiss()
     }
     
     return controller

@@ -3,14 +3,14 @@ import AsyncDisplayKit
 import Display
 
 final class AuthorizationSequenceSplashControllerNode: ASDisplayNode {
-    override init() {
+    init(theme: AuthorizationTheme) {
         super.init()
         
         self.setViewBlock({
             return UITracingLayerView()
         })
         
-        self.backgroundColor = UIColor.white
+        self.backgroundColor = theme.backgroundColor
         self.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     

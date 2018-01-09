@@ -48,6 +48,7 @@ enum ItemListStickerPackItemControl: Equatable {
 
 final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let account: Account
     let packInfo: StickerPackCollectionInfo
     let itemCount: String
@@ -62,8 +63,9 @@ final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let addPack: () -> Void
     let removePack: () -> Void
     
-    init(theme: PresentationTheme, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void) {
         self.theme = theme
+        self.strings = strings
         self.account = account
         self.packInfo = packInfo
         self.itemCount = itemCount
@@ -79,10 +81,10 @@ final class ItemListStickerPackItem: ListViewItem, ItemListItem {
         self.removePack = removePack
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ItemListStickerPackItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -93,7 +95,7 @@ final class ItemListStickerPackItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ItemListStickerPackItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
@@ -104,7 +106,7 @@ final class ItemListStickerPackItem: ListViewItem, ItemListItem {
                 }
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animated)
@@ -140,7 +142,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     private let installationActionImageNode: ASImageNode
     private let installationActionNode: HighlightableButtonNode
     
-    private var layoutParams: (ItemListStickerPackItem, CGFloat, ItemListNeighbors)?
+    private var layoutParams: (ItemListStickerPackItem, ListViewItemLayoutParams, ItemListNeighbors)?
     
     private var editableControlNode: ItemListEditableControlNode?
     
@@ -210,7 +212,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.fetchDisposable.dispose()
     }
     
-    func asyncLayout() -> (_ item: ItemListStickerPackItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ItemListStickerPackItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeImageLayout = self.imageNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
@@ -221,7 +223,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         
         let currentItem = self.layoutParams?.0
         
-        return { item, width, neighbors in
+        return { item, params, neighbors in
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             
@@ -233,12 +235,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             
             let packRevealOptions: [ItemListRevealOption]
             if item.editing.editable && item.enabled {
-                packRevealOptions = [ItemListRevealOption(key: 0, title: "Remove", icon: nil, color: UIColor(rgb: 0xff3824))]
+                packRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]
             } else {
                 packRevealOptions = []
             }
             
-            var rightInset: CGFloat = 0.0
+            var rightInset: CGFloat = params.rightInset
             
             var installationActionImage: UIImage?
             switch item.control {
@@ -261,24 +263,24 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             titleAttributedString = NSAttributedString(string: item.packInfo.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
             statusAttributedString = NSAttributedString(string: item.itemCount, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
             
-            let leftInset: CGFloat = 65.0
+            let leftInset: CGFloat = 65.0 + params.leftInset
             
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
             
             let editingOffset: CGFloat
             if item.editing.editing {
-                let sizeAndApply = editableControlLayout(59.0)
+                let sizeAndApply = editableControlLayout(59.0, item.theme, false)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0.width
             } else {
                 editingOffset = 0.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset - 10.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
-            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - 10.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
-            let contentSize = CGSize(width: width, height: 59.0)
+            let contentSize = CGSize(width: params.width, height: 59.0)
             let separatorHeight = UIScreenPixel
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -287,7 +289,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
                     currentDisabledOverlayNode = ASDisplayNode()
-                    currentDisabledOverlayNode?.backgroundColor = item.theme.list.itemBackgroundColor.withAlphaComponent(0.5)
+                    currentDisabledOverlayNode?.backgroundColor = item.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.5)
                 }
             } else {
                 currentDisabledOverlayNode = nil
@@ -322,12 +324,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
-                    strongSelf.layoutParams = (item, width, neighbors)
+                    strongSelf.layoutParams = (item, params, neighbors)
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     }
                     
@@ -368,9 +370,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             }
                             strongSelf.editableControlNode = editableControlNode
                             strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.imageNode)
-                            let editableControlFrame = CGRect(origin: CGPoint(x: revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
+                            let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
                             editableControlNode.frame = editableControlFrame
-                            transition.animatePosition(node: editableControlNode, from: CGPoint(x: editableControlFrame.midX - editableControlFrame.size.width, y: editableControlFrame.midY))
+                            transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                             editableControlNode.alpha = 0.0
                             transition.updateAlpha(node: editableControlNode, alpha: 1.0)
                         }
@@ -390,7 +392,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     let _ = titleApply()
                     let _ = statusApply()
                     
-                    let installationActionFrame = CGRect(origin: CGPoint(x: width - 50.0, y: 0.0), size: CGSize(width: 50.0, height: layout.contentSize.height))
+                    let installationActionFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 50.0, y: 0.0), size: CGSize(width: 50.0, height: layout.contentSize.height))
                     strongSelf.installationActionNode.frame = installationActionFrame
                     
                     switch item.control {
@@ -433,7 +435,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
                     }
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
@@ -448,13 +450,15 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: (strongSelf.unreadNode.isHidden ? 0.0 : 10.0) + leftInset + revealOffset + editingOffset, y: 11.0), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 32.0), size: statusLayout.size))
                     
-                    transition.updateFrame(node: strongSelf.imageNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + 15.0, y: 11.0), size: CGSize(width: 34.0, height: 34.0)))
+                    transition.updateFrame(node: strongSelf.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: 11.0), size: CGSize(width: 34.0, height: 34.0)))
                     
                     if let updatedImageSignal = updatedImageSignal {
-                        strongSelf.imageNode.setSignal(account: item.account, signal: updatedImageSignal)
+                        strongSelf.imageNode.setSignal(updatedImageSignal)
                     }
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: 59.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 59.0 + UIScreenPixel + UIScreenPixel))
+                    
+                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     strongSelf.setRevealOptions(packRevealOptions)
                     strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
@@ -467,8 +471,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
             self.highlightedBackgroundNode.alpha = 1.0
@@ -516,13 +520,17 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        let leftInset: CGFloat = 65.0
+        guard let params = self.layoutParams?.1 else {
+            return
+        }
+        
+        let leftInset: CGFloat = 65.0 + params.leftInset
         
         let editingOffset: CGFloat
         if let editableControlNode = self.editableControlNode {
             editingOffset = editableControlNode.bounds.size.width
             var editableControlFrame = editableControlNode.frame
-            editableControlFrame.origin.x = offset
+            editableControlFrame.origin.x = params.leftInset + offset
             transition.updateFrame(node: editableControlNode, frame: editableControlFrame)
         } else {
             editingOffset = 0.0
@@ -531,7 +539,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
         
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + 15.0, y: self.imageNode.frame.minY), size: CGSize(width: 34.0, height: 34.0)))
+        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: self.imageNode.frame.minY), size: CGSize(width: 34.0, height: 34.0)))
     }
     
     override func revealOptionsInteractivelyOpened() {

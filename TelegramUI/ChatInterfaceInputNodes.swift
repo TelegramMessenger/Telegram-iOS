@@ -13,7 +13,21 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
             } else if let inputMediaNode = inputMediaNode {
                 return inputMediaNode
             } else {
-                let inputNode = ChatMediaInputNode(account: account, controllerInteraction: controllerInteraction, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                let inputNode = ChatMediaInputNode(account: account, controllerInteraction: controllerInteraction, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, gifPaneIsActiveUpdated: { [weak interfaceInteraction] value in
+                    if let interfaceInteraction = interfaceInteraction {
+                        interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
+                            if case .media = state.inputMode {
+                                if value {
+                                    return (.media(.gif), nil)
+                                } else {
+                                    return (.media(.other), nil)
+                                }
+                            } else {
+                                return (state.inputMode, nil)
+                            }
+                        }
+                    }
+                })
                 inputNode.interfaceInteraction = interfaceInteraction
                 return inputNode
             }

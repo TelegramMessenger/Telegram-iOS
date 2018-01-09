@@ -59,6 +59,7 @@ private let countryNamesAndCodes: [(String, String, Int)] = loadCountryNamesAndC
 
 private final class InnerCoutrySearchResultsController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     private let displayCodes: Bool
+    private let theme: AuthorizationTheme
     
     private let tableView: UITableView
     
@@ -70,8 +71,9 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
     
     var itemSelected: (((String, String, Int)) -> Void)?
     
-    init(displayCodes: Bool) {
+    init(strings: PresentationStrings, theme: AuthorizationTheme, displayCodes: Bool) {
         self.displayCodes = displayCodes
+        self.theme = theme
         
         self.tableView = UITableView(frame: CGRect(), style: .plain)
         
@@ -92,6 +94,10 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
         self.tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.tableView.dataSource = self
         self.tableView.delegate = self
+        
+        self.tableView.backgroundColor = self.theme.backgroundColor
+        self.tableView.separatorColor = self.theme.separatorColor
+        self.tableView.backgroundView = UIView()
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -110,9 +116,13 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
         }
         cell.textLabel?.text = self.searchResults[indexPath.row].0
         if self.displayCodes, let label = cell.accessoryView as? UILabel {
-            label.text = "+\(self.searchResults[indexPath.row].1)"
+            label.text = "+\(self.searchResults[indexPath.row].2)"
             label.sizeToFit()
+            label.textColor = self.theme.primaryColor
         }
+        cell.textLabel?.textColor = self.theme.primaryColor
+        cell.backgroundColor = self.theme.backgroundColor
+        cell.selectedBackgroundView?.backgroundColor = self.theme.itemHighlightedBackgroundColor
         return cell
     }
     
@@ -122,6 +132,8 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
 }
 
 private final class InnerCountrySelectionController: UIViewController, UITableViewDelegate, UITableViewDataSource, UISearchResultsUpdating, UISearchBarDelegate {
+    private let strings: PresentationStrings
+    private let theme: AuthorizationTheme
     private let displayCodes: Bool
     
     private let tableView: UITableView
@@ -135,7 +147,9 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
     var dismiss: (() -> Void)?
     var itemSelected: (((String, String, Int)) -> Void)?
     
-    init(displayCodes: Bool) {
+    init(strings: PresentationStrings, theme: AuthorizationTheme, displayCodes: Bool) {
+        self.strings = strings
+        self.theme = theme
         self.displayCodes = displayCodes
         
         self.tableView = UITableView(frame: CGRect(), style: .plain)
@@ -157,8 +171,8 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
         
         super.init(nibName: nil, bundle: nil)
         
-        self.title = "Select Country"
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.title = strings.Login_SelectCountry_Title
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.definesPresentationContext = true
     }
@@ -172,23 +186,63 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
         
         self.view.backgroundColor = .white
         
-        self.searchResultsController = InnerCoutrySearchResultsController(displayCodes: self.displayCodes)
+        self.searchResultsController = InnerCoutrySearchResultsController(strings: self.strings, theme: self.theme, displayCodes: self.displayCodes)
         self.searchResultsController.itemSelected = { [weak self] item in
             self?.itemSelected?(item)
         }
         
         self.searchController = UISearchController(searchResultsController: self.searchResultsController)
         self.searchController.searchResultsUpdater = self
-        self.searchController.dimsBackgroundDuringPresentation = true
+        self.searchController.dimsBackgroundDuringPresentation = false
         self.searchController.searchBar.delegate = self
+        self.searchController.searchBar.keyboardAppearance = self.theme.keyboardAppearance
+        self.searchController.hidesNavigationBarDuringPresentation = true
         
         self.view.addSubview(self.tableView)
+        self.tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.tableView.tableHeaderView = self.searchController.searchBar
         self.tableView.dataSource = self
         self.tableView.delegate = self
+        self.tableView.sectionIndexColor = self.theme.accentColor
+        
+        self.tableView.backgroundColor = self.theme.backgroundColor
+        self.tableView.separatorColor = self.theme.separatorColor
+        self.tableView.backgroundView = UIView()
         
         self.tableView.frame = self.view.bounds
         self.view.addSubview(self.tableView)
+        
+        self.searchController.searchBar.barTintColor = self.theme.searchBarBackgroundColor
+        self.searchController.searchBar.tintColor = self.theme.accentColor
+        self.searchController.searchBar.backgroundColor = self.theme.searchBarBackgroundColor
+        self.searchController.searchBar.setTextColor(theme.searchBarTextColor)
+        
+        
+        let searchImage = generateImage(CGSize(width: 8.0, height: 28.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(self.theme.searchBarFillColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width)))
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: size.height - size.width), size: CGSize(width: size.width, height: size.width)))
+            context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.width / 2.0), size: CGSize(width: size.width, height: size.height - size.width)))
+        })
+        self.searchController.searchBar.setSearchFieldBackgroundImage(searchImage, for: [])
+        self.searchController.searchBar.backgroundImage = UIImage()
+    }
+    
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+        
+        if #available(iOSApplicationExtension 11.0, *) {
+            var frame = self.searchController.view.frame
+            frame.origin.y = 12.0
+            self.searchController.view.frame = frame
+        }
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+
     }
     
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -201,6 +255,11 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
     
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         return self.sections[section].0
+    }
+    
+    func tableView(_ tableView: UITableView, willDisplayHeaderView view: UIView, forSection section: Int) {
+        (view as? UITableViewHeaderFooterView)?.backgroundView?.backgroundColor = self.theme.backgroundColor
+        (view as? UITableViewHeaderFooterView)?.textLabel?.textColor = self.theme.primaryColor
     }
     
     func sectionIndexTitles(for tableView: UITableView) -> [String]? {
@@ -227,9 +286,13 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
         }
         cell.textLabel?.text = self.sections[indexPath.section].1[indexPath.row].0
         if self.displayCodes, let label = cell.accessoryView as? UILabel {
-            label.text = "+\(self.sections[indexPath.section].1[indexPath.row].1)"
+            label.text = "+\(self.sections[indexPath.section].1[indexPath.row].2)"
             label.sizeToFit()
+            label.textColor = self.theme.primaryColor
         }
+        cell.textLabel?.textColor = self.theme.primaryColor
+        cell.backgroundColor = self.theme.backgroundColor
+        cell.selectedBackgroundView?.backgroundColor = self.theme.itemHighlightedBackgroundColor
         return cell
     }
     
@@ -269,6 +332,8 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
         return nil
     }
     
+    private let theme: AuthorizationTheme
+    
     private var controllerNode: AuthorizationSequenceCountrySelectionControllerNode {
         return self.displayNode as! AuthorizationSequenceCountrySelectionControllerNode
     }
@@ -278,11 +343,24 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
     
     var completeWithCountryCode: ((Int, String) -> Void)?
     
-    init(displayCodes: Bool = true) {
-        self.innerController = InnerCountrySelectionController(displayCodes: displayCodes)
+    init(strings: PresentationStrings, theme: AuthorizationTheme, displayCodes: Bool = true) {
+        self.theme = theme
+        self.innerController = InnerCountrySelectionController(strings: strings, theme: theme, displayCodes: displayCodes)
         self.innerNavigationController = UINavigationController(rootViewController: self.innerController)
+        self.innerController.navigation_setNavigationController(self.innerNavigationController)
+        self.innerNavigationController.navigationBar.barTintColor = theme.navigationBarBackgroundColor
+        self.innerNavigationController.navigationBar.tintColor = theme.accentColor
+        self.innerNavigationController.navigationBar.shadowImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.navigationBarSeparatorColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
+        })
+        self.innerNavigationController.navigationBar.isTranslucent = false
+        self.innerNavigationController.navigationBar.titleTextAttributes = [NSAttributedStringKey.font: Font.semibold(17.0), NSAttributedStringKey.foregroundColor: theme.navigationBarTextColor]
         
         super.init(navigationBarTheme: nil)
+        
+        self.statusBar.statusBarStyle = theme.statusBarStyle
         
         self.innerController.dismiss = { [weak self] in
             self?.cancelPressed()
@@ -325,9 +403,10 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.innerNavigationController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.innerController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-        //self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)
+        transition.animateView {
+            self.innerNavigationController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
+            //self.innerController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
+        }
     }
     
     private func cancelPressed() {

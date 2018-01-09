@@ -113,6 +113,8 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
         if let parameters = parameters as? RadialProgressContentSpinnerNodeParameters {
             context.setStrokeColor(parameters.color.cgColor)
             
+            let factor = bounds.size.width / 50.0
+            
             var progress = parameters.progress
             var startAngle = -CGFloat.pi / 2.0
             var endAngle = CGFloat(progress) * 2.0 * CGFloat.pi + startAngle
@@ -125,11 +127,13 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
             }
             progress = min(1.0, progress)
             
-            let pathDiameter = bounds.size.width - 2.25 - 2.5 * 2.0
+            let lineWidth = max(1.6, 2.25 * factor)
             
-            let path = UIBezierPath(arcCenter: CGPoint(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0), radius: pathDiameter / 2.0, startAngle: startAngle, endAngle:endAngle, clockwise:true)
-            path.lineWidth = 2.25;
-            path.lineCapStyle = .round;
+            let pathDiameter = bounds.size.width - lineWidth - 2.5 * 2.0
+            
+            let path = UIBezierPath(arcCenter: CGPoint(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0), radius: pathDiameter / 2.0, startAngle: startAngle, endAngle: endAngle, clockwise:true)
+            path.lineWidth = lineWidth
+            path.lineCapStyle = .round
             path.stroke()
         }
     }
@@ -192,11 +196,14 @@ private final class RadialProgressContentCancelNode: ASDisplayNode {
         if let parameters = parameters as? RadialProgressContentCancelNodeParameters {
             if parameters.displayCancel {
                 let diameter = min(bounds.size.width, bounds.size.height)
+                
+                let factor = diameter / 50.0
+                
                 context.setStrokeColor(parameters.color.cgColor)
-                context.setLineWidth(2.0)
+                context.setLineWidth(max(1.6, 2.0 * factor))
                 context.setLineCap(.round)
                 
-                let crossSize: CGFloat = 14.0
+                let crossSize: CGFloat = 14.0 * factor
                 context.move(to: CGPoint(x: diameter / 2.0 - crossSize / 2.0, y: diameter / 2.0 - crossSize / 2.0))
                 context.addLine(to: CGPoint(x: diameter / 2.0 + crossSize / 2.0, y: diameter / 2.0 + crossSize / 2.0))
                 context.strokePath()

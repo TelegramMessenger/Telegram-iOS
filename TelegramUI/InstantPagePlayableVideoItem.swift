@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import AsyncDisplayKit
 
 final class InstantPagePlayableVideoItem: InstantPageItem {
     var frame: CGRect
@@ -20,7 +21,7 @@ final class InstantPagePlayableVideoItem: InstantPageItem {
         self.interactive = interactive
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPagePlayableVideoNode(account: account, media: self.media, interactive: self.interactive, openMedia: openMedia)
     }
     

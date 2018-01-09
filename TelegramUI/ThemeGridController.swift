@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-final class ThemeGridController: TelegramController {
+final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {
         return self.displayNode as! ThemeGridControllerNode
     }
@@ -20,11 +20,11 @@ final class ThemeGridController: TelegramController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    override init(account: Account) {
+    init(account: Account) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(account: account)
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
         
         self.title = self.presentationData.strings.Wallpaper_Title
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style

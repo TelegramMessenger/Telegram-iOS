@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 
-private enum MessageContentKind {
+enum MessageContentKind: Equatable {
     case text(String)
     case image
     case video
@@ -14,9 +14,80 @@ private enum MessageContentKind {
     case contact
     case game(String)
     case location
+    
+    static func ==(lhs: MessageContentKind, rhs: MessageContentKind) -> Bool {
+        switch lhs {
+            case let .text(text):
+                if case .text(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .image:
+                if case .image = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .video:
+                if case .video = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .videoMessage:
+                if case .videoMessage = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .audioMessage:
+                if case .audioMessage = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .sticker(text):
+                if case .sticker(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .animation:
+                if case .animation = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .file(text):
+                if case .file(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .contact:
+                if case .contact = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .game(text):
+                if case .game(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .location:
+                if case .location = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
-private func messageContentKind(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> MessageContentKind {
+func messageContentKind(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> MessageContentKind {
     for media in message.media {
         switch media {
             case _ as TelegramMediaImage:
@@ -72,6 +143,9 @@ private func messageContentKind(_ message: Message, strings: PresentationStrings
 }
  
 func descriptionStringForMessage(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> String {
+    if !message.text.isEmpty {
+        return message.text
+    }
     switch messageContentKind(message, strings: strings, accountPeerId: accountPeerId) {
         case let .text(text):
             return text

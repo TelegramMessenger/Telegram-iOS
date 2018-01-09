@@ -72,15 +72,16 @@ final class MediaPlayerNode: ASDisplayNode {
     var polling = false
     
     var currentRotationAngle = 0.0
+    var currentAspect = 1.0
     
-    var state: (timebase: CMTimebase, requestFrames: Bool, rotationAngle: Double)? {
+    var state: (timebase: CMTimebase, requestFrames: Bool, rotationAngle: Double, aspect: Double)? {
         didSet {
             self.updateState()
         }
     }
     
     private func updateState() {
-        if let (timebase, requestFrames, rotationAngle) = self.state {
+        if let (timebase, requestFrames, rotationAngle, aspect) = self.state {
             if let videoLayer = self.videoLayer {
                 videoQueue.async {
                     if videoLayer.controlTimebase !== timebase || videoLayer.status == .failed {
@@ -89,9 +90,14 @@ final class MediaPlayerNode: ASDisplayNode {
                     }
                 }
                 
-                if !self.currentRotationAngle.isEqual(to: rotationAngle) {
+                if !self.currentRotationAngle.isEqual(to: rotationAngle) || !self.currentAspect.isEqual(to: aspect) {
                     self.currentRotationAngle = rotationAngle
-                    videoLayer.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(rotationAngle)))
+                    self.currentAspect = aspect
+                    var transform = CGAffineTransform(rotationAngle: CGFloat(rotationAngle))
+                    if !rotationAngle.isZero {
+                        transform = transform.scaledBy(x: CGFloat(aspect), y: CGFloat(1.0 / aspect))
+                    }
+                    videoLayer.setAffineTransform(transform)
                 }
                 
                 if self.videoInHierarchy {
@@ -109,12 +115,12 @@ final class MediaPlayerNode: ASDisplayNode {
             self.poll(completion: { [weak self] status in
                 self?.polling = false
                 
-                if let strongSelf = self, let (_, requestFrames, _) = strongSelf.state, requestFrames {
+                if let strongSelf = self, let (_, requestFrames, _, _) = strongSelf.state, requestFrames {
                     strongSelf.timer?.invalidate()
                     switch status {
                         case let .delay(delay):
                             strongSelf.timer = SwiftSignalKit.Timer(timeout: delay, repeat: true, completion: {
-                                if let strongSelf = self, let videoLayer = strongSelf.videoLayer, let (_, requestFrames, _) = strongSelf.state, requestFrames, strongSelf.videoInHierarchy {
+                                if let strongSelf = self, let videoLayer = strongSelf.videoLayer, let (_, requestFrames, _, _) = strongSelf.state, requestFrames, strongSelf.videoInHierarchy {
                                     if videoLayer.isReadyForMoreMediaData {
                                         strongSelf.timer?.invalidate()
                                         strongSelf.timer = nil
@@ -132,7 +138,7 @@ final class MediaPlayerNode: ASDisplayNode {
     }
     
     private func poll(completion: @escaping (PollStatus) -> Void) {
-        if let (takeFrameQueue, takeFrame) = self.takeFrameAndQueue, let videoLayer = self.videoLayer, let (timebase, _, _) = self.state {
+        if let (takeFrameQueue, takeFrame) = self.takeFrameAndQueue, let videoLayer = self.videoLayer, let (timebase, _, _, _) = self.state {
             let layerRef = Unmanaged.passRetained(videoLayer)
             takeFrameQueue.async {
                 let status: PollStatus
@@ -235,6 +241,7 @@ final class MediaPlayerNode: ASDisplayNode {
         
         self.videoQueue.async { [weak self] in
             let videoLayer = MediaPlayerNodeLayer()
+            videoLayer.videoGravity = .resize
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     strongSelf.videoLayer = videoLayer

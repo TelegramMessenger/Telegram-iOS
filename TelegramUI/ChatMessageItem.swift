@@ -6,6 +6,62 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 
+public enum ChatMessageItemContent: Sequence {
+    case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection)
+    case group(messages: [(Message, Bool, ChatHistoryMessageSelection)])
+    
+    func effectivelyIncoming(_ accountPeerId: PeerId) -> Bool {
+        switch self {
+            case let .message(message, _, _):
+                return message.effectivelyIncoming(accountPeerId)
+            case let .group(messages):
+                return messages[0].0.effectivelyIncoming(accountPeerId)
+        }
+    }
+    
+    var index: MessageIndex {
+        switch self {
+            case let .message(message, _, _):
+                return MessageIndex(message)
+            case let .group(messages):
+                return MessageIndex(messages[0].0)
+        }
+    }
+    
+    var firstMessage: Message {
+        switch self {
+            case let .message(message, _, _):
+                return message
+            case let .group(messages):
+                return messages[0].0
+        }
+    }
+    
+    public func makeIterator() -> AnyIterator<Message> {
+        var index = 0
+        return AnyIterator { () -> Message? in
+            switch self {
+                case let .message(message, _, _):
+                    if index == 0 {
+                        index += 1
+                        return message
+                    } else {
+                        index += 1
+                        return nil
+                    }
+                case let .group(messages):
+                    if index < messages.count {
+                        let currentIndex = index
+                        index += 1
+                        return messages[currentIndex].0
+                    } else {
+                        return nil
+                    }
+            }
+        }
+    }
+}
+
 private func mediaIsNotMergeable(_ media: Media) -> Bool {
     if let file = media as? TelegramMediaFile, file.isSticker {
         return true
@@ -20,8 +76,21 @@ private func mediaIsNotMergeable(_ media: Media) -> Bool {
     return false
 }
 
-private func messagesShouldBeMerged(_ lhs: Message, _ rhs: Message) -> Bool {
-    if abs(lhs.timestamp - rhs.timestamp) < Int32(5 * 60) && lhs.author?.id == rhs.author?.id {
+private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs: Message) -> Bool {
+    var lhsEffectiveAuthor: Peer? = lhs.author
+    var rhsEffectiveAuthor: Peer? = rhs.author
+    if lhs.id.peerId == accountPeerId {
+        if let forwardInfo = lhs.forwardInfo {
+            lhsEffectiveAuthor = forwardInfo.author
+        }
+    }
+    if rhs.id.peerId == accountPeerId {
+        if let forwardInfo = rhs.forwardInfo {
+            rhsEffectiveAuthor = forwardInfo.author
+        }
+    }
+    
+    if abs(lhs.timestamp - rhs.timestamp) < Int32(5 * 60) && lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id {
         for media in lhs.media {
             if mediaIsNotMergeable(media) {
                 return false
@@ -52,8 +121,9 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     let rhsHeader: ChatMessageDateHeader?
     if let lhs = lhs as? ChatMessageItem {
         lhsHeader = lhs.header
-    } else if let lhs = lhs as? ChatHoleItem {
-        lhsHeader = lhs.header
+    } else if let _ = lhs as? ChatHoleItem {
+        //lhsHeader = lhs.header
+        lhsHeader = nil
     } else if let lhs = lhs as? ChatUnreadItem {
         lhsHeader = lhs.header
     } else {
@@ -62,8 +132,9 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     if let rhs = rhs {
         if let rhs = rhs as? ChatMessageItem {
             rhsHeader = rhs.header
-        } else if let rhs = rhs as? ChatHoleItem {
-            rhsHeader = rhs.header
+        } else if let _ = rhs as? ChatHoleItem {
+            //rhsHeader = rhs.header
+            rhsHeader = nil
         } else if let rhs = rhs as? ChatUnreadItem {
             rhsHeader = rhs.header
         } else {
@@ -80,33 +151,71 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
 }
 
 public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: ChatPresentationData
     let account: Account
-    let peerId: PeerId
+    let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
-    let message: Message
-    let read: Bool
+    let content: ChatMessageItemContent
+    let disableDate: Bool
+    let effectiveAuthorId: PeerId?
     
     public let accessoryItem: ListViewAccessoryItem?
     let header: ChatMessageDateHeader
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool) {
-        self.theme = theme
-        self.strings = strings
+    var message: Message {
+        switch self.content {
+            case let .message(message, _, _):
+                return message
+            case let .group(messages):
+                return messages[0].0
+        }
+    }
+    
+    var read: Bool {
+        switch self.content {
+            case let .message(_, read, _):
+                return read
+            case let .group(messages):
+                return messages[0].1
+        }
+    }
+    
+    public init(presentationData: ChatPresentationData, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false) {
+        self.presentationData = presentationData
         self.account = account
-        self.peerId = peerId
+        self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
-        self.message = message
-        self.read = read
+        self.content = content
+        self.disableDate = disableDate
         
         var accessoryItem: ListViewAccessoryItem?
-        let incoming = message.effectivelyIncoming
-        let displayAuthorInfo = incoming && message.author != nil && peerId.isGroupOrChannel
+        let incoming = content.effectivelyIncoming(self.account.peerId)
         
-        self.header = ChatMessageDateHeader(timestamp: message.timestamp, theme: theme, strings: strings)
+        var effectiveAuthor: Peer?
+        let displayAuthorInfo: Bool
+        
+        switch chatLocation {
+            case let .peer(peerId):
+                if peerId == account.peerId {
+                    if let forwardInfo = content.firstMessage.forwardInfo {
+                        effectiveAuthor = forwardInfo.author
+                    }
+                    displayAuthorInfo = incoming && effectiveAuthor != nil
+                } else {
+                    effectiveAuthor = content.firstMessage.author
+                    displayAuthorInfo = incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
+                }
+            case .group:
+                effectiveAuthor = content.firstMessage.author
+                displayAuthorInfo = incoming && effectiveAuthor != nil
+        }
+        
+        self.effectiveAuthorId = effectiveAuthor?.id
+        
+        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, theme: presentationData.theme, strings: presentationData.strings)
         
         if displayAuthorInfo {
+            let message = content.firstMessage
             var hasActionMedia = false
             for media in message.media {
                 if media is TelegramMediaAction {
@@ -115,19 +224,21 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 }
             }
             var isBroadcastChannel = false
-            if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                isBroadcastChannel = true
+            if case .peer = chatLocation {
+                if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                    isBroadcastChannel = true
+                }
             }
             if !hasActionMedia && !isBroadcastChannel {
-                if let author = message.author {
-                    accessoryItem = ChatMessageAvatarAccessoryItem(account: account, peerId: author.id, peer: author, messageTimestamp: message.timestamp)
+                if let effectiveAuthor = effectiveAuthor {
+                    accessoryItem = ChatMessageAvatarAccessoryItem(account: account, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageTimestamp: content.index.timestamp)
                 }
             }
         }
         self.accessoryItem = accessoryItem
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         var viewClassName: AnyClass = ChatMessageBubbleItemNode.self
         
         loop: for media in message.media {
@@ -159,12 +270,11 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         let configure = {
             let node = (viewClassName as! ChatMessageItemView.Type).init()
-            node.controllerInteraction = self.controllerInteraction
             node.setupItem(self)
             
             let nodeLayout = node.asyncLayout()
             let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
-            let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
+            let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !self.disableDate)
             
             node.updateSelectionState(animated: false)
             node.updateHighlightedState(animated: false)
@@ -193,7 +303,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             if top.header.id != self.header.id {
                 mergedBottom = false
             } else {
-                mergedBottom = messagesShouldBeMerged(message, top.message)
+                mergedBottom = messagesShouldBeMerged(accountPeerId: self.account.peerId, message, top.message)
             }
         }
         if let bottom = bottom as? ChatMessageItem {
@@ -201,16 +311,16 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 mergedTop = false
                 dateAtBottom = true
             } else {
-                mergedTop = messagesShouldBeMerged(bottom.message, message)
+                mergedTop = messagesShouldBeMerged(accountPeerId: self.account.peerId, bottom.message, message)
             }
         } else if let bottom = bottom as? ChatUnreadItem {
             if bottom.header.id != self.header.id {
                 dateAtBottom = true
             }
         } else if let bottom = bottom as? ChatHoleItem {
-            if bottom.header.id != self.header.id {
+            //if bottom.header.id != self.header.id {
                 dateAtBottom = true
-            }
+            //}
         } else {
             dateAtBottom = true
         }
@@ -218,7 +328,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         return (mergedTop, mergedBottom, dateAtBottom)
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ChatMessageItemView {
             Queue.mainQueue().async {
                 node.setupItem(self)
@@ -228,7 +338,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 async {
                     let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
                     
-                    let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
+                    let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !self.disableDate)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)

@@ -92,24 +92,24 @@ private enum VoiceCallDataSavingEntry: ItemListNodeEntry {
     }
 }
 
-private func stringForDataSavingOption(_ option: VoiceCallDataSaving) -> String {
+private func stringForDataSavingOption(_ option: VoiceCallDataSaving, strings: PresentationStrings) -> String {
     switch option {
         case .never:
-            return "Never"
+            return strings.CallSettings_Never
         case .cellular:
-            return "On Mobile Network"
+            return strings.CallSettings_OnMobile
         case .always:
-            return "Always"
+            return strings.CallSettings_Always
     }
 }
 
 private func voiceCallDataSavingControllerEntries(presentationData: PresentationData, settings: VoiceCallSettings) -> [VoiceCallDataSavingEntry] {
     var entries: [VoiceCallDataSavingEntry] = []
     
-    entries.append(.never(presentationData.theme, stringForDataSavingOption(.never), settings.dataSaving == .never))
-    entries.append(.cellular(presentationData.theme, stringForDataSavingOption(.cellular), settings.dataSaving == .cellular))
-    entries.append(.always(presentationData.theme, stringForDataSavingOption(.always), settings.dataSaving == .always))
-    entries.append(.info(presentationData.theme, "Using less data may improve your experience on bad networks, but will slightly decrease audio quality."))
+    entries.append(.never(presentationData.theme, stringForDataSavingOption(.never, strings: presentationData.strings), settings.dataSaving == .never))
+    entries.append(.cellular(presentationData.theme, stringForDataSavingOption(.cellular, strings: presentationData.strings), settings.dataSaving == .cellular))
+    entries.append(.always(presentationData.theme, stringForDataSavingOption(.always, strings: presentationData.strings), settings.dataSaving == .always))
+    entries.append(.info(presentationData.theme, presentationData.strings.CallSettings_UseLessDataLongDescription))
     
     return entries
 }
@@ -137,7 +137,7 @@ func voiceCallDataSavingController(account: Account) -> ViewController {
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, voiceCallSettingsPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, data -> (ItemListControllerState, (ItemListNodeState<VoiceCallDataSavingEntry>, VoiceCallDataSavingEntry.ItemGenerationArguments)) in
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Use Less Data"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CallSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: voiceCallDataSavingControllerEntries(presentationData: presentationData, settings: data), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))

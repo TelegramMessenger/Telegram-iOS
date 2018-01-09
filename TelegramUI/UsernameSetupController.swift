@@ -109,7 +109,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                         text = NSAttributedString(string: "Checking name...", textColor: UIColor(rgb: 0x6d6d72))
                         displayActivity = true
                 }
-                return ItemListActivityTextItem(displayActivity: displayActivity, text: text, sectionId: self.section)
+                return ItemListActivityTextItem(displayActivity: displayActivity, theme: theme, text: text, sectionId: self.section)
         }
     }
 }

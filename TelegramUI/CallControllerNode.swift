@@ -57,6 +57,7 @@ final class CallControllerNode: ASDisplayNode {
         self.containerNode = ASDisplayNode()
         
         self.imageNode = TransformImageNode()
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         self.dimNode = ASDisplayNode()
         self.dimNode.isLayerBacked = true
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
@@ -131,14 +132,18 @@ final class CallControllerNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-        self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+        let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        self.view.addGestureRecognizer(panRecognizer)
+        
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        self.view.addGestureRecognizer(tapRecognizer)
     }
     
     func updatePeer(peer: Peer) {
         if !arePeersEqual(self.peer, peer) {
             self.peer = peer
             
-            self.imageNode.setSignal(account: self.account, signal: chatAvatarGalleryPhoto(account: self.account, representations: peer.profileImageRepresentations, autoFetchFullSize: true))
+            self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: peer.profileImageRepresentations, autoFetchFullSize: true))
             
             self.statusNode.title = peer.displayTitle
             
@@ -252,13 +257,15 @@ final class CallControllerNode: ASDisplayNode {
         let apply = self.imageNode.asyncLayout()(arguments)
         apply()
         
+        let navigationOffset: CGFloat = max(20.0, layout.safeInsets.top)
+        
         let backSize = self.backButtonNode.measure(CGSize(width: 320.0, height: 100.0))
         if let image = self.backButtonArrowNode.image {
-            transition.updateFrame(node: self.backButtonArrowNode, frame: CGRect(origin: CGPoint(x: 10.0, y: 31.0), size: image.size))
+            transition.updateFrame(node: self.backButtonArrowNode, frame: CGRect(origin: CGPoint(x: 10.0, y: navigationOffset + 11.0), size: image.size))
         }
-        transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: 29.0, y: 31.0), size: backSize))
+        transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: 29.0, y: navigationOffset + 11.0), size: backSize))
         
-        let statusOffset: CGFloat
+        var statusOffset: CGFloat
         if layout.metrics.widthClass == .regular && layout.metrics.heightClass == .regular {
             if layout.size.height.isEqual(to: 1366.0) {
                 statusOffset = 160.0
@@ -274,6 +281,8 @@ final class CallControllerNode: ASDisplayNode {
                 statusOffset = 64.0
             }
         }
+        
+        statusOffset += layout.safeInsets.top
         
         let buttonsHeight: CGFloat = 75.0
         let buttonsOffset: CGFloat
@@ -294,12 +303,12 @@ final class CallControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight), size: CGSize(width: layout.size.width, height: buttonsHeight)))
         
         let keyTextSize = self.keyButtonNode.frame.size
-        transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 8.0, y: 28.0), size: keyTextSize))
+        transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 8.0, y: navigationOffset + 8.0), size: keyTextSize))
     }
     
     @objc func keyPressed() {
         if self.keyPreviewNode == nil, let keyText = self.keyTextData?.1, let peer = self.peer {
-            let keyPreviewNode = CallControllerKeyPreviewNode(keyText: keyText, infoText: self.presentationData.strings.Call_EmojiDescription(peer.compactDisplayTitle).0, dismiss: { [weak self] in
+            let keyPreviewNode = CallControllerKeyPreviewNode(keyText: keyText, infoText: self.presentationData.strings.Call_EmojiDescription(peer.compactDisplayTitle).0.replacingOccurrences(of: "%%", with: "%"), dismiss: { [weak self] in
                 if let _ = self?.keyPreviewNode {
                     self?.backPressed()
                 }
@@ -325,6 +334,14 @@ final class CallControllerNode: ASDisplayNode {
             })
         } else {
             self.back?()
+        }
+    }
+    
+    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            if let _ = self.keyPreviewNode {
+                self.backPressed()
+            }
         }
     }
     

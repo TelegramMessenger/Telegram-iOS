@@ -10,7 +10,7 @@ func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSuggestionCo
         return SSignal { subscriber in
             if let mention = mention {
                 let normalizedQuery = mention.lowercased()
-                let disposable = peerParticipants(account: account, id: peerId).start(next: { peers in
+                let disposable = peerParticipants(postbox: account.postbox, id: peerId).start(next: { peers in
                     let filteredPeers = peers.filter { peer in
                         if peer.indexName.matchesByTokens(normalizedQuery) {
                             return true

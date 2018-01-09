@@ -18,6 +18,7 @@ private struct HashtagChatInputContextPanelEntryStableId: Hashable {
 
 private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
+    let theme: PresentationTheme
     let text: String
     
     var stableId: HashtagChatInputContextPanelEntryStableId {
@@ -25,7 +26,7 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     }
     
     static func ==(lhs: HashtagChatInputContextPanelEntry, rhs: HashtagChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.text == rhs.text
+        return lhs.index == rhs.index && lhs.text == rhs.text && lhs.theme === rhs.theme
     }
     
     static func <(lhs: HashtagChatInputContextPanelEntry, rhs: HashtagChatInputContextPanelEntry) -> Bool {
@@ -33,7 +34,7 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
-        return HashtagChatInputPanelItem(text: self.text, hashtagSelected: hashtagSelected)
+        return HashtagChatInputPanelItem(theme: self.theme, text: self.text, hashtagSelected: hashtagSelected)
     }
 }
 
@@ -54,20 +55,24 @@ private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelE
 }
 
 final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
+    private var theme: PresentationTheme
+    
     private let listView: ListView
     private var currentEntries: [HashtagChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(HashtagChatInputContextPanelTransition, Bool)] = []
-    private var hasValidLayout = false
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(account: Account) {
+    override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
-        self.listView.keepBottomItemOverscrollBackground = .white
+        self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
         
-        super.init(account: account)
+        super.init(account: account, theme: theme, strings: strings)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -80,7 +85,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         var index = 0
         var stableIds = Set<HashtagChatInputContextPanelEntryStableId>()
         for text in results {
-            let entry = HashtagChatInputContextPanelEntry(index: index, text: text)
+            let entry = HashtagChatInputContextPanelEntry(index: index, theme: self.theme, text: text)
             if stableIds.contains(entry.stableId) {
                 continue
             }
@@ -93,7 +98,15 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputState { textInputState in
-                    if let (range, type, _) = textInputStateContextQueryRangeAndType(textInputState) {
+                    var hashtagQueryRange: Range<String.Index>?
+                    inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
+                        if type == [.hashtag] {
+                            hashtagQueryRange = range
+                            break inner
+                        }
+                    }
+                    
+                    if let range = hashtagQueryRange {
                         var inputText = textInputState.inputText
                         
                         let replacementText = text + " "
@@ -121,7 +134,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     private func enqueueTransition(_ transition: HashtagChatInputContextPanelTransition, firstTime: Bool) {
         enqueuedTransitions.append((transition, firstTime))
         
-        if self.hasValidLayout {
+        if self.validLayout != nil {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
@@ -129,7 +142,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func dequeueTransition() {
-        if let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let validLayout = self.validLayout, let (transition, firstTime) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
@@ -142,9 +155,11 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             }
             
             var insets = UIEdgeInsets()
-            insets.top = topInsetForLayout(size: self.listView.bounds.size)
+            insets.top = topInsetForLayout(size: validLayout.0)
+            insets.left = validLayout.1
+            insets.right = validLayout.2
             
-            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default)
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: validLayout.0, insets: insets, duration: 0.0, curve: .Default)
             
             self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
@@ -170,9 +185,14 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         return max(size.height - minimumItemHeights, 0.0)
     }
     
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+        let hadValidLayout = self.validLayout != nil
+        self.validLayout = (size, leftInset, rightInset)
+        
         var insets = UIEdgeInsets()
         insets.top = self.topInsetForLayout(size: size)
+        insets.left = leftInset
+        insets.right = rightInset
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         
@@ -184,10 +204,10 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         case let .animated(animationDuration, animationCurve):
             duration = animationDuration
             switch animationCurve {
-            case .easeInOut:
-                break
-            case .spring:
-                curve = 7
+                case .easeInOut:
+                    break
+                case .spring:
+                    curve = 7
             }
         }
         
@@ -202,8 +222,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        if !hasValidLayout {
-            hasValidLayout = true
+        if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }

@@ -1,6 +1,7 @@
 import Foundation
 import TelegramCore
 import Postbox
+import AsyncDisplayKit
 
 final class InstantPageUrlItem {
     let url: String
@@ -240,7 +241,7 @@ final class InstantPageTextItem: InstantPageItem {
         return false
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return nil
     }
     

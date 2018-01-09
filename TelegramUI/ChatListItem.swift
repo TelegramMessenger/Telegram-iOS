@@ -6,52 +6,45 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 
+enum ChatListItemContent {
+    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?)
+    case groupReference(groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters)
+}
+
 class ChatListItem: ListViewItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: ChatListPresentationData
     let account: Account
+    let peerGroupId: PeerGroupId?
     let index: ChatListIndex
-    let message: Message?
-    let peer: RenderedPeer
-    let combinedReadState: CombinedPeerReadState?
-    let notificationSettings: PeerNotificationSettings?
-    let summaryInfo: ChatListMessageTagSummaryInfo
-    let embeddedState: PeerChatListEmbeddedInterfaceState?
+    let content: ChatListItemContent
     let editing: Bool
     let hasActiveRevealControls: Bool
-    let inputActivities: [(Peer, PeerInputActivity)]?
     let interaction: ChatListNodeInteraction
     
     let selectable: Bool = true
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, index: ChatListIndex, message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, editing: Bool, hasActiveRevealControls: Bool, inputActivities: [(Peer, PeerInputActivity)]?, header: ListViewItemHeader?, interaction: ChatListNodeInteraction) {
-        self.theme = theme
-        self.strings = strings
+    init(presentationData: ChatListPresentationData, account: Account, peerGroupId: PeerGroupId?, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, header: ListViewItemHeader?, interaction: ChatListNodeInteraction) {
+        self.presentationData = presentationData
+        self.peerGroupId = peerGroupId
         self.account = account
         self.index = index
-        self.message = message
-        self.peer = peer
-        self.combinedReadState = combinedReadState
-        self.notificationSettings = notificationSettings
-        self.summaryInfo = summaryInfo
-        self.embeddedState = embeddedState
+        self.content = content
         self.editing = editing
         self.hasActiveRevealControls = hasActiveRevealControls
-        self.inputActivities = inputActivities
         self.header = header
         self.interaction = interaction
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatListItemNode()
             node.setupItem(item: self)
             let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
             node.insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             
-            let (nodeLayout, apply) = node.asyncLayout()(self, width, first, last, firstWithHeader, nextIsPinned)
+            let (nodeLayout, apply) = node.asyncLayout()(self, params, first, last, firstWithHeader, nextIsPinned)
             
             node.insets = nodeLayout.insets
             node.contentSize = nodeLayout.contentSize
@@ -64,7 +57,7 @@ class ChatListItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         assert(node is ChatListItemNode)
         if let node = node as? ChatListItemNode {
             Queue.mainQueue().async {
@@ -77,7 +70,7 @@ class ChatListItem: ListViewItem {
                         animated = false
                     }
                     
-                    let (nodeLayout, apply) = layout(self, width, first, last, firstWithHeader, nextIsPinned)
+                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, nextIsPinned)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply(animated)
@@ -89,10 +82,15 @@ class ChatListItem: ListViewItem {
     }
     
     func selected(listView: ListView) {
-        if let message = self.message {
-            self.interaction.messageSelected(message)
-        } else if let peer = self.peer.peers[self.peer.peerId] {
-            self.interaction.peerSelected(peer)
+        switch self.content {
+            case let .peer(message, peer, _, _, _, _, _):
+                if let message = message {
+                    self.interaction.messageSelected(message)
+                } else if let peer = peer.peers[peer.peerId] {
+                    self.interaction.peerSelected(peer)
+                }
+            case let .groupReference(groupId, _, _, _):
+                self.interaction.groupSelected(groupId)
         }
     }
     
@@ -134,6 +132,8 @@ private let unpinIcon = UIImage(bundleImageName: "Chat List/RevealActionUnpinIco
 private let muteIcon = UIImage(bundleImageName: "Chat List/RevealActionMuteIcon")?.precomposed()
 private let unmuteIcon = UIImage(bundleImageName: "Chat List/RevealActionUnmuteIcon")?.precomposed()
 private let deleteIcon = UIImage(bundleImageName: "Chat List/RevealActionDeleteIcon")?.precomposed()
+private let groupIcon = UIImage(bundleImageName: "Chat List/RevealActionGroupIcon")?.precomposed()
+private let ungroupIcon = UIImage(bundleImageName: "Chat List/RevealActionUngroupIcon")?.precomposed()
 
 private enum RevealOptionKey: Int32 {
     case pin
@@ -141,23 +141,38 @@ private enum RevealOptionKey: Int32 {
     case mute
     case unmute
     case delete
+    case group
+    case ungroup
 }
 
 private let itemHeight: CGFloat = 76.0
 
-private func revealOptions(strings: PresentationStrings, isPinned: Bool, isMuted: Bool) -> [ItemListRevealOption] {
+private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool?, isMuted: Bool?, hasPeerGroupId: Bool?, canDelete: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
-    if isPinned {
-        options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: UIColor(rgb: 0xbcbcc3)))
-    } else {
-        options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: UIColor(rgb: 0xbcbcc3)))
+    if let isPinned = isPinned {
+        if isPinned {
+            options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+        } else {
+            options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+        }
     }
-    if isMuted {
-        options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.Conversation_Unmute, icon: unmuteIcon, color: UIColor(rgb: 0xaaaab3)))
-    } else {
-        options.append(ItemListRevealOption(key: RevealOptionKey.mute.rawValue, title: strings.Conversation_Mute, icon: muteIcon, color: UIColor(rgb: 0xaaaab3)))
+    if let isMuted = isMuted {
+        if isMuted {
+            options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.Conversation_Unmute, icon: unmuteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+        } else {
+            options.append(ItemListRevealOption(key: RevealOptionKey.mute.rawValue, title: strings.Conversation_Mute, icon: muteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+        }
     }
-    options.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: deleteIcon, color: UIColor(rgb: 0xff3824)))
+    if let hasPeerGroupId = hasPeerGroupId {
+        if hasPeerGroupId {
+            options.append(ItemListRevealOption(key: RevealOptionKey.ungroup.rawValue, title: "Ungroup", icon: ungroupIcon, color: theme.list.itemAccentColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+        } else {
+            options.append(ItemListRevealOption(key: RevealOptionKey.group.rawValue, title: "Group", icon: groupIcon, color: theme.list.itemAccentColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+        }
+    }
+    if canDelete {
+        options.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: deleteIcon, color: theme.list.itemDisclosureActions.destructive.fillColor, textColor: theme.list.itemDisclosureActions.destructive.foregroundColor))
+    }
     return options
 }
 
@@ -172,6 +187,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     
     let avatarNode: AvatarNode
+    var multipleAvatarsNode: MultipleAvatarsNode?
     let titleNode: TextNode
     let authorNode: TextNode
     let textNode: TextNode
@@ -182,12 +198,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let badgeBackgroundNode: ASImageNode
     let badgeTextNode: TextNode
     let mentionBadgeNode: ASImageNode
+    var secretIconNode: ASImageNode?
     var verificationIconNode: ASImageNode?
     let mutedIconNode: ASImageNode
     
     var editableControlNode: ItemListEditableControlNode?
     
-    var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool)?
+    var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams)?
     
     override var canBeSelected: Bool {
         if self.editableControlNode != nil {
@@ -211,20 +228,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
         self.titleNode.displaysAsynchronously = true
-        //self.titleNode.contentMode = .topLeft
-        //self.titleNode.contentsScale = self.titleNode.contentsScaleForDisplay
         
         self.authorNode = TextNode()
         self.authorNode.isLayerBacked = true
         self.authorNode.displaysAsynchronously = true
-        //self.authorNode.contentMode = .topLeft
-        //self.authorNode.contentsScale = self.titleNode.contentsScaleForDisplay
         
         self.textNode = TextNode()
         self.textNode.isLayerBacked = true
         self.textNode.displaysAsynchronously = true
-        //self.textNode.contentMode = .topLeft
-        //self.textNode.contentsScale = self.titleNode.contentsScaleForDisplay
         
         self.inputActivitiesNode = ChatListInputActivitiesNode()
         self.inputActivitiesNode.alpha = 0.0
@@ -280,22 +291,31 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     func setupItem(item: ChatListItem) {
         self.item = item
         
-        if let message = item.message {
-            let peer = messageMainPeer(message)
-            if let peer = peer {
-                self.avatarNode.setPeer(account: item.account, peer: peer)
+        var peer: Peer?
+        switch item.content {
+            case let .peer(message, peerValue, _, _, _, _, _):
+                if let message = message {
+                    peer = messageMainPeer(message)
+                } else {
+                    peer = peerValue.chatMainPeer
+                }
+            case .groupReference:
+                break
+        }
+        
+        if let peer = peer {
+            var overrideImage: AvatarNodeImageOverride?
+            if peer.id == item.account.peerId {
+                overrideImage = .savedMessagesIcon
             }
-        } else {
-            if let peer = item.peer.chatMainPeer {
-                self.avatarNode.setPeer(account: item.account, peer: peer)
-            }
+            self.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)
         }
     }
     
-    override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         let layout = self.asyncLayout()
         let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: item as! ChatListItem, previousItem: previousItem, nextItem: nextItem)
-        let (nodeLayout, apply) = layout(item as! ChatListItem, width, first, last, firstWithHeader, nextIsPinned)
+        let (nodeLayout, apply) = layout(item as! ChatListItem, params, first, last, firstWithHeader, nextIsPinned)
         apply(false)
         self.contentSize = nodeLayout.contentSize
         self.insets = nodeLayout.insets
@@ -305,8 +325,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         return UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0)
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
             /*var nodes: [ASDisplayNode] = [self.titleNode, self.textNode, self.dateNode, self.statusNode]
@@ -337,7 +357,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ChatListItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ChatListItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         let textLayout = TextNode.asyncLayout(self.textNode)
         let titleLayout = TextNode.asyncLayout(self.titleNode)
@@ -348,19 +368,66 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         let currentItem = self.layoutParams?.0
         
-        return { item, width, first, last, firstWithHeader, nextIsPinned in
+        let multipleAvatarsLayout = MultipleAvatarsNode.asyncLayout(self.multipleAvatarsNode)
+        
+        return { item, params, first, last, firstWithHeader, nextIsPinned in
             let account = item.account
-            let message = item.message
-            let combinedReadState = item.combinedReadState
-            let notificationSettings = item.notificationSettings
-            let embeddedState = item.embeddedState
+            let message: Message?
+            let itemPeer: RenderedPeer
+            let combinedReadState: CombinedPeerReadState?
+            let unreadCount: (count: Int32, muted: Bool)
+            let notificationSettings: PeerNotificationSettings?
+            let embeddedState: PeerChatListEmbeddedInterfaceState?
+            let summaryInfo: ChatListMessageTagSummaryInfo
+            let inputActivities: [(Peer, PeerInputActivity)]?
+            let isPeerGroup: Bool
             
-            let theme = item.theme.chatList
+            var multipleAvatarsApply: ((Bool) -> MultipleAvatarsNode)?
+            
+            switch item.content {
+                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue):
+                    message = messageValue
+                    itemPeer = peerValue
+                    combinedReadState = combinedReadStateValue
+                    if let combinedReadState = combinedReadState {
+                        unreadCount = (combinedReadState.count, notificationSettingsValue?.isRemovedFromTotalUnreadCount ?? false)
+                    } else {
+                        unreadCount = (0, false)
+                    }
+                    notificationSettings = notificationSettingsValue
+                    embeddedState = embeddedStateValue
+                    summaryInfo = summaryInfoValue
+                    inputActivities = inputActivitiesValue
+                    isPeerGroup = false
+                case let .groupReference(_, messageValue, topPeersValue, counters):
+                    if let messageValue = messageValue {
+                        itemPeer = RenderedPeer(message: messageValue)
+                    } else {
+                        itemPeer = RenderedPeer(peerId: item.index.messageIndex.id.peerId, peers: SimpleDictionary())
+                    }
+                    message = messageValue
+                    combinedReadState = nil
+                    notificationSettings = nil
+                    embeddedState = nil
+                    summaryInfo = ChatListMessageTagSummaryInfo()
+                    inputActivities = nil
+                    isPeerGroup = true
+                    multipleAvatarsApply = multipleAvatarsLayout(item.account, topPeersValue, CGSize(width: 60.0, height: 60.0))
+                    if counters.unreadCount > 0 {
+                        unreadCount = (counters.unreadCount + counters.unreadMutedCount, false)
+                    } else if counters.unreadMutedCount > 0 {
+                        unreadCount = (counters.unreadMutedCount, true)
+                    } else{
+                        unreadCount = (0, false)
+                    }
+            }
+            
+            let theme = item.presentationData.theme.chatList
             
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
             var authorAttributedString: NSAttributedString?
@@ -374,40 +441,65 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentMentionBadgeImage: UIImage?
             var currentMutedIconImage: UIImage?
             var currentVerificationIconImage: UIImage?
+            var currentSecretIconImage: UIImage?
             
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
             
             let editingOffset: CGFloat
             if item.editing {
-                let sizeAndApply = editableControlLayout(itemHeight)
+                let sizeAndApply = editableControlLayout(itemHeight, item.presentationData.theme, isPeerGroup)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0.width
             } else {
                 editingOffset = 0.0
             }
             
-            let (peer, hideAuthor, messageText) = chatListItemStrings(strings: item.strings, message: item.message, chatPeer: item.peer, accountPeerId: item.account.peerId)
+            let leftInset: CGFloat = params.leftInset + 78.0
+            
+            let (peer, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, message: message, chatPeer: itemPeer, accountPeerId: item.account.peerId)
+            var hideAuthor = initialHideAuthor
+            if isPeerGroup {
+                hideAuthor = false
+            }
             
             let attributedText: NSAttributedString
+            var hasDraft = false
             if let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
-                authorAttributedString = NSAttributedString(string: item.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
+                hasDraft = true
+                authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                 
                 attributedText = NSAttributedString(string: embeddedState.text, font: textFont, textColor: theme.messageTextColor)
-            } else if let message = message, let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
-                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                    attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: theme.messageTextColor)
-                } else {
-                    let peerText: String = author.id == account.peerId ? item.strings.DialogList_You : author.displayTitle
-                    
+            } else if let message = message {
+                attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: theme.messageTextColor)
+                
+                var peerText: String?
+                if let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                    } else {
+                        peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle
+                    }
+                } else if case .groupReference = item.content {
+                    if let messagePeer = itemPeer.chatMainPeer {
+                        peerText = messagePeer.displayTitle
+                    }
+                }
+                
+                if let peerText = peerText {
                     authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
-                    attributedText = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
                 }
             } else {
                 attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: theme.messageTextColor)
             }
             
-            if let displayTitle = peer?.displayTitle {
-                titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
+            switch item.content {
+                case .peer:
+                    if peer?.id == item.account.peerId {
+                        titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
+                    } else if let displayTitle = peer?.displayTitle {
+                        titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
+                    }
+                case .groupReference:
+                    titleAttributedString = NSAttributedString(string: "Feed", font: titleFont, textColor: theme.titleColor)
             }
             
             textAttributedString = attributedText
@@ -417,52 +509,49 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             localtime_r(&t, &timeinfo)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.index.messageIndex.timestamp, relativeTo: timestamp)
+            let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.index.messageIndex.timestamp, relativeTo: timestamp, timeFormat: item.presentationData.timeFormat)
             
             dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: theme.dateTextColor)
             
-            if let message = message, message.author?.id == account.peerId {
-                if !message.flags.isSending {
+            if let message = message, message.author?.id == account.peerId && !hasDraft {
+                if message.flags.isSending {
+                    statusImage = PresentationResourcesChatList.pendingImage(item.presentationData.theme)
+                } else {
                     if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(MessageIndex(message)) {
-                        statusImage = PresentationResourcesChatList.doubleCheckImage(item.theme)
+                        statusImage = PresentationResourcesChatList.doubleCheckImage(item.presentationData.theme)
                     } else {
-                        statusImage = PresentationResourcesChatList.singleCheckImage(item.theme)
+                        statusImage = PresentationResourcesChatList.singleCheckImage(item.presentationData.theme)
                     }
                 }
             }
             
-            if let unreadCount = combinedReadState?.count, unreadCount > 0 {
-                if let message = message, message.tags.contains(.unseenPersonalMessage), unreadCount == 1 {
+            if unreadCount.count > 0 {
+                if let message = message, message.tags.contains(.unseenPersonalMessage), unreadCount.count == 1 {
                 } else {
                     let badgeTextColor: UIColor
-                    if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
-                        if case .unmuted = notificationSettings.muteState {
-                            currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.theme)
-                            badgeTextColor = theme.unreadBadgeActiveTextColor
-                        } else {
-                            currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.theme)
-                            badgeTextColor = theme.unreadBadgeInactiveTextColor
-                        }
+                    if unreadCount.muted {
+                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme)
+                        badgeTextColor = theme.unreadBadgeInactiveTextColor
                     } else {
-                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.theme)
+                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.presentationData.theme)
                         badgeTextColor = theme.unreadBadgeActiveTextColor
                     }
-                    badgeAttributedString = NSAttributedString(string: "\(unreadCount)", font: badgeFont, textColor: badgeTextColor)
+                    badgeAttributedString = NSAttributedString(string: "\(unreadCount.count)", font: badgeFont, textColor: badgeTextColor)
                 }
             }
             
-            let tagSummaryCount = item.summaryInfo.tagSummaryCount ?? 0
-            let actionsSummaryCount = item.summaryInfo.actionsSummaryCount ?? 0
+            let tagSummaryCount = summaryInfo.tagSummaryCount ?? 0
+            let actionsSummaryCount = summaryInfo.actionsSummaryCount ?? 0
             let totalMentionCount = tagSummaryCount - actionsSummaryCount
             if totalMentionCount > 0 {
-                currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.theme)
+                currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.presentationData.theme)
             } else if item.index.pinningIndex != nil && currentBadgeBackgroundImage == nil {
-                currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundPinned(item.theme)
+                currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme)
             }
             
             if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
                 if case .muted = notificationSettings.muteState {
-                    currentMutedIconImage = PresentationResourcesChatList.mutedIcon(item.theme)
+                    currentMutedIconImage = PresentationResourcesChatList.mutedIcon(item.presentationData.theme)
                 }
             }
             
@@ -477,7 +566,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             var isVerified = false
-            if let peer = item.peer.chatMainPeer {
+            let isSecret = item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat
+            if let peer = itemPeer.chatMainPeer {
                 if let peer = peer as? TelegramUser {
                     isVerified = peer.flags.contains(.isVerified)
                 } else if let peer = peer as? TelegramChannel {
@@ -485,8 +575,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
+            if isSecret {
+                currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
+            }
+            
             if isVerified {
-                currentVerificationIconImage = PresentationResourcesChatList.verifiedIcon(item.theme)
+                currentVerificationIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+            }
+            if let currentSecretIconImage = currentSecretIconImage {
+                titleIconsWidth += currentSecretIconImage.size.width + 2.0
             }
             if let currentVerificationIconImage = currentVerificationIconImage {
                 if titleIconsWidth.isZero {
@@ -497,11 +594,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 titleIconsWidth += currentVerificationIconImage.size.width
             }
             
-            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 8.0), size: CGSize(width: width - 78.0 - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
             
-            let (dateLayout, dateApply) = dateLayout(dateAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (dateLayout, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (badgeLayout, badgeApply) = badgeTextLayout(badgeAttributedString, nil, 1, .end, CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (badgeLayout, badgeApply) = badgeTextLayout(TextNodeLayoutArguments(attributedString: badgeAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var badgeSize: CGFloat = 0.0
             if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
@@ -515,33 +612,53 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            let (authorLayout, authorApply) = authorLayout(hideAuthor ? nil : authorAttributedString, nil, 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
+            let (authorLayout, authorApply) = authorLayout(TextNodeLayoutArguments(attributedString: hideAuthor ? nil : authorAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
-            let (textLayout, textApply) = textLayout(textAttributedString, nil, authorAttributedString == nil ? 2 : 1, .end, CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
+            let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
             let titleRect = CGRect(origin: rawContentRect.origin, size: CGSize(width: rawContentRect.width - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth, height: rawContentRect.height))
-            let (titleLayout, titleApply) = titleLayout(titleAttributedString, nil, 1, .end, CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
             var inputActivitiesSize: CGSize?
             var inputActivitiesApply: (() -> Void)?
-            if let inputActivities = item.inputActivities, !inputActivities.isEmpty {
-                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentRect.width - badgeSize, height: 40.0), item.strings, item.theme.chatList.messageTextColor, item.index.messageIndex.id.peerId, inputActivities)
+            if let inputActivities = inputActivities, !inputActivities.isEmpty {
+                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentRect.width - badgeSize, height: 40.0), item.presentationData.strings, item.presentationData.theme.chatList.messageTextColor, item.index.messageIndex.id.peerId, inputActivities)
                 inputActivitiesSize = size
                 inputActivitiesApply = apply
             }
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: itemHeight), insets: insets)
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: itemHeight), insets: insets)
             
-            let peerRevealOptions = revealOptions(strings: item.strings, isPinned: item.index.pinningIndex != nil, isMuted: currentMutedIconImage != nil)
+            let peerRevealOptions: [ItemListRevealOption]
+            switch item.content {
+                case .peer:
+                    var hasPeerGroupId: Bool?
+                    if GlobalExperimentalSettings.enableFeed {
+                        if let chatMainPeer = itemPeer.chatMainPeer as? TelegramChannel, case .broadcast = chatMainPeer.info {
+                            hasPeerGroupId = item.peerGroupId != nil
+                        }
+                    }
+                    
+                    var isPinned: Bool?
+                    if item.peerGroupId == nil {
+                        isPinned = item.index.pinningIndex != nil
+                    }
+                    
+                    peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, hasPeerGroupId: hasPeerGroupId, canDelete: true)
+                case .groupReference:
+                    let isPinned = item.index.pinningIndex != nil
+                    
+                    peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: nil, hasPeerGroupId: nil, canDelete: false)
+            }
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
-                    strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned)
+                    strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params)
                     
                     if let _ = updatedTheme {
-                        strongSelf.separatorNode.backgroundColor = item.theme.chatList.itemSeparatorColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.chatList.itemHighlightedBackgroundColor
+                        strongSelf.separatorNode.backgroundColor = item.presentationData.theme.chatList.itemSeparatorColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.chatList.itemHighlightedBackgroundColor
                     }
                     
                     let revealOffset = strongSelf.revealOffset
@@ -566,9 +683,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                             strongSelf.editableControlNode = editableControlNode
                             strongSelf.addSubnode(editableControlNode)
-                            let editableControlFrame = CGRect(origin: CGPoint(x: revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
+                            let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
                             editableControlNode.frame = editableControlFrame
-                            transition.animatePosition(node: editableControlNode, from: CGPoint(x: editableControlFrame.midX - editableControlFrame.size.width, y: editableControlFrame.midY))
+                            transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                             editableControlNode.alpha = 0.0
                             transition.updateAlpha(node: editableControlNode, alpha: 1.0)
                         }
@@ -583,7 +700,24 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         })
                     }
                     
-                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: editingOffset + 10.0 + revealOffset, y: 7.0), size: CGSize(width: 60.0, height: 60.0)))
+                    let avatarFrame = CGRect(origin: CGPoint(x: leftInset - 78.0 + editingOffset + 10.0 + revealOffset, y: 7.0), size: CGSize(width: 60.0, height: 60.0))
+                    transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
+                    
+                    if let multipleAvatarsApply = multipleAvatarsApply {
+                        strongSelf.avatarNode.isHidden = true
+                        let multipleAvatarsNode = multipleAvatarsApply(animated && strongSelf.multipleAvatarsNode != nil)
+                        if strongSelf.multipleAvatarsNode != multipleAvatarsNode {
+                            strongSelf.multipleAvatarsNode?.removeFromSupernode()
+                            strongSelf.multipleAvatarsNode = multipleAvatarsNode
+                            strongSelf.addSubnode(multipleAvatarsNode)
+                            multipleAvatarsNode.frame = avatarFrame
+                        } else {
+                            transition.updateFrame(node: multipleAvatarsNode, frame: avatarFrame)
+                        }
+                    } else if let multipleAvatarsNode = strongSelf.multipleAvatarsNode {
+                        multipleAvatarsNode.removeFromSupernode()
+                        strongSelf.avatarNode.isHidden = false
+                    }
                     
                     let _ = dateApply()
                     let _ = textApply()
@@ -591,7 +725,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let _ = titleApply()
                     let _ = badgeApply()
                     
-                    let contentRect = rawContentRect.offsetBy(dx: editingOffset + 78.0 + revealOffset, dy: 0.0)
+                    let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)
                     
                     strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width, y: contentRect.origin.y + 2.0), size: dateLayout.size)
                     
@@ -599,7 +733,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.statusNode.image = statusImage
                         strongSelf.statusNode.isHidden = false
                         let statusSize = statusImage.size
-                        strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width - 2.0 - statusSize.width, y: contentRect.origin.y + 5.0), size: statusSize)
+                        strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width - 2.0 - statusSize.width, y: contentRect.origin.y + 2.0 + floor((dateLayout.size.height - statusSize.height) / 2.0)), size: statusSize)
                     } else {
                         strongSelf.statusNode.image = nil
                         strongSelf.statusNode.isHidden = true
@@ -612,7 +746,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         badgeBackgroundWidth = max(badgeLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
                         let badgeBackgroundFrame = CGRect(x: contentRect.maxX - badgeBackgroundWidth, y: contentRect.maxY - currentBadgeBackgroundImage.size.height - 2.0, width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
-                        let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 1.0), size: badgeLayout.size)
+                        let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 2.0), size: badgeLayout.size)
                         
                         strongSelf.badgeTextNode.frame = badgeTextFrame
                         strongSelf.badgeBackgroundNode.frame = badgeBackgroundFrame
@@ -675,16 +809,40 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.mutedIconNode.isHidden = true
                     }
                     
-                    let contentDeltaX = contentRect.origin.x - strongSelf.titleNode.frame.minX
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y + UIScreenPixel), size: titleLayout.size)
+                    var titleOffset: CGFloat = 0.0
+                    if let currentSecretIconImage = currentSecretIconImage {
+                        let iconNode: ASImageNode
+                        if let current = strongSelf.secretIconNode {
+                            iconNode = current
+                        } else {
+                            iconNode = ASImageNode()
+                            iconNode.isLayerBacked = true
+                            iconNode.displaysAsynchronously = false
+                            iconNode.displayWithoutProcessing = true
+                            strongSelf.addSubnode(iconNode)
+                            strongSelf.secretIconNode = iconNode
+                        }
+                        iconNode.image = currentSecretIconImage
+                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y + 4.0), size: currentSecretIconImage.size))
+                        titleOffset += currentSecretIconImage.size.width + 3.0
+                    } else if let secretIconNode = strongSelf.secretIconNode {
+                        strongSelf.secretIconNode = nil
+                        secretIconNode.removeFromSupernode()
+                    }
+                    
+                    let contentDeltaX = contentRect.origin.x - (strongSelf.titleNode.frame.minX - titleOffset)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: contentRect.origin.y + UIScreenPixel), size: titleLayout.size)
                     let authorNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height), size: authorLayout.size)
                     strongSelf.authorNode.frame = authorNodeFrame
                     let textNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 1.0 + UIScreenPixel + (authorLayout.size.height.isZero ? 0.0 : (authorLayout.size.height - 3.0))), size: textLayout.size)
                     strongSelf.textNode.frame = textNodeFrame
                     
-                    if let inputActivities = item.inputActivities, !inputActivities.isEmpty {
+                    var animateInputActivitiesFrame = false
+                    if let inputActivities = inputActivities, !inputActivities.isEmpty {
                         if strongSelf.inputActivitiesNode.supernode == nil {
                             strongSelf.addSubnode(strongSelf.inputActivitiesNode)
+                        } else {
+                            animateInputActivitiesFrame = true
                         }
                         
                         if strongSelf.inputActivitiesNode.alpha.isZero {
@@ -717,7 +875,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                     if let inputActivitiesSize = inputActivitiesSize {
-                        strongSelf.inputActivitiesNode.frame = CGRect(origin: CGPoint(x: authorNodeFrame.minX + 1.0, y: authorNodeFrame.minY + UIScreenPixel), size: inputActivitiesSize)
+                        let inputActivitiesFrame = CGRect(origin: CGPoint(x: authorNodeFrame.minX + 1.0, y: authorNodeFrame.minY + UIScreenPixel), size: inputActivitiesSize)
+                        if animateInputActivitiesFrame {
+                            transition.updateFrame(node: strongSelf.inputActivitiesNode, frame: inputActivitiesFrame)
+                        } else {
+                            strongSelf.inputActivitiesNode.frame = inputActivitiesFrame
+                        }
                     }
                     inputActivitiesApply?()
                     
@@ -733,13 +896,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let separatorInset: CGFloat
-                    if !nextIsPinned && item.index.pinningIndex != nil {
+                    if (!nextIsPinned && item.index.pinningIndex != nil) || last {
                         separatorInset = 0.0
                     } else {
-                        separatorInset = editingOffset + 78.0 + rawContentRect.origin.x
+                        separatorInset = editingOffset + leftInset + rawContentRect.origin.x
                     }
                     
-                    transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: itemHeight - separatorHeight), size: CGSize(width: width - separatorInset, height: separatorHeight)))
+                    transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: itemHeight - separatorHeight), size: CGSize(width: params.width - separatorInset, height: separatorHeight)))
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     if item.index.pinningIndex != nil {
@@ -750,6 +913,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let topNegativeInset: CGFloat = 0.0
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     
+                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
                     strongSelf.setRevealOptions(peerRevealOptions)
                     strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: animated)
                 }
@@ -758,15 +923,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
+        self.clipsToBounds = true
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
     override public func header() -> ListViewItemHeader? {
-        if let (item, _, _, _, _) = self.layoutParams {
+        if let item = self.layoutParams?.0 {
             return item.header
         } else {
             return nil
@@ -776,39 +942,52 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        if let _ = self.item {
+        if let _ = self.item, let params = self.layoutParams?.5 {
             let editingOffset: CGFloat
             if let editableControlNode = self.editableControlNode {
                 editingOffset = editableControlNode.bounds.size.width
                 var editableControlFrame = editableControlNode.frame
-                editableControlFrame.origin.x = offset
+                editableControlFrame.origin.x = params.leftInset + offset
                 transition.updateFrame(node: editableControlNode, frame: editableControlFrame)
             } else {
                 editingOffset = 0.0
             }
             
-            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 8.0), size: CGSize(width: self.contentSize.width - 78.0 - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
+            let leftInset: CGFloat = params.leftInset + 78.0
             
-            let contentRect = rawContentRect.offsetBy(dx: editingOffset + 78.0 + offset, dy: 0.0)
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
+            
+            let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + offset, dy: 0.0)
             
             var avatarFrame = self.avatarNode.frame
-            avatarFrame.origin.x = editingOffset + 10.0 + offset
+            avatarFrame.origin.x = leftInset - 78.0 + editingOffset + 10.0 + offset
             transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
+            if let multipleAvatarsNode = self.multipleAvatarsNode {
+                transition.updateFrame(node: multipleAvatarsNode, frame: avatarFrame)
+            }
+            
+            var titleOffset: CGFloat = 0.0
+            if let secretIconNode = self.secretIconNode, let image = secretIconNode.image {
+                transition.updateFrame(node: secretIconNode, frame: CGRect(origin: CGPoint(x: contentRect.minX, y: secretIconNode.frame.minY), size: image.size))
+                titleOffset += image.size.width + 3.0
+            }
             
             let titleFrame = self.titleNode.frame
-            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: titleFrame.origin.y), size: titleFrame.size))
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: titleFrame.origin.y), size: titleFrame.size))
             
             let authorFrame = self.authorNode.frame
             transition.updateFrame(node: self.authorNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: authorFrame.origin.y), size: authorFrame.size))
+            
+            transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: authorFrame.minX + 1.0, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
             
             let textFrame = self.textNode.frame
             transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: textFrame.origin.y), size: textFrame.size))
             
             let dateFrame = self.dateNode.frame
-            transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width, y: contentRect.origin.y + 2.0), size: dateFrame.size))
+            transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width, y: dateFrame.minY), size: dateFrame.size))
             
             let statusFrame = self.statusNode.frame
-            transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width - 2.0 - statusFrame.size.width, y: contentRect.origin.y + 5.0), size: statusFrame.size))
+            transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width - 2.0 - statusFrame.size.width, y: statusFrame.minY), size: statusFrame.size))
             
             var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleFrame.size.width + 3.0
             
@@ -828,7 +1007,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if self.mentionBadgeNode.supernode != nil {
                 let mentionBadgeSize = self.mentionBadgeNode.bounds.size
                 let mentionBadgeOffset: CGFloat
-                if updatedBadgeBackgroundFrame.size.width.isZero {
+                if updatedBadgeBackgroundFrame.size.width.isZero || self.badgeBackgroundNode.image == nil {
                     mentionBadgeOffset = contentRect.maxX - mentionBadgeSize.width
                 } else {
                     mentionBadgeOffset = contentRect.maxX - updatedBadgeBackgroundFrame.size.width - 6.0 - mentionBadgeSize.width
@@ -840,7 +1019,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let badgeTextFrame = self.badgeTextNode.frame
-            transition.updateFrame(node: self.badgeTextNode, frame: CGRect(origin: CGPoint(x: updatedBadgeBackgroundFrame.midX - badgeTextFrame.size.width / 2.0, y: badgeBackgroundFrame.minY + 1.0), size: badgeTextFrame.size))
+            transition.updateFrame(node: self.badgeTextNode, frame: CGRect(origin: CGPoint(x: updatedBadgeBackgroundFrame.midX - badgeTextFrame.size.width / 2.0, y: badgeTextFrame.minY), size: badgeTextFrame.size))
         }
     }
     
@@ -861,9 +1040,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         if let item = self.item {
             switch option.key {
                 case RevealOptionKey.pin.rawValue:
-                    item.interaction.setPeerPinned(item.index.messageIndex.id.peerId, true)
+                    let itemId: PinnedItemId
+                    switch item.content {
+                        case .peer:
+                            itemId = .peer(item.index.messageIndex.id.peerId)
+                        case let .groupReference(groupId, _, _, _):
+                            itemId = .group(groupId)
+                    }
+                    item.interaction.setItemPinned(itemId, true)
                 case RevealOptionKey.unpin.rawValue:
-                    item.interaction.setPeerPinned(item.index.messageIndex.id.peerId, false)
+                    let itemId: PinnedItemId
+                    switch item.content {
+                        case .peer:
+                            itemId = .peer(item.index.messageIndex.id.peerId)
+                        case let .groupReference(groupId, _, _, _):
+                            itemId = .group(groupId)
+                    }
+                    item.interaction.setItemPinned(itemId, false)
                 case RevealOptionKey.mute.rawValue:
                     item.interaction.setPeerMuted(item.index.messageIndex.id.peerId, true)
                     close = false
@@ -872,6 +1065,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     close = false
                 case RevealOptionKey.delete.rawValue:
                     item.interaction.deletePeer(item.index.messageIndex.id.peerId)
+                case RevealOptionKey.group.rawValue:
+                    item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, true)
+                case RevealOptionKey.ungroup.rawValue:
+                    item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, false)
                 default:
                     break
             }

@@ -1,0 +1,84 @@
+import Foundation
+import Display
+import AsyncDisplayKit
+
+final class AuthorizationSequenceAwaitingAccountResetController: ViewController {
+    private var controllerNode: AuthorizationSequenceAwaitingAccountResetControllerNode {
+        return self.displayNode as! AuthorizationSequenceAwaitingAccountResetControllerNode
+    }
+    
+    private let strings: PresentationStrings
+    private let theme: AuthorizationTheme
+    
+    var logout: (() -> Void)?
+    var reset: (() -> Void)?
+    
+    var protectedUntil: Int32?
+    var number: String?
+    
+    var inProgress: Bool = false {
+        didSet {
+            if self.inProgress {
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accentColor))
+                self.navigationItem.rightBarButtonItem = item
+            } else {
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.logoutPressed))
+            }
+        }
+    }
+    
+    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+        self.strings = strings
+        self.theme = theme
+        
+        super.init(navigationBarTheme: AuthorizationSequenceController.navigationBarTheme(theme))
+        
+        self.statusBar.statusBarStyle = theme.statusBarStyle
+        
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: " ", style: .plain, target: self, action: nil)
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Settings_Logout, style: .plain, target: self, action: #selector(self.logoutPressed))
+    }
+    
+    required init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override public func loadDisplayNode() {
+        self.displayNode = AuthorizationSequenceAwaitingAccountResetControllerNode(strings: self.strings, theme: self.theme)
+        self.displayNodeDidLoad()
+        
+        self.controllerNode.reset = { [weak self] in
+            self?.reset?()
+        }
+        
+        if let protectedUntil = self.protectedUntil, let number = self.number {
+            self.controllerNode.updateData(protectedUntil: protectedUntil, number: number)
+        }
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+    }
+    
+    func updateData(protectedUntil: Int32, number: String) {
+        if self.protectedUntil != protectedUntil || self.number != number {
+            self.protectedUntil = protectedUntil
+            self.number = number
+            if self.isNodeLoaded {
+                self.controllerNode.updateData(protectedUntil: protectedUntil, number: number)
+            }
+        }
+    }
+    
+    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+        
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+    }
+    
+    @objc func logoutPressed() {
+        self.logout?()
+    }
+}
+
+

@@ -7,6 +7,9 @@ import Postbox
 public final class PeerSelectionController: ViewController {
     private let account: Account
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     var peerSelected: ((PeerId) -> Void)?
     
     private var peerSelectionNode: PeerSelectionControllerNode {
@@ -15,18 +18,26 @@ public final class PeerSelectionController: ViewController {
     
     let openMessageFromSearchDisposable: MetaDisposable = MetaDisposable()
     
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    
     public init(account: Account) {
         self.account = account
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme))
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.title = "Forward"
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.title = self.presentationData.strings.Conversation_ForwardTitle
+        
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
-                strongSelf.peerSelectionNode.chatListNode.scrollToLatest()
+                strongSelf.peerSelectionNode.scrollToTop()
             }
         }
     }
@@ -51,32 +62,15 @@ public final class PeerSelectionController: ViewController {
             self?.deactivateSearch()
         }
         
-        self.peerSelectionNode.chatListNode.activateSearch = { [weak self] in
+        self.peerSelectionNode.requestActivateSearch = { [weak self] in
             self?.activateSearch()
         }
         
-        self.peerSelectionNode.chatListNode.peerSelected = { [weak self] peerId in
+        self.peerSelectionNode.requestOpenPeer = { [weak self] peerId in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
                 peerSelected(peerId)
             }
         }
-        
-        /*self.peerSelectionNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
-            if let strongSelf = self {
-                let storedPeer = strongSelf.account.postbox.modify { modifier -> Void in
-                    if modifier.getPeer(peer.id) == nil {
-                        updatePeers(modifier: modifier, peers: [peer], update: { previousPeer, updatedPeer in
-                            return updatedPeer
-                        })
-                    }
-                }
-                strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
-                    if let strongSelf = strongSelf {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: messageId.peerId, messageId: messageId))
-                    }
-                }))
-            }
-        }*/
         
         self.peerSelectionNode.requestOpenPeerFromSearch = { [weak self] peer in
             if let strongSelf = self {
@@ -96,6 +90,8 @@ public final class PeerSelectionController: ViewController {
         }
         
         self.displayNodeDidLoad()
+        
+        self._ready.set(self.peerSelectionNode.ready)
     }
     
     override public func viewWillAppear(_ animated: Bool) {
@@ -140,6 +136,7 @@ public final class PeerSelectionController: ViewController {
     }
     
     override open func dismiss(completion: (() -> Void)? = nil) {
+        self.peerSelectionNode.view.endEditing(true)
         self.peerSelectionNode.animateOut(completion: completion)
     }
 }

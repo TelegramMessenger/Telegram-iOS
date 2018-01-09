@@ -2,19 +2,24 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let backgroundImageWithShadow = generateImage(CGSize(width: 30.0 + 8.0 * 2.0, height: 30.0 + 8.0 + 20.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setShadow(offset: CGSize(width: 0.0, height: -4.0), blur: 40.0, color: UIColor(white: 0.0, alpha: 0.3).cgColor)
-    context.setFillColor(UIColor.white.cgColor)
-    context.fillEllipse(in: CGRect(origin: CGPoint(x: 8.0, y: 8.0), size: CGSize(width: 30.0, height: 30.0)))
-})?.stretchableImage(withLeftCapWidth: 8 + 15, topCapHeight: 8 + 15)
-
 final class NotificationItemContainerNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
     
     private var validLayout: ContainerViewLayout?
     
     var item: NotificationItem?
+    
+    private var hapticFeedback: HapticFeedback?
+    private var willBeExpanded = false {
+        didSet {
+            if self.willBeExpanded != oldValue {
+                if self.hapticFeedback == nil {
+                    self.hapticFeedback = HapticFeedback()
+                }
+                self.hapticFeedback?.impact()
+            }
+        }
+    }
     
     var contentNode: NotificationItemNode? {
         didSet {
@@ -33,12 +38,16 @@ final class NotificationItemContainerNode: ASDisplayNode {
     }
     
     var dismissed: ((NotificationItem) -> Void)?
+    var cancelTimeout: ((NotificationItem) -> Void)?
+    var resumeTimeout: ((NotificationItem) -> Void)?
     
-    override init() {
+    var cancelledTimeout = false
+    
+    init(theme: PresentationTheme) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = backgroundImageWithShadow
+        self.backgroundNode.image = PresentationResourcesRootController.inAppNotificationBackground(theme)
         
         super.init()
         
@@ -56,24 +65,33 @@ final class NotificationItemContainerNode: ASDisplayNode {
     }
     
     func animateIn() {
-        self.layer.animatePosition(from: CGPoint(x: 0.0, y: -100.0), to: CGPoint(), duration: 0.4, additive: true)
+        if let _ = self.validLayout {
+            self.layer.animatePosition(from: CGPoint(x: 0.0, y: -self.backgroundNode.bounds.size.height), to: CGPoint(), duration: 0.4, additive: true)
+        }
     }
     
     func animateOut(completion: @escaping () -> Void) {
-        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -100.0), duration: 0.4, removeOnCompletion: false, additive: true, completion: { _ in
+        if let _ = self.validLayout {
+            self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -self.backgroundNode.bounds.size.height), duration: 0.4, removeOnCompletion: false, additive: true, completion: { _ in
+                completion()
+            })
+        } else {
             completion()
-        })
+        }
     }
     
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
         if let contentNode = self.contentNode {
-            let contentInsets = UIEdgeInsets(top: 8.0, left: 8.0, bottom: 8.0, right: 8.0)
+            var contentInsets = UIEdgeInsets(top: 8.0, left: 8.0 + layout.safeInsets.left, bottom: 8.0, right: 8.0 + layout.safeInsets.right)
+            if let statusBarHeight = layout.statusBarHeight, CGFloat(44.0).isLessThanOrEqualTo(statusBarHeight) {
+                contentInsets.top += 34.0
+            }
             let contentWidth = layout.size.width - contentInsets.left - contentInsets.right
             let contentHeight = contentNode.updateLayout(width: contentWidth, transition: transition)
             
-            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 8.0 + contentHeight + 20.0)))
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: contentInsets.top - 8.0), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: 8.0 + contentHeight + 20.0)))
             
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: contentInsets.left, y: contentInsets.top), size: CGSize(width: contentWidth, height: contentHeight)))
         }
@@ -89,7 +107,17 @@ final class NotificationItemContainerNode: ASDisplayNode {
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                item.tapped()
+                item.tapped({ [weak self] in
+                    if let strongSelf = self, let contentNode = strongSelf.contentNode, let _ = strongSelf.item {
+                        return (contentNode, {
+                            if let strongSelf = self, let item = strongSelf.item {
+                                strongSelf.dismissed?(item)
+                            }
+                        })
+                    } else {
+                        return (nil, {})
+                    }
+                })
             }
         }
     }
@@ -97,19 +125,87 @@ final class NotificationItemContainerNode: ASDisplayNode {
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
             case .began:
-                break
+                self.cancelledTimeout = false
             case .changed:
                 let translation = recognizer.translation(in: self.view)
                 var bounds = self.bounds
-                bounds.origin.y = max(0.0, -translation.y)
-                self.bounds = bounds
-            case .ended:
-                self.animateOut(completion: { [weak self] in
-                    if let strongSelf = self, let item = strongSelf.item {
-                        strongSelf.dismissed?(item)
+                bounds.origin.y = -translation.y
+                if bounds.origin.y < 0.0 {
+                    let delta = -bounds.origin.y
+                    bounds.origin.y = -((1.0 - (1.0 / (((delta) * 0.55 / (50.0)) + 1.0))) * 50.0)
+                }
+                if abs(translation.y) > 1.0 {
+                    if self.hapticFeedback == nil {
+                        self.hapticFeedback = HapticFeedback()
                     }
-                })
+                    self.hapticFeedback?.prepareImpact()
+                }
+                self.bounds = bounds
+                var expand = false
+                if let item = self.item {
+                    if !self.cancelledTimeout && abs(translation.y) > 4.0 {
+                        self.cancelledTimeout = true
+                        self.cancelTimeout?(item)
+                    }
+                    expand = item.canBeExpanded() && bounds.minY < -24.0
+                }
+                if self.willBeExpanded != expand {
+                    self.willBeExpanded = expand
+                }
+            case .ended:
+                let translation = recognizer.translation(in: self.view)
+                var bounds = self.bounds
+                bounds.origin.y = -translation.y
+                if bounds.origin.y < 0.0 {
+                    let delta = -bounds.origin.y
+                    bounds.origin.y = -((1.0 - (1.0 / (((delta) * 0.55 / (50.0)) + 1.0))) * 50.0)
+                }
+                
+                let velocity = recognizer.velocity(in: self.view)
+                
+                if (bounds.minY < -20.0 || velocity.y > 300.0) {
+                    if let item = self.item {
+                        if !self.cancelledTimeout {
+                            self.cancelledTimeout = true
+                            self.cancelTimeout?(item)
+                        }
+                        
+                        item.expand({ [weak self] in
+                            if let strongSelf = self, let contentNode = strongSelf.contentNode, let _ = strongSelf.item {
+                                return (contentNode, {
+                                    if let strongSelf = self, let item = strongSelf.item {
+                                        strongSelf.dismissed?(item)
+                                    }
+                                })
+                            } else {
+                                return (nil, {})
+                            }
+                        })
+                    }
+                } else if bounds.minY > 5.0 || velocity.y < -200.0 {
+                    self.animateOut(completion: { [weak self] in
+                        if let strongSelf = self, let item = strongSelf.item {
+                            strongSelf.dismissed?(item)
+                        }
+                    })
+                } else {
+                    if let item = self.item, self.cancelledTimeout {
+                        self.cancelledTimeout = false
+                        self.resumeTimeout?(item)
+                    }
+                    
+                    self.cancelledTimeout = false
+                    let previousBounds = self.bounds
+                    var bounds = self.bounds
+                    bounds.origin.y = 0.0
+                    self.bounds = bounds
+                    self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
+                    
+                    self.willBeExpanded = false
+                }
             case .cancelled:
+                self.willBeExpanded = false
+                self.cancelledTimeout = false
                 let previousBounds = self.bounds
                 var bounds = self.bounds
                 bounds.origin.y = 0.0

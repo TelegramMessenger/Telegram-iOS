@@ -18,16 +18,17 @@ final class InstantVideoController: LegacyController {
     private var captureController: TGVideoMessageCaptureController?
     
     var onDismiss: (() -> Void)?
+    var onStop: (() -> Void)?
     
     private let micLevelValue = ValuePromise<Float>(0.0)
     let audioStatus: InstantVideoControllerRecordingStatus
     
     private var dismissedVideo = false
     
-    override init(presentation: LegacyControllerPresentation) {
+    override init(presentation: LegacyControllerPresentation, theme: PresentationTheme?) {
         self.audioStatus = InstantVideoControllerRecordingStatus(micLevel: self.micLevelValue.get())
         
-        super.init(presentation: presentation)
+        super.init(presentation: presentation, theme: theme)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -41,9 +42,10 @@ final class InstantVideoController: LegacyController {
                 self?.micLevelValue.set(Float(level))
             }
             captureController.onDismiss = { [weak self] _ in
-                if let strongSelf = self {
-                    strongSelf.onDismiss?()
-                }
+                self?.onDismiss?()
+            }
+            captureController.onStop = { [weak self] in
+                self?.onStop?()
             }
         }
     }
@@ -82,28 +84,20 @@ final class InstantVideoController: LegacyController {
     }
 }
 
-func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, account: Account, peerId: PeerId) -> InstantVideoController {
-    let legacyController = InstantVideoController(presentation: .custom)
+func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, account: Account, peerId: PeerId, send: @escaping (EnqueueMessage) -> Void) -> InstantVideoController {
+    let legacyController = InstantVideoController(presentation: .custom, theme: theme)
     legacyController.statusBar.statusBarStyle = .Hide
     let baseController = TGViewController(context: legacyController.context)!
     legacyController.bind(controller: baseController)
     legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
         if let legacyController = legacyController, let baseController = baseController {
-            let controllerTheme = TGVideoMessageCaptureControllerTheme(darkBackground: theme.rootController.statusBar.style.style == .White, panelSeparatorColor: theme.chat.inputPanel.panelStrokeColor, panelTime: theme.chat.inputPanel.primaryTextColor, panelDotColor: theme.chat.inputPanel.mediaRecordingDotColor, panelAccentColor: theme.chat.inputPanel.panelControlAccentColor)
-            let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel:PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), theme: controllerTheme)!, transitionInView: {
+            //let controllerTheme = TGVideoMessageCaptureControllerTheme(darkBackground: theme.rootController.statusBar.style.style == .White, panelSeparatorColor: theme.chat.inputPanel.panelStrokeColor, panelBackgroundColor: theme.chat.inputPanel.panelBackgroundColor, panelTime: theme.chat.inputPanel.primaryTextColor, panelDotColor: theme.chat.inputPanel.mediaRecordingDotColor, panelAccentColor: theme.chat.inputPanel.panelControlAccentColor)
+            let inputPanelTheme = theme.chat.inputPanel
+            let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel:PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
                 return nil
             }, parentController: baseController, controlsFrame: panelFrame, isAlreadyLocked: {
                 return false
-            }, liveUploadInterface: nil)!
-            /*controller.finishedWithVideo = ^(NSURL *videoURL, UIImage *previewImage, __unused NSUInteger fileSize, NSTimeInterval duration, CGSize dimensions, TGLiveUploadActorData *liveUploadData, TGVideoEditAdjustments *adjustments)
-            {
-                __strong TGModernConversationController *strongSelf = weakSelf;
-                if (strongSelf != nil)
-                {
-                    NSDictionary *desc = [strongSelf->_companion videoDescriptionFromVideoURL:videoURL previewImage:previewImage dimensions:dimensions duration:duration adjustments:adjustments stickers:nil caption:nil roundMessage:true liveUploadData:liveUploadData timer:0];
-                    [strongSelf->_companion controllerWantsToSendImagesWithDescriptions:@[ desc ] asReplyToMessageId:[strongSelf currentReplyMessageId] botReplyMarkup:nil];
-                }
-            }*/
+            }, liveUploadInterface: nil, pallete: TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor))!
             controller.finishedWithVideo = { videoUrl, previewImage, _, duration, dimensions, liveUploadData, adjustments in
                 guard let videoUrl = videoUrl else {
                     return
@@ -136,14 +130,15 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                     resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
                 }
                 
+                if finalDuration.isZero || finalDuration.isNaN {
+                    return
+                }
+                
                 let resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: videoUrl.path, adjustments: resourceAdjustments)
                 
                 let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), resource: resource, previewRepresentations: previewRepresentations, mimeType: "video/mp4", size: nil, attributes: [.FileName(fileName: "video.mp4"), .Video(duration: Int(finalDuration), size: finalDimensions, flags: [.instantRoundVideo])])
-                var attributes: [MessageAttribute] = []
-                /*if let timer = item.timer, timer > 0 && timer <= 60 {
-                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
-                }*/
-                let _ = enqueueMessages(account: account, peerId: peerId, messages: [.message(text: "", attributes: attributes, media: media, replyToMessageId: nil)]).start()
+                let attributes: [MessageAttribute] = []
+                send(.message(text: "", attributes: attributes, media: media, replyToMessageId: nil, localGroupingKey: nil))
             }
             controller.didDismiss = { [weak legacyController] in
                 if let legacyController = legacyController {

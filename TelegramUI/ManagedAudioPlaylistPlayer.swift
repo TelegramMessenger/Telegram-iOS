@@ -307,7 +307,7 @@ final class ManagedAudioPlaylistPlayer {
                                 if let instantVideo = instantVideo {
                                     if let mediaManager = mediaManager, let account = account {
                                         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                                        let videoNode = InstantVideoNode(theme: presentationData.theme, manager: mediaManager, account: account, source: .messageMedia(stableId: instantVideo.2, file: instantVideo.0), priority: 0, withSound: true)
+                                        let videoNode = InstantVideoNode(theme: presentationData.theme, manager: mediaManager, postbox: account.postbox, source: .messageMedia(stableId: instantVideo.2, file: instantVideo.0), priority: 0, withSound: true, forceAudioToSpeaker: false)
                                         videoNode.tapped = { [weak videoNode] in
                                             videoNode?.togglePlayPause()
                                         }

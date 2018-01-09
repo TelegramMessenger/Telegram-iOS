@@ -25,8 +25,8 @@ private enum DebugAccountsControllerSection: Int32 {
 }
 
 private enum DebugAccountsControllerEntry: ItemListNodeEntry {
-    case record(AccountRecord, Bool)
-    case loginNewAccount
+    case record(PresentationTheme, AccountRecord, Bool)
+    case loginNewAccount(PresentationTheme)
     
     var section: ItemListSectionId {
         switch self {
@@ -39,7 +39,7 @@ private enum DebugAccountsControllerEntry: ItemListNodeEntry {
     
     var stableId: Int64 {
         switch self {
-            case let .record(record, _):
+            case let .record(_, record, _):
                 return record.id.int64
             case .loginNewAccount:
                 return Int64.max
@@ -48,14 +48,14 @@ private enum DebugAccountsControllerEntry: ItemListNodeEntry {
     
     static func ==(lhs: DebugAccountsControllerEntry, rhs: DebugAccountsControllerEntry) -> Bool {
         switch lhs {
-            case let .record(record, current):
-                if case .record(record, current) = rhs {
+            case let .record(lhsTheme, lhsRecord, lhsCurrent):
+                if case let .record(rhsTheme, rhsRecord, rhsCurrent) = rhs, lhsTheme === rhsTheme, lhsRecord == rhsRecord, lhsCurrent == rhsCurrent {
                     return true
                 } else {
                     return false
                 }
-            case .loginNewAccount:
-                if case .loginNewAccount = rhs {
+            case let .loginNewAccount(lhsTheme):
+                if case let .loginNewAccount(rhsTheme) = rhs, lhsTheme === rhsTheme {
                     return true
                 } else {
                     return false
@@ -69,28 +69,28 @@ private enum DebugAccountsControllerEntry: ItemListNodeEntry {
     
     func item(_ arguments: DebugAccountsControllerArguments) -> ListViewItem {
         switch self {
-            case let .record(record, current):
-                return ItemListCheckboxItem(title: "\(UInt64(bitPattern: record.id.int64))", checked: current, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            case let .record(theme, record, current):
+                return ItemListCheckboxItem(theme: theme, title: "\(UInt64(bitPattern: record.id.int64))", checked: current, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.switchAccount(record.id)
                 })
-            case .loginNewAccount:
-                return ItemListActionItem(title: "Login to another account", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .loginNewAccount(theme):
+                return ItemListActionItem(theme: theme, title: "Login to another account", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.loginNewAccount()
                 })
         }
     }
 }
 
-private func debugAccountsControllerEntries(view: AccountRecordsView) -> [DebugAccountsControllerEntry] {
+private func debugAccountsControllerEntries(view: AccountRecordsView, presentationData: PresentationData) -> [DebugAccountsControllerEntry] {
     var entries: [DebugAccountsControllerEntry] = []
     
     for entry in view.records.sorted(by: {
         $0.id < $1.id
     }) {
-        entries.append(.record(entry, entry.id == view.currentRecord?.id))
+        entries.append(.record(presentationData.theme, entry, entry.id == view.currentRecord?.id))
     }
     
-    entries.append(.loginNewAccount)
+    entries.append(.loginNewAccount(presentationData.theme))
     
     return entries
 }
@@ -113,8 +113,8 @@ public func debugAccountsController(account: Account, accountManager: AccountMan
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, accountManager.accountRecords())
         |> map { presentationData, view -> (ItemListControllerState, (ItemListNodeState<DebugAccountsControllerEntry>, DebugAccountsControllerEntry.ItemGenerationArguments)) in
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"))
-            let listState = ItemListNodeState(entries: debugAccountsControllerEntries(view: view), style: .blocks)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let listState = ItemListNodeState(entries: debugAccountsControllerEntries(view: view, presentationData: presentationData), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }

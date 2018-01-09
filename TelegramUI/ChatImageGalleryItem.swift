@@ -66,17 +66,25 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
+    private let statusNodeContainer: HighlightableButtonNode
+    private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
     private var accountAndMedia: (Account, Media)?
     
     private var fetchDisposable = MetaDisposable()
+    private let statusDisposable = MetaDisposable()
+    private var status: MediaResourceStatus?
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
         
         self.imageNode = TransformImageNode()
         self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
+        
+        self.statusNodeContainer = HighlightableButtonNode()
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+        self.statusNode.isHidden = true
         
         super.init()
         
@@ -86,10 +94,18 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.imageNode.view.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
+        
+        self.statusNodeContainer.addSubnode(self.statusNode)
+        self.addSubnode(self.statusNodeContainer)
+        
+        self.statusNodeContainer.addTarget(self, action: #selector(self.statusPressed), forControlEvents: .touchUpInside)
+        
+        self.statusNodeContainer.isUserInteractionEnabled = false
     }
     
     deinit {
         self.fetchDisposable.dispose()
+        self.statusDisposable.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -98,6 +114,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+        
+        let statusSize = CGSize(width: 50.0, height: 50.0)
+        transition.updateFrame(node: self.statusNodeContainer, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - statusSize.width) / 2.0), y: floor((layout.size.height - statusSize.height) / 2.0)), size: statusSize))
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(), size: statusSize))
     }
     
     fileprivate func setMessage(_ message: Message) {
@@ -108,11 +128,11 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(image) {
             if let largestSize = largestRepresentationForPhoto(image) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
-                self.imageNode.alphaTransitionOnFirstUpdate = false
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(account: account, signal: chatMessagePhoto(account: account, photo: image), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photo: image), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                 self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
+                self.setupStatus(resource: largestSize.resource)
             } else {
                 self._ready.set(.single(Void()))
             }
@@ -123,16 +143,64 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     func setFile(account: Account, file: TelegramMediaFile) {
         if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(file) {
             if let largestSize = file.dimensions {
-                self.imageNode.alphaTransitionOnFirstUpdate = false
                 let displaySize = largestSize.dividedByScreenScale()
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(account: account, signal: chatMessageImageFile(account: account, file: file, progressive: false), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessageImageFile(account: account, file: file, thumbnail: false), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize, self.imageNode)
+                self.setupStatus(resource: file.resource)
             } else {
                 self._ready.set(.single(Void()))
             }
         }
         self.accountAndMedia = (account, file)
+    }
+    
+    private func setupStatus(resource: MediaResource) {
+        self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(resource)
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let strongSelf = self {
+                    let previousStatus = strongSelf.status
+                    strongSelf.status = status
+                    switch status {
+                        case .Remote:
+                            strongSelf.statusNode.isHidden = false
+                            strongSelf.statusNode.alpha = 1.0
+                            strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                            strongSelf.statusNode.transitionToState(.download(.white), completion: {})
+                        case let .Fetching(isActive, progress):
+                            strongSelf.statusNode.isHidden = false
+                            strongSelf.statusNode.alpha = 1.0
+                            strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                            var actualProgress = progress
+                            if isActive {
+                                actualProgress = max(actualProgress, 0.027)
+                            }
+                            strongSelf.statusNode.transitionToState(.progress(color: .white, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
+                        case .Local:
+                            if let previousStatus = previousStatus, case .Fetching = previousStatus {
+                                strongSelf.statusNode.transitionToState(.progress(color: .white, value: 1.0, cancelEnabled: true), completion: {
+                                    if let strongSelf = self {
+                                        strongSelf.statusNode.alpha = 0.0
+                                        strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                                        strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                            if let strongSelf = self {
+                                                strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                            }
+                                        })
+                                    }
+                                })
+                            } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
+                                strongSelf.statusNode.alpha = 0.0
+                                strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                                strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                    if let strongSelf = self {
+                                        strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                    }
+                                })
+                            }
+                    }
+                }
+            }))
     }
     
     override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
@@ -183,9 +251,15 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         transformedFrame.origin = CGPoint()
         self.imageNode.layer.animateBounds(from: transformedFrame, to: self.imageNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        
+        self.statusNodeContainer.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.statusNodeContainer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        self.statusNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        self.statusNodeContainer.layer.animateScale(from: 0.5, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
     override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+        self.fetchDisposable.set(nil)
+        
         var transformedFrame = node.view.convert(node.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
@@ -218,8 +292,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             }
         }
         
-        copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false)
-        surfaceCopyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
+        copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false)
+        surfaceCopyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, removeOnCompletion: false)
         
         copyView.layer.animatePosition(from: CGPoint(x: transformedCopyViewInitialFrame.midX, y: transformedCopyViewInitialFrame.midY), to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
         let scale = CGSize(width: transformedCopyViewInitialFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewInitialFrame.size.height / transformedSelfFrame.size.height)
@@ -246,6 +320,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             boundsCompleted = true
             intermediateCompletion()
         })
+        
+        self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
     }
     
     override func visibilityUpdated(isVisible: Bool) {
@@ -253,7 +330,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         if let (account, media) = self.accountAndMedia, let file = media as? TelegramMediaFile {
             if isVisible {
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
+                //self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .image)).start())
             } else {
                 self.fetchDisposable.set(nil)
             }
@@ -266,5 +343,26 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
         return .single(self.footerContentNode)
+    }
+    
+    @objc func statusPressed() {
+        if let (_, media) = self.accountAndMedia, let status = self.status {
+            var resource: MediaResource?
+            if let file = media as? TelegramMediaFile {
+                resource = file.resource
+            } else if let image = media as? TelegramMediaImage {
+                resource = largestImageRepresentation(image.representations)?.resource
+            }
+            if let resource = resource {
+                switch status {
+                    case .Fetching:
+                        self.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource)
+                    case .Remote:
+                        self.fetchDisposable.set(self.account.postbox.mediaBox.fetchedResource(resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                    default:
+                        break
+                }
+            }
+        }
     }
 }

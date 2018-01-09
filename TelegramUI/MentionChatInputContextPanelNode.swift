@@ -7,21 +7,22 @@ import Display
 private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let peer: Peer
+    let theme: PresentationTheme
     
     var stableId: Int64 {
         return self.peer.id.toInt64()
     }
     
     static func ==(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer)
+        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer) && lhs.theme === rhs.theme
     }
     
     static func <(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
-        return MentionChatInputPanelItem(account: account, peer: self.peer, peerSelected: peerSelected)
+    func item(account: Account, inverted: Bool, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
+        return MentionChatInputPanelItem(account: account, theme: self.theme, inverted: inverted, peer: self.peer, peerSelected: peerSelected)
     }
 }
 
@@ -31,36 +32,52 @@ private struct CommandChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], account: Account, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], account: Account, inverted: Bool, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerSelected: peerSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerSelected: peerSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
     
     return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
+enum MentionChatInputContextPanelMode {
+    case input
+    case search
+}
+
 final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
+    let mode: MentionChatInputContextPanelMode
+    
+    private var theme: PresentationTheme
+    
     private let listView: ListView
     private var currentEntries: [MentionChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
-    private var hasValidLayout = false
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(account: Account) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: MentionChatInputContextPanelMode) {
+        self.theme = theme
+        self.mode = mode
+        
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
-        self.listView.keepBottomItemOverscrollBackground = .white
+        self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
         
-        super.init(account: account)
+        super.init(account: account, theme: theme, strings: strings)
         
         self.isOpaque = false
         self.clipsToBounds = true
         
         self.addSubnode(self.listView)
+        
+        if mode == .search {
+            self.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+        }
     }
     
     func updateResults(_ results: [Peer]) {
@@ -73,34 +90,47 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                 continue
             }
             peerIdSet.insert(peerId)
-            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer))
+            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer, theme: self.theme))
             index += 1
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, peerSelected: { [weak self] peer in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, inverted: self.mode == .search, peerSelected: { [weak self] peer in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                interfaceInteraction.updateTextInputState { textInputState in
-                    if let (range, type, _) = textInputStateContextQueryRangeAndType(textInputState) {
-                        var inputText = textInputState.inputText
-                        
-                        if let addressName = peer.addressName, !addressName.isEmpty {
-                            let replacementText = addressName + " "
-                            inputText.replaceSubrange(range, with: replacementText)
-                            
-                            guard let lowerBound = range.lowerBound.samePosition(in: inputText.utf16) else {
-                                return textInputState
+                switch strongSelf.mode {
+                    case .input:
+                        interfaceInteraction.updateTextInputState { textInputState in
+                            var mentionQueryRange: Range<String.Index>?
+                            inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
+                                if type == [.mention] {
+                                    mentionQueryRange = range
+                                    break inner
+                                }
                             }
-                            let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: lowerBound)
                             
-                            let replacementLength = replacementText.utf16.distance(from: replacementText.utf16.startIndex, to: replacementText.utf16.endIndex)
-                            
-                            let utfUpperPosition = utfLowerIndex + replacementLength
-                            
-                            return ChatTextInputState(inputText: inputText, selectionRange: utfUpperPosition ..< utfUpperPosition)
+                            if let range = mentionQueryRange {
+                                var inputText = textInputState.inputText
+                                
+                                if let addressName = peer.addressName, !addressName.isEmpty {
+                                    let replacementText = addressName + " "
+                                    inputText.replaceSubrange(range, with: replacementText)
+                                    
+                                    guard let lowerBound = range.lowerBound.samePosition(in: inputText.utf16) else {
+                                        return textInputState
+                                    }
+                                    let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: lowerBound)
+                                    
+                                    let replacementLength = replacementText.utf16.distance(from: replacementText.utf16.startIndex, to: replacementText.utf16.endIndex)
+                                    
+                                    let utfUpperPosition = utfLowerIndex + replacementLength
+                                    
+                                    return ChatTextInputState(inputText: inputText, selectionRange: utfUpperPosition ..< utfUpperPosition)
+                                }
+                            }
+                            return textInputState
                         }
-                    }
-                    return textInputState
+                    case .search:
+                        interfaceInteraction.beginMessageSearch(.member(peer))
                 }
             }
         })
@@ -111,7 +141,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     private func enqueueTransition(_ transition: CommandChatInputContextPanelTransition, firstTime: Bool) {
         enqueuedTransitions.append((transition, firstTime))
         
-        if self.hasValidLayout {
+        if self.validLayout != nil {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
@@ -119,7 +149,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func dequeueTransition() {
-        if let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let validLayout = self.validLayout, let (transition, firstTime) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
@@ -132,9 +162,11 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
             }
             
             var insets = UIEdgeInsets()
-            insets.top = topInsetForLayout(size: self.listView.bounds.size)
+            insets.top = topInsetForLayout(size: validLayout.0)
+            insets.left = validLayout.1
+            insets.right = validLayout.2
             
-            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default)
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: validLayout.0, insets: insets, duration: 0.0, curve: .Default)
             
             self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
@@ -160,9 +192,14 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         return max(size.height - minimumItemHeights, 0.0)
     }
     
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+        let hadValidLayout = self.validLayout != nil
+        self.validLayout = (size, leftInset, rightInset)
+        
         var insets = UIEdgeInsets()
         insets.top = topInsetForLayout(size: size)
+        insets.left = leftInset
+        insets.right = rightInset
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         
@@ -174,10 +211,10 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
             case let .animated(animationDuration, animationCurve):
                 duration = animationDuration
                 switch animationCurve {
-                case .easeInOut:
-                    break
-                case .spring:
-                    curve = 7
+                    case .easeInOut:
+                        break
+                    case .spring:
+                        curve = 7
                 }
         }
         
@@ -192,8 +229,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        if !hasValidLayout {
-            hasValidLayout = true
+        if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }

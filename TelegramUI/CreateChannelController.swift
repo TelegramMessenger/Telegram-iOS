@@ -17,6 +17,25 @@ private enum CreateChannelSection: Int32 {
     case description
 }
 
+private enum CreateChannelEntryTag: ItemListItemTag {
+    case info
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? CreateChannelEntryTag {
+            switch self {
+                case .info:
+                    if case .info = other {
+                        return true
+                    } else {
+                        return false
+                    }
+            }
+        } else {
+            return false
+        }
+    }
+}
+
 private enum CreateChannelEntry: ItemListNodeEntry {
     case channelInfo(PresentationTheme, PresentationStrings, Peer?, ItemListAvatarAndNameInfoItemState)
     case setProfilePhoto(PresentationTheme, String)
@@ -98,16 +117,16 @@ private enum CreateChannelEntry: ItemListNodeEntry {
     func item(_ arguments: CreateChannelArguments) -> ListViewItem {
         switch self {
             case let .channelInfo(theme, strings, peer, state):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
-                })
+                }, tag: CreateChannelEntryTag.info)
             case let .setProfilePhoto(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     
                 })
             case let .descriptionSetup(theme, text, value):
-                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, maxLength: 1000, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     
@@ -131,7 +150,7 @@ private struct CreateChannelState: Equatable {
     
     init() {
         self.creating = false
-        self.editingName = .title(title: "")
+        self.editingName = .title(title: "", type: .channel)
         self.editingDescriptionText = ""
     }
     
@@ -219,13 +238,13 @@ public func createChannelController(account: Account) -> ViewController {
             if state.creating {
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: "Next", style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
+                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Next, style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
                     arguments.done()
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Create Channel"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"))
-            let listState = ItemListNodeState(entries: CreateChannelEntries(presentationData: presentationData, state: state), style: .blocks)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChannelIntro_CreateChannel), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let listState = ItemListNodeState(entries: CreateChannelEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: CreateChannelEntryTag.info)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

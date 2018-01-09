@@ -22,7 +22,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private var presentationData: PresentationData
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, openPeer: @escaping (PeerId) -> Void) {
+    init(account: Account, onlyWriteable: Bool, openPeer: @escaping (PeerId) -> Void) {
         self.account = account
         self.openPeer = openPeer
         
@@ -70,7 +70,12 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                     for item in items {
                         switch item {
                             case let .peer(peer, theme, strings):
-                                listItems.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: .none, selection: .none, hasActiveRevealControls: false, index: nil, header: nil, action: { [weak self] peer in
+                                var enabled = true
+                                if onlyWriteable {
+                                    enabled = canSendMessagesToPeer(peer)
+                                }
+                                
+                                listItems.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { [weak self] peer in
                                     if let openPeer = self?.openPeer {
                                         self?.listNode.clearHighlightAnimated(true)
                                         openPeer(peer.id)

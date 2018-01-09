@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import AsyncDisplayKit
 
 final class InstantPagePeerReferenceItem: InstantPageItem {
     var frame: CGRect
@@ -16,7 +17,7 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
         self.rtl = rtl
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPagePeerReferenceNode(account: account, strings: strings, theme: theme, initialPeer: self.initialPeer, rtl: self.rtl, openPeer: openPeer)
     }
     

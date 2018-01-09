@@ -3,11 +3,14 @@ import Postbox
 import TelegramCore
 
 enum CallListNodeEntryId: Hashable {
+    case setting(Int32)
     case hole(MessageIndex)
     case message(MessageIndex)
     
     var hashValue: Int {
         switch self {
+            case let .setting(value):
+                return value.hashValue
             case let .hole(index):
                 return index.hashValue
             case let .message(index):
@@ -15,12 +18,14 @@ enum CallListNodeEntryId: Hashable {
         }
     }
     
-    static func <(lhs: CallListNodeEntryId, rhs: CallListNodeEntryId) -> Bool {
-        return lhs.hashValue < rhs.hashValue
-    }
-    
     static func ==(lhs: CallListNodeEntryId, rhs: CallListNodeEntryId) -> Bool {
         switch lhs {
+            case let .setting(value):
+                if case .setting(value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .hole(index):
                 if case .hole(index) = rhs {
                     return true
@@ -48,11 +53,17 @@ private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> B
 }
 
 enum CallListNodeEntry: Comparable, Identifiable {
+    case displayTab(PresentationTheme, String, Bool)
+    case displayTabInfo(PresentationTheme, String)
     case messageEntry(topMessage: Message, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, editing: Bool, hasActiveRevealControls: Bool)
     case holeEntry(index: MessageIndex, theme: PresentationTheme)
     
     var index: MessageIndex {
         switch self {
+            case .displayTab:
+                return MessageIndex.absoluteUpperBound()
+            case .displayTabInfo:
+                return MessageIndex.absoluteUpperBound().predecessor()
             case let .messageEntry(message, _, _, _, _, _):
                 return MessageIndex(message)
             case let .holeEntry(index, _):
@@ -62,6 +73,10 @@ enum CallListNodeEntry: Comparable, Identifiable {
     
     var stableId: CallListNodeEntryId {
         switch self {
+            case .displayTab:
+                return .setting(0)
+            case .displayTabInfo:
+                return .setting(1)
             case let .messageEntry(message, _, _, _, _, _):
                 return .message(MessageIndex(message))
             case let .holeEntry(index, _):
@@ -70,11 +85,53 @@ enum CallListNodeEntry: Comparable, Identifiable {
     }
     
     static func <(lhs: CallListNodeEntry, rhs: CallListNodeEntry) -> Bool {
-        return lhs.index < rhs.index
+        switch lhs {
+            case .displayTab:
+                return false
+            case .displayTabInfo:
+                switch rhs {
+                    case .displayTab:
+                        return true
+                    default:
+                        return false
+                }
+            case let .holeEntry(lhsIndex, _):
+                switch rhs {
+                    case let .holeEntry(rhsIndex, _):
+                        return lhsIndex < rhsIndex
+                    case let .messageEntry(topMessage, _, _, _, _, _):
+                        return lhsIndex < MessageIndex(topMessage)
+                    default:
+                        return true
+                }
+            case let .messageEntry(lhsTopMessage, _, _, _, _, _):
+                let lhsIndex = MessageIndex(lhsTopMessage)
+                switch rhs {
+                    case let .holeEntry(rhsIndex, _):
+                        return lhsIndex < rhsIndex
+                    case let .messageEntry(topMessage, _, _, _, _, _):
+                        return lhsIndex < MessageIndex(topMessage)
+                    default:
+                        return true
+                }
+            
+        }
     }
     
     static func ==(lhs: CallListNodeEntry, rhs: CallListNodeEntry) -> Bool {
         switch lhs {
+            case let .displayTab(lhsTheme, lhsText, lhsValue):
+                if case let .displayTab(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .displayTabInfo(lhsTheme, lhsText):
+                if case let .displayTabInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .messageEntry(lhsMessage, lhsMessages, lhsTheme, lhsStrings, lhsEditing, lhsHasRevealControls):
                 if case let .messageEntry(rhsMessage, rhsMessages, rhsTheme, rhsStrings, rhsEditing, rhsHasRevealControls) = rhs {
                     if lhsTheme !== rhsTheme {
@@ -114,7 +171,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
     }
 }
 
-func callListNodeEntriesForView(_ view: CallListView, state: CallListNodeState) -> [CallListNodeEntry] {
+func callListNodeEntriesForView(_ view: CallListView, state: CallListNodeState, showSettings: Bool, showCallsTab: Bool) -> [CallListNodeEntry] {
     var result: [CallListNodeEntry] = []
     for entry in view.entries {
         switch entry {
@@ -123,6 +180,10 @@ func callListNodeEntriesForView(_ view: CallListView, state: CallListNodeState) 
             case let .hole(index):
                 result.append(.holeEntry(index: index, theme: state.theme))
         }
+    }
+    if showSettings {
+        result.append(.displayTabInfo(state.theme, state.strings.Calls_CallTabDescription))
+        result.append(.displayTab(state.theme, state.strings.Calls_CallTabTitle, showCallsTab))
     }
     return result
 }

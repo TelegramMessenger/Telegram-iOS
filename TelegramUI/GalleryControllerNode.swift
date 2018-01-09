@@ -3,7 +3,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 
-class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
+class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     var statusBar: StatusBar?
     var navigationBar: NavigationBar?
     let footerNode: GalleryFooterNode
@@ -93,6 +93,14 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.footerNode)
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        /*let recognizer = SwipeToDismissGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        recognizer.delegate = self
+        self.view.addGestureRecognizer(recognizer)*/
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (navigationBarHeight, layout)
         
@@ -148,8 +156,13 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        if let backgroundColor = self.backgroundNode.backgroundColor {
+            let updatedColor = backgroundColor.withAlphaComponent(0.0)
+            self.backgroundNode.backgroundColor = updatedColor
+            self.backgroundNode.layer.animate(from: backgroundColor.cgColor, to: updatedColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionLinear, duration: 0.15)
+        }
         UIView.animate(withDuration: 0.25, animations: {
-            self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(0.0)
+            
             self.statusBar?.alpha = 0.0
             self.navigationBar?.alpha = 0.0
             self.footerNode.alpha = 0.0
@@ -237,6 +250,21 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.presentationState = f(self.presentationState)
         if let (navigationBarHeight, layout) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+        }
+    }
+    
+    @objc func panGesture(_ recognizer: SwipeToDismissGestureRecognizer) {
+        switch recognizer.state {
+            case .began:
+                break
+            case .changed:
+                print("changed")
+            case .ended:
+                break
+            case .cancelled:
+                break
+            default:
+                break
         }
     }
 }

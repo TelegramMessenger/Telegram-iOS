@@ -2,21 +2,23 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-public enum PresentationBuilinThemeReference: Int32 {
-    case light
-    case dark
+public enum PresentationBuiltinThemeReference: Int32 {
+    case dayClassic = 0
+    case nightGrayscale = 1
+    case day = 2
+    case nightAccent = 3
 }
 
 public enum PresentationThemeReference: PostboxCoding, Equatable {
-    case builtin(PresentationBuilinThemeReference)
+    case builtin(PresentationBuiltinThemeReference)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
-                self = .builtin(PresentationBuilinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!)
+                self = .builtin(PresentationBuiltinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!)
             default:
                 //assertionFailure()
-                self = .builtin(.light)
+                self = .builtin(.dayClassic)
         }
     }
     
@@ -40,27 +42,39 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
     }
 }
 
+public enum PresentationFontSize: Int32 {
+    case extraSmall = 0
+    case small = 1
+    case regular = 2
+    case large = 3
+    case extraLarge = 4
+}
+
 public struct PresentationThemeSettings: PreferencesEntry {
     public let chatWallpaper: TelegramWallpaper
     public let theme: PresentationThemeReference
+    public let fontSize: PresentationFontSize
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(chatWallpaper: .builtin, theme: .builtin(.light))
+        return PresentationThemeSettings(chatWallpaper: .color(0x000000), theme: .builtin(.nightAccent), fontSize: .regular)
     }
     
-    init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference) {
+    public init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference, fontSize: PresentationFontSize) {
         self.chatWallpaper = chatWallpaper
         self.theme = theme
+        self.fontSize = fontSize
     }
     
     public init(decoder: PostboxDecoder) {
         self.chatWallpaper = (decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper) ?? .builtin
         self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as! PresentationThemeReference
+        self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.chatWallpaper, forKey: "w")
         encoder.encodeObject(self.theme, forKey: "t")
+        encoder.encodeInt32(self.fontSize.rawValue, forKey: "f")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
@@ -72,11 +86,11 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static func ==(lhs: PresentationThemeSettings, rhs: PresentationThemeSettings) -> Bool {
-        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.theme == rhs.theme
+        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.theme == rhs.theme && lhs.fontSize == rhs.fontSize
     }
 }
 
-func updatePresentationThemeSettingsInteractively(postbox: Postbox, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
+public func updatePresentationThemeSettingsInteractively(postbox: Postbox, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
         modifier.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings, { entry in
             let currentSettings: PresentationThemeSettings

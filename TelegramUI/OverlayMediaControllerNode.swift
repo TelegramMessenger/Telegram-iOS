@@ -16,11 +16,13 @@ private final class OverlayMediaVideoNodeData {
     var node: OverlayMediaItemNode
     var location: CGPoint
     var isMinimized: Bool
+    var currentSize: CGSize
     
-    init(node: OverlayMediaItemNode, location: CGPoint, isMinimized: Bool) {
+    init(node: OverlayMediaItemNode, location: CGPoint, isMinimized: Bool, currentSize: CGSize) {
         self.node = node
         self.location = location
         self.isMinimized = isMinimized
+        self.currentSize = currentSize
     }
 }
 
@@ -32,6 +34,9 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
     
     private weak var draggingNode: OverlayMediaItemNode?
     private var draggingStartPosition = CGPoint()
+    
+    private var pinchingNode: OverlayMediaItemNode?
+    private var pinchingNodeInitialSize: CGSize?
     
     override init() {
         super.init()
@@ -48,12 +53,20 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
         panRecognizer.cancelsTouchesInView = false
         panRecognizer.delegate = self
         self.view.addGestureRecognizer(panRecognizer)
+        
+        let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.pinchGesture(_:)))
+        pinchRecognizer.cancelsTouchesInView = false
+        pinchRecognizer.delegate = self
+        self.view.addGestureRecognizer(pinchRecognizer)
     }
     
     deinit {
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer is UIPinchGestureRecognizer {
+            return false
+        }
         return true
     }
     
@@ -74,8 +87,8 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
         self.validLayout = layout
         
         for item in self.videoNodes {
-            let nodeSize = item.node.preferredSizeForOverlayDisplay()
-            transition.updateFrame(node: item.node, frame: CGRect(origin: self.nodePosition(layout: layout, size: nodeSize, location: item.location, hidden: !item.node.hasAttachedContext, isMinimized: item.isMinimized, tempExtendedTopInset: item.node.tempExtendedTopInset), size: nodeSize))
+            let nodeSize = item.currentSize
+            transition.updateFrame(node: item.node, frame: CGRect(origin: self.nodePosition(layout: layout, size: nodeSize, location: item.location, hidden: !item.node.customTransition && !item.node.hasAttachedContext, isMinimized: item.isMinimized, tempExtendedTopInset: item.node.tempExtendedTopInset), size: nodeSize))
             item.node.updateLayout(nodeSize)
         }
     }
@@ -86,7 +99,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
         if tempExtendedTopInset {
             layoutInsets.top += 38.0
         }
-        let inset: CGFloat = 4.0
+        let inset: CGFloat = 4.0 + layout.safeInsets.left
         var result = CGPoint()
         if location.x.isZero {
             if isMinimized {
@@ -228,15 +241,17 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
     
     func addNode(_ node: OverlayMediaItemNode, customTransition: Bool) {
         var location = CGPoint(x: 1.0, y: 0.0)
+        node.customTransition = customTransition
         if let group = node.group {
             if let groupLocation = self.locationByGroup[group] {
                 location = groupLocation
             }
         }
-        self.videoNodes.append(OverlayMediaVideoNodeData(node: node, location: location, isMinimized: false))
+        let nodeData = OverlayMediaVideoNodeData(node: node, location: location, isMinimized: false, currentSize: node.preferredSizeForOverlayDisplay())
+        self.videoNodes.append(nodeData)
         self.addSubnode(node)
         if let validLayout = self.validLayout {
-            let nodeSize = node.preferredSizeForOverlayDisplay()
+            let nodeSize = nodeData.currentSize
             if self.draggingNode !== node {
                 if customTransition {
                     node.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: location, hidden: false, isMinimized: false, tempExtendedTopInset: node.tempExtendedTopInset), size: nodeSize)
@@ -273,7 +288,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                 if customTransition {
                     node.removeFromSupernode()
                 } else {
-                    let nodeSize = node.preferredSizeForOverlayDisplay()
+                    let nodeSize = self.videoNodes[index].currentSize
                     node.layer.animateFrame(from: node.layer.frame, to: CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: self.videoNodes[index].location, hidden: true, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: node.tempExtendedTopInset), size: nodeSize), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak node] _ in
                         node?.removeFromSupernode()
                     })
@@ -291,9 +306,9 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
         switch recognizer.state {
             case .began:
                 if let draggingNode = self.draggingNode, let validLayout = self.validLayout, let index = self.videoNodes.index(where: { $0.node === draggingNode }){
-                    let nodeSize = draggingNode.preferredSizeForOverlayDisplay()
+                    let nodeSize = self.videoNodes[index].currentSize
                     let previousFrame = draggingNode.frame
-                    draggingNode.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: self.videoNodes[index].location, hidden: !draggingNode.hasAttachedContext, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: draggingNode.tempExtendedTopInset), size: nodeSize)
+                    draggingNode.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: self.videoNodes[index].location, hidden: !draggingNode.customTransition && !draggingNode.hasAttachedContext, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: draggingNode.tempExtendedTopInset), size: nodeSize)
                     draggingNode.layer.animateFrame(from: previousFrame, to: draggingNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                     self.draggingNode = nil
                 }
@@ -320,7 +335,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                 }
             case .ended, .cancelled:
                 if let draggingNode = self.draggingNode, let validLayout = self.validLayout, let index = self.videoNodes.index(where: { $0.node === draggingNode }){
-                    let nodeSize = draggingNode.preferredSizeForOverlayDisplay()
+                    let nodeSize = self.videoNodes[index].currentSize
                     let previousFrame = draggingNode.frame
                     
                     let (updatedLocation, shouldDismiss) = self.nodeLocationForPosition(layout: validLayout, position: CGPoint(x: previousFrame.midX, y: previousFrame.midY), velocity: recognizer.velocity(in: self.view), size: nodeSize, tempExtendedTopInset: draggingNode.tempExtendedTopInset)
@@ -346,6 +361,48 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                         draggingNode.dismiss()
                     }
                 }
+            default:
+                break
+        }
+    }
+    
+    @objc func pinchGesture(_ recognizer: UIPinchGestureRecognizer) {
+        switch recognizer.state {
+            case .began:
+                let location = recognizer.location(in: self.view)
+                loop: for videoNode in self.videoNodes {
+                    if videoNode.node.frame.contains(location) {
+                        if videoNode.node.isMinimizeable {
+                            self.pinchingNode = videoNode.node
+                            self.pinchingNodeInitialSize = videoNode.currentSize
+                        }
+                        break loop
+                    }
+                }
+            case .changed:
+                if let validLayout = self.validLayout, let pinchingNode = self.pinchingNode, let initialSize = self.pinchingNodeInitialSize {
+                    let minSize = CGSize(width: 180.0, height: 90.0)
+                    let maxSize = CGSize(width: validLayout.size.width - validLayout.safeInsets.left - validLayout.safeInsets.right - 14.0, height: 500.0)
+                    
+                    let scale = recognizer.scale
+                    var updatedSize = CGSize(width: floor(initialSize.width * scale), height: floor(initialSize.height * scale))
+                    updatedSize = updatedSize.fitted(maxSize)
+                    if updatedSize.width < minSize.width {
+                        updatedSize = updatedSize.aspectFitted(CGSize(width: minSize.width, height: 1000.0))
+                    }
+                    
+                    loop: for videoNode in self.videoNodes {
+                        if videoNode.node === pinchingNode {
+                            videoNode.currentSize = updatedSize
+                            break loop
+                        }
+                    }
+                    
+                    self.containerLayoutUpdated(validLayout, transition: .immediate)
+                }
+            case .ended, .cancelled:
+                self.pinchingNode = nil
+                self.pinchingNodeInitialSize = nil
             default:
                 break
         }

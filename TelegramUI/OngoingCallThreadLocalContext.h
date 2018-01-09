@@ -23,6 +23,8 @@ typedef NS_ENUM(int32_t, OngoingCallState) {
 
 @interface OngoingCallThreadLocalContext : NSObject
 
++ (void)setupLoggingFunction:(void (*)(NSString *))loggingFunction;
+
 @property (nonatomic, copy) void (^stateChanged)(OngoingCallState);
 
 - (instancetype _Nonnull)init;

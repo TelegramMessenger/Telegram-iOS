@@ -1,6 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
@@ -9,52 +10,44 @@ private let maximizedSubtitleFont = Font.regular(12.0)
 
 final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     static let minimizedHeight: CGFloat = 37.0
-    static let maximizedHeight: CGFloat = 166.0
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
     private let titleNode: TextNode
     private let subtitleNode: TextNode
-    private let maximizedTitleNode: TextNode
-    private let maximizedSubtitleNode: TextNode
     
     private let closeButton: HighlightableButtonNode
     private let actionButton: HighlightTrackingButtonNode
     private let actionPauseNode: ASImageNode
     private let actionPlayNode: ASImageNode
     
-    private let maximizedLeftTimestampNode: MediaPlayerTimeTextNode
-    private let maximizedRightTimestampNode: MediaPlayerTimeTextNode
-    private let maximizedActionButton: HighlightableButtonNode
-    private let maximizedActionPauseNode: ASImageNode
-    private let maximizedActionPlayNode: ASImageNode
-    private let maximizedPreviousButton: HighlightableButtonNode
-    private let maximizedNextButton: HighlightableButtonNode
-    private let maximizedShuffleButton: HighlightableButtonNode
-    private let maximizedRepeatButton: HighlightableButtonNode
-    
     private let scrubbingNode: MediaPlayerScrubbingNode
-    private let maximizedScrubbingNode: MediaPlayerScrubbingNode
+    
+    var displayScrubber: Bool = true {
+        didSet {
+            self.scrubbingNode.isHidden = !self.displayScrubber
+        }
+    }
+    
+    private let separatorNode: ASDisplayNode
     
     private var tapRecognizer: UITapGestureRecognizer?
     
-    var expand: (() -> Void)?
-    
+    var tapAction: (() -> Void)?
     var close: (() -> Void)?
     var togglePlayPause: (() -> Void)?
-    var previous: (() -> Void)?
-    var next: (() -> Void)?
-    var seek: ((Double) -> Void)?
     
-    var stateAndStatus: AudioPlaylistStateAndStatus? {
+    var playbackStatus: Signal<MediaPlayerStatus, NoError>? {
         didSet {
-            if self.stateAndStatus != oldValue {
+            self.scrubbingNode.status = self.playbackStatus
+        }
+    }
+    
+    var playbackItem: SharedMediaPlaylistItem? {
+        didSet {
+            if !arePlaylistItemsEqual(self.playbackItem, oldValue) {
                 self.updateLayout(size: self.bounds.size, transition: .immediate)
-                self.scrubbingNode.status = stateAndStatus?.status
-                self.maximizedScrubbingNode.status = stateAndStatus?.status
-                self.maximizedLeftTimestampNode.status = stateAndStatus?.status
-                self.maximizedRightTimestampNode.status = stateAndStatus?.status
             }
         }
     }
@@ -67,11 +60,6 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.titleNode.isLayerBacked = true
         self.subtitleNode = TextNode()
         self.subtitleNode.isLayerBacked = true
-        
-        self.maximizedTitleNode = TextNode()
-        self.maximizedTitleNode.isLayerBacked = true
-        self.maximizedSubtitleNode = TextNode()
-        self.maximizedSubtitleNode.isLayerBacked = true
         
         self.closeButton = HighlightableButtonNode()
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
@@ -97,60 +85,11 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.actionPlayNode.image = PresentationResourcesRootController.navigationPlayerPlayIcon(self.theme)
         self.actionPlayNode.isHidden = true
         
-        self.maximizedLeftTimestampNode = MediaPlayerTimeTextNode(textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-        self.maximizedRightTimestampNode = MediaPlayerTimeTextNode(textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-        self.maximizedLeftTimestampNode.alignment = .right
-        self.maximizedRightTimestampNode.mode = .reversed
+        self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor))
         
-        self.maximizedActionButton = HighlightableButtonNode()
-        self.maximizedActionButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
-        self.maximizedActionButton.displaysAsynchronously = false
-        
-        self.maximizedActionPauseNode = ASImageNode()
-        self.maximizedActionPauseNode.isLayerBacked = true
-        self.maximizedActionPauseNode.displaysAsynchronously = false
-        self.maximizedActionPauseNode.displayWithoutProcessing = true
-        self.maximizedActionPauseNode.image = PresentationResourcesRootController.navigationPlayerMaximizedPauseIcon(self.theme)
-        
-        self.maximizedActionPlayNode = ASImageNode()
-        self.maximizedActionPlayNode.isLayerBacked = true
-        self.maximizedActionPlayNode.displaysAsynchronously = false
-        self.maximizedActionPlayNode.displayWithoutProcessing = true
-        self.maximizedActionPlayNode.image = PresentationResourcesRootController.navigationPlayerMaximizedPlayIcon(self.theme)
-        self.maximizedActionPlayNode.isHidden = true
-        
-        let maximizedActionButtonSize = CGSize(width: 66.0, height: 50.0)
-        self.maximizedActionButton.frame = CGRect(origin: CGPoint(), size: maximizedActionButtonSize)
-        if let maximizedPauseIcon = self.maximizedActionPauseNode.image {
-            self.maximizedActionPauseNode.frame = CGRect(origin: CGPoint(x: floor((maximizedActionButtonSize.width - maximizedPauseIcon.size.width) / 2.0), y: floor((maximizedActionButtonSize.height - maximizedPauseIcon.size.height) / 2.0)), size: maximizedPauseIcon.size)
-        }
-        if let maximizedPlayIcon = self.maximizedActionPlayNode.image {
-            self.maximizedActionPlayNode.frame = CGRect(origin: CGPoint(x: floor((maximizedActionButtonSize.width - maximizedPlayIcon.size.width) / 2.0) + 2.0, y: floor((maximizedActionButtonSize.height - maximizedPlayIcon.size.height) / 2.0)), size: maximizedPlayIcon.size)
-        }
-        
-        self.maximizedPreviousButton = HighlightableButtonNode()
-        self.maximizedPreviousButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedPreviousIcon(self.theme), for: [])
-        self.maximizedPreviousButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
-        self.maximizedPreviousButton.displaysAsynchronously = false
-        
-        self.maximizedNextButton = HighlightableButtonNode()
-        self.maximizedNextButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedNextIcon(self.theme), for: [])
-        self.maximizedNextButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
-        self.maximizedNextButton.displaysAsynchronously = false
-        
-        self.maximizedShuffleButton = HighlightableButtonNode()
-        self.maximizedShuffleButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedShuffleIcon(self.theme), for: [])
-        self.maximizedShuffleButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
-        self.maximizedShuffleButton.displaysAsynchronously = false
-        
-        self.maximizedRepeatButton = HighlightableButtonNode()
-        self.maximizedRepeatButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRepeatIcon(self.theme), for: [])
-        self.maximizedRepeatButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
-        self.maximizedRepeatButton.displaysAsynchronously = false
-        
-        self.scrubbingNode = MediaPlayerScrubbingNode(lineHeight: 2.0, lineCap: .square, scrubberHandle: false, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor)
-        self.maximizedScrubbingNode = MediaPlayerScrubbingNode(lineHeight: 3.0, lineCap: .round, scrubberHandle: true, backgroundColor: self.theme.rootController.navigationBar.secondaryTextColor, foregroundColor: self.theme.rootController.navigationBar.accentTextColor)
-
+        self.separatorNode = ASDisplayNode()
+        self.separatorNode.isLayerBacked = true
+        self.separatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
         
         super.init()
         
@@ -158,8 +97,6 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
-        self.addSubnode(self.maximizedTitleNode)
-        self.addSubnode(self.maximizedSubtitleNode)
         
         self.addSubnode(self.closeButton)
         
@@ -167,27 +104,12 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.actionButton.addSubnode(self.actionPlayNode)
         self.addSubnode(self.actionButton)
         
-        self.addSubnode(self.maximizedLeftTimestampNode)
-        self.addSubnode(self.maximizedRightTimestampNode)
-        
-        self.maximizedActionButton.addSubnode(self.maximizedActionPauseNode)
-        self.maximizedActionButton.addSubnode(self.maximizedActionPlayNode)
-        self.addSubnode(self.maximizedActionButton)
-        self.addSubnode(self.maximizedPreviousButton)
-        self.addSubnode(self.maximizedNextButton)
-        self.addSubnode(self.maximizedShuffleButton)
-        self.addSubnode(self.maximizedRepeatButton)
-        
         self.closeButton.addTarget(self, action: #selector(self.closeButtonPressed), forControlEvents: .touchUpInside)
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
-        self.maximizedActionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
-        self.maximizedPreviousButton.addTarget(self, action: #selector(self.previousButtonPressed), forControlEvents: .touchUpInside)
-        self.maximizedNextButton.addTarget(self, action: #selector(self.nextButtonPressed), forControlEvents: .touchUpInside)
-        self.maximizedShuffleButton.addTarget(self, action: #selector(self.shuffleButtonPressed), forControlEvents: .touchUpInside)
-        self.maximizedRepeatButton.addTarget(self, action: #selector(self.repeatButtonPressed), forControlEvents: .touchUpInside)
         
-        self.addSubnode(self.maximizedScrubbingNode)
         self.addSubnode(self.scrubbingNode)
+        
+        self.addSubnode(self.separatorNode)
         
         self.actionButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -208,7 +130,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                     switch status {
                         case .paused:
                             paused = true
-                        case let .buffering(whilePlaying):
+                        case let .buffering(_, whilePlaying):
                             paused = !whilePlaying
                         case .playing:
                             paused = false
@@ -218,13 +140,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                 }
                 strongSelf.actionPlayNode.isHidden = !paused
                 strongSelf.actionPauseNode.isHidden = paused
-                strongSelf.maximizedActionPlayNode.isHidden = !paused
-                strongSelf.maximizedActionPauseNode.isHidden = paused
             }
-        }
-        
-        self.maximizedScrubbingNode.seek = { [weak self] timestamp in
-            self?.seek?(timestamp)
         }
     }
     
@@ -238,157 +154,74 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         let minHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
-        let maxHeight = MediaNavigationAccessoryHeaderNode.maximizedHeight
-        let maximizationFactor = (size.height - minHeight) / (maxHeight - minHeight)
-        
-        let enableExpandTap = maximizationFactor.isEqual(to: 0.0)
-        if let tapRecognizer = self.tapRecognizer, tapRecognizer.isEnabled != enableExpandTap {
-            tapRecognizer.isEnabled = enableExpandTap
-        }
         
         var titleString: NSAttributedString?
         var subtitleString: NSAttributedString?
-        var maximizedTitleString: NSAttributedString?
-        var maximizedSubtitleString: NSAttributedString?
-        if let stateAndStatus = self.stateAndStatus, let item = stateAndStatus.state.item, let info = item.info {
-            switch info.labelInfo {
-                case let .music(title, performer):
+        if let playbackItem = self.playbackItem, let displayData = playbackItem.displayData {
+            switch displayData {
+                case let .music(title, performer, _):
                     let titleText: String = title ?? "Unknown Track"
                     let subtitleText: String = performer ?? "Unknown Artist"
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                
-                    maximizedTitleString = NSAttributedString(string: titleText, font: maximizedTitleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                    maximizedSubtitleString = NSAttributedString(string: subtitleText, font: maximizedSubtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                case .voice:
-                    let titleText: String = self.strings.Message_Audio
-                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                
-                    maximizedTitleString = NSAttributedString(string: titleText, font: maximizedTitleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                case .video:
-                    let titleText: String = self.strings.Message_VideoMessage
-                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                case let .voice(author, peer):
+                    let titleText: String = author?.displayTitle ?? ""
+                    let subtitleText: String
+                    if author?.id == peer?.id {
+                        subtitleText = self.strings.MusicPlayer_VoiceNote
+                    } else {
+                        subtitleText = peer?.displayTitle ?? ""
+                    }
                     
-                    maximizedTitleString = NSAttributedString(string: titleText, font: maximizedTitleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                case let .instantVideo(author, peer):
+                    let titleText: String = author?.displayTitle ?? ""
+                    let subtitleText: String = peer?.displayTitle ?? ""
+                    
+                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
             }
         }
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
-        let makeMaximizedTitleLayout = TextNode.asyncLayout(self.maximizedTitleNode)
-        let makeMaximizedSubtitleLayout = TextNode.asyncLayout(self.maximizedSubtitleNode)
         
-        let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil, UIEdgeInsets())
-        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(subtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil, UIEdgeInsets())
-        
-        let (maximizedTitleLayout, maximizedTitleApply) = makeMaximizedTitleLayout(maximizedTitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil, UIEdgeInsets())
-        let (maximizedSubtitleLayout, maximizedSubtitleApply) = makeMaximizedSubtitleLayout(maximizedSubtitleString, nil, 1, .middle, CGSize(width: size.width - 80.0, height: 100.0), .natural, nil, UIEdgeInsets())
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - 80.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - 80.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
         let _ = titleApply()
         let _ = subtitleApply()
-        let _ = maximizedTitleApply()
-        let _ = maximizedSubtitleApply()
         
         let minimizedTitleOffset: CGFloat = subtitleString == nil ? 6.0 : 0.0
-        let maximizedTitleOffset: CGFloat = subtitleString == nil ? 12.0 : 0.0
         
         let minimizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleLayout.size.width) / 2.0), y: 4.0 + minimizedTitleOffset), size: titleLayout.size)
         let minimizedSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleLayout.size.width) / 2.0), y: 20.0), size: subtitleLayout.size)
         
-        let maximizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - maximizedTitleLayout.size.width) / 2.0), y: 57.0 + maximizedTitleOffset), size: maximizedTitleLayout.size)
-        let maximizedSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - maximizedSubtitleLayout.size.width) / 2.0), y: 80.0), size: maximizedSubtitleLayout.size)
-        
-        let maximizedTitleDistance = maximizedTitleFrame.midY - minimizedTitleFrame.midY
-        let maximizedSubtitleDistance = maximizedSubtitleFrame.midY - minimizedSubtitleFrame.midY
-        
-        var updatedMinimizedTitleFrame = minimizedTitleFrame.offsetBy(dx: 0.0, dy: maximizedTitleDistance * maximizationFactor)
-        var updatedMaximizedTitleFrame = maximizedTitleFrame.offsetBy(dx: 0.0, dy: -maximizedTitleDistance * (1.0 - maximizationFactor))
-        
-        transition.updateFrame(node: self.titleNode, frame: updatedMinimizedTitleFrame)
-        transition.updateFrame(node: self.subtitleNode, frame: minimizedSubtitleFrame.offsetBy(dx: 0.0, dy: maximizedSubtitleDistance * maximizationFactor))
-        
-        updatedMinimizedTitleFrame.origin.y -= minimizedTitleOffset
-        updatedMaximizedTitleFrame.origin.y -= maximizedTitleOffset
-        
-        transition.updateFrame(node: self.maximizedTitleNode, frame: updatedMaximizedTitleFrame)
-        transition.updateFrame(node: self.maximizedSubtitleNode, frame: maximizedSubtitleFrame.offsetBy(dx: 0.0, dy: -maximizedSubtitleDistance * (1.0 - maximizationFactor)))
+        transition.updateFrame(node: self.titleNode, frame: minimizedTitleFrame)
+        transition.updateFrame(node: self.subtitleNode, frame: minimizedSubtitleFrame)
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width, y: updatedMinimizedTitleFrame.minY + 8.0), size: closeButtonSize))
+        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width, y: minimizedTitleFrame.minY + 8.0), size: closeButtonSize))
         transition.updateFrame(node: self.actionPlayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.actionPauseNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
-        transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: 0.0, y: updatedMinimizedTitleFrame.minY - 4.0), size: CGSize(width: 40.0, height: 37.0)))
-        transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: (37.0 + (maxHeight - minHeight) * maximizationFactor) - 2.0), size: CGSize(width: size.width, height: 2.0)))
-        transition.updateFrame(node: self.maximizedScrubbingNode, frame: CGRect(origin: CGPoint(x: 57.0, y: updatedMaximizedTitleFrame.minY - 38.0), size: CGSize(width: size.width - 114.0, height: 15.0)))
-        
-        transition.updateFrame(node: self.maximizedLeftTimestampNode, frame: CGRect(origin: CGPoint(x: 0.0, y: updatedMaximizedTitleFrame.minY - 39.0), size: CGSize(width: 57.0 - 13.0, height: 20.0)))
-        transition.updateFrame(node: self.maximizedRightTimestampNode, frame: CGRect(origin: CGPoint(x: size.width - 57.0 + 13.0, y: updatedMaximizedTitleFrame.minY - 39.0), size: CGSize(width: 57.0 - 13.0, height: 20.0)))
-        
-        let maximizedActionButtonSize = self.maximizedActionButton.bounds.size
-        let maximizedActionButtonFrame = CGRect(origin: CGPoint(x: floor((size.width - maximizedActionButtonSize.width) / 2.0), y: updatedMaximizedTitleFrame.maxY + 26.0), size: maximizedActionButtonSize)
-        transition.updateFrame(node: self.maximizedActionButton, frame: maximizedActionButtonFrame)
-        
-        let actionButtonSpacing: CGFloat = 10.0
-        transition.updateFrame(node: self.maximizedPreviousButton, frame: CGRect(origin: CGPoint(x: maximizedActionButtonFrame.minX - maximizedActionButtonSize.width - actionButtonSpacing, y: maximizedActionButtonFrame.minY), size: maximizedActionButtonSize))
-        transition.updateFrame(node: self.maximizedNextButton, frame: CGRect(origin: CGPoint(x: maximizedActionButtonFrame.maxX + actionButtonSpacing, y: maximizedActionButtonFrame.minY), size: maximizedActionButtonSize))
-        transition.updateFrame(node: self.maximizedShuffleButton, frame: CGRect(origin: CGPoint(x: 0.0, y: maximizedActionButtonFrame.minY), size: CGSize(width: 56.0, height: 50.0)))
-        transition.updateFrame(node: self.maximizedRepeatButton, frame: CGRect(origin: CGPoint(x: size.width - 56.0, y: maximizedActionButtonFrame.minY), size: CGSize(width: 56.0, height: 50.0)))
-        
-        transition.updateAlpha(node: self.actionButton, alpha: 1.0 - maximizationFactor)
-        transition.updateAlpha(node: self.closeButton, alpha: 1.0 - maximizationFactor)
-        
-        transition.updateAlpha(node: self.maximizedActionButton, alpha: maximizationFactor)
-        transition.updateAlpha(node: self.maximizedPreviousButton, alpha: maximizationFactor)
-        transition.updateAlpha(node: self.maximizedNextButton, alpha: maximizationFactor)
-        transition.updateAlpha(node: self.maximizedPreviousButton, alpha: maximizationFactor)
-        transition.updateAlpha(node: self.maximizedShuffleButton, alpha: maximizationFactor)
-        transition.updateAlpha(node: self.maximizedRepeatButton, alpha: maximizationFactor)
-        
-        transition.updateAlpha(node: self.titleNode, alpha: 1.0 - maximizationFactor)
-        transition.updateAlpha(node: self.subtitleNode, alpha: 1.0 - maximizationFactor)
-        transition.updateAlpha(node: self.scrubbingNode, alpha: 1.0 - maximizationFactor)
-        transition.updateAlpha(node: self.maximizedScrubbingNode, alpha: maximizationFactor)
-        transition.updateAlpha(node: self.maximizedTitleNode, alpha: maximizationFactor)
-        transition.updateAlpha(node: self.maximizedSubtitleNode, alpha: maximizationFactor)
-        transition.updateAlpha(node: self.maximizedLeftTimestampNode, alpha: maximizationFactor)
-        transition.updateAlpha(node: self.maximizedRightTimestampNode, alpha: maximizationFactor)
+        transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: 0.0, y: minimizedTitleFrame.minY - 4.0), size: CGSize(width: 40.0, height: 37.0)))
+        transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 37.0 - 2.0), size: CGSize(width: size.width, height: 2.0)))
+
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: minHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
     }
     
     @objc func closeButtonPressed() {
-        if let close = self.close {
-            close()
-        }
+        self.close?()
     }
     
     @objc func actionButtonPressed() {
-        if let togglePlayPause = self.togglePlayPause {
-            togglePlayPause()
-        }
-    }
-    
-    @objc func previousButtonPressed() {
-        if let previous = self.previous {
-            previous()
-        }
-    }
-    
-    @objc func nextButtonPressed() {
-        if let next = self.next {
-            next()
-        }
-    }
-    
-    @objc func shuffleButtonPressed() {
-        
-    }
-    
-    @objc func repeatButtonPressed() {
-        
+        self.togglePlayPause?()
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.expand?()
+            self.tapAction?()
         }
     }
 }

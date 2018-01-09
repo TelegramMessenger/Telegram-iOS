@@ -14,6 +14,7 @@ public class ContactSelectionController: ViewController {
     
     private let index: PeerNameIndex = .lastNameFirst
     private let titleProducer: (PresentationStrings) -> String
+    private let options: [ContactListAdditionalOption]
     
     private var _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -37,7 +38,7 @@ public class ContactSelectionController: ViewController {
         didSet {
             if self.displayNavigationActivity != oldValue {
                 if self.displayNavigationActivity {
-                    self.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode()), animated: false)
+                    self.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor)), animated: false)
                 } else {
                     self.navigationItem.setRightBarButton(nil, animated: false)
                 }
@@ -45,9 +46,10 @@ public class ContactSelectionController: ViewController {
         }
     }
     
-    public init(account: Account, title: @escaping (PresentationStrings) -> String, confirmation: @escaping (PeerId) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+    public init(account: Account, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], confirmation: @escaping (PeerId) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.account = account
         self.titleProducer = title
+        self.options = options
         self.confirmation = confirmation
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -112,7 +114,7 @@ public class ContactSelectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(account: self.account)
+        self.displayNode = ContactSelectionControllerNode(account: self.account, options: self.options)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -146,7 +148,7 @@ public class ContactSelectionController: ViewController {
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
             switch presentationArguments.presentationAnimation {
                 case .modalSheet:
-                    self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(cancelPressed))
+                    self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
                 case .none:
                     break
             }

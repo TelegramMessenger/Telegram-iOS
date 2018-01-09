@@ -122,12 +122,14 @@ public class ComposeController: ViewController {
                         strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.account, peerId: peerId) |> deliverOnMainQueue).start(next: { peerId in
                             if let strongSelf = self, let controller = controller {
                                 controller.displayNavigationActivity = false
-                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(account: strongSelf.account, peerId: peerId), animated: true)
+                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: true)
                             }
                         }, error: { _ in
-                            if let controller = controller {
+                            if let strongSelf = self, let controller = controller {
+                                let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                
                                 controller.displayNavigationActivity = false
-                                controller.present(standardTextAlertController(title: nil, text: "An error occurred.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }))
                     }
@@ -181,6 +183,6 @@ public class ComposeController: ViewController {
     }
     
     private func openPeer(peerId: PeerId) {
-        (self.navigationController as? NavigationController)?.replaceTopController(ChatController(account: self.account, peerId: peerId), animated: true)
+        (self.navigationController as? NavigationController)?.replaceTopController(ChatController(account: self.account, chatLocation: .peer(peerId)), animated: true)
     }
 }

@@ -2,9 +2,9 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let badgeBackgroundImage = generateStretchableFilledCircleImage(diameter: 22.0, color: UIColor(rgb: 0x007ee5))
-
 final class ShareActionButtonNode: HighlightTrackingButtonNode {
+    private let badgeTextColor: UIColor
+    
     private let badgeLabel: ASTextNode
     private let badgeBackground: ASImageNode
     
@@ -12,7 +12,7 @@ final class ShareActionButtonNode: HighlightTrackingButtonNode {
         didSet {
             if self.badge != oldValue {
                 if let badge = self.badge {
-                    self.badgeLabel.attributedText = NSAttributedString(string: badge, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+                    self.badgeLabel.attributedText = NSAttributedString(string: badge, font: Font.regular(14.0), textColor: self.badgeTextColor, paragraphAlignment: .center)
                     self.badgeLabel.isHidden = false
                     self.badgeBackground.isHidden = false
                 } else {
@@ -26,7 +26,9 @@ final class ShareActionButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    override init() {
+    init(badgeBackgroundColor: UIColor, badgeTextColor: UIColor) {
+        self.badgeTextColor = badgeTextColor
+        
         self.badgeLabel = ASTextNode()
         self.badgeLabel.isHidden = true
         self.badgeLabel.isLayerBacked = true
@@ -38,22 +40,12 @@ final class ShareActionButtonNode: HighlightTrackingButtonNode {
         self.badgeBackground.displaysAsynchronously = false
         self.badgeBackground.displayWithoutProcessing = true
         
-        self.badgeBackground.image = badgeBackgroundImage
+        self.badgeBackground.image = generateStretchableFilledCircleImage(diameter: 22.0, color: badgeBackgroundColor)
         
         super.init()
         
         self.addSubnode(self.badgeBackground)
         self.addSubnode(self.badgeLabel)
-        
-        /*self.highligthedChanged = { [weak self] value in
-            if highlighted {
-                strongSelf.backgroundNode.backgroundColor = ActionSheetItemNode.highlightedBackgroundColor
-            } else {
-                UIView.animate(withDuration: 0.3, animations: {
-                    strongSelf.backgroundNode.backgroundColor = ActionSheetItemNode.defaultBackgroundColor
-                })
-            }
-        }*/
     }
     
     override func layout() {

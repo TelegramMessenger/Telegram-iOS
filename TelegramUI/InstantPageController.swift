@@ -74,9 +74,11 @@ final class InstantPageController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = InstantPageControllerNode(account: self.account, settings: self.settings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, statusBar: self.statusBar, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
-        }, openPeer: { [weak self] peerId in
+            }, pushController: { [weak self] c in
+                (self?.navigationController as? NavigationController)?.pushViewController(c)
+            }, openPeer: { [weak self] peerId in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId))
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)))
             }
         }, navigateBack: { [weak self] in
             self?.navigationController?.popViewController(animated: true)

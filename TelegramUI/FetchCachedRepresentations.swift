@@ -104,7 +104,13 @@ private func fetchCachedScaledImageRepresentation(account: Account, resource: Me
                 let path = NSTemporaryDirectory() + "\(randomId)"
                 let url = URL(fileURLWithPath: path)
 
-                let size = representation.size
+                let size: CGSize
+                switch representation.mode {
+                    case .fill:
+                        size = representation.size
+                    case .aspectFit:
+                        size = image.size.fitted(representation.size)
+                }
                 
                 let colorImage = generateImage(size, contextGenerator: { size, context in
                     context.setBlendMode(.copy)

@@ -3,23 +3,32 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+public enum PresentationTimeFormat {
+    case regular
+    case military
+}
+
 public final class PresentationData: Equatable {
     public let strings: PresentationStrings
     public let theme: PresentationTheme
     public let chatWallpaper: TelegramWallpaper
+    public let fontSize: PresentationFontSize
+    public let timeFormat: PresentationTimeFormat
     
-    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper) {
+    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, fontSize: PresentationFontSize, timeFormat: PresentationTimeFormat) {
         self.strings = strings
         self.theme = theme
         self.chatWallpaper = chatWallpaper
+        self.fontSize = fontSize
+        self.timeFormat = timeFormat
     }
     
     public static func ==(lhs: PresentationData, rhs: PresentationData) -> Bool {
-        return lhs.strings === rhs.strings && lhs.theme == rhs.theme && lhs.chatWallpaper == rhs.chatWallpaper
+        return lhs.strings === rhs.strings && lhs.theme === rhs.theme && lhs.chatWallpaper == rhs.chatWallpaper && lhs.fontSize == rhs.fontSize && lhs.timeFormat == rhs.timeFormat
     }
 }
 
-private func dictFromLocalization(_ value: Localization) -> [String: String] {
+func dictFromLocalization(_ value: Localization) -> [String: String] {
     var dict: [String: String] = [:]
     for entry in value.entries {
         switch entry {
@@ -47,8 +56,23 @@ private func dictFromLocalization(_ value: Localization) -> [String: String] {
     return dict
 }
 
-public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(PresentationData, AutomaticMediaDownloadSettings), NoError> {
-    return postbox.modify { modifier -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings) in
+private func currentTimeFormat() -> PresentationTimeFormat {
+    let dateFormatter = DateFormatter()
+    dateFormatter.locale = Locale.current
+    dateFormatter.dateStyle = .none
+    dateFormatter.timeStyle = .medium
+    dateFormatter.timeZone = TimeZone.current
+    let dateString = dateFormatter.string(from: Date())
+    
+    if dateString.contains(dateFormatter.amSymbol) || dateString.contains(dateFormatter.pmSymbol) {
+        return .regular
+    } else {
+        return .military
+    }
+}
+
+public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(PresentationData, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings), NoError> {
+    return postbox.modify { modifier -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings) in
         let themeSettings: PresentationThemeSettings
         if let current = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
             themeSettings = current
@@ -70,16 +94,34 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(Pres
             automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
         }
         
-        return (themeSettings, localizationSettings, automaticMediaDownloadSettings)
-    } |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings) -> (PresentationData, AutomaticMediaDownloadSettings) in
+        let loggingSettings: LoggingSettings
+        if let value = modifier.getPreferencesEntry(key: PreferencesKeys.loggingSettings) as? LoggingSettings {
+            loggingSettings = value
+        } else {
+            loggingSettings = LoggingSettings.defaultSettings
+        }
+        
+        let callListSettings: CallListSettings
+        if let value = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.callListSettings) as? CallListSettings {
+            callListSettings = value
+        } else {
+            callListSettings = CallListSettings.defaultSettings
+        }
+        
+        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings)
+    } |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings) -> (PresentationData, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings) in
         let themeValue: PresentationTheme
         switch themeSettings.theme {
             case let .builtin(reference):
                 switch reference {
-                    case .light:
+                    case .dayClassic:
                         themeValue = defaultPresentationTheme
-                    case .dark:
+                    case .nightGrayscale:
                         themeValue = defaultDarkPresentationTheme
+                    case .nightAccent:
+                        themeValue = defaultDarkAccentPresentationTheme
+                    case .day:
+                        themeValue = defaultDayPresentationTheme
                 }
         }
         let stringsValue: PresentationStrings
@@ -88,7 +130,8 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(Pres
         } else {
             stringsValue = defaultPresentationStrings
         }
-        return (PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper), automaticMediaDownloadSettings)
+        let timeFormat: PresentationTimeFormat = currentTimeFormat()
+        return (PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat), automaticMediaDownloadSettings, loggingSettings, callListSettings)
     }
 }
 
@@ -108,10 +151,14 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
         switch themeSettings.theme {
             case let .builtin(reference):
                 switch reference {
-                    case .light:
+                    case .dayClassic:
                         themeValue = defaultPresentationTheme
-                    case .dark:
+                    case .nightGrayscale:
                         themeValue = defaultDarkPresentationTheme
+                    case .nightAccent:
+                        themeValue = defaultDarkAccentPresentationTheme
+                    case .day:
+                        themeValue = defaultDayPresentationTheme
                 }
         }
         
@@ -129,6 +176,8 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
             stringsValue = defaultPresentationStrings
         }
         
-        return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper)
+        let timeFormat: PresentationTimeFormat = currentTimeFormat()
+        
+        return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat)
     }
 }

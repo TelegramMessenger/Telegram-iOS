@@ -14,63 +14,6 @@ private let titleFont: UIFont = {
 }()
 private let textFont = Font.regular(14.0)
 
-func textStringForReplyMessage(_ message: Message) -> (String, Bool) {
-    if !message.text.isEmpty {
-        return (message.text, false)
-    } else {
-        for media in message.media {
-            switch media {
-                case _ as TelegramMediaImage:
-                    return ("Photo", true)
-                case let file as TelegramMediaFile:
-                    var fileName: String = "File"
-                    for attribute in file.attributes {
-                        switch attribute {
-                            case let .Sticker(text, _, _):
-                                return ("\(text) Sticker", true)
-                            case let .FileName(name):
-                                fileName = name
-                            case let .Audio(isVoice, _, title, performer, _):
-                                if isVoice {
-                                    return ("Voice Message", true)
-                                } else {
-                                    if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                                        return (title + " — " + performer, true)
-                                    } else if let title = title, !title.isEmpty {
-                                        return (title, true)
-                                    } else if let performer = performer, !performer.isEmpty {
-                                        return (performer, true)
-                                    } else {
-                                        return ("Audio", true)
-                                    }
-                                }
-                            case .Video:
-                                if file.isAnimated {
-                                    return ("GIF", true)
-                                } else {
-                                    return ("Video", true)
-                                }
-                            default:
-                                break
-                        }
-                    }
-                    return (fileName, true)
-                case _ as TelegramMediaContact:
-                    return ("Contact", true)
-                case let game as TelegramMediaGame:
-                    return (game.title, true)
-                case _ as TelegramMediaMap:
-                    return ("Map", true)
-                case let action as TelegramMediaAction:
-                    return ("", true)
-                default:
-                    break
-            }
-        }
-        return ("", false)
-    }
-}
-
 enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
     case standalone
@@ -78,7 +21,7 @@ enum ChatMessageReplyInfoType {
 
 class ChatMessageReplyInfoNode: ASDisplayNode {
     private let contentNode: ASDisplayNode
-    private let lineNode: ASDisplayNode
+    private let lineNode: ASImageNode
     private var titleNode: TextNode?
     private var textNode: TextNode?
     private var imageNode: TransformImageNode?
@@ -92,8 +35,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         self.contentNode.contentMode = .left
         self.contentNode.contentsScale = UIScreenScale
         
-        self.lineNode = ASDisplayNode()
+        self.lineNode = ASImageNode()
         self.lineNode.displaysAsynchronously = false
+        self.lineNode.displayWithoutProcessing = true
         self.lineNode.isLayerBacked = true
         
         super.init()
@@ -102,29 +46,29 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         self.contentNode.addSubnode(self.lineNode)
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: PresentationTheme, _ account: Account, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ account: Account, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
         
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
         let previousMedia = maybeNode?.previousMedia
         
-        return { theme, account, type, message, constrainedSize in
+        return { theme, strings, account, type, message, constrainedSize in
             let titleString = message.author?.displayTitle ?? ""
-            let (textString, textMedia) = textStringForReplyMessage(message)
+            let textString = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
             
             let titleColor: UIColor
-            let lineColor: UIColor
+            let lineImage: UIImage?
             let textColor: UIColor
                 
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? theme.chat.bubble.incomingAccentColor : theme.chat.bubble.outgoingAccentColor
-                    lineColor = incoming ? theme.chat.bubble.incomingAccentColor : theme.chat.bubble.outgoingAccentColor
+                    titleColor = incoming ? theme.chat.bubble.incomingAccentTextColor : theme.chat.bubble.outgoingAccentTextColor
+                    lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(theme)
                     textColor = incoming ? theme.chat.bubble.incomingPrimaryTextColor : theme.chat.bubble.outgoingPrimaryTextColor
                 case .standalone:
                     titleColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
-                    lineColor = titleColor
+                    lineImage = PresentationResourcesChat.chatServiceVerticalLineImage(theme)
                     textColor = titleColor
             }
             
@@ -134,22 +78,26 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             var updatedMedia: Media?
             var imageDimensions: CGSize?
-            for media in message.media {
-                if let image = media as? TelegramMediaImage {
-                    updatedMedia = image
-                    if let representation = largestRepresentationForPhoto(image) {
-                        imageDimensions = representation.dimensions
+            if !message.containsSecretMedia {
+                for media in message.media {
+                    if let image = media as? TelegramMediaImage {
+                        updatedMedia = image
+                        if let representation = largestRepresentationForPhoto(image) {
+                            imageDimensions = representation.dimensions
+                        }
+                        break
+                    } else if let file = media as? TelegramMediaFile, file.isVideo {
+                        updatedMedia = file
+                        if !file.isInstantVideo {
+                            if let dimensions = file.dimensions {
+                                imageDimensions = dimensions
+                            } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                                imageDimensions = representation.dimensions
+                            }
+                            overlayIcon = PresentationResourcesChat.chatBubbleReplyThumbnailPlayImage(theme)
+                        }
+                        break
                     }
-                    break
-                } else if let file = media as? TelegramMediaFile, file.isVideo {
-                    updatedMedia = file
-                    if let dimensions = file.dimensions {
-                        imageDimensions = dimensions
-                    } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
-                        imageDimensions = representation.dimensions
-                    }
-                    overlayIcon = PresentationResourcesChat.chatBubbleReplyThumbnailPlayImage(theme)
-                    break
                 }
             }
             
@@ -172,7 +120,12 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 if let image = updatedMedia as? TelegramMediaImage {
                     updateImageSignal = chatMessagePhotoThumbnail(account: account, photo: image)
                 } else if let file = updatedMedia as? TelegramMediaFile {
-                    updateImageSignal = chatMessageVideoThumbnail(account: account, file: file)
+                    if file.isVideo {
+                        updateImageSignal = chatMessageVideoThumbnail(account: account, file: file)
+                    } else if let iconImageRepresentation = smallestImageRepresentation(file.previewRepresentations) {
+                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [iconImageRepresentation], reference: nil)
+                        updateImageSignal = chatWebpageSnippetPhoto(account: account, photo: tmpImage)
+                    }
                 }
             }
             
@@ -180,8 +133,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let contrainedTextSize = CGSize(width: maximumTextWidth, height: constrainedSize.height)
             
-            let (titleLayout, titleApply) = titleNodeLayout(NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), nil, 1, .end, contrainedTextSize, .natural, nil, UIEdgeInsets())
-            let (textLayout, textApply) = textNodeLayout(NSAttributedString(string: textString, font: textFont, textColor: textMedia ? titleColor : textColor), nil, 1, .end, contrainedTextSize, .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: textString, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let size = CGSize(width: max(titleLayout.size.width, textLayout.size.width) + leftInset, height: titleLayout.size.height + textLayout.size.height)
             
@@ -222,7 +175,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     imageNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 3.0), size: CGSize(width: 30.0, height: 30.0))
                     
                     if let updateImageSignal = updateImageSignal {
-                        imageNode.setSignal(account: account, signal: updateImageSignal)
+                        imageNode.setSignal(updateImageSignal)
                     }
                 } else if let imageNode = node.imageNode {
                     imageNode.removeFromSupernode()
@@ -251,8 +204,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: titleLayout.size)
                 textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: titleLayout.size.height), size: textLayout.size)
                 
-                node.lineNode.backgroundColor = lineColor
-                node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: size.height - 4.0))
+                node.lineNode.image = lineImage
+                node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 4.0)))
                 
                 node.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                 

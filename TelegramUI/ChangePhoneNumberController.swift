@@ -17,10 +17,10 @@ final class ChangePhoneNumberController: ViewController {
     var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode())
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
             }
             self.controllerNode.inProgress = self.inProgress
         }
@@ -33,7 +33,6 @@ final class ChangePhoneNumberController: ViewController {
     
     init(account: Account) {
         self.account = account
-        
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
@@ -67,7 +66,7 @@ final class ChangePhoneNumberController: ViewController {
         self.displayNodeDidLoad()
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {
-                let controller = AuthorizationSequenceCountrySelectionController()
+                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.presentationData.strings, theme: defaultLightAuthorizationTheme)
                 controller.completeWithCountryCode = { code, _ in
                     if let strongSelf = self {
                         strongSelf.updateData(countryCode: Int32(code), number: strongSelf.controllerNode.codeAndNumber.1)

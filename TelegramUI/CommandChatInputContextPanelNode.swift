@@ -19,13 +19,14 @@ private struct CommandChatInputContextPanelEntryStableId: Hashable {
 private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let command: PeerCommand
+    let theme: PresentationTheme
     
     var stableId: CommandChatInputContextPanelEntryStableId {
         return CommandChatInputContextPanelEntryStableId(command: self.command)
     }
     
     static func ==(lhs: CommandChatInputContextPanelEntry, rhs: CommandChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.command == rhs.command
+        return lhs.index == rhs.index && lhs.command == rhs.command && lhs.theme === rhs.theme
     }
     
     static func <(lhs: CommandChatInputContextPanelEntry, rhs: CommandChatInputContextPanelEntry) -> Bool {
@@ -33,7 +34,7 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, commandSelected: @escaping (PeerCommand, Bool) -> Void) -> ListViewItem {
-        return CommandChatInputPanelItem(account: account, command: self.command, commandSelected: commandSelected)
+        return CommandChatInputPanelItem(account: account, theme: self.theme, command: self.command, commandSelected: commandSelected)
     }
 }
 
@@ -54,20 +55,24 @@ private func preparedTransition(from fromEntries: [CommandChatInputContextPanelE
 }
 
 final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
+    private var theme: PresentationTheme
+    
     private let listView: ListView
     private var currentEntries: [CommandChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
-    private var hasValidLayout = false
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(account: Account) {
+    override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
-        self.listView.keepBottomItemOverscrollBackground = .white
+        self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
         
-        super.init(account: account)
+        super.init(account: account, theme: theme, strings: strings)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -80,7 +85,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         var index = 0
         var stableIds = Set<CommandChatInputContextPanelEntryStableId>()
         for command in results {
-            let entry = CommandChatInputContextPanelEntry(index: index, command: command)
+            let entry = CommandChatInputContextPanelEntry(index: index, command: command, theme: self.theme)
             if stableIds.contains(entry.stableId) {
                 continue
             }
@@ -96,7 +101,15 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                     interfaceInteraction.sendBotCommand(command.peer, "/" + command.command.text)
                 } else {
                     interfaceInteraction.updateTextInputState { textInputState in
-                        if let (range, type, _) = textInputStateContextQueryRangeAndType(textInputState) {
+                        var commandQueryRange: Range<String.Index>?
+                        inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
+                            if type == [.command] {
+                                commandQueryRange = range
+                                break inner
+                            }
+                        }
+                        
+                        if let range = commandQueryRange {
                             var inputText = textInputState.inputText
                         
                             let replacementText = command.command.text + " "
@@ -125,7 +138,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     private func enqueueTransition(_ transition: CommandChatInputContextPanelTransition, firstTime: Bool) {
         enqueuedTransitions.append((transition, firstTime))
         
-        if self.hasValidLayout {
+        if self.validLayout != nil {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
@@ -133,7 +146,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func dequeueTransition() {
-        if let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let validLayout = self.validLayout, let (transition, firstTime) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
@@ -146,7 +159,9 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             }
             
             var insets = UIEdgeInsets()
-            insets.top = topInsetForLayout(size: self.listView.bounds.size)
+            insets.top = topInsetForLayout(size: validLayout.0)
+            insets.left = validLayout.1
+            insets.right = validLayout.2
             
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default)
             
@@ -174,9 +189,14 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         return max(size.height - minimumItemHeights, 0.0)
     }
     
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+        let hadValidLayout = self.validLayout != nil
+        self.validLayout = (size, leftInset, rightInset)
+        
         var insets = UIEdgeInsets()
         insets.top = self.topInsetForLayout(size: size)
+        insets.left = leftInset
+        insets.right = rightInset
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         
@@ -206,8 +226,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        if !hasValidLayout {
-            hasValidLayout = true
+        if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }

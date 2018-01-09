@@ -11,6 +11,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     private let upButton: HighlightableButtonNode
     private let downButton: HighlightableButtonNode
     private let calendarButton: HighlightableButtonNode
+    private let membersButton: HighlightableButtonNode
     private let resultsLabel: TextNode
     private let activityIndicator: ActivityIndicator
     
@@ -44,6 +45,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.downButton = HighlightableButtonNode()
         self.downButton.isEnabled = false
         self.calendarButton = HighlightableButtonNode()
+        self.membersButton = HighlightableButtonNode()
         self.resultsLabel = TextNode()
         self.resultsLabel.isLayerBacked = true
         self.resultsLabel.displaysAsynchronously = false
@@ -55,12 +57,14 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.upButton)
         self.addSubnode(self.downButton)
         self.addSubnode(self.calendarButton)
+        self.addSubnode(self.membersButton)
         self.addSubnode(self.resultsLabel)
         self.addSubnode(self.activityIndicator)
         
         self.upButton.addTarget(self, action: #selector(self.upPressed), forControlEvents: [.touchUpInside])
         self.downButton.addTarget(self, action: #selector(self.downPressed), forControlEvents: [.touchUpInside])
         self.calendarButton.addTarget(self, action: #selector(self.calendarPressed), forControlEvents: [.touchUpInside])
+        self.membersButton.addTarget(self, action: #selector(self.membersPressed), forControlEvents: [.touchUpInside])
     }
     
     deinit {
@@ -79,7 +83,11 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.openCalendarSearch()
     }
     
-    override func updateLayout(width: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    @objc func membersPressed() {
+        self.interfaceInteraction?.toggleMembersSearch(true)
+    }
+    
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             let themeUpdated = self.presentationInterfaceState?.theme !== interfaceState.theme
             
@@ -91,14 +99,17 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
                 self.downButton.setImage(PresentationResourcesChat.chatInputSearchPanelDownImage(interfaceState.theme), for: [.normal])
                 self.downButton.setImage(PresentationResourcesChat.chatInputSearchPanelDownDisabledImage(interfaceState.theme), for: [.disabled])
                 self.calendarButton.setImage(PresentationResourcesChat.chatInputSearchPanelCalendarImage(interfaceState.theme), for: [])
+                
+                self.membersButton.setImage(PresentationResourcesChat.chatInputSearchPanelMembersImage(interfaceState.theme), for: [])
             }
         }
         
         let panelHeight: CGFloat = 47.0
         
-        transition.updateFrame(node: self.downButton, frame: CGRect(origin: CGPoint(x: 12.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
-        transition.updateFrame(node: self.upButton, frame: CGRect(origin: CGPoint(x: 12.0 + 43.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
-        transition.updateFrame(node: self.calendarButton, frame: CGRect(origin: CGPoint(x: width - 60.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
+        transition.updateFrame(node: self.downButton, frame: CGRect(origin: CGPoint(x: leftInset + 12.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
+        transition.updateFrame(node: self.upButton, frame: CGRect(origin: CGPoint(x: leftInset + 12.0 + 43.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
+        transition.updateFrame(node: self.calendarButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 60.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
+        transition.updateFrame(node: self.membersButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 60.0 * 2.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
         
         var resultIndex: Int?
         var resultCount: Int?
@@ -117,13 +128,27 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.downButton.isEnabled = resultIndex != nil && resultCount != nil && resultIndex != resultCount! - 1
         self.calendarButton.isHidden = (!(interfaceState.search?.query.isEmpty ?? true)) || self.displayActivity
         
+        var canSearchMembers = false
+        if let search = interfaceState.search {
+            if case .everything = search.domain {
+                if let _ = interfaceState.peer as? TelegramGroup {
+                    canSearchMembers = true
+                } else if let peer = interfaceState.peer as? TelegramChannel, case .group = peer.info {
+                    canSearchMembers = true
+                }
+            } else {
+                canSearchMembers = false
+            }
+        }
+        self.membersButton.isHidden = (!(interfaceState.search?.query.isEmpty ?? true)) || self.displayActivity || !canSearchMembers
+        
         let makeLabelLayout = TextNode.asyncLayout(self.resultsLabel)
-        let (labelSize, labelApply) = makeLabelLayout(resultsText, nil, 1, .end, CGSize(width: 200.0, height: 100.0), .left, nil, UIEdgeInsets())
+        let (labelSize, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: resultsText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - 50.0, height: 100.0), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
         let _ = labelApply()
-        self.resultsLabel.frame = CGRect(origin: CGPoint(x: 105.0, y: floor((panelHeight - labelSize.size.height) / 2.0)), size: labelSize.size)
+        self.resultsLabel.frame = CGRect(origin: CGPoint(x: leftInset + 105.0, y: floor((panelHeight - labelSize.size.height) / 2.0)), size: labelSize.size)
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 22.0, height: 22.0))
-        self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - 41.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
+        self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - rightInset - 41.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
         
         return panelHeight
     }

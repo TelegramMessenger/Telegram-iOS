@@ -5,25 +5,61 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+enum NativeVideoContentId: Hashable {
+    case message(MessageId, MediaId)
+    case instantPage(MediaId, MediaId)
+    
+    static func ==(lhs: NativeVideoContentId, rhs: NativeVideoContentId) -> Bool {
+        switch lhs {
+            case let .message(messageId, mediaId):
+                if case .message(messageId, mediaId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .instantPage(pageId, mediaId):
+                if case .instantPage(pageId, mediaId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    var hashValue: Int {
+        switch self {
+            case let .message(messageId, mediaId):
+                return messageId.hashValue &* 31 &+ mediaId.hashValue
+            case let .instantPage(pageId, mediaId):
+                return pageId.hashValue &* 31 &+ mediaId.hashValue
+        }
+    }
+}
+
 final class NativeVideoContent: UniversalVideoContent {
     let id: AnyHashable
     let file: TelegramMediaFile
     let dimensions: CGSize
     let duration: Int32
+    let streamVideo: Bool
+    let enableSound: Bool
     
-    init(file: TelegramMediaFile) {
-        self.id = anyHashableFromMediaResourceId(file.resource.id)
+    init(id: NativeVideoContentId, file: TelegramMediaFile, streamVideo: Bool = false, enableSound: Bool = true) {
+        self.id = id
         self.file = file
         self.dimensions = file.dimensions ?? CGSize(width: 128.0, height: 128.0)
         self.duration = file.duration ?? 0
+        self.streamVideo = streamVideo
+        self.enableSound = enableSound
     }
     
-    func makeContentNode(account: Account) -> UniversalVideoContentNode & ASDisplayNode {
-        return NativeVideoContentNode(account: account, audioSessionManager: account.telegramApplicationContext.mediaManager.audioSession, postbox: account.postbox, file: self.file)
+    func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
+        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, file: self.file, streamVideo: self.streamVideo, enableSound: self.enableSound)
     }
 }
 
 private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
+    private let postbox: Postbox
     private let file: TelegramMediaFile
     private let player: MediaPlayer
     private let imageNode: TransformImageNode
@@ -36,36 +72,59 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         return self._status.get()
     }
     
-    init(account: Account, audioSessionManager: ManagedAudioSession, postbox: Postbox, file: TelegramMediaFile) {
+    private let _ready = Promise<Void>()
+    var ready: Signal<Void, NoError> {
+        return self._ready.get()
+    }
+    
+    private let fetchDisposable = MetaDisposable()
+    
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, file: TelegramMediaFile, streamVideo: Bool, enableSound: Bool) {
+        self.postbox = postbox
         self.file = file
         
         self.imageNode = TransformImageNode()
         
-        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: file.resource, streamable: false, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: true)
+        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: file.resource, streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound)
         var actionAtEndImpl: (() -> Void)?
-        self.player.actionAtEnd = .stop
+        if enableSound {
+            self.player.actionAtEnd = .action({
+                actionAtEndImpl?()
+            })
+        } else {
+            self.player.actionAtEnd = .loop({
+                actionAtEndImpl?()
+            })
+        }
         self.playerNode = MediaPlayerNode(backgroundThread: false)
         self.player.attachPlayerNode(self.playerNode)
         
         super.init()
         
         actionAtEndImpl = { [weak self] in
-            if let strongSelf = self {
-                for listener in strongSelf.playbackCompletedListeners.copyItems() {
-                    listener()
-                }
-            }
+            self?.performActionAtEnd()
         }
         
-        self.imageNode.setSignal(account: account, signal: mediaGridMessageVideo(account: account, video: file))
+        self.imageNode.setSignal(mediaGridMessageVideo(postbox: postbox, video: file))
         
         self.addSubnode(self.imageNode)
         self.addSubnode(self.playerNode)
         self._status.set(self.player.status)
+        
+        self.imageNode.imageUpdated = { [weak self] in
+            self?._ready.set(.single(Void()))
+        }
     }
     
     deinit {
         self.player.pause()
+        self.fetchDisposable.dispose()
+    }
+    
+    private func performActionAtEnd() {
+        for listener in self.playbackCompletedListeners.copyItems() {
+            listener()
+        }
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -98,7 +157,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     func setSoundEnabled(_ value: Bool) {
         assert(Queue.mainQueue().isCurrent())
         if value {
-            self.player.playOnceWithSound()
+            self.player.playOnceWithSound(playAndRecord: true)
         } else {
             self.player.continuePlayingWithoutSound()
         }
@@ -109,11 +168,38 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.player.seek(timestamp: timestamp)
     }
     
+    func playOnceWithSound(playAndRecord: Bool) {
+        assert(Queue.mainQueue().isCurrent())
+        self.player.actionAtEnd = .loopDisablingSound({ [weak self] in
+            self?.performActionAtEnd()
+        })
+        self.player.playOnceWithSound(playAndRecord: playAndRecord)
+    }
+    
+    func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
+        assert(Queue.mainQueue().isCurrent())
+        self.player.setForceAudioToSpeaker(forceAudioToSpeaker)
+    }
+    
+    func continuePlayingWithoutSound() {
+        assert(Queue.mainQueue().isCurrent())
+        self.player.continuePlayingWithoutSound()
+    }
+    
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {
         return self.playbackCompletedListeners.add(f)
     }
     
     func removePlaybackCompleted(_ index: Int) {
         self.playbackCompletedListeners.remove(index)
+    }
+    
+    func fetchControl(_ control: UniversalVideoNodeFetchControl) {
+        switch control {
+            case .fetch:
+                self.fetchDisposable.set(self.postbox.mediaBox.fetchedResource(self.file.resource, tag: TelegramMediaResourceFetchTag(statsCategory: MediaResourceStatsCategory.video)).start())
+            case .cancel:
+                self.postbox.mediaBox.cancelInteractiveResourceFetch(self.file.resource)
+        }
     }
 }

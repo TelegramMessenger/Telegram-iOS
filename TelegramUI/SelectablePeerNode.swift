@@ -7,16 +7,51 @@ import SwiftSignalKit
 
 import LegacyComponents
 
-private let selectionBackgroundImage = generateImage(CGSize(width: 60.0 + 4.0, height: 60.0 + 4.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor(rgb: 0x007ee5).cgColor)
-    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor.white.cgColor)
-    context.fillEllipse(in: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
-})
-
 private let avatarFont: UIFont = UIFont(name: "ArialRoundedMTBold", size: 24.0)!
 private let textFont = Font.regular(11.0)
+
+final class SelectablePeerNodeTheme {
+    let textColor: UIColor
+    let secretTextColor: UIColor
+    let selectedTextColor: UIColor
+    let checkBackgroundColor: UIColor
+    let checkFillColor: UIColor
+    let checkColor: UIColor
+    
+    init(textColor: UIColor, secretTextColor: UIColor, selectedTextColor: UIColor, checkBackgroundColor: UIColor, checkFillColor: UIColor, checkColor: UIColor) {
+        self.textColor = textColor
+        self.secretTextColor = secretTextColor
+        self.selectedTextColor = selectedTextColor
+        self.checkBackgroundColor = checkBackgroundColor
+        self.checkFillColor = checkFillColor
+        self.checkColor = checkColor
+    }
+    
+    func isEqual(to: SelectablePeerNodeTheme) -> Bool {
+        if self === to {
+            return true
+        }
+        if !self.textColor.isEqual(to.textColor) {
+            return false
+        }
+        if !self.secretTextColor.isEqual(to.secretTextColor) {
+            return false
+        }
+        if !self.selectedTextColor.isEqual(to.selectedTextColor) {
+            return false
+        }
+        if !self.checkBackgroundColor.isEqual(to.checkBackgroundColor) {
+            return false
+        }
+        if !self.checkFillColor.isEqual(to.checkFillColor) {
+            return false
+        }
+        if !self.checkColor.isEqual(to.checkColor) {
+            return false
+        }
+        return true
+    }
+}
 
 final class SelectablePeerNode: ASDisplayNode {
     private let avatarSelectionNode: ASImageNode
@@ -26,26 +61,18 @@ final class SelectablePeerNode: ASDisplayNode {
     private let textNode: ASTextNode
     
     var toggleSelection: (() -> Void)?
+    var longTapAction: (() -> Void)?
     
     private var currentSelected = false
     
     private var peer: Peer?
     private var chatPeer: Peer?
     
-    var textColor: UIColor = .black {
+    var theme: SelectablePeerNodeTheme = SelectablePeerNodeTheme(textColor: .black, secretTextColor: .green, selectedTextColor: .blue, checkBackgroundColor: .white, checkFillColor: .blue, checkColor: .white) {
         didSet {
-            if !self.textColor.isEqual(oldValue) {
+            if !self.theme.isEqual(to: oldValue) {
                 if let peer = self.peer {
-                    self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: self.currentSelected ? self.selectedColor : self.textColor, paragraphAlignment: .center)
-                }
-            }
-        }
-    }
-    var selectedColor: UIColor = UIColor(rgb: 0x007ee5) {
-        didSet {
-            if !self.selectedColor.isEqual(oldValue) {
-                if let peer = self.peer {
-                    self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: self.currentSelected ? self.selectedColor : self.textColor, paragraphAlignment: .center)
+                    self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : self.theme.textColor, paragraphAlignment: .center)
                 }
             }
         }
@@ -55,7 +82,6 @@ final class SelectablePeerNode: ASDisplayNode {
         self.avatarNodeContainer = ASDisplayNode()
         
         self.avatarSelectionNode = ASImageNode()
-        self.avatarSelectionNode.image = selectionBackgroundImage
         self.avatarSelectionNode.isLayerBacked = true
         self.avatarSelectionNode.displayWithoutProcessing = true
         self.avatarSelectionNode.displaysAsynchronously = false
@@ -78,19 +104,26 @@ final class SelectablePeerNode: ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func setup(account: Account, peer: Peer, chatPeer: Peer?, numberOfLines: Int = 2) {
+    func setup(account: Account, strings: PresentationStrings, peer: Peer, chatPeer: Peer?, numberOfLines: Int = 2) {
         self.peer = peer
         self.chatPeer = chatPeer
         
-        var defaultColor: UIColor = self.textColor
+        var defaultColor: UIColor = self.theme.textColor
         if let chatPeer = chatPeer, chatPeer.id.namespace == Namespaces.Peer.SecretChat {
-            defaultColor = UIColor(rgb: 0x149a1f)
+            defaultColor = self.theme.secretTextColor
         }
         
-        let text = peer.displayTitle
+        let text: String
+        var overrideImage: AvatarNodeImageOverride?
+        if peer.id == account.peerId {
+            text = strings.DialogList_SavedMessages
+            overrideImage = .savedMessagesIcon
+        } else {
+            text = peer.compactDisplayTitle
+        }
         self.textNode.maximumNumberOfLines = UInt(numberOfLines)
-        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.selectedColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(account: account, peer: peer)
+        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
+        self.avatarNode.setPeer(account: account, peer: peer, overrideImage: overrideImage)
         self.setNeedsLayout()
     }
     
@@ -98,13 +131,21 @@ final class SelectablePeerNode: ASDisplayNode {
         if selected != self.currentSelected {
             self.currentSelected = selected
             
-            if let peer = self.peer {
-                self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: selected ? self.selectedColor : self.textColor, paragraphAlignment: .center)
+            if let attributedText = self.textNode.attributedText {
+                self.textNode.attributedText = NSAttributedString(string: attributedText.string, font: textFont, textColor: selected ? self.theme.selectedTextColor : self.theme.textColor, paragraphAlignment: .center)
             }
             
             if selected {
                 self.avatarNode.transform = CATransform3DMakeScale(0.866666, 0.866666, 1.0)
                 self.avatarSelectionNode.alpha = 1.0
+                self.avatarSelectionNode.image = generateImage(CGSize(width: 60.0 + 4.0, height: 60.0 + 4.0), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setFillColor(self.theme.selectedTextColor.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                    context.setBlendMode(.copy)
+                    context.setFillColor(UIColor.clear.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
+                })
                 if animated {
                     //self.avatarNode.layer.animateSpring(from: 1.0 as NSNumber, to: 0.866666 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 10.0)
                     self.avatarNode.layer.animateScale(from: 1.0, to: 0.866666, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
@@ -116,11 +157,33 @@ final class SelectablePeerNode: ASDisplayNode {
                 if animated {
                     //self.avatarNode.layer.animateSpring(from: 0.866666 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, initialVelocity: 10.0)
                     self.avatarNode.layer.animateScale(from: 0.866666, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                    self.avatarSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.28)
+                    self.avatarSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.28, completion: { [weak avatarSelectionNode] _ in
+                        avatarSelectionNode?.image = nil
+                    })
+                } else {
+                    self.avatarSelectionNode.image = nil
                 }
             }
             
-            self.checkView?.setSelected(selected, animated: animated)
+            if selected {
+                if self.checkView == nil {
+                    let checkView = TGCheckButtonView(style: TGCheckButtonStyleShare, pallete: TGCheckButtonPallete(defaultBackgroundColor: self.theme.checkBackgroundColor, accentBackgroundColor: self.theme.checkBackgroundColor, defaultBorderColor: .clear, mediaBorderColor: .clear, chatBorderColor: .clear, check: self.theme.checkFillColor, blueColor: self.theme.checkFillColor, barBackgroundColor: self.theme.checkBackgroundColor))!
+                    
+                    self.checkView = checkView
+                    checkView.isUserInteractionEnabled = false
+                    self.view.addSubview(checkView)
+                    
+                    let avatarFrame = self.avatarNode.frame
+                    let checkSize = checkView.bounds.size
+                    checkView.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX - 14.0, y: avatarFrame.maxY - 22.0), size: checkSize)
+                    checkView.setSelected(true, animated: animated)
+                }
+            } else if let checkView = self.checkView {
+                self.checkView = nil
+                checkView.setSelected(false, animated: animated, bump: false, completion: { [weak checkView] in
+                    checkView?.removeFromSuperview()
+                })
+            }
         }
     }
     
@@ -129,15 +192,15 @@ final class SelectablePeerNode: ASDisplayNode {
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
-        let checkView = TGCheckButtonView(style: TGCheckButtonStyleShare)!
-        self.checkView = checkView
-        checkView.isUserInteractionEnabled = false
-        checkView.setSelected(self.currentSelected, animated: false)
-        self.view.addSubview(checkView)
-        
-        let avatarFrame = self.avatarNode.frame
-        let checkSize = checkView.bounds.size
-        checkView.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX - 14.0, y: avatarFrame.maxY - 22.0), size: checkSize)
+        let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longTapGesture(_:)))
+        longTapRecognizer.minimumPressDuration = 0.3
+        self.view.addGestureRecognizer(longTapRecognizer)
+    }
+    
+    @objc func longTapGesture(_ recognizer: UILongPressGestureRecognizer) {
+        if case .began = recognizer.state {
+            self.longTapAction?()
+        }
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {

@@ -28,6 +28,8 @@ final class StickerPreviewController: ViewController {
         self.item = item
         
         super.init(navigationBarTheme: nil)
+        
+        self.statusBar.statusBarStyle = .Ignore
     }
     
     required init(coder aDecoder: NSCoder) {

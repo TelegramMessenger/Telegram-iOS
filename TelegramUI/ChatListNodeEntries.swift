@@ -2,77 +2,71 @@ import Foundation
 import Postbox
 import TelegramCore
 
-enum ChatListNodeEntryId: Hashable, CustomStringConvertible {
+enum ChatListNodeEntryId: Hashable {
     case Search
     case Hole(Int64)
     case PeerId(Int64)
+    case GroupId(PeerGroupId)
     
     var hashValue: Int {
         switch self {
-        case .Search:
-            return 0
-        case let .Hole(peerId):
-            return peerId.hashValue
-        case let .PeerId(peerId):
-            return peerId.hashValue
-        }
-    }
-    
-    var description: String {
-        switch self {
             case .Search:
-                return "search"
-            case let .Hole(value):
-                return "hole(\(value))"
-            case let .PeerId(value):
-                return "peerId(\(value))"
+                return 0
+            case let .Hole(peerId):
+                return peerId.hashValue
+            case let .PeerId(peerId):
+                return peerId.hashValue
+            case let .GroupId(groupId):
+                return groupId.hashValue
         }
-    }
-    
-    static func <(lhs: ChatListNodeEntryId, rhs: ChatListNodeEntryId) -> Bool {
-        return lhs.hashValue < rhs.hashValue
     }
     
     static func ==(lhs: ChatListNodeEntryId, rhs: ChatListNodeEntryId) -> Bool {
         switch lhs {
-        case .Search:
-            switch rhs {
             case .Search:
-                return true
-            default:
-                return false
-            }
-        case let .Hole(lhsId):
-            switch rhs {
-            case .Hole(lhsId):
-                return true
-            default:
-                return false
-            }
-        case let .PeerId(lhsId):
-            switch rhs {
-            case let .PeerId(rhsId):
-                return lhsId == rhsId
-            default:
-                return false
-            }
+                if case .Search = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .Hole(id):
+                if case .Hole(id) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .PeerId(id):
+                if case .PeerId(id) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .GroupId(groupId):
+                if case .GroupId(groupId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {
     case SearchEntry(theme: PresentationTheme, text: String)
-    case PeerEntry(index: ChatListIndex, theme: PresentationTheme, strings: PresentationStrings, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, inputActivities: [(Peer, PeerInputActivity)]?)
+    case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, inputActivities: [(Peer, PeerInputActivity)]?)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
+    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters, editing: Bool)
     
     var index: ChatListIndex {
         switch self {
             case .SearchEntry:
                 return ChatListIndex.absoluteUpperBound
-            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _):
+            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole, _):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
+            case let .GroupReferenceEntry(index, _, _, _, _, _, _):
+                return index
         }
     }
     
@@ -80,10 +74,12 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         switch self {
             case .SearchEntry:
                 return .Search
-            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _):
+            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _):
                 return .PeerId(index.messageIndex.id.peerId.toInt64())
             case let .HoleEntry(hole, _):
                 return .Hole(Int64(hole.index.id.id))
+            case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
+                return .GroupId(groupId)
         }
     }
     
@@ -99,16 +95,13 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .PeerEntry(lhsIndex, lhsTheme, lhsStrings, lhsMessage, lhsUnreadCount, lhsNotificationSettings, lhsEmbeddedState, lhsPeer, lhsSummaryInfo, lhsEditing, lhsHasRevealControls, lhsInputActivities):
+            case let .PeerEntry(lhsIndex, lhsPresentationData, lhsMessage, lhsUnreadCount, lhsNotificationSettings, lhsEmbeddedState, lhsPeer, lhsSummaryInfo, lhsEditing, lhsHasRevealControls, lhsInputActivities):
                 switch rhs {
-                    case let .PeerEntry(rhsIndex, rhsTheme, rhsStrings, rhsMessage, rhsUnreadCount, rhsNotificationSettings, rhsEmbeddedState, rhsPeer, rhsSummaryInfo, rhsEditing, rhsHasRevealControls, rhsInputActivities):
+                    case let .PeerEntry(rhsIndex, rhsPresentationData, rhsMessage, rhsUnreadCount, rhsNotificationSettings, rhsEmbeddedState, rhsPeer, rhsSummaryInfo, rhsEditing, rhsHasRevealControls, rhsInputActivities):
                         if lhsIndex != rhsIndex {
                             return false
                         }
-                        if lhsTheme !== rhsTheme {
-                            return false
-                        }
-                        if lhsStrings !== rhsStrings {
+                        if lhsPresentationData !== rhsPresentationData {
                             return false
                         }
                         if lhsMessage?.stableVersion != rhsMessage?.stableVersion {
@@ -170,22 +163,71 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     default:
                         return false
                 }
+            case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsMessage, lhsTopPeers, lhsCounters, lhsEditing):
+                if case let .GroupReferenceEntry(rhsIndex, rhsPresentationData, rhsGroupId, rhsMessage, rhsTopPeers, rhsCounters, rhsEditing) = rhs {
+                    if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsPresentationData !== rhsPresentationData {
+                        return false
+                    }
+                    if lhsGroupId != rhsGroupId {
+                        return false
+                    }
+                    if lhsMessage?.stableVersion != rhsMessage?.stableVersion {
+                        return false
+                    }
+                    if lhsMessage?.id != rhsMessage?.id || lhsMessage?.flags != rhsMessage?.flags {
+                        return false
+                    }
+                    if lhsTopPeers.count != rhsTopPeers.count {
+                        return false
+                    } else {
+                        for i in 0 ..< lhsTopPeers.count {
+                            if !arePeersEqual(lhsTopPeers[i], rhsTopPeers[i]) {
+                                return false
+                            }
+                        }
+                    }
+                    if lhsCounters != rhsCounters {
+                        return false
+                    }
+                    if lhsEditing != rhsEditing {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
 
-func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState) -> [ChatListNodeEntry] {
+func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, savedMessagesPeer: Peer?, mode: ChatListNodeMode) -> [ChatListNodeEntry] {
     var result: [ChatListNodeEntry] = []
-    for entry in view.entries {
+    loop: for entry in view.entries {
         switch entry {
             case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
-                result.append(.PeerEntry(index: index, theme: state.theme, strings: state.strings, message: message, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId]))
+                if let savedMessagesPeer = savedMessagesPeer, savedMessagesPeer.id == index.messageIndex.id.peerId {
+                    continue loop
+                }
+                result.append(.PeerEntry(index: index, presentationData: state.presentationData, message: message, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId]))
             case let .HoleEntry(hole):
-                result.append(.HoleEntry(hole, theme: state.theme))
+                result.append(.HoleEntry(hole, theme: state.presentationData.theme))
+            case let .GroupReferenceEntry(groupId, index, message, topPeers, counters):
+                if case .chatList = mode {
+                    result.append(.GroupReferenceEntry(index: index, presentationData: state.presentationData, groupId: groupId, message: message, topPeers: topPeers, counters: counters, editing: state.editing))
+                }
         }
     }
     if view.laterIndex == nil {
-        result.append(.SearchEntry(theme: state.theme, text: state.strings.DialogList_SearchLabel))
+        if let savedMessagesPeer = savedMessagesPeer {
+            result.append(.PeerEntry(index: ChatListIndex.absoluteUpperBound.predecessor, presentationData: state.presentationData, message: nil, readState: nil, notificationSettings: nil, embeddedInterfaceState: nil, peer: RenderedPeer(peerId: savedMessagesPeer.id, peers: SimpleDictionary([savedMessagesPeer.id: savedMessagesPeer])), summaryInfo: ChatListMessageTagSummaryInfo(), editing: state.editing, hasActiveRevealControls: false, inputActivities: nil))
+        }
+        result.append(.SearchEntry(theme: state.presentationData.theme, text: state.presentationData.strings.DialogList_SearchLabel))
+    }
+    if result.count == 2, case .SearchEntry = result[1], case .HoleEntry = result[0] {
+        return []
     }
     return result
 }

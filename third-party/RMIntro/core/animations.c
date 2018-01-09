@@ -1497,8 +1497,13 @@ void draw_safe(int type, float alpha, float screw_alpha)
 
 }
 
+static float backgroundColor[3] = {0.0, 0.0, 0.0};
 
-
+void set_intro_background_color(float r, float g, float b) {
+    backgroundColor[0] = r;
+    backgroundColor[1] = g;
+    backgroundColor[2] = b;
+}
 
 
 void on_draw_frame() {
@@ -1582,15 +1587,9 @@ void on_draw_frame() {
     glEnable(GL_BLEND);
 
 
-    glClearColor(1, 1, 1, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-
     float private_back_k = .8;
 
-
-    //glClearColor(0.5, 0.5, 0.5, 1);
-    glClearColor(1, 1, 1, 1);
+    glClearColor(backgroundColor[0], backgroundColor[0], backgroundColor[0], 1);
     glClear(GL_COLOR_BUFFER_BIT);
 
     /*
@@ -2160,7 +2159,7 @@ void on_draw_frame() {
 
     else if (current_page == 2)
     {
-        rglNormalDraw();
+        rglNormalDrawThroughMask();
 
         float dribbon=87;
 
@@ -2233,8 +2232,8 @@ void on_draw_frame() {
 
             float scale = t(1, 2, 0, duration_const, EaseIn);
             powerful_mask.params.scale = xyzMake(scale, scale, 1);
-            draw_textured_shape(&powerful_mask, main_matrix, NORMAL_ONE);
-
+            
+            draw_textured_shape(&powerful_mask, main_matrix, backgroundColor[1] < 0.5 ? DARK : LIGHT);
 
             ribbonLayer.rotation = free_scroll_offset + t_reversed(360, 360+(45+30), 0, duration_const, EaseOut);
             ribbonLayer.position.y = t_reversed(0, -8, 0, duration_const*.8, EaseOut);
@@ -2350,7 +2349,7 @@ void on_draw_frame() {
 
             float scale = t(2, 1, 0, duration_const, EaseOut);
             powerful_mask.params.scale = xyzMake(scale, scale, 1);
-            draw_textured_shape(&powerful_mask, main_matrix, NORMAL_ONE);
+            draw_textured_shape(&powerful_mask, main_matrix, backgroundColor[1] < 0.5 ? DARK : LIGHT);
 
 
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2439,7 +2438,7 @@ void on_draw_frame() {
 
             float scale = t(2, 1, 0, duration_const, EaseOut);
             powerful_mask.params.scale = xyzMake(scale, scale, 1);
-            draw_textured_shape(&powerful_mask, main_matrix, NORMAL_ONE);
+            draw_textured_shape(&powerful_mask, main_matrix, backgroundColor[1] < 0.5 ? DARK : LIGHT);
 
 
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2584,7 +2583,7 @@ void on_draw_frame() {
 
             if (time < duration_const*.4) {
                 cloud_cover.params.position.y=t_reversed(118/2+50, 118/2, duration_const*.8*private_back_k, duration_const*private_back_k, EaseOut);
-                draw_shape(&cloud_cover, main_matrix);
+                draw_colored_shape(&cloud_cover, main_matrix, backgroundColor[1] < 0.5 ? black_color : white_color);
             }
 
             draw_safe(0, t(0,1,duration_const*private_back_k*.0, duration_const*private_back_k, Linear), t(0, 1, 0, duration_const, Linear));
@@ -2624,7 +2623,7 @@ void on_draw_frame() {
 
 
         cloud_cover.params.position.y = t(118/2+50, 118/2, 0, duration_const, EaseOut);
-        draw_shape(&cloud_cover, main_matrix);
+        draw_colored_shape(&cloud_cover, main_matrix, backgroundColor[1] < 0.5 ? black_color : white_color);
     }
 
 

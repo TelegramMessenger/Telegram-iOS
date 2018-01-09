@@ -3,23 +3,49 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+enum TextLinkItemActionType {
+    case tap
+    case longTap
+}
+
+enum TextLinkItem {
+    case url(String)
+    case mention(String)
+    case hashtag(String?, String)
+}
+
 class ItemListMultilineTextItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
+    let enabledEntitiyTypes: EnabledEntityTypes
     let sectionId: ItemListSectionId
     let style: ItemListStyle
+    let action: (() -> Void)?
+    let longTapAction: (() -> Void)?
+    let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
-    init(theme: PresentationTheme, text: String, sectionId: ItemListSectionId, style: ItemListStyle) {
+    let tag: Any?
+    
+    let selectable: Bool
+    
+    init(theme: PresentationTheme, text: String, enabledEntitiyTypes: EnabledEntityTypes, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.text = text
+        self.enabledEntitiyTypes = enabledEntitiyTypes
         self.sectionId = sectionId
         self.style = style
+        self.action = action
+        self.longTapAction = longTapAction
+        self.linkItemAction = linkItemAction
+        self.tag = tag
+        
+        self.selectable = action != nil
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ItemListMultilineTextItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -30,13 +56,13 @@ class ItemListMultilineTextItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ItemListMultilineTextItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -46,19 +72,35 @@ class ItemListMultilineTextItem: ListViewItem, ItemListItem {
             }
         }
     }
+    
+    func selected(listView: ListView){
+        listView.clearHighlightAnimated(true)
+        self.action?()
+    }
 }
 
 private let titleFont = Font.regular(17.0)
+private let titleBoldFont = Font.medium(17.0)
+private let titleFixedFont = Font.regular(17.0)
 
 class ItemListMultilineTextItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
+    private var linkHighlightingNode: LinkHighlightingNode?
     
     private let textNode: TextNode
     
     private var item: ItemListMultilineTextItem?
+    
+    var tag: Any? {
+        return self.item?.tag
+    }
+    
+    override var canBeLongTapped: Bool {
+        return true
+    }
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -66,11 +108,9 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
         self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.backgroundColor = UIColor(rgb: 0xc8c7cc)
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.backgroundColor = UIColor(rgb: 0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
         self.textNode = TextNode()
@@ -79,7 +119,6 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
         self.textNode.contentsScale = UIScreen.main.scale
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -87,12 +126,30 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
         self.addSubnode(self.textNode)
     }
     
-    func asyncLayout() -> (_ item: ItemListMultilineTextItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    override func didLoad() {
+        super.didLoad()
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { [weak self] point in
+            if let strongSelf = self, strongSelf.linkItemAtPoint(point) != nil {
+                return .waitForSingleTap
+            }
+            return .fail
+        }
+        recognizer.highlight = { [weak self] point in
+            if let strongSelf = self {
+                strongSelf.updateTouchesAtPoint(point)
+            }
+        }
+        self.view.addGestureRecognizer(recognizer)
+    }
+    
+    func asyncLayout() -> (_ item: ItemListMultilineTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         let currentItem = self.item
         
-        return { item, width, neighbors in
+        return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
             
             if currentItem?.theme !== item.theme {
@@ -102,15 +159,24 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
             let textColor: UIColor = item.theme.list.itemPrimaryTextColor
             
             let leftInset: CGFloat
+            let itemBackgroundColor: UIColor
+            let itemSeparatorColor: UIColor
             
             switch item.style {
                 case .plain:
-                    leftInset = 35.0
+                    itemBackgroundColor = item.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                    leftInset = 35.0 + params.leftInset
                 case .blocks:
-                    leftInset = 16.0
+                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+                    leftInset = 16.0 + params.rightInset
             }
             
-            let (titleLayout, titleApply) = makeTextLayout(NSAttributedString(string: item.text, font: titleFont, textColor: textColor), nil, 0, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntitiyTypes)
+            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.theme.list.itemAccentColor, baseFont: titleFont, boldFont: titleBoldFont, fixedFont: titleFixedFont)
+            
+            let (titleLayout, titleApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -118,10 +184,10 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
             
             switch item.style {
                 case .plain:
-                    contentSize = CGSize(width: width, height: titleLayout.size.height + 22.0)
+                    contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
-                    contentSize = CGSize(width: width, height: titleLayout.size.height + 22.0)
+                    contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
@@ -133,9 +199,9 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
                     strongSelf.item = item
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     }
                     
@@ -153,7 +219,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
                             strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
                         }
                         
-                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: width - leftInset, height: separatorHeight))
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     case .blocks:
                         if strongSelf.backgroundNode.supernode == nil {
                             strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -165,38 +231,38 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
                             strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                         }
                         switch neighbors.top {
-                        case .sameSection(false):
-                            strongSelf.topStripeNode.isHidden = true
-                        default:
-                            strongSelf.topStripeNode.isHidden = false
+                            case .sameSection(false):
+                                strongSelf.topStripeNode.isHidden = true
+                            default:
+                                strongSelf.topStripeNode.isHidden = false
                         }
                         let bottomStripeInset: CGFloat
                         let bottomStripeOffset: CGFloat
                         switch neighbors.bottom {
-                        case .sameSection(false):
-                            bottomStripeInset = 16.0
-                            bottomStripeOffset = -separatorHeight
-                        default:
-                            bottomStripeInset = 0.0
-                            bottomStripeOffset = 0.0
+                            case .sameSection(false):
+                                bottomStripeInset = 16.0
+                                bottomStripeOffset = -separatorHeight
+                            default:
+                                bottomStripeInset = 0.0
+                                bottomStripeOffset = 0.0
                         }
-                        strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                        strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     }
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: 44.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
                 }
             })
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if highlighted {
+        if highlighted && self.linkItemAtPoint(point) == nil {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 var anchorNode: ASDisplayNode?
@@ -237,5 +303,85 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap, .longTap:
+                            if let item = self.item, let linkItem = self.linkItemAtPoint(location) {
+                                item.linkItemAction?(gesture == .tap ? .tap : .longTap, linkItem)
+                            }
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
+        }
+    }
+    
+    private func linkItemAtPoint(_ point: CGPoint) -> TextLinkItem? {
+        let textNodeFrame = self.textNode.frame
+        if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+            if let url = attributes[NSAttributedStringKey(rawValue: TextNode.UrlAttribute)] as? String {
+                return .url(url)
+            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramPeerTextMentionAttribute)] as? String {
+                return .mention(peerName)
+            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramHashtagAttribute)] as? TelegramHashtag {
+                return .hashtag(hashtag.peerName, hashtag.hashtag)
+            } else {
+                return nil
+            }
+        }
+        return nil
+    }
+    
+    override func longTapped() {
+        self.item?.longTapAction?()
+    }
+    
+    private func updateTouchesAtPoint(_ point: CGPoint?) {
+        if let item = self.item {
+            var rects: [CGRect]?
+            if let point = point {
+                let textNodeFrame = self.textNode.frame
+                if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+                    let possibleNames: [String] = [
+                        TextNode.UrlAttribute,
+                        TextNode.TelegramPeerMentionAttribute,
+                        TextNode.TelegramPeerTextMentionAttribute,
+                        TextNode.TelegramBotCommandAttribute,
+                        TextNode.TelegramHashtagAttribute
+                    ]
+                    for name in possibleNames {
+                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                            rects = self.textNode.attributeRects(name: name, at: index)
+                            break
+                        }
+                    }
+                }
+            }
+            
+            if let rects = rects {
+                let linkHighlightingNode: LinkHighlightingNode
+                if let current = self.linkHighlightingNode {
+                    linkHighlightingNode = current
+                } else {
+                    linkHighlightingNode = LinkHighlightingNode(color: item.theme.list.itemAccentColor.withAlphaComponent(0.5))
+                    self.linkHighlightingNode = linkHighlightingNode
+                    self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
+                }
+                linkHighlightingNode.frame = self.textNode.frame
+                linkHighlightingNode.updateRects(rects)
+            } else if let linkHighlightingNode = self.linkHighlightingNode {
+                self.linkHighlightingNode = nil
+                linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                    linkHighlightingNode?.removeFromSupernode()
+                })
+            }
+        }
     }
 }

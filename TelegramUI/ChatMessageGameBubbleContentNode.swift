@@ -6,14 +6,9 @@ import SwiftSignalKit
 import TelegramCore
 
 final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
-    private var item: ChatMessageItem?
     private var game: TelegramMediaGame?
     
     private let contentNode: ChatMessageAttachedContentNode
-    
-    override var properties: ChatMessageBubbleContentProperties {
-        return ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0)
-    }
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -33,10 +28,10 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let contentNodeLayout = self.contentNode.asyncLayout()
         
-        return { item, layoutConstants, position, constrainedSize in
+        return { item, layoutConstants, _, _, constrainedSize in
             var game: TelegramMediaGame?
             var messageEntities: [MessageTextEntity]?
             
@@ -59,7 +54,6 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
             var text: String?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
             
-            
             if let game = game {
                 title = game.title
                 text = game.description
@@ -71,16 +65,19 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.theme, item.strings, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.message, item.read, title, subtitle, item.message.text.isEmpty ? text : item.message.text, item.message.text.isEmpty ? nil : messageEntities, mediaAndFlags, nil, nil, true, layoutConstants, position, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.message, item.read, title, subtitle, item.message.text.isEmpty ? text : item.message.text, item.message.text.isEmpty ? nil : messageEntities, mediaAndFlags, nil, nil, true, layoutConstants, constrainedSize)
             
-            return (initialWidth, { constrainedSize in
-                let (refinedWidth, finalizeLayout) = continueLayout(constrainedSize)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackgroundForEmptyWallpapers: false, forceFullCorners: false)
+            
+            return (contentProperties, nil, initialWidth, { constrainedSize, position in
+                let (refinedWidth, finalizeLayout) = continueLayout(constrainedSize, position)
                 
                 return (refinedWidth, { boundingWidth in
                     let (size, apply) = finalizeLayout(boundingWidth)
                     
                     return (size, { [weak self] animation in
                         if let strongSelf = self {
+                            strongSelf.item = item
                             strongSelf.game = game
                             
                             apply(animation)
@@ -124,7 +121,10 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
         self.contentNode.updateHiddenMedia(media)
     }
     
-    override func transitionNode(media: Media) -> ASDisplayNode? {
+    override func transitionNode(messageId: MessageId, media: Media) -> ASDisplayNode? {
+        if self.item?.message.id != messageId {
+            return nil
+        }
         return self.contentNode.transitionNode(media: media)
     }
 }

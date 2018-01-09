@@ -113,6 +113,7 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
             index += 1
         }
     }
+    entries.append(.settings(theme))
     return entries
 }
 
@@ -126,32 +127,34 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
         }
     }
     
-    var savedStickerIds = Set<Int64>()
-    if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
-        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_Favorited.uppercased(), shortName: "", hash: 0, count: 0)
-        for i in 0 ..< savedStickers.items.count {
-            if let item = savedStickers.items[i].contents as? SavedStickerItem {
-                savedStickerIds.insert(item.file.fileId.id)
-                let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
-                let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
-                entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
+    if view.lower == nil {
+        var savedStickerIds = Set<Int64>()
+        if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FavoriteStickers.uppercased(), shortName: "", hash: 0, count: 0)
+            for i in 0 ..< savedStickers.items.count {
+                if let item = savedStickers.items[i].contents as? SavedStickerItem {
+                    savedStickerIds.insert(item.file.fileId.id)
+                    let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
+                    let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
+                    entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
+                }
             }
         }
-    }
-    
-    if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
-        let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", hash: 0, count: 0)
-        var addedCount = 0
-        for i in 0 ..< recentStickers.items.count {
-            if addedCount >= 20 {
-                break
-            }
-            if let item = recentStickers.items[i].contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
-                if !savedStickerIds.contains(mediaId.id) {
-                    let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
-                    let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
-                    entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
-                    addedCount += 1
+        
+        if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", hash: 0, count: 0)
+            var addedCount = 0
+            for i in 0 ..< recentStickers.items.count {
+                if addedCount >= 20 {
+                    break
+                }
+                if let item = recentStickers.items[i].contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
+                    if !savedStickerIds.contains(mediaId.id) {
+                        let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
+                        let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
+                        entries.append(ChatMediaInputGridEntry(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
+                        addedCount += 1
+                    }
                 }
             }
         }
@@ -198,13 +201,15 @@ private enum StickerPacksCollectionUpdate {
 
 final class ChatMediaInputNodeInteraction {
     let navigateToCollectionId: (ItemCollectionId) -> Void
+    let openSettings: () -> Void
     
     var highlightedStickerItemCollectionId: ItemCollectionId?
     var highlightedItemCollectionId: ItemCollectionId?
     var previewedStickerPackItem: StickerPackItem?
     
-    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void) {
+    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void, openSettings: @escaping () -> Void) {
         self.navigateToCollectionId = navigateToCollectionId
+        self.openSettings = openSettings
     }
 }
 
@@ -219,9 +224,6 @@ private func clipScrollPosition(_ position: StickerPacksCollectionPosition) -> S
     }
     return position
 }
-
-private let defaultPortraitPanelHeight: CGFloat = UIScreenScale.isEqual(to: 3.0) ? 271.0 : 258.0
-private let defaultLandscapePanelHeight: CGFloat = UIScreenScale.isEqual(to: 3.0) ? 194.0 : 194.0
 
 private enum ChatMediaInputPane {
     case gifs
@@ -245,6 +247,7 @@ private struct ChatMediaInputPaneArrangement {
 final class ChatMediaInputNode: ChatInputNode {
     private let account: Account
     private let controllerInteraction: ChatControllerInteraction
+    private let gifPaneIsActiveUpdated: (Bool) -> Void
     
     private var inputNodeInteraction: ChatMediaInputNodeInteraction!
     
@@ -256,7 +259,9 @@ final class ChatMediaInputNode: ChatInputNode {
     private let listView: ListView
     
     private let stickerPane: ChatMediaInputStickerPane
+    private var animatingStickerPaneOut = false
     private let gifPane: ChatMediaInputGifPane
+    private var animatingGifPaneOut = false
     
     private let itemCollectionsViewPosition = Promise<StickerPacksCollectionPosition>()
     private var currentStickerPacksCollectionPosition: StickerPacksCollectionPosition?
@@ -264,18 +269,19 @@ final class ChatMediaInputNode: ChatInputNode {
     
     private var stickerPreviewController: StickerPreviewController?
     
-    private var validLayout: (CGFloat, ChatPresentationInterfaceState)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState)?
     private var paneArrangement: ChatMediaInputPaneArrangement
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
         self.account = account
         self.controllerInteraction = controllerInteraction
         self.theme = theme
         self.strings = strings
+        self.gifPaneIsActiveUpdated = gifPaneIsActiveUpdated
         
         self.themeAndStringsPromise = Promise((theme, strings))
         
@@ -320,6 +326,10 @@ final class ChatMediaInputNode: ChatInputNode {
                         }
                     }
                 }
+            }
+        }, openSettings: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction.presentController(installedStickerPacksController(account: account, mode: .modal), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         })
         
@@ -470,14 +480,26 @@ final class ChatMediaInputNode: ChatInputNode {
     }
     
     private func heightForWidth(width: CGFloat) -> CGFloat {
+        let defaultPortraitPanelHeight: CGFloat = UIScreenScale.isEqual(to: 3.0) ? 271.0 : 258.0
+        let defaultLandscapePanelHeight: CGFloat = UIScreenScale.isEqual(to: 3.0) ? 194.0 : 194.0
+        
+        if width.isEqual(to: 812.0) {
+            return defaultLandscapePanelHeight
+        }
+        
         return defaultPortraitPanelHeight
     }
     
     private func setCurrentPane(_ pane: ChatMediaInputPane, transition: ContainedViewLayoutTransition) {
         if let index = self.paneArrangement.panes.index(of: pane), index != self.paneArrangement.currentIndex {
+            let previousGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
             self.paneArrangement = self.paneArrangement.withIndexTransition(0.0).withCurrentIndex(index)
-            if let (width, interfaceState) = self.validLayout {
-                let _ = self.updateLayout(width: width, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
+            if let (width, leftInset, rightInset, bottomInset, interfaceState) = self.validLayout {
+                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
+            }
+            let updatedGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
+            if updatedGifPanelWasActive != previousGifPanelWasActive {
+                self.gifPaneIsActiveUpdated(updatedGifPanelWasActive)
             }
             switch pane {
                 case .gifs:
@@ -486,6 +508,10 @@ final class ChatMediaInputNode: ChatInputNode {
                     if let highlightedStickerCollectionId = self.inputNodeInteraction.highlightedStickerItemCollectionId {
                         self.setHighlightedItemCollectionId(highlightedStickerCollectionId)
                     }
+            }
+        } else {
+            if let (width, leftInset, rightInset, bottomInset, interfaceState) = self.validLayout {
+                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
             }
         }
     }
@@ -538,15 +564,15 @@ final class ChatMediaInputNode: ChatInputNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
-        self.validLayout = (width, interfaceState)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, bottomInset, interfaceState)
         
         if self.theme !== interfaceState.theme || self.strings !== interfaceState.strings {
             self.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
         }
         
         let separatorHeight = UIScreenPixel
-        let panelHeight = self.heightForWidth(width: width)
+        let panelHeight = self.heightForWidth(width: width) + bottomInset
         
         transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: 41.0)))
         transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: CGSize(width: width, height: separatorHeight)))
@@ -576,7 +602,7 @@ final class ChatMediaInputNode: ChatInputNode {
             listViewCurve = .Default
         }
         
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: 41.0, height: width), insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), duration: duration, curve: listViewCurve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: 41.0, height: width), insets: UIEdgeInsets(top: 4.0 + leftInset, left: 0.0, bottom: 4.0 + rightInset, right: 0.0), duration: duration, curve: listViewCurve)
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
@@ -592,61 +618,80 @@ final class ChatMediaInputNode: ChatInputNode {
         }
         
         for (pane, paneOrigin) in visiblePanes {
+            let paneFrame = CGRect(origin: CGPoint(x: paneOrigin + leftInset, y: 41.0), size: CGSize(width: width - leftInset - rightInset, height: panelHeight - 41.0))
             switch pane {
                 case .gifs:
                     if self.gifPane.supernode == nil {
                         self.addSubnode(self.gifPane)
                         self.gifPane.frame = CGRect(origin: CGPoint(x: -width, y: 41.0), size: CGSize(width: width, height: panelHeight - 41.0))
                     }
-                    self.gifPane.layer.removeAnimation(forKey: "position")
-                    transition.updateFrame(node: self.gifPane, frame: CGRect(origin: CGPoint(x: paneOrigin, y: 41.0), size: CGSize(width: width, height: panelHeight - 41.0)))
+                    if self.gifPane.frame != paneFrame {
+                        self.gifPane.layer.removeAnimation(forKey: "position")
+                        transition.updateFrame(node: self.gifPane, frame: paneFrame)
+                    }
                 case .stickers:
                     if self.stickerPane.supernode == nil {
                         self.addSubnode(self.stickerPane)
                         self.stickerPane.frame = CGRect(origin: CGPoint(x: width, y: 41.0), size: CGSize(width: width, height: panelHeight - 41.0))
                     }
-                    self.stickerPane.layer.removeAnimation(forKey: "position")
-                    transition.updateFrame(node: self.stickerPane, frame: CGRect(origin: CGPoint(x: paneOrigin, y: 41.0), size: CGSize(width: width, height: panelHeight - 41.0)))
+                    if self.stickerPane.frame != paneFrame {
+                        self.stickerPane.layer.removeAnimation(forKey: "position")
+                        transition.updateFrame(node: self.stickerPane, frame: paneFrame)
+                    }
             }
         }
         
-        self.gifPane.updateLayout(size: CGSize(width: width, height: panelHeight - 41.0), transition: transition)
-        self.stickerPane.updateLayout(size: CGSize(width: width, height: panelHeight - 41.0), transition: transition)
+        self.gifPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight - 41.0), bottomInset: bottomInset, transition: transition)
+        self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight - 41.0), bottomInset: bottomInset, transition: transition)
         
         if self.gifPane.supernode != nil {
             if !visiblePanes.contains(where: { $0.0 == .gifs }) {
                 if case .animated = transition {
-                    var toLeft = false
-                    if let index = self.paneArrangement.panes.index(of: .gifs), index < self.paneArrangement.currentIndex {
-                        toLeft = true
-                    }
-                    transition.animatePosition(node: self.gifPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.gifPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in
-                        if let strongSelf = self, value {
-                            strongSelf.gifPane.removeFromSupernode()
+                    if !self.animatingGifPaneOut {
+                        self.animatingGifPaneOut = true
+                        var toLeft = false
+                        if let index = self.paneArrangement.panes.index(of: .gifs), index < self.paneArrangement.currentIndex {
+                            toLeft = true
                         }
-                    })
+                        transition.animatePosition(node: self.gifPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.gifPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in
+                            if let strongSelf = self, value {
+                                strongSelf.animatingGifPaneOut = false
+                                strongSelf.gifPane.removeFromSupernode()
+                            }
+                        })
+                    }
                 } else {
+                    self.animatingGifPaneOut = false
                     self.gifPane.removeFromSupernode()
                 }
             }
+        } else {
+            self.animatingGifPaneOut = false
         }
         
         if self.stickerPane.supernode != nil {
             if !visiblePanes.contains(where: { $0.0 == .stickers }) {
                 if case .animated = transition {
-                    var toLeft = false
-                    if let index = self.paneArrangement.panes.index(of: .stickers), index < self.paneArrangement.currentIndex {
-                        toLeft = true
-                    }
-                    transition.animatePosition(node: self.stickerPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.stickerPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in
-                        if let strongSelf = self, value {
-                            strongSelf.stickerPane.removeFromSupernode()
+                    if !self.animatingStickerPaneOut {
+                        self.animatingStickerPaneOut = true
+                        var toLeft = false
+                        if let index = self.paneArrangement.panes.index(of: .stickers), index < self.paneArrangement.currentIndex {
+                            toLeft = true
                         }
-                    })
+                        transition.animatePosition(node: self.stickerPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.stickerPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in
+                            if let strongSelf = self, value {
+                                strongSelf.animatingStickerPaneOut = false
+                                strongSelf.stickerPane.removeFromSupernode()
+                            }
+                        })
+                    }
                 } else {
+                    self.animatingStickerPaneOut = false
                     self.stickerPane.removeFromSupernode()
                 }
             }
+        } else {
+            self.animatingStickerPaneOut = false
         }
         
         return panelHeight
@@ -735,7 +780,7 @@ final class ChatMediaInputNode: ChatInputNode {
             case .began:
                 break
             case .changed:
-                if let (width, interfaceState) = self.validLayout {
+                if let (width, leftInset, rightInset, bottomInset, interfaceState) = self.validLayout {
                     let translationX = -recognizer.translation(in: self.view).x
                     var indexTransition = translationX / width
                     if self.paneArrangement.currentIndex == 0 {
@@ -744,10 +789,10 @@ final class ChatMediaInputNode: ChatInputNode {
                         indexTransition = min(0.0, indexTransition)
                     }
                     self.paneArrangement = self.paneArrangement.withIndexTransition(indexTransition)
-                    let _ = self.updateLayout(width: width, transition: .immediate, interfaceState: interfaceState)
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, transition: .immediate, interfaceState: interfaceState)
                 }
             case .ended:
-                if let (width, _) = self.validLayout {
+                if let (width, _, _, _, _) = self.validLayout {
                     var updatedIndex = self.paneArrangement.currentIndex
                     if abs(self.paneArrangement.indexTransition * width) > 30.0 {
                         if self.paneArrangement.indexTransition < 0.0 {
@@ -756,12 +801,13 @@ final class ChatMediaInputNode: ChatInputNode {
                             updatedIndex = min(self.paneArrangement.panes.count - 1, self.paneArrangement.currentIndex + 1)
                         }
                     }
+                    self.paneArrangement = self.paneArrangement.withIndexTransition(0.0)
                     self.setCurrentPane(self.paneArrangement.panes[updatedIndex], transition: .animated(duration: 0.25, curve: .spring))
                 }
             case .cancelled:
-                if let (width, interfaceState) = self.validLayout {
+                if let (width, leftInset, rightInset, bottomInset, interfaceState) = self.validLayout {
                     self.paneArrangement = self.paneArrangement.withIndexTransition(0.0)
-                    let _ = self.updateLayout(width: width, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
                 }
             default:
                 break

@@ -8,8 +8,6 @@ import TelegramCore
 class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     private let interactiveFileNode: ChatMessageInteractiveFileNode
     
-    private var item: ChatMessageItem?
-    
     required init() {
         self.interactiveFileNode = ChatMessageInteractiveFileNode()
         
@@ -19,8 +17,8 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.interactiveFileNode.activateLocalContent = { [weak self] in
             if let strongSelf = self {
-                if let item = strongSelf.item, let controllerInteraction = strongSelf.controllerInteraction {
-                    controllerInteraction.openMessage(item.message.id)
+                if let item = strongSelf.item {
+                    item.controllerInteraction.openMessage(item.message.id)
                 }
             }
         }
@@ -30,10 +28,10 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let interactiveFileLayout = self.interactiveFileNode.asyncLayout()
         
-        return { item, layoutConstants, position, constrainedSize in
+        return { item, layoutConstants, preparePosition, _, constrainedSize in
             var selectedFile: TelegramMediaFile?
             for media in item.message.media {
                 if let telegramFile = media as? TelegramMediaFile {
@@ -41,22 +39,23 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let incoming = item.message.effectivelyIncoming
+            let incoming = item.message.effectivelyIncoming(item.account.peerId)
             let statusType: ChatMessageDateAndStatusType?
-            if case .None = position.bottom {
-                if incoming {
-                    statusType = .BubbleIncoming
-                } else {
-                    if item.message.flags.contains(.Failed) {
-                        statusType = .BubbleOutgoing(.Failed)
-                    } else if item.message.flags.isSending {
-                        statusType = .BubbleOutgoing(.Sending)
+            switch preparePosition {
+                case .linear(_, .None):
+                    if incoming {
+                        statusType = .BubbleIncoming
                     } else {
-                        statusType = .BubbleOutgoing(.Sent(read: item.read))
+                        if item.message.flags.contains(.Failed) {
+                            statusType = .BubbleOutgoing(.Failed)
+                        } else if item.message.flags.isSending {
+                            statusType = .BubbleOutgoing(.Sending)
+                        } else {
+                            statusType = .BubbleOutgoing(.Sent(read: item.read))
+                        }
                     }
-                }
-            } else {
-                statusType = nil
+                default:
+                    statusType = nil
             }
             
             var automaticDownload = false
@@ -64,9 +63,11 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 automaticDownload = item.controllerInteraction.automaticMediaDownloadSettings.categories.getVoice(item.message.id.peerId)
             }
             
-            let (initialWidth, refineLayout) = interactiveFileLayout(item.account, item.theme, item.strings, item.message, selectedFile!, automaticDownload, item.message.effectivelyIncoming, statusType, CGSize(width: constrainedSize.width, height: constrainedSize.height))
+            let (initialWidth, refineLayout) = interactiveFileLayout(item.account, item.presentationData, item.message, selectedFile!, automaticDownload, item.message.effectivelyIncoming(item.account.peerId), statusType, CGSize(width: constrainedSize.width, height: constrainedSize.height))
             
-            return (initialWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { constrainedSize in
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackgroundForEmptyWallpapers: false, forceFullCorners: false)
+            
+            return (contentProperties, nil, initialWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { constrainedSize, position in
                 let (refinedWidth, finishLayout) = refineLayout(constrainedSize)
                 
                 return (refinedWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { boundingWidth in
@@ -84,6 +85,18 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 })
             })
         }
+    }
+    
+    override func transitionNode(messageId: MessageId, media: Media) -> ASDisplayNode? {
+        if self.item?.message.id == messageId {
+            return self.interactiveFileNode.transitionNode(media: media)
+        } else {
+            return nil
+        }
+    }
+    
+    override func updateHiddenMedia(_ media: [Media]?) {
+        self.interactiveFileNode.updateHiddenMedia(media)
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double) {

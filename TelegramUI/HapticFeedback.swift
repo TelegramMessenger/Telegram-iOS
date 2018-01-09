@@ -3,7 +3,7 @@ import UIKit
 
 @available(iOSApplicationExtension 10.0, *)
 private final class HapticFeedbackImpl {
-    private lazy var impactGenerator = { UIImpactFeedbackGenerator(style: .light) }()
+    private lazy var impactGenerator = { UIImpactFeedbackGenerator(style: .medium) }()
     private lazy var selectionGenerator = { UISelectionFeedbackGenerator() }()
     private lazy var notificationGenerator = { UINotificationFeedbackGenerator() }()
     
@@ -13,6 +13,14 @@ private final class HapticFeedbackImpl {
     
     func tap() {
         self.selectionGenerator.selectionChanged()
+    }
+    
+    func prepareImpact() {
+        self.impactGenerator.prepare()
+    }
+    
+    func impact() {
+        self.impactGenerator.impactOccurred()
     }
     
     func success() {
@@ -61,6 +69,22 @@ final class HapticFeedback {
         if #available(iOSApplicationExtension 10.0, *) {
             self.withImpl { impl in
                 impl.tap()
+            }
+        }
+    }
+    
+    func prepareImpact() {
+        if #available(iOSApplicationExtension 10.0, *) {
+            self.withImpl { impl in
+                impl.prepareImpact()
+            }
+        }
+    }
+    
+    func impact() {
+        if #available(iOSApplicationExtension 10.0, *) {
+            self.withImpl { impl in
+                impl.impact()
             }
         }
     }

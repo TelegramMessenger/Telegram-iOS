@@ -67,10 +67,12 @@ public struct ChatTextInputState: PostboxCoding, Equatable {
 struct ChatEditMessageState: PostboxCoding, Equatable {
     let messageId: MessageId
     let inputState: ChatTextInputState
+    let disableUrlPreview: String?
     
-    init(messageId: MessageId, inputState: ChatTextInputState) {
+    init(messageId: MessageId, inputState: ChatTextInputState, disableUrlPreview: String?) {
         self.messageId = messageId
         self.inputState = inputState
+        self.disableUrlPreview = disableUrlPreview
     }
     
     init(decoder: PostboxDecoder) {
@@ -80,6 +82,7 @@ struct ChatEditMessageState: PostboxCoding, Equatable {
         } else {
             self.inputState = ChatTextInputState()
         }
+        self.disableUrlPreview = decoder.decodeOptionalStringForKey("dup")
     }
     
     func encode(_ encoder: PostboxEncoder) {
@@ -87,14 +90,23 @@ struct ChatEditMessageState: PostboxCoding, Equatable {
         encoder.encodeInt32(self.messageId.namespace, forKey: "mn")
         encoder.encodeInt32(self.messageId.id, forKey: "mi")
         encoder.encodeObject(self.inputState, forKey: "is")
+        if let disableUrlPreview = self.disableUrlPreview {
+            encoder.encodeString(disableUrlPreview, forKey: "dup")
+        } else {
+            encoder.encodeNil(forKey: "dup")
+        }
     }
     
     static func ==(lhs: ChatEditMessageState, rhs: ChatEditMessageState) -> Bool {
-        return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState
+        return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState && lhs.disableUrlPreview == rhs.disableUrlPreview
     }
     
     func withUpdatedInputState(_ inputState: ChatTextInputState) -> ChatEditMessageState {
-        return ChatEditMessageState(messageId: self.messageId, inputState: inputState)
+        return ChatEditMessageState(messageId: self.messageId, inputState: inputState, disableUrlPreview: self.disableUrlPreview)
+    }
+    
+    func withUpdatedDisableUrlPreview(_ disableUrlPreview: String?) -> ChatEditMessageState {
+        return ChatEditMessageState(messageId: self.messageId, inputState: self.inputState, disableUrlPreview: disableUrlPreview)
     }
 }
 
@@ -478,24 +490,28 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: forwardMessageIds, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode)
     }
     
-    func withUpdatedSelectedMessage(_ messageId: MessageId) -> ChatInterfaceState {
+    func withUpdatedSelectedMessages(_ messageIds: [MessageId]) -> ChatInterfaceState {
         var selectedIds = Set<MessageId>()
         if let selectionState = self.selectionState {
             selectedIds.formUnion(selectionState.selectedIds)
         }
-        selectedIds.insert(messageId)
+        for messageId in messageIds {
+            selectedIds.insert(messageId)
+        }
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, editMessage: self.editMessage, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode)
     }
     
-    func withToggledSelectedMessage(_ messageId: MessageId) -> ChatInterfaceState {
+    func withToggledSelectedMessages(_ messageIds: [MessageId], value: Bool) -> ChatInterfaceState {
         var selectedIds = Set<MessageId>()
         if let selectionState = self.selectionState {
             selectedIds.formUnion(selectionState.selectedIds)
         }
-        if selectedIds.contains(messageId) {
-            let _ = selectedIds.remove(messageId)
-        } else {
-            selectedIds.insert(messageId)
+        for messageId in messageIds {
+            if value {
+                selectedIds.insert(messageId)
+            } else {
+                selectedIds.remove(messageId)
+            }
         }
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, editMessage: self.editMessage, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode)
     }

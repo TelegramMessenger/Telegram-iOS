@@ -70,7 +70,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         return defaultPortraitPanelHeight
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: UIScreenPixel)))
         
         if self.theme !== interfaceState.theme {
@@ -96,7 +96,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         
         if let markup = validatedMarkup {
             let verticalInset: CGFloat = 10.0
-            let sideInset: CGFloat = 6.0
+            let sideInset: CGFloat = 6.0 + leftInset
             var buttonHeight: CGFloat = 43.0
             let columnSpacing: CGFloat = 6.0
             let rowSpacing: CGFloat = 5.0
@@ -148,7 +148,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
             transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
             self.scrollNode.view.contentSize = CGSize(width: width, height: rowsHeight)
             
-            return panelHeight
+            return panelHeight + bottomInset
         } else {
             return 0.0
         }

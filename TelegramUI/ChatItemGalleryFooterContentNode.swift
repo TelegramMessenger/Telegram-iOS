@@ -28,6 +28,30 @@ private let pauseImage = generateImage(CGSize(width: 16.0, height: 16.0), rotate
     context.translateBy(x: -(diameter - size.width) / 2.0, y: -(diameter - size.height) / 2.0)
 })
 
+private let playImage = generateImage(CGSize(width: 15.0, height: 18.0), rotatedContext: { size, context in
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    
+    let color = UIColor.white
+    let diameter: CGFloat = 16.0
+    
+    context.setFillColor(color.cgColor)
+    
+    context.translateBy(x: (diameter - size.width) / 2.0 + 1.5, y: (diameter - size.height) / 2.0 + 1.0)
+    if (diameter < 40.0) {
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: 0.8, y: 0.8)
+        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    }
+    let _ = try? drawSvgPath(context, path: "M1.71891969,0.209353049 C0.769586558,-0.350676705 0,0.0908839327 0,1.18800046 L0,16.8564753 C0,17.9569971 0.750549162,18.357187 1.67393713,17.7519379 L14.1073836,9.60224049 C15.0318735,8.99626906 15.0094718,8.04970371 14.062401,7.49100858 L1.71891969,0.209353049 ")
+    context.fillPath()
+    if (diameter < 40.0) {
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: 1.0 / 0.8, y: 1.0 / 0.8)
+        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    }
+    context.translateBy(x: -(diameter - size.width) / 2.0 - 1.5, y: -(diameter - size.height) / 2.0)
+})
+
 private let textFont = Font.regular(16.0)
 private let titleFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
@@ -35,6 +59,7 @@ private let dateFont = Font.regular(14.0)
 enum ChatItemGalleryFooterContent {
     case info
     case playbackPause
+    case playbackPlay
 }
 
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
@@ -71,6 +96,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
                         self.playbackControlButton.isHidden = false
+                        self.playbackControlButton.setImage(pauseImage, for: [])
+                    case .playbackPlay:
+                        self.authorNameNode.isHidden = true
+                        self.dateNode.isHidden = true
+                        self.playbackControlButton.isHidden = false
+                        self.playbackControlButton.setImage(playImage, for: [])
                 }
             }
         }
@@ -94,7 +125,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.dateNode.maximumNumberOfLines = 1
         
         self.playbackControlButton = HighlightableButtonNode()
-        self.playbackControlButton.setImage(pauseImage, for: [])
         self.playbackControlButton.isHidden = true
         
         super.init()
@@ -119,7 +149,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     func setup(origin: GalleryItemOriginData?, caption: String) {
         let titleText = origin?.title
-        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, timestamp: $0) }
+        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, timeFormat: .regular, timestamp: $0) }
         
         if self.currentMessageText != caption || self.currentAuthorNameText != titleText || self.currentDateText != dateText {
             self.currentMessageText = caption
@@ -179,17 +209,28 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             authorNameText = peer.displayTitle
         }
         
-        let dateText = humanReadableStringForTimestamp(strings: self.strings, timestamp: message.timestamp)
+        let dateText = humanReadableStringForTimestamp(strings: self.strings, timeFormat: .regular, timestamp: message.timestamp)
         
-        if self.currentMessageText != message.text || canDelete != !self.deleteButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
-            self.currentMessageText = message.text
+        var messageText = ""
+        var hasCaption = false
+        for media in message.media {
+            if media is TelegramMediaImage || media is TelegramMediaFile {
+                hasCaption = true
+            }
+        }
+        if hasCaption {
+            messageText = message.text
+        }
+        
+        if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
+            self.currentMessageText = messageText
             
-            if message.text.isEmpty {
+            if messageText.isEmpty {
                 self.textNode.isHidden = true
                 self.textNode.attributedText = nil
             } else {
                 self.textNode.isHidden = false
-                self.textNode.attributedText = NSAttributedString(string: message.text, font: textFont, textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: messageText, font: textFont, textColor: .white)
             }
             
             if let authorNameText = authorNameText {
@@ -205,31 +246,31 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        var panelHeight: CGFloat = 44.0
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        var panelHeight: CGFloat = 44.0 + bottomInset
         if !self.textNode.isHidden {
-            let sideInset: CGFloat = 8.0
+            let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
-            let bottomInset: CGFloat = 8.0
+            let textBottomInset: CGFloat = 8.0
             let textSize = self.textNode.measure(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-            panelHeight += textSize.height + topInset + bottomInset
+            panelHeight += textSize.height + topInset + textBottomInset
             transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize))
         }
         
-        self.actionButton.frame = CGRect(origin: CGPoint(x: 0.0, y: panelHeight - 44.0), size: CGSize(width: 44.0, height: 44.0))
-        self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0, y: panelHeight - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        transition.updateFrame(view: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0)))
+        transition.updateFrame(view: self.deleteButton, frame: CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0)))
         
-        self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        transition.updateFrame(node: self.playbackControlButton, frame: CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0)))
         
-        let authorNameSize = self.authorNameNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let authorNameSize = self.authorNameNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
         let dateSize = self.dateNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
         
         if authorNameSize.height.isZero {
-            transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - 44.0 + floor((44.0 - dateSize.height) / 2.0)), size: dateSize))
+            transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height) / 2.0)), size: dateSize))
         } else {
             let labelsSpacing: CGFloat = 0.0
-            transition.updateFrame(node: self.authorNameNode, frame: CGRect(origin: CGPoint(x: floor((width - authorNameSize.width) / 2.0), y: panelHeight - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0)), size: authorNameSize))
-            transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0) + authorNameSize.height + labelsSpacing), size: dateSize))
+            transition.updateFrame(node: self.authorNameNode, frame: CGRect(origin: CGPoint(x: floor((width - authorNameSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0)), size: authorNameSize))
+            transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0) + authorNameSize.height + labelsSpacing), size: dateSize))
         }
         
         return panelHeight
@@ -237,44 +278,117 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     @objc func deleteButtonPressed() {
         if let currentMessage = self.currentMessage {
-            self.messageContextDisposable.set((chatDeleteMessagesOptions(account: self.account, messageIds: [currentMessage.id]) |> deliverOnMainQueue).start(next: { [weak self] options in
-                if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !options.isEmpty {
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
-                    var items: [ActionSheetItem] = []
-                    var personalPeerName: String?
-                    var isChannel = false
-                    if let user = currentMessage.peers[currentMessage.id.peerId] as? TelegramUser {
-                        personalPeerName = user.compactDisplayTitle
-                    } else if let channel = currentMessage.peers[currentMessage.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
-                        isChannel = true
-                    }
-                    
-                    if options.contains(.globally) {
-                        let globalTitle: String
-                        if isChannel {
-                            globalTitle = strongSelf.strings.Common_Delete
-                        } else if let personalPeerName = personalPeerName {
-                            globalTitle = strongSelf.strings.Conversation_DeleteMessagesFor(personalPeerName).0
-                        } else {
-                            globalTitle = strongSelf.strings.Conversation_DeleteMessagesForEveryone
+            let _ = (self.account.postbox.modify { modifier -> [Message] in
+                return modifier.getMessageGroup(currentMessage.id) ?? []
+            } |> deliverOnMainQueue).start(next: { [weak self] messages in
+                if let strongSelf = self, !messages.isEmpty {
+                    if messages.count == 1 {
+                        strongSelf.commitDeleteMessages(messages, ask: true)
+                    } else {
+                        let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        var generalMessageContentKind: MessageContentKind?
+                        for message in messages {
+                            let currentKind = messageContentKind(message, strings: presentationData.strings, accountPeerId: strongSelf.account.peerId)
+                            if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
+                                generalMessageContentKind = currentKind
+                            } else {
+                                generalMessageContentKind = nil
+                                break
+                            }
                         }
-                        items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: [currentMessage.id], type: .forEveryone).start()
-                                strongSelf.controllerInteraction?.dismissController()
+                        
+                        var singleText = presentationData.strings.Media_ShareItem(1)
+                        var multipleText = presentationData.strings.Media_ShareItem(Int32(messages.count))
+                    
+                        if let generalMessageContentKind = generalMessageContentKind {
+                            switch generalMessageContentKind {
+                                case .image:
+                                    singleText = presentationData.strings.Media_ShareThisPhoto
+                                    multipleText = presentationData.strings.Media_SharePhoto(Int32(messages.count))
+                                case .video:
+                                    singleText = presentationData.strings.Media_ShareThisVideo
+                                    multipleText = presentationData.strings.Media_ShareVideo(Int32(messages.count))
+                                default:
+                                    break
                             }
-                        }))
-                    }
-                    if options.contains(.locally) {
-                        items.append(ActionSheetButtonItem(title: strongSelf.strings.Conversation_DeleteMessagesForMe, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                        }
+                    
+                        let deleteAction: ([Message]) -> Void = { messages in
                             if let strongSelf = self {
-                                let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: [currentMessage.id], type: .forLocalPeer).start()
-                                strongSelf.controllerInteraction?.dismissController()
+                                strongSelf.commitDeleteMessages(messages, ask: false)
                             }
-                        }))
+                        }
+                    
+                        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                        let items: [ActionSheetItem] = [
+                            ActionSheetButtonItem(title: singleText, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                deleteAction([currentMessage])
+                            }),
+                            ActionSheetButtonItem(title: multipleText, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                deleteAction(messages)
+                            })
+                        ]
+                    
+                        actionSheet.setItemGroups([
+                            ActionSheetItemGroup(items: items),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        strongSelf.controllerInteraction?.presentController(actionSheet, nil)
                     }
+                }
+            })
+        }
+    }
+
+    private func commitDeleteMessages(_ messages: [Message], ask: Bool) {
+        self.messageContextDisposable.set((chatDeleteMessagesOptions(postbox: self.account.postbox, accountPeerId: self.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] options in
+            if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !options.isEmpty {
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                var items: [ActionSheetItem] = []
+                var personalPeerName: String?
+                var isChannel = false
+                if let user = messages[0].peers[messages[0].id.peerId] as? TelegramUser {
+                    personalPeerName = user.compactDisplayTitle
+                } else if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                    isChannel = true
+                }
+                
+                if options.contains(.globally) {
+                    let globalTitle: String
+                    if isChannel {
+                        globalTitle = strongSelf.strings.Common_Delete
+                    } else if let personalPeerName = personalPeerName {
+                        globalTitle = strongSelf.strings.Conversation_DeleteMessagesFor(personalPeerName).0
+                    } else {
+                        globalTitle = strongSelf.strings.Conversation_DeleteMessagesForEveryone
+                    }
+                    items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        if let strongSelf = self {
+                            let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: messages.map { $0.id }, type: .forEveryone).start()
+                            strongSelf.controllerInteraction?.dismissController()
+                        }
+                    }))
+                }
+                if options.contains(.locally) {
+                    items.append(ActionSheetButtonItem(title: strongSelf.strings.Conversation_DeleteMessagesForMe, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        if let strongSelf = self {
+                            let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: messages.map { $0.id }, type: .forLocalPeer).start()
+                            strongSelf.controllerInteraction?.dismissController()
+                        }
+                    }))
+                }
+                if !ask && items.count == 1 {
+                    let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: messages.map { $0.id }, type: .forEveryone).start()
+                    strongSelf.controllerInteraction?.dismissController()
+                } else {
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -282,16 +396,87 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     ])])
                     controllerInteration.presentController(actionSheet, nil)
                 }
-            }))
-        }
+            }
+        }))
     }
     
     @objc func actionButtonPressed() {
-        if let controllerInteraction = self.controllerInteraction, let currentMessage = self.currentMessage {
-            var saveToCameraRoll: (() -> Void)?
-            var shareAction: (([PeerId]) -> Void)?
-            let shareController = ShareController(account: self.account, subject: .message(currentMessage), saveToCameraRoll: true)
-            controllerInteraction.presentController(shareController, nil)
+        if let currentMessage = self.currentMessage {
+            let _ = (self.account.postbox.modify { modifier -> [Message] in
+                return modifier.getMessageGroup(currentMessage.id) ?? []
+            } |> deliverOnMainQueue).start(next: { [weak self] messages in
+                if let strongSelf = self, !messages.isEmpty {
+                    let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    var generalMessageContentKind: MessageContentKind?
+                    for message in messages {
+                        let currentKind = messageContentKind(message, strings: presentationData.strings, accountPeerId: strongSelf.account.peerId)
+                        if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
+                            generalMessageContentKind = currentKind
+                        } else {
+                            generalMessageContentKind = nil
+                            break
+                        }
+                    }
+                    var saveToCameraRoll = false
+                    if let generalMessageContentKind = generalMessageContentKind {
+                        switch generalMessageContentKind {
+                            case .image, .video:
+                                saveToCameraRoll = true
+                            default:
+                                break
+                        }
+                    }
+                    
+                    if messages.count == 1 {
+                        let shareController = ShareController(account: strongSelf.account, subject: .messages([currentMessage]), saveToCameraRoll: saveToCameraRoll)
+                        strongSelf.controllerInteraction?.presentController(shareController, nil)
+                    } else {
+                        var singleText = presentationData.strings.Media_ShareItem(1)
+                        var multipleText = presentationData.strings.Media_ShareItem(Int32(messages.count))
+                        
+                        if let generalMessageContentKind = generalMessageContentKind {
+                            switch generalMessageContentKind {
+                                case .image:
+                                    singleText = presentationData.strings.Media_ShareThisPhoto
+                                    multipleText = presentationData.strings.Media_SharePhoto(Int32(messages.count))
+                                case .video:
+                                    singleText = presentationData.strings.Media_ShareThisVideo
+                                    multipleText = presentationData.strings.Media_ShareVideo(Int32(messages.count))
+                                default:
+                                    break
+                            }
+                        }
+                        
+                        let shareAction: ([Message]) -> Void = { messages in
+                            if let strongSelf = self {
+                                let shareController = ShareController(account: strongSelf.account, subject: .messages(messages), saveToCameraRoll: saveToCameraRoll)
+                                strongSelf.controllerInteraction?.presentController(shareController, nil)
+                            }
+                        }
+                        
+                        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                        let items: [ActionSheetItem] = [
+                            ActionSheetButtonItem(title: singleText, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                shareAction([currentMessage])
+                            }),
+                            ActionSheetButtonItem(title: multipleText, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                shareAction(messages)
+                            })
+                        ]
+                        
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        strongSelf.controllerInteraction?.presentController(actionSheet, nil)
+                    }
+                }
+            })
         }
     }
     

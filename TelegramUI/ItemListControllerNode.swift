@@ -94,7 +94,6 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
     let listNode: ListView
     private var emptyStateItem: ItemListControllerEmptyStateItem?
     private var emptyStateNode: ItemListControllerEmptyStateItemNode?
-    private let scrollNode: ASScrollNode
     
     private let transitionDisposable = MetaDisposable()
     
@@ -111,7 +110,6 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
     
     var enableInteractiveDismiss = false {
         didSet {
-            self.scrollNode.view.isScrollEnabled = self.enableInteractiveDismiss
         }
     }
     
@@ -119,7 +117,6 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         self.updateNavigationOffset = updateNavigationOffset
         
         self.listNode = ListView()
-        self.scrollNode = ASScrollNode()
         
         super.init()
         
@@ -130,23 +127,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         self.backgroundColor = nil
         self.isOpaque = false
         
-        self.scrollNode.view.showsVerticalScrollIndicator = false
-        self.scrollNode.view.showsHorizontalScrollIndicator = false
-        self.scrollNode.view.alwaysBounceHorizontal = false
-        self.scrollNode.view.alwaysBounceVertical = false
-        self.scrollNode.view.clipsToBounds = false
-        self.scrollNode.view.delegate = self
-        self.scrollNode.view.scrollsToTop = false
-        self.scrollNode.view.isScrollEnabled = false
-        self.addSubnode(self.scrollNode)
-        
-        self.scrollNode.backgroundColor = nil
-        self.scrollNode.isOpaque = false
-        
-        self.scrollNode.addSubnode(self.listNode)
-        self.addSubnode(self.scrollNode)
-        
-        self.listNode.backgroundColor = UIColor(rgb: 0xefeff4)
+        self.addSubnode(self.listNode)
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
             if let strongSelf = self, let visibleEntriesUpdated = strongSelf.visibleEntriesUpdated, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState<Entry>)?.mergedEntries {
@@ -191,10 +172,6 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
     
     override func didLoad() {
         super.didLoad()
-        
-        if #available(iOSApplicationExtension 11.0, *) {
-            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
-        }
     }
     
     func animateIn() {
@@ -211,18 +188,6 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        let previousContentHeight = self.scrollNode.view.contentSize.height
-        let previousVerticalOffset = self.scrollNode.view.contentOffset.y
-        
-        self.scrollNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.scrollNode.view.contentSize = CGSize(width: 0.0, height: layout.size.height * 3.0)
-        
-        if previousContentHeight.isEqual(to: 0.0) {
-            self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: self.scrollNode.view.contentSize.height / 3.0)
-        } else {
-            self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: previousVerticalOffset * self.scrollNode.view.contentSize.height / previousContentHeight)
-        }
-        
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
@@ -247,9 +212,11 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
+        insets.left += layout.safeInsets.left
+        insets.right += layout.safeInsets.right
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
-        self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height + layout.size.height / 2.0)
+        self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
@@ -311,6 +278,9 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                 options.insert(.PreferSynchronousResourceLoading)
                 options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateAlpha)
+            } else {
+                options.insert(.Synchronous)
+                options.insert(.PreferSynchronousDrawing)
             }
             let focusItemTag = transition.focusItemTag
             self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, updateOpaqueState: ItemListNodeOpaqueState(mergedEntries: transition.mergedEntries), completion: { [weak self] _ in
@@ -382,8 +352,6 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         
         if abs(scrollVelocity.y) > 200.0 {
            self.animateOut()
-        } else {
-            self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: self.scrollNode.view.contentSize.height / 3.0), animated: true)
         }
     }
 }

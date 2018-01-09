@@ -80,9 +80,8 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
                     switch wallpaper {
                         case .builtin:
                             let displaySize = CGSize(width: 640.0, height: 1136.0)
-                            self.imageNode.alphaTransitionOnFirstUpdate = false
                             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                            self.imageNode.setSignal(account: account, signal: settingsBuiltinWallpaperImage(account: self.account), dispatchOnDisplayLink: false)
+                            self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: self.account), dispatchOnDisplayLink: false)
                             self.zoomableContent = (displaySize, self.imageNode)
                         case let .color(color):
                             self.imageNode.isHidden = true
@@ -90,9 +89,8 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
                         case let .image(representations):
                             if let largestSize = largestImageRepresentation(representations) {
                                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
-                                self.imageNode.alphaTransitionOnFirstUpdate = false
                                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                                self.imageNode.setSignal(account: account, signal: chatAvatarGalleryPhoto(account: account, representations: representations), dispatchOnDisplayLink: false)
+                                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: representations), dispatchOnDisplayLink: false)
                                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                                 self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
                             } else {

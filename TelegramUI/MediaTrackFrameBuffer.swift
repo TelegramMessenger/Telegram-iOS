@@ -27,6 +27,7 @@ final class MediaTrackFrameBuffer {
     private let type: MediaTrackFrameType
     let duration: CMTime
     let rotationAngle: Double
+    let aspect: Double
     
     var statusUpdated: () -> Void = { }
     
@@ -36,12 +37,13 @@ final class MediaTrackFrameBuffer {
     private var endOfStream = false
     private var bufferedUntilTime: CMTime?
     
-    init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, duration: CMTime, rotationAngle: Double) {
+    init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, duration: CMTime, rotationAngle: Double, aspect: Double) {
         self.frameSource = frameSource
         self.type = type
         self.decoder = decoder
         self.duration = duration
         self.rotationAngle = rotationAngle
+        self.aspect = aspect
         
         self.frameSourceSinkIndex = self.frameSource.addEventSink { [weak self] event in
             if let strongSelf = self {

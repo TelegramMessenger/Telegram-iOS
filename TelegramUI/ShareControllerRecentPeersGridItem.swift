@@ -58,7 +58,7 @@ final class ShareControllerRecentPeersGridItemNode: GridItemNode {
             } else {
                 peersNode = ChatListSearchRecentPeersNode(account: account, theme: theme, mode: .actionSheet, strings: strings, peerSelected: { [weak self] peer in
                     self?.controllerInteraction?.togglePeer(peer)
-                }, isPeerSelected: { [weak self] peerId in
+                }, peerLongTapped: {_ in }, isPeerSelected: { [weak self] peerId in
                     return self?.controllerInteraction?.selectedPeerIds.contains(peerId) ?? false
                 }, share: true)
                 self.peersNode = peersNode
@@ -80,5 +80,6 @@ final class ShareControllerRecentPeersGridItemNode: GridItemNode {
         let bounds = self.bounds
         
         self.peersNode?.frame = CGRect(origin: CGPoint(), size: bounds.size)
+        self.peersNode?.updateLayout(size: bounds.size, leftInset: 0.0, rightInset: 0.0)
     }
 }

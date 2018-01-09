@@ -8,24 +8,10 @@ enum PeerMediaCollectionMode: Int32 {
     case music
 }
 
-func titleForPeerMediaCollectionMode(_ mode: PeerMediaCollectionMode, strings: PresentationStrings) -> String {
-    switch mode {
-        case .photoOrVideo:
-            return strings.SharedMedia_TitleAll
-        case .file:
-            return strings.SharedMedia_TitleFile
-        case .music:
-            return strings.SharedMedia_TitleAudio
-        case .webpage:
-            return strings.SharedMedia_TitleLink
-    }
-}
-
 struct PeerMediaCollectionInterfaceState: Equatable {
     let peer: Peer?
     let selectionState: ChatInterfaceSelectionState?
     let mode: PeerMediaCollectionMode
-    let selectingMode: Bool
     let theme: PresentationTheme
     let strings: PresentationStrings
     
@@ -35,14 +21,12 @@ struct PeerMediaCollectionInterfaceState: Equatable {
         self.peer = nil
         self.selectionState = nil
         self.mode = .photoOrVideo
-        self.selectingMode = false
     }
     
-    init(peer: Peer?, selectionState: ChatInterfaceSelectionState?, mode: PeerMediaCollectionMode, selectingMode: Bool, theme: PresentationTheme, strings: PresentationStrings) {
+    init(peer: Peer?, selectionState: ChatInterfaceSelectionState?, mode: PeerMediaCollectionMode, theme: PresentationTheme, strings: PresentationStrings) {
         self.peer = peer
         self.selectionState = selectionState
         self.mode = mode
-        self.selectingMode = selectingMode
         self.theme = theme
         self.strings = strings
     }
@@ -64,10 +48,6 @@ struct PeerMediaCollectionInterfaceState: Equatable {
             return false
         }
         
-        if lhs.selectingMode != rhs.selectingMode {
-            return false
-        }
-        
         if lhs.theme !== rhs.theme {
             return false
         }
@@ -79,45 +59,45 @@ struct PeerMediaCollectionInterfaceState: Equatable {
         return true
     }
     
-    func withUpdatedSelectedMessage(_ messageId: MessageId) -> PeerMediaCollectionInterfaceState {
+    func withUpdatedSelectedMessages(_ messageIds: [MessageId]) -> PeerMediaCollectionInterfaceState {
         var selectedIds = Set<MessageId>()
         if let selectionState = self.selectionState {
             selectedIds.formUnion(selectionState.selectedIds)
         }
-        selectedIds.insert(messageId)
-        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), mode: self.mode, selectingMode: self.selectingMode, theme: self.theme, strings: self.strings)
-    }
-    
-    func withToggledSelectedMessage(_ messageId: MessageId) -> PeerMediaCollectionInterfaceState {
-        var selectedIds = Set<MessageId>()
-        if let selectionState = self.selectionState {
-            selectedIds.formUnion(selectionState.selectedIds)
-        }
-        if selectedIds.contains(messageId) {
-            let _ = selectedIds.remove(messageId)
-        } else {
+        for messageId in messageIds {
             selectedIds.insert(messageId)
         }
-        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), mode: self.mode, selectingMode: self.selectingMode, theme: self.theme, strings: self.strings)
+        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), mode: self.mode, theme: self.theme, strings: self.strings)
+    }
+    
+    func withToggledSelectedMessages(_ messageIds: [MessageId], value: Bool) -> PeerMediaCollectionInterfaceState {
+        var selectedIds = Set<MessageId>()
+        if let selectionState = self.selectionState {
+            selectedIds.formUnion(selectionState.selectedIds)
+        }
+        for messageId in messageIds {
+            if value {
+                selectedIds.insert(messageId)
+            } else {
+                selectedIds.remove(messageId)
+            }
+        }
+        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), mode: self.mode, theme: self.theme, strings: self.strings)
     }
     
     func withSelectionState() -> PeerMediaCollectionInterfaceState {
-        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: self.selectionState ?? ChatInterfaceSelectionState(selectedIds: Set()), mode: self.mode, selectingMode: self.selectingMode, theme: self.theme, strings: self.strings)
+        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: self.selectionState ?? ChatInterfaceSelectionState(selectedIds: Set()), mode: self.mode, theme: self.theme, strings: self.strings)
     }
     
     func withoutSelectionState() -> PeerMediaCollectionInterfaceState {
-        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: nil, mode: self.mode, selectingMode: self.selectingMode, theme: self.theme, strings: self.strings)
+        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: nil, mode: self.mode, theme: self.theme, strings: self.strings)
     }
     
     func withUpdatedPeer(_ peer: Peer?) -> PeerMediaCollectionInterfaceState {
-        return PeerMediaCollectionInterfaceState(peer: peer, selectionState: self.selectionState, mode: self.mode, selectingMode: self.selectingMode, theme: self.theme, strings: self.strings)
-    }
-    
-    func withToggledSelectingMode() -> PeerMediaCollectionInterfaceState {
-        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: self.selectionState, mode: self.mode, selectingMode: !self.selectingMode, theme: self.theme, strings: self.strings)
+        return PeerMediaCollectionInterfaceState(peer: peer, selectionState: self.selectionState, mode: self.mode, theme: self.theme, strings: self.strings)
     }
     
     func withMode(_ mode: PeerMediaCollectionMode) -> PeerMediaCollectionInterfaceState {
-        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: self.selectionState, mode: mode, selectingMode: self.selectingMode, theme: self.theme, strings: self.strings)
+        return PeerMediaCollectionInterfaceState(peer: self.peer, selectionState: self.selectionState, mode: mode, theme: self.theme, strings: self.strings)
     }
 }

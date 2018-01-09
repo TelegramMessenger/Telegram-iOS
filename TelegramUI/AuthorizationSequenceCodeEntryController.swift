@@ -8,6 +8,9 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         return self.displayNode as! AuthorizationSequenceCodeEntryControllerNode
     }
     
+    private let strings: PresentationStrings
+    private let theme: AuthorizationTheme
+    
     var loginWithCode: ((String) -> Void)?
     var requestNextOption: (() -> Void)?
     
@@ -18,19 +21,26 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode())
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accentColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
             }
             self.controllerNode.inProgress = self.inProgress
         }
     }
     
-    init() {
-        super.init(navigationBarTheme: AuthorizationSequenceController.navigationBarTheme)
+    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+        self.strings = strings
+        self.theme = theme
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
+        super.init(navigationBarTheme: AuthorizationSequenceController.navigationBarTheme(theme))
+        
+        self.hasActiveInput = true
+        
+        self.statusBar.statusBarStyle = theme.statusBarStyle
+        
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -38,7 +48,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthorizationSequenceCodeEntryControllerNode()
+        self.displayNode = AuthorizationSequenceCodeEntryControllerNode(strings: self.strings, theme: self.theme)
         self.displayNodeDidLoad()
         
         self.controllerNode.loginWithCode = { [weak self] code in
@@ -46,6 +56,10 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         }
         
         self.controllerNode.requestNextOption = { [weak self] in
+            self?.requestNextOption?()
+        }
+        
+        self.controllerNode.requestAnotherOption = { [weak self] in
             self?.requestNextOption?()
         }
         
@@ -73,7 +87,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
     @objc func nextPressed() {

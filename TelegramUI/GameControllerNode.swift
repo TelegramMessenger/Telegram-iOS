@@ -27,6 +27,8 @@ final class GameControllerNode: ViewControllerTracingNode {
         
         super.init()
         
+        self.backgroundColor = .white
+        
         let js = "var TelegramWebviewProxyProto = function() {}; " +
             "TelegramWebviewProxyProto.prototype.postEvent = function(eventName, eventData) { " +
             "window.webkit.messageHandlers.performAction.postMessage({'eventName': eventName, 'eventData': eventData}); " +

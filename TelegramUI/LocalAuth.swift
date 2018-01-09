@@ -2,9 +2,30 @@ import Foundation
 import LocalAuthentication
 import SwiftSignalKit
 
+enum LocalAuthBiometricAuthentication {
+    case touchId
+    case faceId
+}
+
 struct LocalAuth {
-    static let isTouchIDAvailable: Bool = {
-        return LAContext().canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil)
+    static let biometricAuthentication: LocalAuthBiometricAuthentication? = {
+        let context = LAContext()
+        if context.canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
+            if #available(iOSApplicationExtension 11.0, *) {
+                switch context.biometryType {
+                    case .faceID:
+                        return .faceId
+                    case .touchID:
+                        return .touchId
+                    case .none:
+                        return nil
+                }
+            } else {
+                return .touchId
+            }
+        } else {
+            return nil
+        }
     }()
     
     static func auth(reason: String) -> Signal<Bool, NoError> {

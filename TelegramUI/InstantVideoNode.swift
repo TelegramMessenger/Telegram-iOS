@@ -49,10 +49,15 @@ private final class SharedInstantVideoContext: SharedVideoContext {
     func setSoundEnabled(_ value: Bool) {
         assert(Queue.mainQueue().isCurrent())
         if value {
-            self.player.playOnceWithSound()
+            self.player.playOnceWithSound(playAndRecord: true)
         } else {
             self.player.continuePlayingWithoutSound()
         }
+    }
+    
+    func setForceAudioToSpeaker(_ value: Bool) {
+        assert(Queue.mainQueue().isCurrent())
+        self.player.setForceAudioToSpeaker(value)
     }
     
     func seek(_ timestamp: Double) {
@@ -104,6 +109,7 @@ final class InstantVideoNode: OverlayMediaItemNode {
     private let postbox: Postbox
     
     private var soundEnabled: Bool
+    private var forceAudioToSpeaker: Bool
     
     private var contextId: Int32?
     
@@ -138,14 +144,15 @@ final class InstantVideoNode: OverlayMediaItemNode {
         return true
     }
     
-    init(theme: PresentationTheme, manager: MediaManager, account: Account, source: InstantVideoNodeSource, priority: Int32, withSound: Bool) {
+    init(theme: PresentationTheme, manager: MediaManager, postbox: Postbox, source: InstantVideoNodeSource, priority: Int32, withSound: Bool, forceAudioToSpeaker: Bool) {
         self.theme = theme
         self.manager = manager
         self.source = source
         self.priority = priority
         self.withSound = withSound
+        self.forceAudioToSpeaker = forceAudioToSpeaker
         self.soundEnabled = withSound
-        self.postbox = account.postbox
+        self.postbox = postbox
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displayWithoutProcessing = true
@@ -161,7 +168,7 @@ final class InstantVideoNode: OverlayMediaItemNode {
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.imageNode)
         
-        self.imageNode.setSignal(account: account, signal: chatMessageVideo(account: account, video: source.file))
+        self.imageNode.setSignal(chatMessageVideo(postbox: postbox, video: source.file))
         
         self.manager.sharedVideoContextManager.withSharedVideoContext(id: self.source.id, { [weak self] context in
             if let strongSelf = self, let context = context as? SharedInstantVideoContext {
@@ -298,6 +305,15 @@ final class InstantVideoNode: OverlayMediaItemNode {
         })
     }
     
+    func setForceAudioToSpeaker(_ value: Bool) {
+        self.forceAudioToSpeaker = value
+        self.manager.sharedVideoContextManager.withSharedVideoContext(id: self.source.id, { context in
+            if let context = context as? SharedInstantVideoContext {
+                context.setForceAudioToSpeaker(value)
+            }
+        })
+    }
+    
     func seek(_ timestamp: Double) {
         self.manager.sharedVideoContextManager.withSharedVideoContext(id: self.source.id, { context in
             if let context = context as? SharedInstantVideoContext {
@@ -312,6 +328,7 @@ final class InstantVideoNode: OverlayMediaItemNode {
                 self.contextId = self.manager.sharedVideoContextManager.attachSharedVideoContext(id: source.id, priority: self.priority, create: {
                     let context = SharedInstantVideoContext(audioSessionManager: manager.audioSession, postbox: self.postbox, resource: self.source.resource)
                     context.setSoundEnabled(self.soundEnabled)
+                    context.setForceAudioToSpeaker(self.forceAudioToSpeaker)
                     context.play()
                     return context
                 }, update: { [weak self] context in

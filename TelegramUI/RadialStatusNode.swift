@@ -7,6 +7,7 @@ enum RadialStatusNodeState: Equatable {
     case play(UIColor)
     case pause(UIColor)
     case progress(color: UIColor, value: CGFloat?, cancelEnabled: Bool)
+    case check(UIColor)
     case customIcon(UIImage)
     
     static func ==(lhs: RadialStatusNodeState, rhs: RadialStatusNodeState) -> Bool {
@@ -41,6 +42,12 @@ enum RadialStatusNodeState: Equatable {
                 } else {
                     return false
                 }
+            case let .check(lhsColor):
+                if case let .check(rhsColor) = rhs, lhsColor.isEqual(rhsColor) {
+                    return true
+                } else {
+                    return false
+                }
             case let .customIcon(lhsImage):
                 if case let .customIcon(rhsImage) = rhs, lhsImage === rhsImage {
                     return true
@@ -71,6 +78,8 @@ enum RadialStatusNodeState: Equatable {
                 return RadialStatusIconContentNode(icon: .pause(color))
             case let .customIcon(image):
                 return RadialStatusIconContentNode(icon: .custom(image))
+            case let .check(color):
+                return RadialCheckContentNode(color: color)
             case let .progress(color, value, cancelEnabled):
                 if let current = current as? RadialProgressContentNode, current.displayCancel == cancelEnabled {
                     if !current.color.isEqual(color) {
@@ -112,6 +121,8 @@ final class RadialStatusNode: ASControlNode {
             } else {
                 self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), animated: animated, completion: completion)
             }
+        } else {
+            completion()
         }
     }
     
@@ -121,10 +132,14 @@ final class RadialStatusNode: ASControlNode {
             contentNode.enqueueReadyForTransition { [weak contentNode, weak self] in
                 if let strongSelf = self, let contentNode = contentNode, strongSelf.contentNode === contentNode {
                     if animated {
-                        contentNode.animateOut { [weak contentNode] in
-                            contentNode?.removeFromSupernode()
-                        }
                         strongSelf.contentNode = strongSelf.nextContentNode
+                        contentNode.animateOut { [weak contentNode] in
+                            if let strongSelf = self, let contentNode = contentNode {
+                                if contentNode !== strongSelf.contentNode {
+                                    contentNode.removeFromSupernode()
+                                }
+                            }
+                        }
                         if let contentNode = strongSelf.contentNode {
                             strongSelf.addSubnode(contentNode)
                             contentNode.frame = strongSelf.bounds

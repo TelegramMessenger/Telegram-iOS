@@ -31,12 +31,12 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
         
         super.init()
         
-        self.imageNode.alphaTransitionOnFirstUpdate = true
+        self.imageNode.contentAnimations = [.firstUpdate]
         self.addSubnode(self.imageNode)
         self.addSubnode(self.videoNode)
         
         if let file = media.media as? TelegramMediaFile {
-            self.imageNode.setSignal(account: account, signal: chatMessageVideo(account: account, video: file))
+            self.imageNode.setSignal(chatMessageVideo(postbox: account.postbox, video: file))
             self.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, file: file).start())
         }
     }

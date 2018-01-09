@@ -18,12 +18,12 @@ final class ChatEmptyItem: ListViewItem {
         self.tagMask = tagMask
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = {
             let node = ChatEmptyItemNode(rotated: self.tagMask == nil)
             
             let nodeLayout = node.asyncLayout()
-            let (layout, apply) = nodeLayout(self, width)
+            let (layout, apply) = nodeLayout(self, params)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -41,13 +41,13 @@ final class ChatEmptyItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ChatEmptyItemNode {
             Queue.mainQueue().async {
                 let nodeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = nodeLayout(self, width)
+                    let (layout, apply) = nodeLayout(self, params)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
@@ -94,10 +94,11 @@ final class ChatEmptyItemNode: ListViewItemNode {
         self.wantsTrailingItemSpaceUpdates = true
     }
     
-    func asyncLayout() -> (_ item: ChatEmptyItem, _ width: CGFloat) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    func asyncLayout() -> (_ item: ChatEmptyItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let currentTheme = self.theme
-        return { [weak self] item, width in
+        return { [weak self] item, params in
+            let width = params.width
             var updatedBackgroundImage: UIImage?
             
             let iconImage: UIImage? = PresentationResourcesChat.chatEmptyItemIconImage(item.theme)
@@ -132,7 +133,7 @@ final class ChatEmptyItemNode: ListViewItemNode {
             }
             let imageSpacing: CGFloat = 10.0
             
-            let (textLayout, textApply) = makeTextLayout(attributedText, nil, 0, .end, CGSize(width: width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), .center, nil, UIEdgeInsets())
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let contentWidth = max(textLayout.size.width, 120.0)
             

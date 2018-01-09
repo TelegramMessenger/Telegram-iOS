@@ -9,12 +9,19 @@ final class AuthorizationSequenceSplashController: ViewController {
         return self.displayNode as! AuthorizationSequenceSplashControllerNode
     }
     
-    private let controller = RMIntroViewController()
+    private let theme: AuthorizationTheme
+    
+    private let controller: RMIntroViewController
     
     var nextPressed: (() -> Void)?
     
-    init() {
+    init(theme: AuthorizationTheme) {
+        self.theme = theme
+        self.controller = RMIntroViewController(backroundColor: theme.backgroundColor, primaryColor: theme.primaryColor, accentColor: theme.accentColor, regularDotColor: theme.disclosureControlColor, highlightedDotColor: theme.accentColor)
+        
         super.init(navigationBarTheme: nil)
+        
+        self.statusBar.statusBarStyle = theme.statusBarStyle
         
         self.controller.startMessaging = { [weak self] in
             self?.nextPressed?()
@@ -26,7 +33,7 @@ final class AuthorizationSequenceSplashController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthorizationSequenceSplashControllerNode()
+        self.displayNode = AuthorizationSequenceSplashControllerNode(theme: self.theme)
         self.displayNodeDidLoad()
     }
     
@@ -39,9 +46,9 @@ final class AuthorizationSequenceSplashController: ViewController {
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated);
-        controller.viewWillAppear(false)
+        super.viewWillAppear(animated)
         self.addControllerIfNeeded()
+        controller.viewWillAppear(false)
     }
     
     override func viewDidAppear(_ animated: Bool) {

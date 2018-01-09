@@ -7,14 +7,27 @@ import Photos
 
 func saveToCameraRoll(postbox: Postbox, media: Media) -> Signal<Void, NoError> {
     var resource: MediaResource?
-    var isImage = false
+    var isImage = true
     if let image = media as? TelegramMediaImage {
         if let representation = largestImageRepresentation(image.representations) {
             resource = representation.resource
-            isImage = true
         }
     } else if let file = media as? TelegramMediaFile {
         resource = file.resource
+        if file.isVideo {
+            isImage = false
+        }
+    } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+        if let image = content.image {
+            if let representation = largestImageRepresentation(image.representations) {
+                resource = representation.resource
+            }
+        } else if let file = content.file {
+            resource = file.resource
+            if file.isVideo {
+                isImage = false
+            }
+        }
     }
     
     if let resource = resource {
@@ -37,8 +50,14 @@ func saveToCameraRoll(postbox: Postbox, media: Media) -> Signal<Void, NoError> {
                         let tempVideoPath = NSTemporaryDirectory() + "\(arc4random64()).mp4"
                         PHPhotoLibrary.shared().performChanges({
                             if isImage {
-                                if let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: data) {
-                                    PHAssetChangeRequest.creationRequestForAsset(from: image)
+                                if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                                    if #available(iOSApplicationExtension 9.0, *) {
+                                        PHAssetCreationRequest.forAsset().addResource(with: .photo, data: fileData, options: nil)
+                                    } else {
+                                        if let image = UIImage(data: fileData) {
+                                            PHAssetChangeRequest.creationRequestForAsset(from: image)
+                                        }
+                                    }
                                 }
                             } else {
                                 if let _ = try? FileManager.default.copyItem(atPath: data.path, toPath: tempVideoPath) {

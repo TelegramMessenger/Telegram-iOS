@@ -66,38 +66,34 @@ func stringForMonth(strings: PresentationStrings, month: Int32, ofYear year: Int
     return stringForMonth(strings: strings, month: month) + " \(1900 + year)"
 }
 
-func stringForTime(hours: Int32, minutes: Int32) -> String {
-    return String(format: "%d:%02d", hours, minutes)
-}
-
 enum RelativeTimestampFormatDay {
     case today
     case yesterday
 }
 
-func stringForUserPresence(strings: PresentationStrings, day: RelativeTimestampFormatDay, hours: Int32, minutes: Int32) -> String {
+func stringForUserPresence(strings: PresentationStrings, day: RelativeTimestampFormatDay, timeFormat: PresentationTimeFormat, hours: Int32, minutes: Int32) -> String {
     let dayString: String
     switch day {
         case .today:
-            dayString = strings.LastSeen_AtDate(strings.Time_TodayAt(stringForTime(hours: hours, minutes: minutes)).0).0
+            dayString = strings.LastSeen_AtDate(strings.Time_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, timeFormat: timeFormat)).0).0
         case .yesterday:
-            dayString = strings.LastSeen_AtDate(strings.Time_YesterdayAt(stringForTime(hours: hours, minutes: minutes)).0).0
+            dayString = strings.LastSeen_AtDate(strings.Time_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, timeFormat: timeFormat)).0).0
     }
     return dayString
 }
 
-private func humanReadableStringForTimestamp(strings: PresentationStrings, day: RelativeTimestampFormatDay, hours: Int32, minutes: Int32) -> String {
+private func humanReadableStringForTimestamp(strings: PresentationStrings, day: RelativeTimestampFormatDay, timeFormat: PresentationTimeFormat, hours: Int32, minutes: Int32) -> String {
     let dayString: String
     switch day {
     case .today:
-        dayString = strings.Time_TodayAt(stringForTime(hours: hours, minutes: minutes)).0
+        dayString = strings.Time_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, timeFormat: timeFormat)).0
     case .yesterday:
-        dayString = strings.Time_YesterdayAt(stringForTime(hours: hours, minutes: minutes)).0
+        dayString = strings.Time_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, timeFormat: timeFormat)).0
     }
     return dayString
 }
 
-func humanReadableStringForTimestamp(strings: PresentationStrings, timestamp: Int32) -> String {
+func humanReadableStringForTimestamp(strings: PresentationStrings, timeFormat: PresentationTimeFormat, timestamp: Int32) -> String {
     var t: time_t = time_t(timestamp)
     var timeinfo: tm = tm()
     localtime_r(&t, &timeinfo)
@@ -119,7 +115,7 @@ func humanReadableStringForTimestamp(strings: PresentationStrings, timestamp: In
         } else {
             day = .yesterday
         }
-        return humanReadableStringForTimestamp(strings: strings, day: day, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
+        return humanReadableStringForTimestamp(strings: strings, day: day, timeFormat: timeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
     } else {
         return "\(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year))"
     }
@@ -163,7 +159,7 @@ func relativeUserPresenceStatus(_ presence: TelegramUserPresence, relativeTo tim
     }
 }
 
-func stringForRelativeTimestamp(strings: PresentationStrings, relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
+func stringForRelativeTimestamp(strings: PresentationStrings, relativeTimestamp: Int32, relativeTo timestamp: Int32, timeFormat: PresentationTimeFormat) -> String {
     var t: time_t = time_t(relativeTimestamp)
     var timeinfo: tm = tm()
     localtime_r(&t, &timeinfo)
@@ -179,7 +175,7 @@ func stringForRelativeTimestamp(strings: PresentationStrings, relativeTimestamp:
     let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
     if dayDifference > -7 {
         if dayDifference == 0 {
-            return stringForTime(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
+            return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, timeFormat: timeFormat)
         } else {
             return shortStringForDayOfWeek(strings: strings, day: timeinfo.tm_wday)
         }
@@ -188,10 +184,64 @@ func stringForRelativeTimestamp(strings: PresentationStrings, relativeTimestamp:
     }
 }
 
-func stringAndActivityForUserPresence(strings: PresentationStrings, presence: TelegramUserPresence, relativeTo timestamp: Int32) -> (String, Bool) {
+func stringForRelativeLiveLocationTimestamp(strings: PresentationStrings, relativeTimestamp: Int32, relativeTo timestamp: Int32, timeFormat: PresentationTimeFormat) -> String {
+    let difference = timestamp - relativeTimestamp
+    if difference < 60 {
+        return strings.LiveLocationUpdated_JustNow
+    } else if difference < 60 * 60 {
+        let minutes = difference / 60
+        return strings.LiveLocationUpdated_MinutesAgo(minutes)
+    } else {
+        var t: time_t = time_t(relativeTimestamp)
+        var timeinfo: tm = tm()
+        localtime_r(&t, &timeinfo)
+        
+        var now: time_t = time_t(timestamp)
+        var timeinfoNow: tm = tm()
+        localtime_r(&now, &timeinfoNow)
+        
+        let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+        
+        let hours = timeinfo.tm_hour
+        let minutes = timeinfo.tm_min
+        
+        if dayDifference == 0 {
+            return strings.LiveLocationUpdated_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, timeFormat: timeFormat)).0
+        } else {
+            return stringForFullDate(timestamp: relativeTimestamp, strings: strings, timeFormat: timeFormat)
+        }
+    }
+}
+
+func stringForRelativeLiveLocationUpdateTimestamp(strings: PresentationStrings, relativeTimestamp: Int32, relativeTo timestamp: Int32, timeFormat: PresentationTimeFormat) -> String {
+    var t: time_t = time_t(relativeTimestamp)
+    var timeinfo: tm = tm()
+    localtime_r(&t, &timeinfo)
+    
+    var now: time_t = time_t(timestamp)
+    var timeinfoNow: tm = tm()
+    localtime_r(&now, &timeinfoNow)
+    
+    if timeinfo.tm_year != timeinfoNow.tm_year {
+        return stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year)
+    }
+    
+    let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+    if dayDifference > -7 {
+        if dayDifference == 0 {
+            return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, timeFormat: timeFormat)
+        } else {
+            return shortStringForDayOfWeek(strings: strings, day: timeinfo.tm_wday)
+        }
+    } else {
+        return stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1)
+    }
+}
+
+func stringAndActivityForUserPresence(strings: PresentationStrings, timeFormat: PresentationTimeFormat, presence: TelegramUserPresence, relativeTo timestamp: Int32) -> (String, Bool) {
     switch presence.status {
         case .none:
-            return (strings.Presence_offline, false)
+            return (strings.LastSeen_ALongTimeAgo, false)
         case let .present(statusTimestamp):
             if statusTimestamp >= timestamp {
                 return (strings.Presence_online, true)
@@ -223,7 +273,7 @@ func stringAndActivityForUserPresence(strings: PresentationStrings, presence: Te
                         } else {
                             day = .yesterday
                         }
-                        return (stringForUserPresence(strings: strings, day: day, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min), false)
+                        return (stringForUserPresence(strings: strings, day: day, timeFormat: timeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min), false)
                     } else {
                         return (strings.LastSeen_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year)).0, false)
                     }

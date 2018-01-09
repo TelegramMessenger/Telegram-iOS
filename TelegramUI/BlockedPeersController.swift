@@ -9,11 +9,13 @@ private final class BlockedPeersControllerArguments {
     
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removePeer: (PeerId) -> Void
+    let openPeer: (Peer) -> Void
     
-    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void) {
+    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void) {
         self.account = account
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
+        self.openPeer = openPeer
     }
 }
 
@@ -102,7 +104,9 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
     func item(_ arguments: BlockedPeersControllerArguments) -> ListViewItem {
         switch self {
             case let .peerItem(_, theme, strings, peer, editing, enabled):
-                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
+                    arguments.openPeer(peer)
+                }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -176,7 +180,7 @@ public func blockedPeersController(account: Account) -> ViewController {
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -227,6 +231,10 @@ public func blockedPeersController(account: Account) -> ViewController {
             }
             
         }))
+    }, openPeer: { peer in
+        if let controller = peerInfoController(account: account, peer: peer) {
+            pushControllerImpl?(controller)
+        }
     })
     
     let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(requestBlockedPeers(account: account) |> map { Optional($0) })
@@ -241,13 +249,13 @@ public func blockedPeersController(account: Account) -> ViewController {
             var rightNavigationButton: ItemListNavigationButton?
             if let peers = peers, !peers.isEmpty {
                 if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: "Done", style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: "Edit", style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(true)
                         }
@@ -258,16 +266,16 @@ public func blockedPeersController(account: Account) -> ViewController {
             var emptyStateItem: ItemListControllerEmptyStateItem?
             if let peers = peers {
                 if peers.isEmpty {
-                    emptyStateItem = ItemListTextEmptyStateItem(text: "Blocked users can't send you messages of add you to groups. They will not see your profile pictures, online and last seen status.")
+                    emptyStateItem = ItemListTextEmptyStateItem(text: presentationData.strings.BlockedUsers_Info)
                 }
             } else if peers == nil {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
+                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
             
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Blocked Users"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"), animateChanges: true)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.BlockedUsers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             let listState = ItemListNodeState(entries: blockedPeersControllerEntries(presentationData: presentationData, state: state, peers: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))
@@ -276,9 +284,9 @@ public func blockedPeersController(account: Account) -> ViewController {
     }
     
     let controller = ItemListController(account: account, state: signal)
-    presentControllerImpl = { [weak controller] c, p in
+    pushControllerImpl = { [weak controller] c in
         if let controller = controller {
-            controller.present(c, in: .window(.root), with: p)
+            (controller.navigationController as? NavigationController)?.pushViewController(c)
         }
     }
     return controller

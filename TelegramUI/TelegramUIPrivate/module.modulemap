@@ -22,4 +22,6 @@ module TelegramUIPrivateModule {
     header "../OngoingCallThreadLocalContext.h"
     header "../SecretChatKeyVisualization.h"
     header "../NumberPluralizationForm.h"
+    header "../DeviceProximityManager.h"
+    header "../RaiseToListenActivator.h"
 }

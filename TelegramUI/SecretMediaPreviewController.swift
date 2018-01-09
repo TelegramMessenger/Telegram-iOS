@@ -70,7 +70,10 @@ public final class SecretMediaPreviewController: ViewController {
         if let messageView = self.messageView, let message = messageView.message {
             if self.currentNodeMessageId != message.id {
                 self.currentNodeMessageId = message.id
-                let item = galleryItemForEntry(account: account, theme: self.presentationData.theme, strings: self.presentationData.strings, entry: .MessageEntry(message, false, nil, nil))
+                guard let item = galleryItemForEntry(account: account, theme: self.presentationData.theme, strings: self.presentationData.strings, entry: .MessageEntry(message, false, nil, nil), streamVideos: false) else {
+                    self._ready.set(.single(true))
+                    return
+                }
                 let itemNode = item.node()
                 self.controllerNode.setItemNode(itemNode)
             

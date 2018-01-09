@@ -21,12 +21,15 @@ private final class DebugControllerArguments {
 private enum DebugControllerSection: Int32 {
     case logs
     case payments
+    case logging
 }
 
 private enum DebugControllerEntry: ItemListNodeEntry {
     case sendLogs(PresentationTheme)
     case accounts(PresentationTheme)
     case clearPaymentData(PresentationTheme)
+    case logToFile(PresentationTheme, Bool)
+    case logToConsole(PresentationTheme, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -36,6 +39,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logs.rawValue
             case .clearPaymentData:
                 return DebugControllerSection.payments.rawValue
+            case .logToFile, .logToConsole:
+                return  DebugControllerSection.logging.rawValue
         }
     }
     
@@ -47,6 +52,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 1
             case .clearPaymentData:
                 return 2
+            case .logToFile:
+                return 3
+            case .logToConsole:
+                return 4
         }
     }
     
@@ -66,6 +75,18 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }
             case let .clearPaymentData(lhsTheme):
                 if case let .clearPaymentData(rhsTheme) = rhs, lhsTheme === rhsTheme {
+                    return true
+                } else {
+                    return false
+                }
+            case let .logToFile(lhsTheme, lhsValue):
+                if case let .logToFile(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .logToConsole(lhsTheme, lhsValue):
+                if case let .logToConsole(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -91,7 +112,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     let messages = logs.map { (name, path) -> EnqueueMessage in
                                         let id = arc4random64()
                                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                        return .message(text: "", attributes: [], media: file, replyToMessageId: nil)
+                                        return .message(text: "", attributes: [], media: file, replyToMessageId: nil, localGroupingKey: nil)
                                     }
                                     let _ = enqueueMessages(account: arguments.account, peerId: peerId, messages: messages).start()
                                 }
@@ -104,19 +125,34 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     arguments.pushController(debugAccountsController(account: arguments.account, accountManager: arguments.accountManager))
                 })
             case let .clearPaymentData(theme):
-                return ItemListDisclosureItem(theme: theme, title: "Clear Payment Data", label: "", sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(theme: theme, title: "Clear Payment Password", label: "", sectionId: self.section, style: .blocks, action: {
                     let _ = cacheTwoStepPasswordToken(postbox: arguments.account.postbox, token: nil).start()
+                })
+            case let .logToFile(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Log to File", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    updateLoggingSettings(postbox: arguments.account.postbox, {
+                        $0.withUpdatedLogToFile(value)
+                    }).start()
+                })
+            case let .logToConsole(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Log to Console", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    updateLoggingSettings(postbox: arguments.account.postbox, {
+                        $0.withUpdatedLogToConsole(value)
+                    }).start()
                 })
         }
     }
 }
 
-private func debugControllerEntries(presentationData: PresentationData) -> [DebugControllerEntry] {
+private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = []
     
     entries.append(.sendLogs(presentationData.theme))
     entries.append(.accounts(presentationData.theme))
     entries.append(.clearPaymentData(presentationData.theme))
+    
+    entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
+    entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
     
     return entries
 }
@@ -131,10 +167,17 @@ public func debugController(account: Account, accountManager: AccountManager) ->
         pushControllerImpl?(controller)
     })
     
-    let signal = (account.applicationContext as! TelegramApplicationContext).presentationData
-        |> map { presentationData -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: "Back"))
-            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData), style: .blocks)
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [PreferencesKeys.loggingSettings]))
+        |> map { presentationData, preferencesView -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
+            let loggingSettings: LoggingSettings
+            if let value = preferencesView.values[PreferencesKeys.loggingSettings] as? LoggingSettings {
+                loggingSettings = value
+            } else {
+                loggingSettings = LoggingSettings.defaultSettings
+            }
+            
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }

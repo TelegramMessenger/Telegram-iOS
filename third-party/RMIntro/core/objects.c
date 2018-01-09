@@ -31,6 +31,7 @@ static TextureProgram texture_program_red;
 static TextureProgram texture_program_blue;
 static TextureProgram texture_program_light_red;
 static TextureProgram texture_program_light_blue;
+static TextureProgram texture_program_black;
 
 static TextureProgram *texture_program_temp;
 
@@ -260,6 +261,40 @@ void setup_shaders()
     "}";
     
     texture_program_one = get_texture_program(build_program(vshader, (GLint)strlen(vshader), fshader, (GLint)strlen(fshader)));
+    
+    texture_program_one = get_texture_program(build_program(vshader, (GLint)strlen(vshader), fshader, (GLint)strlen(fshader)));
+
+
+
+
+
+
+
+
+    char* vshader_texture_black =
+        "uniform mat4 u_MvpMatrix;"
+        "attribute vec4 a_Position;"
+        "attribute vec2 a_TextureCoordinates;"
+        "varying vec2 v_TextureCoordinates;"
+        "void main(){"
+        "    v_TextureCoordinates = a_TextureCoordinates;"
+        "    gl_Position = u_MvpMatrix * a_Position;"
+        "}";
+
+    char* fshader_texture_black =
+        "precision lowp float;"
+        "uniform sampler2D u_TextureUnit;"
+        "varying vec2 v_TextureCoordinates;"
+        "uniform float u_Alpha;"
+        "void main(){"
+        "    gl_FragColor = texture2D(u_TextureUnit, v_TextureCoordinates);"
+        //"   float p = u_Alpha*gl_FragColor.w*0.4;"
+        //"   gl_FragColor = vec4(0,0.353,0.761,p);"
+        "   float p = u_Alpha*gl_FragColor.w;"
+        "   gl_FragColor = vec4(0,0,0,p);"
+        "}";
+
+    texture_program_black = get_texture_program(build_program(vshader_texture_black, (GLint)strlen(vshader_texture_black), fshader_texture_black, (GLint)strlen(fshader_texture_black)));
 }
 
 
@@ -454,6 +489,10 @@ void vec4_log(__unused vec4 M)
 
 void draw_shape(const Shape* shape, mat4x4 view_projection_matrix)
 {
+    draw_colored_shape(shape, view_projection_matrix, shape->color);
+}
+
+void draw_colored_shape(const Shape* shape, mat4x4 view_projection_matrix, vec4 color) {
     if (shape->params.alpha>0 && (fabs(shape->params.scale.x)>0 && fabs(shape->params.scale.y)>0 && fabs(shape->params.scale.z)>0))
     {
         
@@ -466,7 +505,7 @@ void draw_shape(const Shape* shape, mat4x4 view_projection_matrix)
         
         glUniformMatrix4fv(color_program.u_mvp_matrix_location, 1, GL_FALSE, (GLfloat*)model_view_projection_matrix);
         if (shape->params.rotation==5.) {
-            glUniform4fv(color_program.u_color_location, 1, shape->color);
+            glUniform4fv(color_program.u_color_location, 1, color);
         }
         else if (shape->params.rotation==10.)
         {
@@ -476,7 +515,7 @@ void draw_shape(const Shape* shape, mat4x4 view_projection_matrix)
         }
         else
         {
-            glUniform4fv(color_program.u_color_location, 1, shape->color);
+            glUniform4fv(color_program.u_color_location, 1, color);
         }
         
         glUniform1f(color_program.u_alpha_loaction, shape->params.alpha);
@@ -533,6 +572,14 @@ void draw_textured_shape(const TexturedShape* shape, mat4x4 view_projection_matr
             texture_program_temp=&texture_program_light_blue;
         }
         else if (program_type==NORMAL_ONE)
+        {
+            texture_program_temp=&texture_program_one;
+        }
+        else if (program_type==DARK)
+        {
+            texture_program_temp=&texture_program_black;
+        }
+        else if (program_type==LIGHT)
         {
             texture_program_temp=&texture_program_one;
         }

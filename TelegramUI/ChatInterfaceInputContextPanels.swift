@@ -1,8 +1,29 @@
 import Foundation
 import TelegramCore
 
+private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult) -> Int {
+    switch result {
+        case .stickers:
+            return 0
+        case .hashtags:
+            return 1
+        case .mentions:
+            return 2
+        case .commands:
+            return 3
+        case .contextRequestResult:
+            return 4
+    }
+}
+
 func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
-    guard let inputQueryResult = chatPresentationInterfaceState.inputQueryResult, let _ = chatPresentationInterfaceState.peer else {
+    guard let _ = chatPresentationInterfaceState.peer else {
+        return nil
+    }
+    
+    guard let inputQueryResult = chatPresentationInterfaceState.inputQueryResults.values.sorted(by: {
+        inputQueryResultPriority($0) < inputQueryResultPriority($1)
+    }).first else {
         return nil
     }
     
@@ -13,7 +34,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     currentPanel.updateResults(results.map({ $0.file }))
                     return currentPanel
                 } else {
-                    let panel = HorizontalStickersChatContextPanelNode(account: account)
+                    let panel = HorizontalStickersChatContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(results.map({ $0.file }))
                     return panel
@@ -24,18 +45,18 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                 currentPanel.updateResults(results)
                 return currentPanel
             } else {
-                let panel = HashtagChatInputContextPanelNode(account: account)
+                let panel = HashtagChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 panel.interfaceInteraction = interfaceInteraction
                 panel.updateResults(results)
                 return panel
             }
         case let .mentions(peers):
             if !peers.isEmpty {
-                if let currentPanel = currentPanel as? MentionChatInputContextPanelNode {
+                if let currentPanel = currentPanel as? MentionChatInputContextPanelNode, currentPanel.mode == .input {
                     currentPanel.updateResults(peers)
                     return currentPanel
                 } else {
-                    let panel = MentionChatInputContextPanelNode(account: account)
+                    let panel = MentionChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, mode: .input)
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(peers)
                     return panel
@@ -49,7 +70,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     currentPanel.updateResults(commands)
                     return currentPanel
                 } else {
-                    let panel = CommandChatInputContextPanelNode(account: account)
+                    let panel = CommandChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(commands)
                     return panel
@@ -57,7 +78,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
             } else {
                 return nil
             }
-        case let .contextRequestResult(peer, results):
+        case let .contextRequestResult(_, results):
             if let results = results, (!results.results.isEmpty || results.switchPeer != nil) {
                 switch results.presentation {
                     case .list:
@@ -65,7 +86,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                             currentPanel.updateResults(results)
                             return currentPanel
                         } else {
-                            let panel = VerticalListContextResultsChatInputContextPanelNode(account: account)
+                            let panel = VerticalListContextResultsChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                             panel.interfaceInteraction = interfaceInteraction
                             panel.updateResults(results)
                             return panel
@@ -75,7 +96,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                             currentPanel.updateResults(results)
                             return currentPanel
                         } else {
-                            let panel = HorizontalListContextResultsChatInputContextPanelNode(account: account)
+                            let panel = HorizontalListContextResultsChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                             panel.interfaceInteraction = interfaceInteraction
                             panel.updateResults(results)
                             return panel
@@ -88,3 +109,31 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
     
     return nil
 }
+
+func chatOverlayContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
+    guard let searchQuerySuggestionResult = chatPresentationInterfaceState.searchQuerySuggestionResult, let _ = chatPresentationInterfaceState.peer else {
+        return nil
+    }
+    
+    switch searchQuerySuggestionResult {
+        case let .mentions(peers):
+            if !peers.isEmpty {
+                if let currentPanel = currentPanel as? MentionChatInputContextPanelNode, currentPanel.mode == .search {
+                    currentPanel.updateResults(peers)
+                    return currentPanel
+                } else {
+                    let panel = MentionChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, mode: .search)
+                    panel.interfaceInteraction = interfaceInteraction
+                    panel.updateResults(peers)
+                    return panel
+                }
+            } else {
+                return nil
+            }
+        default:
+            break
+    }
+    
+    return nil
+}
+

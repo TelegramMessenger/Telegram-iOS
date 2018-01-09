@@ -38,6 +38,12 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     private let account: Account
     private let trackingNode: MultiplexedVideoTrackingNode
     
+    var bottomInset: CGFloat = 0.0 {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
+    
     var files: [TelegramMediaFile] = [] {
         didSet {
             self.updateVisibleItems()
@@ -60,6 +66,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     init(account: Account) {
         self.account = account
         self.trackingNode = MultiplexedVideoTrackingNode()
+        self.trackingNode.isLayerBacked = true
         
         var timebase: CMTimebase?
         CMTimebaseCreateWithMasterClock(nil, CMClockGetHostTimeClock(), &timebase)
@@ -349,7 +356,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 
                 i += row.count
             }
-            let contentSize = CGSize(width: drawableSize.width, height: contentMaxValueInScrollDirection)
+            let contentSize = CGSize(width: drawableSize.width, height: contentMaxValueInScrollDirection + self.bottomInset)
             self.contentSize = contentSize
             
             self.displayItems = displayItems

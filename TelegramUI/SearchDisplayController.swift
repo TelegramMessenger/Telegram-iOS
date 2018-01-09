@@ -36,13 +36,26 @@ final class SearchDisplayController {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        let searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: (layout.statusBarHeight ?? 0.0) - 20.0), size: CGSize(width: layout.size.width, height: 64.0))
-        transition.updateFrame(node: self.searchBar, frame: searchBarFrame)
+        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+        let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
+        let navigationBarOffset: CGFloat
+        if statusBarHeight.isZero {
+            navigationBarOffset = -20.0
+        } else {
+            navigationBarOffset = 0.0
+        }
+        var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: searchBarHeight))
+        if layout.statusBarHeight == nil {
+            navigationBarFrame.size.height = 64.0
+        }
         
-        self.containerLayout = (layout, searchBarFrame.maxY)
+        transition.updateFrame(node: self.searchBar, frame: navigationBarFrame)
+        self.searchBar.updateLayout(boundingSize: navigationBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+        
+        self.containerLayout = (layout, navigationBarFrame.maxY)
         
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: layout.intrinsicInsets, statusBarHeight: nil, inputHeight: layout.inputHeight), navigationBarHeight: searchBarFrame.maxY, transition: transition)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), navigationBarHeight: navigationBarFrame.maxY, transition: transition)
     }
     
     func activate(insertSubnode: (ASDisplayNode) -> Void, placeholder: SearchBarPlaceholderNode) {
@@ -53,7 +66,7 @@ final class SearchDisplayController {
         insertSubnode(self.contentNode)
         
         self.contentNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil), navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
         let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: self.contentNode.supernode)
         
@@ -62,7 +75,21 @@ final class SearchDisplayController {
         self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionEaseOut)
         
         self.searchBar.placeholderString = placeholder.placeholderString
-        self.searchBar.frame = CGRect(origin: CGPoint(x: 0.0, y: (layout.statusBarHeight ?? 0.0) - 20.0), size: CGSize(width: layout.size.width, height: 64.0))
+        
+        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+        let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
+        let navigationBarOffset: CGFloat
+        if statusBarHeight.isZero {
+            navigationBarOffset = -20.0
+        } else {
+            navigationBarOffset = 0.0
+        }
+        var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: searchBarHeight))
+        if layout.statusBarHeight == nil {
+            navigationBarFrame.size.height = 64.0
+        }
+        
+        self.searchBar.frame = navigationBarFrame
         insertSubnode(searchBar)
         self.searchBar.layout()
         

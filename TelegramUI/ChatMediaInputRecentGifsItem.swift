@@ -20,7 +20,7 @@ final class ChatMediaInputRecentGifsItem: ListViewItem {
         self.theme = theme
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatMediaInputRecentGifsItemNode()
             node.contentSize = CGSize(width: 41.0, height: 41.0)
@@ -33,7 +33,7 @@ final class ChatMediaInputRecentGifsItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
             (node as? ChatMediaInputRecentGifsItemNode)?.updateTheme(theme: self.theme)
         })
@@ -48,8 +48,6 @@ private let boundingSize = CGSize(width: 41.0, height: 41.0)
 private let boundingImageSize = CGSize(width: 30.0, height: 30.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
 private let verticalOffset: CGFloat = 3.0 + UIScreenPixel
-
-private let highlightBackground = generateStretchableFilledCircleImage(radius: 9.0, color: UIColor(rgb: 0x9099A2, alpha: 0.2))
 
 final class ChatMediaInputRecentGifsItemNode: ListViewItemNode {
     private let imageNode: ASImageNode

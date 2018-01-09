@@ -15,7 +15,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     
     var navigationBar: NavigationBar?
     
-    init(account: Account) {
+    init(account: Account, theme: PresentationTheme) {
         self.account = account
         self.listNode = ListView()
         
@@ -25,7 +25,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.backgroundColor = .white
+        self.backgroundColor = theme.chatList.backgroundColor
         
         self.listNode.isHidden = true
         self.addSubnode(self.listNode)

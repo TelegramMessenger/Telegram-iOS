@@ -5,10 +5,10 @@ import SwiftSignalKit
 private final class UniversalVideoContentSubscriber {
     let id: Int32
     let priority: UniversalVideoPriority
-    let update: ((UniversalVideoContentNode & ASDisplayNode)?) -> Void
+    let update: (((UniversalVideoContentNode & ASDisplayNode), Bool)?) -> Void
     var active: Bool = false
     
-    init(id: Int32, priority: UniversalVideoPriority, update: @escaping ((UniversalVideoContentNode & ASDisplayNode)?) -> Void) {
+    init(id: Int32, priority: UniversalVideoPriority, update: @escaping (((UniversalVideoContentNode & ASDisplayNode), Bool)?) -> Void) {
         self.id = id
         self.priority = priority
         self.update = update
@@ -23,7 +23,9 @@ private final class UniversalVideoContentHolder {
     var statusDisposable: Disposable?
     var statusValue: MediaPlayerStatus?
     
-    init(content: UniversalVideoContentNode & ASDisplayNode, statusUpdated: @escaping (MediaPlayerStatus?) -> Void) {
+    var playbackCompletedIndex: Int?
+    
+    init(content: UniversalVideoContentNode & ASDisplayNode, statusUpdated: @escaping (MediaPlayerStatus?) -> Void, playbackCompleted: @escaping () -> Void) {
         self.content = content
         
         self.statusDisposable = (content.status |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
@@ -32,17 +34,24 @@ private final class UniversalVideoContentHolder {
                 statusUpdated(value)
             }
         })
+        
+        self.playbackCompletedIndex = content.addPlaybackCompleted {
+            playbackCompleted()
+        }
     }
     
     deinit {
         self.statusDisposable?.dispose()
+        if let playbackCompletedIndex = self.playbackCompletedIndex {
+            self.content.removePlaybackCompleted(playbackCompletedIndex)
+        }
     }
     
     var isEmpty: Bool {
         return self.subscribers.isEmpty
     }
     
-    func addSubscriber(priority: UniversalVideoPriority, update: @escaping ((UniversalVideoContentNode & ASDisplayNode)?) -> Void) -> Int32 {
+    func addSubscriber(priority: UniversalVideoPriority, update: @escaping (((UniversalVideoContentNode & ASDisplayNode), Bool)?) -> Void) -> Int32 {
         let id = self.nextId
         self.nextId += 1
         
@@ -63,25 +72,40 @@ private final class UniversalVideoContentHolder {
                 let subscriber = self.subscribers[i]
                 self.subscribers.remove(at: i)
                 if subscriber.active {
-                    subscriber.update(nil)
-                    self.update()
+                    self.update(removeSubscribers: [subscriber])
                 }
                 break
             }
         }
     }
     
-    func update() {
+    func update(forceUpdateId: Int32? = nil, initiatedCreation: Int32? = nil, removeSubscribers: [UniversalVideoContentSubscriber] = []) {
+        var removeSubscribers = removeSubscribers
         for i in (0 ..< self.subscribers.count) {
             if i == self.subscribers.count - 1 {
                 if !self.subscribers[i].active {
                     self.subscribers[i].active = true
-                    self.subscribers[i].update(self.content)
+                    self.subscribers[i].update((self.content, initiatedCreation: initiatedCreation == self.subscribers[i].id))
                 }
             } else {
                 if self.subscribers[i].active {
                     self.subscribers[i].active = false
-                    self.subscribers[i].update(nil)
+                    removeSubscribers.append(self.subscribers[i])
+                }
+            }
+        }
+        
+        for subscriber in removeSubscribers {
+            subscriber.update(nil)
+        }
+        
+        if let forceUpdateId = forceUpdateId {
+            for subscriber in self.subscribers {
+                if subscriber.id == forceUpdateId {
+                    if !subscriber.active {
+                        subscriber.update(nil)
+                    }
+                    break
                 }
             }
         }
@@ -101,13 +125,16 @@ final class UniversalVideoContentManager {
     private var holders: [AnyHashable: UniversalVideoContentHolder] = [:]
     private var holderCallbacks: [AnyHashable: UniversalVideoContentHolderCallbacks] = [:]
     
-    func attachUniversalVideoContent(id: AnyHashable, priority: UniversalVideoPriority, create: () -> UniversalVideoContentNode & ASDisplayNode, update: @escaping ((UniversalVideoContentNode & ASDisplayNode)?) -> Void) -> Int32 {
+    func attachUniversalVideoContent(id: AnyHashable, priority: UniversalVideoPriority, create: () -> UniversalVideoContentNode & ASDisplayNode, update: @escaping (((UniversalVideoContentNode & ASDisplayNode), Bool)?) -> Void) -> Int32 {
         assert(Queue.mainQueue().isCurrent())
+        
+        var initiatedCreation = false
         
         let holder: UniversalVideoContentHolder
         if let current = self.holders[id] {
             holder = current
         } else {
+            initiatedCreation = true
             holder = UniversalVideoContentHolder(content: create(), statusUpdated: { [weak self] value in
                 if let strongSelf = self {
                     if let current = strongSelf.holderCallbacks[id] {
@@ -116,12 +143,20 @@ final class UniversalVideoContentManager {
                         }
                     }
                 }
+            }, playbackCompleted: { [weak self] in
+                if let strongSelf = self {
+                    if let current = strongSelf.holderCallbacks[id] {
+                        for subscriber in current.playbackCompleted.copyItems() {
+                            subscriber()
+                        }
+                    }
+                }
             })
             self.holders[id] = holder
         }
         
         let id = holder.addSubscriber(priority: priority, update: update)
-        holder.update()
+        holder.update(forceUpdateId: id, initiatedCreation: initiatedCreation ? id : nil)
         return id
     }
     

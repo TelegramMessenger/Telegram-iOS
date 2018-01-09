@@ -6,13 +6,15 @@ import TelegramCore
 
 public final class TelegramApplicationBindings {
     public let openUrl: (String) -> Void
+    public let canOpenUrl: (String) -> Bool
     public let getTopWindow: () -> UIWindow?
     public let displayNotification: (String) -> Void
     public let applicationInForeground: Signal<Bool, NoError>
     public let applicationIsActive: Signal<Bool, NoError>
     
-    public init(openUrl: @escaping (String) -> Void, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>) {
+    public init(openUrl: @escaping (String) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>) {
         self.openUrl = openUrl
+        self.canOpenUrl = canOpenUrl
         self.getTopWindow = getTopWindow
         self.displayNotification = displayNotification
         self.applicationInForeground = applicationInForeground
@@ -26,7 +28,7 @@ public final class TelegramApplicationContext {
     let fetchManager: FetchManager
     public var callManager: PresentationCallManager?
     
-    public let mediaManager = MediaManager()
+    public let mediaManager: MediaManager
     
     public let contactsManager = DeviceContactsManager()
     
@@ -49,6 +51,7 @@ public final class TelegramApplicationContext {
     public var hasOngoingCall: Signal<Bool, NoError>?
     
     public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>, postbox: Postbox) {
+        self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.fetchManager = FetchManager(postbox: postbox)

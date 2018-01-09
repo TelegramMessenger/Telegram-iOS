@@ -19,8 +19,6 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
     private let iconNode: ASImageNode
     private let buttonNode: HighlightableButtonNode
     
-    private var item: ChatMessageItem?
-    
     required init() {
         self.titleNode = TextNode()
         self.labelNode = TextNode()
@@ -56,26 +54,27 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
-        return { item, layoutConstants, position, _ in
-            return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
+        return { item, layoutConstants, _, _, _ in
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackgroundForEmptyWallpapers: false, forceFullCorners: false)
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message = item.message
                 
-                let incoming = item.message.effectivelyIncoming
+                let incoming = item.message.effectivelyIncoming(item.account.peerId)
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
                 
-                let bubbleTheme = item.theme.chat.bubble
+                let bubbleTheme = item.presentationData.theme.chat.bubble
                 
                 var titleString: String
                 if message.flags.contains(.Incoming) {
-                    titleString = item.strings.Notification_CallIncoming
+                    titleString = item.presentationData.strings.Notification_CallIncoming
                 } else {
-                    titleString = item.strings.Notification_CallOutgoing
+                    titleString = item.presentationData.strings.Notification_CallOutgoing
                 }
                 
                 var callDuration: Int32?
@@ -87,10 +86,10 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                             switch discardReason {
                                 case .busy, .disconnect:
                                     callSuccessful = false
-                                    titleString = item.strings.Notification_CallCanceled
+                                    titleString = item.presentationData.strings.Notification_CallCanceled
                                 case .missed:
                                     callSuccessful = false
-                                    titleString = item.strings.Notification_CallMissed
+                                    titleString = item.presentationData.strings.Notification_CallMissed
                                 case .hangup:
                                     break
                             }
@@ -123,29 +122,26 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var buttonImage: UIImage?
                 if incoming {
-                    buttonImage = PresentationResourcesChat.chatBubbleIncomingCallButtonImage(item.theme)
+                    buttonImage = PresentationResourcesChat.chatBubbleIncomingCallButtonImage(item.presentationData.theme)
                 } else {
-                    buttonImage = PresentationResourcesChat.chatBubbleOutgoingCallButtonImage(item.theme)
+                    buttonImage = PresentationResourcesChat.chatBubbleOutgoingCallButtonImage(item.presentationData.theme)
                 }
                 
-                var t = Int(item.message.timestamp)
-                var timeinfo = tm()
-                localtime_r(&t, &timeinfo)
-                var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                var dateText = stringForMessageTimestamp(timestamp: item.message.timestamp, timeFormat: item.presentationData.timeFormat)
                 
                 if let duration = callDuration, duration != 0 {
                     if duration >= 60 {
-                        dateText += ", " + item.strings.Call_Minutes(duration / 60)
+                        dateText += ", " + item.presentationData.strings.Call_Minutes(duration / 60)
                     } else {
-                        dateText += ", " + item.strings.Call_Seconds(duration)
+                        dateText += ", " + item.presentationData.strings.Call_Seconds(duration)
                     }
                 }
                 
                 var attributedLabel: NSAttributedString?
-                attributedLabel = NSAttributedString(string: dateText, font: labelFont, textColor: message.effectivelyIncoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+                attributedLabel = NSAttributedString(string: dateText, font: labelFont, textColor: message.effectivelyIncoming(item.account.peerId) ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
                 
-                let (titleLayout, titleApply) = makeTitleLayout(attributedTitle, nil, 0, .end, textConstrainedSize, .natural, nil, UIEdgeInsets())
-                let (labelLayout, labelApply) = makeLabelLayout(attributedLabel, nil, 0, .end, textConstrainedSize, .natural, nil, UIEdgeInsets())
+                let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedLabel, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let titleSize = titleLayout.size
                 let labelSize = labelLayout.size

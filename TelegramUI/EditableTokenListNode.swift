@@ -155,7 +155,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func updateLayout(tokens: [EditableTokenListToken], width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func updateLayout(tokens: [EditableTokenListToken], width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let validTokens = Set<AnyHashable>(tokens.map { $0.id })
         
         for i in (0 ..< self.tokenNodes.count).reversed() {
@@ -177,7 +177,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             self.selectedTokenId = nil
         }
         
-        let sideInset: CGFloat = 4.0
+        let sideInset: CGFloat = 4.0 + leftInset
         let verticalInset: CGFloat = 6.0
         
         let placeholderSize = self.placeholderNode.measure(CGSize(width: max(1.0, width - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude))

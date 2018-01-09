@@ -4,9 +4,20 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
+public struct TransformImageNodeContentAnimations: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let firstUpdate = TransformImageNodeContentAnimations(rawValue: 1 << 0)
+    public static let subsequentUpdates = TransformImageNodeContentAnimations(rawValue: 1 << 1)
+}
+
 public class TransformImageNode: ASDisplayNode {
     public var imageUpdated: (() -> Void)?
-    public var alphaTransitionOnFirstUpdate = false
+    public var contentAnimations: TransformImageNodeContentAnimations = []
     private var disposable = MetaDisposable()
     
     private var argumentsPromise = ValuePromise<TransformImageArguments>(ignoreRepeated: true)
@@ -26,10 +37,10 @@ public class TransformImageNode: ASDisplayNode {
         }
     }
     
-    func setSignal(account: Account, signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, dispatchOnDisplayLink: Bool = true) {
+    func setSignal(_ signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, dispatchOnDisplayLink: Bool = true) {
         let argumentsPromise = self.argumentsPromise
         
-        let result = combineLatest(signal, argumentsPromise.get()) |> deliverOn(Queue.concurrentDefaultQueue() /*account.graphicsThreadPool*/) |> mapToThrottled { transform, arguments -> Signal<UIImage?, NoError> in
+        let result = combineLatest(signal, argumentsPromise.get()) |> deliverOn(Queue.concurrentDefaultQueue()) |> mapToThrottled { transform, arguments -> Signal<UIImage?, NoError> in
             return deferred {
                 if let context = transform(arguments) {
                     return Signal<UIImage?, NoError>.single(context.generateImage())
@@ -40,34 +51,37 @@ public class TransformImageNode: ASDisplayNode {
         }
         
         self.disposable.set((result |> deliverOnMainQueue).start(next: { [weak self] next in
-            if dispatchOnDisplayLink {
-                displayLinkDispatcher.dispatch {
-                    if let strongSelf = self {
-                        if strongSelf.alphaTransitionOnFirstUpdate && strongSelf.contents == nil {
+            let apply: () -> Void = {
+                if let strongSelf = self {
+                    if strongSelf.contents == nil {
+                        if strongSelf.contentAnimations.contains(.firstUpdate) {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                         }
-                        strongSelf.contents = next?.cgImage
-                        if let overlayColor = strongSelf.overlayColor {
-                            strongSelf.applyOverlayColor(animated: false)
-                        }
-                        if let imageUpdated = strongSelf.imageUpdated {
-                            imageUpdated()
-                        }
+                    } else if strongSelf.contentAnimations.contains(.subsequentUpdates) {
+                        let tempLayer = CALayer()
+                        tempLayer.frame = strongSelf.bounds
+                        tempLayer.contents = strongSelf.contents
+                        strongSelf.layer.addSublayer(tempLayer)
+                        tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
+                            tempLayer?.removeFromSuperlayer()
+                        })
                     }
-                }
-            } else {
-                if let strongSelf = self {
-                    if strongSelf.alphaTransitionOnFirstUpdate && strongSelf.contents == nil {
-                        strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                    }
+                    
                     strongSelf.contents = next?.cgImage
-                    if let overlayColor = strongSelf.overlayColor {
+                    if let _ = strongSelf.overlayColor {
                         strongSelf.applyOverlayColor(animated: false)
                     }
                     if let imageUpdated = strongSelf.imageUpdated {
                         imageUpdated()
                     }
                 }
+            }
+            if dispatchOnDisplayLink {
+                displayLinkDispatcher.dispatch {
+                    apply()
+                }
+            } else {
+                apply()
             }
         }))
     }

@@ -54,12 +54,14 @@ final class CallListNodeInteraction {
     let call: (PeerId) -> Void
     let openInfo: (PeerId) -> Void
     let delete: ([MessageId]) -> Void
+    let updateShowCallsTab: (Bool) -> Void
     
-    init(setMessageIdWithRevealedOptions: @escaping (MessageId?, MessageId?) -> Void, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId) -> Void, delete: @escaping ([MessageId]) -> Void) {
+    init(setMessageIdWithRevealedOptions: @escaping (MessageId?, MessageId?) -> Void, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId) -> Void, delete: @escaping ([MessageId]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void) {
         self.setMessageIdWithRevealedOptions = setMessageIdWithRevealedOptions
         self.call = call
         self.openInfo = openInfo
         self.delete = delete
+        self.updateShowCallsTab = updateShowCallsTab
     }
 }
 
@@ -98,30 +100,42 @@ struct CallListNodeState: Equatable {
     }
 }
 
-private func mappedInsertEntries(account: Account, nodeInteraction: CallListNodeInteraction, entries: [CallListNodeViewTransitionInsertEntry]) -> [ListViewInsertItem] {
+private func mappedInsertEntries(account: Account, showSettings: Bool, nodeInteraction: CallListNodeInteraction, entries: [CallListNodeViewTransitionInsertEntry]) -> [ListViewInsertItem] {
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
+            case let .displayTab(theme, text, value):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(theme: theme, title: text, value: value, enabled: true, sectionId: 0, style: .blocks, updated: { value in
+                    nodeInteraction.updateShowCallsTab(value)
+                }), directionHint: entry.directionHint)
+            case let .displayTabInfo(theme, text):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(theme: theme, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
             case let .messageEntry(topMessage, messages, theme, strings, editing, hasActiveRevealControls):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(theme: theme, strings: strings, account: account, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
-            case let .holeEntry(theme):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(), directionHint: entry.directionHint)
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(theme: theme, strings: strings, account: account, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .holeEntry(_, theme):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
     }
 }
 
-private func mappedUpdateEntries(account: Account, nodeInteraction: CallListNodeInteraction, entries: [CallListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
+private func mappedUpdateEntries(account: Account, showSettings: Bool, nodeInteraction: CallListNodeInteraction, entries: [CallListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
+            case let .displayTab(theme, text, value):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(theme: theme, title: text, value: value, enabled: true, sectionId: 0, style: .blocks, updated: { value in
+                    nodeInteraction.updateShowCallsTab(value)
+                }), directionHint: entry.directionHint)
+            case let .displayTabInfo(theme, text):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(theme: theme, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
             case let .messageEntry(topMessage, messages, theme, strings, editing, hasActiveRevealControls):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(theme: theme, strings: strings, account: account, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
-            case let .holeEntry(theme):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(), directionHint: entry.directionHint)
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(theme: theme, strings: strings, account: account, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .holeEntry(_, theme):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
     }
 }
 
-private func mappedCallListNodeViewListTransition(account: Account, nodeInteraction: CallListNodeInteraction, transition: CallListNodeViewTransition) -> CallListNodeListViewTransition {
-    return CallListNodeListViewTransition(callListView: transition.callListView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, nodeInteraction: nodeInteraction, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, nodeInteraction: nodeInteraction, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange)
+private func mappedCallListNodeViewListTransition(account: Account, showSettings: Bool, nodeInteraction: CallListNodeInteraction, transition: CallListNodeViewTransition) -> CallListNodeListViewTransition {
+    return CallListNodeListViewTransition(callListView: transition.callListView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, showSettings: showSettings, nodeInteraction: nodeInteraction, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, showSettings: showSettings, nodeInteraction: nodeInteraction, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange)
 }
 
 private final class CallListOpaqueTransactionState {
@@ -134,6 +148,7 @@ private final class CallListOpaqueTransactionState {
 
 final class CallListControllerNode: ASDisplayNode {
     private let account: Account
+    private let mode: CallListControllerMode
     private var presentationData: PresentationData
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -167,8 +182,9 @@ final class CallListControllerNode: ASDisplayNode {
     private let openInfo: (PeerId) -> Void
     private let emptyStateUpdated: (Bool) -> Void
     
-    init(account: Account, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
+    init(account: Account, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
         self.account = account
+        self.mode = mode
         self.presentationData = presentationData
         self.call = call
         self.openInfo = openInfo
@@ -187,7 +203,14 @@ final class CallListControllerNode: ASDisplayNode {
         
         self.addSubnode(self.listNode)
         
-        self.backgroundColor = presentationData.theme.chatList.backgroundColor
+        switch self.mode {
+            case .tab:
+                self.backgroundColor = presentationData.theme.chatList.backgroundColor
+                self.listNode.backgroundColor = presentationData.theme.chatList.backgroundColor
+            case .navigation:
+                self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+                self.listNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        }
         
         let nodeInteraction = CallListNodeInteraction(setMessageIdWithRevealedOptions: { [weak self] messageId, fromMessageId in
             if let strongSelf = self {
@@ -207,6 +230,12 @@ final class CallListControllerNode: ASDisplayNode {
             if let strongSelf = self {
                 let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: messageIds, type: .forLocalPeer).start()
             }
+        }, updateShowCallsTab: { [weak self] value in
+            if let strongSelf = self {
+                let _ = updateCallListSettingsInteractively(postbox: strongSelf.account.postbox, {
+                    $0.withUpdatedShowTab(value)
+                }).start()
+            }
         })
         
         let viewProcessingQueue = self.viewProcessingQueue
@@ -219,8 +248,25 @@ final class CallListControllerNode: ASDisplayNode {
         
         let previousView = Atomic<CallListNodeView?>(value: nil)
         
-        let callListNodeViewTransition = combineLatest(callListViewUpdate, self.statePromise.get()) |> mapToQueue { (update, state) -> Signal<CallListNodeListViewTransition, NoError> in
-            let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(update.view, state: state))
+        let showSettings: Bool
+        switch mode {
+            case .tab:
+                showSettings = false
+            case .navigation:
+                showSettings = true
+        }
+        
+        let showCallsTab = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.callListSettings])
+            |> map { view -> Bool in
+                var value = true
+                if let settings = view.values[ApplicationSpecificPreferencesKeys.callListSettings] as? CallListSettings {
+                    value = settings.showTab
+                }
+                return value
+            }
+        
+        let callListNodeViewTransition = combineLatest(callListViewUpdate, self.statePromise.get(), showCallsTab) |> mapToQueue { (update, state, showCallsTab) -> Signal<CallListNodeListViewTransition, NoError> in
+            let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(update.view, state: state, showSettings: showSettings, showCallsTab: showCallsTab))
             let previous = previousView.swap(processedView)
             
             let reason: CallListNodeViewTransitionReason
@@ -243,21 +289,27 @@ final class CallListControllerNode: ASDisplayNode {
                     prepareOnMainQueue = true
                 }
             } else {
-                switch update.type {
-                    case .InitialUnread:
-                        reason = .initial
-                        prepareOnMainQueue = true
-                    case .Generic:
-                        reason = .interactiveChanges
-                    case .UpdateVisible:
-                        reason = .reload
-                    case .FillHole:
-                        reason = .reload
+                if previous?.originalView === update.view {
+                    reason = .interactiveChanges
+                } else {
+                    switch update.type {
+                        case .Initial:
+                            reason = .initial
+                            prepareOnMainQueue = true
+                        case .Generic:
+                            reason = .interactiveChanges
+                        case .UpdateVisible:
+                            reason = .reload
+                        case .Reload:
+                            reason = .reload
+                        case .ReloadAnimated:
+                            reason = .reloadAnimated
+                    }
                 }
             }
             
             return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, account: account, scrollPosition: update.scrollPosition)
-                |> map({ mappedCallListNodeViewListTransition(account: account, nodeInteraction: nodeInteraction, transition: $0) })
+                |> map({ mappedCallListNodeViewListTransition(account: account, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
                 |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
         
@@ -295,7 +347,14 @@ final class CallListControllerNode: ASDisplayNode {
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         if theme !== self.currentState.theme || strings !== self.currentState.strings {
-            self.backgroundColor = theme.chatList.backgroundColor
+            switch self.mode {
+                case .tab:
+                    self.backgroundColor = theme.chatList.backgroundColor
+                    self.listNode.backgroundColor = theme.chatList.backgroundColor
+                case .navigation:
+                    self.backgroundColor = theme.list.blocksBackgroundColor
+                    self.listNode.backgroundColor = theme.list.blocksBackgroundColor
+            }
             
             self.updateState {
                 return $0.withUpdatedPresentationData(theme: theme, strings: strings)
@@ -313,8 +372,14 @@ final class CallListControllerNode: ASDisplayNode {
     
     func updateType(_ type: CallListViewType) {
         if type != self.currentLocationAndType.type {
-            if let view = self.callListView?.originalView, !view.entries.isEmpty {
-                self.currentLocationAndType = CallListNodeLocationAndType(location: .changeType(index: view.entries[view.entries.count - 1].highestIndex), type: type)
+            if let view = self.callListView?.originalView {
+                var index: MessageIndex
+                if !view.entries.isEmpty {
+                    index = view.entries[view.entries.count - 1].highestIndex
+                } else {
+                    index = MessageIndex.absoluteUpperBound()
+                }
+                self.currentLocationAndType = CallListNodeLocationAndType(location: .changeType(index: index), type: type)
                 self.callListLocationAndType.set(self.currentLocationAndType)
             }
         }
@@ -385,6 +450,8 @@ final class CallListControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
+        insets.left += layout.safeInsets.left
+        insets.right += layout.safeInsets.right
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)

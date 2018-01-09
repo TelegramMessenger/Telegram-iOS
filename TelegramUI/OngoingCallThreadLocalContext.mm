@@ -1,6 +1,7 @@
 #import "OngoingCallThreadLocalContext.h"
 
 #import "../submodules/libtgvoip/VoIPController.h"
+#import "../submodules/libtgvoip/os/darwin/TGLogWrapper.h"
 
 #import <MtProtoKitDynamic/MtProtoKitDynamic.h>
 
@@ -20,12 +21,21 @@ static void TGCallSha256(uint8_t *msg, size_t length, uint8_t *output) {
     MTRawSha256(msg, length, output);
 }
 
-static void TGCallRandomBytes(uint8_t *buffer, size_t length) {
-    arc4random_buf(buffer, length);
+static void TGCallAesCtrEncrypt(uint8_t *inOut, size_t length, uint8_t *key, uint8_t *iv, uint8_t *ecount, uint32_t *num) {
+    uint8_t *outData = (uint8_t *)malloc(length);
+    MTAesCtr *aesCtr = [[MTAesCtr alloc] initWithKey:key keyLength:32 iv:iv ecount:ecount num:*num];
+    [aesCtr encryptIn:inOut out:outData len:length];
+    memcpy(inOut, outData, length);
+    free(outData);
+    
+    [aesCtr getIv:iv];
+    
+    memcpy(ecount, [aesCtr ecount], 16);
+    *num = [aesCtr num];
 }
 
-static void TGCallLoggingFunction(const char *msg) {
-    NSLog(@"%s", msg);
+static void TGCallRandomBytes(uint8_t *buffer, size_t length) {
+    arc4random_buf(buffer, length);
 }
 
 @implementation OngoingCallConnectionDescription
@@ -68,6 +78,10 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
 
 @implementation OngoingCallThreadLocalContext
 
++ (void)setupLoggingFunction:(void (*)(NSString *))loggingFunction {
+    TGVoipLoggingFunction = loggingFunction;
+}
+
 - (instancetype)init {
     self = [super init];
     if (self != nil) {
@@ -87,6 +101,7 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         tgvoip::VoIPController::crypto.rand_bytes = &TGCallRandomBytes;
         tgvoip::VoIPController::crypto.aes_ige_encrypt = &TGCallAesIgeEncrypt;
         tgvoip::VoIPController::crypto.aes_ige_decrypt = &TGCallAesIgeDecrypt;
+        tgvoip::VoIPController::crypto.aes_ctr_encrypt = &TGCallAesCtrEncrypt;
         
         _state = OngoingCallStateInitializing;
     }

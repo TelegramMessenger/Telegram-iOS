@@ -177,7 +177,8 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
         if self.previousCountryCodeText != realRegionPrefix {
             self.previousCountryCodeText = realRegionPrefix
-            self.countryCodeUpdated?(removePlus(realRegionPrefix).trimmingCharacters(in: CharacterSet.whitespaces))
+            let code = removePlus(realRegionPrefix).trimmingCharacters(in: CharacterSet.whitespaces)
+            self.countryCodeUpdated?(code)
         }
         
         if numberText != self.numberField.textField.text {

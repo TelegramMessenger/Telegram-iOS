@@ -65,7 +65,7 @@ final class BotCheckoutInfoController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }, openCountrySelection: { [weak self] in
             if let strongSelf = self {
-                let controller = AuthorizationSequenceCountrySelectionController(displayCodes: false)
+                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.presentationData.strings, theme: defaultLightAuthorizationTheme, displayCodes: false)
                 controller.completeWithCountryCode = { _, id in
                     if let strongSelf = self {
                         strongSelf.controllerNode.updateCountry(id)

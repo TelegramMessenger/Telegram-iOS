@@ -5,12 +5,8 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 
-private let separatorColor: UIColor = UIColor(rgb: 0xbcbbc1)
-
 private let cancelFont = Font.regular(17.0)
-private let cancelColor = UIColor(rgb: 0x007ee5)
 private let subtitleFont = Font.regular(12.0)
-private let subtitleColor = UIColor(rgb: 0x7b7b81)
 
 private enum ShareSearchRecentEntryStableId: Hashable {
     case topPeers
@@ -45,13 +41,13 @@ private enum ShareSearchRecentEntryStableId: Hashable {
 
 private enum ShareSearchRecentEntry: Comparable, Identifiable {
     case topPeers(PresentationTheme, PresentationStrings)
-    case peer(index: Int, peer: Peer, associatedPeer: Peer?, PresentationStrings)
+    case peer(index: Int, theme: PresentationTheme, peer: Peer, associatedPeer: Peer?, PresentationStrings)
     
     var stableId: ShareSearchRecentEntryStableId {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, peer, _, _):
+            case let .peer(_, _, peer, _, _):
                 return .peerId(peer.id)
         }
     }
@@ -70,8 +66,8 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsAssociatedPeer, lhsStrings):
-                if case let .peer(rhsIndex, rhsPeer, rhsAssociatedPeer, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsStrings === rhsStrings {
+            case let .peer(lhsIndex, lhsTheme, lhsPeer, lhsAssociatedPeer, lhsStrings):
+                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme {
                     return true
                 } else {
                     return false
@@ -83,11 +79,11 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
         switch lhs {
             case .topPeers:
                 return true
-            case let .peer(lhsIndex, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _):
                 switch rhs {
                     case .topPeers:
                         return false
-                    case let .peer(rhsIndex, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _):
                         return lhsIndex <= rhsIndex
                 }
         }
@@ -97,7 +93,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
         switch self {
             case let .topPeers(theme, strings):
                 return ShareControllerRecentPeersGridItem(account: account, theme: theme, strings: strings, controllerInteraction: interfaceInteraction)
-            case let .peer(_, peer, associatedPeer, strings):
+            case let .peer(_, theme, peer, associatedPeer, strings):
                 let primaryPeer: Peer
                 var chatPeer: Peer?
                 if let associatedPeer = associatedPeer {
@@ -107,7 +103,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                     primaryPeer = peer
                     chatPeer = associatedPeer
                 }
-                return ShareControllerPeerGridItem(account: account, peer: primaryPeer, chatPeer: chatPeer, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent)
+                return ShareControllerPeerGridItem(account: account, theme: theme, strings: strings, peer: primaryPeer, chatPeer: chatPeer, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent)
         }
     }
 }
@@ -115,6 +111,8 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
 private struct ShareSearchPeerEntry: Comparable, Identifiable {
     let index: Int32
     let peer: Peer
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     
     var stableId: Int64 {
         return self.peer.id.toInt64()
@@ -135,7 +133,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(account: account, peer: self.peer, chatPeer: nil, controllerInteraction: interfaceInteraction)
+        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: nil, controllerInteraction: interfaceInteraction)
     }
 }
 
@@ -206,16 +204,16 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentGridNode = GridNode()
         self.contentGridNode.isHidden = true
         
-        self.searchNode = ShareSearchBarNode(placeholder: strings.Common_Search)
+        self.searchNode = ShareSearchBarNode(theme: theme, placeholder: strings.Common_Search)
         
         self.cancelButtonNode = HighlightableButtonNode()
-        self.cancelButtonNode.setTitle(strings.Common_Cancel, with: cancelFont, with: cancelColor, for: [])
+        self.cancelButtonNode.setTitle(strings.Common_Cancel, with: cancelFont, with: theme.actionSheet.controlAccentColor, for: [])
         self.cancelButtonNode.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true
         self.contentSeparatorNode.displaysAsynchronously = false
-        self.contentSeparatorNode.backgroundColor = separatorColor
+        self.contentSeparatorNode.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
         
         super.init()
         
@@ -243,30 +241,56 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         let foundItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ShareSearchPeerEntry]?, NoError> in
                 if !query.isEmpty {
-                    let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased())
-                    let foundRemotePeers: Signal<[Peer], NoError> = .single([]) |> then(searchPeers(account: account, query: query)
+                    let accountPeer = account.postbox.loadedPeerWithId(account.peerId) |> take(1)
+                    let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
+                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], [])) |> then(searchPeers(account: account, query: query)
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                     
-                    return combineLatest(foundLocalPeers, foundRemotePeers)
-                        |> map { foundLocalPeers, foundRemotePeers -> [ShareSearchPeerEntry]? in
+                    return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers)
+                        |> map { accountPeer, foundLocalPeers, foundRemotePeers -> [ShareSearchPeerEntry]? in
                             var entries: [ShareSearchPeerEntry] = []
                             var index: Int32 = 0
-                            for renderedPeer in foundLocalPeers {
-                                if let peer = renderedPeer.peers[renderedPeer.peerId] {
-                                    var associatedPeer: Peer?
-                                    if let associatedPeerId = peer.associatedPeerId {
-                                        associatedPeer = renderedPeer.peers[associatedPeerId]
-                                    }
-                                    //entries.append(.localPeer(peer, associatedPeer, index, themeAndStrings.0, themeAndStrings.1))
-                                    entries.append(ShareSearchPeerEntry(index: index, peer: peer))
+                            
+                            var existingPeerIds = Set<PeerId>()
+                            
+                            if strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
+                                if !existingPeerIds.contains(accountPeer.id) {
+                                    existingPeerIds.insert(accountPeer.id)
+                                    entries.append(ShareSearchPeerEntry(index: index, peer: accountPeer, theme: theme, strings: strings))
                                     index += 1
                                 }
                             }
                             
-                            for peer in foundRemotePeers {
-                                entries.append(ShareSearchPeerEntry(index: index, peer: peer))
-                                //entries.append(.globalPeer(peer, index, themeAndStrings.0, themeAndStrings.1))
-                                index += 1
+                            for renderedPeer in foundLocalPeers {
+                                if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
+                                    if !existingPeerIds.contains(peer.id) {
+                                        existingPeerIds.insert(peer.id)
+                                        var associatedPeer: Peer?
+                                        if let associatedPeerId = peer.associatedPeerId {
+                                            associatedPeer = renderedPeer.peers[associatedPeerId]
+                                        }
+                                        entries.append(ShareSearchPeerEntry(index: index, peer: peer, theme: theme, strings: strings))
+                                        index += 1
+                                    }
+                                }
+                            }
+                            
+                            for foundPeer in foundRemotePeers.0 {
+                                let peer = foundPeer.peer
+                                if !existingPeerIds.contains(peer.id) {
+                                    existingPeerIds.insert(peer.id)
+                                    entries.append(ShareSearchPeerEntry(index: index, peer: foundPeer.peer, theme: theme, strings: strings))
+                                    index += 1
+                                }
+                            }
+                            
+                            for foundPeer in foundRemotePeers.1 {
+                                let peer = foundPeer.peer
+                                if !existingPeerIds.contains(peer.id) {
+                                    existingPeerIds.insert(peer.id)
+                                    entries.append(ShareSearchPeerEntry(index: index, peer: peer, theme: theme, strings: strings))
+                                    index += 1
+                                }
                             }
                             
                             return entries
@@ -310,7 +334,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         var index = 0
         for peer in recentPeers {
             if let mainPeer = peer.peers[peer.peerId] {
-                recentItemList.append(.peer(index: index, peer: mainPeer, associatedPeer: mainPeer.associatedPeerId.flatMap { peer.peers[$0] }, strings))
+                recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer.associatedPeerId.flatMap { peer.peers[$0] }, strings))
                 index += 1
             }
         }
@@ -406,7 +430,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 switch $0 {
                     case .topPeers:
                         return false
-                    case let .peer(_, peer, _, _):
+                    case let .peer(_, _, peer, _, _):
                         return peer.id == ensurePeerVisibleOnLayout
                 }
             }) {
@@ -472,7 +496,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         let titleOffset = max(-titleAreaHeight, rawTitleOffset)
         
         let cancelButtonSize = self.cancelButtonNode.measure(CGSize(width: 320.0, height: 100.0))
-        let cancelButtonFrame = CGRect(origin: CGPoint(x: bounds.size.width - cancelButtonSize.width - 12.0, y: titleOffset + 25.0), size: cancelButtonSize)
+        let cancelButtonFrame = CGRect(origin: CGPoint(x: size.width - cancelButtonSize.width - 12.0, y: titleOffset + 25.0), size: cancelButtonSize)
         transition.updateFrame(node: self.cancelButtonNode, frame: cancelButtonFrame)
         
         let searchNodeFrame = CGRect(origin: CGPoint(x: 16.0, y: titleOffset + 16.0), size: CGSize(width: cancelButtonFrame.minX - 16.0 - 10.0, height: 40.0))

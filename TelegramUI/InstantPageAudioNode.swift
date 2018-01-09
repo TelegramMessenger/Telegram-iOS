@@ -91,7 +91,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
         if brightness > 0.5 {
             backgroundAlpha = 0.4
         }
-        self.scrubbingNode = MediaPlayerScrubbingNode(lineHeight: 3.0, lineCap: .round, scrubberHandle: true, backgroundColor: theme.textCategories.paragraph.color.withAlphaComponent(backgroundAlpha), foregroundColor: theme.textCategories.paragraph.color)
+        self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .line, backgroundColor: theme.textCategories.paragraph.color.withAlphaComponent(backgroundAlpha), foregroundColor: theme.textCategories.paragraph.color))
         
         super.init()
         
@@ -147,7 +147,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
                         switch status {
                             case .paused:
                                 break
-                            case let .buffering(whilePlaying):
+                            case let .buffering(_, whilePlaying):
                                 isPlaying = whilePlaying
                             case .playing:
                                 isPlaying = true

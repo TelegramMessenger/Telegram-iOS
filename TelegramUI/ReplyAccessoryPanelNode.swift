@@ -45,6 +45,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.textNode.displaysAsynchronously = false
         
         self.imageNode = TransformImageNode()
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         self.imageNode.isHidden = true
         
         super.init()
@@ -66,13 +67,12 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     authorName = author.displayTitle
                 }
                 if let message = message {
-                    let (string, _) = textStringForReplyMessage(message)
-                    text = string
+                    text = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
                 }
                 
                 var updatedMedia: Media?
                 var imageDimensions: CGSize?
-                if let message = message {
+                if let message = message, !message.containsSecretMedia {
                     for media in message.media {
                         if let image = media as? TelegramMediaImage {
                             updatedMedia = image
@@ -82,7 +82,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                             break
                         } else if let file = media as? TelegramMediaFile {
                             updatedMedia = file
-                            if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                            if !file.isInstantVideo, let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
                                 imageDimensions = representation.dimensions
                             }
                             break
@@ -103,6 +103,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 } else if (updatedMedia != nil) != (strongSelf.previousMedia != nil) {
                     mediaUpdated = true
                 }
+                strongSelf.previousMedia = updatedMedia
                 
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 if mediaUpdated {
@@ -110,15 +111,32 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         if let image = updatedMedia as? TelegramMediaImage {
                             updateImageSignal = chatMessagePhotoThumbnail(account: account, photo: image)
                         } else if let file = updatedMedia as? TelegramMediaFile {
-                            
+                            if file.isVideo {
+                                updateImageSignal = chatMessageVideoThumbnail(account: account, file: file)
+                            } else if let iconImageRepresentation = smallestImageRepresentation(file.previewRepresentations) {
+                                let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [iconImageRepresentation], reference: nil)
+                                updateImageSignal = chatWebpageSnippetPhoto(account: account, photo: tmpImage)
+                            }
                         }
                     } else {
                         updateImageSignal = .single({ _ in return nil })
                     }
                 }
                 
+                let isMedia: Bool
+                if let message = message {
+                    switch messageContentKind(message, strings: strings, accountPeerId: account.peerId) {
+                        case .text:
+                            isMedia = false
+                        default:
+                            isMedia = true
+                    }
+                } else {
+                    isMedia = false
+                }
+                
                 strongSelf.titleNode.attributedText = NSAttributedString(string: authorName, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.primaryTextColor)
+                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                 
                 if let applyImage = applyImage {
                     applyImage()
@@ -128,7 +146,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 }
                 
                 if let updateImageSignal = updateImageSignal {
-                    strongSelf.imageNode.setSignal(account: account, signal: updateImageSignal)
+                    strongSelf.imageNode.setSignal(updateImageSignal)
                 }
                 
                 strongSelf.setNeedsLayout()

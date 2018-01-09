@@ -7,6 +7,25 @@ import TelegramCore
 
 import LegacyComponents
 
+func webEmbedVideoContentSupportsWebpage(_ webpageContent: TelegramMediaWebpageLoadedContent) -> Bool {
+    let converted = TGWebPageMediaAttachment()
+    
+    converted.url = webpageContent.url
+    converted.displayUrl = webpageContent.displayUrl
+    converted.pageType = webpageContent.type
+    converted.siteName = webpageContent.websiteName
+    converted.title = webpageContent.title
+    converted.pageDescription = webpageContent.text
+    converted.embedUrl = webpageContent.embedUrl
+    converted.embedType = webpageContent.embedType
+    converted.embedSize = webpageContent.embedSize ?? CGSize()
+    let approximateDuration = Int32(webpageContent.duration ?? 0)
+    converted.duration = approximateDuration as NSNumber
+    converted.author = webpageContent.author
+    
+    return TGEmbedPlayerView.hasNativeSupportFor(x: converted)
+}
+
 final class WebEmbedVideoContent: UniversalVideoContent {
     let id: AnyHashable
     let webpageContent: TelegramMediaWebpageLoadedContent
@@ -23,26 +42,30 @@ final class WebEmbedVideoContent: UniversalVideoContent {
         self.duration = Int32(webpageContent.duration ?? (0 as Int))
     }
     
-    func makeContentNode(account: Account) -> UniversalVideoContentNode & ASDisplayNode {
-        return WebEmbedVideoContentNode(account: account, audioSessionManager: account.telegramApplicationContext.mediaManager.audioSession, webpageContent: self.webpageContent)
+    func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
+        return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, webpageContent: self.webpageContent)
     }
 }
 
 private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     private let webpageContent: TelegramMediaWebpageLoadedContent
     private let intrinsicDimensions: CGSize
+    private let approximateDuration: Int32
     
     private let playerView: TGEmbedPlayerView
+    private let playerViewContainer: UIView
     private let audioSessionDisposable = MetaDisposable()
     private var hasAudioSession = false
     
     private let playbackCompletedListeners = Bag<() -> Void>()
     
     private var initializedStatus = false
-    private let _status = Promise<MediaPlayerStatus>()
+    private let _status = ValuePromise<MediaPlayerStatus>()
     var status: Signal<MediaPlayerStatus, NoError> {
         return self._status.get()
     }
+    
+    private var seekId: Int = 0
     
     private let _ready = Promise<Void>()
     var ready: Signal<Void, NoError> {
@@ -58,8 +81,9 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     private var thumbnailDisposable: Disposable?
     
     private var loadProgressDisposable: Disposable?
+    private var statusDisposable: Disposable?
     
-    init(account: Account, audioSessionManager: ManagedAudioSession, webpageContent: TelegramMediaWebpageLoadedContent) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webpageContent: TelegramMediaWebpageLoadedContent) {
         self.webpageContent = webpageContent
         
         let converted = TGWebPageMediaAttachment()
@@ -73,7 +97,8 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         converted.embedUrl = webpageContent.embedUrl
         converted.embedType = webpageContent.embedType
         converted.embedSize = webpageContent.embedSize ?? CGSize()
-        converted.duration = webpageContent.duration.flatMap { NSNumber.init(value: $0) } ?? 0
+        self.approximateDuration = Int32(webpageContent.duration ?? 0)
+        converted.duration = self.approximateDuration as NSNumber
         converted.author = webpageContent.author
         
         if let embedSize = webpageContent.embedSize {
@@ -96,16 +121,20 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
             })
         }
         
+        self.playerViewContainer = UIView()
+        
         self.playerView = TGEmbedPlayerView.make(forWebPage: converted, thumbnailSignal: thumbmnailSignal)!
         self.playerView.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
+        self.playerViewContainer.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
         self.playerView.disallowPIP = true
         self.playerView.isUserInteractionEnabled = false
-        self.playerView.disallowAutoplay = true
+        //self.playerView.disallowAutoplay = true
         self.playerView.disableControls = true
         
         super.init()
         
-        self.view.addSubview(self.playerView)
+        self.playerViewContainer.addSubview(self.playerView)
+        self.view.addSubview(self.playerViewContainer)
         self.playerView.setup(withEmbedSize: self.intrinsicDimensions)
         
         let nativeLoadProgress = self.playerView.loadProgress()
@@ -124,7 +153,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         })
         
         if let image = webpageContent.image {
-            self.thumbnailDisposable = (rawMessagePhoto(account: account, photo: image) |> deliverOnMainQueue).start(next: { [weak self] image in
+            self.thumbnailDisposable = (rawMessagePhoto(postbox: postbox, photo: image) |> deliverOnMainQueue).start(next: { [weak self] image in
                 if let strongSelf = self {
                     strongSelf.thumbnail.set(.single(image))
                     strongSelf._ready.set(.single(Void()))
@@ -134,27 +163,37 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
             self._ready.set(.single(Void()))
         }
         
+        self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), timestamp: 0.0, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true)))
+        
         let stateSignal = self.playerView.stateSignal()!
-        self._status.set(Signal { subscriber in
+        self.statusDisposable = (Signal<MediaPlayerStatus, NoError> { subscriber in
             let innerDisposable = stateSignal.start(next: { next in
                 if let next = next as? TGEmbedPlayerState {
                     let status: MediaPlayerPlaybackStatus
                     if next.playing {
                         status = .playing
-                    } else if next.downloadProgress.isEqual(to: 1.0) {
-                        status = .buffering(whilePlaying: next.playing)
+                    } else if next.buffering {
+                        status = .buffering(initial: false, whilePlaying: next.playing)
                     } else {
                         status = .paused
                     }
-                    subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: next.duration, timestamp: next.position, status: status))
+                    subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: next.duration, timestamp: max(0.0, next.position), seekId: 0, status: status))
                 }
             })
             return ActionDisposable {
                 innerDisposable?.dispose()
             }
+        } |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                if !strongSelf.initializedStatus {
+                    if case .paused = value.status {
+                        return
+                    }
+                }
+                strongSelf.initializedStatus = true
+                strongSelf._status.set(MediaPlayerStatus(generationTimestamp: value.generationTimestamp, duration: value.duration, timestamp: value.timestamp, seekId: strongSelf.seekId, status: value.status))
+            }
         })
-        
-        //self._status.set(self.player.status)
     }
     
     deinit {
@@ -162,23 +201,28 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         
         self.loadProgressDisposable?.dispose()
         self.thumbnailDisposable?.dispose()
+        self.statusDisposable?.dispose()
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.playerView.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-        self.playerView.transform = CGAffineTransform(scaleX: size.width / self.intrinsicDimensions.width, y: size.height / self.intrinsicDimensions.height)
-        
-        //self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
-        //self.playerNode.frame = CGRect(origin: CGPoint(), size: size)
+        transition.updatePosition(layer: self.playerViewContainer.layer, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
+        transition.updateTransformScale(layer: self.playerViewContainer.layer, scale: size.width / self.intrinsicDimensions.width)
     }
     
     func play() {
         assert(Queue.mainQueue().isCurrent())
-        self.playerView.playVideo()
+        if !self.initializedStatus {
+            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), timestamp: 0.0, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true)))
+        } else {
+            self.playerView.playVideo()
+        }
     }
     
     func pause() {
         assert(Queue.mainQueue().isCurrent())
+        if !self.initializedStatus {
+            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), timestamp: 0.0, seekId: self.seekId, status: .paused))
+        }
         self.playerView.pauseVideo()
     }
     
@@ -202,7 +246,17 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     func seek(_ timestamp: Double) {
         assert(Queue.mainQueue().isCurrent())
+        self.seekId += 1
         self.playerView.seek(toPosition: timestamp)
+    }
+    
+    func playOnceWithSound(playAndRecord: Bool) {
+    }
+    
+    func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
+    }
+    
+    func continuePlayingWithoutSound() {
     }
     
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {
@@ -211,5 +265,8 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     func removePlaybackCompleted(_ index: Int) {
         self.playbackCompletedListeners.remove(index)
+    }
+    
+    func fetchControl(_ control: UniversalVideoNodeFetchControl) {
     }
 }

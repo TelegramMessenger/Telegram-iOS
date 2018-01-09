@@ -2,15 +2,19 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import Postbox
+import TelegramCore
 
 struct ChatMessageBubbleContentProperties {
     let hidesSimpleAuthorHeader: Bool
     let headerSpacing: CGFloat
+    let hidesBackgroundForEmptyWallpapers: Bool
+    let forceFullCorners: Bool
 }
 
 enum ChatMessageBubbleNoneMergeStatus {
     case Incoming
     case Outgoing
+    case None
 }
 
 enum ChatMessageBubbleMergeStatus {
@@ -24,9 +28,27 @@ enum ChatMessageBubbleRelativePosition {
     case Neighbour
 }
 
-struct ChatMessageBubbleContentPosition {
-    let top: ChatMessageBubbleRelativePosition
-    let bottom: ChatMessageBubbleRelativePosition
+enum ChatMessageBubbleContentMosaicNeighbor {
+    case merged
+    case none(tail: Bool)
+}
+
+struct ChatMessageBubbleContentMosaicPosition {
+    let topLeft: ChatMessageBubbleContentMosaicNeighbor
+    let topRight: ChatMessageBubbleContentMosaicNeighbor
+    let bottomLeft: ChatMessageBubbleContentMosaicNeighbor
+    let bottomRight: ChatMessageBubbleContentMosaicNeighbor
+    let mosaicStatusHorizontalOffset: CGFloat?
+}
+
+enum ChatMessageBubbleContentPosition {
+    case linear(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition)
+    case mosaic(position: ChatMessageBubbleContentMosaicPosition)
+}
+
+enum ChatMessageBubblePreparePosition {
+    case linear(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition)
+    case mosaic(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition)
 }
 
 enum ChatMessageBubbleContentTapAction {
@@ -42,21 +64,36 @@ enum ChatMessageBubbleContentTapAction {
     case ignore
 }
 
-class ChatMessageBubbleContentNode: ASDisplayNode {
-    var properties: ChatMessageBubbleContentProperties {
-        return ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0)
-    }
+final class ChatMessageBubbleContentItem {
+    let account: Account
+    let controllerInteraction: ChatControllerInteraction
+    let message: Message
+    let read: Bool
+    let presentationData: ChatPresentationData
     
-    var controllerInteraction: ChatControllerInteraction?
+    init(account: Account, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, presentationData: ChatPresentationData) {
+        self.account = account
+        self.controllerInteraction = controllerInteraction
+        self.message = message
+        self.read = read
+        self.presentationData = presentationData
+    }
+}
+
+class ChatMessageBubbleContentNode: ASDisplayNode {
+    var supportsMosaic: Bool {
+        return false
+    }
     
     var visibility: ListViewItemNodeVisibility = .none
     
+    var item: ChatMessageBubbleContentItem?
+    
     required override init() {
-        //super.init(layerBacked: false)
         super.init()
     }
     
-    func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (maxWidth: CGFloat, layout: (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         preconditionFailure()
     }
     
@@ -72,7 +109,13 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     func animateInsertionIntoBubble(_ duration: Double) {
     }
     
-    func transitionNode(media: Media) -> ASDisplayNode? {
+    func animateRemovalFromBubble(_ duration: Double, completion: @escaping () -> Void) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            completion()
+        })
+    }
+    
+    func transitionNode(messageId: MessageId, media: Media) -> ASDisplayNode? {
         return nil
     }
     

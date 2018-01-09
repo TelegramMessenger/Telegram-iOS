@@ -43,3 +43,5 @@ void inc_stars_rendered();
 
 
 void set_elements_top_margins(int a_icon_y, int a_text_y, int a_button_y);
+
+void set_intro_background_color(float r, float g, float b);

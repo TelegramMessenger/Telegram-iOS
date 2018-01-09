@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import AsyncDisplayKit
 
 final class InstantPageAudioItem: InstantPageItem {
     var frame: CGRect
@@ -17,7 +18,7 @@ final class InstantPageAudioItem: InstantPageItem {
         self.medias = [media]
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageAudioNode(account: account, strings: strings, theme: theme, webpage: self.webpage, media: self.media, openMedia: openMedia)
     }
     

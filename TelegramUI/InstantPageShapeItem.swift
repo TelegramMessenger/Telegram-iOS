@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import AsyncDisplayKit
 
 enum InstantPageShape {
     case rect
@@ -55,7 +56,7 @@ final class InstantPageShapeItem: InstantPageItem {
         return false
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return nil
     }
     

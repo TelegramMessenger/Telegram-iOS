@@ -5,21 +5,23 @@ import SwiftSignalKit
 
 class ItemListActivityTextItem: ListViewItem, ItemListItem {
     let displayActivity: Bool
+    let theme: PresentationTheme
     let text: NSAttributedString
     let sectionId: ItemListSectionId
     
     let isAlwaysPlain: Bool = true
     
-    init(displayActivity: Bool, text: NSAttributedString, sectionId: ItemListSectionId) {
+    init(displayActivity: Bool, theme: PresentationTheme, text: NSAttributedString, sectionId: ItemListSectionId) {
         self.displayActivity = displayActivity
+        self.theme = theme
         self.text = text
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ItemListActivityTextItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -30,7 +32,7 @@ class ItemListActivityTextItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         guard let node = node as? ItemListActivityTextItemNode else {
             assertionFailure()
             return
@@ -40,7 +42,7 @@ class ItemListActivityTextItem: ListViewItem, ItemListItem {
             let makeLayout = node.asyncLayout()
             
             async {
-                let (layout, apply) = makeLayout(self, width, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                 Queue.mainQueue().async {
                     completion(layout, {
                         apply()
@@ -55,7 +57,7 @@ private let titleFont = Font.regular(14.0)
 
 class ItemListActivityTextItemNode: ListViewItemNode {
     private let titleNode: TextNode
-    private var activityIndicator: UIActivityIndicatorView?
+    private let activityIndicator: ActivityIndicator
     
     private var item: ItemListActivityTextItem?
     
@@ -65,34 +67,19 @@ class ItemListActivityTextItemNode: ListViewItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
+        self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(.black, 16.0))
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.activityIndicator)
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
-        let activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
-        self.activityIndicator = activityIndicator
-        self.view.addSubview(activityIndicator)
-        activityIndicator.frame = CGRect(origin: CGPoint(x: 15.0, y: 6.0), size: activityIndicator.bounds.size)
-        
-        if let item = self.item {
-            if item.displayActivity {
-                activityIndicator.isHidden = false
-                activityIndicator.startAnimating()
-            } else {
-                activityIndicator.isHidden = true
-            }
-        }
-    }
-    
-    func asyncLayout() -> (_ item: ItemListActivityTextItem, _ width: CGFloat, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ItemListActivityTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
-        return { item, width, neighbors in
-            let leftInset: CGFloat = 15.0
+        return { item, params, neighbors in
+            let leftInset: CGFloat = 12.0 + params.leftInset
             let verticalInset: CGFloat = 7.0
             
             var activityWidth: CGFloat = 0.0
@@ -104,12 +91,12 @@ class ItemListActivityTextItemNode: ListViewItemNode {
             titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
             titleString.addAttributes([NSAttributedStringKey.font: titleFont], range: NSMakeRange(0, titleString.length))
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 0, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), .natural, TextNodeCutout(position: .TopLeft, size: CGSize(width: activityWidth, height: 4.0)), UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - 22.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: TextNodeCutout(position: .TopLeft, size: CGSize(width: activityWidth, height: 4.0)), insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             let insets: UIEdgeInsets
             
-            contentSize = CGSize(width: width, height: titleLayout.size.height + verticalInset + verticalInset)
+            contentSize = CGSize(width: params.width, height: titleLayout.size.height + verticalInset + verticalInset)
             insets = itemListNeighborsPlainInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -121,15 +108,14 @@ class ItemListActivityTextItemNode: ListViewItemNode {
                     let _ = titleApply()
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size)
+                    strongSelf.activityIndicator.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: CGSize(width: 16.0, height: 16.0))
                     
-                    if let activityIndicator = strongSelf.activityIndicator, activityIndicator.isHidden != !item.displayActivity {
-                        if item.displayActivity {
-                            activityIndicator.isHidden = false
-                            activityIndicator.startAnimating()
-                        } else {
-                            activityIndicator.isHidden = true
-                            activityIndicator.stopAnimating()
-                        }
+                    strongSelf.activityIndicator.type = .custom(item.theme.list.itemAccentColor, 16.0)
+                    
+                    if item.displayActivity {
+                        strongSelf.activityIndicator.isHidden = false
+                    } else {
+                        strongSelf.activityIndicator.isHidden = true
                     }
                 }
             })

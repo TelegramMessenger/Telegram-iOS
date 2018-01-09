@@ -139,7 +139,7 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         
         self.phoneInputNode.countryCodeUpdated = { [weak self] code in
             if let strongSelf = self {
-                if let code = Int(code), let countryName = countryCodeToName[code] {
+                if let code = Int(code), let (coutnryId, countryName) = countryCodeToIdAndName[code] {
                     strongSelf.countryButton.setTitle(countryName, with: Font.regular(17.0), with: .black, for: [])
                 } else {
                     strongSelf.countryButton.setTitle(strongSelf.presentationData.strings.Login_CountryCode, with: Font.regular(17.0), with: .black, for: [])

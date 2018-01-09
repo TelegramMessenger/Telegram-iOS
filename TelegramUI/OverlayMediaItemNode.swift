@@ -36,6 +36,8 @@ class OverlayMediaItemNode: ASDisplayNode {
         return false
     }
     
+    var customTransition: Bool = false
+    
     func setShouldAcquireContext(_ value: Bool) {
     }
     

@@ -16,7 +16,7 @@ private let selectableImage = UIImage(bundleImageName: "Contact List/SelectionUn
 enum ContactsPeerItemStatus {
     case none
     case presence(PeerPresence)
-    case addressName
+    case addressName(String)
 }
 
 enum ContactsPeerItemSelection: Equatable {
@@ -41,6 +41,25 @@ enum ContactsPeerItemSelection: Equatable {
     }
 }
 
+struct ContactsPeerItemEditing: Equatable {
+    let editable: Bool
+    let editing: Bool
+    let revealed: Bool
+    
+    static func ==(lhs: ContactsPeerItemEditing, rhs: ContactsPeerItemEditing) -> Bool {
+        if lhs.editable != rhs.editable {
+            return false
+        }
+        if lhs.editing != rhs.editing {
+            return false
+        }
+        if lhs.revealed != rhs.revealed {
+            return false
+        }
+        return true
+    }
+}
+
 class ContactsPeerItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -48,31 +67,35 @@ class ContactsPeerItem: ListViewItem {
     let peer: Peer?
     let chatPeer: Peer?
     let status: ContactsPeerItemStatus
+    let enabled: Bool
     let selection: ContactsPeerItemSelection
-    let hasActiveRevealControls: Bool
+    let editing: ContactsPeerItemEditing
     let action: (Peer) -> Void
     let setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)?
     let deletePeer: ((PeerId) -> Void)?
     
-    let selectable: Bool = true
+    let selectable: Bool
     
     let headerAccessoryItem: ListViewAccessoryItem?
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer?, chatPeer: Peer?, status: ContactsPeerItemStatus, selection: ContactsPeerItemSelection, hasActiveRevealControls: Bool, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer?, chatPeer: Peer?, status: ContactsPeerItemStatus, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.account = account
         self.peer = peer
         self.chatPeer = chatPeer
         self.status = status
+        self.enabled = enabled
         self.selection = selection
-        self.hasActiveRevealControls = hasActiveRevealControls
+        self.editing = editing
         self.action = action
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.deletePeer = deletePeer
         self.header = header
+        
+        self.selectable = self.enabled
         
         if let index = index {
             var letter: String = "#"
@@ -80,24 +103,24 @@ class ContactsPeerItem: ListViewItem {
                 switch index {
                     case .firstNameFirst:
                         if let firstName = user.firstName, !firstName.isEmpty {
-                            letter = firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased()
+                            letter = String(firstName.prefix(1)).uppercased()
                         } else if let lastName = user.lastName, !lastName.isEmpty {
-                            letter = lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()
+                            letter = String(lastName.prefix(1)).uppercased()
                         }
                     case .lastNameFirst:
                         if let lastName = user.lastName, !lastName.isEmpty {
-                            letter = lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()
+                            letter = String(lastName.prefix(1)).uppercased()
                         } else if let firstName = user.firstName, !firstName.isEmpty {
-                            letter = firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased()
+                            letter = String(firstName.prefix(1)).uppercased()
                         }
                 }
             } else if let group = peer as? TelegramGroup {
                 if !group.title.isEmpty {
-                    letter = group.title.substring(to: group.title.index(after: group.title.startIndex)).uppercased()
+                    letter = String(group.title.prefix(1)).uppercased()
                 }
             } else if let channel = peer as? TelegramChannel {
                 if !channel.title.isEmpty {
-                    letter = channel.title.substring(to: channel.title.index(after: channel.title.startIndex)).uppercased()
+                    letter = String(channel.title.prefix(1)).uppercased()
                 }
             }
             self.headerAccessoryItem = ContactsSectionHeaderAccessoryItem(sectionHeader: .letter(letter), theme: theme)
@@ -106,12 +129,12 @@ class ContactsPeerItem: ListViewItem {
         }
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ContactsPeerItemNode()
             let makeLayout = node.asyncLayout()
             let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-            let (nodeLayout, nodeApply) = makeLayout(self, width, first, last, firstWithHeader)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -124,13 +147,13 @@ class ContactsPeerItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ContactsPeerItemNode {
             Queue.mainQueue().async {
                 let layout = node.asyncLayout()
                 async {
                     let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-                    let (nodeLayout, apply) = layout(self, width, first, last, firstWithHeader)
+                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply().1(animation.isAnimated)
@@ -196,7 +219,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var avatarState: (Account, Peer?)?
     
     private var peerPresenceManager: PeerPresenceStatusManager?
-    private var layoutParams: (ContactsPeerItem, CGFloat, Bool, Bool, Bool)?
+    private var layoutParams: (ContactsPeerItem, ListViewItemLayoutParams, Bool, Bool, Bool)?
     var peer: Peer? {
         return self.layoutParams?.0.peer
     }
@@ -236,20 +259,20 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         })
     }
     
-    override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let (item, _, _, _, _) = self.layoutParams {
             let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
-            self.layoutParams = (item, width, first, last, firstWithHeader)
+            self.layoutParams = (item, params, first, last, firstWithHeader)
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, width, first, last, firstWithHeader)
+            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader)
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply()
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted && self.selectionNode == nil {
             self.highlightedBackgroundNode.alpha = 1.0
@@ -274,21 +297,21 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ContactsPeerItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool) -> Void)) {
+    func asyncLayout() -> (_ item: ContactsPeerItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool) -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let currentSelectionNode = self.selectionNode
         
         let currentItem = self.layoutParams?.0
         
-        return { [weak self] item, width, first, last, firstWithHeader in
+        return { [weak self] item, params, first, last, firstWithHeader in
             var updatedTheme: PresentationTheme?
             
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
             }
-            var leftInset: CGFloat = 65.0
-            let rightInset: CGFloat = 10.0
+            var leftInset: CGFloat = 65.0 + params.leftInset
+            let rightInset: CGFloat = 10.0 + params.rightInset
             
             let updatedSelectionNode: ASImageNode?
             var updatedSelectionImage: UIImage?
@@ -332,7 +355,9 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     textColor = item.theme.list.itemPrimaryTextColor
                 }
                 if let user = peer as? TelegramUser {
-                    if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
+                    if peer.id == item.account.peerId {
+                        titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
+                    } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                         let string = NSMutableAttributedString()
                         string.append(NSAttributedString(string: firstName, font: titleFont, textColor: textColor))
                         string.append(NSAttributedString(string: " ", font: titleFont, textColor: textColor))
@@ -358,12 +383,23 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         if let presence = presence as? TelegramUserPresence {
                             userPresence = presence
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                            let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, presence: presence, relativeTo: Int32(timestamp))
+                            let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, timeFormat: .regular, presence: presence, relativeTo: Int32(timestamp))
                             statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
                         }
-                    case .addressName:
+                    case let .addressName(suffix):
                         if let addressName = peer.addressName {
-                            statusAttributedString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                            let addressNameString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.theme.list.itemAccentColor)
+                            if !suffix.isEmpty {
+                                let suffixString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                                let finalString = NSMutableAttributedString()
+                                finalString.append(addressNameString)
+                                finalString.append(suffixString)
+                                statusAttributedString = finalString
+                            } else {
+                                statusAttributedString = addressNameString
+                            }
+                        } else if !suffix.isEmpty {
+                            statusAttributedString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                         }
                 }
             }
@@ -373,11 +409,11 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 additionalTitleInset += 3.0 + verificationIconImage.size.width
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset), height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 48.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 48.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
             let titleFrame: CGRect
             if statusAttributedString != nil {
@@ -389,12 +425,16 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
                     if let peer = item.peer {
-                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer)
+                        var overrideImage: AvatarNodeImageOverride?
+                        if peer.id == item.account.peerId {
+                            overrideImage = .savedMessagesIcon
+                        }
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)
                     }
                     
                     return (strongSelf.avatarNode.ready, { [weak strongSelf] animated in
                         if let strongSelf = strongSelf {
-                            strongSelf.layoutParams = (item, width, first, last, firstWithHeader)
+                            strongSelf.layoutParams = (item, params, first, last, firstWithHeader)
                             
                             let transition: ContainedViewLayoutTransition
                             if animated {
@@ -406,8 +446,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             let revealOffset = strongSelf.revealOffset
                             
                             if let _ = updatedTheme {
-                                strongSelf.separatorNode.backgroundColor = item.theme.list.itemSeparatorColor
-                                strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                                strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                                strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
                                 strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                             }
                             
@@ -415,6 +455,9 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             
                             let _ = titleApply()
                             transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame.offsetBy(dx: revealOffset, dy: 0.0))
+                            
+                            strongSelf.titleNode.alpha = item.enabled ? 1.0 : 0.4
+                            strongSelf.statusNode.alpha = item.enabled ? 1.0 : 0.4
                             
                             let _ = statusApply()
                             transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 25.0), size: statusLayout.size))
@@ -448,7 +491,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     updatedSelectionNode.image = updatedSelectionImage
                                 }
                                 if let updatedSelectionImage = updatedSelectionImage {
-                                    updatedSelectionNode.frame = CGRect(origin: CGPoint(x: 10.0, y: floor((nodeLayout.contentSize.height - updatedSelectionImage.size.height) / 2.0)), size: updatedSelectionImage.size)
+                                    updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 10.0, y: floor((nodeLayout.contentSize.height - updatedSelectionImage.size.height) / 2.0)), size: updatedSelectionImage.size)
                                 }
                             } else if let selectionNode = strongSelf.selectionNode {
                                 selectionNode.removeFromSupernode()
@@ -458,15 +501,22 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
                             strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
-                            strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - 65.0), height: separatorHeight))
+                            strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - leftInset), height: separatorHeight))
                             strongSelf.separatorNode.isHidden = last
                             
                             if let userPresence = userPresence {
                                 strongSelf.peerPresenceManager?.reset(presence: userPresence)
                             }
                             
-                            strongSelf.setRevealOptions([ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: UIColor(rgb: 0xff3824))])
-                            strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: animated)
+                            strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                            
+                           
+                            if item.editing.editable {
+                            strongSelf.setRevealOptions([ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)])
+                            strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
+                            } else {
+                                strongSelf.setRevealOptions([])
+                            }
                         }
                     })
                 } else {

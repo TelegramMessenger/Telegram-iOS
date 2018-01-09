@@ -128,34 +128,6 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
         }
     })
     
-    /*
-    if (status == noErr)
-    {
-        [[TGOpusAudioRecorder processingQueue] dispatchOnQueue:^
-            {
-            TGOpusAudioRecorder *recorder = globalRecorder;
-            if (recorder != nil && recorder.recorderId == (int)(intptr_t)inRefCon && recorder->_recording) {
-            
-            if (recorder->_waitForTone) {
-            if (CACurrentMediaTime() - recorder->_waitForToneStart > 0.3) {
-            [recorder _processBuffer:&buffer];
-            }
-            } else {
-            [recorder _processBuffer:&buffer];
-            }
-            }
-            
-            free(buffer.mData);
-        }];
-    }
-    
-    sharedQueue.async {
-        withAudioRecorderContext(Int32(unsafeBitCast(refCon, to: intptr_t.self)), { context in
-            if !context.isPaused {
-                
-            }
-        })
-    }*/
     return noErr
 }
 
@@ -169,6 +141,8 @@ final class ManagedAudioRecorderContext {
     private let id: Int32
     private let micLevel: ValuePromise<Float>
     private let recordingState: ValuePromise<AudioRecordingState>
+    private let beginWithTone: Bool
+    private let beganWithTone: (Bool) -> Void
     
     private var paused = true
     
@@ -191,19 +165,119 @@ final class ManagedAudioRecorderContext {
     
     private var recordingStateUpdateTimestamp: Double?
     
+    private var hasAudioSession = false
     private var audioSessionDisposable: Disposable?
     
-    init(queue: Queue, mediaManager: MediaManager, micLevel: ValuePromise<Float>, recordingState: ValuePromise<AudioRecordingState>) {
+    private var toneRenderer: MediaPlayerAudioRenderer?
+    private var toneRendererAudioSession: MediaPlayerAudioSessionCustomControl?
+    private var toneRendererAudioSessionActivated = false
+    
+    private var processSamples = false
+    
+    private var toneTimer: SwiftSignalKit.Timer?
+    
+    init(queue: Queue, mediaManager: MediaManager, micLevel: ValuePromise<Float>, recordingState: ValuePromise<AudioRecordingState>, beginWithTone: Bool, beganWithTone: @escaping (Bool) -> Void) {
         assert(queue.isCurrent())
         
         self.id = getNextRecorderContextId()
         self.micLevel = micLevel
+        self.beginWithTone = beginWithTone
+        self.beganWithTone = beganWithTone
+        
         self.recordingState = recordingState
         
         self.queue = queue
         self.mediaManager = mediaManager
         self.dataItem = TGDataItem()
         self.oggWriter = TGOggOpusWriter()
+        
+        if let toneData = audioRecordingToneData {
+            self.processSamples = false
+            let toneRenderer = MediaPlayerAudioRenderer(audioSession: .custom({ [weak self] control in
+                queue.async {
+                    if let strongSelf = self {
+                        strongSelf.toneRendererAudioSession = control
+                        if !strongSelf.paused && strongSelf.hasAudioSession {
+                            strongSelf.toneRendererAudioSessionActivated = true
+                            control.activate()
+                        }
+                    }
+                }
+                return ActionDisposable {
+                }
+            }), playAndRecord: true, forceAudioToSpeaker: false, updatedRate: {
+            }, audioPaused: {})
+            self.toneRenderer = toneRenderer
+            
+            let toneDataOffset = Atomic<Int>(value: 0)
+            toneRenderer.beginRequestingFrames(queue: DispatchQueue.global(), takeFrame: {
+                let frameSize = 44100
+                
+                var takeRange: Range<Int>?
+                let _ = toneDataOffset.modify { current in
+                    let count = min(toneData.count - current, frameSize)
+                    if count > 0 {
+                        takeRange = current ..< (current + count)
+                    }
+                    return current + count
+                }
+                
+                if let takeRange = takeRange {
+                    var blockBuffer: CMBlockBuffer?
+                    
+                    let bytes = malloc(takeRange.count)!
+                    toneData.withUnsafeBytes { (dataBytes: UnsafePointer<UInt8>) -> Void in
+                        memcpy(bytes, dataBytes.advanced(by: takeRange.lowerBound), takeRange.count)
+                    }
+                    let status = CMBlockBufferCreateWithMemoryBlock(nil, bytes, takeRange.count, nil, nil, 0, takeRange.count, 0, &blockBuffer)
+                    if status != noErr {
+                        return .finished
+                    }
+                    
+                    let sampleCount = takeRange.count / 2
+                    
+                    let pts = CMTime(value: Int64(takeRange.lowerBound / 2), timescale: 44100)
+                    var timingInfo = CMSampleTimingInfo(duration: CMTime(value: Int64(sampleCount), timescale: 44100), presentationTimeStamp: pts, decodeTimeStamp: pts)
+                    var sampleBuffer: CMSampleBuffer?
+                    var sampleSize = takeRange.count
+                    guard CMSampleBufferCreate(nil, blockBuffer, true, nil, nil, nil, 1, 1, &timingInfo, 1, &sampleSize, &sampleBuffer) == noErr else {
+                        return .finished
+                    }
+                    
+                    if let sampleBuffer = sampleBuffer {
+                        return .frame(MediaTrackFrame(type: .audio, sampleBuffer: sampleBuffer, resetDecoder: false, decoded: true))
+                    } else {
+                        return .finished
+                    }
+                } else {
+                    return .finished
+                }
+            })
+            toneRenderer.start()
+            let toneTimer = SwiftSignalKit.Timer(timeout: 0.05, repeat: true, completion: { [weak self] in
+                if let strongSelf = self {
+                    var wait = false
+                    
+                    if let toneRenderer = strongSelf.toneRenderer {
+                        let toneTime = CMTimebaseGetTime(toneRenderer.audioTimebase)
+                        let endTime = CMTime(value: Int64(toneData.count / 2), timescale: 44100)
+                        if CMTimeCompare(toneTime, endTime) >= 0 {
+                            strongSelf.processSamples = true
+                        } else {
+                            wait = true
+                        }
+                    }
+                    
+                    if !wait {
+                        strongSelf.toneTimer?.invalidate()
+                    }
+                }
+            }, queue: queue)
+            self.toneTimer = toneTimer
+            toneTimer.start()
+        } else {
+            self.processSamples = true
+        }
         
         addAudioRecorderContext(self.id, self)
         addAudioUnitHolder(self.id, queue, self.audioUnit)
@@ -220,6 +294,9 @@ final class ManagedAudioRecorderContext {
         self.stop()
         
         self.audioSessionDisposable?.dispose()
+        
+        self.toneRenderer?.stop()
+        self.toneTimer?.invalidate()
     }
     
     func start() {
@@ -281,18 +358,22 @@ final class ManagedAudioRecorderContext {
         
         let _ = self.audioUnit.swap(audioUnit)
         
+        self.toneRenderer?.setRate(1.0)
+        
         if self.audioSessionDisposable == nil {
             let queue = self.queue
-            self.audioSessionDisposable = self.mediaManager.audioSession.push(audioSessionType: .playAndRecord, activate: { [weak self] in
+            self.audioSessionDisposable = self.mediaManager.audioSession.push(audioSessionType: .playAndRecord, activate: { [weak self] state in
                 queue.async {
                     if let strongSelf = self, !strongSelf.paused {
-                        strongSelf.audioSessionAcquired()
+                        strongSelf.hasAudioSession = true
+                        strongSelf.audioSessionAcquired(headset: state.isHeadsetConnected)
                     }
                 }
             }, deactivate: { [weak self] in
                 return Signal { subscriber in
                     queue.async {
                         if let strongSelf = self {
+                            strongSelf.hasAudioSession = false
                             strongSelf.stop()
                             subscriber.putCompletion()
                         }
@@ -304,7 +385,18 @@ final class ManagedAudioRecorderContext {
         }
     }
     
-    func audioSessionAcquired() {
+    func audioSessionAcquired(headset: Bool) {
+        if let toneRendererAudioSession = self.toneRendererAudioSession, headset || self.beginWithTone {
+            self.beganWithTone(true)
+            if !self.toneRendererAudioSessionActivated {
+                self.toneRendererAudioSessionActivated = true
+                toneRendererAudioSession.activate()
+            }
+        } else {
+            self.processSamples = true
+            self.beganWithTone(false)
+        }
+        
         self.audioUnit.with { audioUnit -> Void in
             if let audioUnit = audioUnit {
                 guard AudioOutputUnitStart(audioUnit) == noErr else {
@@ -339,6 +431,11 @@ final class ManagedAudioRecorderContext {
             }
         }
         
+        if let toneRendererAudioSession = self.toneRendererAudioSession, self.toneRendererAudioSessionActivated {
+            self.toneRendererAudioSessionActivated = false
+            toneRendererAudioSession.deactivate()
+        }
+        
         let audioSessionDisposable = self.audioSessionDisposable
         self.audioSessionDisposable = nil
         audioSessionDisposable?.dispose()
@@ -349,6 +446,10 @@ final class ManagedAudioRecorderContext {
         
         defer {
             free(buffer.mData)
+        }
+        
+        if !self.processSamples {
+            return
         }
         
         let millisecondsPerPacket = 60
@@ -466,8 +567,8 @@ final class ManagedAudioRecorderContext {
             memset(scaledSamples, 0, 100 * 2);
             var waveform: Data?
             
+            let count = self.waveformSamples.count / 2
             self.waveformSamples.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
-                let count = self.waveformSamples.count / 2
                 for i in 0 ..< count {
                     let sample = samples[i]
                     let index = i * 100 / count
@@ -539,6 +640,8 @@ final class ManagedAudioRecorder {
     private let micLevelValue = ValuePromise<Float>(0.0)
     private let recordingStateValue = ValuePromise<AudioRecordingState>(.paused(duration: 0.0))
     
+    let beginWithTone: Bool
+    
     var micLevel: Signal<Float, NoError> {
         return self.micLevelValue.get()
     }
@@ -547,9 +650,10 @@ final class ManagedAudioRecorder {
         return self.recordingStateValue.get()
     }
     
-    init(mediaManager: MediaManager) {
+    init(mediaManager: MediaManager, beginWithTone: Bool, beganWithTone: @escaping (Bool) -> Void) {
+        self.beginWithTone = beginWithTone
         self.queue.async {
-            let context = ManagedAudioRecorderContext(queue: self.queue, mediaManager: mediaManager, micLevel: self.micLevelValue, recordingState: self.recordingStateValue)
+            let context = ManagedAudioRecorderContext(queue: self.queue, mediaManager: mediaManager, micLevel: self.micLevelValue, recordingState: self.recordingStateValue, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

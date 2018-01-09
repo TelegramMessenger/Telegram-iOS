@@ -14,6 +14,7 @@ enum CallListNodeViewTransitionReason {
     case interactiveChanges
     case holeChanges(filledHoleDirections: [MessageIndex: HoleFillDirection], removeHoleDirections: [MessageIndex: HoleFillDirection])
     case reload
+    case reloadAnimated
 }
 
 struct CallListNodeViewTransitionInsertEntry {
@@ -68,45 +69,49 @@ func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toV
         var scrollToItem: ListViewScrollToItem?
         
         switch reason {
-        case .initial:
-            let _ = options.insert(.LowLatency)
-            let _ = options.insert(.Synchronous)
-        case .interactiveChanges:
-            let _ = options.insert(.AnimateAlpha)
-            let _ = options.insert(.AnimateInsertion)
-            
-            for (index, _, _) in indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
-                let adjustedIndex = updatedCount - 1 - index
-                if adjustedIndex == maxAnimatedInsertionIndex + 1 {
-                    maxAnimatedInsertionIndex += 1
-                }
-            }
-        case .reload:
-            break
-        case let .holeChanges(filledHoleDirections, removeHoleDirections):
-            if let (_, removeDirection) = removeHoleDirections.first {
-                switch removeDirection {
-                case .LowerToUpper:
-                    var holeIndex: MessageIndex?
-                    for (index, _) in filledHoleDirections {
-                        if holeIndex == nil || index < holeIndex! {
-                            holeIndex = index
-                        }
+            case .initial:
+                let _ = options.insert(.LowLatency)
+                let _ = options.insert(.Synchronous)
+            case .interactiveChanges:
+                let _ = options.insert(.AnimateAlpha)
+                let _ = options.insert(.AnimateInsertion)
+                
+                for (index, _, _) in indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
+                    let adjustedIndex = updatedCount - 1 - index
+                    if adjustedIndex == maxAnimatedInsertionIndex + 1 {
+                        maxAnimatedInsertionIndex += 1
                     }
-                    
-                    if let holeIndex = holeIndex {
-                        for i in 0 ..< toView.filteredEntries.count {
-                            if toView.filteredEntries[i].index >= holeIndex {
-                                let index = toView.filteredEntries.count - 1 - (i - 1)
-                                stationaryItemRange = (index, Int.max)
-                                break
+                }
+            case .reload:
+                break
+            case .reloadAnimated:
+                let _ = options.insert(.LowLatency)
+                let _ = options.insert(.Synchronous)
+                let _ = options.insert(.AnimateCrossfade)
+            case let .holeChanges(filledHoleDirections, removeHoleDirections):
+                if let (_, removeDirection) = removeHoleDirections.first {
+                    switch removeDirection {
+                    case .LowerToUpper:
+                        var holeIndex: MessageIndex?
+                        for (index, _) in filledHoleDirections {
+                            if holeIndex == nil || index < holeIndex! {
+                                holeIndex = index
                             }
                         }
-                    }
-                case .UpperToLower:
-                    break
-                case .AroundIndex:
-                    break
+                        
+                        if let holeIndex = holeIndex {
+                            for i in 0 ..< toView.filteredEntries.count {
+                                if toView.filteredEntries[i].index >= holeIndex {
+                                    let index = toView.filteredEntries.count - 1 - (i - 1)
+                                    stationaryItemRange = (index, Int.max)
+                                    break
+                                }
+                            }
+                        }
+                    case .UpperToLower:
+                        break
+                    case .AroundId, .AroundIndex:
+                        break
                 }
             }
         }

@@ -18,9 +18,9 @@ private enum ConvertToSupergroupSection: Int32 {
 }
 
 private enum ConvertToSupergroupEntry: ItemListNodeEntry {
-    case info
-    case action
-    case actionInfo
+    case info(PresentationTheme, String)
+    case action(PresentationTheme, String)
+    case actionInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -43,7 +43,26 @@ private enum ConvertToSupergroupEntry: ItemListNodeEntry {
     }
     
     static func ==(lhs: ConvertToSupergroupEntry, rhs: ConvertToSupergroupEntry) -> Bool {
-        return lhs.stableId == rhs.stableId
+        switch lhs {
+            case let .info(lhsTheme, lhsText):
+                if case let .info(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .action(lhsTheme, lhsText):
+                if case let .action(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .actionInfo(lhsTheme, lhsText):
+                if case let .actionInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+        }
     }
     
     static func <(lhs: ConvertToSupergroupEntry, rhs: ConvertToSupergroupEntry) -> Bool {
@@ -52,14 +71,14 @@ private enum ConvertToSupergroupEntry: ItemListNodeEntry {
     
     func item(_ arguments: ConvertToSupergroupArguments) -> ListViewItem {
         switch self {
-            case .info:
-                return ItemListTextItem(text: .plain("In supergroups:\n• New members can see the full message history\n• Deleted messages will disappear for all members\n• Admins can pin important messages\n• Creator can set a public link for the group"), sectionId: self.section)
-            case .action:
-                return ItemListActionItem(title: "Convert to Supergroup", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .info(theme, text):
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
+            case let .action(theme, title):
+                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.convert()
                 })
-            case .actionInfo:
-                return ItemListTextItem(text: .plain("Note: this action can't be undone"), sectionId: self.section)
+            case let .actionInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
         }
     }
 }
@@ -83,12 +102,12 @@ private struct ConvertToSupergroupState: Equatable {
     }
 }
 
-private func convertToSupergroupEntries() -> [ConvertToSupergroupEntry] {
+private func convertToSupergroupEntries(presentationData: PresentationData) -> [ConvertToSupergroupEntry] {
     var entries: [ConvertToSupergroupEntry] = []
     
-    entries.append(.info)
-    entries.append(.action)
-    entries.append(.actionInfo)
+    entries.append(.info(presentationData.theme, "\(presentationData.strings.ConvertToSupergroup_HelpTitle)\n\(presentationData.strings.ConvertToSupergroup_HelpText)"))
+    entries.append(.action(presentationData.theme, presentationData.strings.GroupInfo_ConvertToSupergroup))
+    entries.append(.actionInfo(presentationData.theme, presentationData.strings.ConvertToSupergroup_Note))
     
     return entries
 }
@@ -118,7 +137,7 @@ public func convertToSupergroupController(account: Account, peerId: PeerId) -> V
         
         if !alreadyConverting {
             convertDisposable.set((convertGroupToSupergroup(account: account, peerId: peerId) |> deliverOnMainQueue).start(next: { createdPeerId in
-                replaceControllerImpl?(ChatController(account: account, peerId: createdPeerId))
+                replaceControllerImpl?(ChatController(account: account, chatLocation: .peer(createdPeerId)))
             }))
         }
     })
@@ -132,8 +151,8 @@ public func convertToSupergroupController(account: Account, peerId: PeerId) -> V
                 rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Supergroup"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: "Back"))
-            let listState = ItemListNodeState(entries: convertToSupergroupEntries(), style: .blocks)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ConvertToSupergroup_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let listState = ItemListNodeState(entries: convertToSupergroupEntries(presentationData: presentationData), style: .blocks)
             
             return (controllerState, (listState, arguments))
         }

@@ -6,6 +6,7 @@ import TelegramCore
 import Display
 
 protocol UniversalVideoContentNode: class {
+    var ready: Signal<Void, NoError> { get }
     var status: Signal<MediaPlayerStatus, NoError> { get }
         
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
@@ -15,15 +16,20 @@ protocol UniversalVideoContentNode: class {
     func togglePlayPause()
     func setSoundEnabled(_ value: Bool)
     func seek(_ timestamp: Double)
+    func playOnceWithSound(playAndRecord: Bool)
+    func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool)
+    func continuePlayingWithoutSound()
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int
     func removePlaybackCompleted(_ index: Int)
+    func fetchControl(_ control: UniversalVideoNodeFetchControl)
 }
 
 protocol UniversalVideoContent {
     var id: AnyHashable { get }
     var dimensions: CGSize { get }
     var duration: Int32 { get }
-    func makeContentNode(account: Account) -> UniversalVideoContentNode & ASDisplayNode
+    
+    func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode
 }
 
 protocol UniversalVideoDecoration: class {
@@ -34,14 +40,16 @@ protocol UniversalVideoDecoration: class {
     func setStatus(_ status: Signal<MediaPlayerStatus?, NoError>)
     
     func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?)
+    func updateContentNodeSnapshot(_ snapshot: UIView?)
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
     func tap()
 }
 
 enum UniversalVideoPriority: Int32, Comparable {
-    case embedded = 0
-    case gallery = 1
-    case overlay = 2
+    case secondaryOverlay = 0
+    case embedded = 1
+    case gallery = 2
+    case overlay = 3
     
     static func <(lhs: UniversalVideoPriority, rhs: UniversalVideoPriority) -> Bool {
         return lhs.rawValue < rhs.rawValue
@@ -52,12 +60,20 @@ enum UniversalVideoPriority: Int32, Comparable {
     }
 }
 
+enum UniversalVideoNodeFetchControl {
+    case fetch
+    case cancel
+}
+
 final class UniversalVideoNode: ASDisplayNode {
-    private let account: Account
+    private let postbox: Postbox
+    private let audioSession: ManagedAudioSession
     private let manager: UniversalVideoContentManager
     private let content: UniversalVideoContent
     private let priority: UniversalVideoPriority
     private let decoration: UniversalVideoDecoration
+    private let autoplay: Bool
+    private let snapshotContentWhenGone: Bool
     
     private var contentNode: (UniversalVideoContentNode & ASDisplayNode)?
     private var contentNodeId: Int32?
@@ -75,6 +91,11 @@ final class UniversalVideoNode: ASDisplayNode {
         return self._status.get()
     }
     
+    private let _ready = Promise<Void>()
+    var ready: Signal<Void, NoError> {
+        return self._ready.get()
+    }
+    
     var canAttachContent: Bool = false {
         didSet {
             if self.canAttachContent != oldValue {
@@ -82,12 +103,13 @@ final class UniversalVideoNode: ASDisplayNode {
                     assert(self.contentRequestIndex == nil)
                     
                     let content = self.content
-                    let account = self.account
+                    let postbox = self.postbox
+                    let audioSession = self.audioSession
                     self.contentRequestIndex = self.manager.attachUniversalVideoContent(id: self.content.id, priority: self.priority, create: {
-                        return content.makeContentNode(account: account)
-                    }, update: { [weak self] contentNode in
+                        return content.makeContentNode(postbox: postbox, audioSession: audioSession)
+                    }, update: { [weak self] contentNodeAndFlags in
                         if let strongSelf = self {
-                            strongSelf.updateContentNode(contentNode)
+                            strongSelf.updateContentNode(contentNodeAndFlags)
                         }
                     })
                 } else {
@@ -101,12 +123,19 @@ final class UniversalVideoNode: ASDisplayNode {
         }
     }
     
-    init(account: Account, manager: UniversalVideoContentManager, decoration: UniversalVideoDecoration, content: UniversalVideoContent, priority: UniversalVideoPriority) {
-        self.account = account
+    var hasAttachedContext: Bool {
+        return self.contentNode != nil
+    }
+    
+    init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoContentManager, decoration: UniversalVideoDecoration, content: UniversalVideoContent, priority: UniversalVideoPriority, autoplay: Bool = false, snapshotContentWhenGone: Bool = false) {
+        self.postbox = postbox
+        self.audioSession = audioSession
         self.manager = manager
         self.content = content
         self.priority = priority
         self.decoration = decoration
+        self.autoplay = autoplay
+        self.snapshotContentWhenGone = snapshotContentWhenGone
         
         super.init()
         
@@ -148,38 +177,35 @@ final class UniversalVideoNode: ASDisplayNode {
         }
     }
     
-    private func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?) {
+    private func updateContentNode(_ contentNode: ((UniversalVideoContentNode & ASDisplayNode), Bool)?) {
         let previous = self.contentNode
-        self.contentNode = contentNode
-        if previous !== contentNode {
-            if let previous = previous {
-                /*if let contextPlaybackEndedIndex = self.contextPlaybackEndedIndex {
-                    previous.removePlaybackCompleted(contextPlaybackEndedIndex)
+        self.contentNode = contentNode?.0
+        if previous !== contentNode?.0 {
+            if let previous = previous, contentNode?.0 == nil && self.snapshotContentWhenGone {
+                if let snapshotView = previous.view.snapshotView(afterScreenUpdates: false) {
+                    self.decoration.updateContentNodeSnapshot(snapshotView)
                 }
-                self.contextPlaybackEndedIndex = nil*/
-                /*if let snapshotView = previous.playerNode.view.snapshotView(afterScreenUpdates: false) {
-                 self.snapshotView = snapshotView
-                 snapshotView.frame = self.imageNode.frame
-                 self.view.addSubview(snapshotView)
-                 }*/
             }
-            if let contentNode = contentNode {
-                /*self.contextPlaybackEndedIndex = context.addPlaybackCompleted { [weak self] in
-                    self?.playbackEnded?()
-                }*/
-                
+            if let (contentNode, initiatedCreation) = contentNode {
+                self._ready.set(contentNode.ready)
+                if initiatedCreation && self.autoplay {
+                    self.play()
+                }
             }
-            self.decoration.updateContentNode(contentNode)
-            /*if self.hasAttachedContext != (context !== nil) {
-                self.hasAttachedContext = (context !== nil)
-                self.hasAttachedContextUpdated?(self.hasAttachedContext)
-            }*/
+            if contentNode?.0 != nil && self.snapshotContentWhenGone {
+                self.decoration.updateContentNodeSnapshot(nil)
+            }
+            self.decoration.updateContentNode(contentNode?.0)
             
-            let ownsContentNode = contentNode !== nil
+            let ownsContentNode = contentNode?.0 !== nil
             if self.ownsContentNode != ownsContentNode {
                 self.ownsContentNode = ownsContentNode
                 self.ownsContentNodeUpdated?(ownsContentNode)
             }
+        }
+        
+        if contentNode == nil {
+            self._ready.set(.single(Void()))
         }
     }
     
@@ -223,6 +249,38 @@ final class UniversalVideoNode: ASDisplayNode {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
                 contentNode.seek(timestamp)
+            }
+        })
+    }
+    
+    func playOnceWithSound(playAndRecord: Bool) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.playOnceWithSound(playAndRecord: playAndRecord)
+            }
+        })
+    }
+    
+    func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.setForceAudioToSpeaker(forceAudioToSpeaker)
+            }
+        })
+    }
+    
+    func continuePlayingWithoutSound() {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.continuePlayingWithoutSound()
+            }
+        })
+    }
+    
+    func fetchControl(_ control: UniversalVideoNodeFetchControl) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.fetchControl(control)
             }
         })
     }

@@ -15,17 +15,12 @@
 #include "objects.h"
 #include "texture_helper.h"
 
-static UIColor *TGColorWithHex(int hex)
-{
-    return [[UIColor alloc] initWithRed:(((hex >> 16) & 0xff) / 255.0f) green:(((hex >> 8) & 0xff) / 255.0f) blue:(((hex) & 0xff) / 255.0f) alpha:1.0f];
-}
+#import <SSignalKit/SSignalKit.h>
+
+#import <LegacyComponents/LegacyComponents.h>
 
 #define TGLog NSLog
 #define TGLocalized(x) NSLocalizedString(x, @"")
-
-static UIColor *TGAccentColor() {
-    return TGColorWithHex(0x007ee5);
-}
 
 static void TGDispatchOnMainThread(dispatch_block_t block) {
     if ([NSThread isMainThread]) {
@@ -77,17 +72,37 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     
     UIImageView *_stillLogoView;
     bool _displayedStillLogo;
+    
+    UIColor *_backgroundColor;
+    UIColor *_primaryColor;
+    UIColor *_accentColor;
+    UIColor *_regularDotColor;
+    UIColor *_highlightedDotColor;
+    
+    UIButton *_startButton;
+    TGModernButton *_alternativeLanguageButton;
+    
+    SMetaDisposable *_localizationsDisposable;
+    NSDictionary *_alternativeLocalizationInfo;
+    
+    SVariable *_alternativeLocalization;
 }
 @end
 
 
 @implementation RMIntroViewController
 
-- (instancetype)init
+- (instancetype)initWithBackroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor
 {
     self = [super init];
     if (self != nil)
     {
+        _backgroundColor = backgroundColor;
+        _primaryColor = primaryColor;
+        _accentColor = accentColor;
+        _regularDotColor = regularDotColor;
+        _highlightedDotColor = highlightedDotColor;
+        
         self.automaticallyAdjustsScrollViewInsets = false;
         
         _headlines = @[ TGLocalized(@"Tour.Title1"), TGLocalized(@"Tour.Title2"),  TGLocalized(@"Tour.Title6"), TGLocalized(@"Tour.Title3"), TGLocalized(@"Tour.Title4"), TGLocalized(@"Tour.Title5")];
@@ -106,6 +121,38 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
             [strongSelf loadGL];
             [strongSelf startTimer];
         }];
+        
+        _alternativeLanguageButton = [[TGModernButton alloc] init];
+        _alternativeLanguageButton.modernHighlight = true;
+        [_alternativeLanguageButton setTitleColor:accentColor];
+        
+        _alternativeLanguageButton.titleLabel.font = [UIFont systemFontOfSize:18.0];
+        _alternativeLanguageButton.hidden = true;
+        [_alternativeLanguageButton addTarget:self action:@selector(alternativeLanguageButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+        
+        _alternativeLocalization = [[SVariable alloc] init];
+        
+        /*SSignal *localizationSignal = [TGLocalizationSignals suggestedLocalization];
+        
+        _localizationsDisposable = [[localizationSignal deliverOn:[SQueue mainQueue]] startWithNext:^(TGSuggestedLocalization *next) {
+            __strong RMIntroViewController *strongSelf = weakSelf;
+            if (strongSelf != nil && next != nil) {
+                if (strongSelf->_alternativeLocalizationInfo == nil) {
+                    _alternativeLocalizationInfo = next;
+                    
+                    [strongSelf->_alternativeLanguageButton setTitle:next.continueWithLanguageString forState:UIControlStateNormal];
+                    strongSelf->_alternativeLanguageButton.hidden = false;
+                    [strongSelf->_alternativeLanguageButton sizeToFit];
+                    
+                    if ([strongSelf isViewLoaded]) {
+                        [strongSelf->_alternativeLanguageButton.layer animateAlphaFrom:0.0f to:1.0f duration:0.3f timingFunction:kCAMediaTimingFunctionEaseInEaseOut removeOnCompletion:true completion:nil];
+                        [UIView animateWithDuration:0.3 animations:^{
+                            [strongSelf viewWillLayoutSubviews];
+                        }];
+                    }
+                }
+            }
+        }];*/
     }
     return self;
 }
@@ -153,6 +200,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
             height += 138 / 2;
         
         _glkView = [[GLKView alloc] initWithFrame:CGRectMake(self.view.bounds.size.width / 2 - size / 2, height, size, size) context:context];
+        _glkView.backgroundColor = _backgroundColor;
         _glkView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
         _glkView.drawableDepthFormat = GLKViewDrawableDepthFormat24;
         _glkView.drawableMultisample = GLKViewDrawableMultisample4X;
@@ -166,7 +214,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         UIView *v3 = [[UIView alloc] initWithFrame:CGRectMake(-patchHalfWidth, -patchHalfWidth + _glkView.frame.size.height, _glkView.frame.size.width + patchHalfWidth * 2, patchHalfWidth * 2)];
         UIView *v4 = [[UIView alloc] initWithFrame:CGRectMake(-patchHalfWidth + _glkView.frame.size.width, -patchHalfWidth, patchHalfWidth * 2, _glkView.frame.size.height + patchHalfWidth * 2)];
         
-        v1.backgroundColor = v2.backgroundColor = v3.backgroundColor = v4.backgroundColor = [UIColor whiteColor];
+        v1.backgroundColor = v2.backgroundColor = v3.backgroundColor = v4.backgroundColor = _backgroundColor;
         
         [_glkView addSubview:v1];
         [_glkView addSubview:v2];
@@ -202,7 +250,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
 {
     [super viewDidLoad];
     
-    self.view.backgroundColor = [UIColor whiteColor];
+    self.view.backgroundColor = _backgroundColor;
     
     [self loadGL];
     
@@ -223,7 +271,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     
     for (NSUInteger i = 0; i < _headlines.count; i++)
     {
-        RMIntroPageView *p = [[RMIntroPageView alloc]initWithFrame:CGRectMake(i * self.view.bounds.size.width, 0, self.view.bounds.size.width, 0) headline:[_headlines objectAtIndex:i] description:[_descriptions objectAtIndex:i]];
+        RMIntroPageView *p = [[RMIntroPageView alloc]initWithFrame:CGRectMake(i * self.view.bounds.size.width, 0, self.view.bounds.size.width, 0) headline:[_headlines objectAtIndex:i] description:[_descriptions objectAtIndex:i] color:_primaryColor];
         p.opaque = true;
         p.clearsContextBeforeDrawing = false;
         [_pageViews addObject:p];
@@ -232,22 +280,47 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     [_pageScrollView setPage:0];
     
     _startButton = [[UIButton alloc] init];
+    _startButton.adjustsImageWhenDisabled = false;
     [_startButton setTitle:TGLocalized(@"Tour.StartButton") forState:UIControlStateNormal];
-    [_startButton.titleLabel setFont:[UIFont fontWithName:@"HelveticaNeue" size:isIpad ? 55 / 2.0f : 21]];
-    [_startButton setTitleColor:TGAccentColor() forState:UIControlStateNormal];
-    
-    _startArrow = [[UIImageView alloc]initWithImage:[UIImage imageNamed:isIpad ? @"start_arrow_ipad.png" : @"start_arrow.png"]];
-    _startButton.titleLabel.clipsToBounds = false;
-    _startArrow.frame = CGRectChangedOrigin(_startArrow.frame, CGPointMake([_startButton.titleLabel.text sizeWithFont:_startButton.titleLabel.font].width + (isIpad ? 7 : 6), isIpad ? 6.5f : 4.5f));
-    [_startButton.titleLabel addSubview:_startArrow];
+    [_startButton.titleLabel setFont:TGMediumSystemFontOfSize(20.0f)];
+    [_startButton setTitleColor:_backgroundColor forState:UIControlStateNormal];
+    static UIImage *buttonBackgroundImage = nil;
+    static UIImage *buttonHighlightedBackgroundImage = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        {
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(48.0, 48.0), false, 0.0f);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            CGContextSetFillColorWithColor(context, [_accentColor CGColor]);
+            CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 48.0f, 48.0f));
+            buttonBackgroundImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:24 topCapHeight:24];
+            UIGraphicsEndImageContext();
+        }
+        {
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(48.0, 48.0), false, 0.0f);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            CGFloat hue = 0.0f;
+            CGFloat sat = 0.0f;
+            CGFloat bri = 0.0f;
+            [_accentColor getHue:&hue saturation:&sat brightness:&bri alpha:nil];
+            UIColor *color = [[UIColor alloc] initWithHue:hue saturation:sat brightness:bri * 0.7 alpha:1.0];
+            CGContextSetFillColorWithColor(context, [color CGColor]);
+            CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 48.0f, 48.0f));
+            buttonHighlightedBackgroundImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:24 topCapHeight:24];
+            UIGraphicsEndImageContext();
+        }
+    });
+    [_startButton setContentEdgeInsets:UIEdgeInsetsMake(0.0f, 20.0f, 0.0f, 20.0f)];
+    [_startButton setBackgroundImage:buttonBackgroundImage forState:UIControlStateNormal];
+    [_startButton setBackgroundImage:buttonHighlightedBackgroundImage forState:UIControlStateHighlighted];
     [self.view addSubview:_startButton];
     
     _pageControl = [[UIPageControl alloc] init];
     _pageControl.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin;
     _pageControl.userInteractionEnabled = false;
-    [_pageControl setPageIndicatorTintColor:[UIColor colorWithWhite:.85 alpha:1]];
-    [_pageControl setCurrentPageIndicatorTintColor:[UIColor colorWithWhite:.2 alpha:1]];
     [_pageControl setNumberOfPages:6];
+    _pageControl.pageIndicatorTintColor = _regularDotColor;
+    _pageControl.currentPageIndicatorTintColor = _highlightedDotColor;
     [self.view addSubview:_pageControl];
 }
 
@@ -313,110 +386,105 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
 {
     UIInterfaceOrientation isVertical = (self.view.bounds.size.height / self.view.bounds.size.width > 1.0f);
     
-    CGFloat statusBarHeight = 0.0f;
+    CGFloat statusBarHeight = 0;
     
     CGFloat pageControlY = 0;
     CGFloat glViewY = 0;
     CGFloat startButtonY = 0;
     CGFloat pageY = 0;
     
+    CGFloat languageButtonSpread = 60.0f;
+    CGFloat languageButtonOffset = 26.0f;
+    
     DeviceScreen deviceScreen = [self deviceScreen];
-    bool landscape = self.view.bounds.size.width > self.view.bounds.size.height;
     switch (deviceScreen)
     {
         case iPad:
-            pageControlY = 386 / 2;
             glViewY = isVertical ? 121 + 90 : 121;
             startButtonY = 120;
             pageY = isVertical ? 485 : 335;
+            pageControlY = pageY + 200.0f;
             break;
-        
+            
         case iPadPro:
-            pageControlY = 386 / 2;
             glViewY = isVertical ? 221 + 110 : 221;
             startButtonY = 120;
             pageY = isVertical ? 605 : 435;
+            pageControlY = pageY + 200.0f;
             break;
             
         case Inch35:
-            if (landscape) {
-                pageControlY = 80;
-                glViewY = -200;
-                startButtonY = 75;
-                pageY = 38;
-            } else {
-                pageControlY = 162 / 2;
-                glViewY = 62 - 20;
-                startButtonY = 75;
-                pageY = 215;
+            pageControlY = 162 / 2;
+            glViewY = 62 - 20;
+            startButtonY = 75;
+            pageY = 215;
+            pageControlY = pageY + 160.0f;
+            if (!_alternativeLanguageButton.isHidden) {
+                glViewY -= 40.0f;
+                pageY -= 40.0f;
+                pageControlY -= 40.0f;
+                startButtonY -= 30.0f;
             }
+            languageButtonSpread = 65.0f;
+            languageButtonOffset = 15.0f;
             break;
             
         case Inch4:
-            if (landscape) {
-                pageControlY = 80;
-                glViewY = -200;
-                startButtonY = 75;
-                pageY = 38;
-            } else {
-                pageControlY = 162 / 2;
-                glViewY = 62;
-                startButtonY = 75;
-                pageY = 245;
-            }
+            glViewY = 62;
+            startButtonY = 75;
+            pageY = 245;
+            pageControlY = pageY + 160.0f;
+            languageButtonSpread = 50.0f;
+            languageButtonOffset = 20.0f;
             break;
-
+            
         case Inch47:
-            if (landscape) {
-                pageControlY = 162 / 2 + 10;
-                glViewY = -200;
-                startButtonY = 75 + 5;
-                pageY = 70;
-            } else {
-                pageControlY = 162 / 2 + 10;
-                glViewY = 62 + 25;
-                startButtonY = 75 + 5;
-                pageY = 245 + 50;
-            }
+            pageControlY = 162 / 2 + 10;
+            glViewY = 62 + 25;
+            startButtonY = 75 + 5;
+            pageY = 245 + 50;
+            pageControlY = pageY + 160.0f;
             break;
-
+            
         case Inch55:
-            if (landscape) {
-                pageControlY = 162 / 2 + 20;
-                glViewY = -200;
-                startButtonY = 75 + 20;
-                pageY = 76;
-            } else {
-                pageControlY = 162 / 2 + 20;
-                glViewY = 62 + 45;
-                startButtonY = 75 + 20;
-                pageY = 245 + 85;
-            }
+            glViewY = 62 + 45;
+            startButtonY = 75 + 20;
+            pageY = 245 + 85;
+            pageControlY = pageY + 160.0f;
             break;
             
         default:
             break;
     }
     
-    _pageControl.frame = CGRectMake(0, self.view.bounds.size.height - pageControlY - statusBarHeight, self.view.bounds.size.width, 7);
+    if (!_alternativeLanguageButton.isHidden) {
+        startButtonY += languageButtonSpread;
+    }
+    
+    _pageControl.frame = CGRectMake(0, pageControlY, self.view.bounds.size.width, 7);
     _glkView.frame = CGRectChangedOriginY(_glkView.frame, glViewY - statusBarHeight);
     
-    _startButton.frame = CGRectMake(-9, self.view.bounds.size.height - startButtonY - statusBarHeight, self.view.bounds.size.width, startButtonY - 4);
+    [_startButton sizeToFit];
+    _startButton.frame = CGRectMake(floor((self.view.bounds.size.width - _startButton.frame.size.width) / 2.0f), self.view.bounds.size.height - startButtonY - statusBarHeight, _startButton.frame.size.width, 48.0f);
     [_startButton addTarget:self action:@selector(startButtonPress) forControlEvents:UIControlEventTouchUpInside];
+    
+    _alternativeLanguageButton.frame = CGRectMake(floor((self.view.bounds.size.width - _alternativeLanguageButton.frame.size.width) / 2.0f), CGRectGetMaxY(_startButton.frame) + languageButtonOffset, _alternativeLanguageButton.frame.size.width, _alternativeLanguageButton.frame.size.height);
     
     _pageScrollView.frame=CGRectMake(0, 20, self.view.bounds.size.width, self.view.bounds.size.height - 20);
     _pageScrollView.contentSize=CGSizeMake(_headlines.count * self.view.bounds.size.width, 150);
     _pageScrollView.contentOffset = CGPointMake(_currentPage * self.view.bounds.size.width, 0);
     
     [_pageViews enumerateObjectsUsingBlock:^(UIView *pageView, NSUInteger index, __unused BOOL *stop)
-    {
-        pageView.frame = CGRectMake(index * self.view.bounds.size.width, (pageY - statusBarHeight), self.view.bounds.size.width, 150);
-    }];
+     {
+         pageView.frame = CGRectMake(index * self.view.bounds.size.width, (pageY - statusBarHeight), self.view.bounds.size.width, 150);
+     }];
 }
 
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
+    
+    [self loadGL];
     
     if (_stillLogoView == nil && !_displayedStillLogo)
     {
@@ -465,8 +533,6 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         _stillLogoView.frame = CGRectChangedOriginY(_glkView.frame, glViewY - statusBarHeight);
         [self.view addSubview:_stillLogoView];
     }
-    
-    [self loadGL];
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -485,6 +551,10 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     [super viewDidDisappear:animated];
     
     [self freeGL];
+    
+    [_stillLogoView removeFromSuperview];
+    _stillLogoView = nil;
+    _displayedStillLogo = false;
 }
 
 - (void)startButtonPress
@@ -612,6 +682,10 @@ NSInteger _current_page_end;
     }
     
     [_pageControl setCurrentPage:_currentPage];
+}
+
+- (void)alternativeLanguageButtonPressed {
+    
 }
 
 @end

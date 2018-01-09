@@ -12,16 +12,32 @@ private func shouldRequestLayoutOnPresentationInterfaceStateTransition(_ lhs: Ch
     return false
 }
 
-class ChatControllerNode: ASDisplayNode {
+private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider {
+    var inputAccessoryHeight: (() -> CGFloat)?
+    
+    func getWindowInputAccessoryHeight() -> CGFloat {
+        return self.inputAccessoryHeight?() ?? 0.0
+    }
+}
+
+class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let account: Account
-    let peerId: PeerId
+    let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
     
     let navigationBar: NavigationBar
     
+    private var backgroundEffectNode: ASDisplayNode?
+    private var containerBackgroundNode: ASImageNode?
+    private var scrollContainerNode: ASScrollNode?
+    private var containerNode: ASDisplayNode?
+    private var overlayNavigationBar: ChatOverlayNavigationBar?
+    
     let backgroundNode: ASDisplayNode
     let historyNode: ChatHistoryListNode
     let loadingNode: ChatLoadingNode
+    
+    private var validLayout: ContainerViewLayout?
     
     private var searchNavigationNode: ChatSearchNavigationContentNode?
     
@@ -34,6 +50,7 @@ class ChatControllerNode: ASDisplayNode {
     private var inputPanelNode: ChatInputPanelNode?
     private var accessoryPanelNode: AccessoryPanelNode?
     private var inputContextPanelNode: ChatInputContextPanelNode?
+    private var overlayContextPanelNode: ChatInputContextPanelNode?
     
     private var inputNode: ChatInputNode?
     
@@ -44,15 +61,35 @@ class ChatControllerNode: ASDisplayNode {
     
     private var ignoreUpdateHeight = false
     
+    private var animateInAsOverlayCompletion: (() -> Void)?
+    private var dismissAsOverlayCompletion: (() -> Void)?
+    private var dismissedAsOverlay = false
+    private var scheduledAnimateInAsOverlayFromNode: ASDisplayNode?
+    private var dismissAsOverlayLayout: ContainerViewLayout?
+    
+    private var hapticFeedback: HapticFeedback?
+    private var scrollViewDismissStatus = false
+    
     var chatPresentationInterfaceState: ChatPresentationInterfaceState
     var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
     
+    private let selectedMessagesPromise = Promise<Set<MessageId>?>(nil)
+    var selectedMessages: Set<MessageId>? {
+        didSet {
+            if self.selectedMessages != oldValue {
+                self.selectedMessagesPromise.set(.single(self.selectedMessages))
+            }
+        }
+    }
+    
     var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _ in }
     var displayAttachmentMenu: () -> Void = { }
+    var displayPasteMenu: ([UIImage]) -> Void = { _ in }
     var updateTypingActivity: () -> Void = { }
     var dismissUrlPreview: () -> Void = { }
     var setupSendActionOnViewUpdate: (@escaping () -> Void) -> Void = { _ in }
     var requestLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
+    var dismissAsOverlay: () -> Void = { }
     
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     
@@ -73,9 +110,9 @@ class ChatControllerNode: ASDisplayNode {
         }
     }
     
-    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar) {
+    init(account: Account, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar) {
         self.account = account
-        self.peerId = peerId
+        self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
         self.chatPresentationInterfaceState = chatPresentationInterfaceState
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
@@ -90,7 +127,7 @@ class ChatControllerNode: ASDisplayNode {
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true
         
-        self.historyNode = ChatHistoryListNode(account: account, peerId: peerId, tagMask: nil, messageId: messageId, controllerInteraction: controllerInteraction)
+        self.historyNode = ChatHistoryListNode(account: account, chatLocation: chatLocation, tagMask: nil, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
         self.loadingNode = ChatLoadingNode(theme: chatPresentationInterfaceState.theme)
         
         self.inputPanelBackgroundNode = ASDisplayNode()
@@ -106,10 +143,16 @@ class ChatControllerNode: ASDisplayNode {
         super.init()
         
         self.setViewBlock({
-            return UITracingLayerView()
+            return ChatControllerNodeView()
         })
         
-        self.backgroundColor = UIColor(rgb: 0xdee3e9)
+        (self.view as? ChatControllerNodeView)?.inputAccessoryHeight = { [weak self] in
+            if let strongSelf = self {
+                return strongSelf.getWindowInputAccessoryHeight()
+            } else {
+                return 0.0
+            }
+        }
         
         assert(Queue.mainQueue().isCurrent())
         
@@ -164,7 +207,7 @@ class ChatControllerNode: ASDisplayNode {
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
         self.textInputPanelNode = ChatTextInputPanelNode(theme: chatPresentationInterfaceState.theme, presentController: { [weak self] controller in
-            self?.interfaceInteraction?.presentController(controller)
+            self?.interfaceInteraction?.presentController(controller, nil)
         })
         self.textInputPanelNode?.updateHeight = { [weak self] in
             if let strongSelf = self, let _ = strongSelf.inputPanelNode as? ChatTextInputPanelNode, !strongSelf.ignoreUpdateHeight {
@@ -185,8 +228,8 @@ class ChatControllerNode: ASDisplayNode {
                 if let editMessage = effectivePresentationInterfaceState.interfaceState.editMessage {
                     let text = editMessage.inputState.inputText
                     
-                    if let interfaceInteraction = strongSelf.interfaceInteraction, !text.isEmpty {
-                        interfaceInteraction.editMessage(editMessage.messageId, editMessage.inputState.inputText)
+                    if let interfaceInteraction = strongSelf.interfaceInteraction {
+                        interfaceInteraction.editMessage()
                     }
                 } else {
                     let text = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
@@ -204,7 +247,7 @@ class ChatControllerNode: ASDisplayNode {
                         var messages: [EnqueueMessage] = []
                         if !text.isEmpty {
                             var attributes: [MessageAttribute] = []
-                            let entities = generateTextEntities(text)
+                            let entities = generateTextEntities(text, enabledTypes: .all)
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
@@ -214,22 +257,28 @@ class ChatControllerNode: ASDisplayNode {
                             } else {
                                 webpage = strongSelf.chatPresentationInterfaceState.urlPreview?.1
                             }
-                            messages.append(.message(text: text, attributes: attributes, media: webpage, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId))
+                            messages.append(.message(text: text, attributes: attributes, media: webpage, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                         }
                         if let forwardMessageIds = strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                             for id in forwardMessageIds {
-                                messages.append(.forward(source: id))
+                                messages.append(.forward(source: id, grouping: .auto))
                             }
                         }
                         
-                        let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: messages).start(next: { _ in
-                            if let strongSelf = self {
-                                strongSelf.historyNode.scrollToEndOfHistory()
-                            }
-                        })
+                        if case let .peer(peerId) = strongSelf.chatLocation {
+                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start(next: { _ in
+                                if let strongSelf = self {
+                                    strongSelf.historyNode.scrollToEndOfHistory()
+                                }
+                            })
+                        }
                     }
                 }
             }
+        }
+        
+        self.textInputPanelNode?.pasteImages = { [weak self] images in
+            self?.displayPasteMenu(images)
         }
         
         self.textInputPanelNode?.displayAttachmentMenu = { [weak self] in
@@ -241,8 +290,104 @@ class ChatControllerNode: ASDisplayNode {
         }
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets) -> Void) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction:
+        (ListViewUpdateSizeAndInsets, CGFloat, Bool) -> Void) {
+        let transition: ContainedViewLayoutTransition
+        if let _ = self.scheduledAnimateInAsOverlayFromNode {
+            transition = .immediate
+        } else {
+            transition = protoTransition
+        }
+        
         self.scheduledLayoutTransitionRequest = nil
+        if case .overlay = self.chatPresentationInterfaceState.mode {
+            if self.backgroundEffectNode == nil {
+                let backgroundEffectNode = ASDisplayNode()
+                switch self.chatPresentationInterfaceState.theme.inAppNotification.expandedNotification.backgroundType {
+                    case .light:
+                        backgroundEffectNode.backgroundColor = UIColor(white: 1.0, alpha: 0.8)
+                    case .dark:
+                        backgroundEffectNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+                }
+                self.insertSubnode(backgroundEffectNode, at: 0)
+                self.backgroundEffectNode = backgroundEffectNode
+            }
+            if self.scrollContainerNode == nil {
+                let scrollContainerNode = ASScrollNode()
+                scrollContainerNode.view.delaysContentTouches = false
+                //scrollContainerNode.view.canCancelContentTouches = false
+                //scrollContainerNode.view.panGestureRecognizer.cancelsTouchesInView = false
+                scrollContainerNode.view.delegate = self
+                scrollContainerNode.view.alwaysBounceVertical = true
+                if #available(iOSApplicationExtension 11.0, *) {
+                    scrollContainerNode.view.contentInsetAdjustmentBehavior = .never
+                }
+                self.insertSubnode(scrollContainerNode, aboveSubnode: self.backgroundEffectNode!)
+                self.scrollContainerNode = scrollContainerNode
+            }
+            if self.containerBackgroundNode == nil {
+                let containerBackgroundNode = ASImageNode()
+                containerBackgroundNode.displaysAsynchronously = false
+                containerBackgroundNode.displayWithoutProcessing = true
+                containerBackgroundNode.image = PresentationResourcesRootController.inAppNotificationBackground(self.chatPresentationInterfaceState.theme)
+                self.scrollContainerNode?.addSubnode(containerBackgroundNode)
+                self.containerBackgroundNode = containerBackgroundNode
+            }
+            if self.containerNode == nil {
+                let containerNode = ASDisplayNode()
+                containerNode.clipsToBounds = true
+                containerNode.cornerRadius = 15.0
+                containerNode.addSubnode(self.backgroundNode)
+                containerNode.addSubnode(self.historyNode)
+                self.containerNode = containerNode
+                self.scrollContainerNode?.addSubnode(containerNode)
+                self.navigationBar.isHidden = true
+            }
+            if self.overlayNavigationBar == nil {
+                let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, close: { [weak self] in
+                    self?.dismissAsOverlay()
+                })
+                self.overlayNavigationBar = overlayNavigationBar
+                self.containerNode?.addSubnode(overlayNavigationBar)
+            }
+        } else {
+            if let backgroundEffectNode = self.backgroundEffectNode {
+                backgroundEffectNode.removeFromSupernode()
+                self.backgroundEffectNode = nil
+            }
+            if let scrollContainerNode = self.scrollContainerNode {
+                scrollContainerNode.removeFromSupernode()
+                self.scrollContainerNode = nil
+            }
+            if let containerNode = self.containerNode {
+                self.containerNode = nil
+                containerNode.removeFromSupernode()
+                self.insertSubnode(self.backgroundNode, at: 0)
+                self.insertSubnode(self.historyNode, aboveSubnode: self.backgroundNode)
+                self.navigationBar.isHidden = false
+            }
+            if let overlayNavigationBar = self.overlayNavigationBar {
+                overlayNavigationBar.removeFromSupernode()
+                self.overlayNavigationBar = nil
+            }
+        }
+        
+        var dismissedInputByDragging = false
+        if let validLayout = self.validLayout {
+            var wasDragging = false
+            if validLayout.inputHeight != nil && validLayout.inputHeightIsInteractivellyChanging {
+                wasDragging = true
+            }
+            if wasDragging {
+                if layout.inputHeight == 0.0 && validLayout.inputHeightIsInteractivellyChanging && !layout.inputHeightIsInteractivellyChanging {
+                    dismissedInputByDragging = true
+                }
+            }
+        }
+        self.validLayout = layout
+        
+        let cleanInsets = layout.intrinsicInsets
+        
         var previousInputHeight: CGFloat = 0.0
         if let (previousLayout, _) = self.containerLayoutAndNavigationBarHeight {
             previousInputHeight = previousLayout.insets(options: [.input]).bottom
@@ -270,6 +415,7 @@ class ChatControllerNode: ASDisplayNode {
                 self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, interaction: interfaceInteraction)
             }
             self.navigationBar.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
+            self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)
             if activate {
                 self.searchNavigationNode?.activate()
             }
@@ -305,10 +451,15 @@ class ChatControllerNode: ASDisplayNode {
             if self.inputNode != inputNode {
                 dismissedInputNode = self.inputNode
                 self.inputNode = inputNode
+                inputNode.alpha = 1.0
                 immediatelyLayoutInputNodeAndAnimateAppearance = true
-                self.insertSubnode(inputNode, belowSubnode: self.inputPanelBackgroundNode)
+                if let inputPanelNode = self.inputPanelNode, inputPanelNode.supernode != nil {
+                    self.insertSubnode(inputNode, aboveSubnode: inputPanelNode)
+                } else {
+                    self.insertSubnode(inputNode, aboveSubnode: self.inputPanelBackgroundNode)
+                }
             }
-            inputNodeHeight = inputNode.updateLayout(width: layout.size.width, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
+            inputNodeHeight = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
         } else if let inputNode = self.inputNode {
             dismissedInputNode = inputNode
             self.inputNode = nil
@@ -317,15 +468,30 @@ class ChatControllerNode: ASDisplayNode {
         var insets: UIEdgeInsets
         if let inputNodeHeight = inputNodeHeight {
             insets = layout.insets(options: [])
-            insets.bottom += inputNodeHeight
+            insets.bottom = max(inputNodeHeight, insets.bottom)
         } else {
             insets = layout.insets(options: [.input])
         }
-        insets.top += navigationBarHeight
+        if case .overlay = self.chatPresentationInterfaceState.mode {
+            insets.top = 44.0
+        } else {
+            insets.top += navigationBarHeight
+        }
+        
+        var wrappingInsets = UIEdgeInsets()
+        if case .overlay = self.chatPresentationInterfaceState.mode {
+            wrappingInsets.left = 8.0 + layout.safeInsets.left
+            wrappingInsets.right = 8.0 + layout.safeInsets.right
+            wrappingInsets.top = 8.0
+            if let statusBarHeight = layout.statusBarHeight, CGFloat(40.0).isLess(than: statusBarHeight) {
+                wrappingInsets.top += statusBarHeight
+            }
+        }
         
         var dismissedInputPanelNode: ASDisplayNode?
         var dismissedAccessoryPanelNode: ASDisplayNode?
         var dismissedInputContextPanelNode: ChatInputContextPanelNode?
+        var dismissedOverlayContextPanelNode: ChatInputContextPanelNode?
         
         var inputPanelSize: CGSize?
         var immediatelyLayoutInputPanelAndAnimateAppearance = false
@@ -336,12 +502,12 @@ class ChatControllerNode: ASDisplayNode {
                 }
                 dismissedInputPanelNode = self.inputPanelNode
                 immediatelyLayoutInputPanelAndAnimateAppearance = true
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, maxHeight: layout.size.height - insets.top - insets.bottom, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
                 self.inputPanelNode = inputPanelNode
-                self.insertSubnode(inputPanelNode, aboveSubnode: self.navigateButtons)
+                self.insertSubnode(inputPanelNode, aboveSubnode: self.inputPanelBackgroundNode)
             } else {
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, maxHeight: layout.size.height - insets.top - insets.bottom, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, transition: transition, interfaceState: self.chatPresentationInterfaceState)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
             }
         } else {
@@ -350,14 +516,14 @@ class ChatControllerNode: ASDisplayNode {
         }
         
         if let inputMediaNode = self.inputMediaNode, inputMediaNode != self.inputNode {
-            let _ = inputMediaNode.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+            let _ = inputMediaNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
         }
         
         transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 56.0)))
         
         var titleAccessoryPanelFrame: CGRect?
         if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {
-            let panelHeight = titleAccessoryPanelNode.updateLayout(width: layout.size.width, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
+            let panelHeight = titleAccessoryPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
             titleAccessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
             insets.top += panelHeight
         }
@@ -377,13 +543,18 @@ class ChatControllerNode: ASDisplayNode {
                 }
         }
         
-        self.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
+        let contentBounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width - wrappingInsets.left - wrappingInsets.right, height: layout.size.height - wrappingInsets.top - wrappingInsets.bottom)
         
-        self.historyNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
-        self.historyNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        if let backgroundEffectNode = self.backgroundEffectNode {
+            transition.updateFrame(node: backgroundEffectNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        }
         
-        self.loadingNode.updateLayout(size: layout.size, insets: insets, transition: transition)
-        transition.updateFrame(node: self.loadingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.backgroundNode, frame: contentBounds)
+        transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
+        transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.midX, y: contentBounds.midY))
+        
+        self.loadingNode.updateLayout(size: contentBounds.size, insets: insets, transition: transition)
+        transition.updateFrame(node: self.loadingNode, frame: contentBounds)
         
         let listViewCurve: ListViewAnimationCurve
         if curve == 7 {
@@ -436,11 +607,24 @@ class ChatControllerNode: ASDisplayNode {
                 
                 self.addSubnode(inputContextPanelNode)
                 immediatelyLayoutInputContextPanelAndAnimateAppearance = true
-                
             }
         } else if let inputContextPanelNode = self.inputContextPanelNode {
             dismissedInputContextPanelNode = inputContextPanelNode
             self.inputContextPanelNode = nil
+        }
+        
+        var immediatelyLayoutOverlayContextPanelAndAnimateAppearance = false
+        if let overlayContextPanelNode = chatOverlayContextPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.overlayContextPanelNode, interfaceInteraction: self.interfaceInteraction) {
+            if overlayContextPanelNode !== self.overlayContextPanelNode {
+                dismissedOverlayContextPanelNode = self.overlayContextPanelNode
+                self.overlayContextPanelNode = overlayContextPanelNode
+                
+                self.addSubnode(overlayContextPanelNode)
+                immediatelyLayoutOverlayContextPanelAndAnimateAppearance = true
+            }
+        } else if let overlayContextPanelNode = self.overlayContextPanelNode {
+            dismissedOverlayContextPanelNode = overlayContextPanelNode
+            self.overlayContextPanelNode = nil
         }
         
         var inputPanelsHeight: CGFloat = 0.0
@@ -449,6 +633,9 @@ class ChatControllerNode: ASDisplayNode {
         if self.inputPanelNode != nil {
             assert(inputPanelSize != nil)
             inputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - inputPanelsHeight - inputPanelSize!.height), size: CGSize(width: layout.size.width, height: inputPanelSize!.height))
+            if self.dismissedAsOverlay {
+                inputPanelFrame = inputPanelFrame!.offsetBy(dx: 0.0, dy: inputPanelsHeight + inputPanelSize!.height)
+            }
             inputPanelsHeight += inputPanelSize!.height
         }
         
@@ -456,15 +643,80 @@ class ChatControllerNode: ASDisplayNode {
         if self.accessoryPanelNode != nil {
             assert(accessoryPanelSize != nil)
             accessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - inputPanelsHeight - accessoryPanelSize!.height), size: CGSize(width: layout.size.width, height: accessoryPanelSize!.height))
+            if self.dismissedAsOverlay {
+                accessoryPanelFrame = accessoryPanelFrame!.offsetBy(dx: 0.0, dy: inputPanelsHeight + accessoryPanelSize!.height)
+            }
             inputPanelsHeight += accessoryPanelSize!.height
         }
         
-        let inputBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - inputPanelsHeight), size: CGSize(width: layout.size.width, height: inputPanelsHeight))
+        if self.dismissedAsOverlay {
+            inputPanelsHeight = 0.0
+        }
         
-        listViewTransaction(ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: insets.bottom + inputPanelsHeight + 4.0, left: insets.right, bottom: insets.top, right: insets.left), duration: duration, curve: listViewCurve))
+        let inputBackgroundInset: CGFloat
+        if cleanInsets.bottom < insets.bottom {
+            inputBackgroundInset = 0.0
+        } else {
+            inputBackgroundInset = cleanInsets.bottom
+        }
+        
+        let inputBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - inputPanelsHeight), size: CGSize(width: layout.size.width, height: inputPanelsHeight + inputBackgroundInset))
+        
+        let additionalScrollDistance: CGFloat = 0.0
+        var scrollToTop = false
+        if dismissedInputByDragging {
+            if !self.historyNode.trackingOffset.isZero {
+                if self.historyNode.beganTrackingAtTopOrigin {
+                    scrollToTop = true
+                }
+            }
+        }
+        
+        var contentBottomInset: CGFloat = inputPanelsHeight + 4.0
+        
+        if let scrollContainerNode = self.scrollContainerNode {
+            transition.updateFrame(node: scrollContainerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        }
+        
+        var containerInsets = insets
+        if let dismissAsOverlayLayout = self.dismissAsOverlayLayout {
+            if let inputNodeHeight = inputNodeHeight {
+                containerInsets = dismissAsOverlayLayout.insets(options: [])
+                containerInsets.bottom = max(inputNodeHeight, insets.bottom)
+            } else {
+                containerInsets = dismissAsOverlayLayout.insets(options: [.input])
+            }
+        }
+        
+        if let containerNode = self.containerNode {
+            contentBottomInset += 8.0
+            let containerNodeFrame = CGRect(origin: CGPoint(x: wrappingInsets.left, y: wrappingInsets.top), size: CGSize(width: contentBounds.size.width, height: contentBounds.size.height - containerInsets.bottom - inputPanelsHeight - 8.0))
+            transition.updateFrame(node: containerNode, frame: containerNodeFrame)
+            
+            if let containerBackgroundNode = self.containerBackgroundNode {
+                transition.updateFrame(node: containerBackgroundNode, frame: CGRect(origin: CGPoint(x: containerNodeFrame.minX - 8.0, y: containerNodeFrame.minY - 8.0), size: CGSize(width: containerNodeFrame.size.width + 8.0 * 2.0, height: containerNodeFrame.size.height + 8.0 + 20.0)))
+            }
+        }
+        
+        if let overlayNavigationBar = self.overlayNavigationBar {
+            let barFrame = CGRect(origin: CGPoint(), size: CGSize(width: contentBounds.size.width, height: 44.0))
+            transition.updateFrame(node: overlayNavigationBar, frame: barFrame)
+            overlayNavigationBar.updateLayout(size: barFrame.size, presentationInterfaceState: self.chatPresentationInterfaceState, transition: transition)
+        }
+        
+        var listInsets = UIEdgeInsets(top: containerInsets.bottom + contentBottomInset, left: containerInsets.right, bottom: containerInsets.top, right: containerInsets.left)
+        if case .standard = self.chatPresentationInterfaceState.mode {
+            listInsets.left += layout.safeInsets.left
+            listInsets.right += layout.safeInsets.right
+        }
+        
+        listViewTransaction(ListViewUpdateSizeAndInsets(size: contentBounds.size, insets: listInsets, duration: duration, curve: listViewCurve), additionalScrollDistance, scrollToTop)
         
         let navigateButtonsSize = self.navigateButtons.updateLayout(transition: transition)
-        let navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - navigateButtonsSize.width - 6.0, y: layout.size.height - insets.bottom - inputPanelsHeight - navigateButtonsSize.height - 6.0), size: navigateButtonsSize)
+        var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 6.0, y: layout.size.height - containerInsets.bottom - inputPanelsHeight - navigateButtonsSize.height - 6.0), size: navigateButtonsSize)
+        if case .overlay = self.chatPresentationInterfaceState.mode {
+            navigateButtonsFrame = navigateButtonsFrame.offsetBy(dx: -8.0, dy: -8.0)
+        }
         
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: inputBackgroundFrame)
         transition.updateFrame(node: self.inputPanelBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: inputBackgroundFrame.origin.y - UIScreenPixel), size: CGSize(width: inputBackgroundFrame.size.width, height: UIScreenPixel)))
@@ -506,10 +758,21 @@ class ChatControllerNode: ASDisplayNode {
             let panelFrame = inputContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
             if immediatelyLayoutInputContextPanelAndAnimateAppearance {
                 inputContextPanelNode.frame = panelFrame
-                inputContextPanelNode.updateLayout(size: panelFrame.size, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             } else if !inputContextPanelNode.frame.equalTo(panelFrame) {
                 transition.updateFrame(node: inputContextPanelNode, frame: panelFrame)
-                inputContextPanelNode.updateLayout(size: panelFrame.size, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+            }
+        }
+        
+        if let overlayContextPanelNode = self.overlayContextPanelNode {
+            let panelFrame = overlayContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
+            if immediatelyLayoutOverlayContextPanelAndAnimateAppearance {
+                overlayContextPanelNode.frame = panelFrame
+                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+            } else if !overlayContextPanelNode.frame.equalTo(panelFrame) {
+                transition.updateFrame(node: overlayContextPanelNode, frame: panelFrame)
+                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
             }
         }
         
@@ -517,7 +780,10 @@ class ChatControllerNode: ASDisplayNode {
             let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - inputNodeHeight), size: CGSize(width: layout.size.width, height: inputNodeHeight))
             if immediatelyLayoutInputNodeAndAnimateAppearance {
                 var adjustedForPreviousInputHeightFrame = inputNodeFrame
-                let heightDifference = inputNodeHeight - previousInputHeight
+                var heightDifference = inputNodeHeight - previousInputHeight
+                if previousInputHeight.isLessThanOrEqualTo(cleanInsets.bottom) {
+                    heightDifference = inputNodeHeight
+                }
                 adjustedForPreviousInputHeightFrame.origin.y += heightDifference
                 inputNode.frame = adjustedForPreviousInputHeightFrame
                 transition.updateFrame(node: inputNode, frame: inputNodeFrame)
@@ -604,18 +870,74 @@ class ChatControllerNode: ASDisplayNode {
             })
         }
         
+        if let dismissedOverlayContextPanelNode = dismissedOverlayContextPanelNode {
+            var frameCompleted = false
+            var animationCompleted = false
+            let completed = { [weak dismissedOverlayContextPanelNode] in
+                if let dismissedOverlayContextPanelNode = dismissedOverlayContextPanelNode, frameCompleted, animationCompleted {
+                    dismissedOverlayContextPanelNode.removeFromSupernode()
+                }
+            }
+            let panelFrame = inputContextPanelsFrame
+            if false && !dismissedOverlayContextPanelNode.frame.equalTo(panelFrame) {
+                transition.updateFrame(node: dismissedOverlayContextPanelNode, frame: panelFrame, completion: { _ in
+                    frameCompleted = true
+                    completed()
+                })
+            } else {
+                frameCompleted = true
+            }
+            
+            dismissedOverlayContextPanelNode.animateOut(completion: {
+                animationCompleted = true
+                completed()
+            })
+        }
+        
         if let dismissedInputNode = dismissedInputNode {
-            transition.updateFrame(node: dismissedInputNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom), size: CGSize(width: layout.size.width, height: max(insets.bottom, dismissedInputNode.bounds.size.height))), force: true, completion: { [weak self, weak dismissedInputNode] completed in
-                if completed {
+            let targetY: CGFloat
+            if cleanInsets.bottom.isLess(than: insets.bottom) {
+                targetY = layout.size.height - insets.bottom
+            } else {
+                targetY = layout.size.height
+            }
+            transition.updateFrame(node: dismissedInputNode, frame: CGRect(origin: CGPoint(x: 0.0, y: targetY), size: CGSize(width: layout.size.width, height: max(insets.bottom, dismissedInputNode.bounds.size.height))), force: true, completion: { [weak self, weak dismissedInputNode] completed in
+                if completed, let dismissedInputNode = dismissedInputNode {
                     if let strongSelf = self {
                         if strongSelf.inputNode !== dismissedInputNode {
-                            dismissedInputNode?.removeFromSupernode()
+                            dismissedInputNode.alpha = 0.0
+                            dismissedInputNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak dismissedInputNode] completed in
+                                if completed, let strongSelf = self, let dismissedInputNode = dismissedInputNode {
+                                    if strongSelf.inputNode !== dismissedInputNode {
+                                        dismissedInputNode.removeFromSupernode()
+                                    }
+                                }
+                            })
                         }
                     } else {
-                        dismissedInputNode?.removeFromSupernode()
+                        dismissedInputNode.removeFromSupernode()
                     }
                 }
             })
+        }
+        
+        if let dismissAsOverlayCompletion = self.dismissAsOverlayCompletion {
+            self.dismissAsOverlayCompletion = nil
+            transition.updateBounds(node: self.navigateButtons, bounds: self.navigateButtons.bounds, force: true, completion: { _ in
+                dismissAsOverlayCompletion()
+            })
+        }
+        
+        if let scheduledAnimateInAsOverlayFromNode = self.scheduledAnimateInAsOverlayFromNode {
+            self.scheduledAnimateInAsOverlayFromNode = nil
+            self.bounds = CGRect(origin: CGPoint(), size: self.bounds.size)
+            let animatedTransition: ContainedViewLayoutTransition
+            if case .animated = protoTransition {
+                animatedTransition = protoTransition
+            } else {
+                animatedTransition = .animated(duration: 0.4, curve: .spring)
+            }
+            self.performAnimateInAsOverlay(from: scheduledAnimateInAsOverlayFromNode, transition: animatedTransition)
         }
     }
     
@@ -633,6 +955,8 @@ class ChatControllerNode: ASDisplayNode {
     }
     
     func updateChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, animated: Bool, interactive: Bool) {
+        self.selectedMessages = chatPresentationInterfaceState.interfaceState.selectionState?.selectedIds
+        
         if let textInputPanelNode = self.textInputPanelNode {
             self.chatPresentationInterfaceState = self.chatPresentationInterfaceState.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputPanelNode.inputTextState) }
         }
@@ -646,9 +970,10 @@ class ChatControllerNode: ASDisplayNode {
             
             let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil
             var extendedSearchLayout = false
-            if let inputQueryResult = chatPresentationInterfaceState.inputQueryResult {
-                if case .contextRequestResult = inputQueryResult {
+            loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
+                if case let .contextRequestResult(peer, _) = result, peer != nil {
                     extendedSearchLayout = true
+                    break loop
                 }
             }
             
@@ -751,14 +1076,166 @@ class ChatControllerNode: ASDisplayNode {
     
     func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings) {
         if self.inputMediaNode == nil {
-            let inputNode = ChatMediaInputNode(account: self.account, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings)
+            let inputNode = ChatMediaInputNode(account: self.account, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings, gifPaneIsActiveUpdated: { [weak self] value in
+                if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                    interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
+                        if case .media = state.inputMode {
+                            if value {
+                                return (.media(.gif), nil)
+                            } else {
+                                return (.media(.other), nil)
+                            }
+                        } else {
+                            return (state.inputMode, nil)
+                        }
+                    }
+                }
+            })
             inputNode.interfaceInteraction = interfaceInteraction
             self.inputMediaNode = inputNode
-            let _ = inputNode.updateLayout(width: self.bounds.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+            if let validLayout = self.validLayout {
+                let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+            }
         }
     }
     
     func currentInputPanelFrame() -> CGRect? {
         return self.inputPanelNode?.frame
+    }
+    
+    var isTextInputPanelActive: Bool {
+        return self.inputPanelNode is ChatTextInputPanelNode
+    }
+    
+    func getWindowInputAccessoryHeight() -> CGFloat {
+        var height = self.inputPanelBackgroundNode.bounds.size.height
+        if case .overlay = self.chatPresentationInterfaceState.mode {
+            height += 8.0
+        }
+        return height
+    }
+    
+    func animateInAsOverlay(from fromNode: ASDisplayNode?, completion: @escaping () -> Void) {
+        if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode, let fromNode = fromNode {
+            if inputPanelNode.isFocused {
+                self.performAnimateInAsOverlay(from: fromNode, transition: .animated(duration: 0.4, curve: .spring))
+                completion()
+            } else {
+                self.animateInAsOverlayCompletion = completion
+                self.bounds = CGRect(origin: CGPoint(x: -self.bounds.size.width * 2.0, y: 0.0), size: self.bounds.size)
+                self.scheduledAnimateInAsOverlayFromNode = fromNode
+                self.scheduleLayoutTransitionRequest(.immediate)
+                inputPanelNode.ensureFocused()
+            }
+        } else {
+            self.performAnimateInAsOverlay(from: fromNode, transition: .animated(duration: 0.4, curve: .spring))
+            completion()
+        }
+    }
+    
+    private func performAnimateInAsOverlay(from fromNode: ASDisplayNode?, transition: ContainedViewLayoutTransition) {
+        if let containerBackgroundNode = self.containerBackgroundNode, let fromNode = fromNode {
+            let fromFrame = fromNode.view.convert(fromNode.bounds, to: self.view)
+            containerBackgroundNode.supernode?.insertSubnode(fromNode, aboveSubnode: containerBackgroundNode)
+            fromNode.frame = fromFrame
+            
+            fromNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak fromNode] _ in
+                fromNode?.removeFromSupernode()
+            })
+            
+            transition.animateFrame(node: containerBackgroundNode, from: CGRect(origin: fromFrame.origin.offsetBy(dx: -8.0, dy: -8.0), size: CGSize(width: fromFrame.size.width + 8.0 * 2.0, height: fromFrame.size.height + 8.0 + 20.0)))
+            containerBackgroundNode.layer.animateSpring(from: 0.99 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 1.0, damping: 10.0, removeOnCompletion: true, additive: false, completion: nil)
+            
+            if let containerNode = self.containerNode {
+                containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                transition.animateFrame(node: containerNode, from: fromFrame)
+                transition.animatePositionAdditive(node: self.backgroundNode, offset: -containerNode.bounds.size.height)
+                transition.animatePositionAdditive(node: self.historyNode, offset: -containerNode.bounds.size.height)
+                
+                transition.updateFrame(node: fromNode, frame: CGRect(origin: containerNode.frame.origin, size: fromNode.frame.size))
+            }
+            
+            self.backgroundEffectNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            
+            let inputPanelsOffset = self.bounds.size.height - self.inputPanelBackgroundNode.frame.minY
+            transition.animateFrame(node: self.inputPanelBackgroundNode, from: self.inputPanelBackgroundNode.frame.offsetBy(dx: 0.0, dy: inputPanelsOffset))
+            transition.animateFrame(node: self.inputPanelBackgroundSeparatorNode, from: self.inputPanelBackgroundSeparatorNode.frame.offsetBy(dx: 0.0, dy: inputPanelsOffset))
+            if let inputPanelNode = self.inputPanelNode {
+                transition.animateFrame(node: inputPanelNode, from: inputPanelNode.frame.offsetBy(dx: 0.0, dy: inputPanelsOffset))
+            }
+            if let accessoryPanelNode = self.accessoryPanelNode {
+                transition.animateFrame(node: accessoryPanelNode, from: accessoryPanelNode.frame.offsetBy(dx: 0.0, dy: inputPanelsOffset))
+            }
+            
+            if let _ = self.scrollContainerNode {
+                containerBackgroundNode.layer.animateSpring(from: 0.99 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.8, initialVelocity: 100.0, damping: 80.0, removeOnCompletion: true, additive: false, completion: nil)
+                self.containerNode?.layer.animateSpring(from: 0.99 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.8, initialVelocity: 100.0, damping: 80.0, removeOnCompletion: true, additive: false, completion: nil)
+            }
+            
+            self.navigateButtons.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        } else {
+            self.backgroundEffectNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            if let containerNode = self.containerNode {
+                containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+        }
+        
+        if let animateInAsOverlayCompletion = self.animateInAsOverlayCompletion {
+            self.animateInAsOverlayCompletion = nil
+            animateInAsOverlayCompletion()
+        }
+    }
+    
+    func animateDismissAsOverlay(completion: @escaping () -> Void) {
+        if let containerNode = self.containerNode {
+            self.dismissedAsOverlay = true
+            self.dismissAsOverlayLayout = self.validLayout
+            
+            self.backgroundEffectNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.27, removeOnCompletion: false)
+            
+            self.containerBackgroundNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.27, removeOnCompletion: false)
+            self.containerBackgroundNode?.layer.animateScale(from: 1.0, to: 0.6, duration: 0.29, removeOnCompletion: false)
+            
+            containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.27, removeOnCompletion: false)
+            containerNode.layer.animateScale(from: 1.0, to: 0.6, duration: 0.29, removeOnCompletion: false)
+            
+            self.navigateButtons.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+            
+            self.dismissAsOverlayCompletion = completion
+            self.scheduleLayoutTransitionRequest(.animated(duration: 0.4, curve: .spring))
+            self.dismissInput()
+        } else {
+            completion()
+        }
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if let scrollContainerNode = self.scrollContainerNode, scrollView === scrollContainerNode.view {
+            if abs(scrollView.contentOffset.y) > 50.0 {
+                scrollView.isScrollEnabled = false
+                self.dismissAsOverlay()
+            }
+        }
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        if let scrollContainerNode = self.scrollContainerNode, scrollView === scrollContainerNode.view {
+            if self.hapticFeedback == nil {
+                self.hapticFeedback = HapticFeedback()
+            }
+            self.hapticFeedback?.prepareImpact()
+        }
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if let scrollContainerNode = self.scrollContainerNode, scrollView === scrollContainerNode.view {
+            let dismissStatus = abs(scrollView.contentOffset.y) > 50.0
+            if dismissStatus != self.scrollViewDismissStatus {
+                self.scrollViewDismissStatus = dismissStatus
+                if !self.dismissedAsOverlay {
+                    self.hapticFeedback?.impact()
+                }
+            }
+        }
     }
 }

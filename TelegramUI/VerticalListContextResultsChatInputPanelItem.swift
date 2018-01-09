@@ -7,24 +7,26 @@ import Postbox
 
 final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
     fileprivate let account: Account
+    fileprivate let theme: PresentationTheme
     fileprivate let result: ChatContextResult
     private let resultSelected: (ChatContextResult) -> Void
     
     let selectable: Bool = true
     
-    public init(account: Account, result: ChatContextResult, resultSelected: @escaping (ChatContextResult) -> Void) {
+    public init(account: Account, theme: PresentationTheme, result: ChatContextResult, resultSelected: @escaping (ChatContextResult) -> Void) {
         self.account = account
+        self.theme = theme
         self.result = result
         self.resultSelected = resultSelected
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = VerticalListContextResultsChatInputPanelItemNode()
             
             let nodeLayout = node.asyncLayout()
             let (top, bottom) = (previousItem != nil, nextItem != nil)
-            let (layout, apply) = nodeLayout(self, width, top, bottom)
+            let (layout, apply) = nodeLayout(self, params, top, bottom)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -42,7 +44,7 @@ final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? VerticalListContextResultsChatInputPanelItemNode {
             Queue.mainQueue().async {
                 let nodeLayout = node.asyncLayout()
@@ -50,7 +52,7 @@ final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
                 async {
                     let (top, bottom) = (previousItem != nil, nextItem != nil)
                     
-                    let (layout, apply) = nodeLayout(self, width, top, bottom)
+                    let (layout, apply) = nodeLayout(self, params, top, bottom)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
@@ -92,15 +94,12 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         self.textNode = TextNode()
         
         self.topSeparatorNode = ASDisplayNode()
-        self.topSeparatorNode.backgroundColor = UIColor(rgb: 0xC9CDD1)
         self.topSeparatorNode.isLayerBacked = true
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(rgb: 0xD6D6DA)
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.iconTextBackgroundNode = ASImageNode()
@@ -112,12 +111,11 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         self.iconTextNode.isLayerBacked = true
         
         self.iconImageNode = TransformImageNode()
+        self.iconImageNode.contentAnimations = [.subsequentUpdates]
         self.iconImageNode.isLayerBacked = true
         self.iconImageNode.displaysAsynchronously = false
         
         super.init(layerBacked: false, dynamicBounce: false)
-        
-        self.backgroundColor = .white
         
         self.addSubnode(self.topSeparatorNode)
         self.addSubnode(self.separatorNode)
@@ -127,27 +125,27 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         self.addSubnode(self.textNode)
     }
     
-    override public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? VerticalListContextResultsChatInputPanelItem {
             let doLayout = self.asyncLayout()
             let merged = (top: previousItem != nil, bottom: nextItem != nil)
-            let (layout, apply) = doLayout(item, width, merged.top, merged.bottom)
+            let (layout, apply) = doLayout(item, params, merged.top, merged.bottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
             apply(.None)
         }
     }
     
-    func asyncLayout() -> (_ item: VerticalListContextResultsChatInputPanelItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    func asyncLayout() -> (_ item: VerticalListContextResultsChatInputPanelItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let iconTextMakeLayout = TextNode.asyncLayout(self.iconTextNode)
         let iconImageLayout = self.iconImageNode.asyncLayout()
         let currentIconImageResource = self.currentIconImageResource
         
-        return { [weak self] item, width, mergedTop, mergedBottom in
-            let leftInset: CGFloat = 80.0
-            let rightInset: CGFloat = 10.0
+        return { [weak self] item, params, mergedTop, mergedBottom in
+            let leftInset: CGFloat = 80.0 + params.leftInset
+            let rightInset: CGFloat = 10.0 + params.rightInset
             
             let applyIconTextBackgroundImage = iconTextBackgroundImage
             
@@ -159,11 +157,11 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             
             if let title = item.result.title {
-                titleString = NSAttributedString(string: title, font: titleFont, textColor: .black)
+                titleString = NSAttributedString(string: title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
             }
             
             if let text = item.result.description {
-                textString = NSAttributedString(string: text, font: textFont, textColor: UIColor(rgb: 0x8e8e93))
+                textString = NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemSecondaryTextColor)
             }
             
             var imageResource: TelegramMediaResource?
@@ -218,18 +216,18 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             if updatedIconImageResource {
                 if let imageResource = imageResource {
                     let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 55.0, height: 55.0), resource: imageResource)
-                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation])
+                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil)
                     updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photo: tmpImage)
                 } else {
                     updateIconImageSignal = .complete()
                 }
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleString, nil, 1, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (textLayout, textApply) = makeTextLayout(textString, nil, 2, .end, CGSize(width: width - leftInset - rightInset, height: 100.0), .natural, nil, UIEdgeInsets())
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (iconTextLayout, iconTextApply) = iconTextMakeLayout(iconText, nil, 1, .end, CGSize(width: 38.0, height: CGFloat.infinity), .natural, nil, UIEdgeInsets())
+            let (iconTextLayout, iconTextApply) = iconTextMakeLayout(TextNodeLayoutArguments(attributedString: iconText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var titleFrame: CGRect?
             if let _ = titleString {
@@ -245,12 +243,17 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                 textFrame = CGRect(origin: CGPoint(x: leftInset, y: topOffset), size: textLayout.size)
             }
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: VerticalListContextResultsChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: VerticalListContextResultsChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
             
             return (nodeLayout, { _ in
                 if let strongSelf = self {
-                    titleApply()
-                    textApply()
+                    strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                    strongSelf.topSeparatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                    strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
+                    strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    
+                    let _ = titleApply()
+                    let _ = textApply()
                     
                     if let titleFrame = titleFrame {
                         strongSelf.titleNode.frame = titleFrame
@@ -259,7 +262,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                         strongSelf.textNode.frame = textFrame
                     }
                     
-                    let iconFrame = CGRect(origin: CGPoint(x: 12.0, y: 11.0), size: CGSize(width: 55.0, height: 55.0))
+                    let iconFrame = CGRect(origin: CGPoint(x: params.leftInset + 12.0, y: 11.0), size: CGSize(width: 55.0, height: 55.0))
                     strongSelf.iconTextNode.frame = CGRect(origin: CGPoint(x: iconFrame.minX + floor((55.0 - iconTextLayout.size.width) / 2.0), y: iconFrame.minY + floor((55.0 - iconTextLayout.size.height) / 2.0) + 2.0), size: iconTextLayout.size)
                     
                     let _ = iconTextApply()
@@ -268,7 +271,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                     
                     if let iconImageApply = iconImageApply {
                         if let updateImageSignal = updateIconImageSignal {
-                            strongSelf.iconImageNode.setSignal(account: item.account, signal: updateImageSignal)
+                            strongSelf.iconImageNode.setSignal(updateImageSignal)
                         }
                         
                         if strongSelf.iconImageNode.supernode == nil {
@@ -301,17 +304,17 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                     strongSelf.topSeparatorNode.isHidden = mergedTop
                     strongSelf.separatorNode.isHidden = !mergedBottom
                     
-                    strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel))
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: width - leftInset, height: UIScreenPixel))
+                    strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: UIScreenPixel))
+                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: nodeLayout.size.height + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
                 }
             })
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
             self.highlightedBackgroundNode.alpha = 1.0

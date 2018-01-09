@@ -54,6 +54,8 @@ private func preparedTransition(from fromEntries: [HorizontalListContextResultsC
 }
 
 final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputContextPanelNode {
+    private var theme: PresentationTheme
+    
     private let listView: ListView
     private let separatorNode: ASDisplayNode
     private var currentResults: ChatContextResultCollection?
@@ -62,25 +64,33 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     private var enqueuedTransitions: [(HorizontalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var hasValidLayout = false
     
-    override init(account: Account) {
+    override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = UIColor(rgb: 0xbdc2c7)
+        self.separatorNode.backgroundColor = theme.list.itemPlainSeparatorColor
         self.separatorNode.isHidden = true
         
         self.listView = ListView()
         self.listView.isOpaque = true
-        self.listView.backgroundColor = .white
-        self.listView.transform = CATransform3DMakeRotation(-CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
+        self.listView.backgroundColor = theme.list.plainBackgroundColor
+        self.listView.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
         self.listView.isHidden = true
         
-        super.init(account: account)
+        super.init(account: account, theme: theme, strings: strings)
         
         self.isOpaque = false
         self.clipsToBounds = true
         
         self.addSubnode(self.listView)
         self.addSubnode(self.separatorNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
     func updateResults(_ results: ChatContextResultCollection) {
@@ -146,7 +156,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         }
     }
     
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         let listHeight: CGFloat = 105.0
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - listHeight), size: CGSize(width: size.width, height: UIScreenPixel)))
@@ -156,7 +166,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         
         transition.updatePosition(node: self.listView, position: CGPoint(x: size.width / 2.0, y: size.height - listHeight / 2.0))
         
-        let insets = UIEdgeInsets()
+        var insets = UIEdgeInsets()
+        insets.top = leftInset
+        insets.bottom = rightInset
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
@@ -165,10 +177,10 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
             case let .animated(animationDuration, animationCurve):
                 duration = animationDuration
                 switch animationCurve {
-                case .easeInOut:
-                    break
-                case .spring:
-                    curve = 7
+                    case .easeInOut:
+                        break
+                    case .spring:
+                        curve = 7
                 }
         }
         

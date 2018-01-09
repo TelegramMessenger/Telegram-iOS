@@ -14,8 +14,9 @@ private final class PrivacyAndSecurityControllerArguments {
     let openTwoStepVerification: () -> Void
     let openActiveSessions: () -> Void
     let setupAccountAutoremove: () -> Void
+    let clearPaymentInfo: () -> Void
     
-    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping () -> Void, openActiveSessions: @escaping () -> Void, setupAccountAutoremove: @escaping () -> Void) {
+    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping () -> Void, openActiveSessions: @escaping () -> Void, setupAccountAutoremove: @escaping () -> Void, clearPaymentInfo: @escaping () -> Void) {
         self.account = account
         self.openBlockedUsers = openBlockedUsers
         self.openLastSeenPrivacy = openLastSeenPrivacy
@@ -25,6 +26,7 @@ private final class PrivacyAndSecurityControllerArguments {
         self.openTwoStepVerification = openTwoStepVerification
         self.openActiveSessions = openActiveSessions
         self.setupAccountAutoremove = setupAccountAutoremove
+        self.clearPaymentInfo = clearPaymentInfo
     }
 }
 
@@ -32,6 +34,7 @@ private enum PrivacyAndSecuritySection: Int32 {
     case privacy
     case security
     case account
+    case payment
 }
 
 private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
@@ -47,6 +50,9 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case accountHeader(PresentationTheme, String)
     case accountTimeout(PresentationTheme, String, String)
     case accountInfo(PresentationTheme, String)
+    case paymentHeader(PresentationTheme, String)
+    case clearPaymentInfo(PresentationTheme, String, Bool)
+    case paymentInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -56,6 +62,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return PrivacyAndSecuritySection.security.rawValue
             case .accountHeader, .accountTimeout, .accountInfo:
                 return PrivacyAndSecuritySection.account.rawValue
+            case .paymentHeader, .clearPaymentInfo, .paymentInfo:
+                return PrivacyAndSecuritySection.payment.rawValue
         }
     }
     
@@ -85,6 +93,12 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 10
             case .accountInfo:
                 return 11
+            case .paymentHeader:
+                return 12
+            case .clearPaymentInfo:
+                return 13
+            case .paymentInfo:
+                return 14
         }
     }
     
@@ -162,6 +176,24 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .paymentHeader(lhsTheme, lhsText):
+                if case let .paymentHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .clearPaymentInfo(lhsTheme, lhsText, lhsEnabled):
+                if case let .clearPaymentInfo(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
+                    return true
+                } else {
+                    return false
+                }
+            case let .paymentInfo(lhsTheme, lhsText):
+                if case let .paymentInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -211,23 +243,37 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 })
             case let .accountInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .paymentHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .clearPaymentInfo(theme, text, enabled):
+                return ItemListActionItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.clearPaymentInfo()
+                })
+            case let .paymentInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
 
 private struct PrivacyAndSecurityControllerState: Equatable {
     let updatingAccountTimeoutValue: Int32?
+    let clearingPaymentInfo: Bool
+    let clearedPaymentInfo: Bool
     
-    init() {
-        self.updatingAccountTimeoutValue = nil
-    }
-    
-    init(updatingAccountTimeoutValue: Int32?) {
+    init(updatingAccountTimeoutValue: Int32? = nil, clearingPaymentInfo: Bool = false, clearedPaymentInfo: Bool = false) {
         self.updatingAccountTimeoutValue = updatingAccountTimeoutValue
+        self.clearingPaymentInfo = clearingPaymentInfo
+        self.clearedPaymentInfo = clearedPaymentInfo
     }
     
     static func ==(lhs: PrivacyAndSecurityControllerState, rhs: PrivacyAndSecurityControllerState) -> Bool {
         if lhs.updatingAccountTimeoutValue != rhs.updatingAccountTimeoutValue {
+            return false
+        }
+        if lhs.clearingPaymentInfo != rhs.clearingPaymentInfo {
+            return false
+        }
+        if lhs.clearedPaymentInfo != rhs.clearedPaymentInfo {
             return false
         }
         
@@ -235,7 +281,15 @@ private struct PrivacyAndSecurityControllerState: Equatable {
     }
     
     func withUpdatedUpdatingAccountTimeoutValue(_ updatingAccountTimeoutValue: Int32?) -> PrivacyAndSecurityControllerState {
-        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: updatingAccountTimeoutValue)
+        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: updatingAccountTimeoutValue, clearingPaymentInfo: self.clearingPaymentInfo, clearedPaymentInfo: self.clearedPaymentInfo)
+    }
+    
+    func withUpdatedClearingPaymentInfo(_ clearingPaymentInfo: Bool) -> PrivacyAndSecurityControllerState {
+        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: self.updatingAccountTimeoutValue, clearingPaymentInfo: clearingPaymentInfo, clearedPaymentInfo: self.clearedPaymentInfo)
+    }
+    
+    func withUpdatedClearedPaymentInfo(_ clearedPaymentInfo: Bool) -> PrivacyAndSecurityControllerState {
+        return PrivacyAndSecurityControllerState(updatingAccountTimeoutValue: self.updatingAccountTimeoutValue, clearingPaymentInfo: self.clearingPaymentInfo, clearedPaymentInfo: clearedPaymentInfo)
     }
 }
 
@@ -282,7 +336,16 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     }
     
     entries.append(.securityHeader(presentationData.theme, presentationData.strings.PrivacySettings_SecurityTitle))
-    entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_Passcode))
+    if let biometricAuthentication = LocalAuth.biometricAuthentication {
+        switch biometricAuthentication {
+            case .touchId:
+                entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_PasscodeAndTouchId))
+            case .faceId:
+                entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_PasscodeAndFaceId))
+        }
+    } else {
+        entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_Passcode))
+    }
     entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth))
     entries.append(.activeSessions(presentationData.theme, presentationData.strings.PrivacySettings_AuthSessions))
     entries.append(.accountHeader(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountTitle))
@@ -298,6 +361,14 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
         entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor, presentationData.strings.Channel_NotificationLoading))
     }
     entries.append(.accountInfo(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountHelp))
+    
+    entries.append(.paymentHeader(presentationData.theme, presentationData.strings.Privacy_PaymentsTitle))
+    entries.append(.clearPaymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfo, !state.clearingPaymentInfo && !state.clearedPaymentInfo))
+    if state.clearedPaymentInfo {
+        entries.append(.paymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfoDoneHelp))
+    } else {
+        entries.append(.paymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfoHelp))
+    }
     
     return entries
 }
@@ -320,6 +391,9 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
     
     let updateAccountTimeoutDisposable = MetaDisposable()
     actionsDisposable.add(updateAccountTimeoutDisposable)
+    
+    let clearPaymentInfoDisposable = MetaDisposable()
+    actionsDisposable.add(clearPaymentInfoDisposable)
     
     let privacySettingsPromise = Promise<AccountPrivacySettings?>()
     privacySettingsPromise.set(initialSettings)
@@ -465,7 +539,41 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
                 presentControllerImpl?(controller)
             }
         }))
+    }, clearPaymentInfo: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Privacy_PaymentsClearInfo, color: .destructive, action: {
+                    var clear = false
+                    updateState { current in
+                        if !current.clearingPaymentInfo && !current.clearedPaymentInfo {
+                            clear = true
+                            return current.withUpdatedClearingPaymentInfo(true)
+                        } else {
+                            return current
+                        }
+                    }
+                    if clear {
+                        clearPaymentInfoDisposable.set((clearBotPaymentInfo(network: account.network)
+                            |> deliverOnMainQueue).start(completed: {
+                                updateState { current in
+                                    return current.withUpdatedClearingPaymentInfo(false).withUpdatedClearedPaymentInfo(true)
+                                }
+                            }))
+                    }
+                    dismissAction()
+                })
+            ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
+        presentControllerImpl?(controller)
     })
+    
+    let previousState = Atomic<PrivacyAndSecurityControllerState?>(value: nil)
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, privacySettingsPromise.get())
         |> map { presentationData, state, privacySettings -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
@@ -476,7 +584,16 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PrivacySettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings), style: .blocks, animateChanges: false)
+            
+            let previousStateValue = previousState.swap(state)
+            var animateChanges = false
+            if let previousStateValue = previousStateValue {
+                if previousStateValue.clearedPaymentInfo != state.clearedPaymentInfo {
+                    animateChanges = true
+                }
+            }
+            
+            let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings), style: .blocks, animateChanges: animateChanges)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

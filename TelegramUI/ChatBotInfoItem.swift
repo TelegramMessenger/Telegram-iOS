@@ -22,12 +22,12 @@ final class ChatBotInfoItem: ListViewItem {
         self.strings = strings
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         let configure = {
             let node = ChatBotInfoItemNode()
             
             let nodeLayout = node.asyncLayout()
-            let (layout, apply) = nodeLayout(self, width)
+            let (layout, apply) = nodeLayout(self, params)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -45,13 +45,13 @@ final class ChatBotInfoItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ChatBotInfoItemNode {
             Queue.mainQueue().async {
                 let nodeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = nodeLayout(self, width)
+                    let (layout, apply) = nodeLayout(self, params)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
@@ -98,11 +98,11 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapGesture(_:))))
     }
     
-    func asyncLayout() -> (_ item: ChatBotInfoItem, _ width: CGFloat) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    func asyncLayout() -> (_ item: ChatBotInfoItem, _ width: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let currentTextAndEntities = self.currentTextAndEntities
         let currentTheme = self.theme
-        return { [weak self] item, width in
+        return { [weak self] item, params in
             var updatedBackgroundImage: UIImage?
             if currentTheme !== item.theme {
                 updatedBackgroundImage = PresentationResourcesChat.chatInfoItemBackgroundImage(item.theme)
@@ -113,25 +113,25 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 if text == item.text {
                     updatedTextAndEntities = (text, entities)
                 } else {
-                    updatedTextAndEntities = (item.text, generateTextEntities(item.text))
+                    updatedTextAndEntities = (item.text, generateTextEntities(item.text, enabledTypes: .all))
                 }
             } else {
-                updatedTextAndEntities = (item.text, generateTextEntities(item.text))
+                updatedTextAndEntities = (item.text, generateTextEntities(item.text, enabledTypes: .all))
             }
             
             let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.theme.chat.bubble.infoPrimaryTextColor, linkColor: item.theme.chat.bubble.infoLinkTextColor, baseFont: messageFont, boldFont: messageBoldFont, fixedFont: messageFixedFont)
             
-            let horizontalEdgeInset: CGFloat = 10.0
+            let horizontalEdgeInset: CGFloat = 10.0 + params.leftInset
             let horizontalContentInset: CGFloat = 12.0
             let verticalItemInset: CGFloat = 10.0
             let verticalContentInset: CGFloat = 8.0
             
-            let (textLayout, textApply) = makeTextLayout(attributedText, nil, 0, .end, CGSize(width: width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: floor((width - textLayout.size.width - horizontalContentInset * 2.0) / 2.0), y: verticalItemInset + 4.0), size: CGSize(width: textLayout.size.width + horizontalContentInset * 2.0, height: textLayout.size.height + verticalContentInset * 2.0))
+            let backgroundFrame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.size.width - horizontalContentInset * 2.0) / 2.0), y: verticalItemInset + 4.0), size: CGSize(width: textLayout.size.width + horizontalContentInset * 2.0, height: textLayout.size.height + verticalContentInset * 2.0))
             let textFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset), size: textLayout.size)
             
-            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: textLayout.size.height + verticalItemInset * 2.0 + verticalContentInset * 2.0 + 4.0), insets: UIEdgeInsets())
+            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: textLayout.size.height + verticalItemInset * 2.0 + verticalContentInset * 2.0 + 4.0), insets: UIEdgeInsets())
             return (itemLayout, { _ in
                 if let strongSelf = self {
                     strongSelf.theme = item.theme

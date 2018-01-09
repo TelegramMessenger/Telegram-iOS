@@ -16,10 +16,10 @@ class ContactListActionItem: ListViewItem {
         self.action = action
     }
     
-    func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ContactListActionItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width)
+            let (layout, apply) = node.asyncLayout()(self, params)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -30,13 +30,13 @@ class ContactListActionItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ContactListActionItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width)
+                    let (layout, apply) = makeLayout(self, params)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -98,22 +98,22 @@ class ContactListActionItemNode: ListViewItemNode {
         self.addSubnode(self.titleNode)
     }
     
-    func asyncLayout() -> (_ item: ContactListActionItem, _ width: CGFloat) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ContactListActionItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentTheme = self.theme
         
-        return { item, width in
+        return { item, params in
             var updatedTheme: PresentationTheme?
             
             if currentTheme !== item.theme {
                 updatedTheme = item.theme
             }
             
-            let leftInset: CGFloat = 65.0
+            let leftInset: CGFloat = 65.0 + params.leftInset
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemAccentColor), nil, 1, .end, CGSize(width: width - 10.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - 10.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: width, height: 48.0)
+            let contentSize = CGSize(width: params.width, height: 48.0)
             let insets = UIEdgeInsets()
             let separatorHeight = UIScreenPixel
             
@@ -124,9 +124,9 @@ class ContactListActionItemNode: ListViewItemNode {
                     strongSelf.theme = item.theme
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     }
                     
@@ -135,7 +135,7 @@ class ContactListActionItemNode: ListViewItemNode {
                     strongSelf.iconNode.image = item.icon
                     
                     if let image = item.icon {
-                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: floor((leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                     }
                     
                     if strongSelf.backgroundNode.supernode == nil {
@@ -150,18 +150,18 @@ class ContactListActionItemNode: ListViewItemNode {
                     
                     strongSelf.topStripeNode.isHidden = true
                     
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height), size: CGSize(width: width - leftInset, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: 48.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 48.0 + UIScreenPixel + UIScreenPixel))
                 }
             })
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        super.setHighlighted(highlighted, animated: animated)
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
             self.highlightedBackgroundNode.alpha = 1.0

@@ -6,10 +6,18 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
     private let separatorNode: ASDisplayNode
     private let titleNode: ASTextNode
     
+    private var textColor: UIColor = .black {
+        didSet {
+            if !self.textColor.isEqual(oldValue) {
+                self.titleNode.attributedText = NSAttributedString(string: self.text, font: Font.regular(14.0), textColor: self.textColor)
+            }
+        }
+    }
+    
     var text: String = "" {
         didSet {
             if self.text != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: UIColor.black)
+                self.titleNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: self.textColor)
                 self.setNeedsLayout()
             }
         }
@@ -17,7 +25,6 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
     
     override init() {
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
         self.separatorNode.isLayerBacked = true
         
         self.titleNode = ASTextNode()
@@ -26,25 +33,22 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
         
         super.init()
         
-        self.backgroundColor = UIColor(rgb: 0xF5F6F8)
-        
         self.addSubnode(self.titleNode)
         self.addSubnode(self.separatorNode)
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         let panelHeight: CGFloat = 40.0
+
+        self.textColor = interfaceState.theme.rootController.navigationBar.primaryTextColor
+        self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
+        self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
-        self.setNeedsLayout()
+        
+        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - rightInset - 20.0, height: 100.0))
+        self.titleNode.frame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: floor((panelHeight - titleSize.height) / 2.0)), size: titleSize)
         
         return panelHeight
-    }
-    
-    override func layout() {
-        super.layout()
-        
-        let titleSize = self.titleNode.measure(CGSize(width: self.bounds.size.width - 20.0, height: 100.0))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: floor((self.bounds.size.width - titleSize.width) / 2.0), y: floor((self.bounds.size.height - titleSize.height) / 2.0)), size: titleSize)
     }
 }

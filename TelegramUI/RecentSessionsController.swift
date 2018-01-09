@@ -400,7 +400,7 @@ public func recentSessionsController(account: Account) -> ViewController {
             
             var emptyStateItem: ItemListControllerEmptyStateItem?
             if sessions == nil {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem()
+                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
             
             let previous = previousSessions

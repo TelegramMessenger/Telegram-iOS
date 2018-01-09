@@ -41,6 +41,9 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
         }
     }
     
+    func updateContentNodeSnapshot(_ snapshot: UIView?) {
+    }
+    
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayoutSize = size
         

@@ -3,11 +3,25 @@ import AsyncDisplayKit
 import Display
 import Postbox
 
+struct ChatMessageItemWidthFill {
+    let compactInset: CGFloat
+    let compactWidthBoundary: CGFloat
+    let freeMaximumFillFactor: CGFloat
+    
+    func widthFor(_ width: CGFloat) -> CGFloat {
+        if width <= self.compactWidthBoundary {
+            return max(1.0, width - self.compactInset)
+        } else {
+            return max(1.0, floor(width * self.freeMaximumFillFactor))
+        }
+    }
+}
+
 struct ChatMessageItemBubbleLayoutConstants {
     let edgeInset: CGFloat
     let defaultSpacing: CGFloat
     let mergedSpacing: CGFloat
-    let maximumWidthFillFactor: CGFloat
+    let maximumWidthFill: ChatMessageItemWidthFill
     let minimumSize: CGSize
     let contentInsets: UIEdgeInsets
 }
@@ -23,6 +37,7 @@ struct ChatMessageItemImageLayoutConstants {
     let mergedCornerRadius: CGFloat
     let contentMergedCornerRadius: CGFloat
     let maxDimensions: CGSize
+    let minDimensions: CGSize
 }
 
 struct ChatMessageItemInstantVideoConstants {
@@ -48,9 +63,9 @@ struct ChatMessageItemLayoutConstants {
         self.avatarDiameter = 37.0
         self.timestampHeaderHeight = 34.0
         
-        self.bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.0 + UIScreenPixel, mergedSpacing: 1.0, maximumWidthFillFactor: 0.85, minimumSize: CGSize(width: 40.0, height: 35.0), contentInsets: UIEdgeInsets(top: 1.0, left: 7.0, bottom: 1.0, right: 1.0))
+        self.bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.0 + UIScreenPixel, mergedSpacing: 1.0, maximumWidthFill: ChatMessageItemWidthFill(compactInset: 40.0, compactWidthBoundary: 500.0, freeMaximumFillFactor: 0.85), minimumSize: CGSize(width: 40.0, height: 35.0), contentInsets: UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 0.0))
         self.text = ChatMessageItemTextLayoutConstants(bubbleInsets: UIEdgeInsets(top: 6.0 + UIScreenPixel, left: 12.0, bottom: 6.0 - UIScreenPixel, right: 12.0))
-        self.image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 0.5, left: 0.5, bottom: 0.5, right: 0.5), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 17.0, mergedCornerRadius: 5.0, contentMergedCornerRadius: 5.0, maxDimensions: CGSize(width: 300.0, height: 300.0))
+        self.image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 1.5, left: 1.5, bottom: 1.5, right: 1.5), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 17.0, mergedCornerRadius: 5.0, contentMergedCornerRadius: 5.0, maxDimensions: CGSize(width: 300.0, height: 300.0), minDimensions: CGSize(width: 64.0, height: 64.0))
         self.file = ChatMessageItemFileLayoutConstants(bubbleInsets: UIEdgeInsets(top: 15.0, left: 9.0, bottom: 15.0, right: 12.0))
         self.instantVideo = ChatMessageItemInstantVideoConstants(insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), dimensions: CGSize(width: 212.0, height: 212.0))
     }
@@ -62,9 +77,6 @@ public class ChatMessageItemView: ListViewItemNode {
     let layoutConstants = defaultChatMessageItemLayoutConstants
     
     var item: ChatMessageItem?
-    var controllerInteraction: ChatControllerInteraction?
-    
-    private var content: ChatMessageItemContent?
     
     public required convenience init() {
         self.init(layerBacked: true)
@@ -90,20 +102,20 @@ public class ChatMessageItemView: ListViewItemNode {
         self.item = item
     }
     
-    override public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? ChatMessageItem {
             let doLayout = self.asyncLayout()
             let merged = item.mergedWithItems(top: previousItem, bottom: nextItem)
-            let (layout, apply) = doLayout(item, width, merged.top, merged.bottom, merged.dateAtBottom)
+            let (layout, apply) = doLayout(item, params, merged.top, merged.bottom, merged.dateAtBottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
             apply(.None)
         }
     }
     
-    override public func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+    override public func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode, leftInset: CGFloat, rightInset: CGFloat) {
         if let avatarNode = accessoryItemNode as? ChatMessageAvatarAccessoryItemNode {
-            avatarNode.frame = CGRect(origin: CGPoint(x: 3.0, y: self.bounds.height - 38.0 - self.insets.top + 1.0), size: CGSize(width: 38.0, height: 38.0))
+            avatarNode.frame = CGRect(origin: CGPoint(x: leftInset + 3.0, y: self.apparentFrame.height - 38.0 - self.insets.top + 1.0), size: CGSize(width: 38.0, height: 38.0))
         }
     }
     
@@ -116,7 +128,7 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         return { _, _, _, _, _ in
             return (ListViewItemNodeLayout(contentSize: CGSize(width: 32.0, height: 32.0), insets: UIEdgeInsets()), { _ in
                 

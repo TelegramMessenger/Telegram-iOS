@@ -186,11 +186,16 @@ final class InstantPageSettingsNode: ASDisplayNode {
     }
     
     func animateIn() {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.layer.allowsGroupOpacity = true
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
+            self?.layer.allowsGroupOpacity = false
+        })
     }
     
     func animateOut(completion: @escaping () -> Void) {
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+        self.layer.allowsGroupOpacity = true
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.layer.allowsGroupOpacity = false
             completion()
         })
     }

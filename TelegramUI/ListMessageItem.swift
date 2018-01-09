@@ -7,27 +7,38 @@ import Postbox
 
 final class ListMessageItem: ListViewItem {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let account: Account
-    let peerId: PeerId
+    let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
     let message: Message
+    let selection: ChatHistoryMessageSelection
+    
+    let header: ListMessageDateHeader?
     
     let selectable: Bool = true
     
-    public init(theme: PresentationTheme, account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool) {
         self.theme = theme
+        self.strings = strings
         self.account = account
-        self.peerId = peerId
+        self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
         self.message = message
+        if displayHeader {
+            self.header = ListMessageDateHeader(timestamp: message.timestamp, theme: theme, strings: strings)
+        } else {
+            self.header = nil
+        }
+        self.selection = selection
     }
     
-    public func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
-        var viewClassName: AnyClass = ListMessageFileItemNode.self
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+        var viewClassName: AnyClass = ListMessageSnippetItemNode.self
         
         for media in message.media {
-            if let _ = media as? TelegramMediaWebpage {
-                viewClassName = ListMessageSnippetItemNode.self
+            if let _ = media as? TelegramMediaFile {
+                viewClassName = ListMessageFileItemNode.self
                 break
             }
         }
@@ -38,8 +49,8 @@ final class ListMessageItem: ListViewItem {
             node.setupItem(self)
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom, dateAtBottom) = (previousItem != nil, nextItem != nil, false) //self.mergedWithItems(top: previousItem, bottom: nextItem)
-            let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
+            let (top, bottom, dateAtBottom) = (previousItem != nil, nextItem != nil, self.getDateAtBottom(top: previousItem, bottom: nextItem))
+            let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom)
             
             node.updateSelectionState(animated: false)
             
@@ -59,7 +70,7 @@ final class ListMessageItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ListMessageNode {
             Queue.mainQueue().async {
                 node.setupItem(self)
@@ -69,9 +80,9 @@ final class ListMessageItem: ListViewItem {
                 let nodeLayout = node.asyncLayout()
                 
                 async {
-                    let (top, bottom, dateAtBottom) = (previousItem != nil, nextItem != nil, false) //self.mergedWithItems(top: previousItem, bottom: nextItem)
+                    let (top, bottom, dateAtBottom) = (previousItem != nil, nextItem != nil, self.getDateAtBottom(top: previousItem, bottom: nextItem))
                     
-                    let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
+                    let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
@@ -87,13 +98,34 @@ final class ListMessageItem: ListViewItem {
     func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
         
-        listView.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ListMessageFileItemNode {
-                if let messageId = itemNode.item?.message.id, messageId == self.message.id {
-                    itemNode.activateMedia()
+        if case let .selectable(selected) = self.selection {
+            self.controllerInteraction.toggleMessagesSelection([self.message.id], !selected)
+        } else {
+            listView.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ListMessageFileItemNode {
+                    if let messageId = itemNode.item?.message.id, messageId == self.message.id {
+                        itemNode.activateMedia()
+                    }
+                } else if let itemNode = itemNode as? ListMessageSnippetItemNode {
+                    if let messageId = itemNode.item?.message.id, messageId == self.message.id {
+                        itemNode.activateMedia()
+                    }
                 }
             }
         }
+    }
+    
+    func getDateAtBottom(top: ListViewItem?, bottom: ListViewItem?) -> Bool {
+        var dateAtBottom = false
+        if let top = top as? ListMessageItem, top.header != nil {
+            if top.header?.id != self.header?.id {
+                dateAtBottom = true
+            }
+        } else {
+            dateAtBottom = true
+        }
+        
+        return dateAtBottom
     }
     
     public var description: String {

@@ -14,6 +14,7 @@ private let granularity: Int32 = 60 * 60 * 24
 
 final class ChatMessageDateHeader: ListViewItemHeader {
     private let timestamp: Int32
+    private let roundedUtcTimestamp: Int32
     private let roundedTimestamp: Int32
     
     let id: Int64
@@ -27,8 +28,10 @@ final class ChatMessageDateHeader: ListViewItemHeader {
         
         if timestamp == Int32.max {
             self.roundedTimestamp = timestamp / (granularity) * (granularity)
+            self.roundedUtcTimestamp = self.roundedTimestamp
         } else {
             self.roundedTimestamp = ((timestamp + timezoneOffset) / (granularity)) * (granularity)
+            self.roundedUtcTimestamp = ((timestamp) / (granularity)) * (granularity)
         }
         self.id = Int64(self.roundedTimestamp)
     }
@@ -38,7 +41,7 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     let height: CGFloat = 34.0
     
     func node() -> ListViewItemHeaderNode {
-        return ChatMessageDateHeaderNode(timestamp: self.roundedTimestamp, theme: self.theme, strings: self.strings)
+        return ChatMessageDateHeaderNode(utcTimestamp: self.roundedUtcTimestamp, theme: self.theme, strings: self.strings)
     }
 }
 
@@ -80,15 +83,15 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     let backgroundNode: ASImageNode
     let stickBackgroundNode: ASImageNode
     
-    private let timestamp: Int32
+    private let utcTimestamp: Int32
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
     
-    init(timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings) {
-        self.timestamp = timestamp
+    init(utcTimestamp: Int32, theme: PresentationTheme, strings: PresentationStrings) {
+        self.utcTimestamp = utcTimestamp
         self.theme = theme
         self.strings = strings
         
@@ -126,7 +129,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         
-        var t: time_t = time_t(timestamp)
+        var t: time_t = time_t(utcTimestamp)
         var timeinfo: tm = tm()
         localtime_r(&t, &timeinfo)
         
@@ -139,16 +142,16 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             if timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = strings.Weekday_Today
             } else {
-                text = "\(monthAtIndex(Int(timeinfo.tm_mon), strings: strings)) \(timeinfo.tm_mday)"
+                text = strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)").0
             }
         } else {
-            text = "\(monthAtIndex(Int(timeinfo.tm_mon), strings: strings)) \(timeinfo.tm_mday), \(1900 + timeinfo.tm_year)"
+            text = strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").0
         }
         
-        let attributedString = NSAttributedString(string: text, font: titleFont, textColor: UIColor.white)
+        let attributedString = NSAttributedString(string: text, font: titleFont, textColor: theme.chat.serviceMessage.dateTextColor)
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         
-        let (size, apply) = labelLayout(attributedString, nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), .natural, nil, UIEdgeInsets())
+        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
         
@@ -178,20 +181,16 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.setNeedsLayout()
     }
     
-    override func layout() {
-        super.layout()
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        //let labelLayout = TextNode.asyncLayout(self.labelNode)
         
-        let bounds = self.bounds
+        let labelSize = self.labelNode.bounds.size
+        let backgroundSize = CGSize(width: labelSize.width + 8.0 + 8.0, height: 26.0)
         
-        let labelLayout = TextNode.asyncLayout(self.labelNode)
-        
-        let size = self.labelNode.bounds.size
-        let backgroundSize = CGSize(width: size.width + 8.0 + 8.0, height: 26.0)
-        
-        let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.size.width - backgroundSize.width) / 2.0), y: (34.0 - 26.0) / 2.0), size: backgroundSize)
+        let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: (34.0 - 26.0) / 2.0), size: backgroundSize)
         self.stickBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
         self.backgroundNode.frame = backgroundFrame
-        self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + 8.0, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - size.height) / 2.0) - 1.0), size: size)
+        self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + 8.0, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
     }
     
     override func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -8,7 +8,7 @@ private let dispatcher = displayLinkDispatcher
 
 public enum ImageCorner: Equatable {
     case Corner(CGFloat)
-    case Tail(CGFloat)
+    case Tail(CGFloat, Bool)
     
     public var extendedInsets: CGSize {
         switch self {
@@ -23,7 +23,7 @@ public enum ImageCorner: Equatable {
         switch self {
             case .Corner:
                 return self
-            case let .Tail(radius):
+            case let .Tail(radius, _):
                 return .Corner(radius)
         }
     }
@@ -32,7 +32,7 @@ public enum ImageCorner: Equatable {
         switch self {
             case let .Corner(radius):
                 return radius
-            case let .Tail(radius):
+            case let .Tail(radius, _):
                 return radius
         }
     }
@@ -47,12 +47,11 @@ public func ==(lhs: ImageCorner, rhs: ImageCorner) -> Bool {
                 default:
                     return false
             }
-        case let .Tail(lhsRadius):
-            switch rhs {
-                case let .Tail(rhsRadius) where abs(lhsRadius - rhsRadius) < CGFloat.ulpOfOne:
-                    return true
-                default:
-                    return false
+        case let .Tail(lhsRadius, lhsEnabled):
+            if case let .Tail(rhsRadius, rhsEnabled) = rhs, lhsRadius.isEqual(to: rhsRadius), lhsEnabled == rhsEnabled {
+                return true
+            } else {
+                return false
             }
     }
 }

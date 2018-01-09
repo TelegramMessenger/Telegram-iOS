@@ -103,30 +103,37 @@ final class InstantPageNavigationBar: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, pageProgress: CGFloat, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.pageProgressNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: floorToScreenPixels(size.width * pageProgress), height: size.height)))
+    func updateLayout(size: CGSize, minHeight: CGFloat, maxHeight: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, pageProgress: CGFloat, transition: ContainedViewLayoutTransition) {
+        let progressHeight: CGFloat
+        if !topInset.isZero {
+            progressHeight = size.height - topInset + 11.0
+        } else {
+            progressHeight = size.height
+        }
+        transition.updateFrame(node: self.pageProgressNode, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - progressHeight), size: CGSize(width: floorToScreenPixels(size.width * pageProgress), height: progressHeight)))
+        
+        let transitionFactor = (size.height - minHeight) / (maxHeight - minHeight)
         
         transition.updateFrame(node: self.backButton, frame: CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: CGSize(width: 100.0, height: size.height)))
         if let image = arrowNode.image {
             let arrowImageSize = image.size
             
             let arrowHeight: CGFloat
-            if size.height.isLess(than: 64.0) {
-                arrowHeight = 9.0 * size.height / 44.0 + 87.0 / 11.0;
+            if size.height.isLess(than: maxHeight) {
+                arrowHeight = floor(9.0 * transitionFactor + 12.0)
             } else {
                 arrowHeight = 21.0
             }
             let scaledArrowSize = CGSize(width: arrowImageSize.width * arrowHeight / arrowImageSize.height, height: arrowHeight)
-            transition.updateFrame(node: self.arrowNode, frame: CGRect(origin: CGPoint(x: 8.0, y: max(0.0, size.height - 44.0) + floor((min(size.height, 44.0) - scaledArrowSize.height) / 2.0)), size: scaledArrowSize))
+            let arrowOffset = floor(8.0 * transitionFactor + 4.0)
+            transition.updateFrame(node: self.arrowNode, frame: CGRect(origin: CGPoint(x: leftInset + 8.0, y: size.height - arrowHeight - arrowOffset), size: scaledArrowSize))
         }
         
         let offsetScaleFactor: CGFloat
         let buttonScaleFactor: CGFloat
-        if size.height.isLess(than: 64.0) {
-            offsetScaleFactor = max(size.height - 20.0, 0.0) / 44.0
-            let k = (self.intrinsicMoreSize.height - self.intrinsicSmallMoreSize.height) / 44.0
-            let b = self.intrinsicSmallMoreSize.height - k * 20.0;
-            buttonScaleFactor = (k * size.height + b) / self.intrinsicMoreSize.height
+        if size.height.isLess(than: maxHeight) {
+            offsetScaleFactor = transitionFactor
+            buttonScaleFactor = ((transitionFactor * self.intrinsicMoreSize.height) + ((1.0 - transitionFactor) * self.intrinsicSmallMoreSize.height)) / self.intrinsicMoreSize.height
         } else {
             offsetScaleFactor = 1.0
             buttonScaleFactor = 1.0
@@ -138,14 +145,18 @@ final class InstantPageNavigationBar: ASDisplayNode {
             alphaFactor *= 0.5
         }
         
+        let maxMoreOffset = self.intrinsicMoreSize.height / 2.0 + floor((44.0 - self.intrinsicMoreSize.height) / 2.0)
+        let minMoreOffset = self.intrinsicSmallMoreSize.height / 2.0 + floor((20.0 - self.intrinsicSmallMoreSize.height) / 2.0)
+        let moreOffset = (transitionFactor * maxMoreOffset) + ((1.0 - transitionFactor) * minMoreOffset)
+        
         transition.updateTransformScale(node: self.moreButton, scale: buttonScaleFactor)
-        transition.updatePosition(node: self.moreButton, position: CGPoint(x: size.width - buttonScaleFactor * self.intrinsicMoreSize.width / 2.0, y: offsetScaleFactor * 20.0 + buttonScaleFactor * self.intrinsicMoreSize.height / 2.0))
+        transition.updatePosition(node: self.moreButton, position: CGPoint(x: size.width - rightInset - buttonScaleFactor * self.intrinsicMoreSize.width / 2.0, y: size.height - moreOffset))
         transition.updateAlpha(node: self.moreButton, alpha: alphaFactor)
         transition.updateTransformScale(node: self.actionButton, scale: buttonScaleFactor)
-        transition.updatePosition(node: self.actionButton, position: CGPoint(x: size.width - buttonScaleFactor * self.intrinsicMoreSize.width - buttonScaleFactor * self.intrinsicActionSize.width / 2.0, y: offsetScaleFactor * 20.0 + buttonScaleFactor * self.intrinsicActionSize.height / 2.0))
+        transition.updatePosition(node: self.actionButton, position: CGPoint(x: size.width - rightInset - buttonScaleFactor * self.intrinsicMoreSize.width - buttonScaleFactor * self.intrinsicActionSize.width / 2.0, y: size.height - moreOffset))
         transition.updateAlpha(node: self.actionButton, alpha: alphaFactor)
         
-        transition.updateFrame(node: self.scrollToTopButton, frame: CGRect(origin: CGPoint(x: 64.0, y: 0.0), size: CGSize(width: size.width - 64.0, height: size.height)))
+        transition.updateFrame(node: self.scrollToTopButton, frame: CGRect(origin: CGPoint(x: leftInset + 64.0, y: 0.0), size: CGSize(width: size.width - leftInset - rightInset - 64.0, height: size.height)))
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

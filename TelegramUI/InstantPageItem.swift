@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import AsyncDisplayKit
 
 protocol InstantPageItem {
     var frame: CGRect { get set }
@@ -9,7 +10,7 @@ protocol InstantPageItem {
     
     func matchesAnchor(_ anchor: String) -> Bool
     func drawInTile(context: CGContext)
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode?
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)?
     func matchesNode(_ node: InstantPageNode) -> Bool
     func linkSelectionRects(at point: CGPoint) -> [CGRect]
     

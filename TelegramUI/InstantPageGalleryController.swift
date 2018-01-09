@@ -17,17 +17,20 @@ struct InstantPageGalleryEntryLocation: Equatable {
 
 struct InstantPageGalleryEntry: Equatable {
     let index: Int32
+    let pageId: MediaId
     let media: InstantPageMedia
     let caption: String
     let location: InstantPageGalleryEntryLocation
     
     static func ==(lhs: InstantPageGalleryEntry, rhs: InstantPageGalleryEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.media == rhs.media && lhs.caption == rhs.caption && lhs.location == rhs.location
+        return lhs.index == rhs.index && lhs.pageId == rhs.pageId && lhs.media == rhs.media && lhs.caption == rhs.caption && lhs.location == rhs.location
     }
     
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings) -> GalleryItem {
         if let image = self.media.media as? TelegramMediaImage {
             return InstantImageGalleryItem(account: account, theme: theme, strings: strings, image: image, caption: self.caption, location: self.location)
+        } else if let file = self.media.media as? TelegramMediaFile, file.isVideo {
+            return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), file: file), originData: nil, indexData: GalleryItemIndexData(position: self.location.position, totalCount: self.location.totalCount), contentInfo: nil, caption: self.caption)
         } else {
             preconditionFailure()
         }
@@ -82,7 +85,8 @@ class InstantPageGalleryController: ViewController {
         
         super.init(navigationBarTheme: GalleryController.darkNavigationTheme)
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+        let backItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: self, action: #selector(self.donePressed))
+        self.navigationItem.leftBarButtonItem = backItem
         
         self.statusBar.statusBarStyle = .White
         

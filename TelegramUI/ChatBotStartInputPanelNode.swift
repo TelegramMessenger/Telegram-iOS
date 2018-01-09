@@ -86,7 +86,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.sendBotStart(presentationInterfaceState.botStartPayload)
     }
     
-    override func updateLayout(width: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
@@ -96,10 +96,10 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
         
         let panelHeight: CGFloat = 47.0
         
-        self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
         let indicatorSize = self.activityIndicator.bounds.size
-        self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - indicatorSize.width - 12.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
+        self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - rightInset - indicatorSize.width - 12.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
         
         return 47.0
     }

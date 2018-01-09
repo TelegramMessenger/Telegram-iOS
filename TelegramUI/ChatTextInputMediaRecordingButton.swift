@@ -218,14 +218,14 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.innerIconView = UIImageView()
         self.presentController = presentController
          
-        let mediaRecordingControl = theme.chat.inputPanel.mediaRecordingControl
-        super.init(theme: TGModernConversationInputMicButtonTheme(buttonColor: mediaRecordingControl.buttonColor, micLevel: mediaRecordingControl.micLevelColor, buttonControlColor: mediaRecordingControl.activeIconColor, panelControlFill: mediaRecordingControl.panelControlFillColor, panelControlStroke: mediaRecordingControl.panelControlStrokeColor, panelControlContentPrimaryColor: mediaRecordingControl.panelControlContentPrimaryColor, panelControlContentAccentColor: mediaRecordingControl.panelControlContentAccentColor))
+        super.init(frame: CGRect())
+        
+        let inputPanelTheme = theme.chat.inputPanel
+        
+        self.pallete = TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
         
         self.insertSubview(self.innerIconView, at: 0)
         
-        self.isExclusiveTouch = true
-        self.adjustsImageWhenHighlighted = false
-        self.adjustsImageWhenDisabled = false
         self.disablesInteractiveTransitionGestureRecognizer = true
         
         self.updateMode(mode: self.mode, animated: false, force: true)
@@ -304,66 +304,6 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.isEnabled = false
         self.isEnabled = true
     }
-    
-    /*override func beginTracking(_ touch: UITouch, with touchEvent: UIEvent?) -> Bool {
-        if super.beginTracking(touch, with: touchEvent) {
-            self.startTouchLocation = touch.location(in: self)
-            
-            self.controlsOffset = 0.0
-            self.beginRecording()
-            let recordingOverlay: ChatTextInputAudioRecordingOverlay
-            if let currentRecordingOverlay = self.recordingOverlay {
-                recordingOverlay = currentRecordingOverlay
-            } else {
-                recordingOverlay = ChatTextInputAudioRecordingOverlay(anchorView: self)
-                self.recordingOverlay = recordingOverlay
-            }
-            if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext, let topWindow = applicationContext.applicationBindings.getTopWindow() {
-                recordingOverlay.present(in: topWindow)
-            }
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    override func endTracking(_ touch: UITouch?, with touchEvent: UIEvent?) {
-        super.endTracking(touch, with: touchEvent)
-        
-        self.endRecording(self.controlsOffset < 40.0)
-        self.dismissRecordingOverlay()
-    }
-    
-    override func cancelTracking(with event: UIEvent?) {
-        super.cancelTracking(with: event)
-        
-        self.endRecording(false)
-        self.dismissRecordingOverlay()
-    }
-    
-    override func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-        if super.continueTracking(touch, with: event) {
-            if let startTouchLocation = self.startTouchLocation {
-                let horiontalOffset = startTouchLocation.x - touch.location(in: self).x
-                let controlsOffset = max(0.0, horiontalOffset - offsetThreshold)
-                if !controlsOffset.isEqual(to: self.controlsOffset) {
-                    self.recordingOverlay?.dismissFactor = 1.0 - controlsOffset / dismissOffsetThreshold
-                    self.controlsOffset = controlsOffset
-                    self.offsetRecordingControls()
-                }
-            }
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    private func dismissRecordingOverlay() {
-        if let recordingOverlay = self.recordingOverlay {
-            self.recordingOverlay = nil
-            recordingOverlay.dismiss()
-        }
-    }*/
     
     func micButtonInteractionBegan() {
         self.modeTimeoutTimer?.invalidate()

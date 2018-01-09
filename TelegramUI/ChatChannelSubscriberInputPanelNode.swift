@@ -54,7 +54,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     
-    private var layoutData: CGFloat?
+    private var layoutData: (CGFloat, CGFloat, CGFloat)?
     
     override init() {
         self.button = UIButton()
@@ -108,8 +108,8 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
-        self.layoutData = width
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        self.layoutData = (width, leftInset, rightInset)
         
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
@@ -132,10 +132,10 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         let panelHeight: CGFloat = 47.0
         
         let buttonSize = self.button.bounds.size
-        self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
         let indicatorSize = self.activityIndicator.bounds.size
-        self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - indicatorSize.width - 12.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
+        self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - rightInset - indicatorSize.width - 12.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
         
         return 47.0
     }

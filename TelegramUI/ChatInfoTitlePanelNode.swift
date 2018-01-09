@@ -118,7 +118,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.addSubnode(self.separatorNode)
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         let themeUpdated = self.theme !== interfaceState.theme
         self.theme = interfaceState.theme
         
@@ -166,8 +166,8 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         if !self.buttons.isEmpty {
-            let buttonWidth = floor(width / CGFloat(self.buttons.count))
-            var nextButtonOrigin: CGFloat = 0.0
+            let buttonWidth = floor((width - leftInset - rightInset) / CGFloat(self.buttons.count))
+            var nextButtonOrigin: CGFloat = leftInset
             for (_, buttonNode) in self.buttons {
                 buttonNode.frame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
                 nextButtonOrigin += buttonWidth
@@ -190,7 +190,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
                     case .unmute:
                         self.interfaceInteraction?.togglePeerNotifications()
                     case .search:
-                        self.interfaceInteraction?.beginMessageSearch()
+                        self.interfaceInteraction?.beginMessageSearch(.everything)
                     case .call:
                         self.interfaceInteraction?.beginCall()
                     case .report:

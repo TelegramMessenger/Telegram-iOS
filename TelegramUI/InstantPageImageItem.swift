@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import AsyncDisplayKit
 
 final class InstantPageImageItem: InstantPageItem {
     var frame: CGRect
@@ -24,7 +25,7 @@ final class InstantPageImageItem: InstantPageItem {
         self.fit = fit
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> InstantPageNode? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageImageNode(account: account, media: self.media, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia)
     }
     

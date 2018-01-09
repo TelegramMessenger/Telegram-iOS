@@ -7,6 +7,9 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
     
     private var containerLayout: ContainerViewLayout?
     
+    private var ignoreZoom = false
+    private var ignoreZoomTransition: ContainedViewLayoutTransition?
+    
     var zoomableContent: (CGSize, ASDisplayNode)? {
         didSet {
             if oldValue?.1 !== self.zoomableContent?.1 {
@@ -17,7 +20,7 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
             if let node = self.zoomableContent?.1 {
                 self.scrollNode.addSubnode(node)
             }
-            self.resetScrollViewContents()
+            self.resetScrollViewContents(transition: .immediate)
         }
     }
     
@@ -89,16 +92,39 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
         self.containerLayout = layout
         
         if shouldResetContents {
-            self.scrollNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-            self.resetScrollViewContents()
+            var previousFrame: CGRect?
+            var previousScale: CGFloat?
+            if let (_, contentNode) = self.zoomableContent {
+                previousFrame = contentNode.view.frame
+                let t = contentNode.layer.transform
+                previousScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+            }
+            
+            transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+            self.resetScrollViewContents(transition: .immediate)
+            
+            if let (_, contentNode) = self.zoomableContent, let previousFrame = previousFrame, let previousScale = previousScale {
+                transition.animatePosition(node: contentNode, from: CGPoint(x: previousFrame.midX, y: previousFrame.midY))
+                switch transition {
+                    case .immediate:
+                        break
+                    case let .animated(duration, curve):
+                        let t = contentNode.layer.transform
+                        let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+                        
+                        contentNode.layer.animateScale(from: previousScale, to: currentScale, duration: duration, timingFunction: curve.timingFunction)
+                }
+            }
         }
     }
     
-    private func resetScrollViewContents() {
+    private func resetScrollViewContents(transition: ContainedViewLayoutTransition) {
         guard let (contentSize, contentNode) = self.zoomableContent else {
             return
         }
         
+        self.ignoreZoom = true
+        self.ignoreZoomTransition = transition
         self.scrollNode.view.minimumZoomScale = 1.0
         self.scrollNode.view.maximumZoomScale = 1.0
         //self.scrollView.normalZoomScale = 1.0
@@ -108,12 +134,14 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
         contentNode.transform = CATransform3DIdentity
         contentNode.frame = CGRect(origin: CGPoint(), size: contentSize)
         
-        self.centerScrollViewContents()
+        self.centerScrollViewContents(transition: transition)
+        self.ignoreZoom = false
         
         self.scrollNode.view.zoomScale = self.scrollNode.view.minimumZoomScale
+        self.ignoreZoomTransition = nil
     }
     
-    private func centerScrollViewContents() {
+    private func centerScrollViewContents(transition: ContainedViewLayoutTransition) {
         guard let (contentSize, contentNode) = self.zoomableContent else {
             return
         }
@@ -159,7 +187,9 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
             contentFrame.origin.y = 0.0
         }
         
-        contentNode.view.frame = contentFrame
+        if !self.ignoreZoom {
+            transition.updateFrame(view: contentNode.view, frame: contentFrame)
+        }
         
         //self.scrollView.scrollEnabled = ABS(_scrollView.zoomScale - _scrollView.normalZoomScale) > FLT_EPSILON;
     }
@@ -169,6 +199,8 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
     }
     
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
-        self.centerScrollViewContents()
+        if !self.ignoreZoom {
+            self.centerScrollViewContents(transition: self.ignoreZoomTransition ?? .immediate)
+        }
     }
 }

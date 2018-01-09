@@ -2,6 +2,12 @@ import Foundation
 import TelegramCore
 
 func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatTitleAccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
+    if case .overlay = chatPresentationInterfaceState.mode {
+        return nil
+    }
+    if chatPresentationInterfaceState.search != nil {
+        return nil
+    }
     var selectedContext: ChatTitlePanelContext?
     if !chatPresentationInterfaceState.titlePanelContexts.isEmpty {
         loop: for context in chatPresentationInterfaceState.titlePanelContexts.reversed() {

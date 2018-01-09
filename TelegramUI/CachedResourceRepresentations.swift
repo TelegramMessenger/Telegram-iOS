@@ -26,20 +26,27 @@ final class CachedStickerAJpegRepresentation: CachedMediaResourceRepresentation 
     }
 }
 
+enum CachedScaledImageRepresentationMode: Int32 {
+    case fill = 0
+    case aspectFit = 1
+}
+
 final class CachedScaledImageRepresentation: CachedMediaResourceRepresentation {
     let size: CGSize
+    let mode: CachedScaledImageRepresentationMode
     
     var uniqueId: String {
-        return "scaled-image-\(Int(self.size.width))x\(Int(self.size.height))"
+        return "scaled-image-\(Int(self.size.width))x\(Int(self.size.height))-\(self.mode.rawValue)"
     }
     
-    init(size: CGSize) {
+    init(size: CGSize, mode: CachedScaledImageRepresentationMode) {
         self.size = size
+        self.mode = mode
     }
     
     func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
         if let to = to as? CachedScaledImageRepresentation {
-            return self.size == to.size
+            return self.size == to.size && self.mode == to.mode
         } else {
             return false
         }

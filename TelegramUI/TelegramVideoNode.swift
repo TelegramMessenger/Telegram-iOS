@@ -63,7 +63,7 @@ private final class SharedTelegramVideoContext: SharedVideoContext {
     func setSoundEnabled(_ value: Bool) {
         assert(Queue.mainQueue().isCurrent())
         if value {
-            self.player.playOnceWithSound()
+            self.player.playOnceWithSound(playAndRecord: false)
         } else {
             self.player.continuePlayingWithoutSound()
         }
@@ -238,7 +238,7 @@ final class TelegramVideoNode: OverlayMediaItemNode {
             self.addSubnode(controlsNode)
         }
         
-        self.imageNode.setSignal(account: account, signal: chatMessageVideo(account: account, video: source.file))
+        self.imageNode.setSignal(chatMessageVideo(postbox: account.postbox, video: source.file))
     }
     
     deinit {

@@ -1,12 +1,26 @@
 import Foundation
 import UIKit
 
+public enum TransformImageResizeMode {
+    case fill(UIColor)
+    case blurBackground
+}
+
 public struct TransformImageArguments: Equatable {
     public let corners: ImageCorners
     
     public let imageSize: CGSize
     public let boundingSize: CGSize
     public let intrinsicInsets: UIEdgeInsets
+    public let resizeMode: TransformImageResizeMode
+    
+    public init(corners: ImageCorners, imageSize: CGSize, boundingSize: CGSize, intrinsicInsets: UIEdgeInsets, resizeMode: TransformImageResizeMode = .fill(.black)) {
+        self.corners = corners
+        self.imageSize = imageSize
+        self.boundingSize = boundingSize
+        self.intrinsicInsets = intrinsicInsets
+        self.resizeMode = resizeMode
+    }
     
     public var drawingSize: CGSize {
         let cornersExtendedEdges = self.corners.extendedEdges

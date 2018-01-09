@@ -5,29 +5,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private let defaultBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 1.0)
-private let highlightedBackgroundColor: UIColor = UIColor(white: 0.9, alpha: 1.0)
-private let separatorColor: UIColor = UIColor(rgb: 0xbcbbc1)
-
-private let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: .white)
-private let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: highlightedBackgroundColor)
-
-private let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(UIColor.white.cgColor)
-    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
-})?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
-
-private let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setFillColor(highlightedBackgroundColor.cgColor)
-    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-    context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
-})?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
-
 final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let account: Account
+    private let presentationData: PresentationData
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -67,6 +47,25 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     init(account: Account) {
         self.account = account
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        let theme = self.presentationData.theme
+        let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
+        let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemHighlightedBackgroundColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
+        let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
+        let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemHighlightedBackgroundColor)
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -80,20 +79,14 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.cancelButtonNode.displaysAsynchronously = false
         self.cancelButtonNode.setBackgroundImage(roundedBackground, for: .normal)
         self.cancelButtonNode.setBackgroundImage(highlightedRoundedBackground, for: .highlighted)
-        //self.cancelButtonNode.cornerRadius = 16.0
-        //self.cancelButtonNode.clipsToBounds = true
         
         self.contentContainerNode = ASDisplayNode()
-        //self.contentContainerNode.cornerRadius = 16.0
-        //self.contentContainerNode.clipsToBounds = true
         self.contentContainerNode.isOpaque = false
         
         self.contentBackgroundNode = ASImageNode()
         self.contentBackgroundNode.displaysAsynchronously = false
         self.contentBackgroundNode.displayWithoutProcessing = true
         self.contentBackgroundNode.image = roundedBackground
-        //self.contentBackgroundNode.cornerRadius = 16.0
-        //self.contentBackgroundNode.clipsToBounds = true
         
         self.contentGridNode = GridNode()
         
@@ -108,12 +101,12 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true
         self.contentSeparatorNode.displaysAsynchronously = false
-        self.contentSeparatorNode.backgroundColor = separatorColor
+        self.contentSeparatorNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemSeparatorColor
         
         self.installActionSeparatorNode = ASDisplayNode()
         self.installActionSeparatorNode.isLayerBacked = true
         self.installActionSeparatorNode.displaysAsynchronously = false
-        self.installActionSeparatorNode.backgroundColor = separatorColor
+        self.installActionSeparatorNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemSeparatorColor
         
         super.init()
         
@@ -133,32 +126,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.wrappingScrollNode.view.delegate = self
         self.addSubnode(self.wrappingScrollNode)
         
-        self.cancelButtonNode.setTitle("Cancel", with: Font.medium(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
-        /*self.cancelButtonNode.backgroundColor = defaultBackgroundColor
-        self.cancelButtonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.cancelButtonNode.backgroundColor = highlightedBackgroundColor
-                } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.cancelButtonNode.backgroundColor = defaultBackgroundColor
-                    })
-                }
-            }
-        }*/
-        
-        /*self.installActionButtonNode.backgroundColor = defaultBackgroundColor
-        self.installActionButtonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.installActionButtonNode.backgroundColor = highlightedBackgroundColor
-                } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.installActionButtonNode.backgroundColor = defaultBackgroundColor
-                    })
-                }
-            }
-        }*/
+        self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
         
         self.wrappingScrollNode.addSubnode(self.cancelButtonNode)
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
@@ -203,10 +171,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         var insets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
+        let cleanInsets = layout.insets(options: [.statusBar])
         
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let bottomInset: CGFloat = 10.0
+        let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let buttonHeight: CGFloat = 57.0
         let sectionSpacing: CGFloat = 8.0
         let titleAreaHeight: CGFloat = 51.0
@@ -243,7 +212,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     }
                     itemCount = items.count
                     if !self.didSetItems {
-                        self.contentTitleNode.attributedText = NSAttributedString(string: info.title, font: Font.medium(20.0), textColor: .black)
+                        self.contentTitleNode.attributedText = NSAttributedString(string: info.title, font: Font.medium(20.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
                         
                         self.didSetItems = true
                         animateIn = true
@@ -315,8 +284,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         if let (layout, _) = self.containerLayout {
             var insets = layout.insets(options: [.statusBar])
             insets.top = max(10.0, insets.top)
+            let cleanInsets = layout.insets(options: [.statusBar])
             
-            let bottomInset: CGFloat = 10.0
+            let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
             let buttonHeight: CGFloat = 57.0
             let sectionSpacing: CGFloat = 8.0
             let titleAreaHeight: CGFloat = 51.0
@@ -433,25 +403,25 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         switch stickerPack {
             case .none, .fetching:
                 self.installActionSeparatorNode.alpha = 0.0
-                self.installActionButtonNode.setTitle("", with: Font.medium(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
+                self.installActionButtonNode.setTitle("", with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             case let .result(info, _, installed):
                 self.installActionSeparatorNode.alpha = 1.0
                 if installed {
                     let text: String
                     if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-                        text = "Remove \(info.count) stickers"
+                        text = self.presentationData.strings.StickerPack_RemoveStickerCount(info.count)
                     } else {
-                        text = "Remove \(info.count) masks"
+                        text = self.presentationData.strings.StickerPack_RemoveMaskCount(info.count)
                     }
-                    self.installActionButtonNode.setTitle(text, with: Font.regular(20.0), with: UIColor(rgb: 0xff3b30), for: .normal)
+                    self.installActionButtonNode.setTitle(text, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
                 } else {
                     let text: String
                     if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-                        text = "Add \(info.count) stickers"
+                        text = self.presentationData.strings.StickerPack_AddStickerCount(info.count)
                     } else {
-                        text = "Add \(info.count) masks"
+                        text = self.presentationData.strings.StickerPack_AddMaskCount(info.count)
                     }
-                    self.installActionButtonNode.setTitle(text, with: Font.regular(20.0), with: UIColor(rgb: 0x007ee5), for: .normal)
+                    self.installActionButtonNode.setTitle(text, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
                 }
         }
     }

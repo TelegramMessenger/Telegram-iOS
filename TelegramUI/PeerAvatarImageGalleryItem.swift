@@ -47,15 +47,23 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
+    private let statusNodeContainer: HighlightableButtonNode
+    private let statusNode: RadialStatusNode
     //private let footerContentNode: ChatItemGalleryFooterContentNode
     
-    private var fetchDisposable = MetaDisposable()
+    private let fetchDisposable = MetaDisposable()
+    private let statusDisposable = MetaDisposable()
+    private var status: MediaResourceStatus?
     
     init(account: Account) {
         self.account = account
         
         self.imageNode = TransformImageNode()
         //self.footerContentNode = ChatItemGalleryFooterContentNode(account: account)
+        
+        self.statusNodeContainer = HighlightableButtonNode()
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+        self.statusNode.isHidden = true
         
         super.init()
         
@@ -65,10 +73,17 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.imageNode.view.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
+        
+        self.statusNodeContainer.addSubnode(self.statusNode)
+        self.addSubnode(self.statusNodeContainer)
+        
+        self.statusNodeContainer.addTarget(self, action: #selector(self.statusPressed), forControlEvents: .touchUpInside)
+        self.statusNodeContainer.isUserInteractionEnabled = false
     }
     
     deinit {
         self.fetchDisposable.dispose()
+        self.statusDisposable.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -77,6 +92,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+        
+        let statusSize = CGSize(width: 50.0, height: 50.0)
+        transition.updateFrame(node: self.statusNodeContainer, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - statusSize.width) / 2.0), y: floor((layout.size.height - statusSize.height) / 2.0)), size: statusSize))
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(), size: statusSize))
     }
     
     fileprivate func setEntry(_ entry: AvatarGalleryEntry) {
@@ -85,11 +104,54 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if let largestSize = largestImageRepresentation(entry.representations) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
-                self.imageNode.alphaTransitionOnFirstUpdate = false
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(account: account, signal: chatAvatarGalleryPhoto(account: account, representations: entry.representations), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: entry.representations), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                 self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                
+                self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(largestSize.resource)
+                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                        if let strongSelf = self {
+                            let previousStatus = strongSelf.status
+                            strongSelf.status = status
+                            switch status {
+                                case .Remote:
+                                    strongSelf.statusNode.isHidden = false
+                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                                    strongSelf.statusNode.transitionToState(.download(.white), completion: {})
+                                case let .Fetching(isActive, progress):
+                                    strongSelf.statusNode.isHidden = false
+                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                                    var actualProgress = progress
+                                    if isActive {
+                                        actualProgress = max(actualProgress, 0.027)
+                                    }
+                                    strongSelf.statusNode.transitionToState(.progress(color: .white, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
+                                case .Local:
+                                    if let previousStatus = previousStatus, case .Fetching = previousStatus {
+                                        strongSelf.statusNode.transitionToState(.progress(color: .white, value: 1.0, cancelEnabled: true), completion: {
+                                            if let strongSelf = self {
+                                                strongSelf.statusNode.alpha = 0.0
+                                                strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                                                strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                                    if let strongSelf = self {
+                                                        strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                                    }
+                                                })
+                                            }
+                                        })
+                                    } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
+                                        strongSelf.statusNode.alpha = 0.0
+                                        strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                                        strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                            if let strongSelf = self {
+                                                strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                            }
+                                        })
+                                    }
+                            }
+                        }
+                    }))
             } else {
                 self._ready.set(.single(Void()))
             }
@@ -130,6 +192,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self?.imageNode.clipsToBounds = false
             }
         })
+        
+        self.statusNodeContainer.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.statusNodeContainer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        self.statusNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        self.statusNodeContainer.layer.animateScale(from: 0.5, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
     override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
@@ -174,11 +240,6 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         transformedFrame.origin = CGPoint()
         
-        /*self.imageNode.layer.animateBounds(from: self.imageNode.layer.bounds, to: transformedFrame, duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-            boundsCompleted = true
-            intermediateCompletion()
-        })*/
-        
         let transform = CATransform3DScale(self.imageNode.layer.transform, transformedFrame.size.width / self.imageNode.layer.bounds.size.width, transformedFrame.size.height / self.imageNode.layer.bounds.size.height, 1.0)
         self.imageNode.layer.animate(from: NSValue(caTransform3D: self.imageNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25 * durationFactor, removeOnCompletion: false, completion: { _ in
             boundsCompleted = true
@@ -187,25 +248,29 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.imageNode.clipsToBounds = true
         self.imageNode.layer.animate(from: 0.0 as NSNumber, to: (self.imageNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionDefault, duration: 0.18 * durationFactor, removeOnCompletion: false)
+        
+        self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
     }
     
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
-        
-        /*if let (account, media) = self.accountAndEntry, let file = media as? TelegramMediaFile {
-            if isVisible {
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource).start())
-            } else {
-                self.fetchDisposable.set(nil)
-            }
-        }*/
     }
     
     override func title() -> Signal<String, NoError> {
         return self._title.get()
     }
     
-    /*override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-        return .single(self.footerContentNode)
-    }*/
+    @objc func statusPressed() {
+        if let entry = self.entry, let resource = largestImageRepresentation(entry.representations)?.resource, let status = self.status {
+            switch status {
+                case .Fetching:
+                    self.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource)
+                case .Remote:
+                    self.fetchDisposable.set(self.account.postbox.mediaBox.fetchedResource(resource, tag: TelegramMediaResourceFetchTag(statsCategory: .generic)).start())
+                default:
+                    break
+            }
+        }
+    }
 }

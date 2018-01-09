@@ -23,12 +23,19 @@ final class SoftwareVideoLayerFrameManager {
     private let queue: ThreadPoolQueue
     private let layerHolder: SampleBufferLayer
     
+    private var rotationAngle: CGFloat = 0.0
+    private var aspect: CGFloat = 1.0
+    
+    private var layerRotationAngleAndAspect: (CGFloat, CGFloat)?
+    
     init(account: Account, resource: MediaResource, layerHolder: SampleBufferLayer) {
         nextWorker += 1
         self.account = account
         self.resource = resource
         self.queue = ThreadPoolQueue(threadPool: workers)
         self.layerHolder = layerHolder
+        layerHolder.layer.videoGravity = .resizeAspectFill
+        layerHolder.layer.masksToBounds = true
         self.fetchDisposable = account.postbox.mediaBox.fetchedResource(resource, tag: TelegramMediaResourceFetchTag(statsCategory: .video)).start()
     }
     
@@ -70,6 +77,14 @@ final class SoftwareVideoLayerFrameManager {
                     if self.layerHolder.layer.status == .failed {
                         self.layerHolder.layer.flush()
                     }
+                    /*if self.layerRotationAngleAndAspect?.0 != self.rotationAngle || self.layerRotationAngleAndAspect?.1 != self.aspect {
+                        self.layerRotationAngleAndAspect = (self.rotationAngle, self.aspect)
+                        var transform = CGAffineTransform(rotationAngle: CGFloat(self.rotationAngle))
+                        if !self.rotationAngle.isZero {
+                            transform = transform.scaledBy(x: CGFloat(self.aspect), y: CGFloat(1.0 / self.aspect))
+                        }
+                        self.layerHolder.layer.setAffineTransform(transform)
+                    }*/
                     self.layerHolder.layer.enqueue(frame.sampleBuffer)
                 }
             }
@@ -94,13 +109,17 @@ final class SoftwareVideoLayerFrameManager {
                     applyQueue.async {
                         if let strongSelf = self {
                             strongSelf.polling = false
+                            if let (_, rotationAngle, aspect, _) = frameAndLoop {
+                                strongSelf.rotationAngle = rotationAngle
+                                strongSelf.aspect = aspect
+                            }
                             if let frame = frameAndLoop?.0 {
                                 if strongSelf.minPts == nil || CMTimeCompare(strongSelf.minPts!, frame.position) < 0 {
                                     strongSelf.minPts = frame.position
                                 }
                                 strongSelf.frames.append(frame)
                             }
-                            if let loop = frameAndLoop?.1, loop {
+                            if let loop = frameAndLoop?.3, loop {
                                 strongSelf.maxPts = strongSelf.minPts
                                 strongSelf.minPts = nil
                             }

@@ -112,13 +112,13 @@ final class AudioWaveformNode: ASDisplayNode {
                         
                         let adjustedSampleHeight = sampleHeight - sampleWidth
                         if adjustedSampleHeight.isLessThanOrEqualTo(sampleWidth) {
-                            context.fillEllipse(in: CGRect(x: offset, y: size.height - sampleWidth, width: sampleWidth, height: sampleHeight))
+                            context.fillEllipse(in: CGRect(x: offset, y: size.height - sampleWidth, width: sampleWidth, height: sampleWidth))
                             context.fill(CGRect(x: offset, y: size.height - halfSampleWidth, width: sampleWidth, height: halfSampleWidth))
                         } else {
                             let adjustedRect = CGRect(x: offset, y: size.height - adjustedSampleHeight, width: sampleWidth, height: adjustedSampleHeight)
                             context.fill(adjustedRect)
                             context.fillEllipse(in: CGRect(x: adjustedRect.minX, y: adjustedRect.minY - halfSampleWidth, width: sampleWidth, height: sampleWidth))
-                            context.fillEllipse(in: CGRect(x: adjustedRect.minX, y: adjustedRect.maxY - halfSampleWidth, width: sampleWidth, height: sampleHeight))
+                            context.fillEllipse(in: CGRect(x: adjustedRect.minX, y: adjustedRect.maxY - halfSampleWidth, width: sampleWidth, height: sampleWidth))
                         }
                     }
                 }

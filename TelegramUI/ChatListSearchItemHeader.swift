@@ -76,8 +76,9 @@ final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         self.addSubnode(self.sectionHeaderNode)
     }
     
-    override func layout() {
-        self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.sectionHeaderNode.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
     }
     
     override func animateRemoved(duration: Double) {

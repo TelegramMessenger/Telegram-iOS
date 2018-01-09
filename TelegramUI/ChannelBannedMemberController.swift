@@ -172,7 +172,7 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
     func item(_ arguments: ChannelBannedMemberControllerArguments) -> ListViewItem {
         switch self {
             case let .info(theme, strings, peer, presence):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rightItem(theme, _, text, right, flags, value, enabled):

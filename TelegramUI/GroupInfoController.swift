@@ -5,6 +5,8 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 
+import SafariServices
+
 private final class GroupInfoArguments {
     let account: Account
     let peerId: PeerId
@@ -16,6 +18,7 @@ private final class GroupInfoArguments {
     let presentController: (ViewController, ViewControllerPresentationArguments) -> Void
     let changeNotificationMuteSettings: () -> Void
     let changeNotificationSoundSettings: () -> Void
+    let togglePreHistory: (Bool) -> Void
     let openSharedMedia: () -> Void
     let openAdminManagement: () -> Void
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
@@ -25,8 +28,11 @@ private final class GroupInfoArguments {
     let removePeer: (PeerId) -> Void
     let convertToSupergroup: () -> Void
     let leave: () -> Void
+    let displayUsernameContextMenu: (String) -> Void
+    let displayAboutContextMenu: (String) -> Void
+    let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     
-    init(account: Account, peerId: PeerId, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdminManagement: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void, leave: @escaping () -> Void) {
+    init(account: Account, peerId: PeerId, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, togglePreHistory: @escaping (Bool) -> Void, openSharedMedia: @escaping () -> Void, openAdminManagement: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void, leave: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void) {
         self.account = account
         self.peerId = peerId
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
@@ -36,6 +42,7 @@ private final class GroupInfoArguments {
         self.presentController = presentController
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
         self.changeNotificationSoundSettings = changeNotificationSoundSettings
+        self.togglePreHistory = togglePreHistory
         self.openSharedMedia = openSharedMedia
         self.openAdminManagement = openAdminManagement
         self.updateEditingName = updateEditingName
@@ -45,6 +52,9 @@ private final class GroupInfoArguments {
         self.removePeer = removePeer
         self.convertToSupergroup = convertToSupergroup
         self.leave = leave
+        self.displayUsernameContextMenu = displayUsernameContextMenu
+        self.displayAboutContextMenu = displayAboutContextMenu
+        self.aboutLinkAction = aboutLinkAction
     }
 }
 
@@ -56,6 +66,10 @@ private enum GroupInfoSection: ItemListSectionId {
     case memberManagement
     case members
     case leave
+}
+
+private enum GroupInfoEntryTag {
+    case about
 }
 
 private enum GroupInfoMemberStatus {
@@ -95,23 +109,24 @@ private enum GroupEntryStableId: Hashable, Equatable {
 }
 
 private enum GroupInfoEntry: ItemListNodeEntry {
-    case info(PresentationTheme, PresentationStrings, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: TelegramMediaImageRepresentation?)
-    case setGroupPhoto(PresentationTheme)
+    case info(PresentationTheme, PresentationStrings, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?)
+    case setGroupPhoto(PresentationTheme, String)
     case about(PresentationTheme, String)
     case link(PresentationTheme, String)
-    case sharedMedia(PresentationTheme)
-    case notifications(PresentationTheme, settings: PeerNotificationSettings?)
+    case sharedMedia(PresentationTheme, String)
+    case notifications(PresentationTheme, String, String)
     case notificationSound(PresentationTheme, String, String)
-    case adminManagement(PresentationTheme)
-    case groupTypeSetup(PresentationTheme, isPublic: Bool)
-    case groupDescriptionSetup(PresentationTheme, text: String)
-    case groupManagementInfoLabel(PresentationTheme, text: String)
-    case membersAdmins(PresentationTheme, count: Int)
-    case membersBlacklist(PresentationTheme, count: Int)
-    case addMember(PresentationTheme, editing: Bool)
-    case member(PresentationTheme, index: Int, peerId: PeerId, peer: Peer, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus, editing: ItemListPeerItemEditing, enabled: Bool)
-    case convertToSupergroup(PresentationTheme)
-    case leave(PresentationTheme)
+    case adminManagement(PresentationTheme, String)
+    case groupTypeSetup(PresentationTheme, String, String)
+    case preHistory(PresentationTheme, String, Bool)
+    case groupDescriptionSetup(PresentationTheme, String, String)
+    case groupManagementInfoLabel(PresentationTheme, String, String)
+    case membersAdmins(PresentationTheme, String, String)
+    case membersBlacklist(PresentationTheme, String, String)
+    case addMember(PresentationTheme, String, editing: Bool)
+    case member(PresentationTheme, PresentationStrings, index: Int, peerId: PeerId, peer: Peer, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus, editing: ItemListPeerItemEditing, enabled: Bool)
+    case convertToSupergroup(PresentationTheme, String)
+    case leave(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -119,7 +134,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return GroupInfoSection.info.rawValue
             case .about, .link:
                 return GroupInfoSection.about.rawValue
-            case .groupTypeSetup, .groupDescriptionSetup, .groupManagementInfoLabel:
+            case .groupTypeSetup, .preHistory, .groupDescriptionSetup, .groupManagementInfoLabel:
                 return GroupInfoSection.infoManagement.rawValue
             case .sharedMedia, .notifications, .notificationSound, .adminManagement:
                 return GroupInfoSection.sharedMediaAndNotifications.rawValue
@@ -166,32 +181,32 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .setGroupPhoto(lhsTheme):
-                if case let .setGroupPhoto(rhsTheme) = rhs, lhsTheme === rhsTheme {
+            case let .setGroupPhoto(lhsTheme, lhsText):
+                if case let .setGroupPhoto(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .sharedMedia(lhsTheme):
-                if case let .sharedMedia(rhsTheme) = rhs, lhsTheme === rhsTheme {
+            case let .sharedMedia(lhsTheme, lhsText):
+                if case let .sharedMedia(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .leave(lhsTheme):
-                if case let .leave(rhsTheme) = rhs, lhsTheme === rhsTheme {
+            case let .leave(lhsTheme, lhsText):
+                if case let .leave(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .convertToSupergroup(lhsTheme):
-                if case let .convertToSupergroup(rhsTheme) = rhs, lhsTheme === rhsTheme {
+            case let .convertToSupergroup(lhsTheme, lhsText):
+                if case let .convertToSupergroup(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .adminManagement(lhsTheme):
-                if case let .adminManagement(rhsTheme) = rhs, lhsTheme === rhsTheme {
+            case let .adminManagement(lhsTheme, lhsText):
+                if case let .adminManagement(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -208,14 +223,15 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .notifications(lhsTheme, lhsSettings):
-                if case let .notifications(rhsTheme, rhsSettings) = rhs {
+            case let .notifications(lhsTheme, lhsTitle, lhsText):
+                if case let .notifications(rhsTheme, rhsTitle, rhsText) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
-                    if let lhsSettings = lhsSettings, let rhsSettings = rhsSettings {
-                        return lhsSettings.isEqual(to: rhsSettings)
-                    } else if (lhsSettings != nil) != (rhsSettings != nil) {
+                    if lhsTitle != rhsTitle {
+                        return false
+                    }
+                    if lhsText != rhsText {
                         return false
                     }
                     return true
@@ -228,45 +244,54 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .groupTypeSetup(lhsTheme, lhsIsPublic):
-                if case let .groupTypeSetup(rhsTheme, rhsIsPublic) = rhs, lhsTheme == rhsTheme, lhsIsPublic == rhsIsPublic {
+            case let .preHistory(lhsTheme, lhsTitle, lhsValue):
+                if case let .preHistory(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .groupDescriptionSetup(lhsTheme, lhsText):
-                if case let .groupDescriptionSetup(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .groupTypeSetup(lhsTheme, lhsTitle, lhsText):
+                if case let .groupTypeSetup(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .groupManagementInfoLabel(lhsTheme, lhsText):
-                if case let .groupManagementInfoLabel(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .groupDescriptionSetup(lhsTheme, lhsPlaceholder, lhsText):
+                if case let .groupDescriptionSetup(rhsTheme, rhsPlaceholder, rhsText) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .membersAdmins(lhsTheme, lhsCount):
-                if case let .membersAdmins(rhsTheme, rhsCount) = rhs, lhsTheme === rhsTheme, lhsCount == rhsCount {
+            case let .groupManagementInfoLabel(lhsTheme, lhsTitle, lhsText):
+                if case let .groupManagementInfoLabel(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .membersBlacklist(lhsTheme, lhsCount):
-                if case let .membersBlacklist(rhsTheme, rhsCount) = rhs, lhsTheme === rhsTheme, lhsCount == rhsCount {
+            case let .membersAdmins(lhsTheme, lhsTitle, lhsText):
+                if case let .membersAdmins(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .addMember(lhsTheme, lhsEditing):
-                if case let .addMember(rhsTheme, rhsEditing) = rhs, lhsTheme === rhsTheme, lhsEditing == rhsEditing {
+            case let .membersBlacklist(lhsTheme, lhsTitle, lhsText):
+                if case let .membersBlacklist(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .member(lhsTheme, lhsIndex, lhsPeerId, lhsPeer, lhsPresence, lhsMemberStatus, lhsEditing, lhsEnabled):
-                if case let .member(rhsTheme, rhsIndex, rhsPeerId, rhsPeer, rhsPresence, rhsMemberStatus, rhsEditing, rhsEnabled) = rhs {
+            case let .addMember(lhsTheme, lhsTitle, lhsEditing):
+                if case let .addMember(rhsTheme, rhsTitle, rhsEditing) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsEditing == rhsEditing {
+                    return true
+                } else {
+                    return false
+                }
+            case let .member(lhsTheme, lhsStrings, lhsIndex, lhsPeerId, lhsPeer, lhsPresence, lhsMemberStatus, lhsEditing, lhsEnabled):
+                if case let .member(rhsTheme, rhsStrings, rhsIndex, rhsPeerId, rhsPeer, rhsPresence, rhsMemberStatus, rhsEditing, rhsEnabled) = rhs {
                     if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
                         return false
                     }
                     if lhsIndex != rhsIndex {
@@ -303,7 +328,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     
     var stableId: GroupEntryStableId {
         switch self {
-            case let .member(_, _, peerId, _, _, _, _, _):
+            case let .member(_, _, _, peerId, _, _, _, _, _):
                 return .peer(peerId)
             default:
                 return .index(self.sortIndex)
@@ -324,23 +349,25 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return 4
             case .groupTypeSetup:
                 return 5
-            case .groupDescriptionSetup:
+            case .preHistory:
                 return 6
-            case .notifications:
+            case .groupDescriptionSetup:
                 return 7
-            case .notificationSound:
+            case .notifications:
                 return 8
-            case .sharedMedia:
+            case .notificationSound:
                 return 9
-            case .groupManagementInfoLabel:
+            case .sharedMedia:
                 return 10
-            case .membersAdmins:
+            case .groupManagementInfoLabel:
                 return 11
-            case .membersBlacklist:
+            case .membersAdmins:
                 return 12
-            case .addMember:
+            case .membersBlacklist:
                 return 13
-            case let .member(_, index, _, _, _, _, _, _):
+            case .addMember:
+                return 14
+            case let .member(_, _, index, _, _, _, _, _, _):
                 return 20 + index
             case .convertToSupergroup:
                 return 100000
@@ -356,73 +383,76 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     func item(_ arguments: GroupInfoArguments) -> ListViewItem {
         switch self {
             case let .info(theme, strings, peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
-            case let .setGroupPhoto(theme):
-                return ItemListActionItem(theme: theme, title: "Set Group Photo", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .setGroupPhoto(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
             case let .about(theme, text):
-                return ItemListMultilineTextItem(theme: theme, text: text, sectionId: self.section, style: .blocks)
+                return ItemListMultilineTextItem(theme: theme, text: text, enabledEntitiyTypes: [.url, .mention, .hashtag], sectionId: self.section, style: .blocks, longTapAction: {
+                    arguments.displayAboutContextMenu(text)
+                }, linkItemAction: { action, itemLink in
+                    arguments.aboutLinkAction(action, itemLink)
+                }, tag: GroupInfoEntryTag.about)
             case let .link(theme, url):
                 return ItemListActionItem(theme: theme, title: url, kind: .neutral, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.displayUsernameContextMenu(url)
                 })
-            case let .notifications(theme, settings):
-                let label: String
-                if let settings = settings as? TelegramPeerNotificationSettings, case .muted = settings.muteState {
-                    label = "Disabled"
-                } else {
-                    label = "Enabled"
-                }
-                return ItemListDisclosureItem(theme: theme, title: "Notifications", label: label, sectionId: self.section, style: .blocks, action: {
+            case let .notifications(theme, title, text):
+                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.changeNotificationMuteSettings()
                 })
             case let .notificationSound(theme, title, value):
                 return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.changeNotificationSoundSettings()
                 })
-            case let .sharedMedia(theme):
-                return ItemListDisclosureItem(theme: theme, title: "Shared Media", label: "", sectionId: self.section, style: .blocks, action: {
+            case let .preHistory(theme, title, value):
+                return ItemListSwitchItem(theme: theme, title: title, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.togglePreHistory(value)
+                })
+            case let .sharedMedia(theme, title):
+                return ItemListDisclosureItem(theme: theme, title: title, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openSharedMedia()
                 })
-            case let .adminManagement(theme):
-                return ItemListDisclosureItem(theme: theme, title: "Add Admins", label: "", sectionId: self.section, style: .blocks, action: {
+            case let .adminManagement(theme, title):
+                return ItemListDisclosureItem(theme: theme, title: title, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openAdminManagement()
                 })
-            case let .addMember(theme, editing):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: "Add Member", sectionId: self.section, editing: editing, action: {
+            case let .addMember(theme, title, editing):
+                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: title, sectionId: self.section, editing: editing, action: {
                     arguments.addMember()
                 })
-            case let .groupTypeSetup(theme, isPublic):
-                return ItemListDisclosureItem(theme: theme, title: "Group Type", label: isPublic ? "Public" : "Private", sectionId: self.section, style: .blocks, action: {
+            case let .groupTypeSetup(theme, title, text):
+                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.presentController(channelVisibilityController(account: arguments.account, peerId: arguments.peerId, mode: .generic), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 })
-            case let .groupDescriptionSetup(theme, text):
-                return ItemListMultilineInputItem(theme: theme, text: text, placeholder: "Group Description", sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+            case let .groupDescriptionSetup(theme, placeholder, text):
+                return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: 1000, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     
                 })
-            case let .membersAdmins(theme, count):
-                return ItemListDisclosureItem(theme: theme, title: "Admins", label: "\(count)", sectionId: self.section, style: .blocks, action: {
+            case let .membersAdmins(theme, title, text):
+                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.pushController(channelAdminsController(account: arguments.account, peerId: arguments.peerId))
                 })
-            case let .membersBlacklist(theme, count):
-                return ItemListDisclosureItem(theme: theme, title: "Blacklist", label: "\(count)", sectionId: self.section, style: .blocks, action: {
+            case let .membersBlacklist(theme, title, text):
+                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.pushController(channelBlacklistController(account: arguments.account, peerId: arguments.peerId))
                 })
-            case let .member(theme, _, _, peer, presence, memberStatus, editing, enabled):
+            case let .member(theme, strings, _, _, peer, presence, memberStatus, editing, enabled):
                 let label: String?
                 switch memberStatus {
                     case .admin:
-                        label = "admin"
+                        label = strings.ChatAdmins_AdminLabel
                     case .member:
                         label = nil
                 }
-                return ItemListPeerItem(theme: theme, account: arguments.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
                     if let infoController = peerInfoController(account: arguments.account, peer: peer) {
                         arguments.pushController(infoController)
                     }
@@ -431,12 +461,12 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
                 })
-            case let .convertToSupergroup(theme):
-                return ItemListActionItem(theme: theme, title: "Convert to Supergroup", kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
+            case let .convertToSupergroup(theme, title):
+                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.convertToSupergroup()
                 })
-            case let .leave(theme):
-                return ItemListActionItem(theme: theme, title: "Delete and Exit", kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
+            case let .leave(theme, title):
+                return ItemListActionItem(theme: theme, title: title, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.leave()
                 })
             default:
@@ -466,7 +496,7 @@ private struct TemporaryParticipant: Equatable {
 }
 
 private struct GroupInfoState: Equatable {
-    let updatingAvatar: TelegramMediaImageRepresentation?
+    let updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
     let editingState: GroupInfoEditingState?
     let updatingName: ItemListAvatarAndNameInfoItemName?
     let peerIdWithRevealedOptions: PeerId?
@@ -505,7 +535,7 @@ private struct GroupInfoState: Equatable {
         return true
     }
     
-    func withUpdatedUpdatingAvatar(_ updatingAvatar: TelegramMediaImageRepresentation?) -> GroupInfoState {
+    func withUpdatedUpdatingAvatar(_ updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?) -> GroupInfoState {
         return GroupInfoState(updatingAvatar: updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
     }
     
@@ -618,35 +648,45 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     }
     
     if let peer = peerViewMainPeer(view) {
-        let infoState = ItemListAvatarAndNameInfoItemState(editingName: canEditGroupInfo ? nil : state.editingState?.editingName, updatingName: state.updatingName)
+        let infoState = ItemListAvatarAndNameInfoItemState(editingName: canEditGroupInfo ? state.editingState?.editingName : nil, updatingName: state.updatingName)
         entries.append(.info(presentationData.theme, presentationData.strings, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
     }
     
     if canEditGroupInfo {
-        entries.append(GroupInfoEntry.setGroupPhoto(presentationData.theme))
+        entries.append(GroupInfoEntry.setGroupPhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
     }
     
     let peerNotificationSettings: TelegramPeerNotificationSettings = (view.notificationSettings as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
+    let notificationsText: String
+    switch peerNotificationSettings.muteState {
+        case .muted:
+            notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
+        case .unmuted:
+            notificationsText = presentationData.strings.UserInfo_NotificationsEnabled
+    }
     
     if let editingState = state.editingState {
         if let group = view.peers[view.peerId] as? TelegramGroup, case .creator = group.role {
-            entries.append(.adminManagement(presentationData.theme))
+            entries.append(.adminManagement(presentationData.theme, presentationData.strings.GroupInfo_ChatAdmins))
         } else if let cachedChannelData = view.cachedData as? CachedChannelData {
             if isCreator {
-                entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, isPublic: isPublic))
+                entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
+                if !isPublic, let cachedData = view.cachedData as? CachedChannelData {
+                    entries.append(GroupInfoEntry.preHistory(presentationData.theme, "Group History For New Members", cachedData.flags.contains(.preHistoryEnabled)))
+                }
             }
             if canEditGroupInfo {
-                entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, text: editingState.editingDescriptionText))
+                entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_Edit_AboutItem, editingState.editingDescriptionText))
             }
             
-            entries.append(GroupInfoEntry.notifications(presentationData.theme, settings: view.notificationSettings))
+            entries.append(GroupInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsText))
             entries.append(GroupInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: peerNotificationSettings.messageSound, default: globalNotificationSettings.effective.groupChats.sound)))
             
             if let adminCount = cachedChannelData.participantsSummary.adminCount {
-                entries.append(GroupInfoEntry.membersAdmins(presentationData.theme, count: Int(adminCount)))
+                entries.append(GroupInfoEntry.membersAdmins(presentationData.theme, presentationData.strings.Channel_Info_Management, "\(adminCount)"))
             }
             if let bannedCount = cachedChannelData.participantsSummary.bannedCount {
-                entries.append(GroupInfoEntry.membersBlacklist(presentationData.theme, count: Int(bannedCount)))
+                entries.append(GroupInfoEntry.membersBlacklist(presentationData.theme, presentationData.strings.Channel_Info_Banned, "\(bannedCount)"))
             }
         }
     } else {
@@ -659,8 +699,8 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             }
         }
         
-        entries.append(GroupInfoEntry.notifications(presentationData.theme, settings: view.notificationSettings))
-        entries.append(GroupInfoEntry.sharedMedia(presentationData.theme))
+        entries.append(GroupInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsText))
+        entries.append(GroupInfoEntry.sharedMedia(presentationData.theme, presentationData.strings.GroupInfo_SharedMedia))
     }
     
     var canRemoveAnyMember = false
@@ -681,7 +721,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     }
     
     if canAddMembers {
-        entries.append(GroupInfoEntry.addMember(presentationData.theme, editing: state.editingState != nil && canRemoveAnyMember))
+        entries.append(GroupInfoEntry.addMember(presentationData.theme, presentationData.strings.GroupInfo_AddParticipant, editing: state.editingState != nil && canRemoveAnyMember))
     }
     
     if let cachedGroupData = view.cachedData as? CachedGroupData, let participants = cachedGroupData.participants {
@@ -771,7 +811,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 } else {
                     memberStatus = .member
                 }
-                entries.append(GroupInfoEntry.member(presentationData.theme, index: i, peerId: peer.id, peer: peer, presence: peerPresences[peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: peer.id, invitedBy: sortedParticipants[i].invitedBy), editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == peer.id), enabled: !disabledPeerIds.contains(peer.id)))
+                entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, index: i, peerId: peer.id, peer: peer, presence: peerPresences[peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: peer.id, invitedBy: sortedParticipants[i].invitedBy), editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == peer.id), enabled: !disabledPeerIds.contains(peer.id)))
             }
         }
     } else if let cachedChannelData = view.cachedData as? CachedChannelData, let participants = cachedChannelData.topParticipants {
@@ -844,7 +884,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 } else {
                     memberStatus = .member
                 }
-                entries.append(GroupInfoEntry.member(presentationData.theme, index: i, peerId: peer.id, peer: peer, presence: peerPresences[peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: peer.id, invitedBy: nil), editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == peer.id), enabled: !disabledPeerIds.contains(peer.id)))
+                entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, index: i, peerId: peer.id, peer: peer, presence: peerPresences[peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: peer.id, invitedBy: nil), editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == peer.id), enabled: !disabledPeerIds.contains(peer.id)))
             }
         }
     }
@@ -852,13 +892,13 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     if let group = view.peers[view.peerId] as? TelegramGroup {
         if case .Member = group.membership {
             if case .creator = group.role, state.editingState != nil {
-                entries.append(.convertToSupergroup(presentationData.theme))
+                entries.append(.convertToSupergroup(presentationData.theme, presentationData.strings.GroupInfo_ConvertToSupergroup))
             }
-            entries.append(.leave(presentationData.theme))
+            entries.append(.leave(presentationData.theme, presentationData.strings.GroupInfo_DeleteAndExit))
         }
     } else if let channel = view.peers[view.peerId] as? TelegramChannel {
-        if case .member = channel.participationStatus {
-            entries.append(.leave(presentationData.theme))
+        if case .member = channel.participationStatus, let cachedChannelData = view.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount <= 200 {
+            entries.append(.leave(presentationData.theme, presentationData.strings.GroupInfo_DeleteAndExit))
         }
     }
     
@@ -936,9 +976,18 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     actionsDisposable.add(updateAvatarDisposable)
     let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
     
+    let updatePreHistoryDisposable = MetaDisposable()
+    actionsDisposable.add(updatePreHistoryDisposable)
+    
+    let navigateDisposable = MetaDisposable()
+    actionsDisposable.add(navigateDisposable)
+    
     var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
     var updateHiddenAvatarImpl: (() -> Void)?
+    
+    var displayAboutContextMenuImpl: ((String) -> Void)?
+    var aboutLinkActionImpl: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
     let arguments = GroupInfoArguments(account: account, peerId: peerId, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
         let _ = (account.postbox.loadedPeerWithId(peerId) |> take(1) |> deliverOnMainQueue).start(next: { peer in
@@ -958,29 +1007,62 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             }))
         })
     }, changeProfilePhoto: {
-        /*let emptyController = LegacyEmptyController()
-        let navigationController = makeLegacyNavigationController(rootController: emptyController)
-        navigationController.setNavigationBarHidden(true, animated: false)
-        navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
-        
-        let legacyController = LegacyController(presentation: .custom, legacyController: navigationController)
-        
-        presentControllerImpl?(legacyController, nil)
-        let mixin = TGMediaAvatarMenuMixin(context: LegacyControllerContext(controller: nil), parentController: emptyController, hasDeleteButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
-        let _ = currentAvatarMixin.swap(mixin)
-        mixin.didDismiss = { [weak legacyController] in
-            legacyController?.dismiss()
-        }
-        mixin.didFinishWithImage = { image in
-            if let image = image {
-                if let data = UIImageJPEGRepresentation(image, 0.6) {
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
-                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
-                    updateState {
-                        $0.withUpdatedUpdatingAvatar(representation)
+        let _ = (account.postbox.modify { modifier -> Peer? in
+            return modifier.getPeer(peerId)
+            } |> deliverOnMainQueue).start(next: { peer in
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                
+                let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
+                legacyController.statusBar.statusBarStyle = .Ignore
+                
+                let emptyController = LegacyEmptyController(context: legacyController.context)!
+                let navigationController = makeLegacyNavigationController(rootController: emptyController)
+                navigationController.setNavigationBarHidden(true, animated: false)
+                navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
+                
+                legacyController.bind(controller: navigationController)
+                
+                presentControllerImpl?(legacyController, nil)
+                
+                var hasPhotos = false
+                if let peer = peer, !peer.profileImageRepresentations.isEmpty {
+                    hasPhotos = true
+                }
+                
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
+                let _ = currentAvatarMixin.swap(mixin)
+                mixin.didFinishWithImage = { image in
+                    if let image = image {
+                        if let data = UIImageJPEGRepresentation(image, 0.6) {
+                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                            account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                            let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                            updateState {
+                                $0.withUpdatedUpdatingAvatar(.image(representation))
+                            }
+                            updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, resource: resource) |> deliverOnMainQueue).start(next: { result in
+                                switch result {
+                                    case .complete:
+                                        updateState {
+                                            $0.withUpdatedUpdatingAvatar(nil)
+                                        }
+                                    case .progress:
+                                        break
+                                }
+                            }))
+                        }
                     }
-                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, resource: resource) |> deliverOnMainQueue).start(next: { result in
+                }
+                mixin.didFinishWithDelete = {
+                    let _ = currentAvatarMixin.swap(nil)
+                    updateState {
+                        if let profileImage = peer?.smallProfileImage {
+                            return $0.withUpdatedUpdatingAvatar(.image(profileImage))
+                        } else {
+                            return $0.withUpdatedUpdatingAvatar(.none)
+                        }
+                    }
+                    updateAvatarDisposable.set((updatePeerPhoto(account: account, peerId: peerId, resource: nil) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                             case .complete:
                                 updateState {
@@ -991,13 +1073,17 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                         }
                     }))
                 }
-            }
-        }
-        mixin.didDismiss = { [weak legacyController] in
-            let _ = currentAvatarMixin.swap(nil)
-            legacyController?.dismiss()
-        }
-        mixin.present()*/
+                mixin.didDismiss = { [weak legacyController] in
+                    let _ = currentAvatarMixin.swap(nil)
+                    legacyController?.dismiss()
+                }
+                let menuController = mixin.present()
+                if let menuController = menuController {
+                    menuController.customRemoveFromParentViewController = { [weak legacyController] in
+                        legacyController?.dismiss()
+                    }
+                }
+        })
     }, pushController: { controller in
         pushControllerImpl?(controller)
     }, presentController: { controller, presentationArguments in
@@ -1056,6 +1142,8 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             })
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
+    }, togglePreHistory: { value in
+        updatePreHistoryDisposable.set(updateChannelHistoryAvailabilitySettingsInteractively(postbox: account.postbox, network: account.network, peerId: peerId, historyAvailableForNewMembers: value).start())
     }, openSharedMedia: {
         if let controller = peerSharedMediaController(account: account, peerId: peerId) {
             pushControllerImpl?(controller)
@@ -1086,117 +1174,117 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             }
         }
     }, addMember: {
-        var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
-        let contactsController = ContactSelectionController(account: account, title: { $0.GroupInfo_AddParticipantTitle }, confirmation: { peerId in
-            if let confirmationImpl = confirmationImpl {
-                return confirmationImpl(peerId)
-            } else {
-                return .single(false)
-            }
-        })
-        confirmationImpl = { [weak contactsController] peerId in
-            return account.postbox.loadedPeerWithId(peerId)
-            |> deliverOnMainQueue
-            |> mapToSignal { peer in
-                let result = ValuePromise<Bool>()
-                if let contactsController = contactsController {
-                    let alertController = standardTextAlertController(title: nil, text: "Add \(peer.displayTitle)?", actions: [
-                        TextAlertAction(type: .genericAction, title: "Cancel", action: {
-                            result.set(false)
-                        }),
-                        TextAlertAction(type: .defaultAction, title: "OK", action: {
-                            result.set(true)
-                        })
-                    ])
-                    contactsController.present(alertController, in: .window(.root))
-                }
+        let _ = (account.postbox.loadedPeerWithId(peerId)
+            |> deliverOnMainQueue).start(next: { groupPeer in
+                var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
+                var options: [ContactListAdditionalOption] = []
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                var inviteByLinkImpl: (() -> Void)?
+                options.append(ContactListAdditionalOption(title: presentationData.strings.GroupInfo_InviteByLink, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/LinkActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
+                    inviteByLinkImpl?()
+                }))
                 
-                return result.get()
-            }
-        }
-        let addMember = contactsController.result
-            |> deliverOnMainQueue
-            |> mapToSignal { memberId -> Signal<Void, NoError> in
-                if let memberId = memberId {
-                    return account.postbox.peerView(id: memberId)
-                        |> take(1)
-                        |> deliverOnMainQueue
-                        |> mapToSignal { view -> Signal<Void, NoError> in
-                            if let peer = view.peers[memberId] {
-                                updateState { state in
-                                    var found = false
-                                    for participant in state.temporaryParticipants {
-                                        if participant.peer.id == memberId {
-                                            found = true
-                                            break
-                                        }
-                                    }
-                                    if !found {
-                                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                        var temporaryParticipants = state.temporaryParticipants
-                                        temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.peerPresences[memberId], timestamp: timestamp))
-                                        return state.withUpdatedTemporaryParticipants(temporaryParticipants)
-                                    } else {
-                                        return state
-                                    }
-                                }
-                            }
-                            
-                            return addPeerMember(account: account, peerId: peerId, memberId: memberId)
+                let contactsController = ContactSelectionController(account: account, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peerId in
+                    if let confirmationImpl = confirmationImpl {
+                        return confirmationImpl(peerId)
+                    } else {
+                        return .single(false)
+                    }
+                })
+                confirmationImpl = { [weak contactsController] peerId in
+                    return account.postbox.loadedPeerWithId(peerId)
+                    |> deliverOnMainQueue
+                    |> mapToSignal { peer in
+                        let result = ValuePromise<Bool>()
+                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        if let contactsController = contactsController {
+                            let alertController = standardTextAlertController(title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {
+                                    result.set(false)
+                                }),
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                                    result.set(true)
+                                })
+                            ])
+                            contactsController.present(alertController, in: .window(.root))
+                        }
+                        
+                        return result.get()
+                    }
+                }
+                let addMember = contactsController.result
+                    |> deliverOnMainQueue
+                    |> mapToSignal { memberId -> Signal<Void, NoError> in
+                        if let memberId = memberId {
+                            return account.postbox.peerView(id: memberId)
+                                |> take(1)
                                 |> deliverOnMainQueue
-                                |> afterCompleted {
-                                    updateState { state in
-                                        var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
-                                        successfullyAddedParticipantIds.insert(memberId)
-                                        
-                                        return state.withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
-                                    }
-                                } |> `catch` { _ -> Signal<Void, NoError> in
-                                    updateState { state in
-                                        var temporaryParticipants = state.temporaryParticipants
-                                        for i in 0 ..< temporaryParticipants.count {
-                                            if temporaryParticipants[i].peer.id == memberId {
-                                                temporaryParticipants.remove(at: i)
-                                                break
+                                |> mapToSignal { view -> Signal<Void, NoError> in
+                                    if let peer = view.peers[memberId] {
+                                        updateState { state in
+                                            var found = false
+                                            for participant in state.temporaryParticipants {
+                                                if participant.peer.id == memberId {
+                                                    found = true
+                                                    break
+                                                }
+                                            }
+                                            if !found {
+                                                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                                                var temporaryParticipants = state.temporaryParticipants
+                                                temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.peerPresences[memberId], timestamp: timestamp))
+                                                return state.withUpdatedTemporaryParticipants(temporaryParticipants)
+                                            } else {
+                                                return state
                                             }
                                         }
-                                        var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
-                                        successfullyAddedParticipantIds.remove(memberId)
-                                        
-                                        return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
                                     }
                                     
-                                    return .complete()
+                                    return addPeerMember(account: account, peerId: peerId, memberId: memberId)
+                                        |> deliverOnMainQueue
+                                        |> afterCompleted {
+                                            updateState { state in
+                                                var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
+                                                successfullyAddedParticipantIds.insert(memberId)
+                                                
+                                                return state.withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
+                                            }
+                                        } |> `catch` { _ -> Signal<Void, NoError> in
+                                            updateState { state in
+                                                var temporaryParticipants = state.temporaryParticipants
+                                                for i in 0 ..< temporaryParticipants.count {
+                                                    if temporaryParticipants[i].peer.id == memberId {
+                                                        temporaryParticipants.remove(at: i)
+                                                        break
+                                                    }
+                                                }
+                                                var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
+                                                successfullyAddedParticipantIds.remove(memberId)
+                                                
+                                                return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
+                                            }
+                                            
+                                            return .complete()
+                                        }
                                 }
+                        } else {
+                            return .complete()
                         }
-                } else {
-                    return .complete()
+                    }
+                inviteByLinkImpl = { [weak contactsController] in
+                    contactsController?.dismiss()
+                    
+                    presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .privateLink), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 }
-            }
-        presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        addMemberDisposable.set(addMember.start())
+                presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                addMemberDisposable.set(addMember.start())
+        })
     }, removePeer: { memberId in
         let signal = account.postbox.loadedPeerWithId(memberId)
             |> deliverOnMainQueue
             |> mapToSignal { peer -> Signal<Bool, NoError> in
                 let result = ValuePromise<Bool>()
-                
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                
-                let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: "Remove \(peer.displayTitle)?", color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        
-                        result.set(true)
-                    })
-                    ]), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])])
-                presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                
+                result.set(true)
                 return result.get()
             }
             |> mapToSignal { value -> Signal<Void, NoError> in
@@ -1241,17 +1329,6 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
-        let notificationAction: (Int32) -> Void = {  muteUntil in
-            let muteState: PeerMuteState
-            if muteUntil <= 0 {
-                muteState = .unmuted
-            } else if muteUntil == Int32.max {
-                muteState = .muted(until: Int32.max)
-            } else {
-                muteState = .muted(until: Int32(Date().timeIntervalSince1970) + muteUntil)
-            }
-            changeMuteSettingsDisposable.set(changePeerNotificationSettings(account: account, peerId: peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
-        }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.DialogList_DeleteConversationConfirmation, color: .destructive, action: {
@@ -1265,6 +1342,13 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }, displayUsernameContextMenu: { text in
+        let shareController = ShareController(account: account, subject: .url(text))
+        presentControllerImpl?(shareController, nil)
+    }, displayAboutContextMenu: { text in
+        displayAboutContextMenuImpl?(text)
+    }, aboutLinkAction: { action, itemLink in
+        aboutLinkActionImpl?(action, itemLink)
     })
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
@@ -1338,7 +1422,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
                     if let peer = peer as? TelegramGroup {
                         updateState { state in
-                            return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer.indexName), editingDescriptionText: ""))
+                            return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer), editingDescriptionText: ""))
                         }
                     } else if let channel = peer as? TelegramChannel, case .group = channel.info {
                         var text = ""
@@ -1346,7 +1430,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                             text = about
                         }
                         updateState { state in
-                            return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(channel.indexName), editingDescriptionText: text))
+                            return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(channel), editingDescriptionText: text))
                         }
                     }
                 })
@@ -1371,6 +1455,43 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     popToRootImpl = { [weak controller] in
         (controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
     }
+    displayAboutContextMenuImpl = { [weak controller] text in
+        if let strongController = controller {
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            var resultItemNode: ListViewItemNode?
+            let _ = strongController.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListMultilineTextItemNode {
+                    if let tag = itemNode.tag as? GroupInfoEntryTag {
+                        if tag == .about {
+                            resultItemNode = itemNode
+                            return true
+                        }
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(presentationData.strings.Conversation_ContextMenuCopy), action: {
+                    UIPasteboard.general.string = text
+                })])
+                strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
+                    if let resultItemNode = resultItemNode {
+                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0))
+                    } else {
+                        return nil
+                    }
+                }))
+                
+            }
+        }
+    }
+    
+    aboutLinkActionImpl = { [weak controller] action, itemLink in
+        if let controller = controller {
+            handlePeerInfoAboutTextAction(account: account, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+        }
+    }
+    
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {
             var result: (ASDisplayNode, CGRect)?
@@ -1396,4 +1517,131 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         }
     }
     return controller
+}
+
+func handlePeerInfoAboutTextAction(account: Account, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
+    let openPeerImpl: (PeerId) -> Void = { [weak controller] peerId in
+        let peerSignal: Signal<Peer?, NoError>
+        peerSignal = account.postbox.loadedPeerWithId(peerId) |> map { Optional($0) }
+        navigateDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { peer in
+            if let controller = controller, let peer = peer {
+                if let infoController = peerInfoController(account: account, peer: peer) {
+                    (controller.navigationController as? NavigationController)?.pushViewController(infoController)
+                }
+            }
+        }))
+    }
+    
+    let openLinkImpl: (String) -> Void = { [weak controller] url in
+        navigateDisposable.set((resolveUrl(account: account, url: url) |> deliverOnMainQueue).start(next: { result in
+            if let controller = controller {
+                switch result {
+                case let .externalUrl(url):
+                    account.telegramApplicationContext.applicationBindings.openUrl(url)
+                case let .peer(peerId):
+                    openPeerImpl(peerId)
+                case let .channelMessage(peerId, messageId):
+                    if let navigationController = controller.navigationController as? NavigationController {
+                        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), messageId: messageId)
+                    }
+                case let .stickerPack(name):
+                    controller.present(StickerPackPreviewController(account: account, stickerPack: .name(name)), in: .window(.root))
+                case let .instantView(webpage, anchor):
+                    (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(account: account, webPage: webpage, anchor: anchor))
+                case let .join(link):
+                    controller.present(JoinLinkPreviewController(account: account, link: link, navigateToPeer: { peerId in
+                        openPeerImpl(peerId)
+                    }), in: .window(.root))
+                default:
+                    break
+                }
+            }
+        }))
+    }
+    
+    let openPeerMentionImpl: (String) -> Void = { [weak controller] mention in
+        navigateDisposable.set((resolvePeerByName(account: account, name: mention, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
+            if let controller = controller, let peerId = peerId {
+                (controller.navigationController as? NavigationController)?.pushViewController(ChatController(account: account, chatLocation: .peer(peerId), messageId: nil))
+            }
+        }))
+    }
+    
+    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    switch action {
+    case .tap:
+        switch itemLink {
+        case let .url(url):
+            openLinkImpl(url)
+        case let .mention(mention):
+            openPeerMentionImpl(mention)
+        case let .hashtag(peerName, hashtag):
+            let searchController = HashtagSearchController(account: account, peerName: peerName, query: hashtag)
+            (controller.navigationController as? NavigationController)?.pushViewController(searchController)
+        }
+    case .longTap:
+        switch itemLink {
+        case let .url(url):
+            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: url),
+                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    openLinkImpl(url)
+                }),
+                ActionSheetButtonItem(title: presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    UIPasteboard.general.string = url
+                }),
+                ActionSheetButtonItem(title: presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    if let link = URL(string: url) {
+                        let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                    }
+                })
+                ]), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                    ])])
+            controller.present(actionSheet, in: .window(.root))
+        case let .mention(mention):
+            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: mention),
+                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    openPeerMentionImpl(mention)
+                }),
+                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    UIPasteboard.general.string = mention
+                })
+                ]), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                    ])])
+            controller.present(actionSheet, in: .window(.root))
+        case let .hashtag(peerName, hashtag):
+            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: hashtag),
+                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    let searchController = HashtagSearchController(account: account, peerName: peerName, query: hashtag)
+                    (controller.navigationController as? NavigationController)?.pushViewController(searchController)
+                }),
+                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    UIPasteboard.general.string = hashtag
+                })
+                ]), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                    ])])
+            controller.present(actionSheet, in: .window(.root))
+        }
+    }
 }

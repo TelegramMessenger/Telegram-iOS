@@ -135,7 +135,7 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
                     arguments.removePeer(peerId)
                 })
             case let .addItem(theme, text, editing):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: editing, action: {
+                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: editing, action: {
                     arguments.addPeer()
                 })
         }

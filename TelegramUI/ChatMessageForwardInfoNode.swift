@@ -6,6 +6,11 @@ import Postbox
 private let prefixFont = Font.regular(13.0)
 private let peerFont = Font.medium(13.0)
 
+enum ChatMessageForwardInfoType {
+    case bubble(incoming: Bool)
+    case standalone
+}
+
 class ChatMessageForwardInfoNode: ASDisplayNode {
     private var textNode: TextNode?
     
@@ -13,22 +18,35 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
         super.init()
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ theme: PresentationTheme, _ incoming: Bool, _ peer: Peer, _ authorPeer: Peer?, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer, _ authorName: String?, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode) {
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         
-        return { theme, incoming, peer, authorPeer, constrainedSize in
-            let prefix: NSString = "Forwarded Message\nFrom: "
+        return { theme, strings, type, peer, authorName, constrainedSize in
             let peerString: String
-            if let authorPeer = authorPeer {
-                peerString = "\(peer.displayTitle) (\(authorPeer.displayTitle))"
+            if let authorName = authorName {
+                peerString = "\(peer.displayTitle) (\(authorName))"
             } else {
                 peerString = peer.displayTitle
             }
-            let completeString: NSString = "\(prefix)\(peerString)" as NSString
-            let color = incoming ? theme.chat.bubble.incomingAccentColor : theme.chat.bubble.outgoingAccentColor
-            let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedStringKey.foregroundColor: color, NSAttributedStringKey.font: prefixFont])
-            string.addAttributes([NSAttributedStringKey.font: peerFont], range: NSMakeRange(prefix.length, completeString.length - prefix.length))
-            let (textLayout, textApply) = textNodeLayout(string, nil, 2, .end, constrainedSize, .natural, nil, UIEdgeInsets())
+            
+            let titleColor: UIColor
+            let completeSourceString: (String, [(Int, NSRange)])
+            
+            switch type {
+                case let .bubble(incoming):
+                    titleColor = incoming ? theme.chat.bubble.incomingAccentTextColor : theme.chat.bubble.outgoingAccentTextColor
+                    completeSourceString = strings.Message_ForwardedMessage(peerString)
+                case .standalone:
+                    titleColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
+                    completeSourceString = strings.Message_ForwardedMessageShort(peerString)
+            }
+            
+            let completeString: NSString = completeSourceString.0 as NSString
+            let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedStringKey.foregroundColor: titleColor, NSAttributedStringKey.font: prefixFont])
+            if let range = completeSourceString.1.first?.1 {
+                string.addAttributes([NSAttributedStringKey.font: peerFont], range: range)
+            }
+            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             return (textLayout.size, {
                 let node: ChatMessageForwardInfoNode

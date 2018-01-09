@@ -25,8 +25,6 @@ typedef enum {
     
     GLKView *_glkView;
     
-    UIImageView *_startArrow;
-    
     NSArray *_headlines;
     NSArray *_descriptions;
     
@@ -35,13 +33,14 @@ typedef enum {
     NSInteger _currentPage;
     
     UIScrollView *_pageScrollView;
-    UIButton *_startButton;
     UIPageControl *_pageControl;
     
     NSTimer *_updateAndRenderTimer;
     
     BOOL _isOpenGLLoaded;
 }
+
+- (instancetype)initWithBackroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor;
 
 @property (nonatomic, copy) void (^startMessaging)();
 

@@ -1,10 +1,13 @@
 import Foundation
 import UIKit
+import Postbox
+import TelegramCore
 
 enum ChatNavigationButtonAction {
     case openChatInfo
     case clearHistory
     case cancelMessageSelection
+    case search
 }
 
 struct ChatNavigationButton: Equatable {
@@ -16,23 +19,39 @@ struct ChatNavigationButton: Equatable {
     }
 }
 
-func leftNavigationButtonForChatInterfaceState(_ chatInterfaceState: ChatInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?) -> ChatNavigationButton? {
-    if let _ = chatInterfaceState.selectionState {
+func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?) -> ChatNavigationButton? {
+    if let _ = presentationInterfaceState.interfaceState.selectionState {
         if let currentButton = currentButton, currentButton.action == .clearHistory {
             return currentButton
-        } else {
-            return ChatNavigationButton(action: .clearHistory, buttonItem: UIBarButtonItem(title: strings.Conversation_ClearAll, style: .plain, target: target, action: selector))
+        } else if let peer = presentationInterfaceState.peer {
+            let canClear: Bool
+            if peer is TelegramUser || peer is TelegramGroup || peer is TelegramSecretChat {
+                canClear = true
+            } else if let peer = peer as? TelegramChannel, case .group = peer.info, peer.addressName == nil {
+                canClear = true
+            } else {
+                canClear = false
+            }
+            if canClear {
+                return ChatNavigationButton(action: .clearHistory, buttonItem: UIBarButtonItem(title: strings.Conversation_ClearAll, style: .plain, target: target, action: selector))
+            }
         }
     }
     return nil
 }
 
-func rightNavigationButtonForChatInterfaceState(_ chatInterfaceState: ChatInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
-    if let _ = chatInterfaceState.selectionState {
+func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
+    if let _ = presentationInterfaceState.interfaceState.selectionState {
         if let currentButton = currentButton, currentButton.action == .cancelMessageSelection {
             return currentButton
         } else {
             return ChatNavigationButton(action: .cancelMessageSelection, buttonItem: UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: target, action: selector))
+        }
+    }
+    
+    if let peer = presentationInterfaceState.peer {
+        if presentationInterfaceState.accountPeerId == peer.id {
+            return ChatNavigationButton(action: .search, buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector))
         }
     }
 

@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
+import LocalAuthentication
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOn: () -> Void
@@ -153,23 +154,23 @@ private struct PasscodeOptionsData: Equatable {
     }
 }
 
-private func autolockStringForTimeout(_ timeout: Int32?) -> String {
+private func autolockStringForTimeout(strings: PresentationStrings, timeout: Int32?) -> String {
     if let timeout = timeout {
         if timeout == 10 {
             return "If away for 10 seconds"
         } else if timeout == 1 * 60 {
-            return "If away for 1 min"
+            return strings.PasscodeSettings_AutoLock_IfAwayFor_1minute
         } else if timeout == 5 * 60 {
-            return "If away for 5 min"
+            return strings.PasscodeSettings_AutoLock_IfAwayFor_5minutes
         } else if timeout == 1 * 60 * 60 {
-            return "If away for 1 hour"
+            return strings.PasscodeSettings_AutoLock_IfAwayFor_1hour
         } else if timeout == 5 * 60 * 60 {
-            return "If away for 5 hours"
+            return strings.PasscodeSettings_AutoLock_IfAwayFor_5hours
         } else {
             return ""
         }
     } else {
-        return "Disabled"
+        return strings.PasscodeSettings_AutoLock_Disabled
     }
 }
 
@@ -184,8 +185,15 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
             entries.append(.togglePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_TurnPasscodeOff, true))
             entries.append(.changePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_ChangePasscode))
             entries.append(.settingInfo(presentationData.theme, presentationData.strings.PasscodeSettings_Help))
-            entries.append(.autoLock(presentationData.theme, presentationData.strings.PasscodeSettings_AutoLock, autolockStringForTimeout(passcodeOptionsData.presentationSettings.autolockTimeout)))
-            entries.append(.touchId(presentationData.theme, presentationData.strings.PasscodeSettings_UnlockWithTouchId, passcodeOptionsData.presentationSettings.enableBiometrics))
+            entries.append(.autoLock(presentationData.theme, presentationData.strings.PasscodeSettings_AutoLock, autolockStringForTimeout(strings: presentationData.strings, timeout: passcodeOptionsData.presentationSettings.autolockTimeout)))
+            if let biometricAuthentication = LocalAuth.biometricAuthentication {
+                switch biometricAuthentication {
+                    case .touchId:
+                        entries.append(.touchId(presentationData.theme, presentationData.strings.PasscodeSettings_UnlockWithTouchId, passcodeOptionsData.presentationSettings.enableBiometrics))
+                    case .faceId:
+                        entries.append(.touchId(presentationData.theme, presentationData.strings.PasscodeSettings_UnlockWithFaceId, passcodeOptionsData.presentationSettings.enableBiometrics))
+                }
+            }
     }
     
     return entries
@@ -213,16 +221,22 @@ func passcodeOptionsController(account: Account) -> ViewController {
     
     let arguments = PasscodeOptionsControllerArguments(turnPasscodeOn: {
         var dismissImpl: (() -> Void)?
-        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true))
+        
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
         let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
             if let result = result {
                 let challenge = PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil)
                 let _ = account.postbox.modify({ modifier -> Void in
                     modifier.setAccessChallengeData(challenge)
+                    updatePresentationPasscodeSettingsInternal(modifier: modifier, { current in
+                        return current.withUpdatedAutolockTimeout(1 * 60 * 60)
+                    })
                 }).start()
                 
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-                    passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge)))
+                    passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge).withUpdatedPresentationSettings(data.presentationSettings.withUpdatedAutolockTimeout(1 * 60 * 60))))
                 })
                 
                 dismissImpl?()
@@ -261,7 +275,10 @@ func passcodeOptionsController(account: Account) -> ViewController {
         presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, changePasscode: {
         var dismissImpl: (() -> Void)?
-        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true))
+        
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
         let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
             if let result = result {
                 let _ = account.postbox.modify({ modifier -> Void in
@@ -311,7 +328,7 @@ func passcodeOptionsController(account: Account) -> ViewController {
             if value != 0 {
                 t = value
             }
-            items.append(ActionSheetButtonItem(title: autolockStringForTimeout(t), color: .accent, action: { [weak actionSheet] in
+            items.append(ActionSheetButtonItem(title: autolockStringForTimeout(strings: presentationData.strings, timeout: t), color: .accent, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
                 setAction(t)
@@ -369,7 +386,10 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
                 attemptData = TGPasscodeEntryAttemptData(numberOfInvalidAttempts: Int(attempts.count), dateOfLastInvalidAttempt: Double(attempts.timestamp))
             }
             var dismissImpl: (() -> Void)?
-            let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true))
+            
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            
+            let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
             let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeVerifySimple, cancelEnabled: true, allowTouchId: false, attemptData: attemptData, completion: { value in
                 if value != nil {
                     completion(false)

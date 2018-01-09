@@ -45,6 +45,14 @@ extension String {
         return emojiScalars.map { String($0) }.reduce("", +)
     }
     
+    var firstEmoji: String {
+        if let first = emojiScalars.first {
+            return String(first)
+        } else {
+            return ""
+        }
+    }
+    
     var emojis: [String] {
         var scalars: [[UnicodeScalar]] = []
         var currentScalarSet: [UnicodeScalar] = []

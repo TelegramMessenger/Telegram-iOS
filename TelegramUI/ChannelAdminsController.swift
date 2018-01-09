@@ -221,7 +221,8 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                                 baseFlags = .broadcastSpecific
                             }
                             let flags = adminInfo.rights.flags.intersection(baseFlags)
-                            peerText = strings.Channel_Management_LabelRights(Int32(flags.count))
+                            peerText = ""
+                            //peerText = strings.Channel_Management_LabelRights(Int32(flags.count))
                         } else {
                             peerText = ""
                         }
@@ -229,13 +230,13 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                             arguments.openAdmin(participant.participant)
                         }
                 }
-                return ItemListPeerItem(theme: theme, account: arguments.account, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removeAdmin(peerId)
                 })
             case let .addAdmin(theme, text, editing):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: editing, action: {
+                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: editing, action: {
                     arguments.addAdmin()
                 })
             case let .adminsInfo(theme, text):
@@ -347,10 +348,10 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 switch selectedType {
                     case .everyoneCanAddMembers:
                         selectedTypeValue = presentationData.strings.ChannelMembers_WhoCanAddMembers_AllMembers
-                        infoText = presentationData.strings.ChannelMembers_AllMembersMayInviteOnHelp
+                        infoText = presentationData.strings.ChannelMembers_WhoCanAddMembersAllHelp
                     case .adminsCanAddMembers:
                         selectedTypeValue = presentationData.strings.ChannelMembers_WhoCanAddMembers_Admins
-                        infoText = presentationData.strings.ChannelMembers_AllMembersMayInviteOffHelp
+                        infoText = presentationData.strings.ChannelMembers_WhoCanAddMembersAdminsHelp
                 }
                 
                 entries.append(.administrationType(presentationData.theme, presentationData.strings.ChannelMembers_WhoCanAddMembers, selectedTypeValue))
