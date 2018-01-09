@@ -380,6 +380,8 @@
 		D0AB0B941D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B931D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift */; };
 		D0AB0B961D662F0B002C78E7 /* ManagedChatListHoles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B951D662F0B002C78E7 /* ManagedChatListHoles.swift */; };
 		D0AB0B9A1D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B991D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift */; };
+		D0AD02E31FFFA14800C1DCFF /* PeerLiveLocationsContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD02E21FFFA14800C1DCFF /* PeerLiveLocationsContext.swift */; };
+		D0AD02E41FFFA14800C1DCFF /* PeerLiveLocationsContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD02E21FFFA14800C1DCFF /* PeerLiveLocationsContext.swift */; };
 		D0AF32221FAC95C20097362B /* StandaloneUploadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32211FAC95C20097362B /* StandaloneUploadedMedia.swift */; };
 		D0AF32231FAC95C20097362B /* StandaloneUploadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32211FAC95C20097362B /* StandaloneUploadedMedia.swift */; };
 		D0AF32311FACEDEC0097362B /* CoreSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32301FACEDEC0097362B /* CoreSettings.swift */; };
@@ -836,6 +838,7 @@
 		D0AB0B951D662F0B002C78E7 /* ManagedChatListHoles.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedChatListHoles.swift; sourceTree = "<group>"; };
 		D0AB0B991D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizePeerReadStates.swift; sourceTree = "<group>"; };
 		D0AC49491D7097A400AA55DA /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0AD02E21FFFA14800C1DCFF /* PeerLiveLocationsContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerLiveLocationsContext.swift; sourceTree = "<group>"; };
 		D0AF32211FAC95C20097362B /* StandaloneUploadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandaloneUploadedMedia.swift; sourceTree = "<group>"; };
 		D0AF32301FACEDEC0097362B /* CoreSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreSettings.swift; sourceTree = "<group>"; };
 		D0AF32341FAE8C6B0097362B /* MultipeerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipeerManager.swift; sourceTree = "<group>"; };
@@ -1476,6 +1479,7 @@
 				D021E0E01DB5400200C6B04F /* Sticker Management */,
 				D05A32DF1E6F096B002760B4 /* Settings */,
 				D08CAA8A1ED81EA10000FDA8 /* Localization */,
+				D0AD02E61FFFA15C00C1DCFF /* Live Location */,
 				D0AF32331FAE8C540097362B /* Multipeer */,
 				D03B0E3A1D631E4400955575 /* Supporting Files */,
 				D09D8C041D4FAB1D0081DBEC /* TelegramCore.h */,
@@ -1491,6 +1495,14 @@
 				D09D8C111D4FAB1D0081DBEC /* Info.plist */,
 			);
 			path = TelegramCoreTests;
+			sourceTree = "<group>";
+		};
+		D0AD02E61FFFA15C00C1DCFF /* Live Location */ = {
+			isa = PBXGroup;
+			children = (
+				D0AD02E21FFFA14800C1DCFF /* PeerLiveLocationsContext.swift */,
+			);
+			name = "Live Location";
 			sourceTree = "<group>";
 		};
 		D0AF32331FAE8C540097362B /* Multipeer */ = {
@@ -1941,6 +1953,7 @@
 				D05452071E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */,
 				D01C7F041EFC1C49008305F1 /* DeviceContact.swift in Sources */,
 				D0F7AB2F1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
+				D0AD02E31FFFA14800C1DCFF /* PeerLiveLocationsContext.swift in Sources */,
 				D0B843971DA7FBBC005F29E1 /* ChangePeerNotificationSettings.swift in Sources */,
 				D0448CA21E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */,
 				D08CAA871ED81DD40000FDA8 /* LocalizationInfo.swift in Sources */,
@@ -2277,6 +2290,7 @@
 				D0DFD5E01FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift in Sources */,
 				D0B418991D7E0580004562A4 /* TelegramMediaMap.swift in Sources */,
 				D0561DEB1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */,
+				D0AD02E41FFFA14800C1DCFF /* PeerLiveLocationsContext.swift in Sources */,
 				D0613FCB1E60440600202CDB /* InvitationLinks.swift in Sources */,
 				D0B844471DAB91FD005F29E1 /* ManagedServiceViews.swift in Sources */,
 				D0F3A8A91E82CD7D00B4C64C /* UpdatePeerChatInterfaceState.swift in Sources */,

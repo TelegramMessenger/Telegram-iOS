@@ -64,7 +64,7 @@ func messageContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods
     } else if let media = media.first {
         if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
             if let reference = image.reference, case let .cloud(id, accessHash) = reference {
-                return .ready(.media(Api.InputMedia.inputMediaPhoto(id: Api.InputPhoto.inputPhoto(id: id, accessHash: accessHash), caption: text)))
+                return .ready(.media(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: id, accessHash: accessHash), caption: text, ttlSeconds: nil)))
             } else {
                 return .upload(uploadedMediaImageContent(network: network, postbox: postbox, peerId: peerId, image: image, text: text, autoremoveAttribute: autoremoveAttribute))
             }
@@ -179,19 +179,20 @@ private func maybeCacheUploadedResource(postbox: Postbox, key: CachedSentMediaRe
 
 private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerId: PeerId, image: TelegramMediaImage, text: String, autoremoveAttribute: AutoremoveTimeoutMessageAttribute?) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
     if let largestRepresentation = largestImageRepresentation(image.representations) {
-        let predownloadedResource: Signal<PredownloadedResource, PendingMessageUploadError>
-        if autoremoveAttribute == nil {
-            predownloadedResource = maybePredownloadedImageResource(postbox: postbox, resource: largestRepresentation.resource)
-        } else {
-            predownloadedResource = .single(.none)
-        }
+        let predownloadedResource: Signal<PredownloadedResource, PendingMessageUploadError> = maybePredownloadedImageResource(postbox: postbox, resource: largestRepresentation.resource)
         return predownloadedResource
             |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                 var referenceKey: CachedSentMediaReferenceKey?
                 switch result {
                     case let .media(media):
                         if let image = media as? TelegramMediaImage, let reference = image.reference, case let .cloud(id, accessHash) = reference {
-                           return .single(.progress(1.0)) |> then(.single(.content(.media(.inputMediaPhoto(id: .inputPhoto(id: id, accessHash: accessHash), caption: text)))))
+                            var flags: Int32 = 0
+                            var ttlSeconds: Int32?
+                            if let autoremoveAttribute = autoremoveAttribute {
+                                flags |= 1 << 1
+                                ttlSeconds = autoremoveAttribute.timeout
+                            }
+                            return .single(.progress(1.0)) |> then(.single(.content(.media(.inputMediaPhoto(flags: flags, id: .inputPhoto(id: id, accessHash: accessHash), caption: text, ttlSeconds: ttlSeconds)))))
                         }
                     case let .localReference(key):
                         referenceKey = key
@@ -227,7 +228,13 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerI
                                                 switch result {
                                                     case let .messageMediaPhoto(_, photo, _, _):
                                                         if let photo = photo, let mediaImage = telegramMediaImageFromApiPhoto(photo), let reference = mediaImage.reference, case let .cloud(id, accessHash) = reference {
-                                                            return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(.media(.inputMediaPhoto(id: .inputPhoto(id: id, accessHash: accessHash), caption: text))), media: mediaImage)
+                                                            var flags: Int32 = 0
+                                                            var ttlSeconds: Int32?
+                                                            if let autoremoveAttribute = autoremoveAttribute {
+                                                                flags |= 1 << 1
+                                                                ttlSeconds = autoremoveAttribute.timeout
+                                                            }
+                                                            return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(.media(.inputMediaPhoto(flags: flags, id: .inputPhoto(id: id, accessHash: accessHash), caption: text, ttlSeconds: ttlSeconds))), media: mediaImage)
                                                         }
                                                     default:
                                                         break

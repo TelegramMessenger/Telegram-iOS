@@ -566,21 +566,11 @@ public class Account {
                     }
                 }
                 
-                let appVersionString = "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] ?? ""))"
-                
-                #if os(macOS)
-                    let pInfo = ProcessInfo.processInfo
-                    let systemVersion = pInfo.operatingSystemVersionString
-                #else
-                    let systemVersion = UIDevice.current.systemVersion
-                #endif
-                
                 var appSandbox: Api.Bool = .boolFalse
                 #if DEBUG
                     appSandbox = .boolTrue
                 #endif
-                
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhone", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, otherUids: []))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
@@ -599,21 +589,12 @@ public class Account {
                     }
                 }
                 
-                let appVersionString = "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] ?? ""))"
-                
-                #if os(macOS)
-                    let pInfo = ProcessInfo.processInfo
-                    let systemVersion = pInfo.operatingSystemVersionString
-                #else
-                    let systemVersion = UIDevice.current.systemVersion
-                #endif
-                
                 var appSandbox: Api.Bool = .boolFalse
                 #if DEBUG
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, deviceModel: "iPhone", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
+                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, otherUids: []))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()

@@ -13,18 +13,18 @@ final class AccountInitialState {
     let state: AuthorizedAccountState.State
     let peerIds: Set<PeerId>
     let messageIds: Set<MessageId>
-    let channelStates: [PeerId: ChannelState]
+    let chatStates: [PeerId: PeerChatState]
     //let topCloudMessageIds: [PeerId: MessageId]
     let peerNotificationSettings: [PeerId: PeerNotificationSettings]
     let peerIdsWithNewMessages: Set<PeerId>
     let locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]
     let cloudReadStates: [PeerId: PeerReadState]
     
-    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, messageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], cloudReadStates: [PeerId: PeerReadState]) {
+    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, messageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], cloudReadStates: [PeerId: PeerReadState]) {
         self.state = state
         self.peerIds = peerIds
         self.messageIds = messageIds
-        self.channelStates = channelStates
+        self.chatStates = chatStates
         self.peerIdsWithNewMessages = peerIdsWithNewMessages
         self.peerNotificationSettings = peerNotificationSettings
         self.locallyGeneratedMessageTimestamps = locallyGeneratedMessageTimestamps
@@ -98,7 +98,7 @@ struct AccountMutableState {
     
     var state: AuthorizedAccountState.State
     var peers: [PeerId: Peer]
-    var channelStates: [PeerId: ChannelState]
+    var chatStates: [PeerId: PeerChatState]
     var peerNotificationSettings: [PeerId: PeerNotificationSettings]
     var storedMessages: Set<MessageId>
     var readInboxMaxIds: [PeerId: MessageId]
@@ -115,18 +115,18 @@ struct AccountMutableState {
         self.peers = initialPeers
         self.storedMessages = initialStoredMessages
         self.readInboxMaxIds = initialReadInboxMaxIds
-        self.channelStates = initialState.channelStates
+        self.chatStates = initialState.chatStates
         self.peerNotificationSettings = initialState.peerNotificationSettings
         self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
         self.branchOperationIndex = 0
     }
     
-    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings], storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], branchOperationIndex: Int) {
+    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
         self.peers = peers
-        self.channelStates = channelStates
+        self.chatStates = chatStates
         self.storedMessages = storedMessages
         self.peerNotificationSettings = peerNotificationSettings
         self.readInboxMaxIds = readInboxMaxIds
@@ -135,7 +135,7 @@ struct AccountMutableState {
     }
     
     func branch() -> AccountMutableState {
-        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, channelStates: self.channelStates, peerNotificationSettings: self.peerNotificationSettings, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, branchOperationIndex: self.operations.count)
+        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, chatStates: self.chatStates, peerNotificationSettings: self.peerNotificationSettings, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, branchOperationIndex: self.operations.count)
     }
     
     mutating func merge(_ other: AccountMutableState) {
@@ -313,7 +313,7 @@ struct AccountMutableState {
             case let .UpdateState(state):
                 self.state = state
             case let .UpdateChannelState(peerId, channelState):
-                self.channelStates[peerId] = channelState
+                self.chatStates[peerId] = channelState
             case let .UpdateNotificationSettings(subject, notificationSettings):
                 if case let .peer(peerId) = subject {
                     self.peerNotificationSettings[peerId] = notificationSettings

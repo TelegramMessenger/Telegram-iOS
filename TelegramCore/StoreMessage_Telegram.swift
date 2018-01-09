@@ -81,6 +81,8 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                 default:
                     break
             }
+        } else if let location = attachment as? TelegramMediaMap, location.liveBroadcastingTimeout != nil {
+            tags.insert(.liveLocation)
         }
     }
     if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.webPage) {
@@ -492,6 +494,25 @@ extension StoreMessage {
                     let attribute = TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities))
                     entitiesAttribute = attribute
                     attributes.append(attribute)
+                } else {
+                    var noEntities = false
+                    loop: for media in medias {
+                        switch media {
+                            case _ as TelegramMediaImage,
+                                 _ as TelegramMediaFile,
+                                 _ as TelegramMediaContact,
+                                 _ as TelegramMediaMap:
+                                noEntities = true
+                            break loop
+                            default:
+                                break
+                        }
+                    }
+                    if !noEntities {
+                        let attribute = TextEntitiesMessageAttribute(entities: [])
+                        entitiesAttribute = attribute
+                        attributes.append(attribute)
+                    }
                 }
                 
                 var storeFlags = StoreMessageFlags()

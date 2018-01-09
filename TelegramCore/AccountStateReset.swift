@@ -118,7 +118,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                 
                 if let apiChannelPts = apiChannelPts {
                     chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: apiChannelPts)
-                } else {
+                } else if peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudUser {
                     switch state {
                         case let .state(pts, _, _, _, _):
                             chatStates[peerId] = RegularChatState(invalidatedPts: pts)
