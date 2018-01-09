@@ -190,7 +190,9 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
   _cropRect = CGRectMake(0.5, 0.5, 0, 0);
   _cropDisplayBounds = CGRectNull;
   _placeholderColor = ASDisplayNodeDefaultPlaceholderColor();
+#ifndef MINIMAL_ASDK
   _animatedImageRunLoopMode = ASAnimatedImageDefaultRunLoopMode;
+#endif
   
   return self;
 }
@@ -198,7 +200,9 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 - (void)dealloc
 {
   // Invalidate all components around animated images
+#ifndef MINIMAL_ASDK
   [self invalidateAnimatedImage];
+#endif
 }
 
 #pragma mark - Placeholder

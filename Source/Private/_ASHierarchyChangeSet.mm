@@ -15,6 +15,8 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <AsyncDisplayKit/_ASHierarchyChangeSet.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/NSIndexSet+ASHelpers.h>
@@ -1007,3 +1009,5 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType)
 }
 
 @end
+
+#endif

@@ -80,6 +80,8 @@
   BOOL _shouldBlockPanGesture;
 }
 
+@property (nonatomic, copy) bool (^shouldPaste)();
+
 @end
 
 @implementation ASPanningOverriddenUITextView
@@ -103,6 +105,30 @@
   [super setContentSize:contentSize];
 }
 
+- (BOOL)canPerformAction:(SEL)action withSender:(id)sender
+{
+  if (action == @selector(paste:))
+    return true;
+  
+  if (action == @selector(toggleUnderline:)) {
+    return false;
+  }
+  
+  return [super canPerformAction:action withSender:sender];
+}
+
+- (id)targetForAction:(SEL)action withSender:(id)__unused sender
+{
+  return [super targetForAction:action withSender:sender];
+}
+
+- (void)paste:(id)sender
+{
+  if (_shouldPaste == nil || _shouldPaste()) {
+    [super paste:sender];
+  }
+}
+
 #endif
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
@@ -120,7 +146,7 @@
 @end
 
 #pragma mark -
-@interface ASEditableTextNode () <UITextViewDelegate, NSLayoutManagerDelegate>
+@interface ASEditableTextNode () <UITextViewDelegate, NSLayoutManagerDelegate, UIGestureRecognizerDelegate>
 {
   @private
   // Configuration.
@@ -227,7 +253,18 @@
   configureTextView(_placeholderTextKitComponents.textView);
 
   // Create and configure our text view.
-  _textKitComponents.textView = [[ASPanningOverriddenUITextView alloc] initWithFrame:CGRectZero textContainer:_textKitComponents.textContainer];
+  ASPanningOverriddenUITextView *textView = [[ASPanningOverriddenUITextView alloc] initWithFrame:CGRectZero textContainer:_textKitComponents.textContainer];
+  __weak ASEditableTextNode *weakSelf = self;
+  textView.shouldPaste = ^bool{
+    __strong ASEditableTextNode *strongSelf = weakSelf;
+    if (strongSelf != nil) {
+      if ([strongSelf->_delegate respondsToSelector:@selector(editableTextNodeShouldPaste:)]) {
+        return [strongSelf->_delegate editableTextNodeShouldPaste:self];
+      }
+    }
+    return true;
+  };
+  _textKitComponents.textView = textView;
   _textKitComponents.textView.scrollEnabled = _scrollEnabled;
   _textKitComponents.textView.delegate = self;
   #if TARGET_OS_IOS
@@ -241,6 +278,32 @@
     
   // once view is loaded, setters set directly on view
   _textInputTraits = nil;
+  
+  UITapGestureRecognizer *tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGesture:)];
+  tapRecognizer.cancelsTouchesInView = false;
+  tapRecognizer.delaysTouchesBegan = false;
+  tapRecognizer.delaysTouchesEnded = false;
+  tapRecognizer.delegate = self;
+  [self.view addGestureRecognizer:tapRecognizer];
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+  return true;
+}
+
+- (void)tapGesture:(UITapGestureRecognizer *)recognizer {
+  static Class promptClass = nil;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    promptClass = NSClassFromString([[NSString alloc] initWithFormat:@"%@AutocorrectInlinePrompt", @"UI"]);
+  });
+  
+  if (recognizer.state == UIGestureRecognizerStateEnded) {
+    UIView *result = [self hitTest:[recognizer locationInView:self.view] withEvent:nil];
+    if (result != nil && [result class] == promptClass) {
+      [self dropAutocorrection];
+    }
+  }
 }
 
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize
@@ -454,6 +517,15 @@
     [_textKitComponents.textView setSelectedRange:selectedRange];
     _isPreservingSelection = NO;
   }
+}
+
+- (void)dropAutocorrection {
+  _isPreservingSelection = YES; // Used in -textViewDidChangeSelection: to avoid informing our delegate about our preservation.
+  
+  [_textKitComponents.textView.inputDelegate textWillChange:_textKitComponents.textView];
+  [_textKitComponents.textView.inputDelegate textDidChange:_textKitComponents.textView];
+  
+  _isPreservingSelection = NO;
 }
 
 #pragma mark - Core

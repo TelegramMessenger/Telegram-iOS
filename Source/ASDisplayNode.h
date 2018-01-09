@@ -793,6 +793,7 @@ extern NSInteger const ASDefaultDrawingPriority;
  * @see [ASDisplayNode(Subclassing) calculateLayoutThatFits:]
  */
 - (ASLayout *)layoutThatFits:(ASSizeRange)constrainedSize;
+- (CGSize)measure:(CGSize)constrainedSize;
 
 @end
 

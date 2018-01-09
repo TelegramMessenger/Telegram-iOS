@@ -61,6 +61,10 @@
   return [self layoutThatFits:constrainedSize parentSize:constrainedSize.max];
 }
 
+- (CGSize)measure:(CGSize)constrainedSize {
+  return [self layoutThatFits:ASSizeRangeMake(CGSizeZero, constrainedSize)].size;
+}
+
 - (ASLayout *)layoutThatFits:(ASSizeRange)constrainedSize parentSize:(CGSize)parentSize
 {
   ASDN::MutexLocker l(__instanceLock__);

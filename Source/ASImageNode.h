@@ -20,7 +20,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+#ifndef MINIMAL_ASDK
 @protocol ASAnimatedImageProtocol;
+#endif
 
 /**
  * Image modification block.  Use to transform an image before display.
@@ -143,6 +145,7 @@ typedef UIImage * _Nullable (^asimagenode_modification_block_t)(UIImage *image);
 
 @end
 
+#ifndef MINIMAL_ASDK
 @interface ASImageNode (AnimatedImage)
 
 /**
@@ -183,6 +186,7 @@ typedef UIImage * _Nullable (^asimagenode_modification_block_t)(UIImage *image);
 - (void)animatedImageSet:(id <ASAnimatedImageProtocol>)newAnimatedImage previousAnimatedImage:(id <ASAnimatedImageProtocol>)previousAnimatedImage;
 
 @end
+#endif
 
 @interface ASImageNode (Unavailable)
 

@@ -15,6 +15,8 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <Foundation/Foundation.h>
 #import <vector>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
@@ -217,3 +219,5 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType);
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif

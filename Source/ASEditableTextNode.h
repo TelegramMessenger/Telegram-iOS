@@ -139,6 +139,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readwrite, assign) BOOL enablesReturnKeyAutomatically;                  // default is NO (when YES, will automatically disable return key when text widget has zero-length contents, and will automatically enable when text widget has non-zero-length contents)
 @property(nonatomic, readwrite, assign, getter=isSecureTextEntry) BOOL secureTextEntry;      // default is NO
 
+- (void)dropAutocorrection;
+
 @end
 
 @interface ASEditableTextNode (Unavailable)
@@ -206,6 +208,7 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)editableTextNodeDidFinishEditing:(ASEditableTextNode *)editableTextNode;
 
+- (BOOL)editableTextNodeShouldPaste:(ASEditableTextNode *)editableTextNode;
 
 @end
 

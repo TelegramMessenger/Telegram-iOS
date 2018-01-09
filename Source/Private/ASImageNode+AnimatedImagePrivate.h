@@ -21,6 +21,7 @@ extern NSString *const ASAnimatedImageDefaultRunLoopMode;
 
 @interface ASImageNode ()
 {
+#ifndef MINIMAL_ASDK
   ASDN::Mutex _displayLinkLock;
   id <ASAnimatedImageProtocol> _animatedImage;
   BOOL _animatedImagePaused;
@@ -31,21 +32,24 @@ extern NSString *const ASAnimatedImageDefaultRunLoopMode;
   //accessed on main thread only
   CFTimeInterval _playHead;
   NSUInteger _playedLoops;
+#endif
 }
 
 @property (nonatomic, assign) CFTimeInterval lastDisplayLinkFire;
 
 @end
 
+#ifndef MINIMAL_ASDK
 @interface ASImageNode (AnimatedImagePrivate)
 
 - (void)_locked_setAnimatedImage:(id <ASAnimatedImageProtocol>)animatedImage;
 
 @end
 
-
 @interface ASImageNode (AnimatedImageInvalidation)
 
 - (void)invalidateAnimatedImage;
 
 @end
+
+#endif

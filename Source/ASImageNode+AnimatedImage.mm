@@ -15,6 +15,8 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <AsyncDisplayKit/ASImageNode.h>
 
 #import <AsyncDisplayKit/ASAssert.h>
@@ -150,7 +152,6 @@ NSString *const ASAnimatedImageDefaultRunLoopMode = NSRunLoopCommonModes;
     [(ASNetworkImageNode *)self _locked_setDefaultImage:coverImage];
   } else if (_displayLink == nil || _displayLink.paused == YES) {
     [self _locked_setImage:coverImage];
-#ifndef MINIMAL_ASDK
   }
 #endif
 }
@@ -395,3 +396,5 @@ NSString *const ASAnimatedImageDefaultRunLoopMode = NSRunLoopCommonModes;
 }
 
 @end
+
+#endif
