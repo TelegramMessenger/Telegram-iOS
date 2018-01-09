@@ -3,7 +3,7 @@
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 [![Slack Status](https://slack.hockeyapp.net/badge.svg)](https://slack.hockeyapp.net)
 
-## Version 5.1.1
+## Version 5.1.2
 
 HockeySDK-iOS implements support for using HockeyApp in your iOS applications.
 
@@ -23,13 +23,13 @@ The following features are currently supported:
 
 ## 1. Setup
 
-It is super easy to use HockeyApp in your iOS app. Have a look at our [documentation](https://www.hockeyapp.net/help/sdk/ios/5.1.1/index.html) and onboard your app within minutes.
+It is super easy to use HockeyApp in your iOS app. Have a look at our [documentation](https://www.hockeyapp.net/help/sdk/ios/5.1.2/index.html) and onboard your app within minutes.
 
 ## 2. Documentation
 
-Please visit [our landing page](https://www.hockeyapp.net/help/sdk/ios/5.1.1/index.html) as a starting point for all of our documentation.
+Please visit [our landing page](https://www.hockeyapp.net/help/sdk/ios/5.1.2/index.html) as a starting point for all of our documentation.
 
-Please check out our [changelog](http://www.hockeyapp.net/help/sdk/ios/5.1.1/changelog.html), as well as our [troubleshooting section](https://www.hockeyapp.net/help/sdk/ios/5.1.1/installation--setup.html#troubleshooting).
+Please check out our [changelog](http://www.hockeyapp.net/help/sdk/ios/5.1.2/changelog.html), as well as our [troubleshooting section](https://www.hockeyapp.net/help/sdk/ios/5.1.2/installation--setup.html#troubleshooting).
 
 ## 3. Contributing
 
@@ -53,4 +53,4 @@ You must sign a [Contributor License Agreement](https://cla.microsoft.com/) befo
 
 ## 4. Contact
 
-If you have further questions or are running into trouble that cannot be resolved by any of the steps [in our troubleshooting section](https://www.hockeyapp.net/help/sdk/ios/5.1.1/installation--setup.html#troubleshooting), feel free to open an issue here, contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net) or join our [Slack](https://slack.hockeyapp.net).
+If you have further questions or are running into trouble that cannot be resolved by any of the steps [in our troubleshooting section](https://www.hockeyapp.net/help/sdk/ios/5.1.2/installation--setup.html#troubleshooting), feel free to open an issue here, contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net) or join our [Slack](https://slack.hockeyapp.net).

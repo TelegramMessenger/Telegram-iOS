@@ -1,3 +1,11 @@
+## 5.1.2
+
+- [IMPROVEMENT] This release uses Xcode 9.2 to compile the SDK. [#502](https://github.com/bitstadium/HockeySDK-iOS/pull/503)
+- [BUGFIX] Fix warnings when integrating the SDK as source in Xcode 9. [#501](https://github.com/bitstadium/HockeySDK-iOS/pull/501)
+- [BUGFIX] Fix a potential memory leak in `BITChannel`. [#500](https://github.com/bitstadium/HockeySDK-iOS/pull/500)
+- [BUGFIX] Version 5.1.X broke support for app extension. We're sorry about this and we've updated our test matrix to make sure this does not happen again. [#499](https://github.com/bitstadium/HockeySDK-iOS/pull/499)
+- [BUGFIX] Fix a bug in the Feedback UI when Feedback was shown in landscape. [#498](https://github.com/bitstadium/HockeySDK-iOS/pull/498)
+
 ## 5.1.1
 
 - [BUGFIX] Fixes a critical bug that would cause apps to freeze when calling `trackEvent` in UIApplicationDelegate callbacks. [#492](https://github.com/bitstadium/HockeySDK-iOS/pull/493)

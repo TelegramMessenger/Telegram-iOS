@@ -5,7 +5,7 @@ sdk: iphonesimulator
 theme: ../Themes/apple
 
 module: HockeySDK
-module_version: 5.1.1
+module_version: 5.1.2
 author: Microsoft Corp
 author_url: https://www.microsoft.com
 
