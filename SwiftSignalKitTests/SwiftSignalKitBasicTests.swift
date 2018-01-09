@@ -256,4 +256,26 @@ class SwiftSignalKitTests: XCTestCase {
         XCTAssertTrue(deallocated2, "deallocated2 != true")
         XCTAssertTrue(disposed2, "disposed2 != true")
     }
+    
+    func testDelayed1() {
+        var flag = false
+        let signal = Signal<Signal<Void, NoError>, NoError> { subscriber in
+            Queue.concurrentDefaultQueue().after(0.1, {
+                subscriber.putNext(Signal { susbcriber2 in
+                    return ActionDisposable {
+                        flag = true
+                    }
+                })
+            })
+            
+            return EmptyDisposable
+        } |> switchToLatest
+        
+        let disposable = signal.start()
+        disposable.dispose()
+        
+        usleep(1000000 * 20)
+        
+        XCTAssert(flag == true)
+    }
 }

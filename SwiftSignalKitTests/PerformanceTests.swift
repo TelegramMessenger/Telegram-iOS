@@ -7,7 +7,7 @@ final class DisposableLock {
     private var action: (() -> Void)?
     private var lock = pthread_mutex_t()
     
-    init(action: () -> Void) {
+    init(action: @escaping () -> Void) {
         self.action = action
         pthread_mutex_init(&self.lock, nil)
     }
@@ -28,7 +28,7 @@ final class DisposableSpinLock {
     private var action: (() -> Void)?
     private var lock = OSSpinLock()
     
-    init(action: () -> Void) {
+    init(action: @escaping () -> Void) {
         self.action = action
     }
     
@@ -47,7 +47,7 @@ final class DisposableSpinLock {
 final class DisposableNoLock {
     private var action: (() -> Void)?
     
-    init(action: () -> Void) {
+    init(action: @escaping () -> Void) {
         self.action = action
     }
     
@@ -65,7 +65,7 @@ final class DisposableAtomic {
     private var action: () -> Void
     private var disposed: Int32 = 0
     
-    init(action: () -> Void) {
+    init(action: @escaping () -> Void) {
         self.action = action
     }
     
