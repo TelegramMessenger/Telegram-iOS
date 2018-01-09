@@ -89,6 +89,7 @@ typedef enum {
 @property (nonatomic) CGFloat additionalStatusBarHeight;
 
 @property (nonatomic) bool navigationBarShouldBeHidden;
+@property (nonatomic) bool ignoreAppearEvents;
 
 @property (nonatomic) bool autoManageStatusBarBackground;
 @property (nonatomic) bool automaticallyManageScrollViewInsets;

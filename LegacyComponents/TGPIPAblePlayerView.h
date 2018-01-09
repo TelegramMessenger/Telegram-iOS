@@ -19,6 +19,7 @@ typedef enum
 @property (nonatomic, readonly) NSTimeInterval duration;
 @property (nonatomic, readonly) NSTimeInterval position;
 @property (nonatomic, readonly) CGFloat downloadProgress;
+@property (nonatomic, readonly) bool buffering;
 
 @property (nonatomic, readonly, getter=isPlaying) bool playing;
 

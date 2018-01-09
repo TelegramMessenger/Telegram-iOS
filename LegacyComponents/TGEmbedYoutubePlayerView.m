@@ -105,7 +105,7 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
     NSString *command = [NSString stringWithFormat:@"player.seekTo(%@, true);", @(position)];
     [self _evaluateJS:command completion:nil];
     
-    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:self.state.isPlaying duration:self.state.duration position:position downloadProgress:self.state.downloadProgress];
+    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:self.state.isPlaying duration:self.state.duration position:position downloadProgress:self.state.downloadProgress buffering:self.state.buffering];
     [self updateState:newState];
     
     _ignorePositionUpdates = 2;
@@ -150,6 +150,7 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
         NSTimeInterval position = self.state.position;
         NSTimeInterval duration = self.state.duration;
         CGFloat downloadProgress = self.state.downloadProgress;
+        bool buffering = self.state.buffering;
         
         for (NSURLQueryItem *queryItem in queryItems)
         {
@@ -157,6 +158,7 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
             {
                 playing = ([queryItem.value integerValue] == TGYTPlayerStatePlayingCode);
                 finished = ([queryItem.value integerValue] == TGYTPlayerStateEndedCode);
+                buffering = ([queryItem.value integerValue] == TGYTPlayerStateBufferingCode);
             }
             else if ([queryItem.name isEqualToString:@"position"])
             {
@@ -195,7 +197,7 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
         if (finished)
             position = 0.0;
         
-        TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:playing duration:duration position:position downloadProgress:downloadProgress];
+        TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:playing duration:duration position:position downloadProgress:downloadProgress buffering:buffering];
         [self updateState:newState];
         
         if (_playAfterTicks > 0)

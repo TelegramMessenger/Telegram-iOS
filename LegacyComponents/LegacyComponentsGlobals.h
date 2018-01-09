@@ -84,12 +84,13 @@ typedef enum {
 - (void)resumePictureInPicturePlayback;
 - (void)maybeReleaseVolumeOverlay;
 
-@optional
 - (TGNavigationBarPallete *)navigationBarPallete;
 - (TGMenuSheetPallete *)menuSheetPallete;
 - (TGMediaAssetsPallete *)mediaAssetsPallete;
-- (TGImageBorderPallete *)imageBorderPallete;
 - (TGCheckButtonPallete *)checkButtonPallete;
+
+@optional
+- (TGImageBorderPallete *)imageBorderPallete;
 
 @end
 

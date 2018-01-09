@@ -73,7 +73,7 @@
         _loadProgressValue = [[SVariable alloc] init];
         
         _webPage = webPage;
-        _state = [TGEmbedPlayerState stateWithPlaying:false duration:0.0 position:0.0 downloadProgress:0.0f];
+        _state = [TGEmbedPlayerState stateWithPlaying:false duration:0.0 position:0.0 downloadProgress:0.0f buffering:false];
         
         TGEmbedPlayerControlsType controlsType = [self _controlsType];
         if (controlsType != TGEmbedPlayerControlsTypeNone)
@@ -222,6 +222,20 @@
     
     [_controlsView showLargePlayButton:true];
     [self insertSubview:_dimWrapperView belowSubview:_controlsView];
+}
+
+- (void)setDisableControls:(bool)disableControls {
+    _disableControls = disableControls;
+    if (disableControls) {
+        for (UIView *view in [_dimWrapperView.subviews copy]) {
+            if (view != _coverView) {
+                view.alpha = 0.0f;
+                view.hidden = true;
+            }
+        }
+        _controlsView.hidden = true;
+        _dimView.hidden = true;
+    }
 }
 
 - (void)_setupAudioSessionIfNeeded
@@ -899,6 +913,42 @@
     } else {
         return nil;
     }
+}
+
++ (bool)hasNativeSupportForX:(TGWebPageMediaAttachment *)webPage {
+    static dispatch_once_t onceToken;
+    static NSArray *playerViewClasses;
+    dispatch_once(&onceToken, ^
+    {
+        playerViewClasses = @
+        [
+         [TGEmbedYoutubePlayerView class],
+         /*[TGEmbedVimeoPlayerView class],
+         [TGEmbedCoubPlayerView class],
+         [TGEmbedVKPlayerView class],
+         [TGEmbedVinePlayerView class],
+         [TGEmbedInstagramPlayerView class],
+         [TGEmbedSoundCloudPlayerView class],
+         [TGEmbedTwitchPlayerView class],
+         [TGEmbedVideoPlayerView class]*/
+         ];
+    });
+    
+    if (iosMajorVersion() >= 8)
+    {
+        for (Class playerViewClass in playerViewClasses)
+        {
+            if ([playerViewClass _supportsWebPage:webPage])
+            {
+                if (playerViewClass == [TGEmbedVideoPlayerView class])
+                    return false;
+                
+                return true;
+            }
+        }
+    }
+    
+    return false;
 }
 
 @end

@@ -29,9 +29,11 @@ typedef enum
 @interface TGCheckButtonView : UIButton
 
 - (instancetype)initWithStyle:(TGCheckButtonStyle)style;
+- (instancetype)initWithStyle:(TGCheckButtonStyle)style pallete:(TGCheckButtonPallete *)pallete;
 
 - (void)setSelected:(bool)selected animated:(bool)animated;
 - (void)setSelected:(bool)selected animated:(bool)animated bump:(bool)bump;
+- (void)setSelected:(bool)selected animated:(bool)animated bump:(bool)bump completion:(void (^)())completion;
 
 - (void)setNumber:(NSUInteger)number;
 

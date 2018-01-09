@@ -43,7 +43,7 @@
 {
     [_player play];
     
-    TGEmbedPlayerState *state = [TGEmbedPlayerState stateWithPlaying:true duration:self.state.duration position:self.state.position downloadProgress:self.state.downloadProgress];
+    TGEmbedPlayerState *state = [TGEmbedPlayerState stateWithPlaying:true duration:self.state.duration position:self.state.position downloadProgress:self.state.downloadProgress buffering:self.state.buffering];
     [self updateState:state];
 }
 
@@ -52,7 +52,7 @@
     [super pauseVideo:manually];
     [_player pause];
     
-    TGEmbedPlayerState *state = [TGEmbedPlayerState stateWithPlaying:false duration:self.state.duration position:self.state.position downloadProgress:self.state.downloadProgress];
+    TGEmbedPlayerState *state = [TGEmbedPlayerState stateWithPlaying:false duration:self.state.duration position:self.state.position downloadProgress:self.state.downloadProgress buffering:self.state.buffering];
     [self updateState:state];
 }
 
@@ -60,7 +60,7 @@
 {
     [_player.currentItem seekToTime:CMTimeMake((int64_t)(position * 1000.0), 1000.0)];
     
-    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:self.state.isPlaying duration:self.state.duration position:position downloadProgress:self.state.downloadProgress];
+    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:self.state.isPlaying duration:self.state.duration position:position downloadProgress:self.state.downloadProgress buffering:self.state.buffering];
     [self updateState:newState];
 }
 
@@ -91,6 +91,7 @@
     NSTimeInterval position = self.state.position;
     NSTimeInterval duration = self.state.duration;
     CGFloat downloadProgress = self.state.downloadProgress;
+    bool buffering = self.state.buffering;
     
     if ([keyPath isEqualToString:@"status"])
     {
@@ -115,7 +116,7 @@
         downloadProgress = MAX(0.0, MIN(1.0, availableDuration / duration));
     }
     
-    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:playing duration:duration position:position downloadProgress:downloadProgress];
+    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:playing duration:duration position:position downloadProgress:downloadProgress buffering:buffering];
     [self updateState:newState];
 }
 
@@ -156,7 +157,7 @@
             }
             
             TGEmbedPlayerState *state = strongSelf.state;
-            TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:state.playing duration:state.duration position:position downloadProgress:state.downloadProgress];
+            TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:state.playing duration:state.duration position:position downloadProgress:state.downloadProgress buffering:self.state.buffering];
             [strongSelf updateState:newState];
         }
     }];

@@ -6,6 +6,7 @@
 @synthesize duration = _duration;
 @synthesize position = _position;
 @synthesize downloadProgress = _downloadProgress;
+@synthesize buffering = _buffering;
 
 + (instancetype)stateWithPlaying:(bool)playing
 {
@@ -14,13 +15,14 @@
     return state;
 }
 
-+ (instancetype)stateWithPlaying:(bool)playing duration:(NSTimeInterval)duration position:(NSTimeInterval)position downloadProgress:(CGFloat)downloadProgress
++ (instancetype)stateWithPlaying:(bool)playing duration:(NSTimeInterval)duration position:(NSTimeInterval)position downloadProgress:(CGFloat)downloadProgress buffering:(bool)buffering
 {
     TGEmbedPlayerState *state = [[TGEmbedPlayerState alloc] init];
     state->_playing = playing;
     state->_duration = duration;
     state->_position = position;
     state->_downloadProgress = downloadProgress;
+    state->_buffering = buffering;
     return state;
 }
 

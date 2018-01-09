@@ -64,9 +64,17 @@ const CGFloat TGLocationMapInset = 100.0f;
     _tableView.delegate = nil;
 }
 
+- (void)setPallete:(TGLocationPallete *)pallete {
+    _pallete = pallete;
+    if ([self isViewLoaded]) {
+        self.view.backgroundColor = pallete.backgroundColor;
+    }
+}
+
 - (void)loadView
 {
     [super loadView];
+    
     self.view.backgroundColor = self.pallete.backgroundColor;
         
     _tableView = [[TGLocationTableView alloc] initWithFrame:self.view.bounds];

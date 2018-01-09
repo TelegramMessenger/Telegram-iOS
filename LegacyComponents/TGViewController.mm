@@ -636,6 +636,9 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (void)viewWillAppear:(BOOL)animated
 {
+    if (_ignoreAppearEvents) {
+        return;
+    }
     _viewControllerIsAnimatingAppearanceTransition = true;
     _viewControllerIsAppearing = true;
     //_viewControllerHasEverAppeared = true;
@@ -664,6 +667,10 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (void)viewDidAppear:(BOOL)animated
 {
+    if (_ignoreAppearEvents) {
+        return;
+    }
+    
     _viewControllerIsAppearing = false;
     _viewControllerIsAnimatingAppearanceTransition = false;
     _viewControllerHasEverAppeared = true;

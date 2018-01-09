@@ -36,6 +36,7 @@
 
 @property (nonatomic, assign) bool disallowAutoplay;
 @property (nonatomic, assign) bool disallowPIP;
+@property (nonatomic, assign) bool disableControls;
 
 @property (nonatomic, assign) CGRect initialFrame;
 
@@ -93,6 +94,7 @@
 - (SSignal *)loadProgress;
 
 + (bool)_supportsWebPage:(TGWebPageMediaAttachment *)webPage;
++ (bool)hasNativeSupportForX:(TGWebPageMediaAttachment *)webPage;
 
 + (Class)playerViewClassForWebPage:(TGWebPageMediaAttachment *)webPage onlySpecial:(bool)onlySpecial;
 + (TGEmbedPlayerView *)makePlayerViewForWebPage:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)signal;
