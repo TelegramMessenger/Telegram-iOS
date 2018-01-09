@@ -3,9 +3,9 @@
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
  [![Slack Status](https://slack.hockeyapp.net/badge.svg)](https://slack.hockeyapp.net)
  
-## Version 5.1.1
+## Version 5.1.2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/5.1.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/5.1.2/docs/docs/Changelog.html)
 
 **NOTE** If your are using the binary integration of our SDK, make sure that the `HockeySDKResources.bundle` inside the `HockeySDK.embeddedframework`-folder has been added to your application.
 
@@ -821,7 +821,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/5.1.1/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/5.1.2/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -835,7 +835,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-5.1.1.docset`
+  - `de.bitstadium.HockeySDK-iOS-5.1.2.docset`
 
 ### Features are not working as expected
 
