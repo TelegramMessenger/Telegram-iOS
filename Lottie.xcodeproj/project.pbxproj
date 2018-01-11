@@ -60,7 +60,6 @@
 		481A4ACE1E4A7885003CF62B /* LOTShapeTrimPath.h in Headers */ = {isa = PBXBuildFile; fileRef = 481A4A551E4A7885003CF62B /* LOTShapeTrimPath.h */; };
 		481A4ACF1E4A7885003CF62B /* LOTShapeTrimPath.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A561E4A7885003CF62B /* LOTShapeTrimPath.m */; };
 		481A4AD01E4A7885003CF62B /* LOTShapeTrimPath.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A561E4A7885003CF62B /* LOTShapeTrimPath.m */; };
-		481A4AD11E4A7885003CF62B /* LOTAnimationTransitionController.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A581E4A7885003CF62B /* LOTAnimationTransitionController.m */; };
 		481A4AD31E4A7885003CF62B /* LOTAnimationView.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A591E4A7885003CF62B /* LOTAnimationView.m */; };
 		481A4AD41E4A7885003CF62B /* LOTAnimationView.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A591E4A7885003CF62B /* LOTAnimationView.m */; };
 		481A4AD51E4A7885003CF62B /* LOTAnimationView_Internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 481A4A5A1E4A7885003CF62B /* LOTAnimationView_Internal.h */; };
@@ -212,19 +211,19 @@
 		629EC5371F50DFFF005B2C59 /* LOTAnimatedControl.m in Sources */ = {isa = PBXBuildFile; fileRef = 629EC5361F50DFFF005B2C59 /* LOTAnimatedControl.m */; };
 		629EC5381F50E00F005B2C59 /* LOTAnimatedControl.m in Sources */ = {isa = PBXBuildFile; fileRef = 629EC5361F50DFFF005B2C59 /* LOTAnimatedControl.m */; };
 		629EC5391F50E02A005B2C59 /* LOTAnimatedControl.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 629EC5321F50DFE4005B2C59 /* LOTAnimatedControl.h */; };
-		62A62B4A1FE48220001A2C2F /* LOTValueCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62A62B481FE48220001A2C2F /* LOTValueCallback.h */; };
-		62A62B4B1FE48220001A2C2F /* LOTValueCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62A62B481FE48220001A2C2F /* LOTValueCallback.h */; };
+		62A62B4A1FE48220001A2C2F /* LOTValueCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62A62B481FE48220001A2C2F /* LOTValueCallback.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		62A62B4B1FE48220001A2C2F /* LOTValueCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62A62B481FE48220001A2C2F /* LOTValueCallback.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		62A62B4C1FE48220001A2C2F /* LOTValueCallback.m in Sources */ = {isa = PBXBuildFile; fileRef = 62A62B491FE48220001A2C2F /* LOTValueCallback.m */; };
 		62A62B4D1FE48220001A2C2F /* LOTValueCallback.m in Sources */ = {isa = PBXBuildFile; fileRef = 62A62B491FE48220001A2C2F /* LOTValueCallback.m */; };
 		62A62B4E1FE4A1DC001A2C2F /* LOTValueCallback.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 62A62B481FE48220001A2C2F /* LOTValueCallback.h */; };
 		62ACB6BB200028D6006EDE2D /* LOTValueDelegate.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 62E4703A20000C9A000C97B5 /* LOTValueDelegate.h */; };
-		62ACB6BE20003027006EDE2D /* LOTBlockCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62ACB6BC20003027006EDE2D /* LOTBlockCallback.h */; };
-		62ACB6BF20003027006EDE2D /* LOTBlockCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62ACB6BC20003027006EDE2D /* LOTBlockCallback.h */; };
+		62ACB6BE20003027006EDE2D /* LOTBlockCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62ACB6BC20003027006EDE2D /* LOTBlockCallback.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		62ACB6BF20003027006EDE2D /* LOTBlockCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62ACB6BC20003027006EDE2D /* LOTBlockCallback.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		62ACB6C020003027006EDE2D /* LOTBlockCallback.m in Sources */ = {isa = PBXBuildFile; fileRef = 62ACB6BD20003027006EDE2D /* LOTBlockCallback.m */; };
 		62ACB6C120003027006EDE2D /* LOTBlockCallback.m in Sources */ = {isa = PBXBuildFile; fileRef = 62ACB6BD20003027006EDE2D /* LOTBlockCallback.m */; };
 		62ACB6C220003027006EDE2D /* LOTBlockCallback.m in Sources */ = {isa = PBXBuildFile; fileRef = 62ACB6BD20003027006EDE2D /* LOTBlockCallback.m */; };
-		62ACB6C5200030BB006EDE2D /* LOTInterpolatorCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62ACB6C3200030BB006EDE2D /* LOTInterpolatorCallback.h */; };
-		62ACB6C6200030BB006EDE2D /* LOTInterpolatorCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62ACB6C3200030BB006EDE2D /* LOTInterpolatorCallback.h */; };
+		62ACB6C5200030BB006EDE2D /* LOTInterpolatorCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62ACB6C3200030BB006EDE2D /* LOTInterpolatorCallback.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		62ACB6C6200030BB006EDE2D /* LOTInterpolatorCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = 62ACB6C3200030BB006EDE2D /* LOTInterpolatorCallback.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		62ACB6C7200030BB006EDE2D /* LOTInterpolatorCallback.m in Sources */ = {isa = PBXBuildFile; fileRef = 62ACB6C4200030BB006EDE2D /* LOTInterpolatorCallback.m */; };
 		62ACB6C8200030BB006EDE2D /* LOTInterpolatorCallback.m in Sources */ = {isa = PBXBuildFile; fileRef = 62ACB6C4200030BB006EDE2D /* LOTInterpolatorCallback.m */; };
 		62ACB6C9200030BB006EDE2D /* LOTInterpolatorCallback.m in Sources */ = {isa = PBXBuildFile; fileRef = 62ACB6C4200030BB006EDE2D /* LOTInterpolatorCallback.m */; };
@@ -305,7 +304,6 @@
 		84FE13111E4C1553009B157C /* LOTShapeStroke.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A521E4A7885003CF62B /* LOTShapeStroke.m */; };
 		84FE13121E4C1553009B157C /* LOTShapeTransform.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A541E4A7885003CF62B /* LOTShapeTransform.m */; };
 		84FE13131E4C1553009B157C /* LOTShapeTrimPath.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A561E4A7885003CF62B /* LOTShapeTrimPath.m */; };
-		84FE13141E4C1553009B157C /* LOTAnimationTransitionController.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A581E4A7885003CF62B /* LOTAnimationTransitionController.m */; };
 		84FE13151E4C1553009B157C /* LOTAnimationView.m in Sources */ = {isa = PBXBuildFile; fileRef = 481A4A591E4A7885003CF62B /* LOTAnimationView.m */; };
 		84FE13161E4C15A1009B157C /* LOTAnimationView.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = FA1F5A9F1E42B52800FF36BF /* LOTAnimationView.h */; };
 		84FE13171E4C15A1009B157C /* LOTAnimationTransitionController.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 62CA59C41E3C179F002D7188 /* LOTAnimationTransitionController.h */; };
@@ -1042,7 +1040,6 @@
 				629EC5371F50DFFF005B2C59 /* LOTAnimatedControl.m in Sources */,
 				6201FAE81F200B4A00A047C9 /* LOTMaskContainer.m in Sources */,
 				481A4AC31E4A7885003CF62B /* LOTShapeRectangle.m in Sources */,
-				481A4AD11E4A7885003CF62B /* LOTAnimationTransitionController.m in Sources */,
 				629EC52F1F50CC2E005B2C59 /* LOTAnimatedSwitch.m in Sources */,
 				62C9EA261F1EB49000DE7D07 /* LOTCompositionContainer.m in Sources */,
 				622F766D1F2BCE1300269858 /* LOTRepeaterRenderer.m in Sources */,
@@ -1138,7 +1135,6 @@
 				84FE13111E4C1553009B157C /* LOTShapeStroke.m in Sources */,
 				84FE13121E4C1553009B157C /* LOTShapeTransform.m in Sources */,
 				84FE13131E4C1553009B157C /* LOTShapeTrimPath.m in Sources */,
-				84FE13141E4C1553009B157C /* LOTAnimationTransitionController.m in Sources */,
 				84FE13151E4C1553009B157C /* LOTAnimationView.m in Sources */,
 				6274D0111F1D6CE200E05049 /* LOTStrokeRenderer.m in Sources */,
 				6274CFA41F17E94C00E05049 /* LOTPathInterpolator.m in Sources */,
@@ -1340,6 +1336,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = com.airbnb.Lottie;
 				PRODUCT_NAME = Lottie;
 				SKIP_INSTALL = YES;
@@ -1361,6 +1358,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = com.airbnb.Lottie;
 				PRODUCT_NAME = Lottie;
 				SKIP_INSTALL = YES;
@@ -1455,6 +1453,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = com.airbnb.Lottie;
 				PRODUCT_NAME = Lottie;
 				SKIP_INSTALL = YES;
@@ -1559,6 +1558,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = com.airbnb.Lottie;
 				PRODUCT_NAME = Lottie;
 				SKIP_INSTALL = YES;
@@ -1657,6 +1657,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = com.airbnb.Lottie;
 				PRODUCT_NAME = Lottie;
 				SKIP_INSTALL = YES;
@@ -1755,6 +1756,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = com.airbnb.Lottie;
 				PRODUCT_NAME = Lottie;
 				SKIP_INSTALL = YES;
@@ -1853,6 +1855,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = com.airbnb.Lottie;
 				PRODUCT_NAME = Lottie;
 				SKIP_INSTALL = YES;
