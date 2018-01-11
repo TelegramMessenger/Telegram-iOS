@@ -816,7 +816,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                             attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
                         }
                         
-                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: [])
+                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: [])
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                     }
                 }
@@ -1773,7 +1773,13 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
             case let .UpdateMinAvailableMessage(id):
                 modifier.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id)
             case let .EditMessage(id, message):
-                modifier.updateMessage(id, update: { _ in .update(message) })
+                modifier.updateMessage(id, update: { previousMessage in
+                    var updatedLocalTags = message.localTags
+                    if previousMessage.localTags.contains(.OutgoingLiveLocation) {
+                        updatedLocalTags.insert(.OutgoingLiveLocation)
+                    }
+                    return .update(message.withUpdatedLocalTags(updatedLocalTags))
+                })
             case let .UpdateMedia(id, media):
                 modifier.updateMedia(id, update: media)
                 if let media = media as? TelegramMediaWebpage {
@@ -1944,7 +1950,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                             break loop
                         }
                     }
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
             case let .UpdateInstalledStickerPacks(operation):
                 stickerPackOperations.append(operation)

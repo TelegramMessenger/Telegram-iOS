@@ -93,6 +93,10 @@ public extension GlobalMessageTags {
     static let all: GlobalMessageTags = [.Calls, .MissedCalls]
 }
 
+public extension LocalMessageTags {
+    static let OutgoingLiveLocation = LocalMessageTags(rawValue: 1 << 0)
+}
+
 public extension PendingMessageActionType {
     static let consumeUnseenPersonalMessage = PendingMessageActionType(rawValue: 0)
 }

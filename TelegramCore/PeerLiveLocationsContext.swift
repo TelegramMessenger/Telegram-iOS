@@ -7,8 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func topPeerActiveLiveLocationMessages(account: Account, peerId: PeerId) -> Signal<[Message], NoError> {
-    return account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil, tagMask: .liveLocation, orderStatistics: [])
+public func topPeerActiveLiveLocationMessages(viewTracker: AccountViewTracker, peerId: PeerId) -> Signal<[Message], NoError> {
+    return viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil, tagMask: .liveLocation, orderStatistics: [])
     |> map { (view, _, _) -> [Message] in
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
         var result: [Message] = []

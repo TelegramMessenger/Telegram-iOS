@@ -47,6 +47,7 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                 //print("fetchMessageHistoryHole for \(peer.displayTitle)")
                 let request: Signal<Api.messages.Messages, MTRpcError>
                 var maxIndexRequest: Signal<Api.messages.Messages?, MTRpcError> = .single(nil)
+                var implicitelyFillHole = false
                 if let tagMask = tagMask {
                     if tagMask == MessageTags.unseenPersonalMessage {
                         let offsetId: Int32
@@ -78,6 +79,16 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                                 minId = 1
                         }
                         request = source.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                    } else if tagMask == .liveLocation {
+                        let selectedLimit = limit
+                        
+                        switch direction {
+                            case .UpperToLower:
+                                implicitelyFillHole = true
+                            default:
+                                assertionFailure()
+                        }
+                        request = source.request(Api.functions.messages.getRecentLocations(peer: inputPeer, limit: Int32(selectedLimit)))
                     } else if let filter = messageFilterForTagMask(tagMask) {
                         let offsetId: Int32
                         let addOffset: Int32
@@ -218,7 +229,7 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                                     fillDirection = .AroundId(index.id, lowerComplete: false, upperComplete: false)
                             }
                             
-                            modifier.fillMultipleHoles(hole, fillType: HoleFill(complete: messages.count == 0, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
+                            modifier.fillMultipleHoles(hole, fillType: HoleFill(complete: messages.count == 0 || implicitelyFillHole, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
                             
                             var peers: [Peer] = []
                             var peerPresences: [PeerId: PeerPresence] = [:]

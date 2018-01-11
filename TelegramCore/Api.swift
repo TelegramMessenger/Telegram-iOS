@@ -19509,9 +19509,9 @@ public struct Api {
                     })
                 }
             
-                public static func editMessage(flags: Int32, peer: Api.InputPeer, id: Int32, message: String?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
+                public static func editMessage(flags: Int32, peer: Api.InputPeer, id: Int32, message: String?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, geoPoint: Api.InputGeoPoint?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-829299510)
+                    buffer.appendInt32(97630429)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -19522,7 +19522,8 @@ public struct Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
-                    return (FunctionDescription({return "(messages.editMessage flags: \(flags), peer: \(peer), id: \(id), message: \(String(describing: message)), replyMarkup: \(String(describing: replyMarkup)), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 13) != 0 {geoPoint!.serialize(buffer, true)}
+                    return (FunctionDescription({return "(messages.editMessage flags: \(flags), peer: \(peer), id: \(id), message: \(String(describing: message)), replyMarkup: \(String(describing: replyMarkup)), entities: \(String(describing: entities)), geoPoint: \(String(describing: geoPoint)))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

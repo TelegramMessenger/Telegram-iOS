@@ -272,7 +272,14 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                     
                     let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: mediaList, textEntities: entitiesAttribute?.entities)
                     
-                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
+                    var localTags: LocalMessageTags = []
+                    for media in mediaList {
+                        if let media = media as? TelegramMediaMap, media.liveBroadcastingTimeout != nil {
+                            localTags.insert(.OutgoingLiveLocation)
+                        }
+                    }
+                    
+                    storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source, grouping):
                     let sourceMessage = modifier.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
@@ -356,7 +363,7 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                                 }
                         }
                         
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: sourceMessage.media))
                     }
             }
         }
