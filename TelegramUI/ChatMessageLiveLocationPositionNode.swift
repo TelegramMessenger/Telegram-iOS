@@ -13,6 +13,7 @@ private func addPulseAnimations(layer: CALayer) {
     scaleAnimation.duration = 3.0
     scaleAnimation.repeatCount = Float.infinity
     scaleAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseOut)
+    scaleAnimation.beginTime = 1.0
     layer.add(scaleAnimation, forKey: "pulse-scale")
     
     let opacityAnimation = CAKeyframeAnimation(keyPath: "opacity")
@@ -20,6 +21,7 @@ private func addPulseAnimations(layer: CALayer) {
     opacityAnimation.keyTimes = [0.0 as NSNumber, 0.4 as NSNumber, 0.62 as NSNumber, 1.0 as NSNumber]
     opacityAnimation.duration = 3.0
     opacityAnimation.repeatCount = Float.infinity
+    opacityAnimation.beginTime = 1.0
     layer.add(opacityAnimation, forKey: "pulse-opacity")
 }
 

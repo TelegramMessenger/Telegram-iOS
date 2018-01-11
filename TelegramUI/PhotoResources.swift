@@ -1736,7 +1736,9 @@ func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaResource) -
     return Signal<Data?, NoError> { subscriber in
         let fetchedDisposable = account.postbox.mediaBox.fetchedResource(resource, tag: nil).start()
         let dataDisposable = account.postbox.mediaBox.resourceData(resource).start(next: { next in
-            subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+            if next.size != 0 {
+                subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+            }
         }, error: subscriber.putError, completed: subscriber.putCompletion)
         
         return ActionDisposable {

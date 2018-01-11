@@ -145,7 +145,11 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 let maxTextWidth: CGFloat
                 
                 if activeLiveBroadcastingTimeout != nil {
-                    imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
+                    var relativePosition = position
+                    if case let .linear(top, _) = position {
+                        relativePosition = .linear(top: top, bottom: ChatMessageBubbleRelativePosition.Neighbour)
+                    }
+                    imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: relativePosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
                     
                     maxTextWidth = constrainedSize.width - bubbleInsets.left + bubbleInsets.right - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 40.0
                 } else {

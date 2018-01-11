@@ -77,6 +77,10 @@ func openChatMessage(account: Account, message: Message, reverseMessageGalleryOr
             dismissInput()
             present(legacyLocationController(message: message, mapMedia: mapMedia, account: account, openPeer: { peer in
                 openPeer(peer, .info)
+            }, sendLiveLocation: { coordinate, period in
+                
+            }, stopLiveLocation: {
+                account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
             }), nil)
         } else if let file = galleryMedia as? TelegramMediaFile, file.isSticker {
             for attribute in file.attributes {

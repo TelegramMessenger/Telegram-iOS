@@ -14,6 +14,7 @@ enum MessageContentKind: Equatable {
     case contact
     case game(String)
     case location
+    case liveLocation
     
     static func ==(lhs: MessageContentKind, rhs: MessageContentKind) -> Bool {
         switch lhs {
@@ -83,6 +84,12 @@ enum MessageContentKind: Equatable {
                 } else {
                     return false
                 }
+            case .liveLocation:
+                if case .liveLocation = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -131,8 +138,12 @@ func messageContentKind(_ message: Message, strings: PresentationStrings, accoun
                 return .contact
             case let game as TelegramMediaGame:
                 return .game(game.title)
-            case _ as TelegramMediaMap:
-                return .location
+            case let location as TelegramMediaMap:
+                if location.liveBroadcastingTimeout != nil {
+                    return .liveLocation
+                } else {
+                    return .location
+                }
             case _ as TelegramMediaAction:
                 return .text(plainServiceMessageString(strings: strings, message: message, accountPeerId: accountPeerId) ?? "")
             default:
@@ -177,5 +188,7 @@ func descriptionStringForMessage(_ message: Message, strings: PresentationString
             return text
         case .location:
             return strings.Message_Location
+        case .liveLocation:
+            return strings.Message_LiveLocation
     }
 }

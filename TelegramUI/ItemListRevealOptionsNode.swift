@@ -63,7 +63,7 @@ final class ItemListRevealOptionNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-        if let url = frameworkBundle.url(forResource: "mute", withExtension: "json") {
+        /*if let url = frameworkBundle.url(forResource: "mute", withExtension: "json") {
             let animView = LOTAnimationView(contentsOf: url)
             animView.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
             self.animView = animView
@@ -74,7 +74,7 @@ final class ItemListRevealOptionNode: ASDisplayNode {
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
                 animView.play()
             })
-        }
+        }*/
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {

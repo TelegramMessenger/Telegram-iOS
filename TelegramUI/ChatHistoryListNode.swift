@@ -513,26 +513,51 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         var messageIdsWithViewCount: [MessageId] = []
                         var messageIdsWithUnseenPersonalMention: [MessageId] = []
                         for i in (indexRange.0 ... indexRange.1) {
-                            if case let .MessageEntry(message, _, _, _, _) = historyView.filteredEntries[i] {
-                                var hasUnconsumedMention = false
-                                var hasUnsonsumedContent = false
-                                if message.tags.contains(.unseenPersonalMessage) {
-                                    for attribute in message.attributes {
-                                        if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
-                                            hasUnconsumedMention = true
+                            switch historyView.filteredEntries[i] {
+                                case let .MessageEntry(message, _, _, _, _):
+                                    var hasUnconsumedMention = false
+                                    var hasUnsonsumedContent = false
+                                    if message.tags.contains(.unseenPersonalMessage) {
+                                        for attribute in message.attributes {
+                                            if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
+                                                hasUnconsumedMention = true
+                                            }
                                         }
                                     }
-                                }
-                                for attribute in message.attributes {
-                                    if attribute is ViewCountMessageAttribute {
-                                        messageIdsWithViewCount.append(message.id)
-                                    } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
-                                        hasUnsonsumedContent = true
+                                    for attribute in message.attributes {
+                                        if attribute is ViewCountMessageAttribute {
+                                            messageIdsWithViewCount.append(message.id)
+                                        } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
+                                            hasUnsonsumedContent = true
+                                        }
                                     }
-                                }
-                                if hasUnconsumedMention && !hasUnsonsumedContent {
-                                    messageIdsWithUnseenPersonalMention.append(message.id)
-                                }
+                                    if hasUnconsumedMention && !hasUnsonsumedContent {
+                                        messageIdsWithUnseenPersonalMention.append(message.id)
+                                    }
+                                case let .MessageGroupEntry(_, messages, _):
+                                    for (message, _, _) in messages {
+                                        var hasUnconsumedMention = false
+                                        var hasUnsonsumedContent = false
+                                        if message.tags.contains(.unseenPersonalMessage) {
+                                            for attribute in message.attributes {
+                                                if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
+                                                    hasUnconsumedMention = true
+                                                }
+                                            }
+                                        }
+                                        for attribute in message.attributes {
+                                            if attribute is ViewCountMessageAttribute {
+                                                messageIdsWithViewCount.append(message.id)
+                                            } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
+                                                hasUnsonsumedContent = true
+                                            }
+                                        }
+                                        if hasUnconsumedMention && !hasUnsonsumedContent {
+                                            messageIdsWithUnseenPersonalMention.append(message.id)
+                                        }
+                                    }
+                                default:
+                                    break
                             }
                         }
                         

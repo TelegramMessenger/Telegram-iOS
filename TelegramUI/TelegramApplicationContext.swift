@@ -30,6 +30,9 @@ public final class TelegramApplicationContext {
     
     public let mediaManager: MediaManager
     
+    let locationManager: DeviceLocationManager
+    public let liveLocationManager: LiveLocationManager?
+    
     public let contactsManager = DeviceContactsManager()
     
     public let currentPresentationData: Atomic<PresentationData>
@@ -50,8 +53,14 @@ public final class TelegramApplicationContext {
     public var navigateToCurrentCall: (() -> Void)?
     public var hasOngoingCall: Signal<Bool, NoError>?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>, postbox: Postbox) {
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>, postbox: Postbox, network: Network, accountPeerId: PeerId?, viewTracker: AccountViewTracker?, stateManager: AccountStateManager?) {
         self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
+        self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
+        if let stateManager = stateManager, let accountPeerId = accountPeerId, let viewTracker = viewTracker {
+            self.liveLocationManager = LiveLocationManager(postbox: postbox, network: network, accountPeerId: accountPeerId, viewTracker: viewTracker, stateManager: stateManager, locationManager: self.locationManager, inForeground: applicationBindings.applicationInForeground)
+        } else {
+            self.liveLocationManager = nil
+        }
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.fetchManager = FetchManager(postbox: postbox)

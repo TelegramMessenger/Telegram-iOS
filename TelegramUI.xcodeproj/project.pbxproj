@@ -60,6 +60,9 @@
 		D033C60B1F0D306E0044EABA /* TelegramVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033C60A1F0D306E0044EABA /* TelegramVideoNode.swift */; };
 		D0430B001FF4570500A35ADD /* WebController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0430AFF1FF4570500A35ADD /* WebController.swift */; };
 		D0430B021FF4584100A35ADD /* WebControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0430B011FF4584100A35ADD /* WebControllerNode.swift */; };
+		D046142E2004DB3700EC0EF2 /* LiveLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D046142D2004DB3700EC0EF2 /* LiveLocationManager.swift */; };
+		D04614372005094E00EC0EF2 /* DeviceLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04614362005094E00EC0EF2 /* DeviceLocationManager.swift */; };
+		D0461439200514F000EC0EF2 /* LiveLocationSummaryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0461438200514F000EC0EF2 /* LiveLocationSummaryManager.swift */; };
 		D0471B491EFD59170074D609 /* BotCheckoutControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B481EFD59170074D609 /* BotCheckoutControllerNode.swift */; };
 		D0471B4B1EFD64AC0074D609 /* BotCheckoutHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B4A1EFD64AC0074D609 /* BotCheckoutHeaderItem.swift */; };
 		D0471B4F1EFD84600074D609 /* BotCheckoutPriceItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B4E1EFD84600074D609 /* BotCheckoutPriceItem.swift */; };
@@ -1172,6 +1175,9 @@
 		D042C6891E8DAAB000C863B0 /* ChatItemGalleryFooterContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatItemGalleryFooterContentNode.swift; sourceTree = "<group>"; };
 		D0430AFF1FF4570500A35ADD /* WebController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebController.swift; sourceTree = "<group>"; };
 		D0430B011FF4584100A35ADD /* WebControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebControllerNode.swift; sourceTree = "<group>"; };
+		D046142D2004DB3700EC0EF2 /* LiveLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLocationManager.swift; sourceTree = "<group>"; };
+		D04614362005094E00EC0EF2 /* DeviceLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceLocationManager.swift; sourceTree = "<group>"; };
+		D0461438200514F000EC0EF2 /* LiveLocationSummaryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLocationSummaryManager.swift; sourceTree = "<group>"; };
 		D04662801E68BA64006FAFC4 /* TransformOutgoingMessageMedia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TransformOutgoingMessageMedia.swift; sourceTree = "<group>"; };
 		D0471B481EFD59170074D609 /* BotCheckoutControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutControllerNode.swift; sourceTree = "<group>"; };
 		D0471B4A1EFD64AC0074D609 /* BotCheckoutHeaderItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutHeaderItem.swift; sourceTree = "<group>"; };
@@ -2465,6 +2471,23 @@
 				D0430B011FF4584100A35ADD /* WebControllerNode.swift */,
 			);
 			name = Web;
+			sourceTree = "<group>";
+		};
+		D046142C2004DB1D00EC0EF2 /* Live Location Manager */ = {
+			isa = PBXGroup;
+			children = (
+				D046142D2004DB3700EC0EF2 /* LiveLocationManager.swift */,
+				D0461438200514F000EC0EF2 /* LiveLocationSummaryManager.swift */,
+			);
+			name = "Live Location Manager";
+			sourceTree = "<group>";
+		};
+		D04614352005093B00EC0EF2 /* Device Location */ = {
+			isa = PBXGroup;
+			children = (
+				D04614362005094E00EC0EF2 /* DeviceLocationManager.swift */,
+			);
+			name = "Device Location";
 			sourceTree = "<group>";
 		};
 		D0471B521EFD8EBC0074D609 /* Resources */ = {
@@ -4665,7 +4688,9 @@
 		D0F69E911D6B8C8E0046BCD6 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				D04614352005093B00EC0EF2 /* Device Location */,
 				D025A4241F79428300563950 /* Fetch Manager */,
+				D046142C2004DB1D00EC0EF2 /* Live Location Manager */,
 				D0B844551DAC3AEE005F29E1 /* PresenceStrings.swift */,
 				D08775081E3E59DE00A97350 /* PeerNotificationSoundStrings.swift */,
 				D0F69E931D6B8C9B0046BCD6 /* ProgressiveImage.swift */,
@@ -5225,6 +5250,7 @@
 				D0EC6D201EB9F58800EBF1C3 /* PeerAvatar.swift in Sources */,
 				D0EC6D211EB9F58800EBF1C3 /* FileResources.swift in Sources */,
 				D0EC6FB31EBA114200EBF1C3 /* aec_core_neon.cc in Sources */,
+				D0461439200514F000EC0EF2 /* LiveLocationSummaryManager.swift in Sources */,
 				D056CD781FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift in Sources */,
 				D0CE67941F7DB45100FFB557 /* ChatMessageContactBubbleContentNode.swift in Sources */,
 				D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */,
@@ -5399,6 +5425,7 @@
 				D0EC6D851EB9F58800EBF1C3 /* ChatHistoryLocation.swift in Sources */,
 				D0EC6D861EB9F58800EBF1C3 /* ChatAvatarNavigationNode.swift in Sources */,
 				D0EC6D871EB9F58800EBF1C3 /* ChatTitleView.swift in Sources */,
+				D04614372005094E00EC0EF2 /* DeviceLocationManager.swift in Sources */,
 				D0EC6D881EB9F58800EBF1C3 /* ChatControllerTitlePanelNodeContainer.swift in Sources */,
 				D0EC6D891EB9F58800EBF1C3 /* ChatSecretAutoremoveTimerActionSheet.swift in Sources */,
 				D0EC6D8A1EB9F58800EBF1C3 /* ChatInfo.swift in Sources */,
@@ -5802,6 +5829,7 @@
 				D0EC6E861EB9F58900EBF1C3 /* UIImage+WebP.m in Sources */,
 				D0EC6E871EB9F58900EBF1C3 /* FastBlur.m in Sources */,
 				D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */,
+				D046142E2004DB3700EC0EF2 /* LiveLocationManager.swift in Sources */,
 				D05677511F4CA0C2001B723E /* InstantPagePeerReferenceItem.swift in Sources */,
 				D0EC6E881EB9F58900EBF1C3 /* FFMpegSwResample.m in Sources */,
 				D0EC6E891EB9F58900EBF1C3 /* FrameworkBundle.swift in Sources */,

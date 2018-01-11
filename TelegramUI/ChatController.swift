@@ -2537,21 +2537,52 @@ public final class ChatController: TelegramController {
     }
     
     private func presentMapPicker() {
-        self.chatDisplayNode.dismissInput()
-        self.present(legacyLocationPickerController(sendLocation: { [weak self] coordinate, venue in
-            if let strongSelf = self {
-                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                    if let strongSelf = self {
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
-                        })
-                    }
-                })
-                let message: EnqueueMessage = .message(text: "", attributes: [], media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: venue, liveBroadcastingTimeout: nil), replyToMessageId: replyMessageId, localGroupingKey: nil)
-                strongSelf.sendMessages([message])
+        guard let peer = self.presentationInterfaceState.peer else {
+            return
+        }
+        let selfPeerId: PeerId
+        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+            selfPeerId = peer.id
+        } else {
+            selfPeerId = self.account.peerId
+        }
+        let _ = (self.account.postbox.modify { modifier -> Peer? in
+            return modifier.getPeer(selfPeerId)
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] selfPeer in
+            guard let strongSelf = self, let selfPeer = selfPeer else {
+                return
             }
-        }, theme: self.presentationData.theme), in: .window(.root))
+            
+            strongSelf.chatDisplayNode.dismissInput()
+            strongSelf.present(legacyLocationPickerController(selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue in
+                if let strongSelf = self {
+                    let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                    strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                        if let strongSelf = self {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                            })
+                        }
+                    })
+                    let message: EnqueueMessage = .message(text: "", attributes: [], media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: venue, liveBroadcastingTimeout: nil), replyToMessageId: replyMessageId, localGroupingKey: nil)
+                    strongSelf.sendMessages([message])
+                }
+                }, sendLiveLocation: { [weak self] coordinate, period in
+                    if let strongSelf = self {
+                        let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                        strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                            if let strongSelf = self {
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                                })
+                            }
+                        })
+                        let message: EnqueueMessage = .message(text: "", attributes: [], media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period), replyToMessageId: replyMessageId, localGroupingKey: nil)
+                        strongSelf.sendMessages([message])
+                    }
+                }, theme: strongSelf.presentationData.theme), in: .window(.root))
+        })
     }
     
     private func sendMessages(_ messages: [EnqueueMessage]) {
