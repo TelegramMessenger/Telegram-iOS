@@ -514,12 +514,16 @@
     
     return [SSignal defer:^SSignal *
     {
-        NSError *error;
-        NSData *fileData = [NSData dataWithContentsOfURL:fileUrl options:NSDataReadingMappedIfSafe error:&error];
-        if (error == nil)
-            return [SSignal single:[self _hashForVideoWithFileData:fileData timingData:timingData preset:[self _presetFromAdjustments:adjustments]]];
-        else
-            return [SSignal fail:error];
+        if (fileUrl == nil) {
+            return [SSignal fail:nil];
+        } else {
+            NSError *error;
+            NSData *fileData = [NSData dataWithContentsOfURL:fileUrl options:NSDataReadingMappedIfSafe error:&error];
+            if (error == nil)
+                return [SSignal single:[self _hashForVideoWithFileData:fileData timingData:timingData preset:[self _presetFromAdjustments:adjustments]]];
+            else
+                return [SSignal fail:error];
+        }
     }];
 }
 
