@@ -46,6 +46,19 @@ bool MTCheckIsSafePrime(NSData *numberBytes, id<MTKeychain> keychain);
 bool MTCheckIsSafeGAOrB(NSData *gAOrB, NSData *p);
 bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain);
     
+@interface MTAesCtr : NSObject
+
+- (instancetype)initWithKey:(const void *)key keyLength:(int)keyLength iv:(const void *)iv decrypt:(bool)decrypt;
+- (instancetype)initWithKey:(const void *)key keyLength:(int)keyLength iv:(const void *)iv ecount:(void *)ecount num:(uint32_t)num;
+
+- (uint32_t)num;
+- (void *)ecount;
+- (void)getIv:(void *)iv;
+
+- (void)encryptIn:(const unsigned char *)in out:(unsigned char *)out len:(size_t)len;
+
+@end
+    
 uint64_t MTRsaFingerprint(NSString *key);
     
 @interface MTBackupDatacenterAddress : NSObject

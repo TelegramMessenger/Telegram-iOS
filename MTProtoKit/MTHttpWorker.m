@@ -98,11 +98,11 @@ MTInternalIdClass(MTHttpWorker)
             [_operation setSuccessCallbackQueue:[MTHttpWorker httpWorkerProcessingQueue].nativeQueue];
             [_operation setFailureCallbackQueue:[MTHttpWorker httpWorkerProcessingQueue].nativeQueue];
             
-            [_operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, __unused id responseObject)
+            [_operation setCompletionBlockWithSuccess:^(NSOperation *operation, __unused id responseObject)
             {
                 MTHttpWorker *strongSelf = weakSelf;
-                [strongSelf requestCompleted:[operation responseData] error:nil];
-            } failure:^(__unused AFHTTPRequestOperation *operation, NSError *error)
+                [strongSelf requestCompleted:[(AFHTTPRequestOperation *)operation responseData] error:nil];
+            } failure:^(__unused NSOperation *operation, NSError *error)
             {
                 MTHttpWorker *strongSelf = weakSelf;
                 [strongSelf requestCompleted:nil error:error];

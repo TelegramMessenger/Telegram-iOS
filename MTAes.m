@@ -221,10 +221,34 @@ static void ctr128_inc_aligned(unsigned char *counter)
     return self;
 }
 
+- (instancetype)initWithKey:(const void *)key keyLength:(int)keyLength iv:(const void *)iv ecount:(void *)ecount num:(uint32_t)num {
+    self = [super init];
+    if (self != nil) {
+        _num = num;
+        memcpy(_ecount, ecount, 16);
+        memcpy(_ivec, iv, 16);
+        
+        CCCryptorCreate(kCCEncrypt, kCCAlgorithmAES128, kCCOptionECBMode, key, keyLength, nil, &_cryptor);
+    }
+    return self;
+}
+
 - (void)dealloc {
     if (_cryptor) {
         CCCryptorRelease(_cryptor);
     }
+}
+
+- (uint32_t)num {
+    return _num;
+}
+
+- (void *)ecount {
+    return _ecount;
+}
+
+- (void)getIv:(void *)iv {
+    memcpy(iv, _ivec, 16);
 }
 
 - (void)encryptIn:(const unsigned char *)in out:(unsigned char *)out len:(size_t)len {

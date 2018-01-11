@@ -174,6 +174,7 @@
                 id requestId = request.internalId;
                 return [[MTBlockDisposable alloc] initWithBlock:^{
                     [requestService removeRequestByInternalId:requestId];
+                    [mtProto pause];
                 }];
             }];
         }

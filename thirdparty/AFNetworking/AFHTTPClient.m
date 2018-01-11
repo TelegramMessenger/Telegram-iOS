@@ -472,7 +472,15 @@ static void AFReachabilityCallback(SCNetworkReachabilityRef __unused target, SCN
         operation = [[[AFHTTPRequestOperation alloc] initWithRequest:urlRequest] autorelease];
     }
     
-    [operation setCompletionBlockWithSuccess:success failure:failure];
+    [operation setCompletionBlockWithSuccess:^(NSOperation *operation, id responseObject) {
+        if (success) {
+            success((AFHTTPRequestOperation *)operation, responseObject);
+        }
+    } failure:^(NSOperation *operation, NSError *error) {
+        if (failure) {
+            failure((AFHTTPRequestOperation *)operation, error);
+        }
+    }];
        
     return operation;
 }

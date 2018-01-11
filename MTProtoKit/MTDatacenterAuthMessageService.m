@@ -24,7 +24,7 @@ static NSArray *defaultPublicKeys() {
     static NSArray *serverPublicKeys = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
-    {
+                  {
         serverPublicKeys = [[NSArray alloc] initWithObjects:
                             [[NSDictionary alloc] initWithObjectsAndKeys:@"-----BEGIN RSA PUBLIC KEY-----\n"
                              "MIIBCgKCAQEAxq7aeLAqJR20tkQQMfRn+ocfrtMlJsQ2Uksfs7Xcoo77jAid0bRt\n"
