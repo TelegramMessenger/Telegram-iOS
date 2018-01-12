@@ -209,9 +209,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1987495099] = { return Api.Update.parse_updateChannelReadMessagesContents($0) }
     dict[1887741886] = { return Api.Update.parse_updateContactsReset($0) }
     dict[1893427255] = { return Api.Update.parse_updateChannelAvailableMessages($0) }
-    dict[-1723313495] = { return Api.Update.parse_updateReadFeed($0) }
     dict[433225532] = { return Api.Update.parse_updateDialogPinned($0) }
     dict[-364071333] = { return Api.Update.parse_updatePinnedDialogs($0) }
+    dict[1363101563] = { return Api.Update.parse_updateReadFeed($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
@@ -5261,9 +5261,9 @@ public struct Api {
         case updateChannelReadMessagesContents(channelId: Int32, messages: [Int32])
         case updateContactsReset
         case updateChannelAvailableMessages(channelId: Int32, availableMinId: Int32)
-        case updateReadFeed(feedId: Int32, maxPosition: Api.FeedPosition)
         case updateDialogPinned(flags: Int32, peer: Api.DialogPeer)
         case updatePinnedDialogs(flags: Int32, order: [Api.DialogPeer]?)
+        case updateReadFeed(flags: Int32, feedId: Int32, maxPosition: Api.FeedPosition, unreadCount: Int32?, unreadMutedCount: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5793,13 +5793,6 @@ public struct Api {
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     serializeInt32(availableMinId, buffer: buffer, boxed: false)
                     break
-                case .updateReadFeed(let feedId, let maxPosition):
-                    if boxed {
-                        buffer.appendInt32(-1723313495)
-                    }
-                    serializeInt32(feedId, buffer: buffer, boxed: false)
-                    maxPosition.serialize(buffer, true)
-                    break
                 case .updateDialogPinned(let flags, let peer):
                     if boxed {
                         buffer.appendInt32(433225532)
@@ -5817,6 +5810,16 @@ public struct Api {
                     for item in order! {
                         item.serialize(buffer, true)
                     }}
+                    break
+                case .updateReadFeed(let flags, let feedId, let maxPosition, let unreadCount, let unreadMutedCount):
+                    if boxed {
+                        buffer.appendInt32(1363101563)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(feedId, buffer: buffer, boxed: false)
+                    maxPosition.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(unreadCount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(unreadMutedCount!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -6877,22 +6880,6 @@ public struct Api {
                 return nil
             }
         }
-        fileprivate static func parse_updateReadFeed(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.FeedPosition?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.FeedPosition
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateReadFeed(feedId: _1!, maxPosition: _2!)
-            }
-            else {
-                return nil
-            }
-        }
         fileprivate static func parse_updateDialogPinned(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -6920,6 +6907,31 @@ public struct Api {
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updatePinnedDialogs(flags: _1!, order: _2)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_updateReadFeed(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.FeedPosition?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.FeedPosition
+            }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Update.updateReadFeed(flags: _1!, feedId: _2!, maxPosition: _3!, unreadCount: _4, unreadMutedCount: _5)
             }
             else {
                 return nil
