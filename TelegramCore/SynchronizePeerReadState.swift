@@ -53,6 +53,8 @@ private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId
                             apiMessages = messages
                         case let .messagesSlice(_, messages, _, _):
                             apiMessages = messages
+                        case .messagesNotModified:
+                            apiMessages = []
                     }
                     if let message = apiMessages.first, let timestamp = message.timestamp {
                         return .single((message.rawId, timestamp))

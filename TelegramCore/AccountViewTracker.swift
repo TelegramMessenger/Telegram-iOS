@@ -77,6 +77,10 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
+                            case .messagesNotModified:
+                                messages = []
+                                chats = []
+                                users = []
                         }
                         
                         return account.postbox.modify { modifier -> Void in

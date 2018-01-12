@@ -117,6 +117,10 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     messages = apiMessages
                     chats = apiChats
                     users = apiUsers
+                case .messagesNotModified:
+                    messages = []
+                    chats = []
+                    users = []
             }
             
             return account.postbox.modify { modifier -> [Message] in
@@ -183,18 +187,22 @@ public func downloadMessage(account: Account, messageId: MessageId) -> Signal<Me
                         let chats: [Api.Chat]
                         let users: [Api.User]
                         switch result {
-                        case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
-                        case let .messages(apiMessages, apiChats, apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
-                        case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
+                            case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case let .messages(apiMessages, apiChats, apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case .messagesNotModified:
+                                messages = []
+                                chats = []
+                                users = []
                         }
                         
                         let postboxSignal = account.postbox.modify { modifier -> Message? in
@@ -249,6 +257,8 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
                             messages = apiMessages
                         case let.messagesSlice(_, apiMessages, _, _):
                             messages = apiMessages
+                        case .messagesNotModified:
+                            messages = []
                     }
                     for message in messages {
                         if let message = StoreMessage(apiMessage: message), case let .Id(id) = message.id {

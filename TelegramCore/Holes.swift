@@ -183,6 +183,10 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                                 chats = apiChats
                                 users = apiUsers
                                 channelPts = pts
+                            case .messagesNotModified:
+                                messages = []
+                                chats = []
+                                users = []
                         }
                         var updatedMaxIndex: MessageIndex?
                         if let maxIndexResult = maxIndexResult {
@@ -194,6 +198,8 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                                     maxIndexMessages = apiMessages
                                 case let .channelMessages(_, _, _, apiMessages, _, _):
                                     maxIndexMessages = apiMessages
+                                case .messagesNotModified:
+                                    maxIndexMessages = []
                             }
                             if !maxIndexMessages.isEmpty {
                                 assert(maxIndexMessages.count == 1)
@@ -520,6 +526,10 @@ func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageInd
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
+                        case .messagesNotModified:
+                            messages = []
+                            chats = []
+                            users = []
                     }
                     return postbox.modify { modifier -> Void in
                         var storeMessages: [StoreMessage] = []

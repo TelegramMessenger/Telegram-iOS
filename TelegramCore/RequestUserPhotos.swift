@@ -75,18 +75,22 @@ public func requestPeerPhotos(account:Account, peerId:PeerId) -> Signal<[Telegra
                             let chats: [Api.Chat]
                             let users: [Api.User]
                             switch result {
-                            case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
-                            case let .messages(apiMessages, apiChats, apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
-                            case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
+                                case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                                    messages = apiMessages
+                                    chats = apiChats
+                                    users = apiUsers
+                                case let .messages(apiMessages, apiChats, apiUsers):
+                                    messages = apiMessages
+                                    chats = apiChats
+                                    users = apiUsers
+                                case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
+                                    messages = apiMessages
+                                    chats = apiChats
+                                    users = apiUsers
+                                case .messagesNotModified:
+                                    messages = []
+                                    chats = []
+                                    users = []
                             }
                             
                             return account.postbox.modify { modifier -> [Message] in
