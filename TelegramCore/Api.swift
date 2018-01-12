@@ -5818,8 +5818,8 @@ public struct Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(feedId, buffer: buffer, boxed: false)
                     maxPosition.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(unreadCount!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(unreadMutedCount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(unreadCount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(unreadMutedCount!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -6922,14 +6922,14 @@ public struct Api {
                 _3 = Api.parse(reader, signature: signature) as? Api.FeedPosition
             }
             var _4: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
             var _5: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.Update.updateReadFeed(flags: _1!, feedId: _2!, maxPosition: _3!, unreadCount: _4, unreadMutedCount: _5)
             }
@@ -19990,31 +19990,6 @@ public struct Api {
                     })
                 }
             
-                public static func search(flags: Int32, peer: Api.InputPeer, q: String, fromId: Api.InputUser?, filter: Api.MessagesFilter, minDate: Int32, maxDate: Int32, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(60726944)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeString(q, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {fromId!.serialize(buffer, true)}
-                    filter.serialize(buffer, true)
-                    serializeInt32(minDate, buffer: buffer, boxed: false)
-                    serializeInt32(maxDate, buffer: buffer, boxed: false)
-                    serializeInt32(offsetId, buffer: buffer, boxed: false)
-                    serializeInt32(addOffset, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    serializeInt32(maxId, buffer: buffer, boxed: false)
-                    serializeInt32(minId, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.search flags: \(flags), peer: \(peer), q: \(q), fromId: \(String(describing: fromId)), filter: \(filter), minDate: \(minDate), maxDate: \(maxDate), offsetId: \(offsetId), addOffset: \(addOffset), limit: \(limit), maxId: \(maxId), minId: \(minId))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Messages?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getUnreadMentions(peer: Api.InputPeer, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
                     let buffer = Buffer()
                     buffer.appendInt32(1180140658)
@@ -20060,21 +20035,6 @@ public struct Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getRecentLocations(peer: Api.InputPeer, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(613691874)
-                    peer.serialize(buffer, true)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.getRecentLocations peer: \(peer), limit: \(limit))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Messages?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
                         }
                         return result
                     })
@@ -20152,6 +20112,48 @@ public struct Api {
                         var result: Api.EncryptedFile?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.EncryptedFile
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getRecentLocations(peer: Api.InputPeer, limit: Int32, hash: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1144759543)
+                    peer.serialize(buffer, true)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(messages.getRecentLocations peer: \(peer), limit: \(limit), hash: \(hash))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
+            
+                public static func search(flags: Int32, peer: Api.InputPeer, q: String, fromId: Api.InputUser?, filter: Api.MessagesFilter, minDate: Int32, maxDate: Int32, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2045448344)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {fromId!.serialize(buffer, true)}
+                    filter.serialize(buffer, true)
+                    serializeInt32(minDate, buffer: buffer, boxed: false)
+                    serializeInt32(maxDate, buffer: buffer, boxed: false)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(addOffset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeInt32(maxId, buffer: buffer, boxed: false)
+                    serializeInt32(minId, buffer: buffer, boxed: false)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(messages.search flags: \(flags), peer: \(peer), q: \(q), fromId: \(String(describing: fromId)), filter: \(filter), minDate: \(minDate), maxDate: \(maxDate), offsetId: \(offsetId), addOffset: \(addOffset), limit: \(limit), maxId: \(maxId), minId: \(minId), hash: \(hash))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
                         }
                         return result
                     })
