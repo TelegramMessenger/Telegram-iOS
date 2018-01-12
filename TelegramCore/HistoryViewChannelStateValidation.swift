@@ -242,7 +242,21 @@ private func validateBatch(postbox: Postbox, network: Network, messageIds: [Mess
                 }
             }
             let hash = hashForMessages(messages)
-            return network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: messageIds[messageIds.count - 1].id, offsetDate: 0, addOffset: 0, limit: 100, maxId: messageIds[messageIds.cout - 1].id, minId: messageIds[0].id))
+            return network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: messageIds[messageIds.count - 1].id, offsetDate: 0, addOffset: 0, limit: 100, maxId: messageIds[messageIds.cout - 1].id, minId: messageIds[0].id, hash: hash))
+            |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<Void, NoError> in
+                return postbox.modify { modifier -> Void in
+                    if let result = result {
+                        switch result {
+                            case .messagesNotModified:
+                                break
+                            
+                        }
+                    }
+                }
+            }
         } else {
             return .never()
         }

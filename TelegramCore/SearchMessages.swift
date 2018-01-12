@@ -239,7 +239,7 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return .single(modifier.findClosestMessageIdByTimestamp(peerId: peerId, timestamp: timestamp))
         } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0))
+            return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
                 |> map { result -> MessageId? in
                     let messages: [Api.Message]
                     switch result {

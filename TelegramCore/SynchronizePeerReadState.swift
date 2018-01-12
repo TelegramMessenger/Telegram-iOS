@@ -42,7 +42,7 @@ private func inputSecretChat(postbox: Postbox, peerId: PeerId) -> Signal<Api.Inp
 private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<(Int32, Int32), VerifyReadStateError> {
     return inputPeer(postbox: postbox, peerId: peerId)
         |> mapToSignal { inputPeer -> Signal<(Int32, Int32), VerifyReadStateError> in
-            return network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: Int32.max, offsetDate: Int32.max, addOffset: 0, limit: 1, maxId: Int32.max, minId: 1))
+            return network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: Int32.max, offsetDate: Int32.max, addOffset: 0, limit: 1, maxId: Int32.max, minId: 1, hash: 0))
                 |> retryRequest
                 |> mapToSignalPromotingError { result -> Signal<(Int32, Int32), VerifyReadStateError> in
                     let apiMessages: [Api.Message]
