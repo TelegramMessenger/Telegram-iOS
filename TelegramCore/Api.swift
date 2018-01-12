@@ -401,6 +401,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1938715001] = { return Api.messages.Messages.parse_messages($0) }
     dict[189033187] = { return Api.messages.Messages.parse_messagesSlice($0) }
     dict[-1725551049] = { return Api.messages.Messages.parse_channelMessages($0) }
+    dict[1951620897] = { return Api.messages.Messages.parse_messagesNotModified($0) }
     dict[-1022713000] = { return Api.Invoice.parse_invoice($0) }
     dict[-2122045747] = { return Api.PeerSettings.parse_peerSettings($0) }
     dict[1577067778] = { return Api.auth.SentCode.parse_sentCode($0) }
@@ -1886,6 +1887,7 @@ public struct Api {
             case messages(messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
             case messagesSlice(count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
             case channelMessages(flags: Int32, pts: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+            case messagesNotModified(count: Int32)
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
@@ -1952,6 +1954,12 @@ public struct Api {
                         for item in users {
                             item.serialize(buffer, true)
                         }
+                        break
+                    case .messagesNotModified(let count):
+                        if boxed {
+                            buffer.appendInt32(1951620897)
+                        }
+                        serializeInt32(count, buffer: buffer, boxed: false)
                         break
         }
         }
@@ -2032,6 +2040,17 @@ public struct Api {
                 let _c6 = _6 != nil
                 if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                     return Api.messages.Messages.channelMessages(flags: _1!, pts: _2!, count: _3!, messages: _4!, chats: _5!, users: _6!)
+                }
+                else {
+                    return nil
+                }
+            }
+            fileprivate static func parse_messagesNotModified(_ reader: BufferReader) -> Messages? {
+                var _1: Int32?
+                _1 = reader.readInt32()
+                let _c1 = _1 != nil
+                if _c1 {
+                    return Api.messages.Messages.messagesNotModified(count: _1!)
                 }
                 else {
                     return nil
