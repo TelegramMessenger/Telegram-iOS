@@ -923,6 +923,10 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
+    func exists(_ index: MessageIndex) -> Bool {
+        return self.valueBox.exists(self.table, key: self.key(index))
+    }
+    
     func getMessage(_ index: MessageIndex) -> IntermediateMessage? {
         let key = self.key(index)
         if let value = self.valueBox.get(self.table, key: key) {
