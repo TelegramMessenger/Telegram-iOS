@@ -211,7 +211,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1893427255] = { return Api.Update.parse_updateChannelAvailableMessages($0) }
     dict[433225532] = { return Api.Update.parse_updateDialogPinned($0) }
     dict[-364071333] = { return Api.Update.parse_updatePinnedDialogs($0) }
-    dict[1363101563] = { return Api.Update.parse_updateReadFeed($0) }
+    dict[1873186369] = { return Api.Update.parse_updateReadFeed($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
@@ -5813,7 +5813,7 @@ public struct Api {
                     break
                 case .updateReadFeed(let flags, let feedId, let maxPosition, let unreadCount, let unreadMutedCount):
                     if boxed {
-                        buffer.appendInt32(1363101563)
+                        buffer.appendInt32(1873186369)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(feedId, buffer: buffer, boxed: false)
