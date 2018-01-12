@@ -213,4 +213,13 @@ public final class LiveLocationManager {
             self.pollingOnceValue = true
         }
     }
+    
+    func internalMessageForPeerId(_ peerId: PeerId) -> MessageId? {
+        for id in self.broadcastToMessageIds {
+            if id.peerId == peerId {
+                return id
+            }
+        }
+        return nil
+    }
 }

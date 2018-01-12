@@ -112,6 +112,12 @@ struct PresentationResourcesRootController {
         })
     }
     
+    static func navigationLiveLocationIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationLiveLocationIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/LiveLocationPanelIcon"), color: theme.rootController.navigationBar.accentTextColor)
+        })
+    }
+    
     static func navigationPlayerMaximizedPlayIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationPlayerMaximizedPlayIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Play"), color: theme.rootController.navigationBar.primaryTextColor)

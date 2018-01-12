@@ -39,7 +39,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.titleView = NetworkStatusTitleView(theme: self.presentationData.theme)
         
-        super.init(account: account, navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), enableMediaAccessoryPanel: true)
+        super.init(account: account, navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .summary)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         

@@ -86,6 +86,7 @@
 		D048EA8B1F4F298A00188713 /* InstantPageSettingsThemeItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D048EA8A1F4F298A00188713 /* InstantPageSettingsThemeItemNode.swift */; };
 		D048EA8D1F4F299A00188713 /* InstantPageSettingsSwitchItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D048EA8C1F4F299A00188713 /* InstantPageSettingsSwitchItemNode.swift */; };
 		D048EA8F1F4F2A9C00188713 /* InstantPageSettingsItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D048EA8E1F4F2A9C00188713 /* InstantPageSettingsItemNode.swift */; };
+		D04B26EC20082EB50053A58C /* LocationBroadcastPanelWavesNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04B26EB20082EB50053A58C /* LocationBroadcastPanelWavesNode.swift */; };
 		D04B4D111EEA04D400711AF6 /* MapResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04B4D101EEA04D400711AF6 /* MapResources.swift */; };
 		D04B4D131EEA0A6500711AF6 /* ChatMessageMapBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04B4D121EEA0A6500711AF6 /* ChatMessageMapBubbleContentNode.swift */; };
 		D04B4D661EEA993A00711AF6 /* LegacyLocationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04B4D651EEA993A00711AF6 /* LegacyLocationController.swift */; };
@@ -137,6 +138,7 @@
 		D091C7A61F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D091C7A51F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift */; };
 		D09250041FE5363D003F693F /* ExperimentalSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09250031FE5363D003F693F /* ExperimentalSettings.swift */; };
 		D09250061FE5371D003F693F /* GlobalExperimentalSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09250051FE5371D003F693F /* GlobalExperimentalSettings.swift */; };
+		D09394132007F5BB00997F31 /* LocationBroadcastNavigationAccessoryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09394122007F5BB00997F31 /* LocationBroadcastNavigationAccessoryPanel.swift */; };
 		D0943AF61FDAAE7E001522CC /* MultipleAvatarsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */; };
 		D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */; };
 		D0943B001FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */; };
@@ -1209,6 +1211,7 @@
 		D049EAE51E44AD5600A2CD3A /* ChatMediaInputMetaSectionItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputMetaSectionItemNode.swift; sourceTree = "<group>"; };
 		D049EAED1E44BB3200A2CD3A /* ChatListRecentPeersListItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListRecentPeersListItem.swift; sourceTree = "<group>"; };
 		D049EAF21E44DE2500A2CD3A /* AuthorizationSequenceController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceController.swift; sourceTree = "<group>"; };
+		D04B26EB20082EB50053A58C /* LocationBroadcastPanelWavesNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationBroadcastPanelWavesNode.swift; sourceTree = "<group>"; };
 		D04B4D101EEA04D400711AF6 /* MapResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapResources.swift; sourceTree = "<group>"; };
 		D04B4D121EEA0A6500711AF6 /* ChatMessageMapBubbleContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageMapBubbleContentNode.swift; sourceTree = "<group>"; };
 		D04B4D651EEA993A00711AF6 /* LegacyLocationController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyLocationController.swift; sourceTree = "<group>"; };
@@ -1423,6 +1426,7 @@
 		D091C7A51F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsThemeWallpaperNode.swift; sourceTree = "<group>"; };
 		D09250031FE5363D003F693F /* ExperimentalSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperimentalSettings.swift; sourceTree = "<group>"; };
 		D09250051FE5371D003F693F /* GlobalExperimentalSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalExperimentalSettings.swift; sourceTree = "<group>"; };
+		D09394122007F5BB00997F31 /* LocationBroadcastNavigationAccessoryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationBroadcastNavigationAccessoryPanel.swift; sourceTree = "<group>"; };
 		D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipleAvatarsNode.swift; sourceTree = "<group>"; };
 		D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMultipleAvatarsNavigationNode.swift; sourceTree = "<group>"; };
 		D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFeedNavigationInputPanelNode.swift; sourceTree = "<group>"; };
@@ -2764,6 +2768,8 @@
 				D0736F2B1DF4DC2400F2C02A /* MediaNavigationAccessoryContainerNode.swift */,
 				D0736F2D1DF4E54A00F2C02A /* MediaNavigationAccessoryHeaderNode.swift */,
 				D0177B811DFAEA5400A5083A /* MediaNavigationAccessoryItemListNode.swift */,
+				D09394122007F5BB00997F31 /* LocationBroadcastNavigationAccessoryPanel.swift */,
+				D04B26EB20082EB50053A58C /* LocationBroadcastPanelWavesNode.swift */,
 			);
 			name = "Telegram Controller";
 			sourceTree = "<group>";
@@ -5114,6 +5120,7 @@
 				D0EC6CCF1EB9F58800EBF1C3 /* GeoLocation.swift in Sources */,
 				D0EC6EA71EBA0FB000EBF1C3 /* BlockingQueue.cpp in Sources */,
 				D0EC6CD01EB9F58800EBF1C3 /* PerformanceSpinner.swift in Sources */,
+				D09394132007F5BB00997F31 /* LocationBroadcastNavigationAccessoryPanel.swift in Sources */,
 				D0471B5C1EFEB4F30074D609 /* BotPaymentFieldItemNode.swift in Sources */,
 				D0C27B3D1F4B454800A4E170 /* InstantPagePlayableVideoNode.swift in Sources */,
 				D0EC6CD11EB9F58800EBF1C3 /* UrlHandling.swift in Sources */,
@@ -5167,6 +5174,7 @@
 				D0EC6FEF1EBA18E800EBF1C3 /* VoIPController.cpp in Sources */,
 				D0EC6CED1EB9F58800EBF1C3 /* StringPluralization.swift in Sources */,
 				D020A9DC1FEAE6E7008C66F7 /* OverlayPlayerControllerNode.swift in Sources */,
+				D04B26EC20082EB50053A58C /* LocationBroadcastPanelWavesNode.swift in Sources */,
 				D0EC6FC61EBA135100EBF1C3 /* complex_fft.c in Sources */,
 				D0EC6CEE1EB9F58800EBF1C3 /* InAppNotificationSettings.swift in Sources */,
 				D0EC6CEF1EB9F58800EBF1C3 /* PresentationPasscodeSettings.swift in Sources */,

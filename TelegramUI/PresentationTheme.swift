@@ -6,6 +6,10 @@ public enum PresentationThemeParsingError: Error {
     case generic
 }
 
+public final class PresentationThemeColorPlaceholder {
+    
+}
+
 public final class PresentationThemeRootTabBar {
     public let backgroundColor: UIColor
     public let separatorColor: UIColor

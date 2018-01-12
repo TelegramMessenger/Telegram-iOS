@@ -78,7 +78,8 @@ func openChatMessage(account: Account, message: Message, reverseMessageGalleryOr
             present(legacyLocationController(message: message, mapMedia: mapMedia, account: account, openPeer: { peer in
                 openPeer(peer, .info)
             }, sendLiveLocation: { coordinate, period in
-                
+                let outMessage: EnqueueMessage = .message(text: "", attributes: [], media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period), replyToMessageId: nil, localGroupingKey: nil)
+                let _ = enqueueMessages(account: account, peerId: message.id.peerId, messages: [outMessage]).start()
             }, stopLiveLocation: {
                 account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
             }), nil)

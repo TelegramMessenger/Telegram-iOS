@@ -5,8 +5,6 @@ import SwiftSignalKit
 
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
-private let maximizedTitleFont = Font.bold(17.0)
-private let maximizedSubtitleFont = Font.regular(12.0)
 
 final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     static let minimizedHeight: CGFloat = 37.0

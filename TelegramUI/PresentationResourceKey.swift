@@ -19,6 +19,8 @@ enum PresentationResourceKey: Int32 {
     case navigationSearchIcon
     case navigationPlayerCloseButton
     
+    case navigationLiveLocationIcon
+    
     case navigationPlayerPlayIcon
     case navigationPlayerPauseIcon
     case navigationPlayerMaximizedPlayIcon

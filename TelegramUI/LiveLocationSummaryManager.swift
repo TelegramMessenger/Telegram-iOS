@@ -82,7 +82,7 @@ private final class LiveLocationPeerSummaryContext {
     private let peerId: PeerId
     private let becameEmpty: () -> Void
     
-    private var peers: [Peer] = [] {
+    private var peers: [Peer]? = nil {
         didSet {
             assert(self.queue.isCurrent())
             
@@ -106,7 +106,7 @@ private final class LiveLocationPeerSummaryContext {
             }
         }
     }
-    private var subscribers = Bag<([Peer]) -> Void>()
+    private var subscribers = Bag<([Peer]?) -> Void>()
     
     var isEmpty: Bool {
         return !self.isActive && self.subscribers.isEmpty
@@ -126,7 +126,7 @@ private final class LiveLocationPeerSummaryContext {
         self.peerDisposable.dispose()
     }
     
-    func subscribe(_ f: @escaping ([Peer]) -> Void) -> Disposable {
+    func subscribe(_ f: @escaping ([Peer]?) -> Void) -> Disposable {
         let index = self.subscribers.add({ next in
             f(next)
         })
@@ -165,7 +165,7 @@ private final class LiveLocationPeerSummaryContext {
                 }))
         } else {
             self.peerDisposable.set(nil)
-            self.peers = []
+            self.peers = nil
         }
     }
 }
@@ -195,21 +195,6 @@ final class LiveLocationSummaryManager {
             peerIds.insert(id.peerId)
         }
         
-        var removedPeerIds: [PeerId] = []
-        for peerId in self.peerContexts.keys {
-            if !peerIds.contains(peerId) {
-                removedPeerIds.append(peerId)
-            }
-        }
-        
-        for peerId in removedPeerIds {
-            if let _ = self.peerContexts[peerId] {
-                self.peerContexts.removeValue(forKey: peerId)
-            } else {
-                assertionFailure()
-            }
-        }
-        
         for peerId in peerIds {
             if self.peerContexts[peerId] == nil {
                 let context = LiveLocationPeerSummaryContext(queue: self.queue, accountPeerId: self.accountPeerId, viewTracker: self.viewTracker, peerId: peerId, becameEmpty: { [weak self] in
@@ -232,7 +217,7 @@ final class LiveLocationSummaryManager {
         return self.globalContext.subscribe()
     }
     
-    func peersBroadcastingTo(peerId: PeerId) -> Signal<[Peer], NoError> {
+    func peersBroadcastingTo(peerId: PeerId) -> Signal<[Peer]?, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -247,6 +232,7 @@ final class LiveLocationSummaryManager {
                                 strongSelf.peerContexts.removeValue(forKey: peerId)
                             }
                         })
+                        strongSelf.peerContexts[peerId] = context
                     }
                     
                     disposable.set(context.subscribe({ next in

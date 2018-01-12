@@ -4,15 +4,51 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 
+enum LocationBroadcastPanelSource {
+    case none
+    case summary
+    case peer(PeerId)
+}
+
+private func presentLiveLocationController(account: Account, peerId: PeerId, controller: ViewController) {
+    if let id = account.telegramApplicationContext.liveLocationManager?.internalMessageForPeerId(peerId) {
+        let _ = (account.postbox.modify { modifier -> Message? in
+            return modifier.getMessage(id)
+        } |> deliverOnMainQueue).start(next: { [weak controller] message in
+            if let message = message, let strongController = controller {
+                let _ = openChatMessage(account: account, message: message, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, dismissInput: {
+                    controller?.view.endEditing(true)
+                }, present: { c, a in
+                    controller?.present(c, in: .window(.root), with: a)
+                }, transitionNode: { _, _ in
+                    return nil
+                }, addToTransitionSurface: { _ in
+                }, openUrl: { _ in
+                }, openPeer: { peer, navigation in
+                }, callPeer: { _ in
+                }, sendSticker: { _ in
+                }, setupTemporaryHiddenMedia: { _, _, _ in
+                })
+            }
+        })
+    }
+}
+
 public class TelegramController: ViewController {
     private let account: Account
     
     let enableMediaAccessoryPanel: Bool
+    let locationBroadcastPanelSource: LocationBroadcastPanelSource
     
     private var mediaStatusDisposable: Disposable?
+    private var locationBroadcastDisposable: Disposable?
     
     private(set) var playlistStateAndType: (SharedMediaPlaylistItem, MusicPlaybackSettingsOrder, MediaManagerPlayerType)?
     private var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
+    
+    private var locationBroadcastMode: LocationBroadcastNavigationAccessoryPanelMode?
+    private var locationBroadcastPeers: [Peer]?
+    private var locationBroadcastAccessoryPanel: LocationBroadcastNavigationAccessoryPanel?
     
     private var dismissingPanel: ASDisplayNode?
     
@@ -21,17 +57,21 @@ public class TelegramController: ViewController {
         if let _ = self.mediaAccessoryPanel {
             height += 36.0
         }
+        if let _ = self.locationBroadcastAccessoryPanel {
+            height += 36.0
+        }
         return height
     }
     
-    init(account: Account, navigationBarTheme: NavigationBarTheme?, enableMediaAccessoryPanel: Bool) {
+    init(account: Account, navigationBarTheme: NavigationBarTheme?, enableMediaAccessoryPanel: Bool, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
         self.account = account
         self.enableMediaAccessoryPanel = enableMediaAccessoryPanel
+        self.locationBroadcastPanelSource = locationBroadcastPanelSource
         
         super.init(navigationBarTheme: navigationBarTheme)
         
-        if let applicationContext = account.applicationContext as? TelegramApplicationContext {
-            self.mediaStatusDisposable = (applicationContext.mediaManager.globalMediaPlayerState
+        if enableMediaAccessoryPanel {
+            self.mediaStatusDisposable = (account.telegramApplicationContext.mediaManager.globalMediaPlayerState
                 |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndType in
                     if let strongSelf = self, strongSelf.enableMediaAccessoryPanel {
                         if !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.0, playlistStateAndType?.0.item) ||
@@ -46,10 +86,52 @@ public class TelegramController: ViewController {
                     }
                 })
         }
+        
+        if let liveLocationManager = account.telegramApplicationContext.liveLocationManager {
+            switch locationBroadcastPanelSource {
+                case .none:
+                    self.locationBroadcastMode = nil
+                case .summary, .peer:
+                    let signal: Signal<[Peer]?, NoError>
+                    switch locationBroadcastPanelSource {
+                        case let .peer(peerId):
+                            self.locationBroadcastMode = .peer
+                            signal = liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
+                        default:
+                            self.locationBroadcastMode = .summary
+                            signal = liveLocationManager.summaryManager.broadcastingToPeers()
+                                |> map { $0.isEmpty ? nil : $0 }
+                        
+                    }
+                    
+                    self.locationBroadcastDisposable = (signal
+                    |> deliverOnMainQueue).start(next: { [weak self] peers in
+                        if let strongSelf = self {
+                            var updated = false
+                            if let current = strongSelf.locationBroadcastPeers, let peers = peers {
+                                updated = !arePeerArraysEqual(current, peers)
+                            } else if (strongSelf.locationBroadcastPeers != nil) != (peers != nil) {
+                                updated = true
+                            }
+                            
+                            if updated {
+                                let wasEmpty = strongSelf.locationBroadcastPeers == nil
+                                strongSelf.locationBroadcastPeers = peers
+                                if wasEmpty != (peers == nil) {
+                                    strongSelf.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+                                } else if let peers = peers, let locationBroadcastMode = strongSelf.locationBroadcastMode {
+                                    strongSelf.locationBroadcastAccessoryPanel?.update(peers: peers, mode: locationBroadcastMode)
+                                }
+                            }
+                        }
+                    })
+            }
+        }
     }
     
     deinit {
         self.mediaStatusDisposable?.dispose()
+        self.locationBroadcastDisposable?.dispose()
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -59,10 +141,148 @@ public class TelegramController: ViewController {
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        if let (item, _, type) = self.playlistStateAndType {
-            let navigationHeight = super.navigationHeight
+        let navigationHeight = super.navigationHeight
+        
+        var additionalHeight: CGFloat = 0.0
+        
+        if let locationBroadcastPeers = self.locationBroadcastPeers, let locationBroadcastMode = self.locationBroadcastMode {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
-            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
+            additionalHeight += panelHeight
+            
+            let locationBroadcastAccessoryPanel: LocationBroadcastNavigationAccessoryPanel
+            if let current = self.locationBroadcastAccessoryPanel {
+                locationBroadcastAccessoryPanel = current
+                transition.updateFrame(node: locationBroadcastAccessoryPanel, frame: panelFrame)
+                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, transition: transition)
+            } else {
+                let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                locationBroadcastAccessoryPanel = LocationBroadcastNavigationAccessoryPanel(theme: presentationData.theme, strings: presentationData.strings, tapAction: { [weak self] in
+                    if let strongSelf = self {
+                        switch strongSelf.locationBroadcastPanelSource {
+                            case .none:
+                                break
+                            case .summary:
+                                if let locationBroadcastPeers = strongSelf.locationBroadcastPeers {
+                                    if locationBroadcastPeers.count == 1 {
+                                        presentLiveLocationController(account: strongSelf.account, peerId: locationBroadcastPeers[0].id, controller: strongSelf)
+                                    } else {
+                                        let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                                        let dismissAction: () -> Void = { [weak controller] in
+                                            controller?.dismissAnimated()
+                                        }
+                                        var items: [ActionSheetItem] = []
+                                        if !locationBroadcastPeers.isEmpty {
+                                            items.append(ActionSheetTextItem(title: presentationData.strings.LiveLocation_MenuChatsCount(Int32(locationBroadcastPeers.count))))
+                                            for peer in locationBroadcastPeers {
+                                                items.append(ActionSheetButtonItem(title: peer.displayTitle, action: {
+                                                    dismissAction()
+                                                    if let strongSelf = self {
+                                                        presentLiveLocationController(account: strongSelf.account, peerId: peer.id, controller: strongSelf)
+                                                    }
+                                                }))
+                                            }
+                                            items.append(ActionSheetButtonItem(title: presentationData.strings.LiveLocation_MenuStopAll, color: .destructive, action: {
+                                                dismissAction()
+                                                for peer in locationBroadcastPeers {
+                                                    self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
+                                                }
+                                            }))
+                                        }
+                                        controller.setItemGroups([
+                                            ActionSheetItemGroup(items: items),
+                                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                                            ])
+                                        strongSelf.view.endEditing(true)
+                                        strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    }
+                                }
+                            case let .peer(peerId):
+                                presentLiveLocationController(account: strongSelf.account, peerId: peerId, controller: strongSelf)
+                        }
+                    }
+                }, close: { [weak self] in
+                    if let strongSelf = self {
+                        var closePeers: [Peer]?
+                        var closePeerId: PeerId?
+                        switch strongSelf.locationBroadcastPanelSource {
+                            case .none:
+                                break
+                            case .summary:
+                                if let locationBroadcastPeers = strongSelf.locationBroadcastPeers {
+                                    if locationBroadcastPeers.count > 1 {
+                                        closePeers = locationBroadcastPeers
+                                    } else {
+                                        closePeerId = locationBroadcastPeers.first?.id
+                                    }
+                                }
+                            case let .peer(peerId):
+                                closePeerId = peerId
+                        }
+                        let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                        let dismissAction: () -> Void = { [weak controller] in
+                            controller?.dismissAnimated()
+                        }
+                        var items: [ActionSheetItem] = []
+                        if let closePeers = closePeers, !closePeers.isEmpty {
+                            items.append(ActionSheetTextItem(title: presentationData.strings.LiveLocation_MenuChatsCount(Int32(closePeers.count))))
+                            for peer in closePeers {
+                                items.append(ActionSheetButtonItem(title: peer.displayTitle, action: {
+                                    dismissAction()
+                                    if let strongSelf = self {
+                                        presentLiveLocationController(account: strongSelf.account, peerId: peer.id, controller: strongSelf)
+                                    }
+                                }))
+                            }
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.LiveLocation_MenuStopAll, color: .destructive, action: {
+                                dismissAction()
+                                for peer in closePeers {
+                                    self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
+                                }
+                            }))
+                        } else if let closePeerId = closePeerId {
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.Map_StopLiveLocation, color: .destructive, action: {
+                                dismissAction()
+                                self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: closePeerId)
+                            }))
+                        }
+                        controller.setItemGroups([
+                            ActionSheetItemGroup(items: items),
+                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                            ])
+                        strongSelf.view.endEditing(true)
+                        strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }
+                })
+                if let navigationBar = self.navigationBar {
+                    self.displayNode.insertSubnode(locationBroadcastAccessoryPanel, aboveSubnode: navigationBar)
+                } else {
+                    self.displayNode.addSubnode(locationBroadcastAccessoryPanel)
+                }
+                self.locationBroadcastAccessoryPanel = locationBroadcastAccessoryPanel
+                locationBroadcastAccessoryPanel.frame = panelFrame
+                locationBroadcastAccessoryPanel.update(peers: locationBroadcastPeers, mode: locationBroadcastMode)
+                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, transition: .immediate)
+                if transition.isAnimated {
+                    locationBroadcastAccessoryPanel.animateIn(transition)
+                }
+            }
+        } else if let locationBroadcastAccessoryPanel = self.locationBroadcastAccessoryPanel {
+            self.locationBroadcastAccessoryPanel = nil
+            if transition.isAnimated {
+                locationBroadcastAccessoryPanel.animateOut(transition, completion: { [weak locationBroadcastAccessoryPanel] in
+                    locationBroadcastAccessoryPanel?.removeFromSupernode()
+                })
+            } else {
+                locationBroadcastAccessoryPanel.removeFromSupernode()
+            }
+        }
+        
+        if let (item, _, type) = self.playlistStateAndType {
+            let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: transition)

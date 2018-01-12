@@ -149,10 +149,14 @@ public final class ChatController: TelegramController {
         self.messageId = messageId
         self.botStart = botStart
         
+        let locationBroadcastPanelSource: LocationBroadcastPanelSource
+        
         switch chatLocation {
-            case .peer:
+            case let .peer(peerId):
+                locationBroadcastPanelSource = .peer(peerId)
                 self.chatLocationInfoData = .peer(Promise())
             case .group:
+                locationBroadcastPanelSource = .none
                 self.chatLocationInfoData = .group(Promise())
         }
         
@@ -166,7 +170,7 @@ public final class ChatController: TelegramController {
         if case .overlay = mode {
             enableMediaAccessoryPanel = false
         }
-        super.init(account: account, navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), enableMediaAccessoryPanel: enableMediaAccessoryPanel)
+        super.init(account: account, navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), enableMediaAccessoryPanel: enableMediaAccessoryPanel, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
