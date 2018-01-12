@@ -79,7 +79,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                                 flags |= (1 << 0)
                             }
                         }
-                        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0))
+                        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0, hash: 0))
                             |> map {Optional($0)}
                             |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
                                 return .single(nil)
