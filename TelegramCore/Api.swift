@@ -18643,9 +18643,9 @@ public struct Api {
                     })
                 }
             
-                public static func getHistory(peer: Api.InputPeer, offsetId: Int32, offsetDate: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
+                public static func getHistory(peer: Api.InputPeer, offsetId: Int32, offsetDate: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Messages?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1347868602)
+                    buffer.appendInt32(-591691168)
                     peer.serialize(buffer, true)
                     serializeInt32(offsetId, buffer: buffer, boxed: false)
                     serializeInt32(offsetDate, buffer: buffer, boxed: false)
@@ -18653,7 +18653,8 @@ public struct Api {
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     serializeInt32(maxId, buffer: buffer, boxed: false)
                     serializeInt32(minId, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.getHistory peer: \(peer), offsetId: \(offsetId), offsetDate: \(offsetDate), addOffset: \(addOffset), limit: \(limit), maxId: \(maxId), minId: \(minId))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(messages.getHistory peer: \(peer), offsetId: \(offsetId), offsetDate: \(offsetDate), addOffset: \(addOffset), limit: \(limit), maxId: \(maxId), minId: \(minId), hash: \(hash))"}), buffer, { (buffer: Buffer) -> Api.messages.Messages? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.Messages?
                         if let signature = reader.readInt32() {
