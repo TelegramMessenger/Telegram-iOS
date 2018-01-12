@@ -829,7 +829,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
-            case let .updateReadFeed(feedId, maxPosition):
+            case let .updateReadFeed(_, feedId, maxPosition, unreadCount, unreadMutedCount):
                 switch maxPosition {
                     case let .feedPosition(date, peer, id):
                         let index = MessageIndex(id: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date)

@@ -50,6 +50,8 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
         }
         
+        let channelPts = result.channelPts
+        
         var sentStickers: [TelegramMediaFile] = []
         var sentGifs: [TelegramMediaFile] = []
         
@@ -62,7 +64,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
             
             let media: [Media]
-            let attributes: [MessageAttribute]
+            var attributes: [MessageAttribute]
             let text: String
             if let apiMessage = apiMessage, let updatedMessage = StoreMessage(apiMessage: apiMessage) {
                 media = updatedMessage.media
@@ -93,6 +95,16 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 media = currentMessage.media
                 attributes = currentMessage.attributes
                 text = currentMessage.text
+            }
+            
+            if let channelPts = channelPts {
+                for i in 0 ..< attributes.count {
+                    if let _ = attributes[i] as? ChannelMessageStateVersionAttribute {
+                        attributes.remove(at: i)
+                        break
+                    }
+                }
+                attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
             }
             
             var storeForwardInfo: StoreMessageForwardInfo?
