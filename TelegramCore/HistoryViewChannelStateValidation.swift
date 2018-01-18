@@ -43,7 +43,8 @@ final class HistoryViewChannelStateValidationContexts {
     }
     
     func updateView(id: Int32, view: MessageHistoryView?) {
-        if let view = view {
+        assert(self.queue.isCurrent())
+        if let view = view, view.tagMask == nil {
             var channelState: ChannelState?
             for entry in view.additionalData {
                 if case let .peerChatState(_, chatState) = entry {
@@ -55,8 +56,20 @@ final class HistoryViewChannelStateValidationContexts {
             }
             
             if let invalidatedPts = channelState?.invalidatedPts {
-                var invalidatedMessageIds: [MessageId] = []
-                var minValidatedPts: Int32?
+                var rangesToInvalidate: [[MessageId]] = []
+                let addToRange: (MessageId, inout [[MessageId]]) -> Void = { id, ranges in
+                    if ranges.isEmpty {
+                        ranges = [[id]]
+                    } else {
+                        ranges[ranges.count - 1].append(id)
+                    }
+                }
+                
+                let addRangeBreak: (inout [[MessageId]]) -> Void = { ranges in
+                    if ranges.last?.count != 0 {
+                        ranges.append([])
+                    }
+                }
                 
                 for entry in view.entries {
                     switch entry {
@@ -69,23 +82,35 @@ final class HistoryViewChannelStateValidationContexts {
                                         break inner
                                     }
                                 }
+                                var requiresValidation = false
                                 if let messagePts = messagePts {
                                     if messagePts < invalidatedPts {
-                                        if minValidatedPts == nil || minValidatedPts! > messagePts {
-                                            minValidatedPts = messagePts
-                                        }
-                                        invalidatedMessageIds.append(message.id)
+                                        requiresValidation = true
                                     }
                                 } else {
-                                    invalidatedMessageIds.append(message.id)
+                                    requiresValidation = true
+                                }
+                                
+                                if requiresValidation {
+                                    addToRange(message.id, &rangesToInvalidate)
+                                } else {
+                                    addRangeBreak(&rangesToInvalidate)
                                 }
                             }
-                        default:
-                            break
+                        case let .HoleEntry(hole, _):
+                            if hole.maxIndex.id.namespace == Namespaces.Message.Cloud {
+                                addRangeBreak(&rangesToInvalidate)
+                            }
                     }
                 }
                 
-                if !invalidatedMessageIds.isEmpty {
+                if !rangesToInvalidate.isEmpty && rangesToInvalidate[rangesToInvalidate.count - 1].isEmpty {
+                    rangesToInvalidate.removeLast()
+                }
+                
+                var invalidatedMessageIds = Set<MessageId>()
+                
+                if !rangesToInvalidate.isEmpty {
                     let context: ChannelStateValidationContext
                     if let current = self.contexts[id] {
                         context = current
@@ -93,7 +118,48 @@ final class HistoryViewChannelStateValidationContexts {
                         context = ChannelStateValidationContext()
                         self.contexts[id] = context
                     }
-                    var messageIdsForBatch: [MessageId] = []
+                    
+                    var addedRanges: [[MessageId]] = []
+                    for messages in rangesToInvalidate {
+                        for id in messages {
+                            invalidatedMessageIds.insert(id)
+                            
+                            if context.batchReferences[id] != nil {
+                                addRangeBreak(&addedRanges)
+                            } else {
+                                addToRange(id, &addedRanges)
+                            }
+                        }
+                    }
+                    
+                    if !addedRanges.isEmpty && addedRanges[addedRanges.count - 1].isEmpty {
+                        addedRanges.removeLast()
+                    }
+                    
+                    for messages in addedRanges {
+                        let disposable = MetaDisposable()
+                        let batch = ChannelStateValidationBatch(disposable: disposable, invalidatedPts: invalidatedPts)
+                        for messageId in messages {
+                            context.batchReferences[messageId] = batch
+                        }
+                        
+                        disposable.set((validateBatch(postbox: self.postbox, network: self.network, messageIds: messages, validatePts: invalidatedPts)
+                            |> deliverOn(self.queue)).start(completed: { [weak self, weak batch] in
+                                if let strongSelf = self, let context = strongSelf.contexts[id], let batch = batch {
+                                    var completedMessageIds: [MessageId] = []
+                                    for (messageId, messageBatch) in context.batchReferences {
+                                        if messageBatch === batch {
+                                            completedMessageIds.append(messageId)
+                                        }
+                                    }
+                                    for messageId in completedMessageIds {
+                                        context.batchReferences.removeValue(forKey: messageId)
+                                    }
+                                }
+                            }))
+                    }
+                    
+                    /*var messageIdsForBatch: [MessageId] = []
                     for messageId in invalidatedMessageIds {
                         if let batch = context.batchReferences[messageId] {
                             if batch.invalidatedPts < invalidatedPts {
@@ -125,15 +191,14 @@ final class HistoryViewChannelStateValidationContexts {
                                 }
                             }
                         }))
-                    }
+                    }*/
                 }
                 
                 if let context = self.contexts[id] {
-                    let messageIds = Set(invalidatedMessageIds)
                     var removeIds: [MessageId] = []
                     
                     for batchMessageId in context.batchReferences.keys {
-                        if !messageIds.contains(batchMessageId) {
+                        if !invalidatedMessageIds.contains(batchMessageId) {
                             removeIds.append(batchMessageId)
                         }
                     }
@@ -149,136 +214,187 @@ final class HistoryViewChannelStateValidationContexts {
     }
 }
 
-private func validateBatch(postbox: Postbox, network: Network, messageIds: [MessageId], minValidatedPts: Int32?) -> Signal<Void, NoError> {
+private func hashForMessages(_ messages: [Message]) -> Int32 {
+    var acc: UInt32 = 0
+    
+    let sorted = messages.sorted(by: { $0.id > $1.id })
+    
+    for message in sorted {
+        acc = (acc &* 20261) &+ UInt32(message.id.id)
+        var timestamp = message.timestamp
+        inner: for attribute in message.attributes {
+            if let attribute = attribute as? EditedMessageAttribute {
+                timestamp = attribute.date
+                break inner
+            }
+        }
+        acc = (acc &* 20261) &+ UInt32(timestamp)
+    }
+    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+}
+
+private func hashForMessages(_ messages: [StoreMessage]) -> Int32 {
+    var acc: UInt32 = 0
+    
+    for message in messages {
+        if case let .Id(id) = message.id {
+            acc = (acc &* 20261) &+ UInt32(id.id)
+            var timestamp = message.timestamp
+            inner: for attribute in message.attributes {
+                if let attribute = attribute as? EditedMessageAttribute {
+                    timestamp = attribute.date
+                    break inner
+                }
+            }
+            acc = (acc &* 20261) &+ UInt32(timestamp)
+        }
+    }
+    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+}
+
+private func validateBatch(postbox: Postbox, network: Network, messageIds: [MessageId], validatePts: Int32) -> Signal<Void, NoError> {
     guard let peerId = messageIds.first?.peerId else {
         return .never()
     }
     return postbox.modify { modifier -> Signal<Void, NoError> in
-        if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-            var ranges: [Api.MessageRange] = []
-            var currentRange: (Int32, Int32)?
-            for id in messageIds.sorted() {
-                if let (minId, maxId) = currentRange {
-                    if maxId == id.id - 1 {
-                        currentRange = (minId, id.id)
-                    } else {
-                        ranges.append(Api.MessageRange.messageRange(minId: minId - 1, maxId: maxId + 1))
-                        currentRange = (id.id, id.id)
-                    }
-                } else {
-                    currentRange = (id.id, id.id)
+        if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            var messages: [Message] = []
+            var previous: [MessageId: Message] = [:]
+            for messageId in messageIds {
+                if let message = modifier.getMessage(messageId) {
+                    messages.append(message)
+                    previous[message.id] = message
                 }
             }
-            if let (minId, maxId) = currentRange {
-                ranges.append(Api.MessageRange.messageRange(minId: minId, maxId: maxId))
+            let hash = hashForMessages(messages)
+            return network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: messageIds[messageIds.count - 1].id + 1, offsetDate: 0, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1, hash: hash))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                return .single(nil)
             }
-            return network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilter(flags: 1 << 1, ranges: ranges), pts: minValidatedPts ?? 1, limit: 100))
-                |> `catch` { _ -> Signal<Api.updates.ChannelDifference, NoError> in
-                    return .never()
-                }
-                |> mapToSignal { result -> Signal<Void, NoError> in
-                    return postbox.modify { modifier -> Void in
-                        let finalPts: Int32
-                        var deletedMessageIds: [MessageId] = []
-                        var updatedMessages: [MessageId: StoreMessage] = [:]
-                        
-                        var apiChats: [Api.Chat] = []
-                        var apiUsers: [Api.User] = []
+            |> mapToSignal { result -> Signal<Void, NoError> in
+                return postbox.modify { modifier -> Void in
+                    if let result = result {
+                        let messages: [Api.Message]
+                        let chats: [Api.Chat]
+                        let users: [Api.User]
+                        var channelPts: Int32?
                         
                         switch result {
-                            case let .channelDifference(_, pts, _, newMessages, otherUpdates, chats, users):
-                                finalPts = pts
-                                apiChats = chats
-                                apiUsers = users
+                            case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case let .channelMessages(_, pts, _, apiMessages, apiChats, apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                                channelPts = pts
+                            case .messagesNotModified:
+                                for id in previous.keys {
+                                    modifier.updateMessage(id, update: { currentMessage in
+                                        var storeForwardInfo: StoreMessageForwardInfo?
+                                        if let forwardInfo = currentMessage.forwardInfo {
+                                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                        }
+                                        var attributes = currentMessage.attributes
+                                        /*if let channelPts = channelPts {
+                                            for i in 0 ..< attributes.count {
+                                                if let _ = attributes[i] as? ChannelMessageStateVersionAttribute {
+                                                    attributes.remove(at: i)
+                                                    break
+                                                }
+                                            }
+                                            attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
+                                        }*/
+                                        for i in 0 ..< attributes.count {
+                                            if let _ = attributes[i] as? ChannelMessageStateVersionAttribute {
+                                                attributes.remove(at: i)
+                                                break
+                                            }
+                                        }
+                                        attributes.append(ChannelMessageStateVersionAttribute(pts: validatePts))
+                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                    })
+                                }
+                                return
+                        }
+                        
+                        var storeMessages: [StoreMessage] = []
+                        
+                        for message in messages {
+                            if let storeMessage = StoreMessage(apiMessage: message) {
+                                if let channelPts = channelPts {
+                                    var attributes = storeMessage.attributes
+                                    attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
+                                    storeMessages.append(storeMessage.withUpdatedAttributes(attributes))
+                                } else {
+                                    storeMessages.append(storeMessage)
+                                }
+                            }
+                        }
+                        
+                        //let updatedHash = hashForMessages(storeMessages)
+                        
+                        var validMessageIds = Set<MessageId>()
+                        for message in storeMessages {
+                            if case let .Id(id) = message.id {
+                                validMessageIds.insert(id)
                                 
-                                for message in newMessages {
-                                    if let message = StoreMessage(apiMessage: message), case let .Id(id) = message.id {
-                                        updatedMessages[id] = message
-                                    }
-                                }
-                                for update in otherUpdates {
-                                    switch update {
-                                        case let .updateDeleteChannelMessages(_, messages, _, _):
-                                            for messageId in messages {
-                                                deletedMessageIds.append(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageId))
-                                            }
-                                        case let .updateNewChannelMessage(message, _, _):
-                                            if let message = StoreMessage(apiMessage: message), case let .Id(id) = message.id {
-                                                updatedMessages[id] = message
-                                            }
-                                        case let .updateEditChannelMessage(message, _, _):
-                                            if let message = StoreMessage(apiMessage: message), case let .Id(id) = message.id {
-                                                updatedMessages[id] = message
-                                            }
-                                        default:
-                                            break
-                                    }
-                                }
-                            case let .channelDifferenceEmpty(_, pts, _):
-                                finalPts = pts
-                            case let .channelDifferenceTooLong(_, pts, _, _, _, _, _, _, _, _, _):
-                                finalPts = pts
-                        }
-                        
-                        var peers: [Peer] = []
-                        var peerPresences: [PeerId: PeerPresence] = [:]
-                        for chat in apiChats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in apiUsers {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            if let presence = TelegramUserPresence(apiUser: user) {
-                                peerPresences[telegramUser.id] = presence
-                            }
-                        }
-                        
-                        updatePeers(modifier: modifier, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-                        modifier.updatePeerPresences(peerPresences)
-                        
-                        if !deletedMessageIds.isEmpty {
-                            modifier.deleteMessages(deletedMessageIds)
-                        }
-                        
-                        for (messageId, message) in updatedMessages {
-                            modifier.updateMessage(messageId, update: { _ in
-                                var attributes = message.attributes
-                                for j in 0 ..< attributes.count {
-                                    if let _ = attributes[j] as? ChannelMessageStateVersionAttribute {
-                                        attributes.remove(at: j)
-                                        break
-                                    }
-                                }
-                                attributes.append(ChannelMessageStateVersionAttribute(pts: finalPts))
-                                return .update(StoreMessage(id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributes: attributes, media: message.media))
-                            })
-                        }
-                        
-                        for messageId in messageIds {
-                            if updatedMessages[messageId] == nil {
-                                modifier.updateMessage(messageId, update: { currentMessage in
-                                    var storeForwardInfo: StoreMessageForwardInfo?
-                                    if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                    }
-                                    var attributes = currentMessage.attributes
-                                    for j in 0 ..< attributes.count {
-                                        if let _ = attributes[j] as? ChannelMessageStateVersionAttribute {
-                                            attributes.remove(at: j)
-                                            break
+                                if let previousMessage = previous[id] {
+                                    var updatedTimestamp = message.timestamp
+                                    inner: for attribute in message.attributes {
+                                        if let attribute = attribute as? EditedMessageAttribute {
+                                            updatedTimestamp = attribute.date
+                                            break inner
                                         }
                                     }
-                                    attributes.append(ChannelMessageStateVersionAttribute(pts: finalPts))
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                                })
+                                    
+                                    var timestamp = previousMessage.timestamp
+                                    inner: for attribute in previousMessage.attributes {
+                                        if let attribute = attribute as? EditedMessageAttribute {
+                                            timestamp = attribute.date
+                                            break inner
+                                        }
+                                    }
+                                    
+                                    modifier.updateMessage(id, update: { currentMessage in
+                                        if updatedTimestamp != timestamp {
+                                            return .update(message)
+                                        } else {
+                                            var storeForwardInfo: StoreMessageForwardInfo?
+                                            if let forwardInfo = currentMessage.forwardInfo {
+                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                            }
+                                            var attributes = currentMessage.attributes
+                                            if let channelPts = channelPts {
+                                                for i in 0 ..< attributes.count {
+                                                    if let _ = attributes[i] as? ChannelMessageStateVersionAttribute {
+                                                        attributes.remove(at: i)
+                                                        break
+                                                    }
+                                                }
+                                                attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
+                                            }
+                                            return .update(StoreMessage(id: message.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                        
+                        for id in previous.keys {
+                            if !validMessageIds.contains(id) {
+                                modifier.deleteMessages([id])
                             }
                         }
                     }
                 }
+            }
         } else {
             return .never()
         }

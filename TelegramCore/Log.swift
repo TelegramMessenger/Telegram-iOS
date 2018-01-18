@@ -73,6 +73,9 @@ public final class Logger {
     
     public static func setSharedLogger(_ logger: Logger) {
         sharedLogger = logger
+        setPostboxLogger({ s in
+            Logger.shared.log("Postbox", s)
+        })
     }
     
     public static var shared: Logger {

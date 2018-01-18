@@ -8,7 +8,7 @@ import Foundation
 #endif
 
 private final class ManagedChatListHolesState {
-    private var holeDisposables: [ChatListHole: Disposable] = [:]
+    private var holeDisposables: [ChatListHolesEntry: Disposable] = [:]
     
     func clearDisposables() -> [Disposable] {
         let disposables = Array(self.holeDisposables.values)
@@ -16,9 +16,9 @@ private final class ManagedChatListHolesState {
         return disposables
     }
     
-    func update(entries: Set<ChatListHole>) -> (removed: [Disposable], added: [ChatListHole: MetaDisposable]) {
+    func update(entries: Set<ChatListHolesEntry>) -> (removed: [Disposable], added: [ChatListHolesEntry: MetaDisposable]) {
         var removed: [Disposable] = []
-        var added: [ChatListHole: MetaDisposable] = [:]
+        var added: [ChatListHolesEntry: MetaDisposable] = [:]
         
         for (entry, disposable) in self.holeDisposables {
             if !entries.contains(entry) {
@@ -44,7 +44,7 @@ func managedChatListHoles(network: Network, postbox: Postbox) -> Signal<Void, No
         let state = Atomic(value: ManagedChatListHolesState())
         
         let disposable = postbox.chatListHolesView().start(next: { view in
-            let (removed, added) = state.with { state -> (removed: [Disposable], added: [ChatListHole: MetaDisposable]) in
+            let (removed, added) = state.with { state -> (removed: [Disposable], added: [ChatListHolesEntry: MetaDisposable]) in
                 return state.update(entries: view.entries)
             }
             
@@ -53,7 +53,7 @@ func managedChatListHoles(network: Network, postbox: Postbox) -> Signal<Void, No
             }
             
             for (entry, disposable) in added {
-                disposable.set(fetchChatListHole(network: network, postbox: postbox, hole: entry).start())
+                disposable.set(fetchChatListHole(postbox: postbox, network: network, groupId: entry.groupId, hole: entry.hole).start())
             }
         })
         

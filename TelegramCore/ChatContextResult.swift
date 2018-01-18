@@ -10,7 +10,7 @@ import Foundation
 #endif
 
 public enum ChatContextResultMessage: PostboxCoding, Equatable {
-    case auto(caption: String, replyMarkup: ReplyMarkupMessageAttribute?)
+    case auto(caption: String, entities: TextEntitiesMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
     case text(text: String, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, replyMarkup: ReplyMarkupMessageAttribute?)
     case mapLocation(media: TelegramMediaMap, replyMarkup: ReplyMarkupMessageAttribute?)
     case contact(media: TelegramMediaContact, replyMarkup: ReplyMarkupMessageAttribute?)
@@ -18,7 +18,7 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_v", orElse: 0) {
             case 0:
-                self = .auto(caption: decoder.decodeStringForKey("c", orElse: ""), replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+                self = .auto(caption: decoder.decodeStringForKey("c", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
             case 1:
                 self = .text(text: decoder.decodeStringForKey("t", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, disableUrlPreview: decoder.decodeInt32ForKey("du", orElse: 0) != 0, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
             case 2:
@@ -26,15 +26,20 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
             case 3:
                 self = .contact(media: decoder.decodeObjectForKey("c") as! TelegramMediaContact, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
             default:
-                self = .auto(caption: "", replyMarkup: nil)
+                self = .auto(caption: "", entities: nil, replyMarkup: nil)
         }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case let .auto(caption, replyMarkup):
+            case let .auto(caption, entities, replyMarkup):
                 encoder.encodeInt32(0, forKey: "_v")
                 encoder.encodeString(caption, forKey: "c")
+                if let entities = entities {
+                    encoder.encodeObject(entities, forKey: "e")
+                } else {
+                    encoder.encodeNil(forKey: "e")
+                }
                 if let replyMarkup = replyMarkup {
                     encoder.encodeObject(replyMarkup, forKey: "m")
                 } else {
@@ -75,9 +80,12 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
     
     public static func ==(lhs: ChatContextResultMessage, rhs: ChatContextResultMessage) -> Bool {
         switch lhs {
-            case let .auto(lhsCaption, lhsReplyMarkup):
-                if case let .auto(rhsCaption, rhsReplyMarkup) = rhs {
+            case let .auto(lhsCaption, lhsEntities, lhsReplyMarkup):
+                if case let .auto(rhsCaption, rhsEntities, rhsReplyMarkup) = rhs {
                     if lhsCaption != rhsCaption {
+                        return false
+                    }
+                    if lhsEntities != rhsEntities {
                         return false
                     }
                     if lhsReplyMarkup != rhsReplyMarkup {
@@ -324,12 +332,16 @@ public final class ChatContextResultCollection: Equatable {
 extension ChatContextResultMessage {
     init(apiMessage: Api.BotInlineMessage) {
         switch apiMessage {
-            case let .botInlineMessageMediaAuto(_, caption, replyMarkup):
+            case let .botInlineMessageMediaAuto(_, message, entities, replyMarkup):
+                var parsedEntities: TextEntitiesMessageAttribute?
+                if let entities = entities, !entities.isEmpty {
+                    parsedEntities = TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities))
+                }
                 var parsedReplyMarkup: ReplyMarkupMessageAttribute?
                 if let replyMarkup = replyMarkup {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
                 }
-                self = .auto(caption: caption, replyMarkup: parsedReplyMarkup)
+                self = .auto(caption: message, entities: parsedEntities, replyMarkup: parsedReplyMarkup)
             case let .botInlineMessageText(flags, message, entities, replyMarkup):
                 var parsedEntities: TextEntitiesMessageAttribute?
                 if let entities = entities, !entities.isEmpty {

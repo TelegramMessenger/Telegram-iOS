@@ -47,7 +47,7 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                 peers[groupOrChannel.id] = groupOrChannel
                                 switch chat {
-                                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
                                     if let participantsCount = participantsCount {
                                         subscribers[groupOrChannel.id] = participantsCount
                                     }
@@ -61,12 +61,21 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                         for result in myResults {
                             let peerId: PeerId
                             switch result {
+<<<<<<< HEAD
                             case let .peerUser(userId):
                                 peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                             case let .peerChat(chatId):
                                 peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                             case let .peerChannel(channelId):
                                 peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+=======
+                                case let .peerUser(userId):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                case let .peerChat(chatId):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                                case let .peerChannel(channelId):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+>>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
                             }
                             if let peer = peers[peerId] {
                                 renderedMyPeers.append(FoundPeer(peer: peer, subscribers: subscribers[peerId]))
@@ -77,12 +86,12 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                         for result in results {
                             let peerId: PeerId
                             switch result {
-                            case let .peerUser(userId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                            case let .peerChat(chatId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                            case let .peerChannel(channelId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                                case let .peerUser(userId):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                case let .peerChat(chatId):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                                case let .peerChannel(channelId):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                             }
                             if let peer = peers[peerId] {
                                 renderedPeers.append(FoundPeer(peer: peer, subscribers: subscribers[peerId]))

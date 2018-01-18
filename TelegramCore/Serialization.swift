@@ -20,7 +20,11 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
+<<<<<<< HEAD
         return 74
+=======
+        return 76
+>>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
     }
     
     public func parseMessage(_ data: Data!) -> Any! {

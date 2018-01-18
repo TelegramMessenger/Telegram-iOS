@@ -193,6 +193,7 @@ public final class Localization: PostboxCoding, Equatable {
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.version, forKey: "v")
         encoder.encodeInt32(Int32(self.entries.count), forKey: "c")
         
         let buffer = WriteBuffer()

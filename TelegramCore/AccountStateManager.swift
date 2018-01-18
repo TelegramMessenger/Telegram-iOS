@@ -75,8 +75,8 @@ public final class AccountStateManager {
         return self.isUpdatingValue.get()
     }
     
-    private let notificationMessagesPipe = ValuePipe<[Message]>()
-    public var notificationMessages: Signal<[Message], NoError> {
+    private let notificationMessagesPipe = ValuePipe<[(Message, PeerGroupId?)]>()
+    public var notificationMessages: Signal<[(Message, PeerGroupId?)], NoError> {
         return self.notificationMessagesPipe.signal()
     }
     
@@ -247,7 +247,7 @@ public final class AccountStateManager {
                     |> take(1)
                     |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                         if let authorizedState = state.state {
-                            let request = account.network.request(Api.functions.updates.getDifference(flags: 1 << 0, pts: authorizedState.pts, ptsTotalLimit: 100, date: authorizedState.date, qts: authorizedState.qts))
+                            let request = account.network.request(Api.functions.updates.getDifference(flags: 1 << 0, pts: authorizedState.pts, ptsTotalLimit: 300000, date: authorizedState.date, qts: authorizedState.qts))
                                 |> retryRequest
                             return request |> mapToSignal { difference -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                                 switch difference {
@@ -460,12 +460,12 @@ public final class AccountStateManager {
                     }
                 }
                 
-                let signal = self.account.postbox.modify { modifier -> [Message] in
-                    var messages: [Message] = []
+                let signal = self.account.postbox.modify { modifier -> [(Message, PeerGroupId?)] in
+                    var messages: [(Message, PeerGroupId?)] = []
                     for id in events.addedIncomingMessageIds {
                         let (message, notify, _, _) = messageForNotification(modifier: modifier, id: id, alwaysReturnMessage: false)
                         if let message = message, notify {
-                            messages.append(message)
+                            messages.append((message, modifier.getPeerGroupId(message.id.peerId)))
                         }
                     }
                     return messages
@@ -473,7 +473,7 @@ public final class AccountStateManager {
                 
                 let _ = (signal |> deliverOn(self.queue)).start(next: { [weak self] messages in
                     if let strongSelf = self {
-                        for message in messages {
+                        for (message, _) in messages {
                             Logger.shared.log("State" , "notify: \(String(describing: messageMainPeer(message)?.displayTitle)): \(message.id)")
                         }
                         

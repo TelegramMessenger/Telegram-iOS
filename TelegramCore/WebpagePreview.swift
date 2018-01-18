@@ -14,7 +14,7 @@ public func webpagePreview(account: Account, url: String, webpageId: MediaId? = 
         if let webpageId = webpageId, let webpage = modifier.getMedia(webpageId) as? TelegramMediaWebpage {
             return .single(webpage)
         } else {
-            return account.network.request(Api.functions.messages.getWebPagePreview(message: url))
+            return account.network.request(Api.functions.messages.getWebPagePreview(flags: 0, message: url, entities: nil))
                 |> `catch` { _ -> Signal<Api.MessageMedia, NoError> in
                     return .single(.messageMediaEmpty)
                 }

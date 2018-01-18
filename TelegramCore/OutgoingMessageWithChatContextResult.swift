@@ -122,7 +122,10 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
     attributes.append(InlineBotMessageAttribute(peerId: results.botId))
     
     switch result.message {
-        case let .auto(caption, replyMarkup):
+        case let .auto(caption, entities, replyMarkup):
+            if let entities = entities {
+                attributes.append(entities)
+            }
             if let replyMarkup = replyMarkup {
                 attributes.append(replyMarkup)
             }

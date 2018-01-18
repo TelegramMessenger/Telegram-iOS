@@ -39,19 +39,13 @@ private final class ManagedMessageHistoryHolesState {
     }
 }
 
-func managedMessageHistoryHoles(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return Signal { _ in
         let state = Atomic(value: ManagedMessageHistoryHolesState())
         
         let disposable = postbox.messageHistoryHolesView().start(next: { view in
             let (removed, added) = state.with { state -> (removed: [Disposable], added: [MessageHistoryHolesViewEntry: MetaDisposable]) in
-                var entries = Set<MessageHistoryHolesViewEntry>()
-                for (_, entrySet) in view.entries {
-                    for entry in entrySet {
-                        entries.insert(entry)
-                    }
-                }
-                return state.update(entries: entries)
+                return state.update(entries: view.entries)
             }
             
             for disposable in removed {
@@ -59,7 +53,12 @@ func managedMessageHistoryHoles(network: Network, postbox: Postbox) -> Signal<Vo
             }
             
             for (entry, disposable) in added {
-                disposable.set(fetchMessageHistoryHole(source: .network(network), postbox: postbox, hole: entry.hole, direction: entry.direction, tagMask: entry.tags).start())
+                switch entry.hole {
+                    case let .peer(hole):
+                        disposable.set(fetchMessageHistoryHole(source: .network(network), postbox: postbox, hole: hole, direction: entry.direction, tagMask: entry.tags).start())
+                    case let .groupFeed(groupId, lowerIndex, upperIndex):
+                        disposable.set(fetchGroupFeedHole(source: .network(network), accountPeerId: accountPeerId, postbox: postbox, groupId: groupId, minIndex: lowerIndex, maxIndex: upperIndex, direction: entry.direction).start())
+                }
             }
         })
         

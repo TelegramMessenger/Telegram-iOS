@@ -60,12 +60,14 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
                     if let signal = signal {
                         signals.append(signal |> map { result in
                             switch result {
-                            case let .messages(messages, chats, users):
-                                return (messages, chats, users)
-                            case let .messagesSlice(_, messages, chats, users):
-                                return (messages, chats, users)
-                            case let .channelMessages(_, _, _, messages, chats, users):
-                                return (messages, chats, users)
+                                case let .messages(messages, chats, users):
+                                    return (messages, chats, users)
+                                case let .messagesSlice(_, messages, chats, users):
+                                    return (messages, chats, users)
+                                case let .channelMessages(_, _, _, messages, chats, users):
+                                    return (messages, chats, users)
+                                case .messagesNotModified:
+                                    return ([], [], [])
                             }
                             } |> `catch` { _ in
                                 return Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>.single(([], [], []))

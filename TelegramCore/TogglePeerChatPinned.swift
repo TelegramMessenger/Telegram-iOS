@@ -12,20 +12,36 @@ public enum TogglePeerChatPinnedResult {
     case limitExceeded
 }
 
-public func togglePeerChatPinned(postbox: Postbox, peerId: PeerId) -> Signal<TogglePeerChatPinnedResult, NoError> {
+public func toggleItemPinned(postbox: Postbox, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
     return postbox.modify { modifier -> TogglePeerChatPinnedResult in
-        var peerIds = modifier.getPinnedPeerIds()
-        let sameKind = peerIds.filter { ($0.namespace == Namespaces.Peer.SecretChat) == (peerId.namespace == Namespaces.Peer.SecretChat) && $0 != peerId }
+        var itemIds = modifier.getPinnedItemIds()
+        let sameKind = itemIds.filter { item in
+            switch itemId {
+                case let .peer(lhsPeerId):
+                    if case let .peer(rhsPeerId) = item {
+                        return (lhsPeerId.namespace == Namespaces.Peer.SecretChat) == (rhsPeerId.namespace == Namespaces.Peer.SecretChat) && lhsPeerId != rhsPeerId
+                    } else {
+                        return false
+                    }
+                case let .group(lhsGroupId):
+                    if case let .group(rhsGroupId) = item {
+                        return lhsGroupId != rhsGroupId
+                    } else {
+                        return false
+                    }
+            }
+            
+        }
         
         if sameKind.count + 1 > 5 {
             return .limitExceeded
         } else {
-            if let index = peerIds.index(of: peerId) {
-                peerIds.remove(at: index)
+            if let index = itemIds.index(of: itemId) {
+                itemIds.remove(at: index)
             } else {
-                peerIds.insert(peerId, at: 0)
+                itemIds.insert(itemId, at: 0)
             }
-            modifier.setPinnedPeerIds(peerIds)
+            modifier.setPinnedItemIds(itemIds)
             addSynchronizePinnedChatsOperation(modifier: modifier)
             return .done
         }

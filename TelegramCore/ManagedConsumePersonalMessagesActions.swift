@@ -185,7 +185,7 @@ private func synchronizeConsumeMessageContents(modifier: Modifier, postbox: Post
                         }
                         var updatedTags = currentMessage.tags
                         updatedTags.remove(.unseenPersonalMessage)
-                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                     })
                 }
             }
@@ -211,7 +211,7 @@ private func synchronizeConsumeMessageContents(modifier: Modifier, postbox: Post
                             }
                             var updatedTags = currentMessage.tags
                             updatedTags.remove(.unseenPersonalMessage)
-                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                         })
                     }
                 }
@@ -226,7 +226,7 @@ private func synchronizeConsumeMessageContents(modifier: Modifier, postbox: Post
 private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
-            return network.request(Api.functions.messages.getPeerDialogs(peers: [inputPeer]))
+            return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeer(peer: inputPeer)]))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
                     return .single(nil)
@@ -242,7 +242,10 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                         case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _):
                                             apiTopMessage = topMessage
                                             apiUnreadMentionsCount = unreadMentionsCount
-                                        }
+                                        case .dialogFeed:
+                                            assertionFailure()
+                                            return .complete()
+                                    }
                                     
                                     return postbox.modify { modifier -> Void in
                                         modifier.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)

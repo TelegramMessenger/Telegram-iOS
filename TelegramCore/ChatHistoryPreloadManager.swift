@@ -120,7 +120,7 @@ final class ChatHistoryPreloadManager {
         self.network = network
         self.download.set(network.download(datacenterId: network.datacenterId, tag: nil))
         
-        self.automaticChatListDisposable = (postbox.tailChatListView(count: 20, summaryComponents: ChatListEntrySummaryComponents()) |> deliverOnMainQueue).start(next: { [weak self] view in
+        self.automaticChatListDisposable = (postbox.tailChatListView(groupId: nil, count: 20, summaryComponents: ChatListEntrySummaryComponents()) |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
                 var indices: [(ChatListIndex, Bool, Bool)] = []
                 for entry in view.0.entries {

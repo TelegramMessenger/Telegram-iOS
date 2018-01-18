@@ -11,6 +11,10 @@ import Foundation
 
 public enum SearchMessagesLocation: Equatable {
     case general
+<<<<<<< HEAD
+=======
+    case group(PeerGroupId)
+>>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?)
     
     public static func ==(lhs: SearchMessagesLocation, rhs: SearchMessagesLocation) -> Bool {
@@ -21,6 +25,15 @@ public enum SearchMessagesLocation: Equatable {
                 } else {
                     return false
                 }
+<<<<<<< HEAD
+=======
+            case let .group(groupId):
+                if case .group(groupId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+>>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
             case let .peer(lhsPeerId, lhsFromId, lhsTags):
                 if case let .peer(rhsPeerId, rhsFromId, rhsTags) = rhs, lhsPeerId == rhsPeerId, lhsFromId == rhsFromId, lhsTags == rhsTags {
                     return true
@@ -72,7 +85,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                                 flags |= (1 << 0)
                             }
                         }
-                        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0))
+                        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0, hash: 0))
                             |> map {Optional($0)}
                             |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
                                 return .single(nil)
@@ -81,6 +94,12 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                         return .never()
                     }
                 }
+<<<<<<< HEAD
+=======
+        case let .group(groupId):
+            remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
+                |> mapError { _ in } |> map(Optional.init)
+>>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
         case .general:
             remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
                 |> mapError { _ in } |> map(Optional.init)
@@ -107,6 +126,13 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     messages = apiMessages
                     chats = apiChats
                     users = apiUsers
+<<<<<<< HEAD
+=======
+                case .messagesNotModified:
+                    messages = []
+                    chats = []
+                    users = []
+>>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
             }
             
             return account.postbox.modify { modifier -> [Message] in
@@ -173,18 +199,22 @@ public func downloadMessage(account: Account, messageId: MessageId) -> Signal<Me
                         let chats: [Api.Chat]
                         let users: [Api.User]
                         switch result {
-                        case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
-                        case let .messages(apiMessages, apiChats, apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
-                        case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
+                            case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case let .messages(apiMessages, apiChats, apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case .messagesNotModified:
+                                messages = []
+                                chats = []
+                                users = []
                         }
                         
                         let postboxSignal = account.postbox.modify { modifier -> Message? in
@@ -229,7 +259,7 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return .single(modifier.findClosestMessageIdByTimestamp(peerId: peerId, timestamp: timestamp))
         } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0))
+            return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
                 |> map { result -> MessageId? in
                     let messages: [Api.Message]
                     switch result {
@@ -239,6 +269,8 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
                             messages = apiMessages
                         case let.messagesSlice(_, apiMessages, _, _):
                             messages = apiMessages
+                        case .messagesNotModified:
+                            messages = []
                     }
                     for message in messages {
                         if let message = StoreMessage(apiMessage: message), case let .Id(id) = message.id {

@@ -68,6 +68,10 @@ public struct Namespaces {
             return UnorderedItemListEntryTag(value: key)
         }()
     }
+    
+    public struct PeerGroup {
+        public static let feed = PeerGroupId(rawValue: 1)
+    }
 }
 
 public extension MessageTags {
@@ -77,8 +81,9 @@ public extension MessageTags {
     static let webPage = MessageTags(rawValue: 1 << 3)
     static let voiceOrInstantVideo = MessageTags(rawValue: 1 << 4)
     static let unseenPersonalMessage = MessageTags(rawValue: 1 << 5)
+    static let liveLocation = MessageTags(rawValue: 1 << 6)
     
-    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage]
+    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation]
 }
 
 public extension GlobalMessageTags {
@@ -86,6 +91,10 @@ public extension GlobalMessageTags {
     static let MissedCalls = GlobalMessageTags(rawValue: 1 << 1)
     
     static let all: GlobalMessageTags = [.Calls, .MissedCalls]
+}
+
+public extension LocalMessageTags {
+    static let OutgoingLiveLocation = LocalMessageTags(rawValue: 1 << 0)
 }
 
 public extension PendingMessageActionType {
@@ -110,6 +119,7 @@ struct OperationLogTags {
     static let SynchronizeSavedGifs = PeerOperationLogTag(value: 12)
     static let SynchronizeLocalizationUpdates = PeerOperationLogTag(value: 13)
     static let SynchronizeSavedStickers = PeerOperationLogTag(value: 14)
+    static let SynchronizeGroupedPeers = PeerOperationLogTag(value: 15)
 }
 
 private enum PreferencesKeyValues: Int32 {

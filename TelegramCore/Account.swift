@@ -250,6 +250,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedStickerPack.self, f: { CachedStickerPack(decoder: $0) })
     declareEncodable(LoggingSettings.self, f: { LoggingSettings(decoder: $0) })
     declareEncodable(CachedLocalizationInfos.self, f: { CachedLocalizationInfos(decoder: $0) })
+    declareEncodable(SynchronizeGroupedPeersOperation.self, f: { SynchronizeGroupedPeersOperation(decoder: $0) })
     
     return
 }()
@@ -489,6 +490,7 @@ public class Account {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
+    public let shouldExplicitelyKeepWorkerConnections = Promise<Bool>(false)
     
     private let networkStateValue = Promise<AccountNetworkState>(.waitingForNetwork)
     public var networkState: Signal<AccountNetworkState, NoError> {
@@ -533,7 +535,8 @@ public class Account {
             }
         }
         
-        let networkStateSignal = combineLatest(self.stateManager.isUpdating, network.connectionStatus)
+        let networkStateQueue = Queue()
+        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue))
             |> map { isUpdating, connectionStatus -> AccountNetworkState in
                 switch connectionStatus {
                     case .waitingForNetwork:
@@ -563,21 +566,11 @@ public class Account {
                     }
                 }
                 
-                let appVersionString = "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] ?? ""))"
-                
-                #if os(macOS)
-                    let pInfo = ProcessInfo.processInfo
-                    let systemVersion = pInfo.operatingSystemVersionString
-                #else
-                    let systemVersion = UIDevice.current.systemVersion
-                #endif
-                
                 var appSandbox: Api.Bool = .boolFalse
                 #if DEBUG
                     appSandbox = .boolTrue
                 #endif
-                
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhone", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, otherUids: []))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
@@ -596,21 +589,12 @@ public class Account {
                     }
                 }
                 
-                let appVersionString = "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] ?? ""))"
-                
-                #if os(macOS)
-                    let pInfo = ProcessInfo.processInfo
-                    let systemVersion = pInfo.operatingSystemVersionString
-                #else
-                    let systemVersion = UIDevice.current.systemVersion
-                #endif
-                
                 var appSandbox: Api.Bool = .boolFalse
                 #if DEBUG
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, deviceModel: "iPhone", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox))
+                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, otherUids: []))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
@@ -638,13 +622,14 @@ public class Account {
             |> distinctUntilChanged
         
         self.network.shouldKeepConnection.set(shouldBeMaster)
+        self.network.shouldExplicitelyKeepWorkerConnections.set(self.shouldExplicitelyKeepWorkerConnections.get())
         
         let serviceTasksMaster = shouldBeMaster
             |> deliverOn(self.serviceQueue)
             |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
                 if let strongSelf = self, value {
                     Logger.shared.log("Account", "Became master")
-                    return managedServiceViews(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
+                    return managedServiceViews(accountPeerId: peerId, network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
                 } else {
                     Logger.shared.log("Account", "Resigned master")
                     return .never()
@@ -662,6 +647,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        
+        self.managedOperationsDisposable.add(managedSynchronizeGroupedPeersOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .stickers).start())
         self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .masks).start())
         self.managedOperationsDisposable.add(managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: self.postbox, network: self.network).start())

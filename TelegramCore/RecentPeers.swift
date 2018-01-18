@@ -45,7 +45,11 @@ public func recentPeers(account: Account) -> Signal<[Peer], NoError> {
                 return .complete()
             }
         }
-    return cachedPeers |> then(updatedRemotePeers |> filter({ !$0.isEmpty }))
+    return cachedPeers
+        |> then(updatedRemotePeers |> filter({ !$0.isEmpty }))
+        |> map { peers -> [Peer] in
+            return peers.filter { $0.id != account.peerId }
+        }
 }
 
 public func removeRecentPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {

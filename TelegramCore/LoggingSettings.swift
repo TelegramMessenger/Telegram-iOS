@@ -13,7 +13,11 @@ public final class LoggingSettings: PreferencesEntry, Equatable {
     public let logToFile: Bool
     public let logToConsole: Bool
     
+    #if DEBUG
+    public static var defaultSettings = LoggingSettings(logToFile: true, logToConsole: true)
+    #else
     public static var defaultSettings = LoggingSettings(logToFile: false, logToConsole: false)
+    #endif
     
     public init(logToFile: Bool, logToConsole: Bool) {
         self.logToFile = logToFile

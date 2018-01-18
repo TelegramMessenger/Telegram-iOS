@@ -16,7 +16,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
         network.request(Api.functions.updates.getState())
             |> retryRequest
     
-    return combineLatest(network.request(Api.functions.messages.getDialogs(flags: 0, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100))
+    return combineLatest(network.request(Api.functions.messages.getDialogs(flags: 0, feedId: nil, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100))
         |> retryRequest, pinnedChats, state)
         |> mapToSignal { result, pinnedChats, state -> Signal<Void, NoError> in
             var dialogsDialogs: [Api.Dialog] = []
@@ -40,7 +40,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                     holeExists = true
             }
             
-            let replacePinnedPeerIds: [PeerId]
+            let replacePinnedItemIds: [PinnedItemId]
             switch pinnedChats {
                 case let .peerDialogs(apiDialogs, apiMessages, apiChats, apiUsers, _):
                     dialogsDialogs.append(contentsOf: apiDialogs)
@@ -48,21 +48,19 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                     dialogsChats.append(contentsOf: apiChats)
                     dialogsUsers.append(contentsOf: apiUsers)
                     
-                    var peerIds: [PeerId] = []
+                    var itemIds: [PinnedItemId] = []
                     
-                    for dialog in apiDialogs {
-                        let apiPeer: Api.Peer
+                    loop: for dialog in apiDialogs {
                         switch dialog {
                             case let .dialog(_, peer, _, _, _, _, _, _, _, _):
-                                apiPeer = peer
+                                itemIds.append(.peer(peer.peerId))
+                            case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+                                itemIds.append(.group(PeerGroupId(rawValue: feedId)))
+                                continue loop
                         }
-                        
-                        let peerId = apiPeer.peerId
-                        
-                        peerIds.append(peerId)
                 }
                 
-                replacePinnedPeerIds = peerIds
+                replacePinnedItemIds = itemIds
             }
             
             var replacementHole: ChatListHole?
@@ -74,7 +72,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
             
             var topMesageIds: [PeerId: MessageId] = [:]
             
-            for dialog in dialogsDialogs {
+            loop: for dialog in dialogsDialogs {
                 let apiPeer: Api.Peer
                 let apiReadInboxMaxId: Int32
                 let apiReadOutboxMaxId: Int32
@@ -93,6 +91,9 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                         apiUnreadMentionsCount = unreadMentionsCount
                         apiNotificationSettings = peerNotificationSettings
                         apiChannelPts = pts
+                    case .dialogFeed:
+                        //assertionFailure()
+                        continue loop
                 }
                 
                 let peerId: PeerId
@@ -117,7 +118,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                 
                 if let apiChannelPts = apiChannelPts {
                     chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: apiChannelPts)
-                } else {
+                } else if peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudUser {
                     switch state {
                         case let .state(pts, _, _, _, _):
                             chatStates[peerId] = RegularChatState(invalidatedPts: pts)
@@ -154,6 +155,9 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                                     }
                                 }
                             }
+                        case .dialogFeed:
+                            //assertionFailure()
+                            break
                     }
                 }
             }
@@ -220,7 +224,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                     }
                 }
                 
-                modifier.setPinnedPeerIds(replacePinnedPeerIds)
+                modifier.setPinnedItemIds(replacePinnedItemIds)
                 
                 for (peerId, summary) in mentionTagSummaries {
                     modifier.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)

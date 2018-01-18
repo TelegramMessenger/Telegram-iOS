@@ -42,7 +42,7 @@ private func inputSecretChat(postbox: Postbox, peerId: PeerId) -> Signal<Api.Inp
 private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<(Int32, Int32), VerifyReadStateError> {
     return inputPeer(postbox: postbox, peerId: peerId)
         |> mapToSignal { inputPeer -> Signal<(Int32, Int32), VerifyReadStateError> in
-            return network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: Int32.max, offsetDate: Int32.max, addOffset: 0, limit: 1, maxId: Int32.max, minId: 1))
+            return network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: Int32.max, offsetDate: Int32.max, addOffset: 0, limit: 1, maxId: Int32.max, minId: 1, hash: 0))
                 |> retryRequest
                 |> mapToSignalPromotingError { result -> Signal<(Int32, Int32), VerifyReadStateError> in
                     let apiMessages: [Api.Message]
@@ -53,6 +53,8 @@ private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId
                             apiMessages = messages
                         case let .messagesSlice(_, messages, _, _):
                             apiMessages = messages
+                        case .messagesNotModified:
+                            apiMessages = []
                     }
                     if let message = apiMessages.first, let timestamp = message.timestamp {
                         return .single((message.rawId, timestamp))
@@ -64,7 +66,7 @@ private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId
 }
 
 func fetchPeerCloudReadState(network: Network, postbox: Postbox, peerId: PeerId, inputPeer: Api.InputPeer) -> Signal<PeerReadState?, NoError> {
-    return network.request(Api.functions.messages.getPeerDialogs(peers: [inputPeer]))
+    return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeer(peer: inputPeer)]))
         |> map { result -> PeerReadState? in
             switch result {
                 case let .peerDialogs(dialogs, _, _, _, _):
@@ -79,6 +81,9 @@ func fetchPeerCloudReadState(network: Network, postbox: Postbox, peerId: PeerId,
                                 apiReadInboxMaxId = readInboxMaxId
                                 apiReadOutboxMaxId = readOutboxMaxId
                                 apiUnreadCount = unreadCount
+                            case .dialogFeed:
+                                assertionFailure()
+                                return nil
                         }
                         
                         return .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
@@ -97,7 +102,7 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
         |> mapToSignal { topMessage -> Signal<(PeerReadState, PeerReadStateMarker), VerifyReadStateError> in
             return inputPeer(postbox: postbox, peerId: peerId)
                 |> mapToSignal { inputPeer -> Signal<(PeerReadState, PeerReadStateMarker), VerifyReadStateError> in
-                    return network.request(Api.functions.messages.getPeerDialogs(peers: [inputPeer]))
+                    return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeer(peer: inputPeer)]))
                         |> retryRequest
                         |> mapToSignalPromotingError { result -> Signal<(PeerReadState, PeerReadStateMarker), VerifyReadStateError> in
                             switch result {
@@ -117,6 +122,9 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                                                 if let pts = pts {
                                                     apiChannelPts = pts
                                                 }
+                                            case .dialogFeed:
+                                                assertionFailure()
+                                                return .fail(.Abort)
                                         }
                                         
                                         let marker: PeerReadStateMarker
@@ -227,6 +235,10 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
 }
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, readState: PeerReadState) -> Signal<PeerReadState, VerifyReadStateError> {
+    #if (arch(i386) || arch(x86_64)) && os(iOS)
+        //return .single(readState)
+    #endif
+    
     if peerId.namespace == Namespaces.Peer.SecretChat {
         return inputSecretChat(postbox: postbox, peerId: peerId)
             |> mapToSignal { inputPeer -> Signal<PeerReadState, VerifyReadStateError> in

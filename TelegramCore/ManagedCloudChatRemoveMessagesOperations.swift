@@ -181,12 +181,8 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
 private func removeChat(modifier: Modifier, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveChatOperation) -> Signal<Void, NoError> {
     if peer.id.namespace == Namespaces.Peer.CloudChannel {
         if let inputChannel = apiInputChannel(peer) {
-            let signal: Signal<Api.Updates, MTRpcError>
-            if let channel = peer as? TelegramChannel, channel.flags.contains(.isCreator) {
-                signal = network.request(Api.functions.channels.deleteChannel(channel: inputChannel))
-            } else {
-                signal = network.request(Api.functions.channels.leaveChannel(channel: inputChannel))
-            }
+            let signal = network.request(Api.functions.channels.leaveChannel(channel: inputChannel))
+            
             let reportSignal: Signal<Api.Bool, NoError>
             if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
                 reportSignal = network.request(Api.functions.messages.reportSpam(peer: inputPeer))

@@ -8,17 +8,29 @@
 
 public typealias AdminLogEventId = Int64
 
-public struct AdminLogEvent {
+public struct AdminLogEvent: Comparable {
     public let id: AdminLogEventId
-    public let peerId:PeerId
-    public let date:Int32
+    public let peerId: PeerId
+    public let date: Int32
     public let action: AdminLogEventAction
+    
+    public static func ==(lhs: AdminLogEvent, rhs: AdminLogEvent) -> Bool {
+        return lhs.id == rhs.id
+    }
+    
+    public static func <(lhs: AdminLogEvent, rhs: AdminLogEvent) -> Bool {
+        if lhs.date != rhs.date {
+            return lhs.date < rhs.date
+        } else {
+            return lhs.id < rhs.id
+        }
+    }
 }
 
 public struct AdminLogEventsResult {
     public let peerId: PeerId
-    public let peers:[PeerId: Peer]
-    public let events:[AdminLogEvent]
+    public let peers: [PeerId: Peer]
+    public let events: [AdminLogEvent]
 }
 
 public enum AdminLogEventAction {
@@ -29,7 +41,7 @@ public enum AdminLogEventAction {
     case toggleInvites(Bool)
     case toggleSignatures(Bool)
     case updatePinned(Message?)
-    case editMessage(prev: Message, new:Message)
+    case editMessage(prev: Message, new: Message)
     case deleteMessage(Message)
     case participantJoin
     case participantLeave
@@ -69,129 +81,129 @@ public struct AdminLogEventsFlags : OptionSet {
     public static let editMessages = AdminLogEventsFlags(rawValue: 1 << 12)
     public static let deleteMessages = AdminLogEventsFlags(rawValue: 1 << 13)
     
-    public static var all:[AdminLogEventsFlags] {
+    public static var all: [AdminLogEventsFlags] {
         return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages]
     }
-    public static var flags:AdminLogEventsFlags {
+    public static var flags: AdminLogEventsFlags {
         return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages]
     }
 }
 
 private func boolFromApiValue(_ value: Api.Bool) -> Bool {
     switch value {
-    case .boolFalse:
-        return false
-    case .boolTrue:
-        return true
+        case .boolFalse:
+            return false
+        case .boolTrue:
+            return true
     }
 }
 
-public func channelAdminLogEvents(_ account:Account, peerId:PeerId, maxId:AdminLogEventId, minId:AdminLogEventId, limit:Int32 = 100, query:String? = nil, filter:AdminLogEventsFlags? = nil, admins:[PeerId]? = nil) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> {
-    
-    return account.postbox.modify { modifier -> (Peer?, [Peer]?) in
-        return (modifier.getPeer(peerId), admins?.flatMap {modifier.getPeer($0)})
-        } |> mapError {return .generic} |> mapToSignal { (peer, admins) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> in
+public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, maxId: AdminLogEventId, minId: AdminLogEventId, limit: Int32 = 100, query: String? = nil, filter: AdminLogEventsFlags? = nil, admins: [PeerId]? = nil) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> {
+    return postbox.modify { modifier -> (Peer?, [Peer]?) in
+        return (modifier.getPeer(peerId), admins?.flatMap { modifier.getPeer($0) })
+    }
+    |> mapError { return .generic }
+    |> mapToSignal { (peer, admins) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> in
+        if let peer = peer, let inputChannel = apiInputChannel(peer) {
+            let inputAdmins = admins?.flatMap {apiInputUser($0)}
             
-            if let peer = peer, let inputChannel = apiInputChannel(peer) {
-                let inputAdmins = admins?.flatMap {apiInputUser($0)}
-                
-                var flags:Int32 = 0
-                var eventsFilter:Api.ChannelAdminLogEventsFilter? = nil
-                if let filter = filter {
-                    flags += Int32(1 << 0)
-                    eventsFilter = Api.ChannelAdminLogEventsFilter.channelAdminLogEventsFilter(flags: Int32(filter.rawValue))
-                }
-                if let _ = inputAdmins {
-                    flags += Int32(1 << 1)
-                }
-                return account.network.request(Api.functions.channels.getAdminLog(flags: flags, channel: inputChannel, q: query ?? "", eventsFilter: eventsFilter, admins: inputAdmins, maxId: maxId, minId: minId, limit: limit)) |> map { result in
-                    
-                    switch result {
-                    case let .adminLogResults(apiEvents, apiChats, apiUsers):
-                        let peers = (apiChats.flatMap {parseTelegramGroupOrChannel(chat: $0)} + apiUsers.flatMap { TelegramUser(user: $0) } + Array(arrayLiteral: peer)).reduce([:], { current, peer -> [PeerId : Peer] in
-                            var current = current
-                            current[peer.id] = peer
-                            return current
-                        })
-                        
-                        var events: [AdminLogEvent] = []
-                        
-                        for event in apiEvents {
-                            switch event {
-                                case let .channelAdminLogEvent(id, date, userId, apiAction):
-                                    var action: AdminLogEventAction?
-                                    switch apiAction {
-                                        case let .channelAdminLogEventActionChangeTitle(prev, new):
-                                            action = .changeTitle(prev: prev, new: new)
-                                        case let .channelAdminLogEventActionChangeAbout(prev, new):
-                                            action = .changeAbout(prev: prev, new: new)
-                                        case let .channelAdminLogEventActionChangeUsername(prev, new):
-                                            action = .changeUsername(prev: prev, new: new)
-                                        case let .channelAdminLogEventActionChangePhoto(prev, new):
-                                            action = .changePhoto(prev: imageRepresentationsForApiChatPhoto(prev), new: imageRepresentationsForApiChatPhoto(new))
-                                        case let .channelAdminLogEventActionToggleInvites(new):
-                                            action = .toggleInvites(boolFromApiValue(new))
-                                        case let .channelAdminLogEventActionToggleSignatures(new):
-                                            action = .toggleSignatures(boolFromApiValue(new))
-                                        case let .channelAdminLogEventActionUpdatePinned(new):
-                                            switch new {
-                                            case .messageEmpty:
-                                                action = .updatePinned(nil)
-                                            default:
-                                                if let message = StoreMessage(apiMessage: new), let rendered = locallyRenderedMessage(message: message, peers: peers) {
-                                                    action = .updatePinned(rendered)
-                                                }
-                                            }
-                                            
-                                        case let .channelAdminLogEventActionEditMessage(prev, new):
-                                            if let prev = StoreMessage(apiMessage: prev), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
-                                                action = .editMessage(prev: prevRendered, new: newRendered)
-                                            }
-                                        case let .channelAdminLogEventActionDeleteMessage(message):
-                                            if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
-                                                action = .deleteMessage(rendered)
-                                            }
-                                        case .channelAdminLogEventActionParticipantJoin:
-                                            action = .participantJoin
-                                        case .channelAdminLogEventActionParticipantLeave:
-                                            action = .participantLeave
-                                        case let .channelAdminLogEventActionParticipantInvite(participant):
-                                            let participant = ChannelParticipant(apiParticipant: participant)
-                                            
-                                            if let peer = peers[participant.peerId] {
-                                                action = .participantInvite(RenderedChannelParticipant(participant: participant, peer: peer))
-                                            }
-                                        case let .channelAdminLogEventActionParticipantToggleBan(prev, new):
-                                            let prevParticipant = ChannelParticipant(apiParticipant: prev)
-                                            let newParticipant = ChannelParticipant(apiParticipant: new)
-                                            
-                                            if let prevPeer = peers[prevParticipant.peerId], let newPeer = peers[newParticipant.peerId] {
-                                                action = .participantToggleBan(prev: RenderedChannelParticipant(participant: prevParticipant, peer: prevPeer), new: RenderedChannelParticipant(participant: newParticipant, peer: newPeer))
-                                            }
-                                        case let .channelAdminLogEventActionParticipantToggleAdmin(prev, new):
-                                            let prevParticipant = ChannelParticipant(apiParticipant: prev)
-                                            let newParticipant = ChannelParticipant(apiParticipant: new)
-                                            
-                                            if let prevPeer = peers[prevParticipant.peerId], let newPeer = peers[newParticipant.peerId] {
-                                                action = .participantToggleAdmin(prev: RenderedChannelParticipant(participant: prevParticipant, peer: prevPeer), new: RenderedChannelParticipant(participant: newParticipant, peer: newPeer))
-                                                }
-                                    case let .channelAdminLogEventActionChangeStickerSet(prevStickerset, newStickerset):
-                                        action = .changeStickerPack(prev: StickerPackReference(apiInputSet: prevStickerset), new: StickerPackReference(apiInputSet: newStickerset))
-                                    case let .channelAdminLogEventActionTogglePreHistoryHidden(value):
-                                            action = .togglePreHistoryHidden(value == .boolTrue)
-                                    }
-                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                                    if let action = action {
-                                        events.append(AdminLogEvent(id: id, peerId: peerId, date: date, action: action))
-                                    }
-                                }
-                        }
-                        return AdminLogEventsResult(peerId: peerId, peers: peers, events: events)
-                    }
-                    
-                    } |> mapError {_ in return .generic}
+            var flags: Int32 = 0
+            var eventsFilter: Api.ChannelAdminLogEventsFilter? = nil
+            if let filter = filter {
+                flags += Int32(1 << 0)
+                eventsFilter = Api.ChannelAdminLogEventsFilter.channelAdminLogEventsFilter(flags: Int32(filter.rawValue))
             }
-            
-            return .complete()
+            if let _ = inputAdmins {
+                flags += Int32(1 << 1)
+            }
+            return network.request(Api.functions.channels.getAdminLog(flags: flags, channel: inputChannel, q: query ?? "", eventsFilter: eventsFilter, admins: inputAdmins, maxId: maxId, minId: minId, limit: limit)) |> map { result in
+                
+                switch result {
+                case let .adminLogResults(apiEvents, apiChats, apiUsers):
+                    let peers = (apiChats.flatMap {parseTelegramGroupOrChannel(chat: $0)} + apiUsers.flatMap { TelegramUser(user: $0) } + Array(arrayLiteral: peer)).reduce([:], { current, peer -> [PeerId : Peer] in
+                        var current = current
+                        current[peer.id] = peer
+                        return current
+                    })
+                    
+                    var events: [AdminLogEvent] = []
+                    
+                    for event in apiEvents {
+                        switch event {
+                            case let .channelAdminLogEvent(id, date, userId, apiAction):
+                                var action: AdminLogEventAction?
+                                switch apiAction {
+                                    case let .channelAdminLogEventActionChangeTitle(prev, new):
+                                        action = .changeTitle(prev: prev, new: new)
+                                    case let .channelAdminLogEventActionChangeAbout(prev, new):
+                                        action = .changeAbout(prev: prev, new: new)
+                                    case let .channelAdminLogEventActionChangeUsername(prev, new):
+                                        action = .changeUsername(prev: prev, new: new)
+                                    case let .channelAdminLogEventActionChangePhoto(prev, new):
+                                        action = .changePhoto(prev: imageRepresentationsForApiChatPhoto(prev), new: imageRepresentationsForApiChatPhoto(new))
+                                    case let .channelAdminLogEventActionToggleInvites(new):
+                                        action = .toggleInvites(boolFromApiValue(new))
+                                    case let .channelAdminLogEventActionToggleSignatures(new):
+                                        action = .toggleSignatures(boolFromApiValue(new))
+                                    case let .channelAdminLogEventActionUpdatePinned(new):
+                                        switch new {
+                                        case .messageEmpty:
+                                            action = .updatePinned(nil)
+                                        default:
+                                            if let message = StoreMessage(apiMessage: new), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                                action = .updatePinned(rendered)
+                                            }
+                                        }
+                                    
+                                    case let .channelAdminLogEventActionEditMessage(prev, new):
+                                        if let prev = StoreMessage(apiMessage: prev), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
+                                            action = .editMessage(prev: prevRendered, new: newRendered)
+                                        }
+                                    case let .channelAdminLogEventActionDeleteMessage(message):
+                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                            action = .deleteMessage(rendered)
+                                        }
+                                    case .channelAdminLogEventActionParticipantJoin:
+                                        action = .participantJoin
+                                    case .channelAdminLogEventActionParticipantLeave:
+                                        action = .participantLeave
+                                    case let .channelAdminLogEventActionParticipantInvite(participant):
+                                        let participant = ChannelParticipant(apiParticipant: participant)
+                                        
+                                        if let peer = peers[participant.peerId] {
+                                            action = .participantInvite(RenderedChannelParticipant(participant: participant, peer: peer))
+                                        }
+                                    case let .channelAdminLogEventActionParticipantToggleBan(prev, new):
+                                        let prevParticipant = ChannelParticipant(apiParticipant: prev)
+                                        let newParticipant = ChannelParticipant(apiParticipant: new)
+                                        
+                                        if let prevPeer = peers[prevParticipant.peerId], let newPeer = peers[newParticipant.peerId] {
+                                            action = .participantToggleBan(prev: RenderedChannelParticipant(participant: prevParticipant, peer: prevPeer), new: RenderedChannelParticipant(participant: newParticipant, peer: newPeer))
+                                        }
+                                    case let .channelAdminLogEventActionParticipantToggleAdmin(prev, new):
+                                        let prevParticipant = ChannelParticipant(apiParticipant: prev)
+                                        let newParticipant = ChannelParticipant(apiParticipant: new)
+                                        
+                                        if let prevPeer = peers[prevParticipant.peerId], let newPeer = peers[newParticipant.peerId] {
+                                            action = .participantToggleAdmin(prev: RenderedChannelParticipant(participant: prevParticipant, peer: prevPeer), new: RenderedChannelParticipant(participant: newParticipant, peer: newPeer))
+                                            }
+                                case let .channelAdminLogEventActionChangeStickerSet(prevStickerset, newStickerset):
+                                    action = .changeStickerPack(prev: StickerPackReference(apiInputSet: prevStickerset), new: StickerPackReference(apiInputSet: newStickerset))
+                                case let .channelAdminLogEventActionTogglePreHistoryHidden(value):
+                                        action = .togglePreHistoryHidden(value == .boolTrue)
+                                }
+                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                if let action = action {
+                                    events.append(AdminLogEvent(id: id, peerId: peerId, date: date, action: action))
+                                }
+                            }
+                    }
+                    return AdminLogEventsResult(peerId: peerId, peers: peers, events: events)
+                }
+                
+                } |> mapError {_ in return .generic}
+        }
+        
+        return .complete()
     }
 }
