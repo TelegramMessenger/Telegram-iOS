@@ -97,11 +97,12 @@ nil];
 
 static NSDictionary *selectPublicKey(NSArray *fingerprints, NSArray<NSDictionary *> *publicKeys)
 {
-    for (NSDictionary *keyDesc in publicKeys)
+    for (NSNumber *nFingerprint in fingerprints)
     {
-        int64_t keyFingerprint = [[keyDesc objectForKey:@"fingerprint"] longLongValue];
-        for (NSNumber *nFingerprint in fingerprints)
+        for (NSDictionary *keyDesc in publicKeys)
         {
+            int64_t keyFingerprint = [[keyDesc objectForKey:@"fingerprint"] longLongValue];
+            
             if ([nFingerprint longLongValue] == keyFingerprint)
                 return keyDesc;
         }
