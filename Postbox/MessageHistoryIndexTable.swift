@@ -15,23 +15,28 @@ enum HistoryIndexEntry {
 }
 
 public enum HoleFillDirection: Equatable {
-    case UpperToLower
-    case LowerToUpper(updatedMaxIndex: MessageIndex?)
+    case UpperToLower(updatedMinIndex: MessageIndex?, clippingMaxIndex: MessageIndex?)
+    case LowerToUpper(updatedMaxIndex: MessageIndex?, clippingMinIndex: MessageIndex?)
     case AroundId(MessageId, lowerComplete: Bool, upperComplete: Bool)
+    case AroundIndex(MessageIndex, lowerComplete: Bool, upperComplete: Bool, clippingMinIndex: MessageIndex?, clippingMaxIndex: MessageIndex?)
 
     public static func ==(lhs: HoleFillDirection, rhs: HoleFillDirection) -> Bool {
         switch lhs {
-            case .UpperToLower:
+            case let .UpperToLower(lhsUpdatedMinIndex, lhsClippingMaxIndex):
                 switch rhs {
-                    case .UpperToLower:
-                        return true
+                    case let .UpperToLower(rhsUpdatedMinIndex, rhsClippingMaxIndex):
+                        if lhsUpdatedMinIndex == rhsUpdatedMinIndex && lhsClippingMaxIndex == rhsClippingMaxIndex {
+                            return true
+                        } else {
+                            return false
+                        }
                     default:
                         return false
                 }
-            case let .LowerToUpper(lhsUpdatedMaxIndex):
+            case let .LowerToUpper(lhsUpdatedMaxIndex, lhsClippingMinIndex):
                 switch rhs {
-                    case let .LowerToUpper(rhsUpdatedMaxIndex):
-                        if lhsUpdatedMaxIndex == rhsUpdatedMaxIndex {
+                    case let .LowerToUpper(rhsUpdatedMaxIndex, lhsClippingMaxIndex):
+                        if lhsUpdatedMaxIndex == rhsUpdatedMaxIndex && lhsClippingMinIndex == lhsClippingMaxIndex {
                             return true
                         } else {
                             return false
@@ -42,6 +47,12 @@ public enum HoleFillDirection: Equatable {
             case let .AroundId(id, lowerComplete, upperComplete):
                 if case .AroundId(id, lowerComplete, upperComplete) = rhs {
                         return true
+                } else {
+                    return false
+                }
+            case let .AroundIndex(lhsIndex, lhsLowerComplete, lhsUpperComplete, lhsClippingMinIndex, lhsClippingMaxIndex):
+                if case let .AroundIndex(rhsIndex, rhsLowerComplete, rhsUpperComplete, rhsClippingMinIndex, rhsClippingMaxIndex) = rhs, lhsIndex == rhsIndex, lhsLowerComplete == rhsLowerComplete, lhsUpperComplete == rhsUpperComplete, lhsClippingMinIndex == rhsClippingMinIndex, lhsClippingMaxIndex == rhsClippingMaxIndex {
+                    return true
                 } else {
                     return false
                 }
@@ -66,6 +77,7 @@ public enum AddMessagesLocation {
 
 enum MessageHistoryIndexOperation {
     case InsertMessage(InternalStoreMessage)
+    case InsertExistingMessage(InternalStoreMessage)
     case InsertHole(MessageHistoryHole)
     case Remove(index: MessageIndex, isMessage: Bool)
     case Update(MessageIndex, InternalStoreMessage)
@@ -302,6 +314,8 @@ final class MessageHistoryIndexTable: Table {
             
             if !exists {
                 self.justInsertMessage(message, operations: &operations)
+            } else {
+                operations.append(.InsertExistingMessage(message))
             }
         }
     }
@@ -479,7 +493,7 @@ final class MessageHistoryIndexTable: Table {
                             if fillType.complete {
                                 currentLowerBound = 1
                             }
-                        case .AroundId:
+                        case .AroundId, .AroundIndex:
                             break
                     }
                     
@@ -497,7 +511,7 @@ final class MessageHistoryIndexTable: Table {
                             if fillType.complete {
                                 filledLowerBound = 1
                             }
-                        case .AroundId:
+                        case .AroundId, .AroundIndex:
                             break
                     }
                 }
@@ -583,23 +597,32 @@ final class MessageHistoryIndexTable: Table {
                             }
                             
                             currentFillType = HoleFill(complete: fillType.complete, direction: .AroundId(id, lowerComplete: adjustedLowerComplete, upperComplete: adjustedUpperComplete))
-                        case let .LowerToUpper(updatedMaxIndex):
-                            currentFillType = HoleFill(complete: fillType.complete || adjustedUpperComplete, direction: .LowerToUpper(updatedMaxIndex: updatedMaxIndex))
-                        case .UpperToLower:
-                            currentFillType = HoleFill(complete: fillType.complete || adjustedLowerComplete, direction: .UpperToLower)
+                        case let .AroundIndex(index, lowerComplete, upperComplete, _, _):
+                            if lowerComplete {
+                                adjustedLowerComplete = true
+                            }
+                            if upperComplete {
+                                adjustedUpperComplete = true
+                            }
+                            
+                            currentFillType = HoleFill(complete: fillType.complete, direction: .AroundId(index.id, lowerComplete: adjustedLowerComplete, upperComplete: adjustedUpperComplete))
+                        case let .LowerToUpper(updatedMaxIndex, clippingMinIndex):
+                            currentFillType = HoleFill(complete: fillType.complete || adjustedUpperComplete, direction: .LowerToUpper(updatedMaxIndex: updatedMaxIndex, clippingMinIndex: clippingMinIndex))
+                        case let .UpperToLower(updatedMinIndex, clippingMaxIndex):
+                            currentFillType = HoleFill(complete: fillType.complete || adjustedLowerComplete, direction: .UpperToLower(updatedMinIndex: updatedMinIndex, clippingMaxIndex: clippingMaxIndex))
                     }
                 } else {
                     if holeId < adjustedMainHoleId {
-                        currentFillType = HoleFill(complete: adjustedLowerComplete, direction: .UpperToLower)
+                        currentFillType = HoleFill(complete: adjustedLowerComplete, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil))
                     } else {
-                        currentFillType = HoleFill(complete: adjustedUpperComplete, direction: .LowerToUpper(updatedMaxIndex: nil))
+                        currentFillType = HoleFill(complete: adjustedUpperComplete, direction: .LowerToUpper(updatedMaxIndex: nil, clippingMinIndex: nil))
                     }
                 }
             } else {
                 if holeId < mainHoleId {
-                    currentFillType = HoleFill(complete: adjustedLowerComplete, direction: .UpperToLower)
+                    currentFillType = HoleFill(complete: adjustedLowerComplete, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil))
                 } else {
-                    currentFillType = HoleFill(complete: adjustedUpperComplete, direction: .LowerToUpper(updatedMaxIndex: nil))
+                    currentFillType = HoleFill(complete: adjustedUpperComplete, direction: .LowerToUpper(updatedMaxIndex: nil, clippingMinIndex: nil))
                 }
             }
             self.fillHole(holeId, fillType: currentFillType, tagMask: tagMask, messages: holeMessages, operations: &operations)
@@ -682,7 +705,9 @@ final class MessageHistoryIndexTable: Table {
                                 if i == messagesInRange.count - 1 {
                                     if upperHole.maxIndex.id.id > message.id.id {
                                         let holeTags: UInt32
-                                        if fillType.complete || fillType.direction == .UpperToLower {
+                                        if fillType.complete {
+                                            holeTags = clearedTags
+                                        } else if case .UpperToLower = fillType.direction {
                                             holeTags = clearedTags
                                         } else {
                                             holeTags = upperHole.tags
@@ -704,7 +729,12 @@ final class MessageHistoryIndexTable: Table {
                             if message.id.id >= upperHole.min && message.id.id <= upperHole.maxIndex.id.id {
                                 if (minMessageInRange == nil || minMessageInRange!.id > message.id) {
                                     minMessageInRange = message
-                                    if (fillType.complete || fillType.direction == .UpperToLower) {
+                                    if fillType.complete {
+                                        if !removedHole {
+                                            removedHole = true
+                                            self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
+                                        }
+                                    } else if case .UpperToLower = fillType.direction {
                                         if !removedHole {
                                             removedHole = true
                                             self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
@@ -744,7 +774,7 @@ final class MessageHistoryIndexTable: Table {
                                 removedHole = true
                                 self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
                             }
-                        } else if case let .LowerToUpper(updatedMaxIndex) = fillType.direction {
+                        } else if case let .LowerToUpper(updatedMaxIndex, _) = fillType.direction {
                             if let maxMessageInRange = maxMessageInRange , maxMessageInRange.id.id != Int32.max && maxMessageInRange.id.id + 1 <= upperHole.maxIndex.id.id {
                                 let stableId: UInt32
                                 let tags: UInt32 = upperHole.tags
@@ -755,7 +785,7 @@ final class MessageHistoryIndexTable: Table {
                                 }
                                 self.justInsertHole(MessageHistoryHole(stableId: stableId, maxIndex: updatedMaxIndex ?? upperHole.maxIndex, min: maxMessageInRange.id.id + 1, tags: tags), operations: &operations)
                             }
-                        } else if fillType.direction == .UpperToLower {
+                        } else if case .UpperToLower = fillType.direction {
                             if let minMessageInRange = minMessageInRange , minMessageInRange.id.id - 1 >= upperHole.min {
                                 let stableId: UInt32
                                 let tags: UInt32 = upperHole.tags

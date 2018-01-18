@@ -14,10 +14,6 @@ public enum ViewUpdateType {
 
 final class ViewTracker {
     private let queue: Queue
-    private let fetchEarlierHistoryEntries: (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry]
-    private let fetchLaterHistoryEntries: (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry]
-    private let fetchEarlierChatEntries: (ChatListIndex?, Int) -> [MutableChatListEntry]
-    private let fetchLaterChatEntries: (ChatListIndex?, Int) -> [MutableChatListEntry]
     private let fetchAnchorIndex: (MessageId) -> InternalMessageHistoryAnchorIndex?
     private let renderMessage: (IntermediateMessage) -> Message
     private let getPeer: (PeerId) -> Peer?
@@ -63,12 +59,8 @@ final class ViewTracker {
     private var multiplePeersViews = Bag<(MutableMultiplePeersView, ValuePipe<MultiplePeersView>)>()
     private var itemCollectionsViews = Bag<(MutableItemCollectionsView, ValuePipe<ItemCollectionsView>)>()
     
-    init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (ChatListIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (ChatListIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> InternalMessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadCount: @escaping () -> Int32, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
+    init(queue: Queue, fetchAnchorIndex: @escaping (MessageId) -> InternalMessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadCount: @escaping () -> Int32, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
-        self.fetchEarlierHistoryEntries = fetchEarlierHistoryEntries
-        self.fetchLaterHistoryEntries = fetchLaterHistoryEntries
-        self.fetchEarlierChatEntries = fetchEarlierChatEntries
-        self.fetchLaterChatEntries = fetchLaterChatEntries
         self.fetchAnchorIndex = fetchAnchorIndex
         self.renderMessage = renderMessage
         self.getPeer = getPeer
@@ -275,7 +267,7 @@ final class ViewTracker {
         self.combinedViews.remove(index)
     }
     
-    func refreshViewsDueToExternalTransaction(postbox: Postbox, fetchAroundChatEntries: (_ index: ChatListIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?), fetchAroundHistoryEntries: (_ index: MessageIndex, _ count: Int, _ tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?), fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
+    func refreshViewsDueToExternalTransaction(postbox: Postbox, fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
         var updateTrackedHoles = false
         
         for (mutableView, pipe) in self.messageHistoryViews.copyItems() {
@@ -290,7 +282,7 @@ final class ViewTracker {
         }
         
         for (mutableView, pipe) in self.chatListViews.copyItems() {
-            if mutableView.refreshDueToExternalTransaction(fetchAroundChatEntries: fetchAroundChatEntries) {
+            if mutableView.refreshDueToExternalTransaction(postbox: postbox) {
                 mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
                     return self.getPeer(id)
                 }, getPeerNotificationSettings: self.getPeerNotificationSettings)
@@ -348,35 +340,46 @@ final class ViewTracker {
                     } else {
                         updateType = .Generic
                     }
-                case .associated, .multiple:
-                    var ids: [PeerId] = []
-                    switch mutableView.peerIds {
-                        case let .single(id):
-                            ids.append(id)
-                        case let .associated(mainId, associatedId):
-                            ids.append(mainId)
-                            if let associatedId = associatedId {
-                                ids.append(associatedId)
-                            }
-                        case let .multiple(multipleIds):
-                            ids.append(contentsOf: multipleIds)
-                    }
-                
+                case .associated, .group:
                     var holeFillDirections: [MessageIndex: HoleFillDirection] = [:]
                     var removedHolesByPeerId: [MessageIndex: HoleFillDirection] = [:]
                     
-                    for peerId in ids {
-                        if let value = transaction.peerIdsWithFilledHoles[peerId] {
-                            for (k, v) in value {
-                                holeFillDirections[k] = v
+                    var ids = Set<PeerId>()
+                    switch mutableView.peerIds {
+                        case .single:
+                            assertionFailure()
+                        case let .associated(mainPeerId, associatedPeerId):
+                            ids.insert(mainPeerId)
+                            if let associatedPeerId = associatedPeerId {
+                                ids.insert(associatedPeerId)
+                            }
+                        case let .group(groupId):
+                            if let value = transaction.groupFeedIdsWithFilledHoles[groupId] {
+                                holeFillDirections = value
+                            }
+                            if let value = transaction.removedHolesByPeerGroupId[groupId] {
+                                removedHolesByPeerId = value
+                            }
+                    }
+                    
+                    if !ids.isEmpty {
+                        for (peerId, value) in transaction.peerIdsWithFilledHoles {
+                            if ids.contains(peerId) {
+                                for (k, v) in value {
+                                    holeFillDirections[k] = v
+                                }
                             }
                         }
-                        if let value = transaction.removedHolesByPeerId[peerId] {
-                            for (k, v) in value {
-                                removedHolesByPeerId[k] = v
+                        
+                        for (peerId, value) in transaction.removedHolesByPeerId {
+                            if ids.contains(peerId) {
+                                for (k, v) in value {
+                                    removedHolesByPeerId[k] = v
+                                }
                             }
                         }
                     }
+                    
                     if !holeFillDirections.isEmpty {
                         updateType = .FillHole(insertions: holeFillDirections, deletions: removedHolesByPeerId)
                     } else {
@@ -420,18 +423,11 @@ final class ViewTracker {
         if !transaction.chatListOperations.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.currentUpdatedPeers.isEmpty || !transaction.currentInvalidateMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageTagSummaries.isEmpty {
             for (mutableView, pipe) in self.chatListViews.copyItems() {
                 let context = MutableChatListViewReplayContext()
-                if mutableView.replay(transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, transaction: transaction, context: context) {
-                    mutableView.complete(context: context, fetchEarlier: self.fetchEarlierChatEntries, fetchLater: self.fetchLaterChatEntries)
+                if mutableView.replay(postbox: postbox, operations: transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, transaction: transaction, context: context) {
+                    mutableView.complete(postbox: postbox, context: context)
                     mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
                         return self.getPeer(id)
                     }, getPeerNotificationSettings: self.getPeerNotificationSettings)
-                    //var updateType: ViewUpdateType = .Generic
-                    for operation in transaction.chatListOperations {
-                        if case .RemoveHoles = operation {
-                            //updateType = .UpdateVisible
-                            break
-                        }
-                    }
                     pipe.putNext((ChatListView(mutableView), .Generic))
                 }
             }
@@ -515,11 +511,11 @@ final class ViewTracker {
     }
     
     private func updateTrackedChatListHoles() {
-        var firstHoles = Set<ChatListHole>()
+        var firstHoles = Set<ChatListHolesEntry>()
         
         for (view, _) in self.chatListViews.copyItems() {
             if let hole = view.firstHole() {
-                firstHoles.insert(hole)
+                firstHoles.insert(ChatListHolesEntry(groupId: view.groupId, hole: hole))
             }
         }
     
@@ -531,21 +527,17 @@ final class ViewTracker {
     }
     
     private func updateTrackedHoles() {
-        var firstHolesAndTags: [PeerId: Set<MessageHistoryHolesViewEntry>] = [:]
+        var firstHolesAndTags = Set<MessageHistoryHolesViewEntry>()
         for (view, _) in self.messageHistoryViews.copyItems() {
             if let (hole, direction) = view.firstHole() {
-                if firstHolesAndTags[hole.maxIndex.id.peerId] == nil {
-                    firstHolesAndTags[hole.maxIndex.id.peerId] = Set()
-                }
-                firstHolesAndTags[hole.maxIndex.id.peerId]!.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, tags: view.tagMask))
+                
+                firstHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, tags: view.tagMask))
             }
         }
         
-        for (peerId, holesAndTags) in firstHolesAndTags {
-            if self.messageHistoryHolesView.update(peerId: peerId, holes: holesAndTags) {
-                for subscriber in self.messageHistoryHolesViewSubscribers.copyItems() {
-                    subscriber.putNext(MessageHistoryHolesView(self.messageHistoryHolesView))
-                }
+        if self.messageHistoryHolesView.update(firstHolesAndTags) {
+            for subscriber in self.messageHistoryHolesViewSubscribers.copyItems() {
+                subscriber.putNext(MessageHistoryHolesView(self.messageHistoryHolesView))
             }
         }
     }

@@ -101,10 +101,6 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             }
         }
         if anchorUpdated {
-            if self.peerId.id == 1076840162 {
-                assert(true)
-            }
-            
             if let anchorId = self.anchorId {
                 let (entries, earlier, later) = fetchEntries(postbox: postbox, anchor: anchorId, count: self.count)
                 self.entries = entries
@@ -241,9 +237,6 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         }
         
         if updated {
-            if self.peerId.id == 1076840162 {
-                assert(true)
-            }
             let closestHole = self.firstHole()
             if closestHole != self.closestHole {
                 self.closestHole = closestHole

@@ -7,7 +7,7 @@ public protocol AccountRecordAttribute: PostboxCoding {
 public struct AccountRecordId: Comparable, Hashable {
     let rawValue: Int64
     
-    init(rawValue: Int64) {
+    public init(rawValue: Int64) {
         self.rawValue = rawValue
     }
     

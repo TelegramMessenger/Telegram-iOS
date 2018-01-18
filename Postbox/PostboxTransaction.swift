@@ -3,9 +3,12 @@ import Foundation
 final class PostboxTransaction {
     let currentUpdatedState: PostboxCoding?
     let currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]]
+    let currentGroupFeedOperations: [PeerGroupId : [GroupFeedIndexOperation]]
     let peerIdsWithFilledHoles: [PeerId: [MessageIndex: HoleFillDirection]]
     let removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]]
-    let chatListOperations: [ChatListOperation]
+    let groupFeedIdsWithFilledHoles: [PeerGroupId: [MessageIndex: HoleFillDirection]]
+    let removedHolesByPeerGroupId: [PeerGroupId: [MessageIndex: HoleFillDirection]]
+    let chatListOperations: [WrappedPeerGroupId: [ChatListOperation]]
     let currentUpdatedPeers: [PeerId: Peer]
     let currentUpdatedPeerNotificationSettings: [PeerId: PeerNotificationSettings]
     let currentUpdatedCachedPeerData: [PeerId: CachedPeerData]
@@ -23,11 +26,14 @@ final class PostboxTransaction {
     let currentUpdatedPeerChatStates: Set<PeerId>
     let updatedAccessChallengeData: PostboxAccessChallengeData?
     let currentGlobalTagsOperations: [GlobalMessageHistoryTagsOperation]
+    let currentLocalTagsOperations: [IntermediateMessageHistoryLocalTagsOperation]
     let currentPendingMessageActionsOperations: [PendingMessageActionsOperation]
     let currentUpdatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32]
     let currentUpdatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary]
     let currentInvalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation]
     let currentUpdatedPendingPeerNotificationSettings: Set<PeerId>
+    let currentGroupFeedReadStateContext: GroupFeedReadStateUpdateContext
+    let currentInitialPeerGroupIdsBeforeUpdate: [PeerId: WrappedPeerGroupId]
     
     let unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation]
     let updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]
@@ -43,10 +49,19 @@ final class PostboxTransaction {
         if !currentOperationsByPeerId.isEmpty {
             return false
         }
+        if !currentGroupFeedOperations.isEmpty {
+            return false
+        }
         if !peerIdsWithFilledHoles.isEmpty {
             return false
         }
         if !removedHolesByPeerId.isEmpty {
+            return false
+        }
+        if !groupFeedIdsWithFilledHoles.isEmpty {
+            return false
+        }
+        if !removedHolesByPeerGroupId.isEmpty {
             return false
         }
         if !chatListOperations.isEmpty {
@@ -121,6 +136,9 @@ final class PostboxTransaction {
         if !self.currentGlobalTagsOperations.isEmpty {
             return false
         }
+        if !self.currentLocalTagsOperations.isEmpty {
+            return false
+        }
         if !self.currentPendingMessageActionsOperations.isEmpty {
             return false
         }
@@ -136,14 +154,23 @@ final class PostboxTransaction {
         if !self.currentUpdatedPendingPeerNotificationSettings.isEmpty {
             return false
         }
+        if !self.currentGroupFeedReadStateContext.isEmpty {
+            return false
+        }
+        if !self.currentInitialPeerGroupIdsBeforeUpdate.isEmpty {
+            return false
+        }
         return true
     }
     
-    init(currentUpdatedState: PostboxCoding?, currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], peerIdsWithFilledHoles: [PeerId: [MessageIndex: HoleFillDirection]], removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]], chatListOperations: [ChatListOperation], currentUpdatedPeers: [PeerId: Peer], currentUpdatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], currentUpdatedCachedPeerData: [PeerId: CachedPeerData], currentUpdatedPeerPresences: [PeerId: PeerPresence], currentUpdatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?], currentUpdatedTotalUnreadCount: Int32?, peerIdsWithUpdatedUnreadCounts: Set<PeerId>, peerIdsWithUpdatedCombinedReadStates: Set<PeerId>, currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation], currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?], currentPreferencesOperations: [PreferencesOperation], currentOrderedItemListOperations: [Int32: [OrderedItemListOperation]], currentItemCollectionItemsOperations: [ItemCollectionId: [ItemCollectionItemsOperation]], currentItemCollectionInfosOperations: [ItemCollectionInfosOperation], currentUpdatedPeerChatStates: Set<PeerId>, updatedAccessChallengeData: PostboxAccessChallengeData?, currentGlobalTagsOperations: [GlobalMessageHistoryTagsOperation], updatedMedia: [MediaId: Media?], replaceRemoteContactCount: Int32?, replaceContactPeerIds: Set<PeerId>?, currentPendingMessageActionsOperations: [PendingMessageActionsOperation], currentUpdatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32], currentUpdatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], currentInvalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation], currentUpdatedPendingPeerNotificationSettings: Set<PeerId>, currentUpdatedMasterClientId: Int64?) {
+    init(currentUpdatedState: PostboxCoding?, currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], currentGroupFeedOperations: [PeerGroupId : [GroupFeedIndexOperation]], peerIdsWithFilledHoles: [PeerId: [MessageIndex: HoleFillDirection]], removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]], groupFeedIdsWithFilledHoles: [PeerGroupId: [MessageIndex: HoleFillDirection]], removedHolesByPeerGroupId: [PeerGroupId: [MessageIndex: HoleFillDirection]], chatListOperations: [WrappedPeerGroupId: [ChatListOperation]], currentUpdatedPeers: [PeerId: Peer], currentUpdatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], currentUpdatedCachedPeerData: [PeerId: CachedPeerData], currentUpdatedPeerPresences: [PeerId: PeerPresence], currentUpdatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?], currentUpdatedTotalUnreadCount: Int32?, peerIdsWithUpdatedUnreadCounts: Set<PeerId>, peerIdsWithUpdatedCombinedReadStates: Set<PeerId>, currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation], currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?], currentPreferencesOperations: [PreferencesOperation], currentOrderedItemListOperations: [Int32: [OrderedItemListOperation]], currentItemCollectionItemsOperations: [ItemCollectionId: [ItemCollectionItemsOperation]], currentItemCollectionInfosOperations: [ItemCollectionInfosOperation], currentUpdatedPeerChatStates: Set<PeerId>, updatedAccessChallengeData: PostboxAccessChallengeData?, currentGlobalTagsOperations: [GlobalMessageHistoryTagsOperation], currentLocalTagsOperations: [IntermediateMessageHistoryLocalTagsOperation], updatedMedia: [MediaId: Media?], replaceRemoteContactCount: Int32?, replaceContactPeerIds: Set<PeerId>?, currentPendingMessageActionsOperations: [PendingMessageActionsOperation], currentUpdatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32], currentUpdatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], currentInvalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation], currentUpdatedPendingPeerNotificationSettings: Set<PeerId>, currentGroupFeedReadStateContext: GroupFeedReadStateUpdateContext, currentInitialPeerGroupIdsBeforeUpdate: [PeerId: WrappedPeerGroupId], currentUpdatedMasterClientId: Int64?) {
         self.currentUpdatedState = currentUpdatedState
         self.currentOperationsByPeerId = currentOperationsByPeerId
+        self.currentGroupFeedOperations = currentGroupFeedOperations
         self.peerIdsWithFilledHoles = peerIdsWithFilledHoles
         self.removedHolesByPeerId = removedHolesByPeerId
+        self.groupFeedIdsWithFilledHoles = groupFeedIdsWithFilledHoles
+        self.removedHolesByPeerGroupId = removedHolesByPeerGroupId
         self.chatListOperations = chatListOperations
         self.currentUpdatedPeers = currentUpdatedPeers
         self.currentUpdatedPeerNotificationSettings = currentUpdatedPeerNotificationSettings;
@@ -164,6 +191,7 @@ final class PostboxTransaction {
         self.currentUpdatedPeerChatStates = currentUpdatedPeerChatStates
         self.updatedAccessChallengeData = updatedAccessChallengeData
         self.currentGlobalTagsOperations = currentGlobalTagsOperations
+        self.currentLocalTagsOperations = currentLocalTagsOperations
         self.updatedMedia = updatedMedia
         self.replaceRemoteContactCount = replaceRemoteContactCount
         self.replaceContactPeerIds = replaceContactPeerIds
@@ -172,6 +200,8 @@ final class PostboxTransaction {
         self.currentUpdatedMessageTagSummaries = currentUpdatedMessageTagSummaries
         self.currentInvalidateMessageTagSummaries = currentInvalidateMessageTagSummaries
         self.currentUpdatedPendingPeerNotificationSettings = currentUpdatedPendingPeerNotificationSettings
+        self.currentGroupFeedReadStateContext = currentGroupFeedReadStateContext
+        self.currentInitialPeerGroupIdsBeforeUpdate = currentInitialPeerGroupIdsBeforeUpdate
         self.currentUpdatedMasterClientId = currentUpdatedMasterClientId
     }
 }

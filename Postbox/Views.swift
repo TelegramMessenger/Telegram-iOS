@@ -19,6 +19,9 @@ public enum PostboxViewKey: Hashable {
     case peerNotificationSettings(peerId: PeerId)
     case pendingPeerNotificationSettings
     case messageOfInterestHole(peerId: PeerId, namespace: MessageId.Namespace, count: Int)
+    case chatListTopPeers(groupId: PeerGroupId)
+    case groupFeedReadStateSyncOperations
+    case localMessageTag(LocalMessageTags)
     
     public var hashValue: Int {
         switch self {
@@ -58,6 +61,12 @@ public enum PostboxViewKey: Hashable {
                 return 7
             case let .messageOfInterestHole(peerId, namespace, count):
                 return 8 &+ 31 &* peerId.hashValue &+ 31 &* namespace.hashValue &+ 31 &* count.hashValue
+            case let .chatListTopPeers(groupId):
+                return groupId.hashValue
+            case .groupFeedReadStateSyncOperations:
+                return 9
+            case let .localMessageTag(tag):
+                return tag.hashValue
         }
     }
     
@@ -171,6 +180,24 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case let .chatListTopPeers(groupId):
+                if case .chatListTopPeers(groupId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .groupFeedReadStateSyncOperations:
+                if case .groupFeedReadStateSyncOperations = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .localMessageTag(tag):
+                if case .localMessageTag(tag) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -213,5 +240,11 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutablePendingPeerNotificationSettingsView(postbox: postbox)
         case let .messageOfInterestHole(peerId, namespace, count):
             return MutableMessageOfInterestHolesView(postbox: postbox, peerId: peerId, namespace: namespace, count: count)
+        case let .chatListTopPeers(groupId):
+            return MutableChatListTopPeersView(postbox: postbox, groupId: groupId)
+        case .groupFeedReadStateSyncOperations:
+            return MutableGroupFeedReadStateSyncOperationsView(postbox: postbox)
+        case let .localMessageTag(tag):
+            return MutableLocalMessageTagsView(postbox: postbox, tag: tag)
     }
 }

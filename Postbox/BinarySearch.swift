@@ -23,3 +23,35 @@ func binarySearch<T: Comparable>(_ inputArr: [T], searchItem: T) -> Int? {
         }
     }
 }
+
+func binaryInsertionIndex<T: Comparable>(_ inputArr: [T], searchItem: T) -> Int {
+    var lo = 0
+    var hi = inputArr.count - 1
+    while lo <= hi {
+        let mid = (lo + hi)/2
+        if inputArr[mid] < searchItem {
+            lo = mid + 1
+        } else if searchItem < inputArr[mid] {
+            hi = mid - 1
+        } else {
+            return mid
+        }
+    }
+    return lo
+}
+
+func binaryInsertionIndexReverse<T: Comparable>(_ inputArr: [T], searchItem: T) -> Int {
+    var lo = 0
+    var hi = inputArr.count - 1
+    while lo <= hi {
+        let mid = (lo + hi)/2
+        if inputArr[mid] > searchItem {
+            lo = mid + 1
+        } else if searchItem > inputArr[mid] {
+            hi = mid - 1
+        } else {
+            return mid
+        }
+    }
+    return lo
+}

@@ -95,6 +95,8 @@ class GlobalMessageHistoryTagsTable: Table {
     }
     
     func addMessage(_ tagMask: GlobalMessageTags, index: MessageIndex) -> Bool {
+        self.ensureInitialized(tagMask)
+        
         assert(tagMask.isSingleTag)
         var upperIsHole = false
         self.valueBox.range(self.table, start: self.key(tagMask, index: index, key: self.sharedKey), end: self.upperBound(tagMask), values: { key, value in

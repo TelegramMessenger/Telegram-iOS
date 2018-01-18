@@ -54,6 +54,7 @@ private struct SqlitePreparedStatement {
             
             if res == SQLITE_CORRUPT {
                 if let path = path {
+                    postboxLog("Corrupted DB at step, dropping")
                     try? FileManager.default.removeItem(atPath: path)
                     preconditionFailure()
                 }
@@ -127,11 +128,13 @@ final class SqliteValueBox: ValueBox {
     private var rangeValueDescStatementsLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeValueDescStatementsNoLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var scanStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var scanKeysStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var existsStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var updateStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var insertStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var insertOrReplaceStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var deleteStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var moveStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var fullTextInsertStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var fullTextDeleteStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var fullTextMatchGlobalStatements: [Int32 : SqlitePreparedStatement] = [:]
@@ -170,6 +173,7 @@ final class SqliteValueBox: ValueBox {
         if let result = Database(path) {
             database = result
         } else {
+            postboxLog("Couldn't open DB")
             preconditionFailure("Couldn't open database")
             //let _ = try? FileManager.default.removeItem(atPath: path)
             //database = Database(path)!
@@ -651,6 +655,27 @@ final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
+    private func scanKeysStatement(_ table: ValueBoxTable) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
+        
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.scanKeysStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) ORDER BY key ASC", -1, &statement, nil)
+            assert(status == SQLITE_OK)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.scanKeysStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        return resultStatement
+    }
+    
     private func existsStatement(_ table: ValueBoxTable, key: ValueBoxKey) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
         checkTableKey(table, key)
@@ -764,10 +789,10 @@ final class SqliteValueBox: ValueBox {
         resultStatement.reset()
         
         switch table.keyType {
-        case .binary:
-            resultStatement.bind(1, data: key.memory, length: key.length)
-        case .int64:
-            resultStatement.bind(1, number: key.getInt64(0))
+            case .binary:
+                resultStatement.bind(1, data: key.memory, length: key.length)
+            case .int64:
+                resultStatement.bind(1, number: key.getInt64(0))
         }
         if value.length == 0 {
             resultStatement.bindNull(2)
@@ -802,6 +827,38 @@ final class SqliteValueBox: ValueBox {
                 resultStatement.bind(1, data: key.memory, length: key.length)
             case .int64:
                 resultStatement.bind(1, number: key.getInt64(0))
+        }
+        
+        return resultStatement
+    }
+    
+    private func moveStatement(_ table: ValueBoxTable, from previousKey: ValueBoxKey, to updatedKey: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
+        checkTableKey(table, previousKey)
+        checkTableKey(table, updatedKey)
+        
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.moveStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "UPDATE t\(table.id) SET key=? WHERE key=?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.moveStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: previousKey.memory, length: previousKey.length)
+                resultStatement.bind(2, data: updatedKey.memory, length: updatedKey.length)
+            case .int64:
+                resultStatement.bind(1, number: previousKey.getInt64(0))
+                resultStatement.bind(2, number: updatedKey.getInt64(0))
         }
         
         return resultStatement
@@ -1187,6 +1244,36 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
+    public func scan(_ table: ValueBoxTable, keys: (ValueBoxKey) -> Bool) {
+        assert(self.queue.isCurrent())
+        
+        if let _ = self.tables[table.id] {
+            let statement: SqlitePreparedStatement = self.scanKeysStatement(table)
+            
+            var startTime = CFAbsoluteTimeGetCurrent()
+            
+            var currentTime = CFAbsoluteTimeGetCurrent()
+            self.readQueryTime += currentTime - startTime
+            
+            startTime = currentTime
+            
+            while statement.step(handle: self.database.handle, path: self.basePath) {
+                startTime = CFAbsoluteTimeGetCurrent()
+                
+                let key = statement.keyAt(0)
+                
+                currentTime = CFAbsoluteTimeGetCurrent()
+                self.readQueryTime += currentTime - startTime
+                
+                if !keys(key) {
+                    break
+                }
+            }
+            
+            statement.reset()
+        }
+    }
+    
     public func scanInt64(_ table: ValueBoxTable, values: (Int64, ReadBuffer) -> Bool) {
         assert(self.queue.isCurrent())
         
@@ -1259,6 +1346,20 @@ final class SqliteValueBox: ValueBox {
             let startTime = CFAbsoluteTimeGetCurrent()
             
             let statement = self.deleteStatement(table, key: key)
+            while statement.step(handle: self.database.handle, path: self.basePath) {
+            }
+            statement.reset()
+            
+            self.writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
+        }
+    }
+    
+    public func move(_ table: ValueBoxTable, from previousKey: ValueBoxKey, to updatedKey: ValueBoxKey) {
+        assert(self.queue.isCurrent())
+        if let _ = self.tables[table.id] {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
+            let statement = self.moveStatement(table, from: previousKey, to: updatedKey)
             while statement.step(handle: self.database.handle, path: self.basePath) {
             }
             statement.reset()
@@ -1398,6 +1499,11 @@ final class SqliteValueBox: ValueBox {
         }
         self.scanStatements.removeAll()
         
+        for (_, statement) in self.scanKeysStatements {
+            statement.destroy()
+        }
+        self.scanKeysStatements.removeAll()
+        
         for (_, statement) in self.existsStatements {
             statement.destroy()
         }
@@ -1422,6 +1528,11 @@ final class SqliteValueBox: ValueBox {
             statement.destroy()
         }
         self.deleteStatements.removeAll()
+        
+        for (_, statement) in self.moveStatements {
+            statement.destroy()
+        }
+        self.moveStatements.removeAll()
         
         for (_, statement) in self.fullTextInsertStatements {
             statement.destroy()
@@ -1461,6 +1572,7 @@ final class SqliteValueBox: ValueBox {
         self.database = nil
         self.lock.unlock()
         
+        postboxLog("dropping DB")
         let _ = try? FileManager.default.removeItem(atPath: self.basePath)
         self.database = self.openDatabase()
         

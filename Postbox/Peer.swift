@@ -109,6 +109,18 @@ public func arePeersEqual(_ lhs: Peer?, _ rhs: Peer?) -> Bool {
     }
 }
 
+public func arePeerArraysEqual(_ lhs: [Peer], _ rhs: [Peer]) -> Bool {
+    if lhs.count != rhs.count {
+        return false
+    }
+    for i in 0 ..< lhs.count {
+        if !lhs[i].isEqual(rhs[i]) {
+            return false
+        }
+    }
+    return true
+}
+
 public func arePeerDictionariesEqual(_ lhs: SimpleDictionary<PeerId, Peer>, _ rhs: SimpleDictionary<PeerId, Peer>) -> Bool {
     if lhs.count != rhs.count {
         return false
