@@ -10,15 +10,15 @@ public typealias AdminLogEventId = Int64
 
 public struct AdminLogEvent {
     public let id: AdminLogEventId
-    public let peerId:PeerId
-    public let date:Int32
+    public let peerId: PeerId
+    public let date: Int32
     public let action: AdminLogEventAction
 }
 
 public struct AdminLogEventsResult {
     public let peerId: PeerId
-    public let peers:[PeerId: Peer]
-    public let events:[AdminLogEvent]
+    public let peers: [PeerId: Peer]
+    public let events: [AdminLogEvent]
 }
 
 public enum AdminLogEventAction {
@@ -29,7 +29,7 @@ public enum AdminLogEventAction {
     case toggleInvites(Bool)
     case toggleSignatures(Bool)
     case updatePinned(Message?)
-    case editMessage(prev: Message, new:Message)
+    case editMessage(prev: Message, new: Message)
     case deleteMessage(Message)
     case participantJoin
     case participantLeave
@@ -69,24 +69,24 @@ public struct AdminLogEventsFlags : OptionSet {
     public static let editMessages = AdminLogEventsFlags(rawValue: 1 << 12)
     public static let deleteMessages = AdminLogEventsFlags(rawValue: 1 << 13)
     
-    public static var all:[AdminLogEventsFlags] {
+    public static var all: [AdminLogEventsFlags] {
         return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages]
     }
-    public static var flags:AdminLogEventsFlags {
+    public static var flags: AdminLogEventsFlags {
         return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages]
     }
 }
 
 private func boolFromApiValue(_ value: Api.Bool) -> Bool {
     switch value {
-    case .boolFalse:
-        return false
-    case .boolTrue:
-        return true
+        case .boolFalse:
+            return false
+        case .boolTrue:
+            return true
     }
 }
 
-public func channelAdminLogEvents(_ account:Account, peerId:PeerId, maxId:AdminLogEventId, minId:AdminLogEventId, limit:Int32 = 100, query:String? = nil, filter:AdminLogEventsFlags? = nil, admins:[PeerId]? = nil) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> {
+public func channelAdminLogEvents(_ account:Account, peerId:PeerId, maxId: AdminLogEventId, minId: AdminLogEventId, limit: Int32 = 100, query: String? = nil, filter: AdminLogEventsFlags? = nil, admins: [PeerId]? = nil) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> {
     
     return account.postbox.modify { modifier -> (Peer?, [Peer]?) in
         return (modifier.getPeer(peerId), admins?.flatMap {modifier.getPeer($0)})

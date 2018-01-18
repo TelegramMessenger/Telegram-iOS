@@ -132,7 +132,7 @@ final class HistoryViewChannelStateValidationContexts {
                         }
                     }
                     
-                    if !addedRanges.isEmpty && addedRanges[rangesToInvalidate.count - 1].isEmpty {
+                    if !addedRanges.isEmpty && addedRanges[addedRanges.count - 1].isEmpty {
                         addedRanges.removeLast()
                     }
                     
@@ -318,7 +318,7 @@ private func validateBatch(postbox: Postbox, network: Network, messageIds: [Mess
                                             }
                                         }
                                         attributes.append(ChannelMessageStateVersionAttribute(pts: validatePts))
-                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                     })
                                 }
                                 return
@@ -380,7 +380,7 @@ private func validateBatch(postbox: Postbox, network: Network, messageIds: [Mess
                                                 }
                                                 attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
                                             }
-                                            return .update(StoreMessage(id: message.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                            return .update(StoreMessage(id: message.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                         }
                                     })
                                 }
