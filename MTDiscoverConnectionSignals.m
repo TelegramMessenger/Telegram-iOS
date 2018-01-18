@@ -68,12 +68,11 @@ typedef struct {
 
 + (bool)isResponseValid:(NSData *)data payloadData:(MTPayloadData)payloadData
 {
-    if (data.length == 84)
+    if (data.length >= 84)
     {
         uint8_t zero[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-        uint8_t length[] = { 0x40, 0, 0, 0 };
         uint8_t resPq[] = { 0x63, 0x24, 0x16, 0x05 };
-        if (memcmp((uint8_t * const)data.bytes, zero, 8) == 0 && memcmp(((uint8_t * const)data.bytes) + 16, length, 4) == 0 && memcmp(((uint8_t * const)data.bytes) + 20, resPq, 4) == 0 && memcmp(((uint8_t * const)data.bytes) + 24, payloadData.nonce, 16) == 0)
+        if (memcmp((uint8_t * const)data.bytes, zero, 8) == 0 && memcmp(((uint8_t * const)data.bytes) + 20, resPq, 4) == 0 && memcmp(((uint8_t * const)data.bytes) + 24, payloadData.nonce, 16) == 0)
         {
             return true;
         }
