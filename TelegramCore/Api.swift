@@ -20114,6 +20114,51 @@ public struct Api {
                     })
                 }
             
+                public static func getWebPagePreview(flags: Int32, message: String, entities: [Api.MessageEntity]?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.MessageMedia?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1956073268)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    return (FunctionDescription({return "(messages.getWebPagePreview flags: \(flags), message: \(message), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.MessageMedia? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.MessageMedia?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                        }
+                        return result
+                    })
+                }
+            
+                public static func sendMedia(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, media: Api.InputMedia, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1194252757)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
+                    media.serialize(buffer, true)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    serializeInt64(randomId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    return (FunctionDescription({return "(messages.sendMedia flags: \(flags), peer: \(peer), replyToMsgId: \(String(describing: replyToMsgId)), media: \(media), message: \(message), randomId: \(randomId), replyMarkup: \(String(describing: replyMarkup)), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
                 public static func getDialogs(flags: Int32, feedId: Int32?, offsetDate: Int32, offsetId: Int32, offsetPeer: Api.InputPeer, limit: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Dialogs?) {
                     let buffer = Buffer()
                     buffer.appendInt32(96533218)
@@ -20222,51 +20267,6 @@ public struct Api {
                         var result: Api.messages.Messages?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.Messages
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getWebPagePreview(flags: Int32, message: String, entities: [Api.MessageEntity]?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.MessageMedia?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1956073268)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(message, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities!.count))
-                    for item in entities! {
-                        item.serialize(buffer, true)
-                    }}
-                    return (FunctionDescription({return "(messages.getWebPagePreview flags: \(flags), message: \(message), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.MessageMedia? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.MessageMedia?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.MessageMedia
-                        }
-                        return result
-                    })
-                }
-            
-                public static func sendMedia(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, media: Api.InputMedia, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Updates?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1194252757)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
-                    media.serialize(buffer, true)
-                    serializeString(message, buffer: buffer, boxed: false)
-                    serializeInt64(randomId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities!.count))
-                    for item in entities! {
-                        item.serialize(buffer, true)
-                    }}
-                    return (FunctionDescription({return "(messages.sendMedia flags: \(flags), peer: \(peer), replyToMsgId: \(String(describing: replyToMsgId)), media: \(media), message: \(message), randomId: \(randomId), replyMarkup: \(String(describing: replyMarkup)), entities: \(String(describing: entities)))"}), buffer, { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })
