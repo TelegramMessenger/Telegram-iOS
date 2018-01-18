@@ -71,3 +71,5 @@ FOUNDATION_EXPORT const unsigned char MtProtoKitVersionString[];
 #import <MTProtoKit/MTNetworkUsageCalculationInfo.h>
 #import <MTProtoKit/MTNetworkUsageManager.h>
 #import <MTProtoKit/MTBackupAddressSignals.h>
+#import <MTProtoKit/AFURLConnectionOperation.h>
+#import <MTProtoKit/AFHTTPRequestOperation.h>

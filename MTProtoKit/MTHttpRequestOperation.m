@@ -30,11 +30,11 @@
         [operation setSuccessCallbackQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];
         [operation setFailureCallbackQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];
         
-        [operation setCompletionBlockWithSuccess:^(__unused AFHTTPRequestOperation *operation, __unused id responseObject)
+        [operation setCompletionBlockWithSuccess:^(__unused NSOperation *operation, __unused id responseObject)
         {
-            [subscriber putNext:[operation responseData]];
+            [subscriber putNext:[(AFHTTPRequestOperation *)operation responseData]];
             [subscriber putCompletion];
-        } failure:^(__unused AFHTTPRequestOperation *operation, __unused NSError *error)
+        } failure:^(__unused NSOperation *operation, __unused NSError *error)
         {
             [subscriber putError:nil];
         }];
