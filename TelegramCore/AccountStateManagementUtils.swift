@@ -802,13 +802,10 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         if !entities.isEmpty {
                             attributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
                         }
-                        var messageText = text
+                        let messageText = text
                         var medias: [Media] = []
                         
-                        let (mediaText, mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
-                        if let mediaText = mediaText {
-                            messageText = mediaText
-                        }
+                        let (mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                         if let mediaValue = mediaValue {
                             medias.append(mediaValue)
                         }

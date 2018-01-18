@@ -8,7 +8,7 @@ import Foundation
 extension Api.MessageMedia {
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
-            case let .messageMediaPhoto(_, photo, _, _):
+            case let .messageMediaPhoto(_, photo, _):
                 if let photo = photo {
                     switch photo {
                         case let .photo(_, _, _, _, sizes):
@@ -34,7 +34,7 @@ extension Api.MessageMedia {
                 } else {
                     return nil
                 }
-            case let .messageMediaDocument(_, document, _, _):
+            case let .messageMediaDocument(_, document, _):
                 if let document = document {
                     switch document {
                         case .document:

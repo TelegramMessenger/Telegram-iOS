@@ -551,8 +551,20 @@ public final class PendingMessageManager {
                         }
                         if let uniqueId = uniqueId {
                             switch content {
-                                case let .media(inputMedia):
-                                    singleMedias.append(.inputSingleMedia(media: inputMedia, randomId: uniqueId))
+                                case let .media(inputMedia, text):
+                                    var messageEntities: [Api.MessageEntity]?
+                                    for attribute in message.attributes {
+                                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                            messageEntities = apiTextAttributeEntities(attribute, associatedPeers: message.peers)
+                                        }
+                                    }
+                                    
+                                    var singleFlags: Int32 = 0
+                                    if let _ = messageEntities {
+                                        singleFlags |= 1 << 0
+                                    }
+                                    
+                                    singleMedias.append(.inputSingleMedia(media: inputMedia, flags: singleFlags, randomId: uniqueId, message: text, entities: messageEntities))
                                 default:
                                     return .complete()
                             }
@@ -726,8 +738,8 @@ public final class PendingMessageManager {
                             |> mapError { _ -> NoError in
                                 return NoError()
                             }
-                    case let .media(inputMedia):
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, randomId: uniqueId, replyMarkup: nil), tag: dependencyTag)
+                    case let .media(inputMedia, text):
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities), tag: dependencyTag)
                             |> mapError { _ -> NoError in
                                 return NoError()
                             }

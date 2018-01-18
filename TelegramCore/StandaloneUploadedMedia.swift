@@ -28,11 +28,11 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
                     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                     |> mapToSignal { inputPeer -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                         if let inputPeer = inputPeer {
-                            return account.network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, caption: "", stickers: nil, ttlSeconds: nil)))
+                            return account.network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil)))
                                 |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                                 |> mapToSignal { media -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                                     switch media {
-                                        case let .messageMediaPhoto(_, photo, _, _):
+                                        case let .messageMediaPhoto(_, photo, _):
                                             if let photo = photo {
                                                 if let mediaImage = telegramMediaImageFromApiPhoto(photo) {
                                                     return .single(.result(mediaImage))
@@ -67,11 +67,11 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                     |> mapToSignal { inputPeer -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                         if let inputPeer = inputPeer {
-                            return account.network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), caption: text, stickers: nil, ttlSeconds: nil)))
+                            return account.network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), stickers: nil, ttlSeconds: nil)))
                                 |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                                 |> mapToSignal { media -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                                     switch media {
-                                        case let .messageMediaDocument(_, document, _, _):
+                                        case let .messageMediaDocument(_, document, _):
                                             if let document = document {
                                                 if let mediaFile = telegramMediaFileFromApiDocument(document) {
                                                     return .single(.result(mediaFile))
