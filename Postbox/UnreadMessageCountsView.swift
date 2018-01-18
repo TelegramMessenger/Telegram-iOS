@@ -29,6 +29,12 @@ public enum UnreadMessageCountsItem: Equatable {
     }
 }
 
+private enum MutableUnreadMessageCountsItemEntry {
+    case total(Int32)
+    case peer(PeerId, Int32)
+    case group(PeerGroupId, ChatListGroupReferenceUnreadCounters)
+}
+
 enum UnreadMessageCountsItemEntry {
     case total(Int32)
     case peer(PeerId, Int32)
@@ -36,7 +42,7 @@ enum UnreadMessageCountsItemEntry {
 }
 
 final class MutableUnreadMessageCountsView: MutablePostboxView {
-    fileprivate var entries: [UnreadMessageCountsItemEntry]
+    fileprivate var entries: [MutableUnreadMessageCountsItemEntry]
     
     init(postbox: Postbox, items: [UnreadMessageCountsItem]) {
         self.entries = items.map { item in
@@ -50,8 +56,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                     }
                     return .peer(peerId, count)
                 case let .group(groupId):
-                    let count: Int32 = 0
-                    return .group(groupId, count)
+                    return .group(groupId, ChatListGroupReferenceUnreadCounters(postbox: postbox, groupId: groupId))
             }
         }
     }
@@ -79,10 +84,9 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                             self.entries[i] = .peer(peerId, updatedCount)
                             updated = true
                         }
-                    case let .group(groupId, _):
-                        if updated {
-                            let count: Int32 = 0
-                            self.entries[i] = .group(groupId, count)
+                    case let .group(_, counters):
+                        if counters.replay(postbox: postbox, transaction: transaction) {
+                            updated = true
                         }
                 }
             }
@@ -100,7 +104,17 @@ public final class UnreadMessageCountsView: PostboxView {
     private let entries: [UnreadMessageCountsItemEntry]
     
     init(_ view: MutableUnreadMessageCountsView) {
-        self.entries = view.entries
+        self.entries = view.entries.map { entry in
+            switch entry {
+                case let .total(count):
+                    return .total(count)
+                case let .peer(peerId, count):
+                    return .peer(peerId, count)
+                case let .group(groupId, counters):
+                    let (unread, mutedUnread) = counters.getCounters()
+                    return .group(groupId, unread + mutedUnread)
+            }
+        }
     }
     
     public func count(for item: UnreadMessageCountsItem) -> Int32? {

@@ -1,6 +1,7 @@
 import Foundation
 
 public final class GroupFeedState {
+    
 }
 
 private struct GroupFeedStateEntry {
