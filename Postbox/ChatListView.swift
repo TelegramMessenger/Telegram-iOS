@@ -732,11 +732,14 @@ final class MutableChatListView {
 }
 
 public final class ChatListView {
+    public let groupId: PeerGroupId?
     public let entries: [ChatListEntry]
     public let earlierIndex: ChatListIndex?
     public let laterIndex: ChatListIndex?
     
     init(_ mutableView: MutableChatListView) {
+        self.groupId = mutableView.groupId
+        
         var entries: [ChatListEntry] = []
         for entry in mutableView.entries {
             switch entry {

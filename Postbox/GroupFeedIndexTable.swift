@@ -176,6 +176,32 @@ final class GroupFeedIndexTable: Table {
         }
     }
     
+    func addHoleFromLatestEntries(groupId: PeerGroupId, messageHistoryTable: MessageHistoryTable, operations: inout [PeerGroupId: [GroupFeedIndexOperation]]) {
+        self.ensureInitialized(groupId)
+        let entries = self.entriesInRange(groupId: groupId, fromIndex: MessageIndex.absoluteUpperBound(), toIndex: MessageIndex.absoluteLowerBound(), count: 1, messageHistoryTable: messageHistoryTable)
+        if let entry = entries.first {
+            switch entry {
+                case .Message:
+                    self.addHole(groupId: groupId, stableId: self.metadataTable.getNextStableMessageIndexId(), hole: GroupFeedIndexHole(lowerIndex: entry.index.successor(), upperIndex: MessageIndex.absoluteUpperBound().predecessor()), addOperation: { groupId, operation in
+                        addOperation(groupId: groupId, operation: operation, to: &operations)
+                    })
+                case let .Hole(hole, lowerIndex):
+                    if hole.maxIndex.timestamp != Int32.max {
+                        if let lowerIndex = lowerIndex {
+                            self.removeHole(groupId: groupId, messageIndex: entry.index, addOperation: { groupId, operation in
+                                addOperation(groupId: groupId, operation: operation, to: &operations)
+                            })
+                            self.addHole(groupId: groupId, stableId: self.metadataTable.getNextStableMessageIndexId(), hole: GroupFeedIndexHole(lowerIndex: lowerIndex, upperIndex: MessageIndex.absoluteUpperBound().predecessor()), addOperation: { groupId, operation in
+                                addOperation(groupId: groupId, operation: operation, to: &operations)
+                            })
+                        } else {
+                            assertionFailure()
+                        }
+                    }
+            }
+        }
+    }
+    
     private func addHole(groupId: PeerGroupId, stableId: UInt32, hole: GroupFeedIndexHole, addOperation: (PeerGroupId, GroupFeedIndexOperation) -> Void) {
         self.ensureInitialized(groupId)
         

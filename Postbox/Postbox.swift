@@ -57,6 +57,11 @@ public final class Modifier {
         self.postbox?.fillMultipleGroupFeedHoles(groupId: groupId, mainHoleMaxIndex: mainHoleMaxIndex, fillType: fillType, messages: messages)
     }
     
+    public func addFeedHoleFromLatestEntries(groupId: PeerGroupId) {
+        assert(!self.disposed)
+        self.postbox?.addFeedHoleFromLatestEntries(groupId: groupId)
+    }
+    
     public func replaceChatListHole(groupId: PeerGroupId?, index: MessageIndex, hole: ChatListHole?) {
         assert(!self.disposed)
         self.postbox?.replaceChatListHole(groupId: groupId, index: index, hole: hole)
@@ -830,7 +835,7 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
             
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous")
-            //debugRestoreState(basePath: basePath, name: "previous")
+            debugRestoreState(basePath: basePath, name: "previous")
             #endif
             
             loop: while true {
@@ -1377,6 +1382,10 @@ public final class Postbox {
             self.currentRemovedHolesByPeerGroupId[groupId] = [:]
         }
         self.currentRemovedHolesByPeerGroupId[groupId]![mainHoleMaxIndex] = fillType.direction
+    }
+    
+    fileprivate func addFeedHoleFromLatestEntries(groupId: PeerGroupId) {
+        self.groupFeedIndexTable.addHoleFromLatestEntries(groupId: groupId, messageHistoryTable: self.messageHistoryTable, operations: &self.currentGroupFeedOperations)
     }
     
     fileprivate func replaceChatListHole(groupId: PeerGroupId?, index: MessageIndex, hole: ChatListHole?) {
