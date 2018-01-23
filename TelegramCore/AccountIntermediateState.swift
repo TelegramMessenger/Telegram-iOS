@@ -69,7 +69,6 @@ enum AccountStateMutationOperation {
     case UpdateChannelState(PeerId, ChannelState)
     case UpdateNotificationSettings(AccountStateNotificationSettingsSubject, PeerNotificationSettings)
     case UpdateGlobalNotificationSettings(AccountStateGlobalNotificationSettingsSubject, MessageNotificationSettings)
-    case AddHole(MessageId)
     case MergeApiChats([Api.Chat])
     case UpdatePeer(PeerId, (Peer?) -> Peer?)
     case UpdateCachedPeerData(PeerId, (CachedPeerData?) -> CachedPeerData?)
@@ -102,6 +101,7 @@ struct AccountMutableState {
     var peerNotificationSettings: [PeerId: PeerNotificationSettings]
     var storedMessages: Set<MessageId>
     var readInboxMaxIds: [PeerId: MessageId]
+    var namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>]
     
     var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]
     
@@ -119,9 +119,10 @@ struct AccountMutableState {
         self.peerNotificationSettings = initialState.peerNotificationSettings
         self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
         self.branchOperationIndex = 0
+        self.namespacesWithHolesFromPreviousState = [:]
     }
     
-    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], branchOperationIndex: Int) {
+    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
@@ -131,11 +132,12 @@ struct AccountMutableState {
         self.peerNotificationSettings = peerNotificationSettings
         self.readInboxMaxIds = readInboxMaxIds
         self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
+        self.namespacesWithHolesFromPreviousState = namespacesWithHolesFromPreviousState
         self.branchOperationIndex = branchOperationIndex
     }
     
     func branch() -> AccountMutableState {
-        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, chatStates: self.chatStates, peerNotificationSettings: self.peerNotificationSettings, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, branchOperationIndex: self.operations.count)
+        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, chatStates: self.chatStates, peerNotificationSettings: self.peerNotificationSettings, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, branchOperationIndex: self.operations.count)
     }
     
     mutating func merge(_ other: AccountMutableState) {
@@ -146,6 +148,14 @@ struct AccountMutableState {
             self.peers[peer.id] = peer
         }
         self.preCachedResources.append(contentsOf: other.preCachedResources)
+        for (peerId, namespaces) in other.namespacesWithHolesFromPreviousState {
+            if self.namespacesWithHolesFromPreviousState[peerId] == nil {
+                self.self.namespacesWithHolesFromPreviousState[peerId] = Set()
+            }
+            for namespace in namespaces {
+                self.namespacesWithHolesFromPreviousState[peerId]!.insert(namespace)
+            }
+        }
     }
     
     mutating func addPreCachedResource(_ resource: MediaResource, data: Data) {
@@ -208,8 +218,11 @@ struct AccountMutableState {
         self.addOperation(.UpdateGlobalNotificationSettings(subject, notificationSettings))
     }
     
-    mutating func addHole(_ messageId: MessageId) {
-        self.addOperation(.AddHole(messageId))
+    mutating func setNeedsHoleFromPreviousState(peerId: PeerId, namespace: MessageId.Namespace) {
+        if self.namespacesWithHolesFromPreviousState[peerId] == nil {
+            self.namespacesWithHolesFromPreviousState[peerId] = Set()
+        }
+        self.namespacesWithHolesFromPreviousState[peerId]!.insert(namespace)
     }
     
     mutating func mergeChats(_ chats: [Api.Chat]) {
@@ -302,7 +315,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {

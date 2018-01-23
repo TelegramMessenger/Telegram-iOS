@@ -235,9 +235,9 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
 }
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, readState: PeerReadState) -> Signal<PeerReadState, VerifyReadStateError> {
-    #if (arch(i386) || arch(x86_64)) && os(iOS)
-        //return .single(readState)
-    #endif
+    if !GlobalTelegramCoreConfiguration.readMessages {
+        return .single(readState)
+    }
     
     if peerId.namespace == Namespaces.Peer.SecretChat {
         return inputSecretChat(postbox: postbox, peerId: peerId)

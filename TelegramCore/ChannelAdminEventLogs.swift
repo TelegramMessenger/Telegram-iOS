@@ -81,7 +81,7 @@ public struct AdminLogEventsFlags : OptionSet {
     public static let editMessages = AdminLogEventsFlags(rawValue: 1 << 12)
     public static let deleteMessages = AdminLogEventsFlags(rawValue: 1 << 13)
     
-    public static var all: [AdminLogEventsFlags] {
+    public static var all: AdminLogEventsFlags {
         return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages]
     }
     public static var flags: AdminLogEventsFlags {

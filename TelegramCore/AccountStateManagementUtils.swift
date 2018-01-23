@@ -1413,8 +1413,8 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
             updatedState.mergeUsers(dialogsUsers)
             
             for message in storeMessages {
-                if case let .Id(id) = message.id {
-                    updatedState.addHole(MessageId(peerId: id.peerId, namespace: Namespaces.Message.Cloud, id: Int32.max))
+                if case let .Id(id) = message.id, id.namespace == Namespaces.Message.Cloud {
+                    updatedState.setNeedsHoleFromPreviousState(peerId: id.peerId, namespace: id.namespace)
                 }
             }
             
@@ -1576,7 +1576,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                             updatedState.mergeChats(chats)
                             updatedState.mergeUsers(users)
                             
-                            updatedState.addHole(MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32.max))
+                            updatedState.setNeedsHoleFromPreviousState(peerId: peer.id, namespace: Namespaces.Message.Cloud)
                         
                             for apiMessage in messages {
                                 if let message = StoreMessage(apiMessage: apiMessage) {
@@ -1703,7 +1703,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1756,6 +1756,36 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     var syncRecentGifs = false
     var langPackDifferences: [Api.LangPackDifference] = []
     var pollLangPack = false
+    
+    var addHolesToGroupFeedIds = Set<PeerGroupId>()
+    
+    for (peerId, namespaces) in finalState.state.namespacesWithHolesFromPreviousState {
+        for namespace in namespaces {
+            modifier.addHole(MessageId(peerId: peerId, namespace: namespace, id: Int32.max))
+            
+            if namespace == Namespaces.Message.Cloud {
+                let peer: Peer? = finalState.state.peers[peerId] ?? modifier.getPeer(peerId)
+                if let peer = peer {
+                    var groupId: PeerGroupId?
+                    if let channel = peer as? TelegramChannel {
+                        groupId = channel.peerGroupId
+                    }
+                    if groupId == nil {
+                        groupId = modifier.getPeerGroupId(peerId)
+                    }
+                    if let groupId = groupId {
+                        addHolesToGroupFeedIds.insert(groupId)
+                    }
+                } else {
+                    assertionFailure()
+                }
+            }
+        }
+    }
+    
+    for groupId in addHolesToGroupFeedIds {
+        modifier.addFeedHoleFromLatestEntries(groupId: groupId)
+    }
     
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
@@ -1847,8 +1877,6 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                             })
                         })
                 }
-            case let .AddHole(messageId):
-                modifier.addHole(messageId)
             case let .MergeApiChats(chats):
                 var peers: [Peer] = []
                 for chat in chats {

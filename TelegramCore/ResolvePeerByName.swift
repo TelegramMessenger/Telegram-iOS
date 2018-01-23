@@ -64,7 +64,7 @@ public enum ResolvePeerByNameOptionRemote {
 public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<PeerId?, NoError> {
     var normalizedName = name
     if normalizedName.hasPrefix("@") {
-       normalizedName = normalizedName.substring(from: name.index(after: name.startIndex))
+       normalizedName = String(normalizedName[name.index(after: name.startIndex)...])
     }
     
     return account.postbox.modify { modifier -> CachedResolvedByNamePeer? in
@@ -82,7 +82,6 @@ public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 
                     return account.postbox.modify { modifier -> PeerId? in
                         var peerId: PeerId? = nil
                         
-                        //contacts.resolvedPeer peer:Peer chats:Vector<Chat> users:Vector<User> = contacts.ResolvedPeer;
                         switch result {
                             case let .resolvedPeer(apiPeer, chats, users):
                                 var peers: [PeerId: Peer] = [:]
