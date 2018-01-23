@@ -64,6 +64,10 @@ private func fetchMessage(modifier: Modifier, account: Account, messageId: Messa
                                 apiMessages = messages
                                 apiChats = chats
                                 apiUsers = users
+                            case .messagesNotModified:
+                                apiMessages = []
+                                apiChats = []
+                                apiUsers = []
                         }
                         
                         var peers: [PeerId: Peer] = [:]

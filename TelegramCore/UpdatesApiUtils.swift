@@ -8,7 +8,7 @@ import Foundation
 extension Api.MessageMedia {
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
-            case let .messageMediaPhoto(_, photo, _, _):
+            case let .messageMediaPhoto(_, photo, _):
                 if let photo = photo {
                     switch photo {
                         case let .photo(_, _, _, _, sizes):
@@ -34,7 +34,7 @@ extension Api.MessageMedia {
                 } else {
                     return nil
                 }
-            case let .messageMediaDocument(_, document, _, _):
+            case let .messageMediaDocument(_, document, _):
                 if let document = document {
                     switch document {
                         case .document:
@@ -283,6 +283,17 @@ extension Api.Update {
         }
         return nil
     }
+    
+    var channelPts: Int32? {
+        switch self {
+            case let .updateNewChannelMessage(_, pts, _):
+                return pts
+            case let .updateEditChannelMessage(_, pts, _):
+                return pts
+            default:
+                return nil
+        }
+    }
 }
 
 extension Api.Updates {
@@ -419,6 +430,39 @@ extension Api.Updates {
                 }
             default:
                 return []
+        }
+    }
+    
+    var channelPts: Int32? {
+        switch self {
+            case let .updates(updates, _, _, _, _):
+                var result: Int32?
+                for update in updates {
+                    if let channelPts = update.channelPts {
+                        if result == nil || channelPts > result! {
+                            result = channelPts
+                        }
+                    }
+                }
+                return result
+            case let .updatesCombined(updates, _, _, _, _, _):
+                var result: Int32?
+                for update in updates {
+                    if let channelPts = update.channelPts {
+                        if result == nil || channelPts > result! {
+                            result = channelPts
+                        }
+                    }
+                }
+                return result
+            case let .updateShort(update, _):
+                if let message = update.channelPts {
+                    return channelPts
+                } else {
+                    return nil
+                }
+            default:
+                return nil
         }
     }
 }

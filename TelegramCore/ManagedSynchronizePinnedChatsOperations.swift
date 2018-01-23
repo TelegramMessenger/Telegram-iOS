@@ -119,8 +119,8 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
         switch item {
             case let .peer(peerId):
                 return peerId.namespace != Namespaces.Peer.SecretChat
-            case .group:
-                return false
+            default:
+                return true
         }
     }
     let localItemIds = modifier.getPinnedItemIds()
@@ -128,17 +128,14 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
         switch item {
             case let .peer(peerId):
                 return peerId.namespace != Namespaces.Peer.SecretChat
-            case .group:
-                return false
+            default:
+                return true
         }
     }
     
     return network.request(Api.functions.messages.getPinnedDialogs())
         |> retryRequest
         |> mapToSignal { dialogs -> Signal<Void, NoError> in
-            let dialogsChats: [Api.Chat]
-            let dialogsUsers: [Api.User]
-            
             var storeMessages: [StoreMessage] = []
             var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
             var chatStates: [PeerId: PeerChatState] = [:]
@@ -146,10 +143,27 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
             
             var remoteItemIds: [PinnedItemId] = []
             
+            var peers: [Peer] = []
+            var peerPresences: [PeerId: PeerPresence] = [:]
+            
             switch dialogs {
                 case let .peerDialogs(dialogs, messages, chats, users, _):
-                    dialogsChats = chats
-                    dialogsUsers = users
+                    var channelGroupIds: [PeerId: PeerGroupId] = [:]
+                    for chat in chats {
+                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                            peers.append(groupOrChannel)
+                            if let channel = groupOrChannel as? TelegramChannel, let peerGroupId = channel.peerGroupId {
+                                channelGroupIds[channel.id] = peerGroupId
+                            }
+                        }
+                    }
+                    for user in users {
+                        let telegramUser = TelegramUser(user: user)
+                        peers.append(telegramUser)
+                        if let presence = TelegramUserPresence(apiUser: user) {
+                            peerPresences[telegramUser.id] = presence
+                        }
+                    }
                     
                     loop: for dialog in dialogs {
                         let apiPeer: Api.Peer
@@ -161,6 +175,9 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                         let apiNotificationSettings: Api.PeerNotifySettings
                         switch dialog {
                             case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
+                                if channelGroupIds[peer.peerId] != nil {
+                                    continue loop
+                                }
                                 apiPeer = peer
                                 apiTopMessage = topMessage
                                 apiReadInboxMaxId = readInboxMaxId
@@ -202,21 +219,6 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                             storeMessages.append(storeMessage)
                         }
                     }
-            }
-            
-            var peers: [Peer] = []
-            var peerPresences: [PeerId: PeerPresence] = [:]
-            for chat in dialogsChats {
-                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                    peers.append(groupOrChannel)
-                }
-            }
-            for user in dialogsUsers {
-                let telegramUser = TelegramUser(user: user)
-                peers.append(telegramUser)
-                if let presence = TelegramUserPresence(apiUser: user) {
-                    peerPresences[telegramUser.id] = presence
-                }
             }
             
             let locallyRemovedFromRemoteItemIds = Set(initialRemoteItemIdsWithoutSecretChats).subtracting(Set(localItemIdsWithoutSecretChats))

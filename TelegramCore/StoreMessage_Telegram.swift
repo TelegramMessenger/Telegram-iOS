@@ -266,48 +266,48 @@ extension Api.Message {
     }
 }
 
-func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerId:PeerId) -> (String?, Media?, Int32?) {
+func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerId:PeerId) -> (Media?, Int32?) {
     if let media = media {
         switch media {
-            case let .messageMediaPhoto(_, photo, caption, ttlSeconds):
+            case let .messageMediaPhoto(_, photo, ttlSeconds):
                 if let photo = photo {
                     if let mediaImage = telegramMediaImageFromApiPhoto(photo) {
-                        return (caption, mediaImage, ttlSeconds)
+                        return (mediaImage, ttlSeconds)
                     }
                 } else {
-                    return (nil, TelegramMediaExpiredContent(data: .image), nil)
+                    return (TelegramMediaExpiredContent(data: .image), nil)
                 }
             case let .messageMediaContact(phoneNumber, firstName, lastName, userId):
                 let contactPeerId: PeerId? = userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                 let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId)
-                return (nil, mediaContact, nil)
+                return (mediaContact, nil)
             case let .messageMediaGeo(geo):
                 let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: nil)
-                return (nil, mediaMap, nil)
+                return (mediaMap, nil)
             case let .messageMediaVenue(geo, title, address, provider, venueId, venueType):
                 let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil)
-                return (nil, mediaMap, nil)
+                return (mediaMap, nil)
             case let .messageMediaGeoLive(geo, period):
                 let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period)
-                return (nil, mediaMap, nil)
-            case let .messageMediaDocument(_, document, caption, ttlSeconds):
+                return (mediaMap, nil)
+            case let .messageMediaDocument(_, document, ttlSeconds):
                 if let document = document {
                     if let mediaFile = telegramMediaFileFromApiDocument(document) {
-                        return (caption, mediaFile, ttlSeconds)
+                        return (mediaFile, ttlSeconds)
                     }
                 } else {
-                    return (nil, TelegramMediaExpiredContent(data: .file), nil)
+                    return (TelegramMediaExpiredContent(data: .file), nil)
                 }
             case let .messageMediaWebPage(webpage):
                 if let mediaWebpage = telegramMediaWebpageFromApiWebpage(webpage) {
-                    return (nil, mediaWebpage, nil)
+                    return (mediaWebpage, nil)
                 }
             case .messageMediaUnsupported:
-                return (nil, TelegramMediaUnsupported(), nil)
+                return (TelegramMediaUnsupported(), nil)
             case .messageMediaEmpty:
                 break
             case let .messageMediaGame(game):
-                return (nil, TelegramMediaGame(apiGame: game), nil)
+                return (TelegramMediaGame(apiGame: game), nil)
             case let .messageMediaInvoice(flags, title, description, photo, receiptMsgId, currency, totalAmount, startParam):
                 var parsedFlags = TelegramMediaInvoiceFlags()
                 if (flags & (1 << 3)) != 0 {
@@ -316,11 +316,11 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 if (flags & (1 << 1)) != 0 {
                     parsedFlags.insert(.shippingAddressRequested)
                 }
-                return (nil, TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, flags: parsedFlags), nil)
+                return (TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, flags: parsedFlags), nil)
         }
     }
     
-    return (nil, nil, nil)
+    return (nil, nil)
 }
 
 func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [MessageTextEntity] {
@@ -432,16 +432,13 @@ extension StoreMessage {
                     }
                 }
                 
-                var messageText = message
+                let messageText = message
                 var medias: [Media] = []
                 
                 var consumableContent: (Bool, Bool)? = nil
                 
                 if let media = media {
-                    let (mediaText, mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
-                    if let mediaText = mediaText {
-                        messageText = mediaText
-                    }
+                    let (mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                     if let mediaValue = mediaValue {
                         medias.append(mediaValue)
                     
