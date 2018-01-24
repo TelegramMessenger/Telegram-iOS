@@ -264,7 +264,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1262639204] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageGame($0) }
     dict[864077702] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaAuto($0) }
     dict[2002815875] = { return Api.KeyboardButtonRow.parse_keyboardButtonRow($0) }
-    dict[-852477119] = { return Api.StickerSet.parse_stickerSet($0) }
+    dict[1434820921] = { return Api.StickerSet.parse_stickerSet($0) }
     dict[539045032] = { return Api.photos.Photo.parse_photo($0) }
     dict[-208488460] = { return Api.InputContact.parse_inputPhoneContact($0) }
     dict[-1419371685] = { return Api.TopPeerCategory.parse_topPeerCategoryBotsPM($0) }
@@ -344,6 +344,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[649453030] = { return Api.messages.MessageEditData.parse_messageEditData($0) }
     dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
+    dict[-313079300] = { return Api.account.WebAuthorizations.parse_webAuthorizations($0) }
     dict[-236044656] = { return Api.help.TermsOfService.parse_termsOfService($0) }
     dict[1490799288] = { return Api.ReportReason.parse_inputReportReasonSpam($0) }
     dict[505595789] = { return Api.ReportReason.parse_inputReportReasonViolence($0) }
@@ -458,7 +459,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1642487306] = { return Api.Message.parse_messageService($0) }
     dict[1157215293] = { return Api.Message.parse_message($0) }
     dict[186120336] = { return Api.messages.RecentStickers.parse_recentStickersNotModified($0) }
-    dict[1558317424] = { return Api.messages.RecentStickers.parse_recentStickers($0) }
+    dict[586395571] = { return Api.messages.RecentStickers.parse_recentStickers($0) }
     dict[342061462] = { return Api.InputFileLocation.parse_inputFileLocation($0) }
     dict[-182231723] = { return Api.InputFileLocation.parse_inputEncryptedFileLocation($0) }
     dict[1125058340] = { return Api.InputFileLocation.parse_inputDocumentFileLocation($0) }
@@ -629,6 +630,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[922273905] = { return Api.Document.parse_documentEmpty($0) }
     dict[-2027738169] = { return Api.Document.parse_document($0) }
     dict[-1707344487] = { return Api.messages.HighScores.parse_highScores($0) }
+    dict[-892779534] = { return Api.WebAuthorization.parse_webAuthorization($0) }
     dict[-805141448] = { return Api.ImportedContact.parse_importedContact($0) }
     return dict
 }()
@@ -856,6 +858,8 @@ public struct Api {
             case let _1 as Api.LabeledPrice:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.ChatFull:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.WebAuthorizations:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.TermsOfService:
                 _1.serialize(buffer, boxed)
@@ -1098,6 +1102,8 @@ public struct Api {
             case let _1 as Api.Document:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.HighScores:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.WebAuthorization:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ImportedContact:
                 _1.serialize(buffer, boxed)
@@ -2131,7 +2137,7 @@ public struct Api {
     
         public enum RecentStickers {
             case recentStickersNotModified
-            case recentStickers(hash: Int32, stickers: [Api.Document])
+            case recentStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document], dates: [Int32])
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
@@ -2141,15 +2147,25 @@ public struct Api {
                         }
                         
                         break
-                    case .recentStickers(let hash, let stickers):
+                    case .recentStickers(let hash, let packs, let stickers, let dates):
                         if boxed {
-                            buffer.appendInt32(1558317424)
+                            buffer.appendInt32(586395571)
                         }
                         serializeInt32(hash, buffer: buffer, boxed: false)
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(packs.count))
+                        for item in packs {
+                            item.serialize(buffer, true)
+                        }
                         buffer.appendInt32(481674261)
                         buffer.appendInt32(Int32(stickers.count))
                         for item in stickers {
                             item.serialize(buffer, true)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(dates.count))
+                        for item in dates {
+                            serializeInt32(item, buffer: buffer, boxed: false)
                         }
                         break
         }
@@ -2161,14 +2177,24 @@ public struct Api {
             fileprivate static func parse_recentStickers(_ reader: BufferReader) -> RecentStickers? {
                 var _1: Int32?
                 _1 = reader.readInt32()
-                var _2: [Api.Document]?
+                var _2: [Api.StickerPack]?
                 if let _ = reader.readInt32() {
-                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
+                }
+                var _3: [Api.Document]?
+                if let _ = reader.readInt32() {
+                    _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+                }
+                var _4: [Int32]?
+                if let _ = reader.readInt32() {
+                    _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
                 }
                 let _c1 = _1 != nil
                 let _c2 = _2 != nil
-                if _c1 && _c2 {
-                    return Api.messages.RecentStickers.recentStickers(hash: _1!, stickers: _2!)
+                let _c3 = _3 != nil
+                let _c4 = _4 != nil
+                if _c1 && _c2 && _c3 && _c4 {
+                    return Api.messages.RecentStickers.recentStickers(hash: _1!, packs: _2!, stickers: _3!, dates: _4!)
                 }
                 else {
                     return nil
@@ -8245,15 +8271,16 @@ public struct Api {
     }
 
     public enum StickerSet {
-        case stickerSet(flags: Int32, id: Int64, accessHash: Int64, title: String, shortName: String, count: Int32, hash: Int32)
+        case stickerSet(flags: Int32, installedDate: Int32?, id: Int64, accessHash: Int64, title: String, shortName: String, count: Int32, hash: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .stickerSet(let flags, let id, let accessHash, let title, let shortName, let count, let hash):
+                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let count, let hash):
                     if boxed {
-                        buffer.appendInt32(-852477119)
+                        buffer.appendInt32(1434820921)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(installedDate!, buffer: buffer, boxed: false)}
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -8267,27 +8294,30 @@ public struct Api {
         fileprivate static func parse_stickerSet(_ reader: BufferReader) -> StickerSet? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
             var _3: Int64?
             _3 = reader.readInt64()
-            var _4: String?
-            _4 = parseString(reader)
+            var _4: Int64?
+            _4 = reader.readInt64()
             var _5: String?
             _5 = parseString(reader)
-            var _6: Int32?
-            _6 = reader.readInt32()
+            var _6: String?
+            _6 = parseString(reader)
             var _7: Int32?
             _7 = reader.readInt32()
+            var _8: Int32?
+            _8 = reader.readInt32()
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.StickerSet.stickerSet(flags: _1!, id: _2!, accessHash: _3!, title: _4!, shortName: _5!, count: _6!, hash: _7!)
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.StickerSet.stickerSet(flags: _1!, installedDate: _2, id: _3!, accessHash: _4!, title: _5!, shortName: _6!, count: _7!, hash: _8!)
             }
             else {
                 return nil
@@ -16102,6 +16132,66 @@ public struct Api {
     
     }
 
+    public enum WebAuthorization {
+        case webAuthorization(hash: Int64, botId: Int32, domain: String, browser: String, platform: String, dateCreated: Int32, dateActive: Int32, ip: String, region: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .webAuthorization(let hash, let botId, let domain, let browser, let platform, let dateCreated, let dateActive, let ip, let region):
+                    if boxed {
+                        buffer.appendInt32(-892779534)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    serializeInt32(botId, buffer: buffer, boxed: false)
+                    serializeString(domain, buffer: buffer, boxed: false)
+                    serializeString(browser, buffer: buffer, boxed: false)
+                    serializeString(platform, buffer: buffer, boxed: false)
+                    serializeInt32(dateCreated, buffer: buffer, boxed: false)
+                    serializeInt32(dateActive, buffer: buffer, boxed: false)
+                    serializeString(ip, buffer: buffer, boxed: false)
+                    serializeString(region, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+        fileprivate static func parse_webAuthorization(_ reader: BufferReader) -> WebAuthorization? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: String?
+            _8 = parseString(reader)
+            var _9: String?
+            _9 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.WebAuthorization.webAuthorization(hash: _1!, botId: _2!, domain: _3!, browser: _4!, platform: _5!, dateCreated: _6!, dateActive: _7!, ip: _8!, region: _9!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+
     public enum ImportedContact {
         case importedContact(userId: Int32, clientId: Int64)
     
@@ -18371,6 +18461,50 @@ public struct Api {
         
         }
     
+        public enum WebAuthorizations {
+            case webAuthorizations(authorizations: [Api.WebAuthorization], users: [Api.User])
+        
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+        switch self {
+                    case .webAuthorizations(let authorizations, let users):
+                        if boxed {
+                            buffer.appendInt32(-313079300)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(authorizations.count))
+                        for item in authorizations {
+                            item.serialize(buffer, true)
+                        }
+                        buffer.appendInt32(481674261)
+                        buffer.appendInt32(Int32(users.count))
+                        for item in users {
+                            item.serialize(buffer, true)
+                        }
+                        break
+        }
+        }
+        
+            fileprivate static func parse_webAuthorizations(_ reader: BufferReader) -> WebAuthorizations? {
+                var _1: [Api.WebAuthorization]?
+                if let _ = reader.readInt32() {
+                    _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.WebAuthorization.self)
+                }
+                var _2: [Api.User]?
+                if let _ = reader.readInt32() {
+                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                }
+                let _c1 = _1 != nil
+                let _c2 = _2 != nil
+                if _c1 && _c2 {
+                    return Api.account.WebAuthorizations.webAuthorizations(authorizations: _1!, users: _2!)
+                }
+                else {
+                    return nil
+                }
+            }
+        
+        }
+    
         public enum Authorizations {
             case authorizations(authorizations: [Api.Authorization])
         
@@ -20267,6 +20401,22 @@ public struct Api {
                         var result: Api.messages.Messages?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getStickers(flags: Int32, emoticon: String, hash: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Stickers?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2050272894)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    serializeString(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(messages.getStickers flags: \(flags), emoticon: \(emoticon), hash: \(hash))"}), buffer, { (buffer: Buffer) -> Api.messages.Stickers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Stickers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Stickers
                         }
                         return result
                     })
@@ -22303,6 +22453,48 @@ public struct Api {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
                     return (FunctionDescription({return "(account.unregisterDevice tokenType: \(tokenType), token: \(token), otherUids: \(otherUids))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getWebAuthorizations() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.account.WebAuthorizations?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(405695855)
+                    
+                    return (FunctionDescription({return "(account.getWebAuthorizations )"}), buffer, { (buffer: Buffer) -> Api.account.WebAuthorizations? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.WebAuthorizations?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.WebAuthorizations
+                        }
+                        return result
+                    })
+                }
+            
+                public static func resetWebAuthorization(hash: Int64) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(755087855)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(account.resetWebAuthorization hash: \(hash))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func resetWebAuthorizations() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1747789204)
+                    
+                    return (FunctionDescription({return "(account.resetWebAuthorizations )"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

@@ -55,6 +55,18 @@ public func updatePeerGroupIdInteractively(postbox: Postbox, peerId: PeerId, gro
     }
 }
 
+public func clearPeerGroupInteractively(postbox: Postbox, groupId: PeerGroupId) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> Void in
+        var previousGroupPeerIds = Set<PeerId>()
+        previousGroupPeerIds = modifier.getPeerIdsInGroup(groupId)
+        
+        for peerId in modifier.getPeerIdsInGroup(groupId) {
+            modifier.updatePeerGroupId(peerId, groupId: nil)
+        }
+        addSynchronizeGroupedPeersOperation(modifier: modifier, groupId: groupId, initialPeerIds: previousGroupPeerIds)
+    }
+}
+
 private func addSynchronizeGroupedPeersOperation(modifier: Modifier, groupId: PeerGroupId, initialPeerIds: Set<PeerId>) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeGroupedPeers
     let peerId = PeerId(namespace: 0, id: groupId.rawValue)

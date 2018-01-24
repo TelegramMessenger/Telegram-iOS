@@ -29,7 +29,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case gameScore(gameId: Int64, score: Int32)
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
     case paymentSent(currency: String, totalAmount: Int64)
-    case customText(text: String)
+    case customText(text: String, entities: [MessageTextEntity])
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -69,7 +69,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             case 15:
                 self = .paymentSent(currency: decoder.decodeStringForKey("currency", orElse: ""), totalAmount: decoder.decodeInt64ForKey("ta", orElse: 0))
             case 16:
-                self = .customText(text: decoder.decodeStringForKey("text", orElse: ""))
+                self = .customText(text: decoder.decodeStringForKey("text", orElse: ""), entities: decoder.decodeObjectArrayWithDecoderForKey("ent"))
             default:
                 self = .unknown
         }
@@ -140,9 +140,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "d")
                 }
-            case let .customText(text):
+            case let .customText(text, entities):
                 encoder.encodeInt32(16, forKey: "_rawValue")
                 encoder.encodeString(text, forKey: "text")
+                encoder.encodeObjectArray(entities, forKey: "ent")
         }
     }
     
@@ -262,8 +263,8 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
             } else {
                 return false
             }
-        case let .customText(text):
-            if case .customText(text) = rhs {
+        case let .customText(lhsText, lhsEntities):
+            if case let .customText(rhsText, rhsEntities) = rhs, lhsText == rhsText, lhsEntities == rhsEntities {
                 return true
             } else {
                 return false
@@ -343,7 +344,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         case .messageActionScreenshotTaken:
             return TelegramMediaAction(action: .historyScreenshot)
         case let .messageActionCustomAction(message):
-            return TelegramMediaAction(action: .customText(text: message))
+            return TelegramMediaAction(action: .customText(text: message, entities: []))
     }
 }
 

@@ -77,6 +77,10 @@ public struct TelegramChannelGroupFlags: OptionSet {
 
 public struct TelegramChannelGroupInfo: Equatable {
     public let flags: TelegramChannelGroupFlags
+    
+    public init(flags: TelegramChannelGroupFlags) {
+        self.flags = flags
+    }
 
     public static func ==(lhs: TelegramChannelGroupInfo, rhs: TelegramChannelGroupInfo) -> Bool {
         return lhs.flags == rhs.flags

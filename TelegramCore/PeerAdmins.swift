@@ -202,7 +202,7 @@ public enum UpdatePeerAdminRightsError {
     case addMemberError(AddPeerMemberError)
 }
 
-func fetchChannelParticipant(account: Account, peerId: PeerId, participantId: PeerId) -> Signal<ChannelParticipant?, NoError> {
+public func fetchChannelParticipant(account: Account, peerId: PeerId, participantId: PeerId) -> Signal<ChannelParticipant?, NoError> {
     return account.postbox.modify { modifier -> Signal<ChannelParticipant?, NoError> in
         if let peer = modifier.getPeer(peerId), let adminPeer = modifier.getPeer(participantId), let inputUser = apiInputUser(adminPeer) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {

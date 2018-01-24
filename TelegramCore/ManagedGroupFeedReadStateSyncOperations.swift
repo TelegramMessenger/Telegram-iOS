@@ -171,9 +171,13 @@ private func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.P
 
 private func pushReadState(network: Network, accountPeerId: PeerId, groupId: PeerGroupId, state: GroupFeedReadState) -> Signal<Api.Updates?, NoError> {
     let position: Api.FeedPosition = .feedPosition(date: state.maxReadIndex.timestamp, peer: groupBoundaryPeer(state.maxReadIndex.id.peerId, accountPeerId: accountPeerId), id: state.maxReadIndex.id.id)
-    return network.request(Api.functions.channels.readFeed(feedId: groupId.rawValue, maxPosition: position))
-        |> retryRequest
-        |> map(Optional.init)
+    if GlobalTelegramCoreConfiguration.readMessages {
+        return network.request(Api.functions.channels.readFeed(feedId: groupId.rawValue, maxPosition: position))
+            |> retryRequest
+            |> map(Optional.init)
+    } else {
+        return .single(nil)
+    }
 }
 
 private func performSyncOperation(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, groupId: PeerGroupId, operation: GroupFeedReadStateSyncOperation) -> Signal<Void, NoError> {
