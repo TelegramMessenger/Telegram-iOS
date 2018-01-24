@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+extern void (*TGVoipLoggingFunction)(NSString *);
+
 void __tgvoip_call_tglog(const char* format, ...);
 	
 #if defined __cplusplus
