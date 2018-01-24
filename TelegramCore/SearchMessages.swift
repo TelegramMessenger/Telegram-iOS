@@ -11,10 +11,7 @@ import Foundation
 
 public enum SearchMessagesLocation: Equatable {
     case general
-<<<<<<< HEAD
-=======
     case group(PeerGroupId)
->>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?)
     
     public static func ==(lhs: SearchMessagesLocation, rhs: SearchMessagesLocation) -> Bool {
@@ -25,15 +22,12 @@ public enum SearchMessagesLocation: Equatable {
                 } else {
                     return false
                 }
-<<<<<<< HEAD
-=======
             case let .group(groupId):
                 if case .group(groupId) = rhs {
                     return true
                 } else {
                     return false
                 }
->>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
             case let .peer(lhsPeerId, lhsFromId, lhsTags):
                 if case let .peer(rhsPeerId, rhsFromId, rhsTags) = rhs, lhsPeerId == rhsPeerId, lhsFromId == rhsFromId, lhsTags == rhsTags {
                     return true
@@ -94,12 +88,9 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                         return .never()
                     }
                 }
-<<<<<<< HEAD
-=======
         case let .group(groupId):
             remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
                 |> mapError { _ in } |> map(Optional.init)
->>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
         case .general:
             remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
                 |> mapError { _ in } |> map(Optional.init)
@@ -126,13 +117,10 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     messages = apiMessages
                     chats = apiChats
                     users = apiUsers
-<<<<<<< HEAD
-=======
                 case .messagesNotModified:
                     messages = []
                     chats = []
                     users = []
->>>>>>> 50c01586839b0113730b0aaa9a4011b954868da2
             }
             
             return account.postbox.modify { modifier -> [Message] in
