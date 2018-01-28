@@ -185,10 +185,9 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                 apiUnreadCount = unreadCount
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
-                            /*%layer76*/
-                            /*case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+                            case let .dialogFeed(_, _, _, feedId, _, _, _, _):
                                 remoteItemIds.append(.group(PeerGroupId(rawValue: feedId)))
-                                continue loop*/
+                                continue loop
                         }
                         
                         let peerId: PeerId
@@ -264,8 +263,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                 if remoteItemIds == resultingItemIds {
                     return .complete()
                 } else {
-                    /*%layer76*/
-                    /*var inputDialogPeers: [Api.InputDialogPeer] = []
+                    var inputDialogPeers: [Api.InputDialogPeer] = []
                     for itemId in resultingItemIds {
                         switch itemId {
                             case let .peer(peerId):
@@ -274,17 +272,6 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                 }
                             case let .group(groupId):
                                 inputDialogPeers.append(.inputDialogPeerFeed(feedId: groupId.rawValue))
-                        }
-                    }*/
-                    var inputDialogPeers: [Api.InputPeer] = []
-                    for itemId in resultingItemIds {
-                        switch itemId {
-                            case let .peer(peerId):
-                                if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-                                    inputDialogPeers.append(inputPeer)
-                                }
-                            case .group:
-                                break
                         }
                     }
                     

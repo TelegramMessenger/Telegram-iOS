@@ -79,8 +79,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                                 flags |= (1 << 0)
                             }
                         }
-                        /*%layer76*/
-                        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0/*, hash: 0*/))
+                        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0, hash: 0))
                             |> map {Optional($0)}
                             |> `catch` { _ -> Signal<Api.messages.Messages?, MTRpcError> in
                                 return .single(nil)
@@ -90,10 +89,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     }
                 }
         case let .group(groupId):
-            /*%layer76*/
-            remoteSearchResult = .single(nil)
-            /*remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
-                |> mapError { _ in } |> map(Optional.init)*/
+            remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
+                |> mapError { _ in } |> map(Optional.init)
         case .general:
             remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
                 |> mapError { _ in } |> map(Optional.init)

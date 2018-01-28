@@ -16,8 +16,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
         network.request(Api.functions.updates.getState())
             |> retryRequest
     
-    /*%layer76*/
-    return combineLatest(network.request(Api.functions.messages.getDialogs(flags: 0/*, feedId: nil*/, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100))
+    return combineLatest(network.request(Api.functions.messages.getDialogs(flags: 0, feedId: nil, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100))
         |> retryRequest, pinnedChats, state)
         |> mapToSignal { result, pinnedChats, state -> Signal<Void, NoError> in
             var dialogsDialogs: [Api.Dialog] = []
@@ -55,10 +54,9 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                         switch dialog {
                             case let .dialog(_, peer, _, _, _, _, _, _, _, _):
                                 itemIds.append(.peer(peer.peerId))
-                            /*%layer76*/
-                            /*case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+                            case let .dialogFeed(_, _, _, feedId, _, _, _, _):
                                 itemIds.append(.group(PeerGroupId(rawValue: feedId)))
-                                continue loop*/
+                                continue loop
                         }
                 }
                 
@@ -93,10 +91,9 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                         apiUnreadMentionsCount = unreadMentionsCount
                         apiNotificationSettings = peerNotificationSettings
                         apiChannelPts = pts
-                    /*%layer76*/
-                    /*case .dialogFeed:
+                    case .dialogFeed:
                         //assertionFailure()
-                        continue loop*/
+                        continue loop
                 }
                 
                 let peerId: PeerId
@@ -158,10 +155,9 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                                     }
                                 }
                             }
-                        /*%layer76*/
-                        /*case .dialogFeed:
+                        case .dialogFeed:
                             //assertionFailure()
-                            break*/
+                            break
                     }
                 }
             }

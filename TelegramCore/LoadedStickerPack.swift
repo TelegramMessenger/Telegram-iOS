@@ -45,13 +45,12 @@ func remoteStickerPack(network: Network, reference: StickerPackReference) -> Sig
             case let .stickerSet(set, packs, documents):
                 let namespace: ItemCollectionId.Namespace
                 switch set {
-                    /*%layer76*/
-                case let .stickerSet(flags, _, _, _, _, _, _):
-                    if (flags & (1 << 3)) != 0 {
-                        namespace = Namespaces.ItemCollection.CloudMaskPacks
-                    } else {
-                        namespace = Namespaces.ItemCollection.CloudStickerPacks
-                    }
+                    case let .stickerSet(flags, _, _, _, _, _, _, _):
+                        if (flags & (1 << 3)) != 0 {
+                            namespace = Namespaces.ItemCollection.CloudMaskPacks
+                        } else {
+                            namespace = Namespaces.ItemCollection.CloudStickerPacks
+                        }
                 }
                 info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
                 var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]

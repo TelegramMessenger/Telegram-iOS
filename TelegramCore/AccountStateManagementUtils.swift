@@ -827,13 +827,12 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
-            /*%layer76*/
-            /*case let .updateReadFeed(_, feedId, maxPosition, unreadCount, unreadMutedCount):
+            case let .updateReadFeed(_, feedId, maxPosition, unreadCount, unreadMutedCount):
                 switch maxPosition {
                     case let .feedPosition(date, peer, id):
                         let index = MessageIndex(id: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date)
                         updatedState.readGroupFeedInbox(groupId: PeerGroupId(rawValue: feedId), index: index)
-                }*/
+                }
             case let .updateWebPage(apiWebpage, _, _):
                 switch apiWebpage {
                     case let .webPageEmpty(id):
@@ -1002,14 +1001,12 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), peerId: nil, activity: .typingText)
             case let .updateDialogPinned(flags, peer):
                 let item: PinnedItemId
-                /*%layer76*/
-                /*switch peer {
+                switch peer {
                     case let .dialogPeer(peer):
                         item = .peer(peer.peerId)
                     case let .dialogPeerFeed(feedId):
                         item = .group(PeerGroupId(rawValue: feedId))
-                }*/
-                item = .peer(peer.peerId)
+                }
                 if (flags & (1 << 0)) != 0 {
                     updatedState.addUpdatePinnedItemIds(.pin(item))
                 } else {
@@ -1019,14 +1016,12 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 if let order = order {
                     updatedState.addUpdatePinnedItemIds(.reorder(order.map {
                         let item: PinnedItemId
-                        /*%layer76*/
-                        /*switch $0 {
+                        switch $0 {
                             case let .dialogPeer(peer):
                                 item = .peer(peer.peerId)
                             case let .dialogPeerFeed(feedId):
                                 item = .group(PeerGroupId(rawValue: feedId))
-                        }*/
-                        item = .peer($0.peerId)
+                        }
                         return item
                     }))
                 } else {
@@ -1317,17 +1312,10 @@ func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountS
 }
 
 private func resetChannels(_ account: Account, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
-    /*%layer76*/
-    /*var inputPeers: [Api.InputDialogPeer] = []
+    var inputPeers: [Api.InputDialogPeer] = []
     for peer in peers {
         if let inputPeer = apiInputPeer(peer) {
             inputPeers.append(.inputDialogPeer(peer: inputPeer))
-        }
-    }*/
-    var inputPeers: [Api.InputPeer] = []
-    for peer in peers {
-        if let inputPeer = apiInputPeer(peer) {
-            inputPeers.append(inputPeer)
         }
     }
     return account.network.request(Api.functions.messages.getPeerDialogs(peers: inputPeers))
@@ -1376,10 +1364,9 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
                                     apiUnreadMentionsCount = unreadMentionsCount
                                     apiNotificationSettings = peerNotificationSettings
                                     apiChannelPts = pts
-                                /*%layer76*/
-                                /*case .dialogFeed:
+                                case .dialogFeed:
                                     assertionFailure()
-                                    continue loop*/
+                                    continue loop
                             }
                             
                             let peerId: PeerId
@@ -2091,8 +2078,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                                 }
                                 
                                 switch set {
-                                    /*%layer76*/
-                                    case let .stickerSet(flags, _, _, _, _, _, _):
+                                    case let .stickerSet(flags, _, _, _, _, _, _, _):
                                         if (flags & (1 << 3)) != 0 {
                                             namespace = Namespaces.ItemCollection.CloudMaskPacks
                                         } else {
