@@ -22,10 +22,16 @@ public func requestRecentAccountSessions(account: Account) -> Signal<[RecentAcco
         }
 }
 
-public func terminateAccountSession(account: Account, hash: Int64) -> Signal<Void, NoError> {
+public enum TerminateAccountSessionError {
+    case generic
+}
+
+public func terminateAccountSession(account: Account, hash: Int64) -> Signal<Void, TerminateAccountSessionError> {
     return account.network.request(Api.functions.account.resetAuthorization(hash: hash))
-        |> retryRequest
-        |> mapToSignal { _ -> Signal<Void, NoError> in
+        |> mapError { error -> TerminateAccountSessionError in
+            return .generic
+        }
+        |> mapToSignal { _ -> Signal<Void, TerminateAccountSessionError> in
             return .complete()
         }
 }

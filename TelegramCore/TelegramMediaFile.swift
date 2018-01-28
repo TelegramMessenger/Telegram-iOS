@@ -379,6 +379,10 @@ public final class TelegramMediaFile: Media, Equatable {
     public func withUpdatedPreviewRepresentations(_ previewRepresentations: [TelegramMediaImageRepresentation]) -> TelegramMediaFile {
         return TelegramMediaFile(fileId: self.fileId, resource: self.resource, previewRepresentations: previewRepresentations, mimeType: self.mimeType, size: self.size, attributes: self.attributes)
     }
+    
+    public func withUpdatedAttributes(_ attributes: [TelegramMediaFileAttribute]) -> TelegramMediaFile {
+        return TelegramMediaFile(fileId: self.fileId, resource: self.resource, previewRepresentations: self.previewRepresentations, mimeType: self.mimeType, size: self.size, attributes: attributes)
+    }
 }
 
 public func ==(lhs: TelegramMediaFile, rhs: TelegramMediaFile) -> Bool {

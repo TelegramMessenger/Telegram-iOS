@@ -80,7 +80,19 @@ public final class AccountStateManager {
         return self.notificationMessagesPipe.signal()
     }
     
+    private let displayAlertsPipe = ValuePipe<[String]>()
+    public var displayAlerts: Signal<[String], NoError> {
+        return self.displayAlertsPipe.signal()
+    }
+    
+    private let appliedIncomingReadMessagesPipe = ValuePipe<[MessageId]>()
+    public var appliedIncomingReadMessages: Signal<[MessageId], NoError> {
+        return self.appliedIncomingReadMessagesPipe.signal()
+    }
+    
     private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
+    
+    private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
     
     init(account: Account, peerInputActivityManager: PeerInputActivityManager, auxiliaryMethods: AccountAuxiliaryMethods) {
         self.account = account
@@ -460,6 +472,10 @@ public final class AccountStateManager {
                     }
                 }
                 
+                if events.delayNotificatonsUntil != nil {
+                    let _ = self.delayNotificatonsUntil.swap(events.delayNotificatonsUntil)
+                }
+                
                 let signal = self.account.postbox.modify { modifier -> [(Message, PeerGroupId?)] in
                     var messages: [(Message, PeerGroupId?)] = []
                     for id in events.addedIncomingMessageIds {
@@ -484,6 +500,10 @@ public final class AccountStateManager {
                 }, completed: {
                     completed()
                 })
+            
+                if !events.displayAlerts.isEmpty {
+                    self.displayAlertsPipe.putNext(events.displayAlerts)
+                }
             case let .pollCompletion(pollId, preMessageIds, preSubscribers):
                 if self.operations.count > 1 {
                     self.operations.removeFirst()
@@ -684,6 +704,14 @@ public final class AccountStateManager {
                 }
             }
         }
+    }
+    
+    func notifyAppliedIncomingReadMessages(_ ids: [MessageId]) {
+        self.appliedIncomingReadMessagesPipe.putNext(ids)
+    }
+    
+    public func getDelayNotificatonsUntil() -> Int32? {
+        return self.delayNotificatonsUntil.with { $0 }
     }
 }
 

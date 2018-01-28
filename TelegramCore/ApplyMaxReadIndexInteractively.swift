@@ -7,7 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func applyMaxReadIndexInteractively(postbox: Postbox, network: Network, index: MessageIndex) -> Signal<Void, NoError> {
+public func applyMaxReadIndexInteractively(postbox: Postbox, network: Network, stateManager: AccountStateManager, index: MessageIndex) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
         let messageIds = modifier.applyInteractiveReadMaxIndex(index)
         if index.id.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -38,6 +38,8 @@ public func applyMaxReadIndexInteractively(postbox: Postbox, network: Network, i
                     }
                 }
             }
+        } else if index.id.peerId.namespace == Namespaces.Peer.CloudUser || index.id.peerId.namespace == Namespaces.Peer.CloudGroup || index.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+            stateManager.notifyAppliedIncomingReadMessages([index.id])
         }
     }
 }

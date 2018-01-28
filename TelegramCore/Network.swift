@@ -429,15 +429,30 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
 
 private final class NetworkHelper: NSObject, MTContextChangeListener {
     private let requestPublicKeys: (Int) -> Signal<NSArray, NoError>
+    private let isContextNetworkAccessAllowedImpl: () -> Signal<Bool, NoError>
     
-    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>) {
+    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>) {
         self.requestPublicKeys = requestPublicKeys
+        self.isContextNetworkAccessAllowedImpl = isContextNetworkAccessAllowed
     }
     
     func fetchContextDatacenterPublicKeys(_ context: MTContext!, datacenterId: Int) -> MTSignal! {
         return MTSignal { subscriber in
             let disposable = self.requestPublicKeys(datacenterId).start(next: { next in
                 subscriber?.putNext(next)
+                subscriber?.putCompletion()
+            })
+            
+            return MTBlockDisposable(block: {
+                disposable.dispose()
+            })
+        }
+    }
+    
+    func isContextNetworkAccessAllowed(_ context: MTContext!) -> MTSignal! {
+        return MTSignal { subscriber in
+            let disposable = self.isContextNetworkAccessAllowedImpl().start(next: { next in
+                subscriber?.putNext(next as NSNumber)
                 subscriber?.putCompletion()
             })
             
@@ -518,6 +533,12 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                     }
             } else {
                 return .never()
+            }
+        }, isContextNetworkAccessAllowed: { [weak self] in
+            if let strongSelf = self {
+                return strongSelf.shouldKeepConnection.get() |> distinctUntilChanged
+            } else {
+                return .single(false)
             }
         }))
         requestService.delegate = self

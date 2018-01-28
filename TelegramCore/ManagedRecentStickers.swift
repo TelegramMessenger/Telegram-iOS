@@ -49,7 +49,8 @@ func managedRecentStickers(postbox: Postbox, network: Network) -> Signal<Void, N
                 switch result {
                     case .recentStickersNotModified:
                         return .single(nil)
-                    case let .recentStickers(_, _, stickers, _):
+                    /*%layer76*/
+                    case let .recentStickers(/*_,*/ _, stickers):
                         var items: [OrderedItemListEntry] = []
                         for sticker in stickers {
                             if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {

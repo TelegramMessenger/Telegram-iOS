@@ -35,7 +35,7 @@ public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, No
     }
 }
 
-public func mutePeer(account: Account, peerId: PeerId, for interval: Int32) -> Signal<Void, NoError> {
+public func updatePeerMuteSetting(account: Account, peerId: PeerId, muteInterval: Int32?) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Void in
         if let peer = modifier.getPeer(peerId) {
             var notificationPeerId = peerId
@@ -51,14 +51,20 @@ public func mutePeer(account: Account, peerId: PeerId, for interval: Int32) -> S
                 previousSettings = TelegramPeerNotificationSettings.defaultSettings
             }
             
-            let absoluteUntil: Int32
-            if interval == Int32.max {
-                absoluteUntil = Int32.max
+            let muteState: PeerMuteState
+            if let muteInterval = muteInterval {
+                let absoluteUntil: Int32
+                if muteInterval == Int32.max {
+                    absoluteUntil = Int32.max
+                } else {
+                    absoluteUntil = Int32(Date().timeIntervalSince1970) + muteInterval
+                }
+                muteState = .muted(until: absoluteUntil)
             } else {
-                absoluteUntil = Int32(Date().timeIntervalSince1970) + interval
+                muteState = .unmuted
             }
             
-            let updatedSettings = previousSettings.withUpdatedMuteState(.muted(until: absoluteUntil))
+            let updatedSettings = previousSettings.withUpdatedMuteState(muteState)
             modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
         }
     }
@@ -83,11 +89,5 @@ public func updatePeerNotificationSoundInteractive(account: Account, peerId: Pee
             let updatedSettings = previousSettings.withUpdatedMessageSound(sound)
             modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
         }
-    }
-}
-
-public func changePeerNotificationSettings(account: Account, peerId: PeerId, settings: TelegramPeerNotificationSettings) -> Signal<Void, NoError> {
-    return account.postbox.modify { modifier -> Void in
-        modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: settings)
     }
 }

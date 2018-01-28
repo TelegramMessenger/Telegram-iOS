@@ -816,8 +816,9 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: [])
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                     }
+                } else {
+                    updatedState.addDisplayAlert(text)
                 }
-                break
             case let .updateReadChannelInbox(channelId, maxId):
                 updatedState.readInbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadChannelOutbox(channelId, maxId):
@@ -826,12 +827,13 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
-            case let .updateReadFeed(_, feedId, maxPosition, unreadCount, unreadMutedCount):
+            /*%layer76*/
+            /*case let .updateReadFeed(_, feedId, maxPosition, unreadCount, unreadMutedCount):
                 switch maxPosition {
                     case let .feedPosition(date, peer, id):
                         let index = MessageIndex(id: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date)
                         updatedState.readGroupFeedInbox(groupId: PeerGroupId(rawValue: feedId), index: index)
-                }
+                }*/
             case let .updateWebPage(apiWebpage, _, _):
                 switch apiWebpage {
                     case let .webPageEmpty(id):
@@ -1000,12 +1002,14 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), peerId: nil, activity: .typingText)
             case let .updateDialogPinned(flags, peer):
                 let item: PinnedItemId
-                switch peer {
+                /*%layer76*/
+                /*switch peer {
                     case let .dialogPeer(peer):
                         item = .peer(peer.peerId)
                     case let .dialogPeerFeed(feedId):
                         item = .group(PeerGroupId(rawValue: feedId))
-                }
+                }*/
+                item = .peer(peer.peerId)
                 if (flags & (1 << 0)) != 0 {
                     updatedState.addUpdatePinnedItemIds(.pin(item))
                 } else {
@@ -1013,13 +1017,16 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 }
             case let .updatePinnedDialogs(_, order):
                 if let order = order {
-                    updatedState.addUpdatePinnedItemIds(.reorder(order.map { let item: PinnedItemId
-                        switch $0 {
+                    updatedState.addUpdatePinnedItemIds(.reorder(order.map {
+                        let item: PinnedItemId
+                        /*%layer76*/
+                        /*switch $0 {
                             case let .dialogPeer(peer):
                                 item = .peer(peer.peerId)
                             case let .dialogPeerFeed(feedId):
                                 item = .group(PeerGroupId(rawValue: feedId))
-                        }
+                        }*/
+                        item = .peer($0.peerId)
                         return item
                     }))
                 } else {
@@ -1310,10 +1317,17 @@ func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountS
 }
 
 private func resetChannels(_ account: Account, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
-    var inputPeers: [Api.InputDialogPeer] = []
+    /*%layer76*/
+    /*var inputPeers: [Api.InputDialogPeer] = []
     for peer in peers {
         if let inputPeer = apiInputPeer(peer) {
             inputPeers.append(.inputDialogPeer(peer: inputPeer))
+        }
+    }*/
+    var inputPeers: [Api.InputPeer] = []
+    for peer in peers {
+        if let inputPeer = apiInputPeer(peer) {
+            inputPeers.append(inputPeer)
         }
     }
     return account.network.request(Api.functions.messages.getPeerDialogs(peers: inputPeers))
@@ -1362,9 +1376,10 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
                                     apiUnreadMentionsCount = unreadMentionsCount
                                     apiNotificationSettings = peerNotificationSettings
                                     apiChannelPts = pts
-                                case .dialogFeed:
+                                /*%layer76*/
+                                /*case .dialogFeed:
                                     assertionFailure()
-                                    continue loop
+                                    continue loop*/
                             }
                             
                             let peerId: PeerId
@@ -1756,6 +1771,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     var syncRecentGifs = false
     var langPackDifferences: [Api.LangPackDifference] = []
     var pollLangPack = false
+    var delayNotificatonsUntil: Int32?
     
     var addHolesToGroupFeedIds = Set<PeerGroupId>()
     
@@ -1908,7 +1924,14 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     return f(current)
                 })
             case let .MergePeerPresences(presences):
-                modifier.updatePeerPresences(presences)
+                var filteredPresences = presences
+                if let accountPresence = presences[accountPeerId] {
+                    filteredPresences.removeValue(forKey: accountPeerId)
+                    if let presence = accountPresence as? TelegramUserPresence, case let .present(until) = presence.status {
+                        delayNotificatonsUntil = until + 30
+                    }
+                }
+                modifier.updatePeerPresences(filteredPresences)
             case let .UpdateSecretChat(chat, _):
                 updateSecretChat(accountPeerId: accountPeerId, modifier: modifier, chat: chat, requestData: nil)
             case let .AddSecretMessages(messages):
@@ -2068,7 +2091,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                                 }
                                 
                                 switch set {
-                                    case let .stickerSet(flags, _, _, _, _, _, _, _):
+                                    /*%layer76*/
+                                    case let .stickerSet(flags, _, _, _, _, _, _):
                                         if (flags & (1 << 3)) != 0 {
                                             namespace = Namespaces.ItemCollection.CloudMaskPacks
                                         } else {
@@ -2216,5 +2240,5 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
         }
     }
     
-    return AccountReplayedFinalState(state: finalState, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls)
+    return AccountReplayedFinalState(state: finalState, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, delayNotificatonsUntil: delayNotificatonsUntil)
 }

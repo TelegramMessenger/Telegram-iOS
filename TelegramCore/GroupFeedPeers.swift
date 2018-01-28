@@ -8,7 +8,9 @@ import Foundation
 #endif
 
 public func availableGroupFeedPeers(postbox: Postbox, network: Network, groupId: PeerGroupId) -> Signal<[(Peer, Bool)], NoError> {
-    return network.request(Api.functions.channels.getFeedSources(flags: 0, feedId: groupId.rawValue, hash: 0))
+    /*%layer76*/
+    return .single([])
+    /*return network.request(Api.functions.channels.getFeedSources(flags: 0, feedId: groupId.rawValue, hash: 0))
     |> retryRequest
     |> mapToSignal { result -> Signal<[(Peer, Bool)], NoError> in
         return postbox.modify { modifier -> [(Peer, Bool)] in
@@ -46,5 +48,5 @@ public func availableGroupFeedPeers(postbox: Postbox, network: Network, groupId:
                     return peers
             }
         }
-    }
+    }*/
 }

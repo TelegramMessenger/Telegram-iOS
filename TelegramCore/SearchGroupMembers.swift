@@ -12,6 +12,10 @@ private func searchLocalGroupMembers(postbox: Postbox, peerId: PeerId, query: St
     |> map { peers -> [Peer] in
         let normalizedQuery = query.lowercased()
         
+        if normalizedQuery.isEmpty {
+            return peers
+        }
+        
         return peers.filter { peer in
             if peer.indexName.matchesByTokens(normalizedQuery) {
                 return true

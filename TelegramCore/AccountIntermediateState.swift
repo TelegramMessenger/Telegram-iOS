@@ -104,6 +104,7 @@ struct AccountMutableState {
     var namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>]
     
     var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]
+    var displayAlerts: [String] = []
     
     var insertedPeers: [PeerId: Peer] = [:]
     
@@ -122,7 +123,7 @@ struct AccountMutableState {
         self.namespacesWithHolesFromPreviousState = [:]
     }
     
-    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>], branchOperationIndex: Int) {
+    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>], displayAlerts: [String], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
@@ -133,11 +134,12 @@ struct AccountMutableState {
         self.readInboxMaxIds = readInboxMaxIds
         self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
         self.namespacesWithHolesFromPreviousState = namespacesWithHolesFromPreviousState
+        self.displayAlerts = displayAlerts
         self.branchOperationIndex = branchOperationIndex
     }
     
     func branch() -> AccountMutableState {
-        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, chatStates: self.chatStates, peerNotificationSettings: self.peerNotificationSettings, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, branchOperationIndex: self.operations.count)
+        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, chatStates: self.chatStates, peerNotificationSettings: self.peerNotificationSettings, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, displayAlerts: self.displayAlerts, branchOperationIndex: self.operations.count)
     }
     
     mutating func merge(_ other: AccountMutableState) {
@@ -156,6 +158,7 @@ struct AccountMutableState {
                 self.namespacesWithHolesFromPreviousState[peerId]!.insert(namespace)
             }
         }
+        self.displayAlerts.append(contentsOf: other.displayAlerts)
     }
     
     mutating func addPreCachedResource(_ resource: MediaResource, data: Data) {
@@ -164,6 +167,10 @@ struct AccountMutableState {
     
     mutating func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
         self.addOperation(.AddMessages(messages, location))
+    }
+    
+    mutating func addDisplayAlert(_ text: String) {
+        self.displayAlerts.append(text)
     }
     
     mutating func deleteMessagesWithGlobalIds(_ globalIds: [Int32]) {
@@ -385,6 +392,7 @@ struct AccountReplayedFinalState {
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
     let updatedCalls: [Api.PhoneCall]
+    let delayNotificatonsUntil: Int32?
 }
 
 struct AccountFinalStateEvents {
@@ -392,9 +400,11 @@ struct AccountFinalStateEvents {
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
     let updatedCalls: [Api.PhoneCall]
+    let displayAlerts: [String]
+    let delayNotificatonsUntil: Int32?
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty
+        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil
     }
     
     init() {
@@ -402,13 +412,17 @@ struct AccountFinalStateEvents {
         self.updatedTypingActivities = [:]
         self.updatedWebpages = [:]
         self.updatedCalls = []
+        self.displayAlerts = []
+        self.delayNotificatonsUntil = nil
     }
     
-    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage], updatedCalls: [Api.PhoneCall]) {
+    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage], updatedCalls: [Api.PhoneCall], displayAlerts: [String], delayNotificatonsUntil: Int32?) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.updatedTypingActivities = updatedTypingActivities
         self.updatedWebpages = updatedWebpages
         self.updatedCalls = updatedCalls
+        self.displayAlerts = displayAlerts
+        self.delayNotificatonsUntil = delayNotificatonsUntil
     }
     
     init(state: AccountReplayedFinalState) {
@@ -432,9 +446,17 @@ struct AccountFinalStateEvents {
         self.updatedTypingActivities = state.updatedTypingActivities
         self.updatedWebpages = state.updatedWebpages
         self.updatedCalls = state.updatedCalls
+        self.displayAlerts = state.state.state.displayAlerts
+        self.delayNotificatonsUntil = state.delayNotificatonsUntil
     }
     
     func union(with other: AccountFinalStateEvents) -> AccountFinalStateEvents {
-        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls)
+        var delayNotificatonsUntil = self.delayNotificatonsUntil
+        if let other = self.delayNotificatonsUntil {
+            if delayNotificatonsUntil == nil || other > delayNotificatonsUntil! {
+                delayNotificatonsUntil = other
+            }
+        }
+        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil)
     }
 }
