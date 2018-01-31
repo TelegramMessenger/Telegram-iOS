@@ -20,6 +20,8 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var media: TelegramMediaMap?
     
+    private var timeoutTimer: (SwiftSignalKit.Timer, Int32)?
+    
     required init() {
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -36,6 +38,10 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.timeoutTimer?.0.invalidate()
     }
     
     override func didLoad() {
@@ -368,6 +374,22 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 
                                 strongSelf.liveTextNode?.update(color: timerTextColor, timestamp: Double(updateTimestamp), strings: item.presentationData.strings, timeFormat: item.presentationData.timeFormat)
+                                
+                                let timeoutDeadline = item.message.timestamp + activeLiveBroadcastingTimeout
+                                if strongSelf.timeoutTimer?.1 != timeoutDeadline {
+                                    strongSelf.timeoutTimer?.0.invalidate()
+                                    let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                                    
+                                    let timer = SwiftSignalKit.Timer(timeout: Double(max(0, timeoutDeadline - currentTimestamp)), repeat: false, completion: {
+                                        if let strongSelf = self {
+                                            strongSelf.timeoutTimer?.0.invalidate()
+                                            strongSelf.timeoutTimer = nil
+                                            item.controllerInteraction.requestMessageUpdate(item.message.id)
+                                        }
+                                    }, queue: Queue.mainQueue())
+                                    strongSelf.timeoutTimer = (timer, timeoutDeadline)
+                                    timer.start()
+                                }
                             } else {
                                 if let liveTimerNode = strongSelf.liveTimerNode {
                                     strongSelf.liveTimerNode = nil
@@ -381,6 +403,11 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                                     transition.updateAlpha(node: liveTextNode, alpha: 0.0, completion: { [weak liveTextNode] _ in
                                         liveTextNode?.removeFromSupernode()
                                     })
+                                }
+                                
+                                if let (timer, _) = strongSelf.timeoutTimer {
+                                    strongSelf.timeoutTimer = nil
+                                    timer.invalidate()
                                 }
                             }
                             
@@ -436,7 +463,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                item.controllerInteraction.openMessage(item.message.id)
+                item.controllerInteraction.openMessage(item.message)
             }
         }
     }

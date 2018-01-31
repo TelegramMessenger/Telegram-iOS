@@ -245,9 +245,9 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
             
             let rightNavigationButton: ItemListNavigationButton
             if state.creating {
-                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Compose_Create, style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Compose_Create), style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
                     arguments.done()
                 })
             }

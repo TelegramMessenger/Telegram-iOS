@@ -171,7 +171,9 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     func playOnceWithSound(playAndRecord: Bool) {
         assert(Queue.mainQueue().isCurrent())
         self.player.actionAtEnd = .loopDisablingSound({ [weak self] in
-            self?.performActionAtEnd()
+            Queue.mainQueue().async {
+                self?.performActionAtEnd()
+            }
         })
         self.player.playOnceWithSound(playAndRecord: playAndRecord)
     }

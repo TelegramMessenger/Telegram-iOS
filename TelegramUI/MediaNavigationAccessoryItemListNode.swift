@@ -35,10 +35,10 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                         self.listNode = nil
                     }
                     if let updatedPlaylistPeerId = updatedPlaylistPeerId {
-                        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] id in
+                        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message in
                             if let strongSelf = self, let listNode = strongSelf.listNode {
                                 var galleryMedia: Media?
-                                if let message = listNode.messageInCurrentHistoryView(id) {
+                                if let message = listNode.messageInCurrentHistoryView(message.id) {
                                     for media in message.media {
                                         if let file = media as? TelegramMediaFile {
                                             galleryMedia = file
@@ -57,7 +57,7 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                                 if let galleryMedia = galleryMedia {
                                     if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice {
                                         if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
-                                            let player = ManagedAudioPlaylistPlayer(audioSessionManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, overlayMediaManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager.overlayMediaManager, mediaManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager, account: strongSelf.account, postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: id))
+                                            let player = ManagedAudioPlaylistPlayer(audioSessionManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager.audioSession, overlayMediaManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager.overlayMediaManager, mediaManager: (strongSelf.account.applicationContext as! TelegramApplicationContext).mediaManager, account: strongSelf.account, postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: message.id))
                                             applicationContext.mediaManager.setPlaylistPlayer(player)
                                             player.control(.navigation(.next))
                                         }
@@ -66,7 +66,7 @@ final class MediaNavigationAccessoryItemListNode: ASDisplayNode {
                             }
                             return false
                             }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, openMessageShareMenu: { _ in
-                        }, presentController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in }, canSetupReply: { return false },  automaticMediaDownloadSettings: .none)
+                        }, presentController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in }, canSetupReply: { return false }, requestMessageUpdate: { _ in }, automaticMediaDownloadSettings: .none)
                         
                         let listNode = ChatHistoryListNode(account: account, chatLocation: .peer(updatedPlaylistPeerId), tagMask: .music, messageId: nil, controllerInteraction: controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: false))
                         listNode.preloadPages = true

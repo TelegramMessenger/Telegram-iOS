@@ -75,26 +75,28 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     
     var canReply = false
     var canPin = false
-    switch chatPresentationInterfaceState.chatLocation {
-        case .peer:
-            if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
-                switch channel.info {
-                    case .broadcast:
-                        canReply = channel.hasAdminRights([.canPostMessages])
-                        if !isAction {
-                            canPin = channel.hasAdminRights([.canEditMessages])
-                        }
-                    case .group:
-                        canReply = true
-                        if !isAction {
-                            canPin = channel.hasAdminRights([.canPinMessages])
-                        }
+    if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
+        switch chatPresentationInterfaceState.chatLocation {
+            case .peer:
+                if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
+                    switch channel.info {
+                        case .broadcast:
+                            canReply = channel.hasAdminRights([.canPostMessages])
+                            if !isAction {
+                                canPin = channel.hasAdminRights([.canEditMessages])
+                            }
+                        case .group:
+                            canReply = true
+                            if !isAction {
+                                canPin = channel.hasAdminRights([.canPinMessages])
+                            }
+                    }
+                } else {
+                    canReply = true
                 }
-            } else {
-                canReply = true
-            }
-        case .group:
-            break
+            case .group:
+                break
+        }
     }
     
     var canEdit = false
@@ -215,10 +217,11 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                                     if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                                         if let image = UIImage(data: imageData) {
                                             if !message.text.isEmpty {
-                                                UIPasteboard.general.items = [
+                                                UIPasteboard.general.string = message.text
+                                                /*UIPasteboard.general.items = [
                                                     [kUTTypeUTF8PlainText as String: message.text],
                                                     [kUTTypePNG as String: image]
-                                                ]
+                                                ]*/
                                             } else {
                                                 UIPasteboard.general.image = image
                                             }
@@ -282,7 +285,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     }
 }
 
-struct ChatDeleteMessagesOptions: OptionSet {
+struct ChatAvailableMessageActionOptions: OptionSet {
     var rawValue: Int32
     
     init(rawValue: Int32) {
@@ -293,57 +296,76 @@ struct ChatDeleteMessagesOptions: OptionSet {
         self.rawValue = 0
     }
     
-    static let locally = ChatDeleteMessagesOptions(rawValue: 1 << 0)
-    static let globally = ChatDeleteMessagesOptions(rawValue: 1 << 1)
+    static let deleteLocally = ChatAvailableMessageActionOptions(rawValue: 1 << 0)
+    static let deleteGlobally = ChatAvailableMessageActionOptions(rawValue: 1 << 1)
+    static let forward = ChatAvailableMessageActionOptions(rawValue: 1 << 2)
 }
 
-func chatDeleteMessagesOptions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatDeleteMessagesOptions, NoError> {
-    return postbox.modify { modifier -> ChatDeleteMessagesOptions in
-        var optionsMap: [MessageId: ChatDeleteMessagesOptions] = [:]
+struct ChatAvailableMessageActions {
+    let options: ChatAvailableMessageActionOptions
+    let banAuthor: Peer?
+}
+
+func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
+    return postbox.modify { modifier -> ChatAvailableMessageActions in
+        var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
+        var banPeer: Peer?
+        var hadBanPeerId = false
         for id in messageIds {
+            if optionsMap[id] == nil {
+                optionsMap[id] = []
+            }
             if id.peerId == accountPeerId {
-                optionsMap[id] = .locally
+                optionsMap[id]!.insert(.deleteLocally)
             } else if let peer = modifier.getPeer(id.peerId), let message = modifier.getMessage(id) {
                 if let channel = peer as? TelegramChannel {
-                    var options: ChatDeleteMessagesOptions = []
-                    if !message.flags.contains(.Incoming) {
-                        options.insert(.globally)
-                    } else {
-                        if channel.hasAdminRights([.canDeleteMessages]) {
-                            options.insert(.globally)
+                    if channel.hasAdminRights(.canBanUsers), case .group = channel.info {
+                        if message.flags.contains(.Incoming) {
+                            if !hadBanPeerId {
+                                hadBanPeerId = true
+                                banPeer = message.author
+                            } else if banPeer?.id != message.author?.id {
+                                banPeer = nil
+                            }
+                        } else {
+                            hadBanPeerId = true
+                            banPeer = nil
                         }
                     }
-                    optionsMap[message.id] = options
-                } else if let group = peer as? TelegramGroup {
-                    var options: ChatDeleteMessagesOptions = []
-                    options.insert(.locally)
+                    optionsMap[id]!.insert(.forward)
                     if !message.flags.contains(.Incoming) {
-                        options.insert(.globally)
+                        optionsMap[id]!.insert(.deleteGlobally)
+                    } else {
+                        if channel.hasAdminRights([.canDeleteMessages]) {
+                            optionsMap[id]!.insert(.deleteGlobally)
+                        }
+                    }
+                } else if let group = peer as? TelegramGroup {
+                    optionsMap[id]!.insert(.forward)
+                    optionsMap[id]!.insert(.deleteLocally)
+                    if !message.flags.contains(.Incoming) {
+                        optionsMap[id]!.insert(.deleteGlobally)
                     } else {
                         switch group.role {
                             case .creator, .admin:
-                                options.insert(.globally)
+                                optionsMap[id]!.insert(.deleteGlobally)
                             case .member:
                                 break
                         }
                     }
-                    optionsMap[message.id] = options
                 } else if let _ = peer as? TelegramUser {
-                    var options: ChatDeleteMessagesOptions = []
-                    options.insert(.locally)
+                    optionsMap[id]!.insert(.forward)
+                    optionsMap[id]!.insert(.deleteLocally)
                     if !message.flags.contains(.Incoming) {
-                        options.insert(.globally)
+                        optionsMap[id]!.insert(.deleteGlobally)
                     }
-                    optionsMap[message.id] = options
                 } else if let _ = peer as? TelegramSecretChat {
-                    var options: ChatDeleteMessagesOptions = []
-                    options.insert(.globally)
-                    optionsMap[message.id] = options
+                    optionsMap[id]!.insert(.deleteGlobally)
                 } else {
                     assertionFailure()
                 }
             } else {
-                optionsMap[id] = [.locally]
+                optionsMap[id]!.insert(.deleteLocally)
             }
         }
         
@@ -352,9 +374,9 @@ func chatDeleteMessagesOptions(postbox: Postbox, accountPeerId: PeerId, messageI
             for value in optionsMap.values {
                 reducedOptions.formIntersection(value)
             }
-            return reducedOptions
+            return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer)
         } else {
-            return []
+            return ChatAvailableMessageActions(options: [], banAuthor: nil)
         }
     }
 }

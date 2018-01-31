@@ -38,12 +38,25 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                     context.setBlendMode(.copy)
                                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
                                 }), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {
+                                    let imageDimensions = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+                                    
                                     let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
                                     postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
                                     
                                     let scaledImageSize = CGSize(width: scaledImage.size.width * scaledImage.scale, height: scaledImage.size.height * scaledImage.scale)
                                     
-                                    subscriber.putNext(file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: scaledImageSize, resource: thumbnailResource)]))
+                                    var attributes = file.attributes
+                                    loop: for i in 0 ..< attributes.count {
+                                        switch attributes[i] {
+                                            case .ImageSize:
+                                                attributes.remove(at: i)
+                                                break loop
+                                            default:
+                                                break
+                                        }
+                                    }
+                                    attributes.append(.ImageSize(size: imageDimensions))
+                                    subscriber.putNext(file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: scaledImageSize, resource: thumbnailResource)]).withUpdatedAttributes(attributes))
                                     subscriber.putCompletion()
                                 } else {
                                     subscriber.putNext(file.withUpdatedSize(data.size))

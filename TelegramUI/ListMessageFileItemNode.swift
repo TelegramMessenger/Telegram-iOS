@@ -770,7 +770,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     }
                 case .Local:
                     if let item = self.item, let controllerInteraction = self.controllerInteraction {
-                        let _ = controllerInteraction.openMessage(item.message.id)
+                        let _ = controllerInteraction.openMessage(item.message)
                     }
                 }
             case .playbackStatus:
@@ -796,7 +796,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     
     override func longTapped() {
         if let item = self.item {
-            item.controllerInteraction.openMessageContextMenu(item.message.id, self, self.bounds)
+            item.controllerInteraction.openMessageContextMenu(item.message, self, self.bounds)
         }
     }
 }

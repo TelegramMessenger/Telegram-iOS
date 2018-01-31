@@ -122,7 +122,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     }
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: primaryPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: true, editing: false, revealed: hasRevealControls), index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings, actionTitle: strings.WebSearch_RecentSectionClear.uppercased(), action: {
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: primaryPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: true, editing: false, revealed: hasRevealControls), index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings, actionTitle: strings.WebSearch_RecentSectionClear.uppercased(), action: {
                     clearRecentlySearchedPeers()
                 }), action: { _ in
                     peerSelected(peer)
@@ -268,7 +268,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     }
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: primaryPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: primaryPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.peerSelected(peer)
                 })
             case let .globalPeer(peer, _, theme, strings):
@@ -288,11 +288,11 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     }
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer.peer, chatPeer: peer.peer, status: .addressName(suffixString), enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .generalSearch, peer: peer.peer, chatPeer: peer.peer, status: .addressName(suffixString), enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.peerSelected(peer.peer)
                 })
             case let .message(message, presentationData):
-                return ChatListItem(presentationData: presentationData, account: account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: nil, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil), editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, account: account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: nil, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil), editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
         }
     }
 }
@@ -399,8 +399,13 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 if let query = query, !query.isEmpty {
                     let accountPeer = account.postbox.loadedPeerWithId(account.peerId) |> take(1)
                     let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: groupId)
-                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], [])) |> then(searchPeers(account: account, query: query)
+                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError>
+                    if groupId == nil {
+                        foundRemotePeers = .single(([], [])) |> then(searchPeers(account: account, query: query)
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                    } else {
+                        foundRemotePeers = .single(([], []))
+                    }
                     let location: SearchMessagesLocation
                     if let groupId = groupId {
                         location = .group(groupId)

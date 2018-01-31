@@ -65,6 +65,17 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         result.append((item.content.firstMessage, ChatMessageTextBubbleContentNode.self))
     }
     
+    if let additionalContent = item.additionalContent {
+        switch additionalContent {
+            case let .eventLogPreviousMessage(previousMessage):
+                result.append((previousMessage, ChatMessageEventLogPreviousMessageContentNode.self))
+            case let .eventLogPreviousDescription(previousMessage):
+                result.append((previousMessage, ChatMessageEventLogPreviousDescriptionContentNode.self))
+            case let .eventLogPreviousLink(previousMessage):
+                result.append((previousMessage, ChatMessageEventLogPreviousLinkContentNode.self))
+        }
+    }
+    
     return result
 }
 
@@ -1234,7 +1245,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
                                 
                                 if let item = self.item, let author = item.content.firstMessage.author {
-                                    item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, .info, item.message.id)
+                                    item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, .info, item.message)
                                 }
                                 return
                             }
@@ -1244,7 +1255,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     for attribute in item.message.attributes {
                                         if let attribute = attribute as? InlineBotMessageAttribute, let botPeer = item.message.peers[attribute.peerId], let addressName = botPeer.addressName {
                                             item.controllerInteraction.updateInputState { textInputState in
-                                                return ChatTextInputState(inputText: "@" + addressName + " ")
+                                                return ChatTextInputState(inputText: NSAttributedString(string: "@" + addressName + " "))
                                             }
                                             return
                                         }
@@ -1265,7 +1276,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     if let sourceMessageId = forwardInfo.sourceMessageId {
                                         item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                     } else {
-                                        item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil), nil)
+                                        item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil, messageId: nil), nil)
                                     }
                                     return
                                 }
@@ -1282,7 +1293,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         break loop
                                     case let .peerMention(peerId, _):
                                         foundTapAction = true
-                                        self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil), nil)
+                                        self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, messageId: nil), nil)
                                         break loop
                                     case let .textMention(name):
                                         foundTapAction = true
@@ -1301,7 +1312,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     case .instantPage:
                                         foundTapAction = true
                                         if let item = self.item {
-                                        item.controllerInteraction.openInstantPage(item.message.id)
+                                            item.controllerInteraction.openInstantPage(item.message)
                                         }
                                         break loop
                                     case .holdToPreviewSecretMedia:
@@ -1318,12 +1329,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         case .longTap, .doubleTap:
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
                                 var foundTapAction = false
-                                var tapMessageId: MessageId? = item.content.firstMessage.id
+                                var tapMessage: Message? = item.content.firstMessage
                                 loop: for contentNode in self.contentNodes {
                                     if !contentNode.frame.contains(location) {
                                         continue loop
                                     }
-                                    tapMessageId = contentNode.item?.message.id
+                                    tapMessage = contentNode.item?.message
                                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY))
                                     switch tapAction {
                                         case .none, .ignore:
@@ -1356,8 +1367,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             break
                                     }
                                 }
-                                if !foundTapAction, let tapMessageId = tapMessageId {
-                                    item.controllerInteraction.openMessageContextMenu(tapMessageId, self, self.backgroundNode.frame)
+                                if !foundTapAction, let tapMessage = tapMessage {
+                                    item.controllerInteraction.openMessageContextMenu(tapMessage, self, self.backgroundNode.frame)
                                 }
                             }
                         case .hold:
@@ -1602,7 +1613,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         peerId = item.message.id.peerId
                     }
                     if let botPeer = botPeer, let addressName = botPeer.addressName {
-                        item.controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: "@\(addressName) \(query)")), nil)
+                        item.controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: "@\(addressName) \(query)")), messageId: nil), nil)
                     }
                 case .payment:
                     item.controllerInteraction.openCheckoutOrReceipt(item.message.id)

@@ -507,6 +507,8 @@ private struct GroupInfoState: Equatable {
     
     let savingData: Bool
     
+    let searchingMembers: Bool
+    
     static func ==(lhs: GroupInfoState, rhs: GroupInfoState) -> Bool {
         if lhs.updatingAvatar != rhs.updatingAvatar {
             return false
@@ -532,39 +534,46 @@ private struct GroupInfoState: Equatable {
         if lhs.savingData != rhs.savingData {
             return false
         }
+        if lhs.searchingMembers != rhs.searchingMembers {
+            return false
+        }
         return true
     }
     
     func withUpdatedUpdatingAvatar(_ updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?) -> GroupInfoState {
-        return GroupInfoState(updatingAvatar: updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedEditingState(_ editingState: GroupInfoEditingState?) -> GroupInfoState {
-        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedUpdatingName(_ updatingName: ItemListAvatarAndNameInfoItemName?) -> GroupInfoState {
-        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> GroupInfoState {
-        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData, searchingMembers: self.searchingMembers)
     }
 
     func withUpdatedTemporaryParticipants(_ temporaryParticipants: [TemporaryParticipant]) -> GroupInfoState {
-        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedSuccessfullyAddedParticipantIds(_ successfullyAddedParticipantIds: Set<PeerId>) -> GroupInfoState {
-        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedRemovingParticipantIds(_ removingParticipantIds: Set<PeerId>) -> GroupInfoState {
-        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: removingParticipantIds, savingData: self.savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: removingParticipantIds, savingData: self.savingData, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedSavingData(_ savingData: Bool) -> GroupInfoState {
-        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: savingData)
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: savingData, searchingMembers: self.searchingMembers)
+    }
+    
+    func withUpdatedSearchingMembers(_ searchingMembers: Bool) -> GroupInfoState {
+        return GroupInfoState(updatingAvatar: self.updatingAvatar, editingState: self.editingState, updatingName: self.updatingName, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, temporaryParticipants: self.temporaryParticipants, successfullyAddedParticipantIds: self.successfullyAddedParticipantIds, removingParticipantIds: self.removingParticipantIds, savingData: self.savingData, searchingMembers: searchingMembers)
     }
 }
 
@@ -682,11 +691,19 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             entries.append(GroupInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsText))
             entries.append(GroupInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: peerNotificationSettings.messageSound, default: globalNotificationSettings.effective.groupChats.sound)))
             
-            if let adminCount = cachedChannelData.participantsSummary.adminCount {
-                entries.append(GroupInfoEntry.membersAdmins(presentationData.theme, presentationData.strings.Channel_Info_Management, "\(adminCount)"))
+            var canViewAdminsAndBanned = false
+            if let channel = view.peers[view.peerId] as? TelegramChannel {
+                if let adminRights = channel.adminRights, !adminRights.isEmpty {
+                    canViewAdminsAndBanned = true
+                } else if channel.flags.contains(.isCreator) {
+                    canViewAdminsAndBanned = true
+                }
             }
-            if let bannedCount = cachedChannelData.participantsSummary.bannedCount {
-                entries.append(GroupInfoEntry.membersBlacklist(presentationData.theme, presentationData.strings.Channel_Info_Banned, "\(bannedCount)"))
+            
+            if canViewAdminsAndBanned {
+                entries.append(GroupInfoEntry.membersAdmins(presentationData.theme, presentationData.strings.Channel_Info_Management, cachedChannelData.participantsSummary.adminCount.flatMap { "\($0)" } ?? ""))
+                
+                entries.append(GroupInfoEntry.membersBlacklist(presentationData.theme, presentationData.strings.Channel_Info_Banned, cachedChannelData.participantsSummary.bannedCount.flatMap { "\($0)" } ?? "" ))
             }
         }
     } else {
@@ -938,8 +955,8 @@ private func valuesRequiringUpdate(state: GroupInfoState, view: PeerView) -> (ti
 }
 
 public func groupInfoController(account: Account, peerId: PeerId) -> ViewController {
-    let statePromise = ValuePromise(GroupInfoState(updatingAvatar: nil, editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false), ignoreRepeated: true)
-    let stateValue = Atomic(value: GroupInfoState(updatingAvatar: nil, editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false))
+    let statePromise = ValuePromise(GroupInfoState(updatingAvatar: nil, editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false, searchingMembers: false), ignoreRepeated: true)
+    let stateValue = Atomic(value: GroupInfoState(updatingAvatar: nil, editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false, searchingMembers: false))
     let updateState: ((GroupInfoState) -> GroupInfoState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -1095,15 +1112,16 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             controller?.dismissAnimated()
         }
         let notificationAction: (Int32) -> Void = {  muteUntil in
-            let muteState: PeerMuteState
+            let muteInterval: Int32?
             if muteUntil <= 0 {
-                muteState = .unmuted
+                muteInterval = nil
             } else if muteUntil == Int32.max {
-                muteState = .muted(until: Int32.max)
+                muteInterval = Int32.max
             } else {
-                muteState = .muted(until: Int32(Date().timeIntervalSince1970) + muteUntil)
+                muteInterval = muteUntil
             }
-            changeMuteSettingsDisposable.set(changePeerNotificationSettings(account: account, peerId: peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
+            
+            changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: muteInterval).start())
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
@@ -1198,7 +1216,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                         let result = ValuePromise<Bool>()
                         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                         if let contactsController = contactsController {
-                            let alertController = standardTextAlertController(title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
+                            let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {
                                     result.set(false)
                                 }),
@@ -1364,6 +1382,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             }
             
             let rightNavigationButton: ItemListNavigationButton
+            var secondaryRightNavigationButton: ItemListNavigationButton?
             if let editingState = state.editingState {
                 var doneEnabled = true
                 if let editingName = editingState.editingName, editingName.isEmpty {
@@ -1376,9 +1395,9 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 }
                 
                 if state.savingData {
-                    rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: doneEnabled, action: {})
+                    rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: doneEnabled, action: {})
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: doneEnabled, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
                         var updateValues: (title: String?, description: String?) = (nil, nil)
                         updateState { state in
                             updateValues = valuesRequiringUpdate(state: state, view: view)
@@ -1419,7 +1438,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     })
                 }
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                     if let peer = peer as? TelegramGroup {
                         updateState { state in
                             return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer), editingDescriptionText: ""))
@@ -1434,10 +1453,28 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                         }
                     }
                 })
+                secondaryRightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                    updateState { state in
+                        return state.withUpdatedSearchingMembers(true)
+                    }
+                })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.GroupInfo_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: groupInfoEntries(account: account, presentationData: presentationData, view: view, globalNotificationSettings: globalNotificationSettings, state: state), style: .blocks)
+            var searchItem: ItemListControllerSearch?
+            if state.searchingMembers {
+                searchItem = GroupInfoSearchItem(account: account, peerId: peerId, cancel: {
+                    updateState { state in
+                        return state.withUpdatedSearchingMembers(false)
+                    }
+                }, openPeer: { peer in
+                    if let infoController = peerInfoController(account: account, peer: peer) {
+                        arguments.pushController(infoController)
+                    }
+                })
+            }
+            
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.GroupInfo_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let listState = ItemListNodeState(entries: groupInfoEntries(account: account, presentationData: presentationData, view: view, globalNotificationSettings: globalNotificationSettings, state: state), style: .blocks, searchItem: searchItem)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

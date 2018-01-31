@@ -109,7 +109,7 @@ final class GridMessageItem: GridItem {
     fileprivate let theme: PresentationTheme
     private let strings: PresentationStrings
     private let account: Account
-    private let message: Message
+    fileprivate let message: Message
     private let controllerInteraction: ChatControllerInteraction
     
     let section: GridSection?
@@ -323,7 +323,7 @@ final class GridMessageItemNode: GridItemNode {
     }
     
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-        guard let controllerInteraction = self.controllerInteraction, let messageId = self.messageId else {
+        guard let controllerInteraction = self.controllerInteraction, let message = self.item?.message else {
             return
         }
         
@@ -337,19 +337,19 @@ final class GridMessageItemNode: GridItemNode {
                                     if let resourceStatus = self.resourceStatus {
                                         switch resourceStatus {
                                         case .Fetching:
-                                            messageMediaFileCancelInteractiveFetch(account: account, messageId: messageId, file: file)
+                                            messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
                                         case .Local:
-                                            controllerInteraction.openMessage(messageId)
+                                            let _ = controllerInteraction.openMessage(message)
                                         case .Remote:
-                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: messageId, file: file).start())
+                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: message.id, file: file).start())
                                         }
                                     }
                                 } else {
-                                    controllerInteraction.openMessage(messageId)
+                                    let _ = controllerInteraction.openMessage(message)
                                 }
                             }
                         case .longTap:
-                            controllerInteraction.openMessageContextMenu(messageId, self, self.bounds)
+                            controllerInteraction.openMessageContextMenu(message, self, self.bounds)
                         default:
                             break
                     }

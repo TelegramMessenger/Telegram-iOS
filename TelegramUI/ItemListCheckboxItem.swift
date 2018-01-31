@@ -3,17 +3,24 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+enum ItemListCheckboxItemStyle {
+    case left
+    case right
+}
+
 class ItemListCheckboxItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
+    let style: ItemListCheckboxItemStyle
     let checked: Bool
     let zeroSeparatorInsets: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, style: ItemListCheckboxItemStyle, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
+        self.style = style
         self.checked = checked
         self.zeroSeparatorInsets = zeroSeparatorInsets
         self.sectionId = sectionId
@@ -107,7 +114,14 @@ class ItemListCheckboxItemNode: ListViewItemNode {
         let currentItem = self.item
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 44.0 + params.leftInset
+            var leftInset: CGFloat = params.leftInset
+            
+            switch item.style {
+                case .left:
+                    leftInset += 44.0
+                case .right:
+                    leftInset += 16.0
+            }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -117,7 +131,6 @@ class ItemListCheckboxItemNode: ListViewItemNode {
             let contentSize = CGSize(width: params.width, height: 44.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            let layoutSize = layout.size
             
             var updateCheckImage: UIImage?
             var updatedTheme: PresentationTheme?
@@ -145,7 +158,12 @@ class ItemListCheckboxItemNode: ListViewItemNode {
                     let _ = titleApply()
                     
                     if let image = strongSelf.iconNode.image {
-                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                        switch item.style {
+                            case .left:
+                                strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                            case .right:
+                                strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - image.size.width - floor((44.0 - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                        }
                     }
                     strongSelf.iconNode.isHidden = !item.checked
                     

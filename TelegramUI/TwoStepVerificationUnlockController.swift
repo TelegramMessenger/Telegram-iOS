@@ -311,6 +311,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
             switch data {
                 case let .access(configuration):
                     if let configuration = configuration {
+                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                         switch configuration {
                             case let .set(_, hasRecoveryEmail, _):
                                 if hasRecoveryEmail {
@@ -332,10 +333,10 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                         updateState {
                                             $0.withUpdatedChecking(false)
                                         }
-                                        presentControllerImpl?(standardTextAlertController(title: nil, text: "An error occured. Please try again later.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "An error occured. Please try again later.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }))
                                 } else {
-                                    presentControllerImpl?(standardTextAlertController(title: nil, text: "Since you haven't provided a recovery e-mail when setting up your password, your remaining options are either to remember your password or to reset your account.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Since you haven't provided a recovery e-mail when setting up your password, your remaining options are either to remember your password or to reset your account.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                 }
                             case .notSet:
                                 break
@@ -382,7 +383,8 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
             }
         }))
     }, openDisablePassword: {
-        presentControllerImpl?(standardTextAlertController(title: nil, text: "Are you sure you want to disable your password?", actions: [TextAlertAction(type: .defaultAction, title: "Cancel", action: {}), TextAlertAction(type: .genericAction, title: "OK", action: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Are you sure you want to disable your password?", actions: [TextAlertAction(type: .defaultAction, title: "Cancel", action: {}), TextAlertAction(type: .genericAction, title: "OK", action: {
             var disablePassword = false
             updateState { state in
                 if state.checking {
@@ -463,13 +465,13 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     title = presentationData.strings.TwoStepAuth_Title
                     if let configuration = configuration {
                         if state.checking {
-                            rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
                         } else {
                             switch configuration {
                                 case .notSet:
                                     break
                                 case .set:
-                                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Next, style: .bold, enabled: true, action: {
+                                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: true, action: {
                                         var wasChecking = false
                                         var password: String?
                                         updateState { state in
@@ -490,6 +492,8 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                                     $0.withUpdatedChecking(false)
                                                 }
                                                 
+                                                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                                
                                                 let text: String
                                                 switch error {
                                                     case .limitExceeded:
@@ -500,7 +504,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                                         text = "An error occured. Please try again later."
                                                 }
                                                 
-                                                presentControllerImpl?(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                             }))
                                         }
                                     })
@@ -512,7 +516,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                 case .manage:
                     title = presentationData.strings.PrivacySettings_TwoStepAuth
                     if state.checking {
-                        rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                        rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
                     }
             }
             

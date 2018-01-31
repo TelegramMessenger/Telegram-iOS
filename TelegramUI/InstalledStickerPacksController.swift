@@ -424,7 +424,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             
             var leftNavigationButton: ItemListNavigationButton?
             if case .modal = mode {
-                leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+                leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                     dismissImpl?()
                 })
             }
@@ -432,13 +432,13 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             var rightNavigationButton: ItemListNavigationButton?
             if let packCount = packCount, packCount != 0 {
                 if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                         updateState {
                             $0.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState {
                             $0.withUpdatedEditing(true)
                         }

@@ -15,7 +15,7 @@ public struct ChatControllerInitialBotStart {
 }
 
 public enum ChatControllerInteractionNavigateToPeer {
-    case chat(textInputState: ChatTextInputState?)
+    case chat(textInputState: ChatTextInputState?, messageId: MessageId?)
     case info
     case withBotStartPayload(ChatControllerInitialBotStart)
 }
@@ -37,12 +37,12 @@ public enum ChatControllerInteractionLongTapAction {
 }
 
 public final class ChatControllerInteraction {
-    let openMessage: (MessageId) -> Bool
+    let openMessage: (Message) -> Bool
     let openSecretMessagePreview: (MessageId) -> Void
     let closeSecretMessagePreview: () -> Void
-    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageId?) -> Void
+    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void
     let openPeerMention: (String) -> Void
-    let openMessageContextMenu: (MessageId, ASDisplayNode, CGRect) -> Void
+    let openMessageContextMenu: (Message, ASDisplayNode, CGRect) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
     let clickThroughMessage: () -> Void
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
@@ -54,7 +54,7 @@ public final class ChatControllerInteraction {
     let shareCurrentLocation: () -> Void
     let shareAccountContact: () -> Void
     let sendBotCommand: (MessageId?, String) -> Void
-    let openInstantPage: (MessageId) -> Void
+    let openInstantPage: (Message) -> Void
     let openHashtag: (String?, String) -> Void
     let updateInputState: ((ChatTextInputState) -> ChatTextInputState) -> Void
     let openMessageShareMenu: (MessageId) -> Void
@@ -66,12 +66,14 @@ public final class ChatControllerInteraction {
     let setupReply: (MessageId) -> Void
     let canSetupReply: () -> Bool
     
+    let requestMessageUpdate: (MessageId) -> Void
+    
     var hiddenMedia: [MessageId: [Media]] = [:]
     var selectionState: ChatInterfaceSelectionState?
     var highlightedState: ChatInterfaceHighlightedState?
     var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
     
-    public init(openMessage: @escaping (MessageId) -> Bool, openSecretMessagePreview: @escaping (MessageId) -> Void, closeSecretMessagePreview: @escaping () -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageId?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, sendGif: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (MessageId) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, callPeer: @escaping (PeerId) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void, openSearch: @escaping () -> Void, setupReply: @escaping (MessageId) -> Void, canSetupReply: @escaping () -> Bool, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings) {
+    public init(openMessage: @escaping (Message) -> Bool, openSecretMessagePreview: @escaping (MessageId) -> Void, closeSecretMessagePreview: @escaping () -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (Message, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, sendGif: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (Message) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, callPeer: @escaping (PeerId) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void, openSearch: @escaping () -> Void, setupReply: @escaping (MessageId) -> Void, canSetupReply: @escaping () -> Bool, requestMessageUpdate: @escaping (MessageId) -> Void, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings) {
         self.openMessage = openMessage
         self.openSecretMessagePreview = openSecretMessagePreview
         self.closeSecretMessagePreview = closeSecretMessagePreview
@@ -100,6 +102,8 @@ public final class ChatControllerInteraction {
         self.openSearch = openSearch
         self.setupReply = setupReply
         self.canSetupReply = canSetupReply
+        
+        self.requestMessageUpdate = requestMessageUpdate
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
     }

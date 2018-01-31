@@ -283,7 +283,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
                                 } else {
-                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: 17.0), content: NativeVideoContent(id: .message(message.id, file.fileId), file: file, enableSound: false), priority: .embedded)
+                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: 17.0, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, file.fileId), file: file, enableSound: false), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     updatedVideoNode = videoNode
                                     replaceVideoNode = true
@@ -347,7 +347,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                         }
                     }
                     
-                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
+                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground)
                     
                     let imageFrame = CGRect(origin: CGPoint(x: -arguments.insets.left, y: -arguments.insets.top), size: arguments.drawingSize)
                     

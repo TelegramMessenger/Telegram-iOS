@@ -229,11 +229,11 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .typeHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
             case let .typePublic(theme, text, selected):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateCurrentType(.publicChannel)
                 })
             case let .typePrivate(theme, text, selected):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateCurrentType(.privateChannel)
                 })
             case let .typeInfo(theme, text):
@@ -792,7 +792,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                     }
                 }
                 
-                rightNavigationButton = ItemListNavigationButton(title: mode == .initialSetup ? presentationData.strings.Common_Next : presentationData.strings.Common_Done, style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(mode == .initialSetup ? presentationData.strings.Common_Next : presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
                     var updatedAddressNameValue: String?
                     updateState { state in
                         updatedAddressNameValue = updatedAddressName(state: state, peer: peer)
@@ -845,7 +845,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                 case .initialSetup:
                     leftNavigationButton = nil
                 case .generic, .privateLink:
-                    leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+                    leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                         dismissImpl?()
                     })
             }

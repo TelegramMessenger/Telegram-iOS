@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import Display
 
-final class AuthorizationTheme {
+public final class AuthorizationTheme {
     let statusBarStyle: StatusBarStyle
     let navigationBarBackgroundColor: UIColor
     let navigationBarTextColor: UIColor

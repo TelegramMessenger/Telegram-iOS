@@ -14,10 +14,6 @@ private var legacyLocalization = TGLocalization(version: 0, code: "en", dict: [:
 
 func updateLegacyLocalization(strings: PresentationStrings) {
     legacyLocalization = TGLocalization(version: 0, code: strings.languageCode, dict: strings.dict, isActive: true)
-    
-    let languages: [String] = [strings.languageCode]
-    UserDefaults.standard.set(languages, forKey: "AppleLanguages")
-    UserDefaults.standard.synchronize()
 }
 
 public func updateLegacyComponentsAccount(_ account: Account?) {

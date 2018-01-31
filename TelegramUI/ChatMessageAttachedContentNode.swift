@@ -9,6 +9,7 @@ import Postbox
 private let titleFont: UIFont = Font.semibold(15.0)
 private let textFont: UIFont = Font.regular(15.0)
 private let textBoldFont: UIFont = Font.semibold(15.0)
+private let textItalicFont: UIFont = Font.italic(15.0)
 private let textFixedFont: UIFont = Font.regular(15.0)
 private let buttonFont: UIFont = Font.semibold(13.0)
 
@@ -358,7 +359,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     string.append(NSAttributedString(string: "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
                 }
                 if let entities = entities {
-                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: textFont, boldFont: textBoldFont, fixedFont: textFixedFont))
+                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, fixedFont: textFixedFont))
                 } else {
                     string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
                 }

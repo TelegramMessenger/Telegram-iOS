@@ -109,7 +109,7 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     
     func forgotPressed() {
         if self.didForgotWithNoRecovery {
-            self.present(standardTextAlertController(title: nil, text: self.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
+            self.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
         } else {
             self.forgot?()
         }

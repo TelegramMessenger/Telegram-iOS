@@ -296,7 +296,8 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
 
 func botCheckoutPasswordEntryController(account: Account, strings: PresentationStrings, cartTitle: String, period: Int32, requiresBiometrics: Bool, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) -> AlertController {
     var dismissImpl: (() -> Void)?
-    let controller = AlertController(contentNode: BotCheckoutPasswordAlertContentNode(account: account, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
+    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: BotCheckoutPasswordAlertContentNode(account: account, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
         dismissImpl?()
     }, completion: { token in
         completion(token)

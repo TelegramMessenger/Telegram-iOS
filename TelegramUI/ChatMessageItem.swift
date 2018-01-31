@@ -150,6 +150,12 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     }
 }
 
+public enum ChatMessageItemAdditionalContent {
+    case eventLogPreviousMessage(Message)
+    case eventLogPreviousDescription(Message)
+    case eventLogPreviousLink(Message)
+}
+
 public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let presentationData: ChatPresentationData
     let account: Account
@@ -158,6 +164,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let content: ChatMessageItemContent
     let disableDate: Bool
     let effectiveAuthorId: PeerId?
+    let additionalContent: ChatMessageItemAdditionalContent?
     
     public let accessoryItem: ListViewAccessoryItem?
     let header: ChatMessageDateHeader
@@ -180,13 +187,14 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    public init(presentationData: ChatPresentationData, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false) {
+    public init(presentationData: ChatPresentationData, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
         self.presentationData = presentationData
         self.account = account
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
         self.content = content
         self.disableDate = disableDate
+        self.additionalContent = additionalContent
         
         var accessoryItem: ListViewAccessoryItem?
         let incoming = content.effectivelyIncoming(self.account.peerId)

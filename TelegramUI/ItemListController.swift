@@ -18,8 +18,41 @@ enum ItemListNavigationButtonStyle {
     }
 }
 
+enum ItemListNavigationButtonContentIcon {
+    case search
+}
+
+enum ItemListNavigationButtonContent: Equatable {
+    case none
+    case text(String)
+    case icon(ItemListNavigationButtonContentIcon)
+    
+    static func ==(lhs: ItemListNavigationButtonContent, rhs: ItemListNavigationButtonContent) -> Bool {
+        switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .text(value):
+                if case .text(value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .icon(value):
+                if case .icon(value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 struct ItemListNavigationButton {
-    let title: String
+    let content: ItemListNavigationButtonContent
     let style: ItemListNavigationButtonStyle
     let enabled: Bool
     let action: () -> Void
@@ -76,15 +109,17 @@ struct ItemListControllerState {
     let title: ItemListControllerTitle
     let leftNavigationButton: ItemListNavigationButton?
     let rightNavigationButton: ItemListNavigationButton?
+    let secondaryRightNavigationButton: ItemListNavigationButton?
     let backNavigationButton: ItemListBackButton?
     let tabBarItem: ItemListControllerTabBarItem?
     let animateChanges: Bool
     
-    init(theme: PresentationTheme, title: ItemListControllerTitle, leftNavigationButton: ItemListNavigationButton?, rightNavigationButton: ItemListNavigationButton?, backNavigationButton: ItemListBackButton?, tabBarItem: ItemListControllerTabBarItem? = nil, animateChanges: Bool = true) {
+    init(theme: PresentationTheme, title: ItemListControllerTitle, leftNavigationButton: ItemListNavigationButton?, rightNavigationButton: ItemListNavigationButton?, secondaryRightNavigationButton: ItemListNavigationButton? = nil, backNavigationButton: ItemListBackButton?, tabBarItem: ItemListControllerTabBarItem? = nil, animateChanges: Bool = true) {
         self.theme = theme
         self.title = title
         self.leftNavigationButton = leftNavigationButton
         self.rightNavigationButton = rightNavigationButton
+        self.secondaryRightNavigationButton = secondaryRightNavigationButton
         self.backNavigationButton = backNavigationButton
         self.tabBarItem = tabBarItem
         self.animateChanges = animateChanges
@@ -94,11 +129,11 @@ struct ItemListControllerState {
 final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     private let state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>
     
-    private var leftNavigationButtonTitleAndStyle: (String, ItemListNavigationButtonStyle)?
-    private var rightNavigationButtonTitleAndStyle: (String, ItemListNavigationButtonStyle)?
+    private var leftNavigationButtonTitleAndStyle: (ItemListNavigationButtonContent, ItemListNavigationButtonStyle)?
+    private var rightNavigationButtonTitleAndStyle: [(ItemListNavigationButtonContent, ItemListNavigationButtonStyle)] = []
     private var backNavigationButton: ItemListBackButton?
     private var tabBarItemInfo: ItemListControllerTabBarItem?
-    private var navigationButtonActions: (left: (() -> Void)?, right: (() -> Void)?) = (nil, nil)
+    private var navigationButtonActions: (left: (() -> Void)?, right: (() -> Void)?, secondaryRight: (() -> Void)?) = (nil, nil, nil)
     private var segmentedTitleView: ItemListControllerSegmentedTitleView?
     
     private var theme: PresentationTheme
@@ -192,12 +227,25 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                                 }
                         }
                     }
-                    strongSelf.navigationButtonActions = (left: controllerState.leftNavigationButton?.action, right: controllerState.rightNavigationButton?.action)
+                    strongSelf.navigationButtonActions = (left: controllerState.leftNavigationButton?.action, right: controllerState.rightNavigationButton?.action, secondaryRight: controllerState.secondaryRightNavigationButton?.action)
                     
-                    if strongSelf.leftNavigationButtonTitleAndStyle?.0 != controllerState.leftNavigationButton?.title || strongSelf.leftNavigationButtonTitleAndStyle?.1 != controllerState.leftNavigationButton?.style {
+                    if strongSelf.leftNavigationButtonTitleAndStyle?.0 != controllerState.leftNavigationButton?.content || strongSelf.leftNavigationButtonTitleAndStyle?.1 != controllerState.leftNavigationButton?.style {
                         if let leftNavigationButton = controllerState.leftNavigationButton {
-                            let item = UIBarButtonItem(title: leftNavigationButton.title, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
-                            strongSelf.leftNavigationButtonTitleAndStyle = (leftNavigationButton.title, leftNavigationButton.style)
+                            let item: UIBarButtonItem
+                            switch leftNavigationButton.content {
+                                case .none:
+                                    item = UIBarButtonItem(title: "", style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
+                                case let .text(value):
+                                    item = UIBarButtonItem(title: value, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
+                                case let .icon(icon):
+                                    var image: UIImage?
+                                    switch icon {
+                                        case .search:
+                                            image = PresentationResourcesRootController.navigationSearchIcon(controllerState.theme)
+                                    }
+                                    item = UIBarButtonItem(image: image, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
+                            }
+                            strongSelf.leftNavigationButtonTitleAndStyle = (leftNavigationButton.content, leftNavigationButton.style)
                             strongSelf.navigationItem.setLeftBarButton(item, animated: false)
                             item.isEnabled = leftNavigationButton.enabled
                         } else {
@@ -208,23 +256,62 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                         barButtonItem.isEnabled = leftNavigationButton.enabled
                     }
                     
-                    if strongSelf.rightNavigationButtonTitleAndStyle?.0 != controllerState.rightNavigationButton?.title || strongSelf.rightNavigationButtonTitleAndStyle?.1 != controllerState.rightNavigationButton?.style {
-                        if let rightNavigationButton = controllerState.rightNavigationButton {
+                    var rightNavigationButtonTitleAndStyle: [(ItemListNavigationButtonContent, ItemListNavigationButtonStyle, Bool)] = []
+                    if let secondaryRightNavigationButton = controllerState.secondaryRightNavigationButton {
+                        rightNavigationButtonTitleAndStyle.append((secondaryRightNavigationButton.content, secondaryRightNavigationButton.style, secondaryRightNavigationButton.enabled))
+                    }
+                    if let rightNavigationButton = controllerState.rightNavigationButton {
+                        rightNavigationButtonTitleAndStyle.append((rightNavigationButton.content, rightNavigationButton.style, rightNavigationButton.enabled))
+                    }
+                    
+                    var updateRightButtonItems = false
+                    if rightNavigationButtonTitleAndStyle.count != strongSelf.rightNavigationButtonTitleAndStyle.count {
+                        updateRightButtonItems = true
+                    } else {
+                        for i in 0 ..< rightNavigationButtonTitleAndStyle.count {
+                            if rightNavigationButtonTitleAndStyle[i].0 != strongSelf.rightNavigationButtonTitleAndStyle[i].0 || rightNavigationButtonTitleAndStyle[i].1 != strongSelf.rightNavigationButtonTitleAndStyle[i].1 {
+                                updateRightButtonItems = true
+                            }
+                        }
+                    }
+                    
+                    if updateRightButtonItems {
+                        strongSelf.rightNavigationButtonTitleAndStyle = rightNavigationButtonTitleAndStyle.map { ($0.0, $0.1) }
+                        var items: [UIBarButtonItem] = []
+                        var index = 0
+                        for (content, style, _) in rightNavigationButtonTitleAndStyle {
                             let item: UIBarButtonItem
-                            if case .activity = rightNavigationButton.style {
+                            if case .activity = style {
                                 item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: controllerState.theme))
                             } else {
-                                item = UIBarButtonItem(title: rightNavigationButton.title, style: rightNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.rightNavigationButtonPressed))
+                                let action: Selector = (index == 0 && rightNavigationButtonTitleAndStyle.count > 1) ? #selector(strongSelf.secondaryRightNavigationButtonPressed) : #selector(strongSelf.rightNavigationButtonPressed)
+                                switch content {
+                                    case .none:
+                                        item = UIBarButtonItem(title: "", style: style.barButtonItemStyle, target: strongSelf, action: action)
+                                    case let .text(value):
+                                        item = UIBarButtonItem(title: value, style: style.barButtonItemStyle, target: strongSelf, action: action)
+                                    case let .icon(icon):
+                                        var image: UIImage?
+                                        switch icon {
+                                            case .search:
+                                                image = PresentationResourcesRootController.navigationSearchIcon(controllerState.theme)
+                                        }
+                                        item = UIBarButtonItem(image: image, style: style.barButtonItemStyle, target: strongSelf, action: action)
+                                }
                             }
-                            strongSelf.rightNavigationButtonTitleAndStyle = (rightNavigationButton.title, rightNavigationButton.style)
-                            strongSelf.navigationItem.setRightBarButton(item, animated: false)
-                            item.isEnabled = rightNavigationButton.enabled
-                        } else {
-                            strongSelf.rightNavigationButtonTitleAndStyle = nil
-                            strongSelf.navigationItem.setRightBarButton(nil, animated: false)
+                            items.append(item)
+                            index += 1
                         }
-                    }  else if let barButtonItem = strongSelf.navigationItem.rightBarButtonItem, let rightNavigationButton = controllerState.rightNavigationButton, rightNavigationButton.enabled != barButtonItem.isEnabled {
-                        barButtonItem.isEnabled = rightNavigationButton.enabled
+                        strongSelf.navigationItem.setRightBarButtonItems(items, animated: false)
+                        index = 0
+                        for (_, _, enabled) in rightNavigationButtonTitleAndStyle {
+                            items[index].isEnabled = enabled
+                            index += 1
+                        }
+                    } else {
+                        for i in 0 ..< rightNavigationButtonTitleAndStyle.count {
+                            strongSelf.navigationItem.rightBarButtonItems?[i].isEnabled = rightNavigationButtonTitleAndStyle[i].2
+                        }
                     }
                     
                     if strongSelf.backNavigationButton != controllerState.backNavigationButton {
@@ -245,20 +332,18 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                         
                         strongSelf.segmentedTitleView?.color = controllerState.theme.rootController.navigationBar.accentTextColor
                         
-                        if let rightNavigationButton = controllerState.rightNavigationButton {
-                            if case .activity = rightNavigationButton.style {
-                                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: controllerState.theme))!
-                                
-                                strongSelf.rightNavigationButtonTitleAndStyle = (rightNavigationButton.title, rightNavigationButton.style)
-                                strongSelf.navigationItem.setRightBarButton(item, animated: false)
-                                item.isEnabled = rightNavigationButton.enabled
+                        var items = strongSelf.navigationItem.rightBarButtonItems ?? []
+                        for i in 0 ..< strongSelf.rightNavigationButtonTitleAndStyle.count {
+                            if case .activity = strongSelf.rightNavigationButtonTitleAndStyle[i].1 {
+                                items[i] = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: controllerState.theme))!
                             }
                         }
+                        strongSelf.navigationItem.setRightBarButtonItems(items, animated: false)
                     }
                 }
             }
         } |> map { ($0.theme, $1) }
-        let displayNode = ItemListControllerNode<Entry>(updateNavigationOffset: { [weak self] offset in
+        let displayNode = ItemListControllerNode<Entry>(navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }
@@ -284,6 +369,10 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     @objc func rightNavigationButtonPressed() {
         self.navigationButtonActions.right?()
+    }
+    
+    @objc func secondaryRightNavigationButtonPressed() {
+        self.navigationButtonActions.secondaryRight?()
     }
     
     override func viewDidAppear(_ animated: Bool) {

@@ -120,7 +120,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
             case let .peersHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .peer(_, theme, strings, peer, value):
-                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, aliasHandling: .threatSelfAsSaved, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
                     arguments.openPeerMedia(peer.id)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     

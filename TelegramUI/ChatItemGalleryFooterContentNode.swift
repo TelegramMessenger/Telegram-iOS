@@ -347,8 +347,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     }
 
     private func commitDeleteMessages(_ messages: [Message], ask: Bool) {
-        self.messageContextDisposable.set((chatDeleteMessagesOptions(postbox: self.account.postbox, accountPeerId: self.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] options in
-            if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !options.isEmpty {
+        self.messageContextDisposable.set((chatAvailableMessageActions(postbox: self.account.postbox, accountPeerId: self.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] actions in
+            if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !actions.options.isEmpty {
                 let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
                 var items: [ActionSheetItem] = []
                 var personalPeerName: String?
@@ -359,7 +359,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     isChannel = true
                 }
                 
-                if options.contains(.globally) {
+                if actions.options.contains(.deleteGlobally) {
                     let globalTitle: String
                     if isChannel {
                         globalTitle = strongSelf.strings.Common_Delete
@@ -376,7 +376,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         }
                     }))
                 }
-                if options.contains(.locally) {
+                if actions.options.contains(.deleteLocally) {
                     items.append(ActionSheetButtonItem(title: strongSelf.strings.Conversation_DeleteMessagesForMe, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         if let strongSelf = self {

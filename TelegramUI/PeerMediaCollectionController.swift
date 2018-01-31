@@ -60,13 +60,13 @@ public class PeerMediaCollectionController: TelegramController {
             }
         }
         
-        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] id in
-            if let strongSelf = self, strongSelf.isNodeLoaded, let galleryMessage = strongSelf.mediaCollectionDisplayNode.messageForGallery(id) {
+        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message in
+            if let strongSelf = self, strongSelf.isNodeLoaded, let galleryMessage = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id) {
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {
                     return false
                 }
                 strongSelf.mediaCollectionDisplayNode.view.endEditing(true)
-                return openChatMessage(account: account, message: galleryMessage.message, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: {
+                return openChatMessage(account: account, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: {
                     self?.mediaCollectionDisplayNode.view.endEditing(true)
                 }, present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
@@ -102,9 +102,9 @@ public class PeerMediaCollectionController: TelegramController {
                     }
                 }
             }, openPeerMention: { _ in
-            }, openMessageContextMenu: { [weak self] id, _, _ in
+            }, openMessageContextMenu: { [weak self] message, _, _ in
                 if let strongSelf = self, strongSelf.isNodeLoaded {
-                    if let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(id)?.message {
+                    if let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
                         let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.SharedMedia_ViewInChat, color: .accent, action: { [weak actionSheet] in
@@ -165,8 +165,8 @@ public class PeerMediaCollectionController: TelegramController {
             }, shareCurrentLocation: {
             }, shareAccountContact: {
             }, sendBotCommand: { _, _ in
-            }, openInstantPage: { [weak self] messageId in
-                if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.navigationController as? NavigationController, let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(messageId)?.message {
+            }, openInstantPage: { [weak self] message in
+                if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.navigationController as? NavigationController, let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
                     openChatInstantPage(account: strongSelf.account, message: message, navigationController: navigationController)
                 }
             }, openHashtag: { _, _ in
@@ -215,6 +215,7 @@ public class PeerMediaCollectionController: TelegramController {
             }, setupReply: { _ in
             }, canSetupReply: {
                 return false
+        }, requestMessageUpdate: { _ in
         }, automaticMediaDownloadSettings: .none)
         
         self.controllerInteraction = controllerInteraction
@@ -225,8 +226,8 @@ public class PeerMediaCollectionController: TelegramController {
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let messageIds = strongSelf.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
-                    strongSelf.messageContextDisposable.set((combineLatest(chatDeleteMessagesOptions(postbox: strongSelf.account.postbox, accountPeerId: strongSelf.account.peerId, messageIds: messageIds), strongSelf.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { options, peer in
-                        if let strongSelf = self, let peer = peer, !options.isEmpty {
+                    strongSelf.messageContextDisposable.set((combineLatest(chatAvailableMessageActions(postbox: strongSelf.account.postbox, accountPeerId: strongSelf.account.peerId, messageIds: messageIds), strongSelf.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { actions, peer in
+                        if let strongSelf = self, let peer = peer, !actions.options.isEmpty {
                             let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                             var items: [ActionSheetItem] = []
                             var personalPeerName: String?
@@ -237,7 +238,7 @@ public class PeerMediaCollectionController: TelegramController {
                                 isChannel = true
                             }
                             
-                            if options.contains(.globally) {
+                            if actions.options.contains(.deleteGlobally) {
                                 let globalTitle: String
                                 if isChannel {
                                     globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
@@ -254,7 +255,7 @@ public class PeerMediaCollectionController: TelegramController {
                                     }
                                 }))
                             }
-                            if options.contains(.locally) {
+                            if actions.options.contains(.deleteLocally) {
                                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe, color: .destructive, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     if let strongSelf = self {
@@ -367,6 +368,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
         }, navigateFeed: {
+        }, openGrouping: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

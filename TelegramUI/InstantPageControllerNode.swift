@@ -12,6 +12,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var presentationTheme: PresentationTheme
     private var strings: PresentationStrings
     private var theme: InstantPageTheme?
+    private let getNavigationController: () -> NavigationController?
     private let present: (ViewController, Any?) -> Void
     private let pushController: (ViewController) -> Void
     private let openPeer: (PeerId) -> Void
@@ -46,7 +47,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let resolveUrlDisposable = MetaDisposable()
     private let loadWebpageDisposable = MetaDisposable()
     
-    init(account: Account, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, statusBar: StatusBar, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(account: Account, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.account = account
         self.presentationTheme = presentationTheme
         self.strings = strings
@@ -54,6 +55,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.theme = settings.flatMap { return instantPageThemeForSettingsAndTime(settings: $0, time: Date()) }
         
         self.statusBar = statusBar
+        self.getNavigationController = getNavigationController
         self.present = present
         self.pushController = pushController
         self.openPeer = openPeer
@@ -692,7 +694,6 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.resolveUrlDisposable.set((resolveUrl(account: self.account, url: url.url) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
-                    
                     case let .externalUrl(externalUrl):
                         if let webpageId = url.webpageId {
                             var anchor: String?
@@ -705,18 +706,30 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 }
                             }))
                         } else {
-                            strongSelf.account.telegramApplicationContext.applicationBindings.openUrl(externalUrl)
+                            openExternalUrl(url: externalUrl, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.getNavigationController())
                         }
                     default:
-                        break
-                        /*case let .peer(peerId):
-                         strongSelf.openPeer(peerId: peerId, navigation: .chat(textInputState: nil), fromMessageId: nil)
-                         case let .botStart(peerId, payload):
-                         strongSelf.openPeer(peerId: peerId, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)), fromMessageId: nil)
-                         case let .groupBotStart(peerId, payload):
-                         break
-                         case let .channelMessage(peerId, messageId):
-                         (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId, messageId: messageId))*/
+                        openResolvedUrl(result, account: strongSelf.account, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, navigation in
+                            switch navigation {
+                                case let .chat(_, messageId):
+                                    if let navigationController = strongSelf.getNavigationController() {
+                                        navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId)
+                                    }
+                                case .info:
+                                    let _ = (strongSelf.account.postbox.loadedPeerWithId(peerId)
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        if let strongSelf = self {
+                                            if let controller = peerInfoController(account: strongSelf.account, peer: peer) {
+                                                strongSelf.getNavigationController()?.pushViewController(controller)
+                                            }
+                                        }
+                                    })
+                                case .withBotStartPayload:
+                                    break
+                            }
+                        }, present: { c, a in
+                            self?.present(c, a)
+                        })
                 }
             }
         }))

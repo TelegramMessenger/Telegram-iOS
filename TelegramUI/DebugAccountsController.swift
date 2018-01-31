@@ -70,7 +70,7 @@ private enum DebugAccountsControllerEntry: ItemListNodeEntry {
     func item(_ arguments: DebugAccountsControllerArguments) -> ListViewItem {
         switch self {
             case let .record(theme, record, current):
-                return ItemListCheckboxItem(theme: theme, title: "\(UInt64(bitPattern: record.id.int64))", checked: current, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: "\(UInt64(bitPattern: record.id.int64))", style: .left, checked: current, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.switchAccount(record.id)
                 })
             case let .loginNewAccount(theme):

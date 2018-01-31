@@ -5,20 +5,24 @@ import Postbox
 import TelegramCore
 
 public final class TelegramApplicationBindings {
+    public let isMainApp: Bool
     public let openUrl: (String) -> Void
     public let canOpenUrl: (String) -> Bool
     public let getTopWindow: () -> UIWindow?
     public let displayNotification: (String) -> Void
     public let applicationInForeground: Signal<Bool, NoError>
     public let applicationIsActive: Signal<Bool, NoError>
+    public let clearMessageNotifications: ([MessageId]) -> Void
     
-    public init(openUrl: @escaping (String) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>) {
+    public init(isMainApp: Bool, openUrl: @escaping (String) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void) {
+        self.isMainApp = isMainApp
         self.openUrl = openUrl
         self.canOpenUrl = canOpenUrl
         self.getTopWindow = getTopWindow
         self.displayNotification = displayNotification
         self.applicationInForeground = applicationInForeground
         self.applicationIsActive = applicationIsActive
+        self.clearMessageNotifications = clearMessageNotifications
     }
 }
 
@@ -30,7 +34,7 @@ public final class TelegramApplicationContext {
     
     public let mediaManager: MediaManager
     
-    let locationManager: DeviceLocationManager
+    let locationManager: DeviceLocationManager?
     public let liveLocationManager: LiveLocationManager?
     
     public let contactsManager = DeviceContactsManager()
@@ -40,6 +44,9 @@ public final class TelegramApplicationContext {
     public var presentationData: Signal<PresentationData, NoError> {
         return self._presentationData.get()
     }
+    
+    public let currentInAppNotificationSettings: Atomic<InAppNotificationSettings>
+    private var inAppNotificationSettingsDisposable: Disposable?
     
     public let currentAutomaticMediaDownloadSettings: Atomic<AutomaticMediaDownloadSettings>
     private let _automaticMediaDownloadSettings = Promise<AutomaticMediaDownloadSettings>()
@@ -53,11 +60,16 @@ public final class TelegramApplicationContext {
     public var navigateToCurrentCall: (() -> Void)?
     public var hasOngoingCall: Signal<Bool, NoError>?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>, postbox: Postbox, network: Network, accountPeerId: PeerId?, viewTracker: AccountViewTracker?, stateManager: AccountStateManager?) {
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>, currentInAppNotificationSettings: InAppNotificationSettings, postbox: Postbox, network: Network, accountPeerId: PeerId?, viewTracker: AccountViewTracker?, stateManager: AccountStateManager?) {
         self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
-        self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
-        if let stateManager = stateManager, let accountPeerId = accountPeerId, let viewTracker = viewTracker {
-            self.liveLocationManager = LiveLocationManager(postbox: postbox, network: network, accountPeerId: accountPeerId, viewTracker: viewTracker, stateManager: stateManager, locationManager: self.locationManager, inForeground: applicationBindings.applicationInForeground)
+        
+        if applicationBindings.isMainApp {
+            self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
+        } else {
+            self.locationManager = nil
+        }
+        if let stateManager = stateManager, let accountPeerId = accountPeerId, let viewTracker = viewTracker, let locationManager = self.locationManager {
+            self.liveLocationManager = LiveLocationManager(postbox: postbox, network: network, accountPeerId: accountPeerId, viewTracker: viewTracker, stateManager: stateManager, locationManager: locationManager, inForeground: applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }
@@ -68,6 +80,19 @@ public final class TelegramApplicationContext {
         self.currentAutomaticMediaDownloadSettings = Atomic(value: currentMediaDownloadSettings)
         self._presentationData.set(.single(currentPresentationData) |> then(presentationData))
         self._automaticMediaDownloadSettings.set(.single(currentMediaDownloadSettings) |> then(automaticMediaDownloadSettings))
+        self.currentInAppNotificationSettings = Atomic(value: currentInAppNotificationSettings)
+        
+        
+        let inAppPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.inAppNotificationSettings]))
+        inAppNotificationSettingsDisposable = (postbox.combinedView(keys: [inAppPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
+            if let strongSelf = self {
+                if let view = views.views[inAppPreferencesKey] as? PreferencesView {
+                    if let settings = view.values[ApplicationSpecificPreferencesKeys.inAppNotificationSettings] as? InAppNotificationSettings {
+                        let _ = strongSelf.currentInAppNotificationSettings.swap(settings)
+                    }
+                }
+            }
+        })
         
         self.presentationDataDisposable.set(self._presentationData.get().start(next: { [weak self] next in
             if let strongSelf = self {
@@ -94,6 +119,7 @@ public final class TelegramApplicationContext {
     deinit {
         self.presentationDataDisposable.dispose()
         self.automaticMediaDownloadSettingsDisposable.dispose()
+        self.inAppNotificationSettingsDisposable?.dispose()
     }
     
     public func attachOverlayMediaController(_ controller: OverlayMediaController) {

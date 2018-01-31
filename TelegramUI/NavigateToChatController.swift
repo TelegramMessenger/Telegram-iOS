@@ -9,7 +9,7 @@ public func navigateToChatController(navigationController: NavigationController,
     for controller in navigationController.viewControllers.reversed() {
         if let controller = controller as? ChatController, controller.chatLocation == chatLocation {
             if let messageId = messageId {
-                controller.navigateToMessage(id: messageId, animated: isFirst, completion: { [weak navigationController, weak controller] in
+                controller.navigateToMessage(messageLocation: .id(messageId), animated: isFirst, completion: { [weak navigationController, weak controller] in
                     if let navigationController = navigationController, let controller = controller {
                         let _ = navigationController.popToViewController(controller, animated: animated)
                     }

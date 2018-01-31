@@ -81,6 +81,48 @@ private final class AccessoryItemIconButton: HighlightableButton {
     }
 }
 
+private func cauclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    let baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
+    if baseFontSize.isEqual(to: 17.0) {
+        return 33.0
+    } else if baseFontSize.isEqual(to: 19.0) {
+        return 35.0
+    } else if baseFontSize.isEqual(to: 21.0) {
+        return 38.0
+    } else {
+        return 33.0
+    }
+}
+
+private var currentTextInputBackgroundImage: (UIColor, UIColor, CGFloat, UIImage)?
+private func textInputBackgroundImage(backgroundColor: UIColor, strokeColor: UIColor, diameter: CGFloat) -> UIImage? {
+    if let current = currentTextInputBackgroundImage {
+        if current.0.isEqual(backgroundColor) && current.1.isEqual(strokeColor) && current.2.isEqual(to: diameter) {
+            return current.3
+        }
+    }
+    
+    let image = generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
+        context.setFillColor(backgroundColor.cgColor)
+        context.fill(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
+        
+        context.setBlendMode(.clear)
+        context.setFillColor(UIColor.clear.cgColor)
+        context.fillEllipse(in: CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
+        context.setBlendMode(.normal)
+        context.setStrokeColor(strokeColor.cgColor)
+        let strokeWidth: CGFloat = 0.5
+        context.setLineWidth(strokeWidth)
+        context.strokeEllipse(in: CGRect(x: strokeWidth / 2.0, y: strokeWidth / 2.0, width: diameter - strokeWidth, height: diameter - strokeWidth))
+    })?.stretchableImage(withLeftCapWidth: Int(diameter) / 2, topCapHeight: Int(diameter) / 2)
+    if let image = image {
+        currentTextInputBackgroundImage = (backgroundColor, strokeColor, diameter, image)
+        return image
+    } else {
+        return nil
+    }
+}
+
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textPlaceholderNode: TextNode
     var contextPlaceholderNode: TextNode?
@@ -120,14 +162,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     private var keepSendButtonEnabled = false
     private var extendedSearchLayout = false
     
+    private let inputMenu = ChatTextInputMenu()
+    
     private var theme: PresentationTheme?
     private var strings: PresentationStrings?
     
     var inputTextState: ChatTextInputState {
         if let textInputNode = self.textInputNode {
-            let text = textInputNode.attributedText?.string ?? ""
             let selectionRange: Range<Int> = textInputNode.selectedRange.location ..< (textInputNode.selectedRange.location + textInputNode.selectedRange.length)
-            return ChatTextInputState(inputText: text, selectionRange: selectionRange)
+            return ChatTextInputState(inputText: stateAttributedStringForText(textInputNode.attributedText ?? NSAttributedString()), selectionRange: selectionRange)
         } else {
             return ChatTextInputState()
         }
@@ -140,17 +183,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, animated: Bool) {
-        if !state.inputText.isEmpty && self.textInputNode == nil {
+        if state.inputText.length != 0 && self.textInputNode == nil {
             self.loadTextInputNode()
         }
         
         if let textInputNode = self.textInputNode {
             self.updatingInputState = true
             var textColor: UIColor = .black
+            var accentTextColor: UIColor = .blue
+            var baseFontSize: CGFloat = 17.0
             if let presentationInterfaceState = self.presentationInterfaceState {
                 textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
+                accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
+                baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
             }
-            textInputNode.attributedText = NSAttributedString(string: state.inputText, font: Font.regular(17.0), textColor: textColor)
+            textInputNode.attributedText = textAttributedStringForStateText(state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor)
             textInputNode.selectedRange = NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count)
             self.updatingInputState = false
             self.keepSendButtonEnabled = keepSendButtonEnabled
@@ -173,8 +220,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         } set(value) {
             if let textInputNode = self.textInputNode {
                 var textColor: UIColor = .black
+                var baseFontSize: CGFloat = 17.0
                 if let presentationInterfaceState = self.presentationInterfaceState {
                     textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
+                    baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
                 }
                 textInputNode.attributedText = NSAttributedString(string: value, font: Font.regular(17.0), textColor: textColor)
                 self.editableTextNodeDidUpdateText(textInputNode)
@@ -293,7 +342,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         if let presentationInterfaceState = self.presentationInterfaceState {
             textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
             tintColor = presentationInterfaceState.theme.list.itemAccentColor
-            //baseFontSize = presentationInterfaceState.fontSize.baseDisplaySize
+            baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
             switch presentationInterfaceState.theme.chat.inputPanel.keyboardColor {
                 case .light:
                     keyboardAppearance = .default
@@ -320,6 +369,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.textView.scrollIndicatorInsets = UIEdgeInsets(top: 9.0, left: 0.0, bottom: 9.0, right: -13.0)
         self.textInputContainer.addSubnode(textInputNode)
         self.textInputNode = textInputNode
+        
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
+        }
         
         if !self.textInputContainer.bounds.size.width.isZero {
             let textInputFrame = self.textInputContainer.frame
@@ -373,9 +426,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             accessoryButtonsWidth += button.buttonWidth
         }
         
+        var textFieldMinHeight: CGFloat = 35.0
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            textFieldMinHeight = cauclulateTextFieldMinHeight(presentationInterfaceState)
+        }
+        
         let textFieldHeight: CGFloat
         if let textInputNode = self.textInputNode {
-            let unboundTextFieldHeight = max(33.0, ceil(textInputNode.measure(CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height))
+            let unboundTextFieldHeight = max(textFieldMinHeight, ceil(textInputNode.measure(CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height))
             
             let maxNumberOfLines = min(12, (Int(fieldMaxHeight - 11.0) - 33) / 22)
             
@@ -383,7 +441,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             textFieldHeight = min(updatedMaxHeight, unboundTextFieldHeight)
         } else {
-            textFieldHeight = 33.0
+            textFieldHeight = textFieldMinHeight
         }
         
         return (accessoryButtonsWidth, textFieldHeight)
@@ -409,14 +467,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 if self.theme == nil || !self.theme!.chat.inputPanel.inputTextColor.isEqual(interfaceState.theme.chat.inputPanel.inputTextColor) {
                     let textColor = interfaceState.theme.chat.inputPanel.inputTextColor
+                    let baseFontSize = max(17.0, interfaceState.fontSize.baseDisplaySize)
                     
                     if let textInputNode = self.textInputNode {
                         if let text = textInputNode.attributedText?.string {
                             let range = textInputNode.selectedRange
-                            textInputNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: textColor)
+                            textInputNode.attributedText = NSAttributedString(string: text, font: Font.regular(baseFontSize), textColor: textColor)
                             textInputNode.selectedRange = range
                         }
-                        textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
+                        textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(baseFontSize), NSAttributedStringKey.foregroundColor.rawValue: textColor]
                     }
                 }
                 
@@ -438,7 +497,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                
                 self.micButton.updateTheme(theme: interfaceState.theme)
                 
-                self.textInputBackgroundView.image = PresentationResourcesChat.chatInputTextFieldBackgroundImage(interfaceState.theme)
+                let textFieldMinHeight = cauclulateTextFieldMinHeight(interfaceState)
+                let minimalInputHeight: CGFloat = 2.0 + textFieldMinHeight
+                self.textInputBackgroundView.image = textInputBackgroundImage(backgroundColor: interfaceState.theme.chat.inputPanel.panelBackgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
                 
                 self.searchLayoutClearButton.setImage(PresentationResourcesChat.chatInputTextFieldClearImage(interfaceState.theme), for: [])
                 
@@ -470,7 +531,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 if self.currentPlaceholder != placeholder {
                     self.currentPlaceholder = placeholder
                     let placeholderLayout = TextNode.asyncLayout(self.textPlaceholderNode)
-                    let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: interfaceState.theme.chat.inputPanel.inputPlaceholderColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    let baseFontSize = max(17.0, interfaceState.fontSize.baseDisplaySize)
+                    let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: placeholder, font: Font.regular(baseFontSize), textColor: interfaceState.theme.chat.inputPanel.inputPlaceholderColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize.size)
                     let _ = placeholderApply()
                 }
@@ -502,8 +564,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
-        let minimalHeight: CGFloat = 47.0
-        let minimalInputHeight: CGFloat = 35.0
+        var textFieldMinHeight: CGFloat = 33.0
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            textFieldMinHeight = cauclulateTextFieldMinHeight(presentationInterfaceState)
+        }
+        let minimalHeight: CGFloat = 14.0 + textFieldMinHeight
+        let minimalInputHeight: CGFloat = 2.0 + textFieldMinHeight
         
         var animatedTransition = true
         if case .immediate = transition {
@@ -734,7 +800,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let searchProgressSize = self.searchLayoutProgressView.bounds.size
         transition.updateFrame(layer: self.searchLayoutProgressView.layer, frame: CGRect(origin: CGPoint(x: floor((searchLayoutClearButtonSize.width - searchProgressSize.width) / 2.0), y: floor((searchLayoutClearButtonSize.height - searchProgressSize.height) / 2.0)), size: searchProgressSize))
         
-        let textInputFrame = CGRect(x: leftInset + self.textFieldInsets.left, y: self.textFieldInsets.top + audioRecordingItemsVerticalOffset, width: baseWidth - self.textFieldInsets.left - self.textFieldInsets.right, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom)
+        let textInputFrame = CGRect(x: leftInset + self.textFieldInsets.left, y: self.textFieldInsets.top + audioRecordingItemsVerticalOffset, width: baseWidth - self.textFieldInsets.left - self.textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom)
         transition.updateFrame(node: self.textInputContainer, frame: textInputFrame)
         
         if let textInputNode = self.textInputNode {
@@ -834,8 +900,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
-        if let _ = self.textInputNode {
+        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
+            let baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
+            refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
+            refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
+            
             let inputTextState = self.inputTextState
+            
             self.interfaceInteraction?.updateTextInputState({ _ in return inputTextState })
             self.updateTextNodeText(animated: true)
         }
@@ -972,6 +1043,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let inputTextState = self.inputTextState
             self.interfaceInteraction?.updateTextInputState({ _ in return inputTextState })
         }
+        
+        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
+            let baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
+            refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
+        }
     }
     
     @objc func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
@@ -986,12 +1062,65 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         })
         if activateGifInput {
             self.interfaceInteraction?.updateTextInputState { state in
-                if state.inputText.isEmpty {
-                    return ChatTextInputState(inputText: "@gif ")
+                if state.inputText.length == 0 {
+                    return ChatTextInputState(inputText: NSAttributedString(string: "@gif "))
                 } else {
                     return state
                 }
             }
+        }
+        self.inputMenu.activate()
+    }
+    
+    func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
+        self.inputMenu.deactivate()
+    }
+    
+    func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
+        if action == Selector(("_showTextStyleOptions:")) {
+            if case .general = self.inputMenu.state {
+                if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 {
+                    return ASEditableTextNodeTargetForAction(target: nil)
+                }
+                return ASEditableTextNodeTargetForAction(target: self)
+            } else {
+                return ASEditableTextNodeTargetForAction(target: nil)
+            }
+        } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) {
+            if case .format = self.inputMenu.state {
+                return ASEditableTextNodeTargetForAction(target: self)
+            } else {
+                return ASEditableTextNodeTargetForAction(target: nil)
+            }
+        }
+        if case .format = self.inputMenu.state {
+            return ASEditableTextNodeTargetForAction(target: nil)
+        }
+        return nil
+    }
+    
+    @objc func _showTextStyleOptions(_ sender: Any) {
+        self.inputMenu.format()
+    }
+    
+    @objc func formatAttributesBold(_ sender: Any) {
+        self.inputMenu.back()
+        self.interfaceInteraction?.updateTextInputState { current in
+            return chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.bold)
+        }
+    }
+    
+    @objc func formatAttributesItalic(_ sender: Any) {
+        self.inputMenu.back()
+        self.interfaceInteraction?.updateTextInputState { current in
+            return chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.italic)
+        }
+    }
+    
+    @objc func formatAttributesMonospace(_ sender: Any) {
+        self.inputMenu.back()
+        self.interfaceInteraction?.updateTextInputState { current in
+            return chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.monospace)
         }
     }
     
@@ -1021,23 +1150,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         } else {
             return true
         }
-        
-        /*for (NSDictionary *item in pasteBoard.items) {
-            if (item[(__bridge NSString *)kUTTypeJPEG] != nil) {
-                [images addObject:item[(__bridge NSString *)kUTTypeJPEG]];
-            } else if (item[(__bridge NSString *)kUTTypePNG] != nil) {
-                [images addObject:item[(__bridge NSString *)kUTTypePNG]];
-            } else if (item[(__bridge NSString *)kUTTypeGIF] != nil) {
-                [images addObject:item[(__bridge NSString *)kUTTypeGIF]];
-            } else if (item[(__bridge NSString *)kUTTypeURL] != nil) {
-                id url = item[(__bridge NSString *)kUTTypeURL];
-                if ([url respondsToSelector:@selector(characterAtIndex:)]) {
-                    text = url;
-                } else if ([url isKindOfClass:[NSURL class]]) {
-                    text = ((NSURL *)url).absoluteString;
-                }
-            }
-        }*/
     }
     
     @objc func sendButtonPressed() {
@@ -1051,19 +1163,24 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     @objc func searchLayoutClearButtonPressed() {
         if let interfaceInteraction = self.interfaceInteraction {
             interfaceInteraction.updateTextInputState { textInputState in
-                var mentionQueryRange: Range<String.Index>?
+                var mentionQueryRange: NSRange?
                 inner: for (_, type, queryRange) in textInputStateContextQueryRangeAndType(textInputState) {
                     if type == [.contextRequest] {
                         mentionQueryRange = queryRange
                         break inner
                     }
                 }
-                if let mentionQueryRange = mentionQueryRange, !mentionQueryRange.isEmpty {
-                    var inputText = textInputState.inputText
-                    inputText.replaceSubrange(mentionQueryRange, with: "")
+                if let mentionQueryRange = mentionQueryRange, mentionQueryRange.length > 0 {
+                    let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
+                    
+                    let rangeLower = mentionQueryRange.lowerBound
+                    let rangeUpper = mentionQueryRange.upperBound
+                    
+                    inputText.replaceCharacters(in: NSRange(location: rangeLower, length: rangeUpper - rangeLower), with: "")
+                    
                     return ChatTextInputState(inputText: inputText)
                 } else {
-                    return ChatTextInputState(inputText: "")
+                    return ChatTextInputState(inputText: NSAttributedString(string: ""))
                 }
             }
         }

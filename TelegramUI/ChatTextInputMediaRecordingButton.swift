@@ -231,6 +231,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.updateMode(mode: self.mode, animated: false, force: true)
         
         self.delegate = self
+        self.isExclusiveTouch = false;
         
         self.centerOffset = CGPoint(x: 0.0, y: -1.0 + UIScreenPixel)
     }

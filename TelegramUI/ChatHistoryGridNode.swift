@@ -226,7 +226,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                         }
                     }
                     return .complete()
-                case let .HistoryView(view, type, scrollPosition, _):
+                case let .HistoryView(view, type, scrollPosition, _, _):
                     let reason: ChatHistoryViewTransitionReason
                     var prepareOnMainQueue = false
                     switch type {

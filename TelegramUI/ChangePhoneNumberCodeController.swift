@@ -223,23 +223,25 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 let alertText: String
                 switch error {
                     case .generic:
-                        alertText = "An error occurred."
+                        alertText = presentationData.strings.Login_UnknownError
                     case .invalidCode:
-                        alertText = "Invalid code. Please try again."
+                        alertText = presentationData.strings.Login_InvalidCodeError
                     case .codeExpired:
-                        alertText = "Code expired."
+                        alertText = presentationData.strings.Login_CodeExpiredError
                     case .limitExceeded:
-                        alertText = "You have entered invalid code too many times. Please try again later."
+                        alertText = presentationData.strings.Login_CodeFloodError
                 }
-                presentControllerImpl?(standardTextAlertController(title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, completed: {
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
-                presentControllerImpl?(standardTextAlertController(title: nil, text: "You have changed your phone number to \(formatPhoneNumber(phoneNumber)).", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "You have changed your phone number to \(formatPhoneNumber(phoneNumber)).", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 dismissImpl?()
             }))
         }
@@ -265,13 +267,13 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
         |> map { presentationData, state, data, timeout -> (ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
             if state.checking {
-                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             } else {
                 var nextEnabled = true
                 if state.codeText.isEmpty {
                     nextEnabled = false
                 }
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Next, style: .bold, enabled: nextEnabled, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: nextEnabled, action: {
                     checkCode()
                 })
             }

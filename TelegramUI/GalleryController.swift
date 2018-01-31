@@ -139,6 +139,11 @@ private enum GalleryMessageHistoryView {
     }
 }
 
+enum GalleryControllerItemSource {
+    case peerMessagesAtId(MessageId)
+    case standaloneMessage(Message)
+}
+
 class GalleryController: ViewController {
     static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007ee5), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
@@ -179,7 +184,7 @@ class GalleryController: ViewController {
     
     private var hiddenMediaManagerIndex: Int?
     
-    init(account: Account, messageId: MessageId, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+    init(account: Account, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
         self.account = account
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
@@ -194,21 +199,32 @@ class GalleryController: ViewController {
         
         self.statusBar.statusBarStyle = .White
         
-        let message = account.postbox.messageAtId(messageId)
+        let message: Signal<Message?, NoError>
+        switch source {
+            case let .peerMessagesAtId(messageId):
+                message = account.postbox.messageAtId(messageId)
+            case let .standaloneMessage(m):
+                message = .single(m)
+        }
         
         let messageView = message
             |> filter({ $0 != nil })
             |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, Void> in
-                if !streamSingleVideo, let tags = tagsForMessage(message!) {
-                    let view = account.postbox.aroundMessageHistoryViewForLocation(.peer(messageId.peerId), index: .message(MessageIndex(message!)), anchorIndex: .message(MessageIndex(message!)), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
-                        
-                    return view
-                        |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, Void> in
-                            let mapped = GalleryMessageHistoryView.view(view)
-                            return .single(mapped)
+                switch source {
+                    case .peerMessagesAtId:
+                        if !streamSingleVideo, let tags = tagsForMessage(message!) {
+                            let view = account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), index: .message(MessageIndex(message!)), anchorIndex: .message(MessageIndex(message!)), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
+                            
+                            return view
+                                |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, Void> in
+                                    let mapped = GalleryMessageHistoryView.view(view)
+                                    return .single(mapped)
+                                }
+                        } else {
+                            return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil)))
                         }
-                } else {
-                    return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil)))
+                    case .standaloneMessage:
+                        return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil)))
                 }
             }
             |> take(1)
@@ -227,9 +243,19 @@ class GalleryController: ViewController {
                     var centralEntryStableId: UInt32?
                     loop: for i in 0 ..< entries.count {
                         switch entries[i] {
-                            case let .MessageEntry(message, _, _, _) where message.id == messageId:
-                                centralEntryStableId = message.stableId
-                                break loop
+                            case let .MessageEntry(message, _, _, _):
+                                switch source {
+                                    case let .peerMessagesAtId(messageId):
+                                        if message.id == messageId {
+                                            centralEntryStableId = message.stableId
+                                            break loop
+                                        }
+                                    case let .standaloneMessage(m):
+                                        if message.id == m.id {
+                                            centralEntryStableId = message.stableId
+                                            break loop
+                                        }
+                                }
                             default:
                                 break
                         }
@@ -258,6 +284,7 @@ class GalleryController: ViewController {
                         strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
                         
                         if strongSelf.temporaryDoNotWaitForReady {
+                            strongSelf.didSetReady = true
                             strongSelf._ready.set(.single(true))
                         } else {
                             let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
@@ -456,6 +483,18 @@ class GalleryController: ViewController {
                 if strongSelf.didSetReady {
                     strongSelf._hiddenMedia.set(.single(hiddenItem))
                 }
+            }
+        }
+        
+        if !self.entries.isEmpty && !self.didSetReady {
+            if self.temporaryDoNotWaitForReady {
+                self.didSetReady = true
+                self._ready.set(.single(true))
+            } else {
+                let ready = self.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak self] _ in
+                    self?.didSetReady = true
+                }
+                self._ready.set(ready |> map { true })
             }
         }
     }

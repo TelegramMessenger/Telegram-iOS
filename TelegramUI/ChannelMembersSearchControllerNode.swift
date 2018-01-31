@@ -52,7 +52,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     }))
                     
                     for participant in participants {
-                        items.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peer: participant.peer, chatPeer: nil, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { peer in
+                        items.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: participant.peer, chatPeer: nil, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { peer in
                             if let strongSelf = self {
                                 strongSelf.requestOpenPeerFromSearch?(peer)
                             }
@@ -135,7 +135,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, openPeer: { [weak self] peer in
+            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, mode: .inviteActions, openPeer: { [weak self] peer in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peer)
                 }

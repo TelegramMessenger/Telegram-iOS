@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 
 final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    let ready = Promise<Bool>()
+    
     private let account: Account
     private let peerId: PeerId
     private let presentationData: PresentationData
@@ -46,9 +48,9 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }
         
         var openMessageImpl: ((MessageId) -> Bool)?
-        self.controllerInteraction = ChatControllerInteraction(openMessage: { id in
+        self.controllerInteraction = ChatControllerInteraction(openMessage: { message in
             if let openMessageImpl = openMessageImpl {
-                return openMessageImpl(id)
+                return openMessageImpl(message.id)
             } else {
                 return false
             }
@@ -56,6 +58,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, presentController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: {
             return false
+        }, requestMessageUpdate: { _ in
         }, automaticMediaDownloadSettings: .none)
         
         self.dimNode = ASDisplayNode()
@@ -144,10 +147,14 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         openMessageImpl = { [weak self] id in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.historyNode.messageInCurrentHistoryView(id) {
-                return openChatMessage(account: strongSelf.account, message: message, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _ in }, sendSticker: { _ in }, setupTemporaryHiddenMedia: { _, _, _ in })
+                return openChatMessage(account: strongSelf.account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _ in }, sendSticker: { _ in }, setupTemporaryHiddenMedia: { _, _, _ in })
             }
             return false
         }
+        
+        self.ready.set(self.historyNode.historyState.get() |> map { _ -> Bool in
+            return true
+        } |> take(1))
     }
     
     deinit {

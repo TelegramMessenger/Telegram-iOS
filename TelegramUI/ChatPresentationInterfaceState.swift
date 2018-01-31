@@ -256,11 +256,11 @@ enum ChatTitlePanelContext: Comparable {
 }
 
 struct ChatSearchResultsState: Equatable {
-    let messageIds: [MessageId]
+    let messageIndices: [MessageIndex]
     let currentId: MessageId?
     
     static func ==(lhs: ChatSearchResultsState, rhs: ChatSearchResultsState) -> Bool {
-        if lhs.messageIds != rhs.messageIds {
+        if lhs.messageIndices != rhs.messageIndices {
             return false
         }
         if lhs.currentId != rhs.currentId {

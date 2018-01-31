@@ -301,7 +301,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
                         text = strongSelf.strings.Login_UnknownError
                 }
                 
-                strongSelf.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
             }
         }))
         

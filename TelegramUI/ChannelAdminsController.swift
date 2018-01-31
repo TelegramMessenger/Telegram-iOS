@@ -7,14 +7,16 @@ import TelegramCore
 private final class ChannelAdminsControllerArguments {
     let account: Account
     
+    let openRecentActions: () -> Void
     let updateCurrentAdministrationType: () -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removeAdmin: (PeerId) -> Void
     let addAdmin: () -> Void
     let openAdmin: (ChannelParticipant) -> Void
     
-    init(account: Account, updateCurrentAdministrationType: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removeAdmin: @escaping (PeerId) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void) {
+    init(account: Account, openRecentActions: @escaping () -> Void, updateCurrentAdministrationType: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removeAdmin: @escaping (PeerId) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void) {
         self.account = account
+        self.openRecentActions = openRecentActions
         self.updateCurrentAdministrationType = updateCurrentAdministrationType
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removeAdmin = removeAdmin
@@ -60,6 +62,7 @@ private enum ChannelAdminsEntryStableId: Hashable {
 }
 
 private enum ChannelAdminsEntry: ItemListNodeEntry {
+    case recentActions(PresentationTheme, String)
     case administrationType(PresentationTheme, String, String)
     case administrationInfo(PresentationTheme, String)
     
@@ -70,7 +73,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .administrationType, .administrationInfo:
+            case .recentActions, .administrationType, .administrationInfo:
                 return ChannelAdminsSection.administration.rawValue
             case .adminsHeader, .adminPeerItem, .addAdmin, .adminsInfo:
                 return ChannelAdminsSection.admins.rawValue
@@ -79,16 +82,18 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     
     var stableId: ChannelAdminsEntryStableId {
         switch self {
-            case .administrationType:
+            case .recentActions:
                 return .index(0)
-            case .administrationInfo:
+            case .administrationType:
                 return .index(1)
-            case .adminsHeader:
+            case .administrationInfo:
                 return .index(2)
-            case .addAdmin:
+            case .adminsHeader:
                 return .index(3)
-            case .adminsInfo:
+            case .addAdmin:
                 return .index(4)
+            case .adminsInfo:
+                return .index(5)
             case let .adminPeerItem(_, _, _, _, participant, _, _):
                 return .peer(participant.peer.id)
         }
@@ -96,6 +101,12 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     
     static func ==(lhs: ChannelAdminsEntry, rhs: ChannelAdminsEntry) -> Bool {
         switch lhs {
+            case let .recentActions(lhsTheme, lhsText):
+                if case let .recentActions(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .administrationType(lhsTheme, lhsText, lhsValue):
                 if case let .administrationType(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -158,25 +169,32 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     
     static func <(lhs: ChannelAdminsEntry, rhs: ChannelAdminsEntry) -> Bool {
         switch lhs {
-            case .administrationType:
+            case .recentActions:
                 return true
+            case .administrationType:
+                switch rhs {
+                    case .recentActions:
+                        return false
+                    default:
+                        return true
+                }
             case .administrationInfo:
                 switch rhs {
-                    case .administrationType:
+                    case .recentActions, .administrationType:
                         return false
                     default:
                         return true
                 }
             case .adminsHeader:
                 switch rhs {
-                    case .administrationType, .administrationInfo:
+                    case .recentActions, .administrationType, .administrationInfo:
                         return false
                     default:
                         return true
                 }
             case let .adminPeerItem(_, _, _, index, _, _, _):
                 switch rhs {
-                    case .administrationType, .administrationInfo, .adminsHeader:
+                    case .recentActions, .administrationType, .administrationInfo, .adminsHeader:
                         return false
                     case let .adminPeerItem(_, _, _, rhsIndex, _, _, _):
                         return index < rhsIndex
@@ -185,7 +203,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 }
             case .addAdmin:
                 switch rhs {
-                    case .administrationType, .administrationInfo, .adminsHeader, .adminPeerItem:
+                    case .recentActions, .administrationType, .administrationInfo, .adminsHeader, .adminPeerItem:
                         return false
                     default:
                         return true
@@ -197,6 +215,10 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChannelAdminsControllerArguments) -> ListViewItem {
         switch self {
+            case let .recentActions(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                    arguments.openRecentActions()
+                })
             case let .administrationType(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.updateCurrentAdministrationType()
@@ -214,15 +236,11 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                         action = nil
                     case let .member(_, _, adminInfo, _):
                         if let adminInfo = adminInfo {
-                            let baseFlags: TelegramChannelAdminRightsFlags
-                            if isGroup {
-                                baseFlags = .groupSpecific
+                            if let peer = participant.peers[adminInfo.promotedBy] {
+                                peerText = strings.Channel_Management_PromotedBy(peer.displayTitle).0
                             } else {
-                                baseFlags = .broadcastSpecific
+                                peerText = ""
                             }
-                            let flags = adminInfo.rights.flags.intersection(baseFlags)
-                            peerText = ""
-                            //peerText = strings.Channel_Management_LabelRights(Int32(flags.count))
                         } else {
                             peerText = ""
                         }
@@ -332,6 +350,8 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
         if case let .group(info) = peer.info {
             isGroup = true
             
+            entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
+            
             if peer.flags.contains(.isCreator) {
                 let selectedType: CurrentAdministrationType
                 if let current = state.selectedType {
@@ -358,6 +378,8 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 
                 entries.append(.administrationInfo(presentationData.theme, infoText))
             }
+        } else {
+            entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
         }
         
         if let participants = participants {
@@ -433,6 +455,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
         statePromise.set(stateValue.modify { f($0) })
     }
     
+    var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -450,7 +473,12 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     
     let presentationDataSignal = (account.applicationContext as! TelegramApplicationContext).presentationData
     
-    let arguments = ChannelAdminsControllerArguments(account: account, updateCurrentAdministrationType: {
+    let arguments = ChannelAdminsControllerArguments(account: account, openRecentActions: {
+        let _ = (account.postbox.loadedPeerWithId(peerId)
+        |> deliverOnMainQueue).start(next: { peer in
+            pushControllerImpl?(ChatRecentActionsController(account: account, peer: peer))
+        })
+    }, updateCurrentAdministrationType: {
         let _ = (presentationDataSignal |> take(1) |> deliverOnMainQueue).start(next: { presentationData in
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             let result = ValuePromise<Bool>()
@@ -551,38 +579,42 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                 let applyAdmin: Signal<Void, NoError> = adminsPromise.get()
                     |> filter { $0 != nil }
                     |> take(1)
-                    |> deliverOnMainQueue
                     |> mapToSignal { admins -> Signal<Void, NoError> in
-                        if let admins = admins {
-                            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                            
-                            var updatedAdmins = admins
-                            if updatedRights.isEmpty {
-                                for i in 0 ..< updatedAdmins.count {
-                                    if updatedAdmins[i].peer.id == peer.id {
-                                        updatedAdmins.remove(at: i)
-                                        break
-                                    }
-                                }
-                            } else {
-                                var found = false
-                                for i in 0 ..< updatedAdmins.count {
-                                    if updatedAdmins[i].peer.id == peer.id {
-                                        if case let .member(id, date, _, banInfo) = updatedAdmins[i].participant {
-                                            updatedAdmins[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: updatedAdmins[i].peer, peers: [:])
+                        return account.postbox.loadedPeerWithId(account.peerId)
+                        |> take(1)
+                        |> deliverOnMainQueue
+                        |> mapToSignal { accountPeer in
+                            if let admins = admins {
+                                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                                
+                                var updatedAdmins = admins
+                                if updatedRights.isEmpty {
+                                    for i in 0 ..< updatedAdmins.count {
+                                        if updatedAdmins[i].peer.id == peer.id {
+                                            updatedAdmins.remove(at: i)
+                                            break
                                         }
-                                        found = true
-                                        break
+                                    }
+                                } else {
+                                    var found = false
+                                    for i in 0 ..< updatedAdmins.count {
+                                        if updatedAdmins[i].peer.id == peer.id {
+                                            if case let .member(id, date, _, banInfo) = updatedAdmins[i].participant {
+                                                updatedAdmins[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: updatedAdmins[i].peer, peers: updatedAdmins[i].peers)
+                                            }
+                                            found = true
+                                            break
+                                        }
+                                    }
+                                    if !found {
+                                        updatedAdmins.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: timestamp, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: nil), peer: peer, peers: [accountPeer.id: accountPeer]))
                                     }
                                 }
-                                if !found {
-                                    updatedAdmins.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: timestamp, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: nil), peer: peer, peers: [:]))
-                                }
+                                adminsPromise.set(.single(updatedAdmins))
                             }
-                            adminsPromise.set(.single(updatedAdmins))
+                            
+                            return .complete()
                         }
-                        
-                        return .complete()
                 }
                 addAdminDisposable.set(applyAdmin.start())
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -609,7 +641,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                                 for i in 0 ..< updatedAdmins.count {
                                     if updatedAdmins[i].peer.id == adminId {
                                         if case let .member(id, date, _, banInfo) = updatedAdmins[i].participant {
-                                            updatedAdmins[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: updatedAdmins[i].peer, peers: [:])
+                                            updatedAdmins[i] = RenderedChannelParticipant(participant: .member(id: id, invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: updatedRights, promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: banInfo), peer: updatedAdmins[i].peer, peers: updatedAdmins[i].peers)
                                         }
                                         found = true
                                         break
@@ -643,13 +675,13 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
             var rightNavigationButton: ItemListNavigationButton?
             if let admins = admins, admins.count > 1 {
                 if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(false)
                         }
                     })
                 } else if let peer = view.peers[peerId] as? TelegramChannel, peer.flags.contains(.isCreator) {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(true)
                         }
@@ -660,7 +692,12 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
             let previous = previousPeers
             previousPeers = admins
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatAdmins_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: nil, animateChanges: true)
+            var isGroup = true
+            if let peer = view.peers[peerId] as? TelegramChannel, case .broadcast = peer.info {
+                isGroup = false
+            }
+            
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(isGroup ? presentationData.strings.ChatAdmins_Title : presentationData.strings.Channel_Management_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             let listState = ItemListNodeState(entries: channelAdminsControllerEntries(presentationData: presentationData, accountPeerId: account.peerId, view: view, state: state, participants: admins), style: .blocks, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
             
             return (controllerState, (listState, arguments))
@@ -669,6 +706,9 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
         }
     
     let controller = ItemListController(account: account, state: signal)
+    pushControllerImpl = { [weak controller] c in
+        (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

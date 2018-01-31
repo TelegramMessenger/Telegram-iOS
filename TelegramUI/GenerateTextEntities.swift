@@ -77,8 +77,26 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
     }
 }
 
-func generateTextEntities(_ text: String, enabledTypes: EnabledEntityTypes) -> [MessageTextEntity] {
+func generateChatInputTextEntities(_ text: NSAttributedString) -> [MessageTextEntity] {
     var entities: [MessageTextEntity] = []
+    text.enumerateAttributes(in: NSRange(location: 0, length: text.length), options: [], using: { attributes, range, _ in
+        for (key, value) in attributes {
+            if key == ChatTextInputAttributes.bold {
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Bold))
+            } else if key == ChatTextInputAttributes.italic {
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Italic))
+            } else if key == ChatTextInputAttributes.monospace {
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Pre))
+            } else if key == ChatTextInputAttributes.textMention, let value = value as? ChatTextInputTextMentionAttribute {
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextMention(peerId: value.peerId)))
+            }
+        }
+    })
+    return entities
+}
+
+func generateTextEntities(_ text: String, enabledTypes: EnabledEntityTypes, currentEntities: [MessageTextEntity] = []) -> [MessageTextEntity] {
+    var entities: [MessageTextEntity] = currentEntities
     
     let utf16 = text.utf16
     

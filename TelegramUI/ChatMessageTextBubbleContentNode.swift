@@ -164,7 +164,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let bubbleTheme = item.presentationData.theme.chat.bubble
                 
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: item.presentationData.messageFont, boldFont: item.presentationData.messageBoldFont, fixedFont: item.presentationData.messageFixedFont)
+                    attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: item.presentationData.messageFont, linkFont: item.presentationData.messageFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, fixedFont: item.presentationData.messageFixedFont)
                 } else {
                     attributedText = NSAttributedString(string: message.text, font: item.presentationData.messageFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
                 }

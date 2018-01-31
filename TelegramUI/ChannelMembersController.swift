@@ -292,7 +292,8 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                 |> mapToSignal { peer in
                     let result = ValuePromise<Bool>()
                     if let contactsController = contactsController {
-                        let alertController = standardTextAlertController(title: nil, text: "Add \(peer.displayTitle)?", actions: [
+                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Add \(peer.displayTitle)?", actions: [
                             TextAlertAction(type: .genericAction, title: "Cancel", action: {
                                 result.set(false)
                             }),
@@ -411,13 +412,13 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             var rightNavigationButton: ItemListNavigationButton?
             if let peers = peers, !peers.isEmpty {
                 if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(true)
                         }

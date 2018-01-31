@@ -708,6 +708,18 @@ struct PresentationResourcesChat {
         })
     }
     
+    static func chatTitlePanelGroupingImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatTitlePanelGroupingImage.rawValue, { theme in
+            return generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/RevealActionGroupIcon"), color: theme.chat.inputPanel.panelControlAccentColor) {
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) - 3.0), size: image.size))
+                }
+            })
+        })
+    }
+    
     static func chatMessageAttachedContentButtonIncoming(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonIncoming.rawValue, { theme in
             return generateStretchableFilledCircleImage(diameter: 9.0, color: nil, strokeColor: theme.chat.bubble.incomingAccentControlColor, strokeWidth: 1.0, backgroundColor: nil)

@@ -639,7 +639,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 switch contentInfo {
                     case let .message(message):
-                        let gallery = GalleryController(account: account, messageId: message.id, replaceRootController: { controller, ready in
+                        let gallery = GalleryController(account: account, source: .peerMessagesAtId(message.id), replaceRootController: { controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                             }

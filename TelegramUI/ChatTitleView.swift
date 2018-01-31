@@ -65,6 +65,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var timeFormat: PresentationTimeFormat
     
     private let contentContainer: ASDisplayNode
     private let titleNode: ASTextNode
@@ -251,7 +252,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 }
                             } else if let peer = peerViewMainPeer(peerView), let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {
                                 let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                                let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, timeFormat: .regular, presence: presence, relativeTo: Int32(timestamp))
+                                let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, timeFormat: self.timeFormat, presence: presence, relativeTo: Int32(timestamp))
                                 let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.secondaryTextColor)
                                 if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: attributedString) {
                                     self.infoNode.attributedText = attributedString
@@ -333,10 +334,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat) {
         self.account = account
         self.theme = theme
         self.strings = strings
+        self.timeFormat = timeFormat
         
         self.contentContainer = ASDisplayNode()
         

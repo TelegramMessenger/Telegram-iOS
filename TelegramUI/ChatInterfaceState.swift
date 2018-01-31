@@ -28,39 +28,196 @@ struct ChatInterfaceSelectionState: PostboxCoding, Equatable {
     }
 }
 
+private enum ChatTextInputStateTextAttributeType: PostboxCoding, Equatable {
+    case bold
+    case italic
+    case monospace
+    case textMention(PeerId)
+    
+    init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("t", orElse: 0) {
+            case 0:
+                self = .bold
+            case 1:
+                self = .italic
+            case 2:
+                self = .monospace
+            case 3:
+                self = .textMention(PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0)))
+            default:
+                assertionFailure()
+                self = .bold
+        }
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        switch self {
+            case .bold:
+                encoder.encodeInt32(0, forKey: "t")
+            case .italic:
+                encoder.encodeInt32(1, forKey: "t")
+            case .monospace:
+                encoder.encodeInt32(2, forKey: "t")
+            case let .textMention(id):
+                encoder.encodeInt32(3, forKey: "t")
+                encoder.encodeInt64(id.toInt64(), forKey: "peerId")
+        }
+    }
+    
+    static func ==(lhs: ChatTextInputStateTextAttributeType, rhs: ChatTextInputStateTextAttributeType) -> Bool {
+        switch lhs {
+            case .bold:
+                if case .bold = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .italic:
+                if case .italic = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .monospace:
+                if case .monospace = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .textMention(id):
+                if case .textMention(id) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
+private struct ChatTextInputStateTextAttribute: PostboxCoding, Equatable {
+    let type: ChatTextInputStateTextAttributeType
+    let range: Range<Int>
+    
+    init(type: ChatTextInputStateTextAttributeType, range: Range<Int>) {
+        self.type = type
+        self.range = range
+    }
+    
+    init(decoder: PostboxDecoder) {
+        self.type = decoder.decodeObjectForKey("type", decoder: { ChatTextInputStateTextAttributeType(decoder: $0) }) as! ChatTextInputStateTextAttributeType
+        self.range = Int(decoder.decodeInt32ForKey("range0", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("range1", orElse: 0))
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObject(self.type, forKey: "type")
+        encoder.encodeInt32(Int32(self.range.lowerBound), forKey: "range0")
+        encoder.encodeInt32(Int32(self.range.upperBound), forKey: "range1")
+    }
+    
+    static func ==(lhs: ChatTextInputStateTextAttribute, rhs: ChatTextInputStateTextAttribute) -> Bool {
+        return lhs.type == rhs.type && lhs.range == rhs.range
+    }
+}
+
+private struct ChatTextInputStateText: PostboxCoding, Equatable {
+    let text: String
+    fileprivate let attributes: [ChatTextInputStateTextAttribute]
+    
+    init() {
+        self.text = ""
+        self.attributes = []
+    }
+    
+    init(text: String, attributes: [ChatTextInputStateTextAttribute]) {
+        self.text = text
+        self.attributes = attributes
+    }
+    
+    init(attributedText: NSAttributedString) {
+        self.text = attributedText.string
+        var parsedAttributes: [ChatTextInputStateTextAttribute] = []
+        attributedText.enumerateAttributes(in: NSRange(location: 0, length: attributedText.length), options: [], using: { attributes, range, _ in
+            for (key, value) in attributes {
+                if key == ChatTextInputAttributes.bold {
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .bold, range: range.location ..< (range.location + range.length)))
+                } else if key == ChatTextInputAttributes.italic {
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .italic, range: range.location ..< (range.location + range.length)))
+                } else if key == ChatTextInputAttributes.monospace {
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .monospace, range: range.location ..< (range.location + range.length)))
+                } else if key == ChatTextInputAttributes.textMention, let value = value as? ChatTextInputTextMentionAttribute {
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .textMention(value.peerId), range: range.location ..< (range.location + range.length)))
+                }
+            }
+        })
+        self.attributes = parsedAttributes
+    }
+    
+    init(decoder: PostboxDecoder) {
+        self.text = decoder.decodeStringForKey("text", orElse: "")
+        self.attributes = decoder.decodeObjectArrayWithDecoderForKey("attributes")
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.text, forKey: "text")
+        encoder.encodeObjectArray(self.attributes, forKey: "attributes")
+    }
+    
+    static func ==(lhs: ChatTextInputStateText, rhs: ChatTextInputStateText) -> Bool {
+        return lhs.text == rhs.text && lhs.attributes == rhs.attributes
+    }
+    
+    func attributedText() -> NSAttributedString {
+        let result = NSMutableAttributedString(string: self.text)
+        for attribute in self.attributes {
+            switch attribute.type {
+                case .bold:
+                    result.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                case .italic:
+                    result.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                case .monospace:
+                    result.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                case let .textMention(id):
+                    result.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: id), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            }
+        }
+        return result
+    }
+}
+
 public struct ChatTextInputState: PostboxCoding, Equatable {
-    let inputText: String
+    let inputText: NSAttributedString
     let selectionRange: Range<Int>
     
     public static func ==(lhs: ChatTextInputState, rhs: ChatTextInputState) -> Bool {
-        return lhs.inputText == rhs.inputText && lhs.selectionRange == rhs.selectionRange
+        return lhs.inputText.isEqual(to: rhs.inputText) && lhs.selectionRange == rhs.selectionRange
     }
     
     init() {
-        self.inputText = ""
+        self.inputText = NSAttributedString()
         self.selectionRange = 0 ..< 0
     }
     
-    init(inputText: String, selectionRange: Range<Int>) {
+    init(inputText: NSAttributedString, selectionRange: Range<Int>) {
         self.inputText = inputText
         self.selectionRange = selectionRange
     }
     
-    init(inputText: String) {
+    init(inputText: NSAttributedString) {
         self.inputText = inputText
-        let length = (inputText as NSString).length
+        let length = inputText.length
         self.selectionRange = length ..< length
     }
     
     public init(decoder: PostboxDecoder) {
-        self.inputText = decoder.decodeStringForKey("t", orElse: "")
-        self.selectionRange = Int(decoder.decodeInt32ForKey("s0", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("s1", orElse: 0))
+        self.inputText = ((decoder.decodeObjectForKey("at", decoder: { ChatTextInputStateText(decoder: $0) }) as? ChatTextInputStateText) ?? ChatTextInputStateText()).attributedText()
+        self.selectionRange = Int(decoder.decodeInt32ForKey("as0", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("as1", orElse: 0))
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.inputText, forKey: "t")
-        encoder.encodeInt32(Int32(self.selectionRange.lowerBound), forKey: "s0")
-        encoder.encodeInt32(Int32(self.selectionRange.upperBound), forKey: "s1")
+        encoder.encodeObject(ChatTextInputStateText(attributedText: self.inputText), forKey: "at")
+        
+        encoder.encodeInt32(Int32(self.selectionRange.lowerBound), forKey: "as0")
+        encoder.encodeInt32(Int32(self.selectionRange.upperBound), forKey: "as1")
     }
 }
 
@@ -112,26 +269,26 @@ struct ChatEditMessageState: PostboxCoding, Equatable {
 
 final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceState {
     let timestamp: Int32
-    let text: String
+    let text: NSAttributedString
     
-    init(timestamp: Int32, text: String) {
+    init(timestamp: Int32, text: NSAttributedString) {
         self.timestamp = timestamp
         self.text = text
     }
     
     init(decoder: PostboxDecoder) {
         self.timestamp = decoder.decodeInt32ForKey("d", orElse: 0)
-        self.text = decoder.decodeStringForKey("t", orElse: "")
+        self.text = ((decoder.decodeObjectForKey("at", decoder: { ChatTextInputStateText(decoder: $0) }) as? ChatTextInputStateText) ?? ChatTextInputStateText()).attributedText()
     }
     
     func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.timestamp, forKey: "d")
-        encoder.encodeString(self.text, forKey: "t")
+        encoder.encodeObject(ChatTextInputStateText(attributedText: self.text), forKey: "at")
     }
     
     public func isEqual(to: PeerChatListEmbeddedInterfaceState) -> Bool {
         if let to = to as? ChatEmbeddedInterfaceState {
-            return self.timestamp == to.timestamp && self.text == to.text
+            return self.timestamp == to.timestamp && self.text.isEqual(to: to.text)
         } else {
             return false
         }
@@ -274,7 +431,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
     let mediaRecordingMode: ChatTextInputMediaRecordingButtonMode
     
     var chatListEmbeddedState: PeerChatListEmbeddedInterfaceState? {
-        if !self.composeInputState.inputText.isEmpty && self.timestamp != 0 {
+        if self.composeInputState.inputText.length != 0 && self.timestamp != 0 {
             return ChatEmbeddedInterfaceState(timestamp: self.timestamp, text: self.composeInputState.inputText)
         } else {
             return nil
@@ -282,10 +439,10 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
     }
     
     var synchronizeableInputState: SynchronizeableChatInputState? {
-        if self.composeInputState.inputText.isEmpty {
+        if self.composeInputState.inputText.length == 0 {
             return nil
         } else {
-            return SynchronizeableChatInputState(replyToMessageId: self.replyMessageId, text: self.composeInputState.inputText, timestamp: self.timestamp)
+            return SynchronizeableChatInputState(replyToMessageId: self.replyMessageId, text: self.composeInputState.inputText.string, timestamp: self.timestamp)
         }
     }
     
@@ -294,7 +451,7 @@ final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
     }
     
     func withUpdatedSynchronizeableInputState(_ state: SynchronizeableChatInputState?) -> SynchronizeableChatInterfaceState {
-        var result = self.withUpdatedComposeInputState(ChatTextInputState(inputText: state?.text ?? "")).withUpdatedReplyMessageId(state?.replyToMessageId)
+        var result = self.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: state?.text ?? ""))).withUpdatedReplyMessageId(state?.replyToMessageId)
         if let timestamp = state?.timestamp {
             result = result.withUpdatedTimestamp(timestamp)
         }

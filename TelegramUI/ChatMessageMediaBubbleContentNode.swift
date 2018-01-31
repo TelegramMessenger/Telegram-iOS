@@ -33,7 +33,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveImageNode.activateLocalContent = { [weak self] in
             if let strongSelf = self {
                 if let item = strongSelf.item, !item.message.containsSecretMedia {
-                    item.controllerInteraction.openMessage(item.message.id)
+                    item.controllerInteraction.openMessage(item.message)
                 }
             }
         }

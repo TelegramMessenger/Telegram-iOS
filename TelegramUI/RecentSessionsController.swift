@@ -317,7 +317,7 @@ public func recentSessionsController(account: Account) -> ViewController {
                 return .complete()
         }
         
-        removeSessionDisposable.set((terminateAccountSession(account: account, hash: sessionId) |> then(applySessions) |> deliverOnMainQueue).start(error: { _ in
+        removeSessionDisposable.set((terminateAccountSession(account: account, hash: sessionId) |> then((applySessions |> mapError { _ in TerminateAccountSessionError.generic })) |> deliverOnMainQueue).start(error: { _ in
             updateState {
                 return $0.withUpdatedRemovingSessionId(nil)
             }
@@ -382,15 +382,15 @@ public func recentSessionsController(account: Account) -> ViewController {
             var rightNavigationButton: ItemListNavigationButton?
             if let sessions = sessions, sessions.count > 1 {
                 if state.terminatingOtherSessions {
-                    rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                    rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
                 } else if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(true)
                         }

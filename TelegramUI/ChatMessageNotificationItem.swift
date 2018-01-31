@@ -51,6 +51,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     private var item: ChatMessageNotificationItem?
     
     private let avatarNode: AvatarNode
+    private let titleIconNode: ASImageNode
     private let titleNode: TextNode
     private let textNode: TextNode
     private let imageNode: TransformImageNode
@@ -66,6 +67,11 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
         
+        self.titleIconNode = ASImageNode()
+        self.titleIconNode.isLayerBacked = true
+        self.titleIconNode.displayWithoutProcessing = true
+        self.titleIconNode.displaysAsynchronously = false
+        
         self.textNode = TextNode()
         self.textNode.isLayerBacked = true
         
@@ -74,6 +80,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         super.init()
         
         self.addSubnode(self.avatarNode)
+        self.addSubnode(self.titleIconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.imageNode)
@@ -95,21 +102,30 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             }
         }
         
+        var titleIcon: UIImage?
+        if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+            titleIcon = PresentationResourcesRootController.inAppNotificationSecretChatIcon(presentationData.theme)
+        }
+        
+        self.titleIconNode.image = titleIcon
+        
         var updatedMedia: Media?
         var imageDimensions: CGSize?
-        for media in item.message.media {
-            if let image = media as? TelegramMediaImage {
-                updatedMedia = image
-                if let representation = largestRepresentationForPhoto(image) {
-                    imageDimensions = representation.dimensions
+        if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+            for media in item.message.media {
+                if let image = media as? TelegramMediaImage {
+                    updatedMedia = image
+                    if let representation = largestRepresentationForPhoto(image) {
+                        imageDimensions = representation.dimensions
+                    }
+                    break
+                } else if let file = media as? TelegramMediaFile {
+                    updatedMedia = file
+                    if let representation = largestImageRepresentation(file.previewRepresentations) {
+                        imageDimensions = representation.dimensions
+                    }
+                    break
                 }
-                break
-            } else if let file = media as? TelegramMediaFile {
-                updatedMedia = file
-                if let representation = largestImageRepresentation(file.previewRepresentations) {
-                    imageDimensions = representation.dimensions
-                }
-                break
             }
         }
         
@@ -133,7 +149,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             }
         }
         
-        let messageText = descriptionStringForMessage(item.message, strings: item.strings, accountPeerId: item.account.peerId)
+        let messageText: String
+        if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+            messageText = item.strings.ENCRYPTED_MESSAGE("").0
+        } else {
+            messageText = descriptionStringForMessage(item.message, strings: item.strings, accountPeerId: item.account.peerId)
+        }
         
         if let applyImage = applyImage {
             applyImage()
@@ -166,8 +187,13 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: CGSize(width: 54.0, height: 54.0)))
         
+        var titleInset: CGFloat = 0.0
+        if let image = self.titleIconNode.image {
+            titleInset += image.size.width + 4.0
+        }
+        
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: self.titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: self.titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - titleInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         let _ = titleApply()
         
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -177,8 +203,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         let textSpacing: CGFloat = 1.0
         
-        let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 1.0 + floor((panelHeight - textLayout.size.height - titleLayout.size.height - textSpacing) / 2.0)), size: titleLayout.size)
+        let titleFrame = CGRect(origin: CGPoint(x: leftInset + titleInset, y: 1.0 + floor((panelHeight - textLayout.size.height - titleLayout.size.height - textSpacing) / 2.0)), size: titleLayout.size)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        
+        if let image = self.titleIconNode.image {
+            transition.updateFrame(node: self.titleIconNode, frame: CGRect(origin: CGPoint(x: leftInset + 1.0, y: titleFrame.minY + 3.0), size: image.size))
+        }
         
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textLayout.size))
         

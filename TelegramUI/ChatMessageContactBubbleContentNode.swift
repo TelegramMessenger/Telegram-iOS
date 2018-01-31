@@ -246,7 +246,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     @objc func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                item.controllerInteraction.openMessage(item.message.id)
+                item.controllerInteraction.openMessage(item.message)
             }
         }
     }

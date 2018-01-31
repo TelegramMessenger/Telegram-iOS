@@ -188,7 +188,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         requestOpenPeerFromSearch(peer)
                     }
                 }, openRecentPeerOptions: { _ in
-                },openMessage: { [weak self] peer, messageId in
+                }, openMessage: { [weak self] peer, messageId in
                     if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
                         requestOpenMessageFromSearch(peer, messageId)
                     }

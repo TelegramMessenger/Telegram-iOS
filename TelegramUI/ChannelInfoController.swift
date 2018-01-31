@@ -659,15 +659,16 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             controller?.dismissAnimated()
         }
         let notificationAction: (Int32) -> Void = {  muteUntil in
-            let muteState: PeerMuteState
+            let muteInterval: Int32?
             if muteUntil <= 0 {
-                muteState = .unmuted
+                muteInterval = nil
             } else if muteUntil == Int32.max {
-                muteState = .muted(until: Int32.max)
+                muteInterval = Int32.max
             } else {
-                muteState = .muted(until: Int32(Date().timeIntervalSince1970) + muteUntil)
+                muteInterval = muteUntil
             }
-            changeMuteSettingsDisposable.set(changePeerNotificationSettings(account: account, peerId: peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
+            
+            changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: muteInterval).start())
         }
         var items: [ActionSheetItem] = []
         items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsEnable, action: {
@@ -770,7 +771,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             var leftNavigationButton: ItemListNavigationButton?
             var rightNavigationButton: ItemListNavigationButton?
             if let editingState = state.editingState {
-                leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+                leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                     updateState {
                         $0.withUpdatedEditingState(nil)
                     }
@@ -787,9 +788,9 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 }
                 
                 if state.savingData {
-                    rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: doneEnabled, action: {})
+                    rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: doneEnabled, action: {})
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: doneEnabled, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
                         var updateValues: (title: String?, description: String?) = (nil, nil)
                         updateState { state in
                             updateValues = valuesRequiringUpdate(state: state, view: view)
@@ -830,7 +831,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                     })
                 }
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         var text = ""
                         if let cachedData = view.cachedData as? CachedChannelData, let about = cachedData.about {

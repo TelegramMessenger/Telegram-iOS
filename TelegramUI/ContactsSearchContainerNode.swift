@@ -75,7 +75,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                                     enabled = canSendMessagesToPeer(peer)
                                 }
                                 
-                                listItems.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { [weak self] peer in
+                                listItems.append(ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer, chatPeer: peer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { [weak self] peer in
                                     if let openPeer = self?.openPeer {
                                         self?.listNode.clearHighlightAnimated(true)
                                         openPeer(peer.id)

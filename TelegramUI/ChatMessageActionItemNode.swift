@@ -355,8 +355,8 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                         }
                     }
                     attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
-                case let .customText(text):
-                    attributedString = NSAttributedString(string: text, font: titleFont, textColor: primaryTextColor)
+                case let .customText(text, entities):
+                    attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, fixedFont: titleFont)
                 case .unknown:
                     attributedString = nil
             }
@@ -535,7 +535,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                                 case .instantPage:
                                     foundTapAction = true
                                     if let item = self.item {
-                                        item.controllerInteraction.openInstantPage(item.message.id)
+                                        item.controllerInteraction.openInstantPage(item.message)
                                     }
                                 case .holdToPreviewSecretMedia:
                                     foundTapAction = true
@@ -588,7 +588,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                                 }
                                 
                                 if !foundTapAction {
-                                    item.controllerInteraction.openMessageContextMenu(item.message.id, self, self.filledBackgroundNode.frame)
+                                    item.controllerInteraction.openMessageContextMenu(item.message, self, self.filledBackgroundNode.frame)
                                 }
                             }
                         case .hold:

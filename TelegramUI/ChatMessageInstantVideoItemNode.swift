@@ -483,7 +483,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                     if strongSelf.infoBackgroundNode.alpha.isZero {
                                         item.account.telegramApplicationContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
                                     } else {
-                                        let _ = item.controllerInteraction.openMessage(item.message.id)
+                                        let _ = item.controllerInteraction.openMessage(item.message)
                                     }
                                 }
                             }
@@ -560,7 +560,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     case .tap:
                         if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
                             if let item = self.item, let author = item.message.author {
-                                item.controllerInteraction.openPeer(author.id, .info, item.message.id)
+                                item.controllerInteraction.openPeer(author.id, .info, item.message)
                             }
                             return
                         }
@@ -581,7 +581,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 if let sourceMessageId = forwardInfo.sourceMessageId {
                                     item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                 } else {
-                                    item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil), nil)
+                                    item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil, messageId: nil), nil)
                                 }
                                 return
                             }
@@ -596,7 +596,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                             if self.infoBackgroundNode.alpha.isZero {
                                 item.account.telegramApplicationContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
                             } else {
-                                let _ = item.controllerInteraction.openMessage(item.message.id)
+                                let _ = item.controllerInteraction.openMessage(item.message)
                             }
                             return
                         }
@@ -604,7 +604,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         self.item?.controllerInteraction.clickThroughMessage()
                     case .longTap, .doubleTap:
                         if let item = self.item, let videoNode = self.videoNode, videoNode.frame.contains(location) {
-                            item.controllerInteraction.openMessageContextMenu(item.message.id, self, videoNode.frame)
+                            item.controllerInteraction.openMessageContextMenu(item.message, self, videoNode.frame)
                         }
                     case .hold:
                         break

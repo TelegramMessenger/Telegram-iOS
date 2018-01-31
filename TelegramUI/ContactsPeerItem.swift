@@ -60,10 +60,16 @@ struct ContactsPeerItemEditing: Equatable {
     }
 }
 
+enum ContactsPeerItemPeerMode {
+    case generalSearch
+    case peer
+}
+
 class ContactsPeerItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let account: Account
+    let peerMode: ContactsPeerItemPeerMode
     let peer: Peer?
     let chatPeer: Peer?
     let status: ContactsPeerItemStatus
@@ -80,10 +86,11 @@ class ContactsPeerItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer?, chatPeer: Peer?, status: ContactsPeerItemStatus, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peerMode: ContactsPeerItemPeerMode, peer: Peer?, chatPeer: Peer?, status: ContactsPeerItemStatus, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.account = account
+        self.peerMode = peerMode
         self.peer = peer
         self.chatPeer = chatPeer
         self.status = status
@@ -165,6 +172,7 @@ class ContactsPeerItem: ListViewItem {
     }
     
     func selected(listView: ListView) {
+        listView.clearHighlightAnimated(true)
         if let peer = self.peer {
             self.action(peer)
         }
@@ -355,7 +363,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     textColor = item.theme.list.itemPrimaryTextColor
                 }
                 if let user = peer as? TelegramUser {
-                    if peer.id == item.account.peerId {
+                    if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
                         titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
                     } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                         let string = NSMutableAttributedString()
@@ -426,7 +434,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 if let strongSelf = self {
                     if let peer = item.peer {
                         var overrideImage: AvatarNodeImageOverride?
-                        if peer.id == item.account.peerId {
+                        if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
                             overrideImage = .savedMessagesIcon
                         }
                         strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)

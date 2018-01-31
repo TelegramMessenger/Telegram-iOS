@@ -5,13 +5,6 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
-private var backgroundImageForWallpaper: (TelegramWallpaper, UIImage)?
-
-private func shouldRequestLayoutOnPresentationInterfaceStateTransition(_ lhs: ChatPresentationInterfaceState, _ rhs: ChatPresentationInterfaceState) -> Bool {
-    
-    return false
-}
-
 private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider {
     var inputAccessoryHeight: (() -> CGFloat)?
     
@@ -166,34 +159,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        var backgroundImage: UIImage?
-        let wallpaper = chatPresentationInterfaceState.chatWallpaper
-        if wallpaper == backgroundImageForWallpaper?.0 {
-            backgroundImage = backgroundImageForWallpaper?.1
-        } else {
-            switch wallpaper {
-                case .builtin:
-                    if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
-                        backgroundImage = UIImage(contentsOfFile: filePath)?.precomposed()
-                    }
-                case let .color(color):
-                    backgroundImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-                        context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
-                        context.fill(CGRect(origin: CGPoint(), size: size))
-                    })
-                case let .image(representations):
-                    if let largest = largestImageRepresentation(representations) {
-                        if let path = account.postbox.mediaBox.completedResourcePath(largest.resource) {
-                            backgroundImage = UIImage(contentsOfFile: path)?.precomposed()
-                        }
-                    }
-            }
-            if let backgroundImage = backgroundImage {
-                backgroundImageForWallpaper = (wallpaper, backgroundImage)
-            }
-        }
-        
-        self.backgroundNode.contents = backgroundImage?.cgImage
+        self.backgroundNode.contents = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)?.cgImage
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.historyNode)
@@ -225,29 +191,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     effectivePresentationInterfaceState = effectivePresentationInterfaceState.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputPanelNode.inputTextState) }
                 }
                 
-                if let editMessage = effectivePresentationInterfaceState.interfaceState.editMessage {
-                    let text = editMessage.inputState.inputText
-                    
-                    if let interfaceInteraction = strongSelf.interfaceInteraction {
-                        interfaceInteraction.editMessage()
-                    }
+                if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
+                    strongSelf.interfaceInteraction?.editMessage()
                 } else {
-                    let text = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
+                    var messages: [EnqueueMessage] = []
                     
-                    if !text.isEmpty || strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
-                        strongSelf.setupSendActionOnViewUpdate({ [weak strongSelf] in
-                            if let strongSelf = strongSelf, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
-                                strongSelf.ignoreUpdateHeight = true
-                                textInputPanelNode.text = ""
-                                strongSelf.requestUpdateChatInterfaceState(false, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
-                                strongSelf.ignoreUpdateHeight = false
-                            }
-                        })
-                        
-                        var messages: [EnqueueMessage] = []
-                        if !text.isEmpty {
+                    for text in breakChatInputText(trimChatInputText(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)) {
+                        if text.length != 0 {
                             var attributes: [MessageAttribute] = []
-                            let entities = generateTextEntities(text, enabledTypes: .all)
+                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
@@ -257,8 +209,21 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             } else {
                                 webpage = strongSelf.chatPresentationInterfaceState.urlPreview?.1
                             }
-                            messages.append(.message(text: text, attributes: attributes, media: webpage, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
+                            messages.append(.message(text: text.string, attributes: attributes, media: webpage, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                         }
+                    }
+                    
+                    if !messages.isEmpty || strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
+                        strongSelf.setupSendActionOnViewUpdate({ [weak strongSelf] in
+                            if let strongSelf = strongSelf, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
+                                strongSelf.ignoreUpdateHeight = true
+                                textInputPanelNode.text = ""
+                                strongSelf.requestUpdateChatInterfaceState(false, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
+                                strongSelf.ignoreUpdateHeight = false
+                            }
+                        })
+                        
+                        
                         if let forwardMessageIds = strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                             for id in forwardMessageIds {
                                 messages.append(.forward(source: id, grouping: .auto))
@@ -266,7 +231,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         
                         if case let .peer(peerId) = strongSelf.chatLocation {
-                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start(next: { _ in
+                            let _ = (enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages) |> deliverOnMainQueue).start(next: { _ in
                                 if let strongSelf = self {
                                     strongSelf.historyNode.scrollToEndOfHistory()
                                 }
@@ -412,7 +377,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             var activate = false
             if self.searchNavigationNode == nil {
                 activate = true
-                self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, interaction: interfaceInteraction)
+                self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction)
             }
             self.navigationBar.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
             self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)

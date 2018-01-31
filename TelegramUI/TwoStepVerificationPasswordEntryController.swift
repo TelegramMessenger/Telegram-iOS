@@ -337,6 +337,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }
+                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                         let alertText: String
                         switch error {
                             case .generic:
@@ -344,7 +345,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                             case .invalidEmail:
                                 alertText = "Please enter valid e-mail address."
                         }
-                        presentControllerImpl?(standardTextAlertController(title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }))
                 case let .setupEmail(password):
                     updatePasswordDisposable.set((updateTwoStepVerificationEmail(account: account, currentPassword: password, updatedEmail: email) |> deliverOnMainQueue).start(next: { update in
@@ -361,6 +362,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }
+                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                         let alertText: String
                         switch error {
                             case .generic:
@@ -368,11 +370,12 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                             case .invalidEmail:
                                 alertText = "Please enter valid e-mail address."
                         }
-                        presentControllerImpl?(standardTextAlertController(title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }))
             }
         } else if invalidReentry {
-            presentControllerImpl?(standardTextAlertController(title: nil, text: "Passwords don't match.\nPlease try again.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Passwords don't match.\nPlease try again.", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     
@@ -387,13 +390,13 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationPasswordEntryEntry>, TwoStepVerificationPasswordEntryEntry.ItemGenerationArguments)) in
             
-            let leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
             
             var rightNavigationButton: ItemListNavigationButton?
             if state.updating {
-                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             } else {
                 var nextEnabled = true
                 switch state.stage {
@@ -408,7 +411,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                     case .hint, .email:
                         break
                 }
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Next, style: .bold, enabled: nextEnabled, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: nextEnabled, action: {
                     checkPassword()
                 })
             }

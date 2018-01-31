@@ -148,7 +148,7 @@ public func convertToSupergroupController(account: Account, peerId: PeerId) -> V
             
             var rightNavigationButton: ItemListNavigationButton?
             if state.isConverting {
-                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ConvertToSupergroup_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))

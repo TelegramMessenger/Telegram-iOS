@@ -129,7 +129,7 @@ public class ComposeController: ViewController {
                                 let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
                                 
                                 controller.displayNavigationActivity = false
-                                controller.present(standardTextAlertController(title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }))
                     }

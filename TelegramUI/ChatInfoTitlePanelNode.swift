@@ -11,6 +11,8 @@ private enum ChatInfoTitleButton {
     case unmute
     case call
     case report
+    case grouping
+    case channels
     
     func title(_ strings: PresentationStrings) -> String {
         switch self {
@@ -26,6 +28,10 @@ private enum ChatInfoTitleButton {
                 return strings.Conversation_Call
             case .report:
                 return strings.ReportPeer_Report
+            case .grouping:
+                return "Grouping"
+            case .channels:
+                return "Channels"
         }
     }
     
@@ -33,7 +39,7 @@ private enum ChatInfoTitleButton {
         switch self {
             case .search:
                 return PresentationResourcesChat.chatTitlePanelSearchImage(theme)
-            case .info:
+            case .info, .channels:
                 return PresentationResourcesChat.chatTitlePanelInfoImage(theme)
             case .mute:
                 return PresentationResourcesChat.chatTitlePanelMuteImage(theme)
@@ -43,6 +49,8 @@ private enum ChatInfoTitleButton {
                 return PresentationResourcesChat.chatTitlePanelCallImage(theme)
             case .report:
                 return PresentationResourcesChat.chatTitlePanelReportImage(theme)
+            case .grouping:
+                return PresentationResourcesChat.chatTitlePanelGroupingImage(theme)
         }
     }
 }
@@ -77,6 +85,10 @@ private func peerButtons(_ peer: Peer, isMuted: Bool) -> [ChatInfoTitleButton] {
     } else {
         return [.search, muteAction, .info]
     }
+}
+
+private func groupButtons() -> [ChatInfoTitleButton] {
+    return [.search, .grouping, .channels]
 }
 
 private let buttonFont = Font.regular(10.0)
@@ -130,10 +142,15 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         let updatedButtons: [ChatInfoTitleButton]
-        if let peer = interfaceState.peer {
-            updatedButtons = peerButtons(peer, isMuted: interfaceState.peerIsMuted)
-        } else {
-            updatedButtons = []
+        switch interfaceState.chatLocation {
+            case .peer:
+                if let peer = interfaceState.peer {
+                    updatedButtons = peerButtons(peer, isMuted: interfaceState.peerIsMuted)
+                } else {
+                    updatedButtons = []
+                }
+            case .group:
+                updatedButtons = groupButtons()
         }
         
         var buttonsUpdated = false
@@ -183,7 +200,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         for (button, buttonNode) in self.buttons {
             if buttonNode === node {
                 switch button {
-                    case .info:
+                    case .info, .channels:
                         self.interfaceInteraction?.openPeerInfo()
                     case .mute:
                         self.interfaceInteraction?.togglePeerNotifications()
@@ -195,6 +212,9 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
                         self.interfaceInteraction?.beginCall()
                     case .report:
                         self.interfaceInteraction?.reportPeer()
+                    case .grouping:
+                        self.interfaceInteraction?.openGrouping()
+                        break
                 }
                 break
             }

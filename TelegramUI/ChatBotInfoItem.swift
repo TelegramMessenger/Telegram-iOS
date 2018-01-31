@@ -7,6 +7,7 @@ import TelegramCore
 
 private let messageFont: UIFont = UIFont.systemFont(ofSize: 17.0)
 private let messageBoldFont: UIFont = UIFont.boldSystemFont(ofSize: 17.0)
+private let messageItalicFont: UIFont = UIFont.italicSystemFont(ofSize: 17.0)
 private let messageFixedFont: UIFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFont.systemFont(ofSize: 17.0)
 
 final class ChatBotInfoItem: ListViewItem {
@@ -119,7 +120,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 updatedTextAndEntities = (item.text, generateTextEntities(item.text, enabledTypes: .all))
             }
             
-            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.theme.chat.bubble.infoPrimaryTextColor, linkColor: item.theme.chat.bubble.infoLinkTextColor, baseFont: messageFont, boldFont: messageBoldFont, fixedFont: messageFixedFont)
+            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.theme.chat.bubble.infoPrimaryTextColor, linkColor: item.theme.chat.bubble.infoLinkTextColor, baseFont: messageFont, linkFont: messageFont, boldFont: messageBoldFont, italicFont: messageItalicFont, fixedFont: messageFixedFont)
             
             let horizontalEdgeInset: CGFloat = 10.0 + params.leftInset
             let horizontalContentInset: CGFloat = 12.0
@@ -208,7 +209,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                     case let .peerMention(peerId, _):
                         foundTapAction = true
                         if let controllerInteraction = self.controllerInteraction {
-                            controllerInteraction.openPeer(peerId, .chat(textInputState: nil), nil)
+                            controllerInteraction.openPeer(peerId, .chat(textInputState: nil, messageId: nil), nil)
                         }
                     case let .textMention(name):
                         foundTapAction = true

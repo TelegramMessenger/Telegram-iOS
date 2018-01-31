@@ -24,15 +24,21 @@ private enum ChannelAdminSection: Int32 {
 
 private enum ChannelAdminEntryStableId: Hashable {
     case info
+    case rightsTitle
     case right(TelegramChannelAdminRightsFlags)
+    case addAdminsInfo
     case dismiss
     
     var hashValue: Int {
         switch self {
             case .info:
                 return 0
-            case .dismiss:
+            case .rightsTitle:
                 return 1
+            case .addAdminsInfo:
+                return 2
+            case .dismiss:
+                return 3
             case let .right(flags):
                 return flags.rawValue.hashValue
         }
@@ -46,8 +52,20 @@ private enum ChannelAdminEntryStableId: Hashable {
                 } else {
                     return false
                 }
+            case .rightsTitle:
+                if case .rightsTitle = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let right(flags):
                 if case .right(flags) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .addAdminsInfo:
+                if case .addAdminsInfo = rhs {
                     return true
                 } else {
                     return false
@@ -64,14 +82,16 @@ private enum ChannelAdminEntryStableId: Hashable {
 
 private enum ChannelAdminEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, Peer, TelegramUserPresence?)
+    case rightsTitle(PresentationTheme, String)
     case rightItem(PresentationTheme, Int, String, TelegramChannelAdminRightsFlags, TelegramChannelAdminRightsFlags, Bool, Bool)
+    case addAdminsInfo(PresentationTheme, String)
     case dismiss(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
             case .info:
                 return ChannelAdminSection.info.rawValue
-            case .rightItem:
+            case .rightsTitle, .rightItem, .addAdminsInfo:
                 return ChannelAdminSection.rights.rawValue
             case .dismiss:
                 return ChannelAdminSection.dismiss.rawValue
@@ -82,8 +102,12 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
         switch self {
             case .info:
                 return .info
+            case .rightsTitle:
+                return .rightsTitle
             case let .rightItem(_, _, _, right, _, _, _):
                 return .right(right)
+            case .addAdminsInfo:
+                return .addAdminsInfo
             case .dismiss:
                 return .dismiss
         }
@@ -106,6 +130,12 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                         return false
                     }
                     
+                    return true
+                } else {
+                    return false
+                }
+            case let .rightsTitle(lhsTheme, lhsText):
+                if case let .rightsTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -137,6 +167,12 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .addAdminsInfo(lhsTheme, lhsText):
+                if case let .addAdminsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .dismiss(lhsTheme, lhsText):
                 if case let .dismiss(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -155,12 +191,26 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
+            case .rightsTitle:
+                switch rhs {
+                    case .info, .rightsTitle:
+                        return false
+                    default:
+                        return true
+                }
             case let .rightItem(_, lhsIndex, _, _, _, _, _):
                 switch rhs {
-                    case .info:
+                    case .info, .rightsTitle:
                         return false
                     case let .rightItem(_, rhsIndex, _, _, _, _, _):
                         return lhsIndex < rhsIndex
+                    default:
+                        return true
+                }
+            case .addAdminsInfo:
+                switch rhs {
+                    case .info, .rightsTitle, .rightItem, .addAdminsInfo:
+                        return false
                     default:
                         return true
                 }
@@ -175,10 +225,14 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
+            case let .rightsTitle(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .rightItem(theme, _, text, right, flags, value, enabled):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { _ in
                     arguments.toggleRight(right, flags)
                 })
+            case let .addAdminsInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .dismiss(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.dismissAdmin()
@@ -292,6 +346,8 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
     if let channel = channelView.peers[channelView.peerId] as? TelegramChannel, let admin = adminView.peers[adminView.peerId] {
         entries.append(.info(presentationData.theme, presentationData.strings, admin, adminView.peerPresences[admin.id] as? TelegramUserPresence))
         
+        entries.append(.rightsTitle(presentationData.theme, presentationData.strings.Channel_EditAdmin_PermissionsHeader))
+        
         let isGroup: Bool
         let maskRightsFlags: TelegramChannelAdminRightsFlags
         let rightsOrder: [TelegramChannelAdminRightsFlags]
@@ -314,8 +370,6 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canChangeInfo,
                     .canDeleteMessages,
                     .canBanUsers,
-                    .canInviteUsers,
-                    .canChangeInviteLink,
                     .canPinMessages,
                     .canAddAdmins
                 ]
@@ -346,6 +400,10 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup), right, currentRightsFlags, currentRightsFlags.contains(right), !state.updating))
                     index += 1
                 }
+            }
+            
+            if accountUserRightsFlags.contains(.canAddAdmins) {
+                entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
             }
         
             if let initialParticipant = initialParticipant {
@@ -427,20 +485,20 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
             
             let leftNavigationButton: ItemListNavigationButton
             if canEdit {
-                leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+                leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                     dismissImpl?()
                 })
             } else {
-                leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                     dismissImpl?()
                 })
             }
             
             var rightNavigationButton: ItemListNavigationButton?
             if state.updating {
-                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             } else if canEdit {
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                     if let _ = initialParticipant {
                         var updateFlags: TelegramChannelAdminRightsFlags?
                         updateState { current in

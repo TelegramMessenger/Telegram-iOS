@@ -36,16 +36,32 @@ enum ItemListPeerItemLabel {
     case disclosure(String)
 }
 
+struct ItemListPeerItemSwitch {
+    let value: Bool
+    let style: ItemListPeerItemSwitchStyle
+}
+
+enum ItemListPeerItemSwitchStyle {
+    case standard
+    case check
+}
+
+enum ItemListPeerItemAliasHandling {
+    case standard
+    case threatSelfAsSaved
+}
+
 final class ItemListPeerItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let account: Account
     let peer: Peer
+    let aliasHandling: ItemListPeerItemAliasHandling
     let presence: PeerPresence?
     let text: ItemListPeerItemText
     let label: ItemListPeerItemLabel
     let editing: ItemListPeerItemEditing
-    let switchValue: Bool?
+    let switchValue: ItemListPeerItemSwitch?
     let enabled: Bool
     let sectionId: ItemListSectionId
     let action: (() -> Void)?
@@ -53,11 +69,12 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let removePeer: (PeerId) -> Void
     let toggleUpdated: ((Bool) -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, switchValue: Bool?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.account = account
         self.peer = peer
+        self.aliasHandling = aliasHandling
         self.presence = presence
         self.text = text
         self.label = label
@@ -135,6 +152,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     private var labelArrowNode: ASImageNode?
     private let statusNode: TextNode
     private var switchNode: SwitchNode?
+    private var checkNode: ASImageNode?
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (ItemListPeerItem, ListViewItemLayoutParams, ItemListNeighbors)?
@@ -207,6 +225,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
         var currentSwitchNode = self.switchNode
+        var currentCheckNode = self.checkNode
         
         let currentLabelArrowNode = self.labelArrowNode
         
@@ -234,17 +253,32 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             
             var rightInset: CGFloat = params.rightInset
             let switchSize = CGSize(width: 51.0, height: 31.0)
+            var checkImage: UIImage?
             
-            if let _ = item.switchValue {
-                if currentSwitchNode == nil {
-                    currentSwitchNode = SwitchNode()
+            if let switchValue = item.switchValue {
+                switch switchValue.style {
+                    case .standard:
+                        if currentSwitchNode == nil {
+                            currentSwitchNode = SwitchNode()
+                        }
+                        rightInset += switchSize.width
+                        currentCheckNode = nil
+                    case .check:
+                        checkImage = PresentationResourcesItemList.checkIconImage(item.theme)
+                        if currentCheckNode == nil {
+                            currentCheckNode = ASImageNode()
+                        }
+                        rightInset += 10.0
+                        currentSwitchNode = nil
                 }
-                rightInset += switchSize.width
             } else {
                 currentSwitchNode = nil
+                currentCheckNode = nil
             }
             
-            if let user = item.peer as? TelegramUser {
+            if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
+                titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: item.theme.list.itemPrimaryTextColor)
+            } else if let user = item.peer as? TelegramUser {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                     let string = NSMutableAttributedString()
                     string.append(NSAttributedString(string: firstName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor))
@@ -461,11 +495,32 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         }
                         currentSwitchNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - switchSize.width - 15.0, y: floor((contentSize.height - switchSize.height) / 2.0)), size: switchSize)
                         if let switchValue = item.switchValue {
-                            currentSwitchNode.setOn(switchValue, animated: animated)
+                            currentSwitchNode.setOn(switchValue.value, animated: animated)
                         }
                     } else if let switchNode = strongSelf.switchNode {
                         switchNode.removeFromSupernode()
                         strongSelf.switchNode = nil
+                    }
+                    
+                    if let currentCheckNode = currentCheckNode {
+                        if currentCheckNode !== strongSelf.checkNode {
+                            strongSelf.checkNode = currentCheckNode
+                            if let disabledOverlayNode = strongSelf.disabledOverlayNode, disabledOverlayNode.supernode != nil {
+                                strongSelf.insertSubnode(currentCheckNode, belowSubnode: disabledOverlayNode)
+                            } else {
+                                strongSelf.addSubnode(currentCheckNode)
+                            }
+                        }
+                        if let checkImage = checkImage {
+                            currentCheckNode.image = checkImage
+                            currentCheckNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - checkImage.size.width - floor((44.0 - checkImage.size.width) / 2.0), y: floor((layout.contentSize.height - checkImage.size.height) / 2.0)), size: checkImage.size)
+                        }
+                        if let switchValue = item.switchValue {
+                            currentCheckNode.isHidden = !switchValue.value
+                        }
+                    } else if let checkNode = strongSelf.checkNode {
+                        checkNode.removeFromSupernode()
+                        strongSelf.checkNode = nil
                     }
                     
                     var rightLabelInset: CGFloat = 15.0
@@ -486,7 +541,12 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - rightLabelInset - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size))
                     
                     transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 12.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0)))
-                    strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer)
+                    
+                    if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer, overrideImage: .savedMessagesIcon)
+                    } else {
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer)
+                    }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 48.0 + UIScreenPixel + UIScreenPixel))
                     

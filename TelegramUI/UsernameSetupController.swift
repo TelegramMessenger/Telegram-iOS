@@ -245,7 +245,7 @@ public func usernameSetupController(account: Account) -> ViewController {
                     }
                 }
                 
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
                     var updatedAddressNameValue: String?
                     updateState { state in
                         if state.editingPublicLinkText != peer.addressName {
@@ -278,7 +278,7 @@ public func usernameSetupController(account: Account) -> ViewController {
                 })
             }
             
-            let leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
             

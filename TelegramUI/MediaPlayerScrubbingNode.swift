@@ -18,7 +18,7 @@ private func generateHandleBackground(color: UIColor) -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: 2)
 }
 
-private final class MediaPlayerScrubbingNodeButton: ASButtonNode {
+private final class MediaPlayerScrubbingNodeButton: ASDisplayNode {
     var beginScrubbing: (() -> Void)?
     var endScrubbing: ((Bool) -> Void)?
     var updateScrubbing: ((CGFloat) -> Void)?
@@ -29,48 +29,31 @@ private final class MediaPlayerScrubbingNodeButton: ASButtonNode {
         super.didLoad()
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
     }
     
-    override func beginTracking(with touch: UITouch, with event: UIEvent?) -> Bool {
-        if super.beginTracking(with: touch, with: event) {
-            scrubbingStartLocation = touch.location(in: self.view)
-            self.beginScrubbing?()
-            return true
-        } else {
-            return false
+    @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+            case .began:
+                self.scrubbingStartLocation = recognizer.location(in: self.view)
+                self.beginScrubbing?()
+            case .changed:
+                let location = recognizer.location(in: self.view)
+                if let scrubbingStartLocation = self.scrubbingStartLocation {
+                    let delta = location.x - scrubbingStartLocation.x
+                    self.updateScrubbing?(delta / self.bounds.size.width)
+                }
+            case .ended, .cancelled:
+                let location = recognizer.location(in: self.view)
+                if let scrubbingStartLocation = self.scrubbingStartLocation {
+                    self.scrubbingStartLocation = nil
+                    let delta = location.x - scrubbingStartLocation.x
+                    self.updateScrubbing?(delta / self.bounds.size.width)
+                    self.endScrubbing?(recognizer.state == .ended)
+                }
+            default:
+                break
         }
-    }
-    
-    override func continueTracking(with touch: UITouch, with touchEvent: UIEvent?) -> Bool {
-        if super.continueTracking(with: touch, with: touchEvent) {
-            let location = touch.location(in: self.view)
-            if let scrubbingStartLocation = self.scrubbingStartLocation {
-                let delta = location.x - scrubbingStartLocation.x
-                self.updateScrubbing?(delta / self.bounds.size.width)
-            }
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    override func endTracking(with touch: UITouch?, with event: UIEvent?) {
-        super.endTracking(with: touch, with: event)
-        if let touch = touch {
-            let location = touch.location(in: self.view)
-            if let scrubbingStartLocation = self.scrubbingStartLocation {
-                let delta = location.x - scrubbingStartLocation.x
-                self.updateScrubbing?(delta / self.bounds.size.width)
-            }
-        }
-        self.scrubbingStartLocation = nil
-        self.endScrubbing?(true)
-    }
-    
-    override func cancelTracking(with event: UIEvent?) {
-        super.cancelTracking(with: event)
-        self.scrubbingStartLocation = nil
-        self.endScrubbing?(false)
     }
 }
 
@@ -115,9 +98,23 @@ private final class StandardMediaPlayerScrubbingNodeContentNode {
     }
 }
 
+private final class CustomMediaPlayerScrubbingNodeContentNode {
+    let backgroundNode: ASDisplayNode
+    let foregroundContentNode: ASDisplayNode
+    let foregroundNode: MediaPlayerScrubbingForegroundNode
+    let handleNodeContainer: MediaPlayerScrubbingNodeButton?
+    
+    init(backgroundNode: ASDisplayNode, foregroundContentNode: ASDisplayNode, foregroundNode: MediaPlayerScrubbingForegroundNode, handleNodeContainer: MediaPlayerScrubbingNodeButton?) {
+        self.backgroundNode = backgroundNode
+        self.foregroundContentNode = foregroundContentNode
+        self.foregroundNode = foregroundNode
+        self.handleNodeContainer = handleNodeContainer
+    }
+}
+
 private enum MediaPlayerScrubbingNodeContentNodes {
     case standard(StandardMediaPlayerScrubbingNodeContentNode)
-    case custom(backgroundNode: ASDisplayNode, foregroundContentNode: ASDisplayNode, foregroundNode: MediaPlayerScrubbingForegroundNode)
+    case custom(CustomMediaPlayerScrubbingNodeContentNode)
 }
 
 final class MediaPlayerScrubbingNode: ASDisplayNode {
@@ -229,7 +226,9 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 foregroundNode.isLayerBacked = true
                 foregroundNode.clipsToBounds = true
                 
-                self.contentNodes = .custom(backgroundNode: backgroundNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode)
+                let handleNodeContainer = MediaPlayerScrubbingNodeButton()
+                
+                self.contentNodes = .custom(CustomMediaPlayerScrubbingNodeContentNode(backgroundNode: backgroundNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNodeContainer: handleNodeContainer))
         }
         
         super.init()
@@ -278,12 +277,12 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 node.foregroundNode.onEnterHierarchy = { [weak self] in
                     self?.updateProgress()
                 }
-            case let .custom(backgroundNode, foregroundContentNode, foregroundNode):
-                self.addSubnode(backgroundNode)
-                foregroundNode.addSubnode(foregroundContentNode)
-                self.addSubnode(foregroundNode)
+            case let .custom(node):
+                self.addSubnode(node.backgroundNode)
+                node.foregroundNode.addSubnode(node.foregroundContentNode)
+                self.addSubnode(node.foregroundNode)
                 
-                /*if let handleNodeContainer = handleNodeContainer {
+                if let handleNodeContainer = node.handleNodeContainer {
                     self.addSubnode(handleNodeContainer)
                     handleNodeContainer.beginScrubbing = { [weak self] in
                         if let strongSelf = self {
@@ -313,9 +312,9 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                             strongSelf.updateProgress()
                         }
                     }
-                }*/
+                }
                 
-                foregroundNode.onEnterHierarchy = { [weak self] in
+                node.foregroundNode.onEnterHierarchy = { [weak self] in
                     self?.updateProgress()
                 }
         }
@@ -508,13 +507,17 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 } else {
                     
                 }
-            case let .custom(backgroundNode, foregroundContentNode, foregroundNode):
-                foregroundNode.layer.removeAnimation(forKey: "playback-bounds")
-                foregroundNode.layer.removeAnimation(forKey: "playback-position")
+            case let .custom(node):
+                if let handleNodeContainer = node.handleNodeContainer {
+                    handleNodeContainer.frame = bounds
+                }
+                
+                node.foregroundNode.layer.removeAnimation(forKey: "playback-bounds")
+                node.foregroundNode.layer.removeAnimation(forKey: "playback-position")
                 
                 let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: bounds.size.width, height: bounds.size.height))
-                backgroundNode.frame = backgroundFrame
-                foregroundContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
+                node.backgroundNode.frame = backgroundFrame
+                node.foregroundContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
                 
                 let timestampAndDuration: (timestamp: Double, duration: Double)?
                 if let statusValue = self.statusValue, Double(0.0).isLess(than: statusValue.duration) {
@@ -536,9 +539,9 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                         let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
                         let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
                         
-                        foregroundNode.frame = toRect
-                        foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
-                        foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-position")
+                        node.foregroundNode.frame = toRect
+                        node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
+                        node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-position")
                     } else if let statusValue = self.statusValue, !progress.isNaN && progress.isFinite {
                         if statusValue.generationTimestamp.isZero {
                             let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
@@ -547,9 +550,9 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                             let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
                             let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
                             
-                            foregroundNode.frame = toRect
-                            foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
-                            foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-position")
+                            node.foregroundNode.frame = toRect
+                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
+                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-position")
                         } else {
                             let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
                             let toRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
@@ -557,15 +560,15 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                             let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
                             let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
                             
-                            foregroundNode.frame = toRect
-                            foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-bounds")
-                            foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-position")
+                            node.foregroundNode.frame = toRect
+                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-bounds")
+                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? 1.0 : 0.0), forKey: "playback-position")
                         }
                     } else {
-                        foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
+                        node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
                     }
                 } else {
-                    foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
+                    node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
                 }
         }
     }
@@ -575,8 +578,8 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
             switch self.contentNodes {
                 case let .standard(node):
                     return node.handleNodeContainer?.view
-                case .custom:
-                    break
+                case let .custom(node):
+                    return node.handleNodeContainer?.view
             }
             return super.hitTest(point, with: event)
         } else {

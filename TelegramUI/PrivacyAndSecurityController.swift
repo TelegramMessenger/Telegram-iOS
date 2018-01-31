@@ -580,7 +580,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             
             var rightNavigationButton: ItemListNavigationButton?
             if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
-                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PrivacySettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)

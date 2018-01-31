@@ -102,7 +102,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.contentNode)
         self.contentNode.openMedia = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
-                item.controllerInteraction.openMessage(item.message.id)
+                item.controllerInteraction.openMessage(item.message)
             }
         }
         self.contentNode.activateAction = { [weak self] in

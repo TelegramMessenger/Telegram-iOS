@@ -123,15 +123,15 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
             case let .classicHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .none(_, theme, text, selected):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: true, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: selected, zeroSeparatorInsets: true, sectionId: self.section, action: {
                     arguments.selectSound(.none)
                 })
             case let .default(_, theme, text, selected):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.selectSound(.default)
                 })
             case let .sound(_, _, theme, text, sound, selected):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.selectSound(sound)
                 })
         }
@@ -267,11 +267,11 @@ public func notificationSoundSelectionController(account: Account, isModal: Bool
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get())
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationSoundSelectionEntry>, NotificationSoundSelectionEntry.ItemGenerationArguments)) in
             
-            let leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 arguments.cancel()
             })
             
-            let rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                 arguments.complete()
             })
             

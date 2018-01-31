@@ -366,6 +366,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let actionsDisposable = DisposableSet()
     
+    let cachedDataDisposable = MetaDisposable()
+    actionsDisposable.add(cachedDataDisposable)
+    
     let updateAvatarDisposable = MetaDisposable()
     actionsDisposable.add(updateAvatarDisposable)
     
@@ -478,8 +481,6 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 
                 presentControllerImpl?(legacyController, nil)
                 
-                let theme = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme
-                
                 var hasPhotos = false
                 if let peer = peer, !peer.profileImageRepresentations.isEmpty {
                     hasPhotos = true
@@ -547,7 +548,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView)
         |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
-            let rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
+            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                 if let peer = peer as? TelegramUser, let cachedData = view.cachedData as? CachedUserData {
                     arguments.openEditing()
                 }

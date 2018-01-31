@@ -170,4 +170,10 @@ struct PresentationResourcesRootController {
             })?.stretchableImage(withLeftCapWidth: 8 + 15, topCapHeight: 8 + 15)
         })
     }
+    
+    static func inAppNotificationSecretChatIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.inAppNotificationSecretChatIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Notification/SecretLock"), color: theme.inAppNotification.primaryTextColor)
+        })
+    }
 }

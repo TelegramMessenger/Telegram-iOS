@@ -54,7 +54,7 @@ public struct ChatHistoryCombinedInitialData {
 
 enum ChatHistoryViewUpdate {
     case Loading(initialData: ChatHistoryCombinedInitialData?)
-    case HistoryView(view: MessageHistoryView, type: ChatHistoryViewUpdateType, scrollPosition: ChatHistoryViewScrollPosition?, initialData: ChatHistoryCombinedInitialData)
+    case HistoryView(view: MessageHistoryView, type: ChatHistoryViewUpdateType, scrollPosition: ChatHistoryViewScrollPosition?, originalScrollPosition: ChatHistoryViewScrollPosition?, initialData: ChatHistoryCombinedInitialData)
 }
 
 struct ChatHistoryView {
@@ -368,7 +368,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             |> mapToSignal { location in
                 return chatHistoryViewForLocation(location, account: account, chatLocation: chatLocation, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData) |> beforeNext { viewUpdate in
                     switch viewUpdate {
-                        case let .HistoryView(view, _, _, _):
+                        case let .HistoryView(view, _, _, _, _):
                             let _ = fixedCombinedReadStates.swap(view.combinedReadStates)
                         default:
                             break
@@ -406,7 +406,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                     }
                     return .complete()
-                case let .HistoryView(view, type, scrollPosition, data):
+                case let .HistoryView(view, type, scrollPosition, originalScrollPosition, data):
                     initialData = data
                     
                     var updatedScrollPosition = scrollPosition
@@ -420,6 +420,19 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     
                     let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData))
                     let previous = previousView.swap(processedView)
+                    
+                    if scrollPosition == nil, let originalScrollPosition = originalScrollPosition {
+                        switch originalScrollPosition {
+                            case let .index(index, position, _, _):
+                                if case .upperBound = index {
+                                    if let previous = previous, previous.filteredEntries.count == 1, case .HoleEntry = previous.filteredEntries[0] {
+                                        updatedScrollPosition = .index(index: index, position: position, directionHint: .Down, animated: false)
+                                    }
+                                }
+                            default:
+                                break
+                        }
+                    }
                     
                     let reason: ChatHistoryViewTransitionReason
                     var prepareOnMainQueue = false
@@ -477,7 +490,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if apply {
                         switch chatLocation {
                             case .peer:
-                                let _ = applyMaxReadIndexInteractively(postbox: account.postbox, network: account.network, index: messageIndex).start()
+                                let _ = applyMaxReadIndexInteractively(postbox: account.postbox, network: account.network, stateManager: account.stateManager, index: messageIndex).start()
                             case let .group(groupId):
                                 let _ = account.postbox.modify({ modifier -> Void in
                                     modifier.applyGroupFeedInteractiveReadMaxIndex(groupId: groupId, index: messageIndex)
@@ -673,7 +686,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
     
-    public func scrollToMessage(from fromIndex: MessageIndex, to toIndex: MessageIndex, animated: Bool) {
+    public func scrollToMessage(from fromIndex: MessageIndex, to toIndex: MessageIndex, animated: Bool, highlight: Bool = true) {
         self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: .message(toIndex), anchorIndex: .message(toIndex), sourceIndex: .message(fromIndex), scrollPosition: .center(.bottom), animated: animated))
     }
     
@@ -985,14 +998,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     
                     if !nextItem {
                         scrolled = true
-                        self.scrollToMessage(from: scrollState.messageIndex, to: scrollState.messageIndex, animated: true)
+                        self.scrollToMessage(from: scrollState.messageIndex, to: scrollState.messageIndex, animated: true, highlight: false)
                     } else {
                         loop: for i in (index + 1) ..< historyView.filteredEntries.count {
                             let entry = historyView.filteredEntries[i]
                             switch entry {
                                 case .MessageEntry, .MessageGroupEntry:
                                     scrolled = true
-                                    self.scrollToMessage(from: scrollState.messageIndex, to: entry.index, animated: true)
+                                    self.scrollToMessage(from: scrollState.messageIndex, to: entry.index, animated: true, highlight: false)
                                     break loop
                                 default:
                                     break
@@ -1004,6 +1017,31 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             if !scrolled {
                 self.scrollToEndOfHistory()
+            }
+        }
+    }
+    
+    func requestMessageUpdate(_ id: MessageId) {
+        if let historyView = self.historyView {
+            loop: for i in 0 ..< historyView.filteredEntries.count {
+                switch historyView.filteredEntries[i] {
+                    case let .MessageEntry(message, presentationData, read, _, selection):
+                        if message.id == id {
+                            let index = historyView.filteredEntries.count - 1 - i
+                            let item: ListViewItem
+                            switch self.mode {
+                                case .bubbles:
+                                    item = ChatMessageItem(presentationData: presentationData, account: self.account, chatLocation: self.chatLocation, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection))
+                                case let .list(search, _):
+                                    item = ListMessageItem(theme: presentationData.theme, strings: presentationData.strings, account: self.account, chatLocation: self.chatLocation, controllerInteraction: self.controllerInteraction, message: message, selection: selection, displayHeader: search)
+                            }
+                            let updateItem = ListViewUpdateItem(index: index, previousIndex: index, item: item, directionHint: nil)
+                            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                            break loop
+                        }
+                    default:
+                        break
+                }
             }
         }
     }

@@ -6,7 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import PassKit
 
-func openChatMessage(account: Account, message: Message, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> ASDisplayNode?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
+func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> ASDisplayNode?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: [InstantPageGalleryEntry]?
@@ -127,19 +127,8 @@ func openChatMessage(account: Account, message: Message, reverseMessageGalleryOr
                     }
                 }
             })
-            /*
-             NSData *passData = [[NSData alloc] initWithContentsOfFile:[_companion fileUrlForDocumentMedia:documentAttachment].path];
-             NSError *error;
-             PKPass *pass = [[PKPass alloc] initWithData:passData error:&error];
-             
-             if (error == nil)
-             {
-             [self presentViewController:[[PKAddPassesViewController alloc] initWithPass:pass] animated:true completion:nil];
-             return nil;
-             }
-             */
         } else {
-            let gallery = GalleryController(account: account, messageId: message.id, invertItemOrder: reverseMessageGalleryOrder, replaceRootController: { [weak navigationController] controller, ready in
+            let gallery = GalleryController(account: account, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, replaceRootController: { [weak navigationController] controller, ready in
                 navigationController?.replaceTopController(controller, animated: false, ready: ready)
             }, baseNavigationController: navigationController)
             
@@ -176,7 +165,7 @@ func openChatMessage(account: Account, message: Message, reverseMessageGalleryOr
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_SendMessage, action: {
                         dismissAction()
                         
-                        openPeer(peer, .chat(textInputState: nil))
+                        openPeer(peer, .chat(textInputState: nil, messageId: nil))
                     }))
                     if let isContact = isContact, !isContact {
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_AddContact, action: {

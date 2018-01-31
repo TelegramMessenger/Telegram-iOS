@@ -75,15 +75,15 @@ private enum VoiceCallDataSavingEntry: ItemListNodeEntry {
     func item(_ arguments: VoiceCallDataSavingControllerArguments) -> ListViewItem {
         switch self {
             case let .never(theme, text, value):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSelection(.never)
                 })
             case let .cellular(theme, text, value):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSelection(.cellular)
                 })
             case let .always(theme, text, value):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSelection(.always)
                 })
             case let .info(theme, text):

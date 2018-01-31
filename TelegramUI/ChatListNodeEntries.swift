@@ -224,7 +224,7 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
         if let savedMessagesPeer = savedMessagesPeer {
             result.append(.PeerEntry(index: ChatListIndex.absoluteUpperBound.predecessor, presentationData: state.presentationData, message: nil, readState: nil, notificationSettings: nil, embeddedInterfaceState: nil, peer: RenderedPeer(peerId: savedMessagesPeer.id, peers: SimpleDictionary([savedMessagesPeer.id: savedMessagesPeer])), summaryInfo: ChatListMessageTagSummaryInfo(), editing: state.editing, hasActiveRevealControls: false, inputActivities: nil))
         }
-        result.append(.SearchEntry(theme: state.presentationData.theme, text: state.presentationData.strings.DialogList_SearchLabel))
+        result.append(.SearchEntry(theme: state.presentationData.theme, text: view.groupId == nil ? state.presentationData.strings.DialogList_SearchLabel : "Search this feed"))
     }
     if result.count == 2, case .SearchEntry = result[1], case .HoleEntry = result[0] {
         return []

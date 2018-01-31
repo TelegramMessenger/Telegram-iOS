@@ -9,8 +9,6 @@ class SearchDisplayControllerContentNode: ASDisplayNode {
     
     override init() {
         super.init()
-        
-        self.backgroundColor = UIColor.white
     }
     
     func searchTextUpdated(text: String) {

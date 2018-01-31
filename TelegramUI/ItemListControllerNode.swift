@@ -39,6 +39,7 @@ private struct ItemListNodeTransition<Entry: ItemListNodeEntry> {
     let entries: ItemListNodeEntryTransition
     let updateStyle: ItemListStyle?
     let emptyStateItem: ItemListControllerEmptyStateItem?
+    let searchItem: ItemListControllerSearch?
     let focusItemTag: ItemListItemTag?
     let firstTime: Bool
     let animated: Bool
@@ -50,13 +51,15 @@ struct ItemListNodeState<Entry: ItemListNodeEntry> {
     let entries: [Entry]
     let style: ItemListStyle
     let emptyStateItem: ItemListControllerEmptyStateItem?
+    let searchItem: ItemListControllerSearch?
     let animateChanges: Bool
     let focusItemTag: ItemListItemTag?
     
-    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, animateChanges: Bool = true) {
+    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, animateChanges: Bool = true) {
         self.entries = entries
         self.style = style
         self.emptyStateItem = emptyStateItem
+        self.searchItem = searchItem
         self.animateChanges = animateChanges
         self.focusItemTag = focusItemTag
     }
@@ -84,16 +87,21 @@ final class ItemListNodeVisibleEntries<Entry: ItemListNodeEntry>: Sequence {
     }
 }
 
-class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollViewDelegate {
+class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNode, UIScrollViewDelegate {
     private var _ready = ValuePromise<Bool>()
     public var ready: Signal<Bool, NoError> {
         return self._ready.get()
     }
     private var didSetReady = false
     
+    private let navigationBar: NavigationBar
+    
     let listNode: ListView
     private var emptyStateItem: ItemListControllerEmptyStateItem?
     private var emptyStateNode: ItemListControllerEmptyStateItemNode?
+    
+    private var searchItem: ItemListControllerSearch?
+    private var searchNode: ItemListControllerSearchNode?
     
     private let transitionDisposable = MetaDisposable()
     
@@ -113,16 +121,13 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         }
     }
     
-    init(updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
+    init(navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
+        self.navigationBar = navigationBar
         self.updateNavigationOffset = updateNavigationOffset
         
         self.listNode = ListView()
         
         super.init()
-        
-        self.setViewBlock({
-            return UITracingLayerView()
-        })
         
         self.backgroundColor = nil
         self.isOpaque = false
@@ -158,7 +163,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
             if previous?.style != state.style {
                 updatedStyle = state.style
             }
-            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, focusItemTag: state.focusItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, mergedEntries: state.entries)
+            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, mergedEntries: state.entries)
         }) |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
@@ -222,6 +227,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         
         if let emptyStateNode = self.emptyStateNode {
             emptyStateNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
+        }
+        
+        if let searchNode = self.searchNode {
+            searchNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
         
         let dequeue = self.validLayout == nil
@@ -326,6 +335,51 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                     self.emptyStateNode = nil
                 }
             }
+            
+            var updateSearchItem = false
+            if let searchItem = self.searchItem, let updatedSearchItem = transition.searchItem {
+                updateSearchItem = !searchItem.isEqual(to: updatedSearchItem)
+            } else if (self.searchItem != nil) != (transition.searchItem != nil) {
+                updateSearchItem = true
+            }
+            if updateSearchItem {
+                self.searchItem = transition.searchItem
+                if let searchItem = transition.searchItem {
+                    let updatedNode = searchItem.node(current: self.searchNode)
+                    if let searchNode = self.searchNode, updatedNode !== searchNode {
+                        searchNode.removeFromSupernode()
+                    }
+                    if self.searchNode !== updatedNode {
+                        self.searchNode = updatedNode
+                        if let validLayout = self.validLayout {
+                            updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
+                        }
+                        self.insertSubnode(updatedNode, belowSubnode: self.navigationBar)
+                        updatedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
+                    }
+                    let updatedTitleContentNode = searchItem.titleContentNode(current: self.navigationBar.contentNode as? (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode))
+                    if updatedTitleContentNode !== self.navigationBar.contentNode {
+                        updatedTitleContentNode.setQueryUpdated { [weak self] query in
+                            if let strongSelf = self {
+                                strongSelf.searchNode?.queryUpdated(query)
+                            }
+                        }
+                        self.navigationBar.setContentNode(updatedTitleContentNode, animated: true)
+                        updatedTitleContentNode.activate()
+                    }
+                } else {
+                    if let searchNode = self.searchNode {
+                        self.searchNode = nil
+                        searchNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak searchNode]_ in
+                            searchNode?.removeFromSupernode()
+                        })
+                    }
+                    
+                    if let _ = self.navigationBar.contentNode {
+                        self.navigationBar.setContentNode(nil, animated: true)
+                    }
+                }
+            }
         }
     }
     
@@ -353,5 +407,15 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         if abs(scrollVelocity.y) > 200.0 {
            self.animateOut()
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let searchNode = self.searchNode {
+            if let result = searchNode.hitTest(point, with: event) {
+                return result
+            }
+        }
+        
+        return super.hitTest(point, with: event)
     }
 }

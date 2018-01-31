@@ -77,8 +77,12 @@ public func chatListItemStrings(strings: PresentationStrings, message: Message?,
                             messageText = strings.Message_Animation
                         }
                     }
-                case _ as TelegramMediaMap:
-                    messageText = strings.Message_Location
+                case let location as TelegramMediaMap:
+                    if location.liveBroadcastingTimeout != nil {
+                        messageText = strings.Message_LiveLocation
+                    } else {
+                        messageText = strings.Message_Location
+                    }
                 case _ as TelegramMediaContact:
                     messageText = strings.Message_Contact
                 case let game as TelegramMediaGame:

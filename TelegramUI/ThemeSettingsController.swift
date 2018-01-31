@@ -133,7 +133,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             case let .themeListHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .themeItem(theme, title, value, index):
-                return ItemListCheckboxItem(theme: theme, title: title, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.selectTheme(index)
                 })
         }

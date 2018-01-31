@@ -91,6 +91,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         }, presentController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: {
             return false
+        }, requestMessageUpdate: { _ in
         }, automaticMediaDownloadSettings: .none)
         
         super.init(layerBacked: false, dynamicBounce: false)

@@ -409,9 +409,9 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     func activateMedia() {
         if let item = self.item, let currentPrimaryUrl = self.currentPrimaryUrl {
             if let webpage = self.currentMedia as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
-                item.controllerInteraction.openInstantPage(item.message.id)
+                item.controllerInteraction.openInstantPage(item.message)
             } else {
-                if !item.controllerInteraction.openMessage(item.message.id) {
+                if !item.controllerInteraction.openMessage(item.message) {
                     item.controllerInteraction.openUrl(currentPrimaryUrl)
                 }
             }
@@ -461,7 +461,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                 if case .longTap = gesture {
                                     item.controllerInteraction.longTap(ChatControllerInteractionLongTapAction.url(url))
                                 } else if url == self.currentPrimaryUrl {
-                                    item.controllerInteraction.openMessage(item.message.id)
+                                    item.controllerInteraction.openMessage(item.message)
                                 } else {
                                     item.controllerInteraction.openUrl(url)
                                 }
@@ -517,7 +517,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     
     override func longTapped() {
         if let item = self.item {
-            item.controllerInteraction.openMessageContextMenu(item.message.id, self, self.bounds)
+            item.controllerInteraction.openMessageContextMenu(item.message, self, self.bounds)
         }
     }
 }

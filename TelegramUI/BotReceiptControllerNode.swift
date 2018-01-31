@@ -259,7 +259,7 @@ final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
     
     private let actionButton: BotCheckoutActionButton
     
-    init(updateNavigationOffset: @escaping (CGFloat) -> Void, account: Account, invoice: TelegramMediaInvoice, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
+    init(navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, account: Account, invoice: TelegramMediaInvoice, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
         self.account = account
         self.dismissAnimated = dismissAnimated
         
@@ -277,7 +277,7 @@ final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
         self.actionButton = BotCheckoutActionButton(inactiveFillColor: self.presentationData.theme.list.plainBackgroundColor, activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.plainBackgroundColor)
         self.actionButton.setState(.inactive(self.presentationData.strings.Common_Done))
         
-        super.init(updateNavigationOffset: updateNavigationOffset, state: signal)
+        super.init(navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
         
         self.dataRequestDisposable = (requestBotPaymentReceipt(network: account.network, messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
             if let strongSelf = self {

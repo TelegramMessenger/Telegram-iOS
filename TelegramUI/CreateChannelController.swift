@@ -236,9 +236,9 @@ public func createChannelController(account: Account) -> ViewController {
             
             let rightNavigationButton: ItemListNavigationButton
             if state.creating {
-                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Next, style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
                     arguments.done()
                 })
             }

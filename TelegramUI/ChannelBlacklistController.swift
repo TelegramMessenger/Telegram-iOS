@@ -329,9 +329,9 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             
         }))*/
     }, openPeer: { participant in
-        presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peerId, initialParticipant: participant, updated: { rights in
+        /*presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peerId, initialParticipant: participant, updated: { rights in
             
-        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))*/
     })
     
     let peerView = account.viewTracker.peerView(peerId)
@@ -348,13 +348,13 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             var rightNavigationButton: ItemListNavigationButton?
             if let blacklist = blacklist, !blacklist.isEmpty {
                 if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                         updateState { state in
                             return state.withUpdatedEditing(true)
                         }

@@ -9,17 +9,26 @@ private let searchBarFont = Font.regular(14.0)
 final class ChatSearchNavigationContentNode: NavigationBarContentNode {
     private let theme: PresentationTheme
     private let strings: PresentationStrings
+    private let chatLocation: ChatLocation
     
     private let searchBar: SearchBarNode
     private let interaction: ChatPanelInterfaceInteraction
     
-    init(theme: PresentationTheme, strings: PresentationStrings, interaction: ChatPanelInterfaceInteraction) {
+    init(theme: PresentationTheme, strings: PresentationStrings, chatLocation: ChatLocation, interaction: ChatPanelInterfaceInteraction) {
         self.theme = theme
         self.strings = strings
+        self.chatLocation = chatLocation
         self.interaction = interaction
         
         self.searchBar = SearchBarNode(theme: theme, strings: strings)
-        self.searchBar.placeholderString = NSAttributedString(string: strings.Conversation_SearchPlaceholder, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
+        let placeholderText: String
+        switch chatLocation {
+            case .peer:
+                placeholderText = strings.Conversation_SearchPlaceholder
+            case .group:
+                placeholderText = "Search this feed"
+        }
+        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
         
         super.init()
         
@@ -62,7 +71,14 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
             switch search.domain {
                 case .everything:
                     self.searchBar.prefixString = nil
-                    self.searchBar.placeholderString = NSAttributedString(string: strings.Conversation_SearchPlaceholder, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
+                    let placeholderText: String
+                    switch self.chatLocation {
+                        case .peer:
+                            placeholderText = self.strings.Conversation_SearchPlaceholder
+                        case .group:
+                            placeholderText = "Search this feed"
+                    }
+                    self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
                 case .members:
                     self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputTextColor)
                     self.searchBar.placeholderString = nil

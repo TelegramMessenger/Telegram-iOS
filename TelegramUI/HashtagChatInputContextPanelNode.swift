@@ -71,6 +71,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.stackFromBottom = true
         self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
+        self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         
         super.init(account: account, theme: theme, strings: strings)
         
@@ -98,7 +99,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputState { textInputState in
-                    var hashtagQueryRange: Range<String.Index>?
+                    var hashtagQueryRange: NSRange?
                     inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
                         if type == [.hashtag] {
                             hashtagQueryRange = range
@@ -107,21 +108,15 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                     }
                     
                     if let range = hashtagQueryRange {
-                        var inputText = textInputState.inputText
+                        let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
                         
                         let replacementText = text + " "
-                        inputText.replaceSubrange(range, with: replacementText)
                         
-                        guard let lowerBound = range.lowerBound.samePosition(in: inputText.utf16) else {
-                            return textInputState
-                        }
-                        let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: lowerBound)
+                        inputText.replaceCharacters(in: range, with: replacementText)
                         
-                        let replacementLength = replacementText.utf16.distance(from: replacementText.utf16.startIndex, to: replacementText.utf16.endIndex)
+                        let selectionPosition = range.lowerBound + (replacementText as NSString).length
                         
-                        let utfUpperPosition = utfLowerIndex + replacementLength
-                        
-                        return ChatTextInputState(inputText: inputText, selectionRange: utfUpperPosition ..< utfUpperPosition)
+                        return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
                     }
                     return textInputState
                 }

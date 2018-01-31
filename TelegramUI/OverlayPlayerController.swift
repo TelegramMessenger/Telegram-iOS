@@ -30,6 +30,8 @@ final class OverlayPlayerController: ViewController {
         super.init(navigationBarTheme: nil)
         
         self.statusBar.statusBarStyle = .Ignore
+        
+        self.ready.set(.never())
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -57,6 +59,8 @@ final class OverlayPlayerController: ViewController {
                 })
             }
         })
+        
+        self.ready.set(self.controllerNode.ready.get())
         
         self.displayNodeDidLoad()
     }

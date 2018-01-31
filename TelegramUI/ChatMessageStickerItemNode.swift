@@ -251,7 +251,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         case .tap:
                             if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
                                 if let item = self.item, let author = item.message.author {
-                                    item.controllerInteraction.openPeer(author.id, .info, item.message.id)
+                                    item.controllerInteraction.openPeer(author.id, .info, item.message)
                                 }
                                 return
                             }
@@ -291,14 +291,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             }*/
                         
                             if let item = self.item, self.imageNode.frame.contains(location) {
-                                item.controllerInteraction.openMessage(item.message.id)
+                                item.controllerInteraction.openMessage(item.message)
                                 return
                             }
                         
                             self.item?.controllerInteraction.clickThroughMessage()
                         case .longTap, .doubleTap:
                             if let item = self.item, self.imageNode.frame.contains(location) {
-                                item.controllerInteraction.openMessageContextMenu(item.message.id, self, self.imageNode.frame)
+                                item.controllerInteraction.openMessageContextMenu(item.message, self, self.imageNode.frame)
                             }
                         case .hold:
                             break

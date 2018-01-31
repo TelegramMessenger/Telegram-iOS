@@ -430,10 +430,11 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             dismissImpl?()
         }))
     }, logout: {
-        let alertController = standardTextAlertController(title: NSLocalizedString("Settings.LogoutConfirmationTitle", comment: ""), text: NSLocalizedString("Settings.LogoutConfirmationText", comment: ""), actions: [
-            TextAlertAction(type: .genericAction, title: "Cancel", action: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [
+            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
             }),
-            TextAlertAction(type: .defaultAction, title: "OK", action: {
+            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                 let _ = logoutFromAccount(id: account.id, accountManager: accountManager).start()
             })
             ])
@@ -446,9 +447,9 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
         |> map { presentationData, state, view, wallpapers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let rightNavigationButton: ItemListNavigationButton
             if state.updatingName != nil || state.updatingBioText {
-                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                     arguments.saveEditingState()
                 })
             }

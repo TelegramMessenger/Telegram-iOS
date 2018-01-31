@@ -302,13 +302,13 @@ public func archivedStickerPacksController(account: Account) -> ViewController {
             var rightNavigationButton: ItemListNavigationButton?
             if let packs = packs, packs.count != 0 {
                 if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                         updateState {
                             $0.withUpdatedEditing(false)
                         }
                     })
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState {
                             $0.withUpdatedEditing(true)
                         }

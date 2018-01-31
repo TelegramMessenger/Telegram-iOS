@@ -28,6 +28,8 @@ final class ChannelMembersSearchController: ViewController {
         
         super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
         
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        
         self.title = self.presentationData.strings.Channel_Members_Title
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
     }
@@ -89,8 +91,8 @@ final class ChannelMembersSearchController: ViewController {
     
     private func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
+            self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
             self.controllerNode.deactivateSearch(animated: animated)
-            self.setDisplayNavigationBar(true, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
         }
     }
     

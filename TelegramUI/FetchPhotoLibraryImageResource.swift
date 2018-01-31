@@ -3,10 +3,15 @@ import Photos
 import Postbox
 import SwiftSignalKit
 
+private final class RequestId {
+    var id: PHImageRequestID?
+    var invalidated: Bool = false
+}
+
 func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceDataFetchResult, NoError> {
     return Signal { subscriber in
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
-        var requestId: PHImageRequestID?
+        let requestId = Atomic<RequestId>(value: RequestId())
         if fetchResult.count != 0 {
             let asset = fetchResult.object(at: 0)
             let option = PHImageRequestOptions()
@@ -20,9 +25,15 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
                 }
             }
             let size = CGSize(width: 1280.0, height: 1280.0)
-            requestId = PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFit, options: option, resultHandler: { (image, info) -> Void in
+            
+            let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFit, options: option, resultHandler: { (image, info) -> Void in
                 Queue.concurrentDefaultQueue().async {
-                    requestId = nil
+                    requestId.with { current -> Void in
+                        if !current.invalidated {
+                            current.id = nil
+                            current.invalidated = true
+                        }
+                    }
                     if let image = image {
                         if let info = info, let degraded = info[PHImageResultIsDegradedKey], (degraded as AnyObject).boolValue!{
                             if !madeProgress.swap(true) {
@@ -53,13 +64,28 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
                     }
                 }
             })
+            requestId.with { current -> Void in
+                if !current.invalidated {
+                    current.id = requestIdValue
+                }
+            }
         } else {
             subscriber.putNext(.reset)
         }
         
         return ActionDisposable {
-            if let requestId = requestId {
-                PHImageManager.default().cancelImageRequest(requestId)
+            let requestIdValue = requestId.with { current -> PHImageRequestID? in
+                if !current.invalidated {
+                    let value = current.id
+                    current.id = nil
+                    current.invalidated = true
+                    return value
+                } else {
+                    return nil
+                }
+            }
+            if let requestIdValue = requestIdValue {
+                PHImageManager.default().cancelImageRequest(requestIdValue)
             }
         }
     }

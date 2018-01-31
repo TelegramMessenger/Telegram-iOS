@@ -146,6 +146,7 @@ enum PresentationResourceKey: Int32 {
     case chatTitlePanelUnmuteImage
     case chatTitlePanelCallImage
     case chatTitlePanelReportImage
+    case chatTitlePanelGroupingImage
     
     case chatHistoryNavigationButtonImage
     case chatHistoryMentionsButtonImage
@@ -186,4 +187,5 @@ enum PresentationResourceKey: Int32 {
     case genericSearchBar
     
     case inAppNotificationBackground
+    case inAppNotificationSecretChatIcon
 }

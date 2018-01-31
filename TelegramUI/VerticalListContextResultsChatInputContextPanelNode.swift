@@ -124,6 +124,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
         self.listView.isHidden = true
+        self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         
         super.init(account: account, theme: theme, strings: strings)
         

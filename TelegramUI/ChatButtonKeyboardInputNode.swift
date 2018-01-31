@@ -193,7 +193,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                             peerId = message.id.peerId
                         }
                         if let botPeer = botPeer, let addressName = botPeer.addressName {
-                            controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: "@\(addressName) \(query)")), nil)
+                            controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: "@\(addressName) \(query)")), messageId: nil), nil)
                         }
                     }
                 case .payment:

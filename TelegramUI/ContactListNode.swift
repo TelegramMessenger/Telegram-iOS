@@ -92,7 +92,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 } else {
                     status = .none
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: peer, chatPeer: peer, status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: peer, chatPeer: peer, status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     interaction.openPeer(peer)
                 })
         }

@@ -19,13 +19,14 @@ class ChatListItem: ListViewItem {
     let content: ChatListItemContent
     let editing: Bool
     let hasActiveRevealControls: Bool
+    let enableContextActions: Bool
     let interaction: ChatListNodeInteraction
     
     let selectable: Bool = true
     
     let header: ListViewItemHeader?
     
-    init(presentationData: ChatListPresentationData, account: Account, peerGroupId: PeerGroupId?, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, header: ListViewItemHeader?, interaction: ChatListNodeInteraction) {
+    init(presentationData: ChatListPresentationData, account: Account, peerGroupId: PeerGroupId?, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, header: ListViewItemHeader?, enableContextActions: Bool, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.peerGroupId = peerGroupId
         self.account = account
@@ -34,6 +35,7 @@ class ChatListItem: ListViewItem {
         self.editing = editing
         self.hasActiveRevealControls = hasActiveRevealControls
         self.header = header
+        self.enableContextActions = enableContextActions
         self.interaction = interaction
     }
     
@@ -468,7 +470,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 hasDraft = true
                 authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                 
-                attributedText = NSAttributedString(string: embeddedState.text, font: textFont, textColor: theme.messageTextColor)
+                attributedText = NSAttributedString(string: embeddedState.text.string, font: textFont, textColor: theme.messageTextColor)
             } else if let message = message {
                 attributedText = NSAttributedString(string: messageText as String, font: textFont, textColor: theme.messageTextColor)
                 
@@ -567,11 +569,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var isVerified = false
             let isSecret = item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat
-            if let peer = itemPeer.chatMainPeer {
-                if let peer = peer as? TelegramUser {
-                    isVerified = peer.flags.contains(.isVerified)
-                } else if let peer = peer as? TelegramChannel {
-                    isVerified = peer.flags.contains(.isVerified)
+            
+            if case .peer = item.content {
+                if let peer = itemPeer.chatMainPeer {
+                    if let peer = peer as? TelegramUser {
+                        isVerified = peer.flags.contains(.isVerified)
+                    } else if let peer = peer as? TelegramChannel {
+                        isVerified = peer.flags.contains(.isVerified)
+                    }
                 }
             }
             
@@ -645,11 +650,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         isPinned = item.index.pinningIndex != nil
                     }
                     
-                    peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, hasPeerGroupId: hasPeerGroupId, canDelete: true)
+                    if item.enableContextActions {
+                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, hasPeerGroupId: hasPeerGroupId, canDelete: true)
+                    } else {
+                        peerRevealOptions = []
+                    }
                 case .groupReference:
                     let isPinned = item.index.pinningIndex != nil
                     
-                    peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: nil, hasPeerGroupId: nil, canDelete: false)
+                    if item.enableContextActions {
+                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: nil, hasPeerGroupId: nil, canDelete: false)
+                    } else {
+                        peerRevealOptions = []
+                    }
             }
             
             return (layout, { [weak self] animated in

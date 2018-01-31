@@ -26,6 +26,7 @@ public final class ChatPresentationData {
     
     let messageFont: UIFont
     let messageBoldFont: UIFont
+    let messageItalicFont: UIFont
     let messageFixedFont: UIFont
     
     init(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, wallpaper: TelegramWallpaper, timeFormat: PresentationTimeFormat) {
@@ -38,6 +39,7 @@ public final class ChatPresentationData {
         let baseFontSize = fontSize.baseDisplaySize
         self.messageFont = UIFont.systemFont(ofSize: baseFontSize)
         self.messageBoldFont = UIFont.boldSystemFont(ofSize: baseFontSize)
+        self.messageItalicFont = UIFont.italicSystemFont(ofSize: baseFontSize)
         self.messageFixedFont = UIFont(name: "Menlo-Regular", size: baseFontSize - 1.0) ?? UIFont.systemFont(ofSize: baseFontSize)
     }
 }

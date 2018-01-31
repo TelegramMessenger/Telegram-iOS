@@ -67,6 +67,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.stackFromBottom = true
         self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
+        self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         
         super.init(account: account, theme: theme, strings: strings)
         
@@ -100,7 +101,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                 switch strongSelf.mode {
                     case .input:
                         interfaceInteraction.updateTextInputState { textInputState in
-                            var mentionQueryRange: Range<String.Index>?
+                            var mentionQueryRange: NSRange?
                             inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
                                 if type == [.mention] {
                                     mentionQueryRange = range
@@ -109,22 +110,28 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                             }
                             
                             if let range = mentionQueryRange {
-                                var inputText = textInputState.inputText
+                                let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
                                 
                                 if let addressName = peer.addressName, !addressName.isEmpty {
                                     let replacementText = addressName + " "
-                                    inputText.replaceSubrange(range, with: replacementText)
                                     
-                                    guard let lowerBound = range.lowerBound.samePosition(in: inputText.utf16) else {
-                                        return textInputState
-                                    }
-                                    let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: lowerBound)
+                                    inputText.replaceCharacters(in: range, with: replacementText)
                                     
-                                    let replacementLength = replacementText.utf16.distance(from: replacementText.utf16.startIndex, to: replacementText.utf16.endIndex)
+                                    let selectionPosition = range.lowerBound + (replacementText as NSString).length
                                     
-                                    let utfUpperPosition = utfLowerIndex + replacementLength
+                                    return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                } else if !peer.compactDisplayTitle.isEmpty {
+                                    let replacementText = NSMutableAttributedString()
+                                    replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
+                                    replacementText.append(NSAttributedString(string: " "))
                                     
-                                    return ChatTextInputState(inputText: inputText, selectionRange: utfUpperPosition ..< utfUpperPosition)
+                                    let updatedRange = NSRange(location: range.location - 1, length: range.length + 1)
+                                    
+                                    inputText.replaceCharacters(in: updatedRange, with: replacementText)
+                                    
+                                    let selectionPosition = updatedRange.lowerBound + replacementText.length
+                                    
+                                    return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
                                 }
                             }
                             return textInputState

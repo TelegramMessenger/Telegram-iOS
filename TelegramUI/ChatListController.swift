@@ -196,7 +196,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.chatListDisplayNode.chatListNode.presentAlert = { [weak self] text in
             if let strongSelf = self {
-                self?.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                self?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
         }
         

@@ -110,8 +110,18 @@ final class InstantPageTextItem: InstantPageItem {
     
     private func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedStringKey: Any])? {
         let transformedPoint = CGPoint(x: point.x, y: point.y)
-        for line in self.lines {
-            let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+        let boundsWidth = self.frame.width
+        for i in 0 ..< self.lines.count {
+            let line = self.lines[i]
+            
+            var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+            if self.alignment == .center {
+                lineFrame.origin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
+            } else if self.alignment == .right {
+                lineFrame.origin.x = boundsWidth - lineFrame.size.width
+            } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
+                lineFrame.origin.x = boundsWidth - lineFrame.size.width
+            }
             if lineFrame.contains(transformedPoint) {
                 var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
                 if index == attributedString.length {
@@ -129,8 +139,18 @@ final class InstantPageTextItem: InstantPageItem {
                 break
             }
         }
-        for line in self.lines {
-            let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+        for i in 0 ..< self.lines.count {
+            let line = self.lines[i]
+            
+            var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+            if self.alignment == .center {
+                lineFrame.origin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
+            } else if self.alignment == .right {
+                lineFrame.origin.x = boundsWidth - lineFrame.size.width
+            } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
+                lineFrame.origin.x = boundsWidth - lineFrame.size.width
+            }
+            
             if lineFrame.insetBy(dx: -5.0, dy: -5.0).contains(transformedPoint) {
                 var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
                 if index == attributedString.length {

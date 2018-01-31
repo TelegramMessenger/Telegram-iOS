@@ -109,6 +109,8 @@ final class ChangePhoneNumberController: ViewController {
             }, error: { [weak self] error in
                 if let strongSelf = self {
                     strongSelf.inProgress = false
+                    
+                    let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
                 
                     let text: String
                     switch error {
@@ -122,7 +124,7 @@ final class ChangePhoneNumberController: ViewController {
                             text = "An error occurred. Please try again later."
                     }
                     
-                    strongSelf.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
                 }
             }))
         } else {

@@ -276,9 +276,9 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 }, tag: UserInfoEntryTag.phoneNumber)
             case let .userName(theme, text, value):
                 return ItemListTextWithLabelItem(theme: theme, label: text, text: "@\(value)", enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
-                    arguments.displayUsernameContextMenu("@" + value)
+                    arguments.displayUsernameContextMenu("@\(value)")
                 }, longTapAction: {
-                    arguments.displayCopyContextMenu(.username, value)
+                    arguments.displayCopyContextMenu(.username, "@\(value)")
                 }, tag: UserInfoEntryTag.username)
             case let .sendMessage(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
@@ -525,7 +525,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                     return (modifier.getPeer(peerId), modifier.getPeer(currentPeerId))
                     } |> deliverOnMainQueue).start(next: { peer, current in
                         if let peer = peer, let current = current {
-                            presentControllerImpl?(standardTextAlertController(title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
                             })]), nil)
                         }
@@ -580,15 +580,16 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             controller?.dismissAnimated()
         }
         let notificationAction: (Int32) -> Void = {  muteUntil in
-            let muteState: PeerMuteState
+            let muteInterval: Int32?
             if muteUntil <= 0 {
-                muteState = .unmuted
+                muteInterval = nil
             } else if muteUntil == Int32.max {
-                muteState = .muted(until: Int32.max)
+                muteInterval = Int32.max
             } else {
-                muteState = .muted(until: Int32(Date().timeIntervalSince1970) + muteUntil)
+                muteInterval = muteUntil
             }
-            changeMuteSettingsDisposable.set(changePeerNotificationSettings(account: account, peerId: peerId, settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: PeerMessageSound.bundledModern(id: 0))).start())
+            
+            changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: muteInterval).start())
         }
         var items: [ActionSheetItem] = []
         items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsEnable, action: {
@@ -644,7 +645,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 } else {
                     text = presentationData.strings.UserInfo_UnblockConfirmation(peer.displayTitle).0
                 }
-                presentControllerImpl?(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
+                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
                     updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: value).start())
                 })]), nil)
             })
@@ -729,7 +730,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             var leftNavigationButton: ItemListNavigationButton?
             let rightNavigationButton: ItemListNavigationButton
             if let editingState = state.editingState {
-                leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+                leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                     updateState {
                         $0.withUpdatedEditingState(nil)
                     }
@@ -741,9 +742,9 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 }
                 
                 if state.savingData {
-                    rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: doneEnabled, action: {})
+                    rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: doneEnabled, action: {})
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: doneEnabled, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
                         var updateName: ItemListAvatarAndNameInfoItemName?
                         updateState { state in
                             if let editingState = state.editingState, let editingName = editingState.editingName {
@@ -774,7 +775,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                     })
                 }
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Edit, style: .regular, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                     if let user = peer {
                         updateState { state in
                             return state.withUpdatedEditingState(UserInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(user)))
@@ -860,7 +861,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                 }, error: { _ in
                     if let controller = controller {
                         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        controller.present(standardTextAlertController(title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
                 }))
             }

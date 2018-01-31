@@ -8,6 +8,13 @@ import TelegramCore
 import LegacyComponents
 
 func webEmbedVideoContentSupportsWebpage(_ webpageContent: TelegramMediaWebpageLoadedContent) -> Bool {
+    switch websiteType(of: webpageContent) {
+        case .instagram:
+            return true
+        default:
+            break
+    }
+        
     let converted = TGWebPageMediaAttachment()
     
     converted.url = webpageContent.url

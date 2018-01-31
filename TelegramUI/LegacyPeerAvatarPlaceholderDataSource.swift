@@ -49,7 +49,7 @@ final class LegacyPeerAvatarPlaceholderDataSource: TGImageDataSource {
         if let account = self.account() {
             let task = ThreadPoolTask { state in
                 let args: [AnyHashable : Any]
-                let argumentsString = uri.substring(from: uri.index(uri.startIndex, offsetBy: "placeholder://?".characters.count))
+                let argumentsString = String(uri[uri.index(uri.startIndex, offsetBy: "placeholder://?".characters.count)...])
                 args = TGStringUtils.argumentDictionary(inUrlString: argumentsString)!
                 
                 guard let width = Int((args["w"] as! String)), width > 1 else {
@@ -63,6 +63,8 @@ final class LegacyPeerAvatarPlaceholderDataSource: TGImageDataSource {
                 
                 if let uid = args["uid"] as? String, let nUid = Int32(uid) {
                     peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: nUid)
+                } else if let cid = args["cid"] as? String, let nCid = Int32(cid) {
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: nCid)
                 }
                 
                 let image = generateImage(CGSize(width: CGFloat(width), height: CGFloat(height)), rotatedContext: { size, context in

@@ -359,15 +359,12 @@ private func ==(lhs: Tail, rhs: Tail) -> Bool {
     }
 }
 
-private var cachedCorners: [Corner: DrawingContext] = [:]
-private let cachedCornersLock = SwiftSignalKit.Lock()
-private var cachedTails: [Tail: DrawingContext] = [:]
-private let cachedTailsLock = SwiftSignalKit.Lock()
+private var cachedCorners = Atomic<[Corner: DrawingContext]>(value: [:])
+private var cachedTails = Atomic<[Tail: DrawingContext]>(value: [:])
 
 private func cornerContext(_ corner: Corner) -> DrawingContext {
-    var cached: DrawingContext?
-    cachedCornersLock.locked {
-        cached = cachedCorners[corner]
+    var cached: DrawingContext? = cachedCorners.with {
+        return $0[corner]
     }
     
     if let cached = cached {
@@ -392,17 +389,19 @@ private func cornerContext(_ corner: Corner) -> DrawingContext {
             c.fillEllipse(in: rect)
         }
         
-        cachedCornersLock.locked {
-            cachedCorners[corner] = context
+        let _ = cachedCorners.modify { current in
+            var current = current
+            current[corner] = context
+            return current
         }
+        
         return context
     }
 }
 
 private func tailContext(_ tail: Tail) -> DrawingContext {
-    var cached: DrawingContext?
-    cachedTailsLock.locked {
-        cached = cachedTails[tail]
+    var cached: DrawingContext? = cachedTails.with {
+        return $0[tail]
     }
     
     if let cached = cached {
@@ -459,8 +458,10 @@ private func tailContext(_ tail: Tail) -> DrawingContext {
             c.fillEllipse(in: rect)
         }
         
-        cachedCornersLock.locked {
-            cachedTails[tail] = context
+        let _ = cachedTails.modify { current in
+            var current = current
+            current[tail] = context
+            return current
         }
         return context
     }
@@ -1188,30 +1189,36 @@ func mediaGridMessageVideo(postbox: Postbox, video: TelegramMediaFile) -> Signal
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if arguments.boundingSize != arguments.imageSize {
-                    let blurSourceImage = thumbnailImage ?? fullSizeImage
-                    
-                    if let fullSizeImage = blurSourceImage {
-                        let thumbnailSize = CGSize(width: fullSizeImage.width, height: fullSizeImage.height)
-                        let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 74.0, height: 74.0))
-                        let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
-                        thumbnailContext.withFlippedContext { c in
-                            c.interpolationQuality = .none
-                            c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
-                        }
-                        telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                        telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                        
-                        if let blurredImage = thumbnailContext.generateImage() {
-                            let filledSize = thumbnailSize.aspectFilled(arguments.drawingRect.size)
-                            c.interpolationQuality = .medium
-                            c.draw(blurredImage.cgImage!, in: CGRect(origin: CGPoint(x: arguments.drawingRect.minX + (arguments.drawingRect.width - filledSize.width) / 2.0, y: arguments.drawingRect.minY + (arguments.drawingRect.height - filledSize.height) / 2.0), size: filledSize))
-                            c.setBlendMode(.normal)
-                            c.setFillColor(UIColor(white: 1.0, alpha: 0.5).cgColor)
+                    switch arguments.resizeMode {
+                        case .blurBackground:
+                            let blurSourceImage = thumbnailImage ?? fullSizeImage
+                            
+                            if let fullSizeImage = blurSourceImage {
+                                let thumbnailSize = CGSize(width: fullSizeImage.width, height: fullSizeImage.height)
+                                let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 74.0, height: 74.0))
+                                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                                thumbnailContext.withFlippedContext { c in
+                                    c.interpolationQuality = .none
+                                    c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                                }
+                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                
+                                if let blurredImage = thumbnailContext.generateImage() {
+                                    let filledSize = thumbnailSize.aspectFilled(arguments.drawingRect.size)
+                                    c.interpolationQuality = .medium
+                                    c.draw(blurredImage.cgImage!, in: CGRect(origin: CGPoint(x: arguments.drawingRect.minX + (arguments.drawingRect.width - filledSize.width) / 2.0, y: arguments.drawingRect.minY + (arguments.drawingRect.height - filledSize.height) / 2.0), size: filledSize))
+                                    c.setBlendMode(.normal)
+                                    c.setFillColor(UIColor(white: 1.0, alpha: 0.5).cgColor)
+                                    c.fill(arguments.drawingRect)
+                                    c.setBlendMode(.copy)
+                                }
+                            } else {
+                                c.fill(arguments.drawingRect)
+                            }
+                        case let .fill(color):
+                            c.setFillColor(color.cgColor)
                             c.fill(arguments.drawingRect)
-                            c.setBlendMode(.copy)
-                        }
-                    } else {
-                        c.fill(arguments.drawingRect)
                     }
                 }
                 

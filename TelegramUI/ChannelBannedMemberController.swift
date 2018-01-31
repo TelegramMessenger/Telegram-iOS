@@ -337,15 +337,15 @@ public func channelBannedMemberController(account: Account, peerId: PeerId, memb
             let memberView = combinedView.views[.peer(peerId: memberId)] as! PeerView
             
             let leftNavigationButton: ItemListNavigationButton
-            leftNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Cancel, style: .regular, enabled: true, action: {
+            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
             
             var rightNavigationButton: ItemListNavigationButton?
             if state.updating {
-                rightNavigationButton = ItemListNavigationButton(title: "", style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             } else {
-                rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                     /*if let _ = initialParticipant {
                         var updateFlags: TelegramChannelBannedMemberRightsFlags?
                         updateState { current in

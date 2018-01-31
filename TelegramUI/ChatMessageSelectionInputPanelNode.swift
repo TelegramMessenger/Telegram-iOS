@@ -21,19 +21,17 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             if oldValue != self.selectedMessages {
                 self.forwardButton.isEnabled = self.selectedMessages.count != 0
                 
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
-                
                 if self.selectedMessages.isEmpty {
                     self.canDeleteMessagesDisposable.set(nil)
                     self.deleteButton.isEnabled = false
                     self.shareButton.isEnabled = false
                 } else if let account = self.account {
                     let isEmpty = self.selectedMessages.isEmpty
-                    self.canDeleteMessagesDisposable.set((chatDeleteMessagesOptions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: self.selectedMessages)
-                        |> deliverOnMainQueue).start(next: { [weak self] options in
+                    self.canDeleteMessagesDisposable.set((chatAvailableMessageActions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: self.selectedMessages)
+                        |> deliverOnMainQueue).start(next: { [weak self] actions in
                             if let strongSelf = self {
-                                strongSelf.deleteButton.isEnabled = !options.isEmpty
-                                strongSelf.shareButton.isEnabled = !isEmpty
+                                strongSelf.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
+                                strongSelf.shareButton.isEnabled = !actions.options.intersection([.forward]).isEmpty
                             }
                         }))
                 }

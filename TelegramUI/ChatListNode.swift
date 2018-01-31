@@ -101,7 +101,7 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
             case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo, editing, hasActiveRevealControls, inputActivities):
                 switch mode {
                     case .chatList:
-                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities), editing: editing, hasActiveRevealControls: hasActiveRevealControls, header: nil, interaction: nodeInteraction), directionHint: entry.directionHint)
+                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities), editing: editing, hasActiveRevealControls: hasActiveRevealControls, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)
                     case let .peers(onlyWriteable):
                         let itemPeer = peer.chatMainPeer
                         var chatPeer: Peer?
@@ -116,7 +116,7 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                                 enabled = false
                             }
                         }
-                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, account: account, peer: itemPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
+                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, account: account, peerMode: .generalSearch, peer: itemPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                             if let chatPeer = chatPeer {
                                 nodeInteraction.peerSelected(chatPeer)
                             }
@@ -125,7 +125,7 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
             case let .HoleEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
             case let .GroupReferenceEntry(index, presentationData, groupId, message, topPeers, counters, editing):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, header: nil, interaction: nodeInteraction), directionHint: entry.directionHint)
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)
         }
     }
 }
@@ -140,7 +140,7 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
             case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo, editing, hasActiveRevealControls, inputActivities):
                 switch mode {
                     case .chatList:
-                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities), editing: editing, hasActiveRevealControls: hasActiveRevealControls, header: nil, interaction: nodeInteraction), directionHint: entry.directionHint)
+                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities), editing: editing, hasActiveRevealControls: hasActiveRevealControls, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)
                     case let .peers(onlyWriteable):
                         let itemPeer = peer.chatMainPeer
                         var chatPeer: Peer?
@@ -155,7 +155,7 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                                 enabled = false
                             }
                         }
-                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, account: account, peer: itemPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
+                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, account: account, peerMode: .generalSearch, peer: itemPeer, chatPeer: chatPeer, status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                             if let chatPeer = chatPeer {
                                 nodeInteraction.peerSelected(chatPeer)
                             }
@@ -164,7 +164,7 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
             case let .HoleEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
             case let .GroupReferenceEntry(index, presentationData, groupId, message, topPeers, counters, editing):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, header: nil, interaction: nodeInteraction), directionHint: entry.directionHint)
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)
         }
     }
 }

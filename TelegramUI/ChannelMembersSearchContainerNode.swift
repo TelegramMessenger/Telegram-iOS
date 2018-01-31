@@ -5,13 +5,21 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+enum ChannelMembersSearchMode {
+    case searchMembers
+    case inviteActions
+}
+
 private enum ChannelMembersSearchSection {
+    case none
     case members
     case contacts
     case global
     
-    var chatListHeaderType: ChatListSearchItemHeaderType {
+    var chatListHeaderType: ChatListSearchItemHeaderType? {
         switch self {
+            case .none:
+                return nil
             case .members:
                 return .members
             case .contacts:
@@ -47,7 +55,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
     
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
         let peer = self.peer
-        return ContactsPeerItem(theme: theme, strings: strings, account: account, peer: self.peer, chatPeer: self.peer, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: self.section.chatListHeaderType, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+        return ContactsPeerItem(theme: theme, strings: strings, account: account, peerMode: .peer, peer: self.peer, chatPeer: self.peer, status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
             peerSelected(peer)
         })
     }
@@ -56,22 +64,25 @@ struct ChannelMembersSearchContainerTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
+    let isSearching: Bool
 }
 
-private func channelMembersSearchContainerPreparedRecentTransition(from fromEntries: [ChannelMembersSearchEntry], to toEntries: [ChannelMembersSearchEntry], account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void) -> ChannelMembersSearchContainerTransition {
+private func channelMembersSearchContainerPreparedRecentTransition(from fromEntries: [ChannelMembersSearchEntry], to toEntries: [ChannelMembersSearchEntry], isSearching: Bool, account: Account, theme: PresentationTheme, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void) -> ChannelMembersSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, peerSelected: peerSelected), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, peerSelected: peerSelected), directionHint: nil) }
     
-    return ChannelMembersSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates)
+    return ChannelMembersSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
 
 final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNode {
     private let account: Account
     private let openPeer: (Peer) -> Void
+    private let mode: ChannelMembersSearchMode
     
+    private let dimNode: ASDisplayNode
     private let listNode: ListView
     
     private var enqueuedTransitions: [(ChannelMembersSearchContainerTransition, Bool)] = []
@@ -85,41 +96,89 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, peerId: PeerId, openPeer: @escaping (Peer) -> Void) {
+    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, openPeer: @escaping (Peer) -> Void) {
         self.account = account
         self.openPeer = openPeer
+        self.mode = mode
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
+        
+        self.dimNode = ASDisplayNode()
+        self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         
         self.listNode = ListView()
         
         super.init()
         
-        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        self.listNode.isHidden = true
         
+        self.addSubnode(self.dimNode)
         self.addSubnode(self.listNode)
         
         let themeAndStringsPromise = self.themeAndStringsPromise
         let foundItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ChannelMembersSearchEntry]?, NoError> in
                 if let query = query, !query.isEmpty {
-                    let foundMembers = channelMembers(postbox: account.postbox, network: account.network, peerId: peerId, filter: .search(query))
-                    let foundContacts = account.postbox.searchContacts(query: query.lowercased())
-                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], [])) |> then(searchPeers(account: account, query: query)
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                    let foundGroupMembers: Signal<[Peer], NoError>
+                    let foundMembers: Signal<[RenderedChannelParticipant], NoError>
                     
-                    return combineLatest(foundMembers, foundContacts, foundRemotePeers, themeAndStringsPromise.get())
-                        |> map { foundMembers, foundContacts, foundRemotePeers, themeAndStrings -> [ChannelMembersSearchEntry]? in
+                    switch mode {
+                        case .searchMembers:
+                            foundGroupMembers = searchGroupMembers(postbox: account.postbox, network: account.network, peerId: peerId, query: query)
+                            foundMembers = .single([])
+                        case .inviteActions:
+                            foundGroupMembers = .single([])
+                            foundMembers = channelMembers(postbox: account.postbox, network: account.network, peerId: peerId, filter: .search(query))
+                    }
+                    
+                    let foundContacts: Signal<[Peer], NoError>
+                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError>
+                    switch mode {
+                        case .inviteActions:
+                            foundContacts = account.postbox.searchContacts(query: query.lowercased())
+                            foundRemotePeers = .single(([], [])) |> then(searchPeers(account: account, query: query)
+                            |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                        case .searchMembers:
+                            foundContacts = .single([])
+                            foundRemotePeers = .single(([], []))
+                    }
+                    
+                    return combineLatest(foundGroupMembers, foundMembers, foundContacts, foundRemotePeers, themeAndStringsPromise.get())
+                        |> map { foundGroupMembers, foundMembers, foundContacts, foundRemotePeers, themeAndStrings -> [ChannelMembersSearchEntry]? in
                             var entries: [ChannelMembersSearchEntry] = []
                             
                             var existingPeerIds = Set<PeerId>()
                             
                             var index = 0
+                            
+                            for peer in foundGroupMembers {
+                                if !existingPeerIds.contains(peer.id) {
+                                    existingPeerIds.insert(peer.id)
+                                    let section: ChannelMembersSearchSection
+                                    switch mode {
+                                        case .inviteActions:
+                                            section = .members
+                                        case .searchMembers:
+                                            section = .none
+                                    }
+                                    entries.append(ChannelMembersSearchEntry(index: index, peer: peer, section: section))
+                                    index += 1
+                                }
+                            }
+                            
                             for participant in foundMembers {
                                 if !existingPeerIds.contains(participant.peer.id) {
                                     existingPeerIds.insert(participant.peer.id)
-                                    entries.append(ChannelMembersSearchEntry(index: index, peer: participant.peer, section: .members))
+                                    let section: ChannelMembersSearchSection
+                                    switch mode {
+                                        case .inviteActions:
+                                            section = .members
+                                        case .searchMembers:
+                                            section = .none
+                                    }
+                                    entries.append(ChannelMembersSearchEntry(index: index, peer: participant.peer, section: section))
                                     index += 1
                                 }
                             }
@@ -165,7 +224,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     let previousEntries = previousSearchItems.swap(entries)
                     
                     let firstTime = previousEntries == nil
-                    let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], account: account, theme: themeAndStrings.0, strings: themeAndStrings.1, peerSelected: openPeer)
+                    let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, account: account, theme: themeAndStrings.0, strings: themeAndStrings.1, peerSelected: openPeer)
                     strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 }
             }))
@@ -194,8 +253,14 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         self.presentationDataDisposable?.dispose()
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+    }
+    
     private func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.backgroundColor = theme.chatList.backgroundColor
+        self.listNode.backgroundColor = theme.chatList.backgroundColor
     }
     
     override func searchTextUpdated(text: String) {
@@ -227,13 +292,19 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                 //options.insert(.AnimateAlpha)
             }
             
+            let isSearching = transition.isSearching
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+                self?.listNode.isHidden = !isSearching
+                self?.dimNode.isHidden = isSearching
             })
         }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+        
+        let topInset = navigationBarHeight
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
         
         var duration: Double = 0.0
         var curve: UInt = 0
@@ -265,6 +336,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
+        }
+    }
+    
+    @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.cancel?()
         }
     }
 }

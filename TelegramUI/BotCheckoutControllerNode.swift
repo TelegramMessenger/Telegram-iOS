@@ -324,7 +324,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
     private var applePayAuthrorizationCompletion: ((PKPaymentAuthorizationStatus) -> Void)?
     private var applePayController: PKPaymentAuthorizationViewController?
     
-    init(updateNavigationOffset: @escaping (CGFloat) -> Void, account: Account, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
+    init(navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, account: Account, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
         self.account = account
         self.messageId = messageId
         self.present = present
@@ -359,7 +359,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
         self.inProgressDimNode.isUserInteractionEnabled = false
         self.inProgressDimNode.backgroundColor = UIColor.white.withAlphaComponent(0.5)
         
-        super.init(updateNavigationOffset: updateNavigationOffset, state: signal)
+        super.init(navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
         
         self.arguments = arguments
         
@@ -666,7 +666,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                     if value {
                         strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
                     } else {
-                        strongSelf.present(standardTextAlertController(title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle, providerPeer.displayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle, providerPeer.displayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
                                 let _ = ApplicationSpecificNotice.setBotPaymentLiability(postbox: strongSelf.account.postbox, peerId: strongSelf.messageId.peerId).start()
                                 strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
@@ -734,7 +734,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                             text = strongSelf.presentationData.strings.Checkout_ErrorGeneric
                     }
                     
-                    strongSelf.present(standardTextAlertController(title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                 }
             }))
         }
@@ -761,7 +761,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                     alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeout(durationString).0
                 }
                 
-                strongSelf.present(standardTextAlertController(title: nil, text: alertText, actions: [
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: alertText, actions: [
                     TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_No, action: {
                         if let strongSelf = self {
                             strongSelf.pay(savedCredentialsToken: token)

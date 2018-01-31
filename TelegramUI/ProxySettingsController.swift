@@ -159,7 +159,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     func item(_ arguments: ProxySettingsControllerArguments) -> ListViewItem {
         switch self {
             case let .modeDisabled(theme, text, value):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateState { current in
                         var state = current
                         state.enabled = false
@@ -167,7 +167,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                     }
                 })
             case let .modeSocks5(theme, text, value):
-                return ItemListCheckboxItem(theme: theme, title: text, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateState { current in
                         var state = current
                         state.enabled = true
@@ -317,13 +317,13 @@ func proxySettingsController(account: Account, currentSettings: ProxySettings?) 
             
             UIPasteboard.general.string = result
             
-            presentImpl?(standardTextAlertController(title: nil, text: presentationData.strings.Username_LinkCopied, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            presentImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Username_LinkCopied, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         }
     })
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<ProxySettingsEntry>, ProxySettingsEntry.ItemGenerationArguments)) in
-            let rightNavigationButton = ItemListNavigationButton(title: presentationData.strings.Common_Done, style: .bold, enabled: !state.enabled || state.isComplete, action: {
+            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: !state.enabled || state.isComplete, action: {
                 var proxySettings: ProxySettings?
                 if state.enabled && state.isComplete, let port = Int32(state.port) {
                     proxySettings = ProxySettings(host: state.host, port: port, username: state.username.isEmpty ? nil : state.username, password: state.password.isEmpty ? nil : state.password, useForCalls: state.useForCalls)

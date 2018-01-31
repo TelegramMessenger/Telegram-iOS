@@ -16,7 +16,7 @@ private func presentLiveLocationController(account: Account, peerId: PeerId, con
             return modifier.getMessage(id)
         } |> deliverOnMainQueue).start(next: { [weak controller] message in
             if let message = message, let strongController = controller {
-                let _ = openChatMessage(account: account, message: message, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, dismissInput: {
+                let _ = openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, dismissInput: {
                     controller?.view.endEditing(true)
                 }, present: { c, a in
                     controller?.present(c, in: .window(.root), with: a)
