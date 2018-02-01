@@ -143,7 +143,7 @@ final class HistoryViewStateValidationContexts {
                     break
                 } else if case let .peerGroupState(groupId, groupState) = entry {
                     if let groupState = groupState as? TelegramPeerGroupState {
-                        historyState = .group(groupId, groupState)
+                        //historyState = .group(groupId, groupState)
                     }
                     break
                 }

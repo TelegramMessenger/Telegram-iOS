@@ -289,7 +289,7 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
             
             let request: Signal<Api.messages.FeedMessages, MTRpcError>
             
-            let offsetPosition: Api.FeedPosition
+            let offsetPosition: Api.FeedPosition?
             let addOffset: Int32
             let selectedLimit = limit
             var maxPositionAndClipIndex: (Api.FeedPosition, MessageIndex)?
@@ -301,9 +301,14 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
             switch direction {
                 case .UpperToLower:
                     let upperIndex = maxIndex.successor()
-                    offsetPosition = .feedPosition(date: min(upperIndex.timestamp, Int32.max - 1), peer: upperInputPeer, id: min(upperIndex.id.id, Int32.max - 1))
+                    if upperIndex.timestamp != Int32.max {
+                        offsetPosition = .feedPosition(date: min(upperIndex.timestamp, Int32.max - 1), peer: upperInputPeer, id: min(upperIndex.id.id, Int32.max - 1))
+                        maxPositionAndClipIndex = (.feedPosition(date: min(upperIndex.timestamp, Int32.max - 1), peer: upperInputPeer, id: min(upperIndex.id.id, Int32.max - 1)), maxIndex)
+                    } else {
+                        offsetPosition = nil
+                        maxPositionAndClipIndex = nil
+                    }
                     addOffset = 0
-                    maxPositionAndClipIndex = (.feedPosition(date: min(upperIndex.timestamp, Int32.max - 1), peer: upperInputPeer, id: min(upperIndex.id.id, Int32.max - 1)), maxIndex)
                     //minPosition = .feedPosition(date: 1, peer: lowerInputPeer, id: 1)
                 case .LowerToUpper:
                     let lowerIndex = minIndex.predecessor()
@@ -328,7 +333,9 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
             }
             
             var flags: Int32 = 0
-            flags |= (1 << 0)
+            if offsetPosition != nil {
+                flags |= (1 << 0)
+            }
             if maxPositionAndClipIndex != nil {
                 flags |= (1 << 1)
             }
