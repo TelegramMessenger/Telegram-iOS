@@ -75,13 +75,19 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         self.context.authTokenForDatacenter(withIdRequired: self.datacenterId, authToken:self.mtProto.requiredAuthToken, masterDatacenterId: self.mtProto.authTokenMasterDatacenterId)
     }
     
-    func uploadPart(fileId: Int64, index: Int, data: Data, bigTotalParts: Int? = nil) -> Signal<Void, NoError> {
+    func uploadPart(fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil) -> Signal<Void, NoError> {
         return Signal<Void, MTRpcError> { subscriber in
             let request = MTRequest()
             
             let saveFilePart: (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?)
-            if let bigTotalParts = bigTotalParts {
-                saveFilePart = Api.functions.upload.saveBigFilePart(fileId: fileId, filePart: Int32(index), fileTotalParts: Int32(bigTotalParts), bytes: Buffer(data: data))
+            if asBigPart {
+                let totalParts: Int32
+                if let bigTotalParts = bigTotalParts {
+                    totalParts = Int32(bigTotalParts)
+                } else {
+                    totalParts = -1
+                }
+                saveFilePart = Api.functions.upload.saveBigFilePart(fileId: fileId, filePart: Int32(index), fileTotalParts: totalParts, bytes: Buffer(data: data))
             } else {
                 saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
             }

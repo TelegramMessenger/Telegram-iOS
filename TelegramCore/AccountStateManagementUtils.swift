@@ -778,7 +778,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                     if updatedState.peers[peerId] == nil {
                         updatedState.updatePeer(peerId, { peer in
                             if peer == nil {
-                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), flags: [.isVerified])
+                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), restrictionInfo: nil, flags: [.isVerified])
                             } else {
                                 return peer
                             }
@@ -1741,6 +1741,8 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     return result
 }
 
+private var testAddInvalidation = false
+
 func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modifier, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(modifier, finalState: finalState.state)
     if !verified {
@@ -1788,6 +1790,15 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     
     for groupId in addHolesToGroupFeedIds {
         modifier.addFeedHoleFromLatestEntries(groupId: groupId)
+        let groupState = (modifier.getPeerGroupState(groupId) as? TelegramPeerGroupState) ?? TelegramPeerGroupState()
+        modifier.setPeerGroupState(groupId, state: groupState.withInvalidatedStateIndex())
+    }
+    
+    if !testAddInvalidation {
+        testAddInvalidation = true
+        let groupId = PeerGroupId(rawValue: 1)
+        let groupState = (modifier.getPeerGroupState(groupId) as? TelegramPeerGroupState) ?? TelegramPeerGroupState()
+        modifier.setPeerGroupState(groupId, state: groupState.withInvalidatedStateIndex())
     }
     
     for operation in optimizedOperations(finalState.state.operations) {
@@ -1825,7 +1836,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     } else {
                         updatedFlags.remove(.Incoming)
                     }
-                    return .update(message.withUpdatedLocalTags(updatedLocalTags))
+                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
                 })
             case let .UpdateMedia(id, media):
                 modifier.updateMedia(id, update: media)

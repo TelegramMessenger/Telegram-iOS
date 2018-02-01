@@ -22,7 +22,7 @@ private func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox)
         }
         if fromFile.size == toFile.size && fromFile.mimeType == toFile.mimeType {
             postbox.mediaBox.moveResourceData(from: fromFile.resource.id, to: toFile.resource.id)
-        } 
+        }
     }
 }
 

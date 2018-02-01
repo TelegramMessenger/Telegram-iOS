@@ -28,7 +28,7 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, resource: MediaRes
         |> mapError {_ in return .generic}
         |> mapToSignal { peer -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
         if let resource = resource {
-            return multipartUpload(network: account.network, postbox: account.postbox, source: .resource(resource), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
+            return multipartUpload(network: account.network, postbox: account.postbox, source: .resource(resource), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
                 |> mapError { _ in return .generic }
                 |> mapToSignal { result -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
                     switch result {

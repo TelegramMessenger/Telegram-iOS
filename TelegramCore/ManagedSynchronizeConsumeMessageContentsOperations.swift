@@ -86,7 +86,7 @@ func managedSynchronizeConsumeMessageContentOperations(postbox: Postbox, network
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { modifier, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeConsumeMessageContentsOperation {
-                            return synchronizeConsumeMessageContents(network: network, stateManager: stateManager, peerId: entry.peerId, operation: operation)
+                            return synchronizeConsumeMessageContents(modifier: modifier, network: network, stateManager: stateManager, peerId: entry.peerId, operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -113,22 +113,35 @@ func managedSynchronizeConsumeMessageContentOperations(postbox: Postbox, network
     }
 }
 
-private func synchronizeConsumeMessageContents(network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeConsumeMessageContentsOperation) -> Signal<Void, NoError> {
-    if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
+private func synchronizeConsumeMessageContents(modifier: Modifier, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeConsumeMessageContentsOperation) -> Signal<Void, NoError> {
+    if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
         return network.request(Api.functions.messages.readMessageContents(id: operation.messageIds.map { $0.id }))
+        |> map { Optional($0) }
+        |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            if let result = result {
+                switch result {
+                    case let .affectedMessages(pts, ptsCount):
+                        stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                }
+            }
+            return .complete()
+        }
+    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+        if let peer = modifier.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+            return network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: operation.messageIds.map { $0.id }))
             |> map { Optional($0) }
-            |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
+            |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                 return .single(nil)
             }
             |> mapToSignal { result -> Signal<Void, NoError> in
-                if let result = result {
-                    switch result {
-                        case let .affectedMessages(pts, ptsCount):
-                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
-                    }
-                }
                 return .complete()
             }
+        } else {
+            return .complete()
+        }
     } else {
         return .complete()
     }

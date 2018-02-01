@@ -156,19 +156,6 @@ private func fetchReadState(network: Network, groupId: PeerGroupId) -> Signal<Gr
     }
 }
 
-private func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
-    switch peerId.namespace {
-        case Namespaces.Peer.CloudUser:
-            return Api.Peer.peerUser(userId: peerId.id)
-        case Namespaces.Peer.CloudGroup:
-            return Api.Peer.peerChat(chatId: peerId.id)
-        case Namespaces.Peer.CloudChannel:
-            return Api.Peer.peerChannel(channelId: peerId.id)
-        default:
-            return Api.Peer.peerUser(userId: accountPeerId.id)
-    }
-}
-
 private func pushReadState(network: Network, accountPeerId: PeerId, groupId: PeerGroupId, state: GroupFeedReadState) -> Signal<Api.Updates?, NoError> {
     let position: Api.FeedPosition = .feedPosition(date: state.maxReadIndex.timestamp, peer: groupBoundaryPeer(state.maxReadIndex.id.peerId, accountPeerId: accountPeerId), id: state.maxReadIndex.id.id)
     if GlobalTelegramCoreConfiguration.readMessages {

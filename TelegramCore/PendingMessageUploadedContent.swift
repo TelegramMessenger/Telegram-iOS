@@ -201,7 +201,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerI
                     case .none:
                         referenceKey = nil
                 }
-                return multipartUpload(network: network, postbox: postbox, source: .resource(largestRepresentation.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
+                return multipartUpload(network: network, postbox: postbox, source: .resource(largestRepresentation.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
                     |> mapError { _ -> PendingMessageUploadError in return .generic }
                     |> mapToSignal { next -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                         switch next {
@@ -325,7 +325,7 @@ private enum UploadedMediaThumbnail {
 }
 
 private func uploadedThumbnail(network: Network, postbox: Postbox, image: TelegramMediaImageRepresentation) -> Signal<Api.InputFile?, PendingMessageUploadError> {
-    return multipartUpload(network: network, postbox: postbox, source: .resource(image.resource), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
+    return multipartUpload(network: network, postbox: postbox, source: .resource(image.resource), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
         |> mapError { _ -> PendingMessageUploadError in return .generic }
         |> mapToSignal { result -> Signal<Api.InputFile?, PendingMessageUploadError> in
             switch result {
@@ -367,22 +367,23 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                 referenceKey = nil
         }
         
+        var hintFileIsLarge = false
         var hintSize: Int?
         if let size = file.size {
             hintSize = size
         } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
             hintSize = Int(size)
         }
-        let upload = multipartUpload(network: network, postbox: postbox, source: .resource(file.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes)), hintFileSize: hintSize)
+        if file.resource.headerSize != 0 {
+            hintFileIsLarge = true
+        }
+        let upload = multipartUpload(network: network, postbox: postbox, source: .resource(file.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes)), hintFileSize: hintSize, hintFileIsLarge: hintFileIsLarge)
             |> mapError { _ -> PendingMessageUploadError in return .generic }
         var alreadyTransformed = false
-        var autoremoveAttribute: AutoremoveTimeoutMessageAttribute?
         for attribute in attributes {
             if let attribute = attribute as? OutgoingMessageInfoAttribute {
                 if attribute.flags.contains(.transformedMedia) {
                     alreadyTransformed = true
-                } else if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                    autoremoveAttribute = attribute
                 }
             }
         }

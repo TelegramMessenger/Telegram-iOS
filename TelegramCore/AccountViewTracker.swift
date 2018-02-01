@@ -146,8 +146,10 @@ private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocation, additi
                     result.append(.peerChatState(peerId))
                 }
             }
-        case .group:
-            break
+        case let .group(groupId):
+            if result.index(where: { if case .peerGroupState = $0 { return true } else { return false } }) == nil {
+                result.append(.peerGroupState(groupId))
+            }
     }
     return result
 }
@@ -219,12 +221,12 @@ public final class AccountViewTracker {
     
     let chatHistoryPreloadManager: ChatHistoryPreloadManager
     
-    private let historyViewChannelStateValidationContexts: HistoryViewChannelStateValidationContexts
+    private let historyViewStateValidationContexts: HistoryViewStateValidationContexts
     
     init(account: Account) {
         self.account = account
         
-        self.historyViewChannelStateValidationContexts = HistoryViewChannelStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network)
+        self.historyViewStateValidationContexts = HistoryViewStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network, accountPeerId: account.peerId)
         
         self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, networkState: account.networkState)
     }
@@ -556,7 +558,9 @@ public final class AccountViewTracker {
                     let messageIds = pendingWebpages(entries: next.0.entries)
                     strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds)
                     if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
-                        strongSelf.historyViewChannelStateValidationContexts.updateView(id: viewId, view: next.0)
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
+                    } else if case .group = chatLocation {
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
                     }
                 }
             }
@@ -567,10 +571,10 @@ public final class AccountViewTracker {
                     switch chatLocation {
                         case let .peer(peerId):
                             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                strongSelf.historyViewChannelStateValidationContexts.updateView(id: viewId, view: nil)
+                                strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
                             }
                         case .group:
-                            break
+                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
                     }
                 }
             }

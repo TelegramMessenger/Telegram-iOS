@@ -40,7 +40,7 @@ enum CallSessionInternalState {
     case requesting(a: Data, disposable: Disposable)
     case requested(id: Int64, accessHash: Int64, a: Data, gA: Data, config: SecretChatEncryptionConfig, remoteConfirmationTimestamp: Int32?)
     case confirming(id: Int64, accessHash: Int64, key: Data, keyId: Int64, keyVisualHash: Data, disposable: Disposable)
-    case active(id: Int64, accessHash: Int64, beginTimestamp: Int32, key: Data, keyId: Int64, keyVisualHash: Data, connections: CallSessionConnectionSet)
+    case active(id: Int64, accessHash: Int64, beginTimestamp: Int32, key: Data, keyId: Int64, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32)
     case dropping(Disposable)
     case terminated(reason: CallSessionTerminationReason, reportRating: ReportCallRating?)
 }
@@ -67,7 +67,7 @@ public enum CallSessionState {
     case ringing
     case accepting
     case requesting(ringing: Bool)
-    case active(key: Data, keyVisualHash: Data, connections: CallSessionConnectionSet)
+    case active(key: Data, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32)
     case dropping
     case terminated(reason: CallSessionTerminationReason, reportRating: ReportCallRating?)
     
@@ -81,8 +81,8 @@ public enum CallSessionState {
                 self = .requesting(ringing: false)
             case let .requested(_, _, _, _, _, remoteConfirmationTimestamp):
                 self = .requesting(ringing: remoteConfirmationTimestamp != nil)
-            case let .active(_, _, _, key, _, keyVisualHash, connections):
-                self = .active(key: key, keyVisualHash: keyVisualHash, connections: connections)
+            case let .active(_, _, _, key, _, keyVisualHash, connections, maxLayer):
+                self = .active(key: key, keyVisualHash: keyVisualHash, connections: connections, maxLayer: maxLayer)
             case .dropping:
                 self = .dropping
             case let .terminated(reason, reportRating):
@@ -270,7 +270,7 @@ private final class CallSessionManagerContext {
                 case let .accepting(id, accessHash, _, _, disposable):
                     dropData = (id, accessHash, .abort)
                     disposable.dispose()
-                case let .active(id, accessHash, beginTimestamp, _, _, _, _):
+                case let .active(id, accessHash, beginTimestamp, _, _, _, _, _):
                     let duration = max(0, Int32(CFAbsoluteTimeGetCurrent()) - beginTimestamp)
                     let internalReason: DropCallSessionReason
                     switch reason {
@@ -350,7 +350,7 @@ private final class CallSessionManagerContext {
                                                 strongSelf.contextUpdated(internalId: internalId)
                                             case let .call(config, gA, timestamp, connections):
                                                 if let (key, keyId, keyVisualHash) = strongSelf.makeSessionEncryptionKey(config: config, gAHash: gAHash, b: b, gA: gA) {
-                                                    context.state = .active(id: id, accessHash: accessHash, beginTimestamp: timestamp, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: connections)
+                                                    context.state = .active(id: id, accessHash: accessHash, beginTimestamp: timestamp, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: connections, maxLayer: 77)
                                                     strongSelf.contextUpdated(internalId: internalId)
                                                 } else {
                                                     strongSelf.drop(internalId: internalId, reason: .disconnect)
@@ -439,25 +439,25 @@ private final class CallSessionManagerContext {
                                 disposable.dispose()
                                 context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
                                 self.contextUpdated(internalId: internalId)
-                            case .active(let id, let accessHash, _, _, _, _, _):
-                                context.state = .terminated(reason: parsedReason, reportRating:  reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                            case .active(let id, let accessHash, _, _, _, _, _, _):
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
                                 self.contextUpdated(internalId: internalId)
                             case .awaitingConfirmation(let id, let accessHash, _, _, _):
-                                context.state = .terminated(reason: parsedReason, reportRating:  reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
                                 self.contextUpdated(internalId: internalId)
                             case .requested(let id, let accessHash, _, _, _, _):
-                                context.state = .terminated(reason: parsedReason, reportRating:  reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
                                 self.contextUpdated(internalId: internalId)
                             case let .confirming(id, accessHash, _, _, _, disposable):
                                 disposable.dispose()
-                                context.state = .terminated(reason: parsedReason, reportRating:  reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
                                 self.contextUpdated(internalId: internalId)
                             case let .requesting(_, disposable):
                                 disposable.dispose()
                                 context.state = .terminated(reason: parsedReason, reportRating: nil)
                                 self.contextUpdated(internalId: internalId)
                             case .ringing(let id, let accesshash, _, _):
-                                context.state = .terminated(reason: parsedReason, reportRating:  reportRating ? ReportCallRating(id: id, accessHash: accesshash) : nil)
+                                context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accesshash) : nil)
                                 self.ringingStatesUpdated()
                                 self.contextUpdated(internalId: internalId)
                             case .dropping, .terminated:
@@ -476,7 +476,7 @@ private final class CallSessionManagerContext {
                             case let .awaitingConfirmation(_, accessHash, gAHash, b, config):
                                 if let (key, calculatedKeyId, keyVisualHash) = self.makeSessionEncryptionKey(config: config, gAHash: gAHash, b: b, gA: gAOrB.makeData()) {
                                     if keyFingerprint == calculatedKeyId {
-                                        context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections))
+                                        context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections), maxLayer: 77)
                                         self.contextUpdated(internalId: internalId)
                                     } else {
                                         self.drop(internalId: internalId, reason: .disconnect)
@@ -485,7 +485,7 @@ private final class CallSessionManagerContext {
                                     self.drop(internalId: internalId, reason: .disconnect)
                                 }
                             case let .confirming(id, accessHash, key, keyId, keyVisualHash, _):
-                                context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections))
+                                context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections), maxLayer: 77)
                                 self.contextUpdated(internalId: internalId)
                         }
                     } else {

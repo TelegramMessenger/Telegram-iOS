@@ -17,7 +17,7 @@ public enum StandaloneUploadMediaEvent {
 }
 
 public func standaloneUploadedImage(account: Account, peerId: PeerId, text: String, data: Data) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
         |> mapError { _ -> StandaloneUploadMediaError in return .generic }
         |> mapToSignal { next -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
             switch next {
@@ -56,7 +56,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
 }
 
 public func standaloneUploadedFile(account: Account, peerId: PeerId, text: String, source: MultipartUploadSource, mimeType: String, attributes: [TelegramMediaFileAttribute]) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: source, encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes)))
+    return multipartUpload(network: account.network, postbox: account.postbox, source: source, encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes)), hintFileSize: nil, hintFileIsLarge: false)
         |> mapError { _ -> StandaloneUploadMediaError in return .generic }
         |> mapToSignal { next -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
             switch next {

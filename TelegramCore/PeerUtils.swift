@@ -38,6 +38,17 @@ public extension Peer {
         }
     }
     
+    public var restrictionText: String? {
+        switch self {
+            case let user as TelegramUser:
+                return nil
+            case let channel as TelegramChannel:
+                return channel.restrictionInfo?.reason
+            default:
+                return nil
+        }
+    }
+    
     public var addressName: String? {
         switch self {
             case let user as TelegramUser:

@@ -142,7 +142,7 @@ private enum UploadMediaEvent {
 }
 
 private func uploadedImage(account: Account, data: Data) -> Signal<UploadMediaEvent, StandaloneSendMessageError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image))
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
         |> mapError { _ -> StandaloneSendMessageError in return .generic }
         |> map { next -> UploadMediaEvent in
             switch next {
@@ -157,7 +157,7 @@ private func uploadedImage(account: Account, data: Data) -> Signal<UploadMediaEv
 }
 
 private func uploadedFile(account: Account, data: Data, mimeType: String, attributes: [TelegramMediaFileAttribute]) -> Signal<UploadMediaEvent, PendingMessageUploadError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes)))
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes)), hintFileSize: data.count, hintFileIsLarge: false)
         |> mapError { _ -> PendingMessageUploadError in return .generic }
         |> map { next -> UploadMediaEvent in
             switch next {

@@ -267,7 +267,7 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
         }
 }
 
-private func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
+func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
     switch peerId.namespace {
         case Namespaces.Peer.CloudUser:
             return Api.Peer.peerUser(userId: peerId.id)
