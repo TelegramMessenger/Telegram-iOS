@@ -180,8 +180,8 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 	VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
 	impl_data_android_t* impl=(impl_data_android_t*)ctlr->implData;
 	jobject jobj=impl->javaObject;
-	free(impl);
 	delete ctlr;
+	free(impl);
 	env->DeleteGlobalRef(jobj);
 }
 
