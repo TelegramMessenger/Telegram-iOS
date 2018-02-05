@@ -399,18 +399,21 @@ private enum MultipartFetchSource {
 }
 
 private final class MultipartFetchManager {
-    let parallelParts: Int
+    let parallelParts: Int = 1
     let defaultPartSize = 128 * 1024
     let partAlignment = 128 * 1024
     
     let queue = Queue()
     
-    var committedOffset: Int
-    let range: Range<Int>
+    var currentRanges: IndexSet?
+    var currentFilledRanges = IndexSet()
+    
     var completeSize: Int?
+    var completeSizeReported = false
+    
     let takeDownloader: (Int32, Bool) -> Signal<Download, NoError>
-    let partReady: (Data) -> Void
-    let completed: () -> Void
+    let partReady: (Int, Data) -> Void
+    let reportCompleteSize: (Int) -> Void
     
     private var source: MultipartFetchSource
     
@@ -418,55 +421,59 @@ private final class MultipartFetchManager {
     var fetchedParts: [Int: Data] = [:]
     var cachedPartHashes: [Int: Data] = [:]
     
-    var statsTimer: SignalKitTimer?
-    var receivedSize = 0
-    var lastStatReport: (timestamp: Double, receivedSize: Int)?
-    
     var reuploadingToCdn = false
     let reuploadToCdnDisposable = MetaDisposable()
     
     var state: MultipartDownloadState
     
-    init(size: Int?, range: Range<Int>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int32?, location: MultipartFetchMasterLocation, takeDownloader: @escaping (Int32, Bool) -> Signal<Download, NoError>, partReady: @escaping (Data) -> Void, completed: @escaping () -> Void) {
+    var rangesDisposable: Disposable?
+    
+    init(size: Int?, ranges: Signal<IndexSet, NoError>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int32?, location: MultipartFetchMasterLocation, takeDownloader: @escaping (Int32, Bool) -> Signal<Download, NoError>, partReady: @escaping (Int, Data) -> Void, reportCompleteSize: @escaping (Int) -> Void) {
         self.completeSize = size
         if let size = size {
-            if size <= range.lowerBound {
+            /*if size <= range.lowerBound {
                 self.range = range
                 self.parallelParts = 0
             } else {
                 self.range = range.lowerBound ..< min(range.upperBound, size)
                 self.parallelParts = 4
-            }
+            }*/
         } else {
-            self.range = range
-            self.parallelParts = 1
+            //self.range = range
+            //self.parallelParts = 1
         }
         
         self.state = MultipartDownloadState(encryptionKey: encryptionKey, decryptedSize: decryptedSize)
-        self.committedOffset = range.lowerBound
+        //self.committedOffset = range.lowerBound
         self.takeDownloader = takeDownloader
         self.source = .master(location: location, download: DownloadWrapper(id: location.datacenterId, cdn: false, take: takeDownloader))
         self.partReady = partReady
-        self.completed = completed
+        self.reportCompleteSize = reportCompleteSize
         
-        self.statsTimer = SignalKitTimer(timeout: 3.0, repeat: true, completion: { [weak self] in
-            self?.reportStats()
-        }, queue: self.queue)
+        self.rangesDisposable = (ranges |> deliverOn(self.queue)).start(next: { [weak self] ranges in
+            if let strongSelf = self {
+                if let currentRanges = strongSelf.currentRanges {
+                    let updatedRanges = currentRanges.subtracting(strongSelf.currentFilledRanges)
+                    strongSelf.currentRanges = updatedRanges
+                    strongSelf.checkState()
+                } else {
+                    strongSelf.currentRanges = ranges
+                    strongSelf.checkState()
+                }
+            }
+        })
     }
     
     deinit {
-        let statsTimer = self.statsTimer
+        let rangesDisposable = self.rangesDisposable
         self.queue.async {
-            statsTimer?.invalidate()
+            rangesDisposable?.dispose()
         }
     }
     
     func start() {
         self.queue.async {
             self.checkState()
-            
-            self.lastStatReport = (CACurrentMediaTime(), self.receivedSize)
-            self.statsTimer?.start()
         }
     }
     
@@ -476,18 +483,121 @@ private final class MultipartFetchManager {
             for (_, (_, disposable)) in self.fetchingParts {
                 disposable.dispose()
             }
-            self.statsTimer?.invalidate()
             self.reuploadToCdnDisposable.dispose()
         }
     }
     
     func checkState() {
-        for offset in self.fetchedParts.keys.sorted() {
+        guard let currentRanges = self.currentRanges else {
+            return
+        }
+        var rangesToFetch = currentRanges.subtracting(self.currentFilledRanges)
+        for (offset, (size, _)) in self.fetchingParts {
+            rangesToFetch.remove(integersIn: offset ..< (offset + size))
+        }
+        
+        for (offset, data) in self.fetchedParts {
+            self.currentFilledRanges.insert(integersIn: offset ..< (offset + data.count))
+            rangesToFetch.remove(integersIn: offset ..< (offset + data.count))
+            let _ = self.fetchedParts.removeValue(forKey: offset)
+            self.partReady(offset, self.state.transform(data: data))
+        }
+        
+        if let completeSize = self.completeSize {
+            self.currentFilledRanges.insert(integersIn: completeSize ..< Int.max)
+            rangesToFetch.remove(integersIn: completeSize ..< Int.max)
+            if rangesToFetch.isEmpty && !self.completeSizeReported {
+                self.completeSizeReported = true
+                self.reportCompleteSize(completeSize)
+            }
+        }
+        
+        while !rangesToFetch.isEmpty && self.fetchingParts.count < self.parallelParts && !self.reuploadingToCdn {
+            var selectedRange: Range<Int>?
+            for range in rangesToFetch.rangeView {
+                var dataRange: Range<Int> = range.lowerBound ..< min(range.lowerBound + self.defaultPartSize, range.upperBound)
+                if dataRange.lowerBound % self.partAlignment != 0 {
+                    let previousBoundary = (dataRange.lowerBound / self.partAlignment) * self.partAlignment
+                    dataRange = previousBoundary ..< dataRange.upperBound
+                }
+                if dataRange.lowerBound / (1024 * 1024) != (dataRange.upperBound - 1) / (1024 * 1024) {
+                    let nextBoundary = (dataRange.lowerBound / (1024 * 1024) + 1) * (1024 * 1024)
+                    dataRange = dataRange.lowerBound ..< nextBoundary
+                }
+                selectedRange = dataRange
+                break
+            }
+            if let selectedRange = selectedRange {
+                rangesToFetch.remove(integersIn: selectedRange)
+                var requestLimit = selectedRange.count
+                if requestLimit % self.partAlignment != 0 {
+                    requestLimit = (requestLimit / self.partAlignment + 1) * self.partAlignment
+                }
+                let part = self.source.request(offset: Int32(selectedRange.lowerBound), limit: Int32(requestLimit))
+                    |> deliverOn(self.queue)
+                self.fetchingParts[selectedRange.lowerBound] = (selectedRange.count, part.start(next: { [weak self] data in
+                    if let strongSelf = self {
+                        var data = data
+                        if data.count > selectedRange.count {
+                            data = data.subdata(in: 0 ..< selectedRange.count)
+                        }
+                        if data.count < selectedRange.count {
+                            strongSelf.completeSize = selectedRange.lowerBound + data.count
+                        }
+                        let _ = strongSelf.fetchingParts.removeValue(forKey: selectedRange.lowerBound)
+                        strongSelf.fetchedParts[selectedRange.lowerBound] = data
+                        strongSelf.checkState()
+                    }
+                }, error: { [weak self] error in
+                    if let strongSelf = self {
+                        let _ = strongSelf.fetchingParts.removeValue(forKey: selectedRange.lowerBound)
+                        switch error {
+                            case .generic:
+                                break
+                            case let .switchToCdn(id, token, key, iv, partHashes):
+                                switch strongSelf.source {
+                                    case let .master(location, download):
+                                        strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, fileToken: token, key: key, iv: iv, download: DownloadWrapper(id: id, cdn: true, take: strongSelf.takeDownloader), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download))
+                                        strongSelf.checkState()
+                                    case .cdn, .none:
+                                        break
+                                }
+                            case let .reuploadToCdn(_, token):
+                                switch strongSelf.source {
+                                    case .master, .none:
+                                        break
+                                    case let .cdn(_, fileToken, _, _, _, masterDownload, _):
+                                        if !strongSelf.reuploadingToCdn {
+                                            strongSelf.reuploadingToCdn = true
+                                            let reupload: Signal<[Api.CdnFileHash], NoError> = masterDownload.get() |> mapToSignal { download -> Signal<[Api.CdnFileHash], NoError> in
+                                                return download.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)))
+                                                    |> `catch` { _ -> Signal<[Api.CdnFileHash], NoError> in
+                                                        return .single([])
+                                                }
+                                            }
+                                            strongSelf.reuploadToCdnDisposable.set((reupload |> deliverOn(strongSelf.queue)).start(next: { _ in
+                                                if let strongSelf = self {
+                                                    strongSelf.reuploadingToCdn = false
+                                                    strongSelf.checkState()
+                                                }
+                                            }))
+                                    }
+                                }
+                            case .hashesMissing:
+                                break
+                        }
+                    }
+                }))
+            } else {
+                break
+            }
+        }
+        /*for offset in self.fetchedParts.keys.sorted() {
             if offset == self.committedOffset {
                 let data = self.fetchedParts[offset]!
                 self.committedOffset += data.count
                 let _ = self.fetchedParts.removeValue(forKey: offset)
-                self.partReady(self.state.transform(data: data))
+                self.partReady(offset, self.state.transform(data: data))
             }
         }
         
@@ -590,19 +700,11 @@ private final class MultipartFetchManager {
                     break
                 }
             }
-        }
-    }
-    
-    func reportStats() {
-        /*if let lastStatReport = self.lastStatReport {
-            let downloadSpeed = Double(self.receivedSize - lastStatReport.receivedSize) / (CACurrentMediaTime() - lastStatReport.timestamp)
-            print("MultipartFetch speed \(downloadSpeed / 1024) KB/s")
-        }
-        self.lastStatReport = (CACurrentMediaTime(), self.receivedSize)*/
+        }*/
     }
 }
 
-func multipartFetch(account: Account, resource: TelegramMultipartFetchableResource, size: Int?, range: Range<Int>, tag: MediaResourceFetchTag?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, NoError> {
+func multipartFetch(account: Account, resource: TelegramMultipartFetchableResource, size: Int?, ranges: Signal<IndexSet, NoError>, tag: MediaResourceFetchTag?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, NoError> {
     return Signal { subscriber in
         let datacenterId = resource.datacenterId
         let location: MultipartFetchMasterLocation
@@ -615,12 +717,13 @@ func multipartFetch(account: Account, resource: TelegramMultipartFetchableResour
             return EmptyDisposable
         }
         
-        let manager = MultipartFetchManager(size: size, range: range, encryptionKey: encryptionKey, decryptedSize: decryptedSize, location: location, takeDownloader: { id, cdn in
+        let manager = MultipartFetchManager(size: size, ranges: ranges, encryptionKey: encryptionKey, decryptedSize: decryptedSize, location: location, takeDownloader: { id, cdn in
             return account.network.download(datacenterId: Int(id), isCdn: cdn, tag: tag)
-        }, partReady: { data in
-            subscriber.putNext(.dataPart(data: data, range: 0 ..< data.count, complete: false))
-        }, completed: {
-            subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
+        }, partReady: { dataOffset, data in
+            subscriber.putNext(.dataPart(resourceOffset: dataOffset, data: data, range: 0 ..< data.count, complete: false))
+        }, reportCompleteSize: { size in
+            subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
+            subscriber.putNext(.resourceSizeUpdated(size))
             subscriber.putCompletion()
         })
         

@@ -432,10 +432,10 @@ public enum AccountNetworkState: Equatable {
 
 public final class AccountAuxiliaryMethods {
     public let updatePeerChatInputState: (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?
-    public let fetchResource: (Account, MediaResource, Range<Int>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?
+    public let fetchResource: (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?
     public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
     
-    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Range<Int>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
+    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchTag?) -> Signal<MediaResourceDataFetchResult, NoError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
         self.updatePeerChatInputState = updatePeerChatInputState
         self.fetchResource = fetchResource
         self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
@@ -753,11 +753,11 @@ public typealias FetchCachedResourceRepresentation = (_ account: Account, _ reso
 public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: Media, _ userInteractive: Bool) -> Signal<Media?, NoError>
 
 public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
-    account.postbox.mediaBox.fetchResource = { [weak account] resource, range, tag -> Signal<MediaResourceDataFetchResult, NoError> in
+    account.postbox.mediaBox.fetchResource = { [weak account] resource, ranges, tag -> Signal<MediaResourceDataFetchResult, NoError> in
         if let strongAccount = account {
-            if let result = fetchResource(account: strongAccount, resource: resource, range: range, tag: tag) {
+            if let result = fetchResource(account: strongAccount, resource: resource, ranges: ranges, tag: tag) {
                 return result
-            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, range, tag) {
+            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, ranges, tag) {
                 return result
             } else {
                 return .never()

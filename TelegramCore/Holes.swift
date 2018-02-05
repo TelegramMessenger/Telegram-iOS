@@ -454,7 +454,6 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
                     }
             }
     }
-    return .complete()
 }
 
 func fetchChatListHole(postbox: Postbox, network: Network, groupId: PeerGroupId?, hole: ChatListHole) -> Signal<Void, NoError> {
