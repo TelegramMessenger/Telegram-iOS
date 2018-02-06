@@ -50,6 +50,9 @@ private func writeEntry(_ entry: GroupFeedIndexEntry, to buffer: WriteBuffer) {
             
             var stableIdValue: UInt32 = stableId
             var timestampValue: Int32 = hole.lowerIndex.timestamp
+            if timestampValue == 0 {
+                //print("writing 0 hole")
+            }
             var idPeerIdValue: Int64 = hole.lowerIndex.id.peerId.toInt64()
             var idNamespaceValue: Int32 = hole.lowerIndex.id.namespace
             var idIdValue: Int32 = hole.lowerIndex.id.id
@@ -293,6 +296,8 @@ final class GroupFeedIndexTable: Table {
         var filledUpperBound: MessageIndex?
         var filledLowerBound: MessageIndex?
         
+        //self.debugPrintEntries(groupId: groupId)
+        
         var adjustedMainHoleIndex: MessageIndex?
         do {
             var upperItem: GroupFeedIndexEntry?
@@ -454,9 +459,13 @@ final class GroupFeedIndexTable: Table {
             self.fillHole(insertMessage: insertMessage, groupId: groupId, index: holeIndex, fillType: currentFillType, messages: holeMessages, addOperation: addOperation)
         }
         
+        //self.debugPrintEntries(groupId: groupId)
+        
         for message in remainingMessages {
             insertMessage(message)
         }
+        
+        //self.debugPrintEntries(groupId: groupId)
     }
     
     private func fillHole(insertMessage: (InternalStoreMessage) -> Void, groupId: PeerGroupId, index: MessageIndex, fillType: HoleFill, messages: [InternalStoreMessage], addOperation: (PeerGroupId, GroupFeedIndexOperation) -> Void) {
@@ -713,5 +722,20 @@ final class GroupFeedIndexTable: Table {
             return false
         }, limit: 1)
         return result
+    }
+    
+    private func debugPrintEntries(groupId: PeerGroupId) {
+        print("-----------------------------")
+        self.valueBox.range(self.table, start: self.lowerBound(groupId: groupId), end: self.upperBound(groupId: groupId), values: { key, value in
+            let entry = readEntry(groupId: groupId, key: key, value: value)
+            switch entry {
+                case let .message(index):
+                    print("message timestamp: \(index.timestamp), peerId: \(index.id.peerId.id), id: \(index.id.id)")
+                case let .hole(_, hole):
+                    print("hole upper timestamp: \(hole.upperIndex.timestamp), \(hole.upperIndex.id.peerId.id), \(hole.upperIndex.id.id), lower \(hole.lowerIndex.timestamp), \(hole.lowerIndex.id.peerId.id), \(hole.lowerIndex.id.id)")
+            }
+            return true
+        }, limit: 0)
+        print("-----------------------------")
     }
 }

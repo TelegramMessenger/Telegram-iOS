@@ -651,12 +651,24 @@ public final class StoreMessage {
         }
     }
     
+    public func withUpdatedFlags(_ flags: StoreMessageFlags) -> StoreMessage {
+        if flags == self.flags {
+            return self
+        } else {
+            return StoreMessage(id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, timestamp: self.timestamp, flags: flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributes: attributes, media: self.media)
+        }
+    }
+    
     public func withUpdatedAttributes(_ attributes: [MessageAttribute]) -> StoreMessage {
         return StoreMessage(id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributes: attributes, media: self.media)
     }
     
     public func withUpdatedLocalTags(_ localTags: LocalMessageTags) -> StoreMessage {
-        return StoreMessage(id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: localTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributes: self.attributes, media: self.media)
+        if localTags == self.localTags {
+            return self
+        } else {
+            return StoreMessage(id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: localTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributes: self.attributes, media: self.media)
+        }
     }
 }
 

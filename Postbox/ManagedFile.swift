@@ -70,4 +70,17 @@ public final class ManagedFile {
     public func truncate(count: Int64) {
         ftruncate(self.fd, count)
     }
+    
+    public func getSize() -> Int? {
+        var value = stat()
+        if fstat(self.fd, &value) == 0 {
+            return Int(value.st_size)
+        } else {
+            return nil
+        }
+    }
+    
+    public func sync() {
+        fsync(self.fd)
+    }
 }
