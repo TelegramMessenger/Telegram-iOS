@@ -24,6 +24,15 @@ public enum EnqueueMessage {
                 return self
         }
     }
+    
+    public func withUpdatedAttributes(_ f: ([MessageAttribute]) -> [MessageAttribute]) -> EnqueueMessage {
+        switch self {
+            case let .message(text, attributes, media, replyToMessageId, localGroupingKey):
+                return .message(text: text, attributes: f(attributes), media: media, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey)
+            case .forward:
+                return self
+        }
+    }
 }
 
 private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {

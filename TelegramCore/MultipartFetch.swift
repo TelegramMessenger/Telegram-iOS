@@ -399,7 +399,7 @@ private enum MultipartFetchSource {
 }
 
 private final class MultipartFetchManager {
-    let parallelParts: Int = 1
+    let parallelParts: Int
     let defaultPartSize = 128 * 1024
     let partAlignment = 128 * 1024
     
@@ -418,7 +418,7 @@ private final class MultipartFetchManager {
     private var source: MultipartFetchSource
     
     var fetchingParts: [Int: (Int, Disposable)] = [:]
-    var fetchedParts: [Int: Data] = [:]
+    var fetchedParts: [Int: (Int, Data)] = [:]
     var cachedPartHashes: [Int: Data] = [:]
     
     var reuploadingToCdn = false
@@ -431,16 +431,17 @@ private final class MultipartFetchManager {
     init(size: Int?, ranges: Signal<IndexSet, NoError>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int32?, location: MultipartFetchMasterLocation, takeDownloader: @escaping (Int32, Bool) -> Signal<Download, NoError>, partReady: @escaping (Int, Data) -> Void, reportCompleteSize: @escaping (Int) -> Void) {
         self.completeSize = size
         if let size = size {
+            self.parallelParts = 4
             /*if size <= range.lowerBound {
                 self.range = range
                 self.parallelParts = 0
             } else {
                 self.range = range.lowerBound ..< min(range.upperBound, size)
-                self.parallelParts = 4
+             
             }*/
         } else {
             //self.range = range
-            //self.parallelParts = 1
+            self.parallelParts = 1
         }
         
         self.state = MultipartDownloadState(encryptionKey: encryptionKey, decryptedSize: decryptedSize)
@@ -492,30 +493,43 @@ private final class MultipartFetchManager {
             return
         }
         var rangesToFetch = currentRanges.subtracting(self.currentFilledRanges)
-        for (offset, (size, _)) in self.fetchingParts {
-            rangesToFetch.remove(integersIn: offset ..< (offset + size))
+        for offset in self.fetchedParts.keys.sorted() {
+            if let (_, data) = self.fetchedParts[offset] {
+                let partRange = offset ..< (offset + data.count)
+                rangesToFetch.remove(integersIn: partRange)
+                if let minOffset = currentRanges.rangeView.first?.lowerBound {
+                    if true || minOffset >= offset {
+                        self.currentFilledRanges.insert(integersIn: partRange)
+                        self.fetchedParts.removeValue(forKey: offset)
+                        self.partReady(offset, self.state.transform(data: data))
+                    } else {
+                        if !currentRanges.intersects(integersIn: partRange) {
+                            self.fetchedParts.removeValue(forKey: offset)
+                        }
+                    }
+                }
+            }
         }
         
-        for (offset, data) in self.fetchedParts {
-            self.currentFilledRanges.insert(integersIn: offset ..< (offset + data.count))
-            rangesToFetch.remove(integersIn: offset ..< (offset + data.count))
-            let _ = self.fetchedParts.removeValue(forKey: offset)
-            self.partReady(offset, self.state.transform(data: data))
+        for (offset, (size, _)) in self.fetchingParts {
+            rangesToFetch.remove(integersIn: offset ..< (offset + size))
         }
         
         if let completeSize = self.completeSize {
             self.currentFilledRanges.insert(integersIn: completeSize ..< Int.max)
             rangesToFetch.remove(integersIn: completeSize ..< Int.max)
-            if rangesToFetch.isEmpty && !self.completeSizeReported {
+            if rangesToFetch.isEmpty && self.fetchingParts.isEmpty && !self.completeSizeReported {
                 self.completeSizeReported = true
+                assert(self.fetchedParts.isEmpty)
                 self.reportCompleteSize(completeSize)
             }
         }
         
         while !rangesToFetch.isEmpty && self.fetchingParts.count < self.parallelParts && !self.reuploadingToCdn {
-            var selectedRange: Range<Int>?
+            var selectedRange: (Range<Int>, Range<Int>)?
             for range in rangesToFetch.rangeView {
                 var dataRange: Range<Int> = range.lowerBound ..< min(range.lowerBound + self.defaultPartSize, range.upperBound)
+                let rawRange: Range<Int> = dataRange
                 if dataRange.lowerBound % self.partAlignment != 0 {
                     let previousBoundary = (dataRange.lowerBound / self.partAlignment) * self.partAlignment
                     dataRange = previousBoundary ..< dataRange.upperBound
@@ -524,33 +538,30 @@ private final class MultipartFetchManager {
                     let nextBoundary = (dataRange.lowerBound / (1024 * 1024) + 1) * (1024 * 1024)
                     dataRange = dataRange.lowerBound ..< nextBoundary
                 }
-                selectedRange = dataRange
+                selectedRange = (rawRange, dataRange)
                 break
             }
-            if let selectedRange = selectedRange {
-                rangesToFetch.remove(integersIn: selectedRange)
-                var requestLimit = selectedRange.count
+            if let (rawRange, downloadRange) = selectedRange {
+                rangesToFetch.remove(integersIn: downloadRange)
+                var requestLimit = downloadRange.count
                 if requestLimit % self.partAlignment != 0 {
                     requestLimit = (requestLimit / self.partAlignment + 1) * self.partAlignment
                 }
-                let part = self.source.request(offset: Int32(selectedRange.lowerBound), limit: Int32(requestLimit))
+                let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit))
                     |> deliverOn(self.queue)
-                self.fetchingParts[selectedRange.lowerBound] = (selectedRange.count, part.start(next: { [weak self] data in
+                self.fetchingParts[downloadRange.lowerBound] = (downloadRange.count, part.start(next: { [weak self] data in
                     if let strongSelf = self {
                         var data = data
-                        if data.count > selectedRange.count {
-                            data = data.subdata(in: 0 ..< selectedRange.count)
+                        if data.count < downloadRange.count {
+                            strongSelf.completeSize = downloadRange.lowerBound + data.count
                         }
-                        if data.count < selectedRange.count {
-                            strongSelf.completeSize = selectedRange.lowerBound + data.count
-                        }
-                        let _ = strongSelf.fetchingParts.removeValue(forKey: selectedRange.lowerBound)
-                        strongSelf.fetchedParts[selectedRange.lowerBound] = data
+                        let _ = strongSelf.fetchingParts.removeValue(forKey: downloadRange.lowerBound)
+                        strongSelf.fetchedParts[downloadRange.lowerBound] = (rawRange.lowerBound, data)
                         strongSelf.checkState()
                     }
                 }, error: { [weak self] error in
                     if let strongSelf = self {
-                        let _ = strongSelf.fetchingParts.removeValue(forKey: selectedRange.lowerBound)
+                        let _ = strongSelf.fetchingParts.removeValue(forKey: downloadRange.lowerBound)
                         switch error {
                             case .generic:
                                 break
@@ -722,7 +733,6 @@ func multipartFetch(account: Account, resource: TelegramMultipartFetchableResour
         }, partReady: { dataOffset, data in
             subscriber.putNext(.dataPart(resourceOffset: dataOffset, data: data, range: 0 ..< data.count, complete: false))
         }, reportCompleteSize: { size in
-            subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
             subscriber.putNext(.resourceSizeUpdated(size))
             subscriber.putCompletion()
         })

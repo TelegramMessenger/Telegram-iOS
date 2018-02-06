@@ -18,11 +18,17 @@ public struct CacheUsageStats {
     public let media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]]
     public let mediaResourceIds: [MediaId: [MediaResourceId]]
     public let peers: [PeerId: Peer]
+    public let otherSize: Int64
+    public let otherPaths: [String]
+    public let cacheSize: Int64
     
-    public init(media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], mediaResourceIds: [MediaId: [MediaResourceId]], peers: [PeerId: Peer]) {
+    public init(media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], mediaResourceIds: [MediaId: [MediaResourceId]], peers: [PeerId: Peer], otherSize: Int64, otherPaths: [String], cacheSize: Int64) {
         self.media = media
         self.mediaResourceIds = mediaResourceIds
         self.peers = peers
+        self.otherSize = otherSize
+        self.otherPaths = otherPaths
+        self.cacheSize = cacheSize
     }
 }
 
@@ -33,11 +39,13 @@ public enum CacheUsageStatsResult {
 
 private enum CollectCacheUsageStatsError {
     case done(CacheUsageStats)
+    case generic
 }
 
 private final class CacheUsageStatsState {
     var media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]] = [:]
     var mediaResourceIds: [MediaId: [MediaResourceId]] = [:]
+    var allResourceIds = Set<WrappedMediaResourceId>()
     var lowerBound: MessageIndex?
 }
 
@@ -118,23 +126,31 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
                     }
                     for (id, ids) in mediaResourceIds {
                         state.mediaResourceIds[id] = ids
+                        for resourceId in ids {
+                            state.allResourceIds.insert(WrappedMediaResourceId(resourceId))
+                        }
                     }
                 }
                 if updatedLowerBound == nil {
-                    let (finalMedia, finalMediaResourceIds) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]]) in
-                        return (state.media, state.mediaResourceIds)
+                    let (finalMedia, finalMediaResourceIds, allResourceIds) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]], Set<WrappedMediaResourceId>) in
+                        return (state.media, state.mediaResourceIds, state.allResourceIds)
                     }
-                    return account.postbox.modify { modifier -> CacheUsageStats in
-                        var peers: [PeerId: Peer] = [:]
-                        for peerId in finalMedia.keys {
-                            if let peer = modifier.getPeer(peerId) {
-                                peers[peer.id] = peer
+                    
+                    return account.postbox.mediaBox.collectOtherResourceUsage(excludeIds: allResourceIds)
+                    |> mapError { _ in return CollectCacheUsageStatsError.generic }
+                    |> mapToSignal { otherSize, otherPaths, cacheSize in
+                        return account.postbox.modify { modifier -> CacheUsageStats in
+                            var peers: [PeerId: Peer] = [:]
+                            for peerId in finalMedia.keys {
+                                if let peer = modifier.getPeer(peerId) {
+                                    peers[peer.id] = peer
+                                }
                             }
+                            return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: otherSize, otherPaths: otherPaths, cacheSize: cacheSize)
+                        } |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
+                        |> mapToSignal { stats -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
+                            return .fail(.done(stats))
                         }
-                        return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers)
-                    } |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
-                    |> mapToSignal { stats -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
-                        return .fail(.done(stats))
                     }
                 } else {
                     return .complete()
@@ -150,6 +166,8 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
         switch error {
             case let .done(result):
                 return .single(.result(result))
+            case .generic:
+                return .complete()
         }
     }
 }
