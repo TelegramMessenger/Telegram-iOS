@@ -86,5 +86,13 @@ public protocol Media: class, PostboxCoding {
     var id: MediaId? { get }
     var peerIds: [PeerId] { get }
     
+    func isLikelyToBeUpdated() -> Bool
+    
     func isEqual(_ other: Media) -> Bool
+}
+
+public extension Media {
+    func isLikelyToBeUpdated() -> Bool {
+        return false
+    }
 }
