@@ -612,7 +612,7 @@ final class MediaBoxPartialFile {
                                     strongSelf.write(offset: Int32(resourceOffset), data: data, dataRange: range)
                                 }
                                 if complete {
-                                    if let maxOffset = strongSelf.fileMap.ranges.max() {
+                                    if let maxOffset = strongSelf.fileMap.ranges.rangeView.reversed().first?.upperBound {
                                         let maxValue = max(resourceOffset + range.count, maxOffset)
                                         strongSelf.truncate(Int32(maxValue))
                                     }
