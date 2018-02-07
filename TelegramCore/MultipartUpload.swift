@@ -159,7 +159,7 @@ private final class MultipartUploadManager {
     let dataSignal: Signal<MultipartUploadData, NoError>
     
     var committedOffset: Int
-    let uploadPart: (UploadPart) -> Signal<Void, NoError>
+    let uploadPart: (UploadPart) -> Signal<Void, UploadPartError>
     let progress: (Float) -> Void
     let completed: (MultipartIntermediateResult?) -> Void
     
@@ -173,7 +173,7 @@ private final class MultipartUploadManager {
     
     let state: MultipartUploadState
     
-    init(headerSize: Int32, data: Signal<MultipartUploadData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, hintFileIsLarge: Bool, uploadPart: @escaping (UploadPart) -> Signal<Void, NoError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult?) -> Void) {
+    init(headerSize: Int32, data: Signal<MultipartUploadData, NoError>, encryptionKey: SecretFileEncryptionKey?, hintFileSize: Int?, hintFileIsLarge: Bool, uploadPart: @escaping (UploadPart) -> Signal<Void, UploadPartError>, progress: @escaping (Float) -> Void, completed: @escaping (MultipartIntermediateResult?) -> Void) {
         self.dataSignal = data
         
         var fileId: Int64 = 0
@@ -273,7 +273,9 @@ private final class MultipartUploadManager {
                     self.headerPartState = .uploading
                     let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: currentBigTotalParts, bigPart: self.bigParts))
                         |> deliverOn(self.queue)
-                    self.uploadingParts[0] = (partSize, part.start(completed: { [weak self] in
+                    self.uploadingParts[0] = (partSize, part.start(error: { [weak self] _ in
+                        self?.completed(nil)
+                    }, completed: { [weak self] in
                         if let strongSelf = self {
                             let _ = strongSelf.uploadingParts.removeValue(forKey: 0)
                             strongSelf.headerPartState = .ready
@@ -330,7 +332,9 @@ private final class MultipartUploadManager {
                                     break
                             }
                         }
-                        self.uploadingParts[nextOffset] = (partSize, part.start(completed: { [weak self] in
+                        self.uploadingParts[nextOffset] = (partSize, part.start(error: { [weak self] _ in
+                            self?.completed(nil)
+                        }, completed: { [weak self] in
                             if let strongSelf = self {
                                 let _ = strongSelf.uploadingParts.removeValue(forKey: nextOffset)
                                 strongSelf.uploadedParts[partOffset] = partSize
