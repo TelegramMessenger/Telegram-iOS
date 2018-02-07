@@ -173,7 +173,7 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 }
 
 func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
-    if let peer = modifier.getPeer(peerId) {
+    if let peer = modifier.getPeer(peerId), let accountPeer = modifier.getPeer(account.peerId) {
         var storeMessages: [StoreMessage] = []
         var timestamp = Int32(account.network.context.globalTime())
         switch peerId.namespace {
@@ -229,6 +229,17 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                     if let file = media as? TelegramMediaFile, file.isVoice {
                         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
                             attributes.append(ConsumableContentMessageAttribute(consumed: false))
+                        }
+                    }
+                    if let peer = peer as? TelegramChannel {
+                        switch peer.info {
+                        case let .broadcast(info):
+                            attributes.append(ViewCountMessageAttribute(count: 1))
+                            if info.flags.contains(.messagesShouldHaveSignatures) {
+                                attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.displayTitle))
+                            }
+                        case .group:
+                            break
                         }
                     }
                     

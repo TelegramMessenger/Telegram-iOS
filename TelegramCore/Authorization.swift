@@ -27,7 +27,7 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
             switch error.errorDescription {
                 case Regex("(PHONE_|USER_|NETWORK_)MIGRATE_(\\d+)"):
                     let range = error.errorDescription.range(of: "MIGRATE_")!
-                    let updatedMasterDatacenterId = Int32(error.errorDescription.substring(from: range.upperBound))!
+                    let updatedMasterDatacenterId = Int32(error.errorDescription[range.upperBound ..< error.errorDescription.endIndex])!
                     let updatedAccount = account.changedMasterDatacenterId(updatedMasterDatacenterId)
                     return updatedAccount
                         |> mapToSignalPromotingError { updatedAccount -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in

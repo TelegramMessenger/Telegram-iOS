@@ -24,7 +24,7 @@ public struct FoundPeer: Equatable {
 }
 
 public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
-    let searchResult = account.network.request(Api.functions.contacts.search(q: query, limit: 20))
+    let searchResult = account.network.request(Api.functions.contacts.search(q: query, limit: 20), automaticFloodWait: false)
         |> map { Optional($0) }
         |> `catch` { _ in
             return Signal<Api.contacts.Found?, NoError>.single(nil)

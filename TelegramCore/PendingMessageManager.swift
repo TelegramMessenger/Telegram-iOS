@@ -381,7 +381,23 @@ public final class PendingMessageManager {
             subscriber(status)
         }
         
-        messageContext.disposable.set((uploadSignal |> deliverOn(self.queue)).start(next: { [weak self] next in
+        
+        
+        messageContext.disposable.set((uploadSignal |> deliverOn(self.queue) |> `catch` { [weak self] _ -> Signal<PendingMessageUploadedContentResult, NoError> in
+            if let strongSelf = self {
+                let modify = strongSelf.postbox.modify { modifier -> Void in
+                    modifier.updateMessage(id, update: { currentMessage in
+                        var storeForwardInfo: StoreMessageForwardInfo?
+                        if let forwardInfo = currentMessage.forwardInfo {
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                        }
+                        return .update(StoreMessage(id: id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                    })
+                }
+                return modify |> mapToSignal { _ in return .complete() }
+            }
+            return .fail(Void())
+        }).start(next: { [weak self] next in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
                 

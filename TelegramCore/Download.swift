@@ -22,6 +22,12 @@ private func roundUp(_ value: Int, to multiple: Int) -> Int {
     return value + multiple - remainder
 }
 
+enum UploadPartError {
+    case generic
+    case invalidMedia
+}
+
+
 class Download: NSObject, MTRequestMessageServiceDelegate {
     let datacenterId: Int
     let isCdn: Bool
@@ -75,7 +81,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         self.context.authTokenForDatacenter(withIdRequired: self.datacenterId, authToken:self.mtProto.requiredAuthToken, masterDatacenterId: self.mtProto.authTokenMasterDatacenterId)
     }
     
-    func uploadPart(fileId: Int64, index: Int, data: Data, bigTotalParts: Int? = nil) -> Signal<Void, NoError> {
+    func uploadPart(fileId: Int64, index: Int, data: Data, bigTotalParts: Int? = nil) -> Signal<Void, UploadPartError> {
         return Signal<Void, MTRpcError> { subscriber in
             let request = MTRequest()
             
@@ -110,7 +116,13 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             return ActionDisposable {
                 self.requestService.removeRequest(byInternalId: internalId)
             }
-        } |> retryRequest
+        } |> `catch` { value -> Signal<Void, UploadPartError> in
+            if value.errorCode == 400 {
+                return .fail(.invalidMedia)
+            } else {
+               return .fail(.generic)
+            }
+        }
     }
     
     func webFilePart(location: Api.InputWebFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
@@ -160,7 +172,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         } |> retryRequest
     }
     
-    func part(location: Api.InputFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
+    func part(location: Api.InputFileLocation, offset: Int, length: Int) -> Signal<Data, Void> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()
             
