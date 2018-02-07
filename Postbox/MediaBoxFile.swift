@@ -765,7 +765,7 @@ final class MediaBoxFileContext {
     func data(range: Range<Int32>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {
         switch self.content {
             case let .complete(path, size):
-                next(MediaResourceData(path: path, offset: Int(range.lowerBound), size: min(Int(range.upperBound), size), complete: true))
+                next(MediaResourceData(path: path, offset: Int(range.lowerBound), size: min(Int(range.upperBound), size) - Int(range.lowerBound), complete: true))
                 return EmptyDisposable
             case let .partial(file):
                 return file.data(range: range, waitUntilAfterInitialFetch: waitUntilAfterInitialFetch, next: next)
@@ -802,7 +802,7 @@ final class MediaBoxFileContext {
     func rangeStatus(next: @escaping (IndexSet) -> Void, completed: @escaping () -> Void) -> Disposable {
         switch self.content {
             case let .complete(_, size):
-                next(IndexSet(0 ..< size))
+                next(IndexSet(integersIn: 0 ..< size))
                 completed()
                 return EmptyDisposable
             case let .partial(file):
