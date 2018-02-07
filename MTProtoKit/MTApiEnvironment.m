@@ -272,10 +272,23 @@ typedef enum {
             
         case UIDeviceIFPGA: return IFPGA_NAMESTRING;
             
-        case UIDeviceOSX: return @"macOS";
-            
+        case UIDeviceOSX: return [self macHWName];
+        
         default: return IOS_FAMILY_UNKNOWN_DEVICE;
     }
+}
+    
+-(NSString *)macHWName {
+    size_t len = 0;
+    sysctlbyname("hw.model", NULL, &len, NULL, 0);
+    if (len) {
+        char *model = malloc(len*sizeof(char));
+        sysctlbyname("hw.model", model, &len, NULL, 0);
+        NSString *name = [[NSString alloc] initWithUTF8String:model];
+        free(model);
+        return name;
+    };
+    return @"macOS";
 }
 
 - (NSUInteger)platformType
