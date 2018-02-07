@@ -174,12 +174,12 @@ public func downloadMessage(account: Account, messageId: MessageId) -> Signal<Me
                     let signal: Signal<Api.messages.Messages, MTRpcError>
                     if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
                         if let channel = apiInputChannel(peer) {
-                            signal = account.network.request(Api.functions.channels.getMessages(channel: channel, id: [messageId.id]))
+                            signal = account.network.request(Api.functions.channels.getMessages(channel: channel, id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
                         } else {
                             signal = .complete()
                         }
                     } else {
-                        signal = account.network.request(Api.functions.messages.getMessages(id: [messageId.id]))
+                        signal = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
                     }
                     
                     return signal |> mapError {_ in} |> mapToSignal { result -> Signal<Message?, Void> in

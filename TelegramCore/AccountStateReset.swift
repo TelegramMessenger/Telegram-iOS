@@ -54,7 +54,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
                         switch dialog {
                             case let .dialog(_, peer, _, _, _, _, _, _, _, _):
                                 itemIds.append(.peer(peer.peerId))
-                            case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+                            case let .dialogFeed(_, _, _, feedId, _, _, _, _, _):
                                 itemIds.append(.group(PeerGroupId(rawValue: feedId)))
                                 continue loop
                         }

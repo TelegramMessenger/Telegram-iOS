@@ -564,7 +564,7 @@ public final class PendingMessageManager {
                                         singleFlags |= 1 << 0
                                     }
                                     
-                                    singleMedias.append(.inputSingleMedia(media: inputMedia, flags: singleFlags, randomId: uniqueId, message: text, entities: messageEntities))
+                                    singleMedias.append(.inputSingleMedia(flags: singleFlags, media: inputMedia, randomId: uniqueId, message: text, entities: messageEntities))
                                 default:
                                     return .complete()
                             }

@@ -35,10 +35,10 @@ private func fetchMessage(modifier: Modifier, account: Account, messageId: Messa
     if let peer = modifier.getPeer(messageId.peerId) {
         var signal: Signal<Api.messages.Messages, MTRpcError>?
         if messageId.peerId.namespace == Namespaces.Peer.CloudUser || messageId.peerId.namespace == Namespaces.Peer.CloudGroup {
-            signal = account.network.request(Api.functions.messages.getMessages(id: [messageId.id]))
+            signal = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
         } else if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
             if let inputChannel = apiInputChannel(peer) {
-                signal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: [messageId.id]))
+                signal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
             }
         }
         if let signal = signal {

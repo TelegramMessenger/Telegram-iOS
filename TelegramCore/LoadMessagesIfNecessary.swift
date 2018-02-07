@@ -51,10 +51,10 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
                 if let peer = supportPeers[peerId] {
                     var signal: Signal<Api.messages.Messages, MTRpcError>?
                     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
-                        signal = network.request(Api.functions.messages.getMessages(id: messageIds.map({ $0.id })))
+                        signal = network.request(Api.functions.messages.getMessages(id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
                     } else if peerId.namespace == Namespaces.Peer.CloudChannel {
                         if let inputChannel = apiInputChannel(peer) {
-                            signal = network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map({ $0.id })))
+                            signal = network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
                         }
                     }
                     if let signal = signal {

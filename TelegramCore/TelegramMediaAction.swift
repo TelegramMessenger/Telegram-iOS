@@ -30,6 +30,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
     case paymentSent(currency: String, totalAmount: Int64)
     case customText(text: String, entities: [MessageTextEntity])
+    case botDomainAccessGranted(domain: String)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -70,6 +71,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 self = .paymentSent(currency: decoder.decodeStringForKey("currency", orElse: ""), totalAmount: decoder.decodeInt64ForKey("ta", orElse: 0))
             case 16:
                 self = .customText(text: decoder.decodeStringForKey("text", orElse: ""), entities: decoder.decodeObjectArrayWithDecoderForKey("ent"))
+            case 17:
+                self = .botDomainAccessGranted(domain: decoder.decodeStringForKey("do", orElse: ""))
             default:
                 self = .unknown
         }
@@ -144,6 +147,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 encoder.encodeInt32(16, forKey: "_rawValue")
                 encoder.encodeString(text, forKey: "text")
                 encoder.encodeObjectArray(entities, forKey: "ent")
+            case let .botDomainAccessGranted(domain):
+                encoder.encodeInt32(17, forKey: "_rawValue")
+                encoder.encodeString(domain, forKey: "do")
         }
     }
     
@@ -269,6 +275,12 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
             } else {
                 return false
             }
+        case let .botDomainAccessGranted(domain):
+            if case .botDomainAccessGranted(domain) = rhs {
+                return true
+            } else {
+                return false
+            }
     }
     return false
 }
@@ -345,6 +357,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .historyScreenshot)
         case let .messageActionCustomAction(message):
             return TelegramMediaAction(action: .customText(text: message, entities: []))
+        case let .messageActionBotAllowed(domain):
+            return TelegramMediaAction(action: .botDomainAccessGranted(domain: domain))
     }
 }
 

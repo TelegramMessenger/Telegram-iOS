@@ -205,7 +205,7 @@ extension Api.Message {
                 }
                 
                 switch action {
-                    case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction:
+                    case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed:
                         break
                     case let .messageActionChannelMigrateFrom(_, chatId):
                         result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
@@ -351,6 +351,10 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
             case let .messageEntityMentionName(offset, length, userId):
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextMention(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))))
+            case let .messageEntityPhone(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .PhoneNumber))
+            case let .messageEntityCashtag(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Hashtag))
         }
     }
     return result

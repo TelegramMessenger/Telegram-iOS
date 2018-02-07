@@ -1141,10 +1141,10 @@ private func resolveAssociatedMessages(account: Account, state: AccountMutableSt
             if let peer = state.peers[peerId] {
                 var signal: Signal<Api.messages.Messages, MTRpcError>?
                 if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
-                    signal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map({ $0.id })))
+                    signal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
                 } else if peerId.namespace == Namespaces.Peer.CloudChannel {
                     if let inputChannel = apiInputChannel(peer) {
-                        signal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map({ $0.id })))
+                        signal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
                     }
                 }
                 if let signal = signal {

@@ -453,8 +453,8 @@ private final class MultipartFetchManager {
         
         self.rangesDisposable = (ranges |> deliverOn(self.queue)).start(next: { [weak self] ranges in
             if let strongSelf = self {
-                if let currentRanges = strongSelf.currentRanges {
-                    let updatedRanges = currentRanges.subtracting(strongSelf.currentFilledRanges)
+                if let _ = strongSelf.currentRanges {
+                    let updatedRanges = ranges.subtracting(strongSelf.currentFilledRanges)
                     strongSelf.currentRanges = updatedRanges
                     strongSelf.checkState()
                 } else {

@@ -54,9 +54,9 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                 let messages: Signal<Api.messages.Messages, MTRpcError>
                 switch inputPeer {
                     case let .inputPeerChannel(channelId, accessHash):
-                        messages = account.network.request(Api.functions.channels.getMessages(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), id: [messageId.id]))
+                        messages = account.network.request(Api.functions.channels.getMessages(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
                     default:
-                        messages = account.network.request(Api.functions.messages.getMessages(id: [messageId.id]))
+                        messages = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
                 }
                 return messages
                     |> retryRequest

@@ -100,7 +100,7 @@ private func fetchReadStateNext(network: Network, groupId: PeerGroupId) -> Signa
         switch result {
             case let .peerDialogs(dialogs, messages, _, _, _):
                 for dialog in dialogs {
-                    if case let .dialogFeed(_, _, topMessage, feedId, _, resultMaxReadPosition, _, _) = dialog {
+                    if case let .dialogFeed(_, _, topMessage, feedId, _, resultMaxReadPosition, _, _, _) = dialog {
                         assert(feedId == groupId.rawValue)
                         if let resultMaxReadPosition = resultMaxReadPosition {
                             switch resultMaxReadPosition {
