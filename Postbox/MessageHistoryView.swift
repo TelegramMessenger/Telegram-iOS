@@ -13,6 +13,7 @@ public enum AdditionalMessageHistoryViewData {
     case cachedPeerData(PeerId)
     case cachedPeerDataMessages(PeerId)
     case peerChatState(PeerId)
+    case peerGroupState(PeerGroupId)
     case totalUnreadCount
     case peerNotificationSettings(PeerId)
 }
@@ -21,6 +22,7 @@ public enum AdditionalMessageHistoryViewDataEntry {
     case cachedPeerData(PeerId, CachedPeerData?)
     case cachedPeerDataMessages(PeerId, [MessageId: Message]?)
     case peerChatState(PeerId, PeerChatState?)
+    case peerGroupState(PeerGroupId, PeerGroupState?)
     case totalUnreadCount(Int32)
     case peerNotificationSettings(PeerNotificationSettings?)
 }
@@ -999,6 +1001,11 @@ final class MutableMessageHistoryView {
                 case let .peerChatState(peerId, _):
                     if transaction.currentUpdatedPeerChatStates.contains(peerId) {
                         self.additionalDatas[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId) as? PeerChatState)
+                        hasChanges = true
+                    }
+                case let .peerGroupState(groupId, _):
+                    if transaction.currentUpdatedPeerGroupStates.contains(groupId) {
+                        self.additionalDatas[i] = .peerGroupState(groupId, postbox.peerGroupStateTable.get(groupId))
                         hasChanges = true
                     }
                 case .totalUnreadCount:

@@ -5,6 +5,7 @@ public enum PostboxViewKey: Hashable {
     case itemCollectionIds(namespaces: [ItemCollectionId.Namespace])
     case itemCollectionInfo(id: ItemCollectionId)
     case peerChatState(peerId: PeerId)
+    case peerGroupState(groupId: PeerGroupId)
     case orderedItemList(id: Int32)
     case accessChallengeData
     case preferences(keys: Set<ValueBoxKey>)
@@ -31,6 +32,8 @@ public enum PostboxViewKey: Hashable {
                 return 1
             case let .peerChatState(peerId):
                 return peerId.hashValue
+            case let .peerGroupState(groupId):
+                return groupId.hashValue
             case let .itemCollectionInfo(id):
                 return id.hashValue
             case let .orderedItemList(id):
@@ -92,6 +95,12 @@ public enum PostboxViewKey: Hashable {
                 }
             case let .peerChatState(peerId):
                 if case .peerChatState(peerId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .peerGroupState(groupId):
+                if case .peerGroupState(groupId) = rhs {
                     return true
                 } else {
                     return false
@@ -212,6 +221,8 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutableItemCollectionInfoView(postbox: postbox, id: id)
         case let .peerChatState(peerId):
             return MutablePeerChatStateView(postbox: postbox, peerId: peerId)
+        case let .peerGroupState(groupId):
+            return MutablePeerGroupStateView(postbox: postbox, groupId: groupId)
         case let .orderedItemList(id):
             return MutableOrderedItemListView(postbox: postbox, collectionId: id)
         case .accessChallengeData:

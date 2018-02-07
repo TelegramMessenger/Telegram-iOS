@@ -1,23 +1,23 @@
 import Foundation
 
-public final class GroupFeedState {
-    
+public protocol PeerGroupState: PostboxCoding {
+    func equals(_ other: PeerGroupState) -> Bool
 }
 
-private struct GroupFeedStateEntry {
-    let state: GroupFeedState?
+private struct PeerGroupStateEntry {
+    let state: PeerGroupState?
     
-    init(_ state: GroupFeedState?) {
+    init(_ state: PeerGroupState?) {
         self.state = state
     }
 }
 
-final class GroupFeedStateTable: Table {
+final class PeerGroupStateTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
-    private var cachedStates: [PeerGroupId: GroupFeedStateEntry] = [:]
+    private var cachedStates: [PeerGroupId: PeerGroupStateEntry] = [:]
     private var updatedGroupIds = Set<PeerGroupId>()
     
     private let sharedKey = ValueBoxKey(length: 8)
@@ -27,23 +27,22 @@ final class GroupFeedStateTable: Table {
         return self.sharedKey
     }
     
-    func get(_ id: PeerGroupId) -> GroupFeedState? {
+    func get(_ id: PeerGroupId) -> PeerGroupState? {
         if let state = self.cachedStates[id] {
             return state.state
         } else {
-            /*if let value = self.valueBox.get(self.table, key: self.key(id)), let state = PostboxDecoder(buffer: value).decodeRootObject() {
-                self.cachedPeerChatStates[id] = state
+            if let value = self.valueBox.get(self.table, key: self.key(id)), let state = PostboxDecoder(buffer: value).decodeRootObject() as? PeerGroupState {
+                self.cachedStates[id] = PeerGroupStateEntry(state)
                 return state
             } else {
-                self.cachedPeerChatStates[id] = nil
+                self.cachedStates[id] = PeerGroupStateEntry(nil)
                 return nil
-            }*/
-            return nil
+            }
         }
     }
     
-    func set(_ id: PeerGroupId, state: GroupFeedState?) {
-        self.cachedStates[id] = GroupFeedStateEntry(state)
+    func set(_ id: PeerGroupId, state: PeerGroupState?) {
+        self.cachedStates[id] = PeerGroupStateEntry(state)
         self.updatedGroupIds.insert(id)
     }
     
@@ -55,10 +54,11 @@ final class GroupFeedStateTable: Table {
     override func beforeCommit() {
         if !self.updatedGroupIds.isEmpty {
             for id in self.updatedGroupIds {
+                let sharedEncoder = PostboxEncoder()
                 if let entry = self.cachedStates[id], let state = entry.state {
-                    /*sharedEncoder.reset()
+                    sharedEncoder.reset()
                     sharedEncoder.encodeRootObject(state)
-                    self.valueBox.set(self.table, key: self.key(id), value: sharedEncoder.readBufferNoCopy())*/
+                    self.valueBox.set(self.table, key: self.key(id), value: sharedEncoder.readBufferNoCopy())
                 } else {
                     self.valueBox.remove(self.table, key: self.key(id))
                 }
@@ -67,4 +67,5 @@ final class GroupFeedStateTable: Table {
         }
     }
 }
+
 
