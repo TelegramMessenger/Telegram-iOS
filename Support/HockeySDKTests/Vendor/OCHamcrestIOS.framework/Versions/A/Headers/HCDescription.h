@@ -5,8 +5,8 @@
 
 
 /*!
- * @abstract A description of an @ref HCMatcher.
- * @discussion An @ref HCMatcher will describe itself to a description which can later be used for reporting.
+ * @abstract A description of an HCMatcher.
+ * @discussion An HCMatcher will describe itself to a description which can later be used for reporting.
  */
 @protocol HCDescription <NSObject>
 
@@ -18,7 +18,7 @@
 
 /*!
  * @abstract Appends description of specified value to description.
- * @discussion If the value implements the @ref HCSelfDescribing protocol, then it will be used.
+ * @discussion If the value implements the HCSelfDescribing protocol, then it will be used.
  * @return <code>self</code>, for chaining.
  */
 - (id <HCDescription>)appendDescriptionOf:(id)value;

@@ -11,7 +11,10 @@
 #import "HockeySDKNullability.h"
 NS_ASSUME_NONNULL_BEGIN
 
-FOUNDATION_EXPORT char *BITSafeJsonEventsString;
+/**
+ * Buffer of telemtry events, will be written to disk. Make sure the buffer is used in a threadsafe way.
+ */
+FOUNDATION_EXPORT char *_Nullable BITTelemetryEventBuffer;
 
 /**
  *  Items get queued before they are persisted and sent out as a batch. This class managed the queue, and forwards the batch

@@ -36,6 +36,7 @@
 #import "BITAuthenticationViewController.h"
 #import "BITHockeyAppClient.h"
 #import "BITHockeyHelper.h"
+#import "BITHockeyHelper+Application.h"
 #import "BITHockeyBaseManagerPrivate.h"
 
 #include <sys/stat.h>
@@ -105,12 +106,13 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(authenticateInstallation) object:nil];
     [self performSelector:@selector(authenticateInstallation) withObject:nil afterDelay:0.1];
   } else {
-    switch ([[UIApplication sharedApplication] applicationState]) {
-      case UIApplicationStateActive:
+    switch ([BITHockeyHelper applicationState]) {
+      case BITApplicationStateActive:
         [self authenticate];
         break;
-      case UIApplicationStateBackground:
-      case UIApplicationStateInactive:
+      case BITApplicationStateBackground:
+      case BITApplicationStateInactive:
+      case BITApplicationStateUnknown:
         // do nothing, wait for active state
         break;
     }
@@ -526,7 +528,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   if (BITAuthenticatorIdentificationTypeHockeyAppUser == self.identificationType) {
     NSString *authStr = [NSString stringWithFormat:@"%@:%@", email, password];
     NSData *authData = [authStr dataUsingEncoding:NSUTF8StringEncoding];
-    NSString *authValue = [NSString stringWithFormat:@"Basic %@", bit_base64String(authData, authData.length)];
+    NSString *authValue = [NSString stringWithFormat:@"Basic %@", [authData base64EncodedStringWithOptions:0]];
     [request setValue:authValue forHTTPHeaderField:@"Authorization"];
   }
   
@@ -743,7 +745,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 #pragma mark - Private helpers
 
 - (void)alertOnFailureStoringTokenInKeychain {
-  if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) {
+  if ([BITHockeyHelper applicationState] != BITApplicationStateActive) {
     return;
   }
   
@@ -915,9 +917,6 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   } else {
     [defaults setObject:lastAuthenticatedVersion
                  forKey:kBITAuthenticatorLastAuthenticatedVersionKey];
-    if(bit_isPreiOS8Environment()) {
-      [defaults synchronize];
-    }
   }
 }
 

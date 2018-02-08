@@ -9,8 +9,8 @@
  * @discussion A matcher is able to describe itself to give feedback when it fails.
  *
  * HCMatcher implementations should not directly implement this protocol. Instead, extend the
- * @ref HCBaseMatcher class, which will ensure that the HCMatcher API can grow to support new
- * features and remain compatible with all HCMatcher implementations.
+ * HCBaseMatcher class, which will ensure that the HCMatcher API can grow to support new features
+ * and remain compatible with all HCMatcher implementations.
  */
 @protocol HCMatcher <HCSelfDescribing>
 

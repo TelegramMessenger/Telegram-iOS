@@ -716,6 +716,10 @@
 #pragma mark - ListViewCellDelegate
 
 - (void)listCell:(id) __unused cell didSelectAttachment:(BITFeedbackMessageAttachment *)attachment {
+  if (!self.cachedPreviewItems){
+    [self refreshPreviewItems];
+  }
+  
   QLPreviewController *previewController = [[QLPreviewController alloc] init];
   previewController.dataSource = self;
   
@@ -739,10 +743,6 @@
 }
 
 - (NSInteger)numberOfPreviewItemsInPreviewController:(QLPreviewController *) __unused controller {
-  if (!self.cachedPreviewItems){
-    [self refreshPreviewItems];
-  }
-  
   return self.cachedPreviewItems.count;
 }
 

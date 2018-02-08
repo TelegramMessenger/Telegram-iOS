@@ -90,7 +90,7 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
 @property (nonatomic, strong) BITHockeyAppClient *hockeyAppClient;
 
 // Redeclare BITHockeyManager properties with readwrite attribute.
-@property (nonatomic, readwrite) NSString *installString;
+@property (nonatomic, readwrite, copy) NSString *installString;
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 @property (nonatomic, strong, readwrite) BITCrashManager *crashManager;
@@ -279,8 +279,17 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
     [self.crashManager startManager];
   }
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
-  
-  // App Extensions can only use BITCrashManager, so ignore all others automatically
+
+#if HOCKEYSDK_FEATURE_METRICS
+  // start MetricsManager
+  if (!self.isMetricsManagerDisabled) {
+    BITHockeyLogDebug(@"INFO: Start MetricsManager");
+    [self.metricsManager startManager];
+    [BITCategoryContainer activateCategory];
+  }
+#endif /* HOCKEYSDK_FEATURE_METRICS */
+
+  // App Extensions can only use BITCrashManager and BITMetricsManager, so ignore all others automatically
   if (bit_isRunningInAppExtension()) {
     return;
   }
@@ -334,15 +343,6 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
     [self invokeStartUpdateManager];
   }
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
-  
-#if HOCKEYSDK_FEATURE_METRICS
-  // start MetricsManager
-  if (!self.isMetricsManagerDisabled) {
-    BITHockeyLogDebug(@"INFO: Start MetricsManager");
-    [self.metricsManager startManager];
-    [BITCategoryContainer activateCategory];
-  }
-#endif /* HOCKEYSDK_FEATURE_METRICS */
 }
 
 #if HOCKEYSDK_FEATURE_UPDATES
@@ -599,7 +599,7 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
   NSDictionary *params = @{@"timestamp": timeString,
                            @"sdk": BITHOCKEY_NAME,
                            @"sdk_version": BITHOCKEY_VERSION,
-                           @"bundle_version": [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]
+                           @"bundle_version": (id)[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]
                            };
   
   NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
@@ -701,9 +701,10 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
   self.startManagerIsInvoked = NO;
   
   if (self.validAppIdentifier) {
+    id<BITHockeyManagerDelegate> currentDelegate = self.delegate;
+
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
     BITHockeyLogDebug(@"INFO: Setup CrashManager");
-    id<BITHockeyManagerDelegate> currentDelegate = self.delegate;
     self.crashManager = [[BITCrashManager alloc] initWithAppIdentifier:self.appIdentifier
                                                     appEnvironment:self.appEnvironment
                                                    hockeyAppClient:[self hockeyAppClient]];

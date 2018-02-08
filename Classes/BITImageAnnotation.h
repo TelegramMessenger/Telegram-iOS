@@ -30,14 +30,11 @@
 
 @interface BITImageAnnotation : UIView
 
-@property (nonatomic) BOOL selected;
+@property (nonatomic, getter=isSelected) BOOL selected;
 @property (nonatomic) CGSize movedDelta;
 @property (nonatomic, weak) UIImage *sourceImage;
 @property (nonatomic) CGRect imageFrame;
 
 - (BOOL)resizable;
-
-- (void)setSelected:(BOOL)selected;
-- (BOOL)isSelected;
 
 @end

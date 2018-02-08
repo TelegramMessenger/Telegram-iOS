@@ -6,7 +6,7 @@
 
 
 /*!
- * @abstract Base class for all @ref HCDescription implementations.
+ * @abstract Base class for all HCDescription implementations.
  */
 @interface HCBaseDescription : NSObject <HCDescription>
 @end
