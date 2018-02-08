@@ -320,7 +320,10 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         
         _outerCircleView = [[UIImageView alloc] initWithImage:[self outerCircleImage:self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()]];
         _outerCircleView.alpha = 0.0f;
+        _outerCircleView.tag = 0x01f2bca;
         [[_presentation view] addSubview:_outerCircleView];
+        
+        [_outerCircleView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(outerCircleTapGesture:)]];
         
         _innerIconView = [[UIImageView alloc] initWithImage:_icon];
     
@@ -422,6 +425,16 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         }];
     }
     [self displayLink].paused = false;
+    
+    if (_locked) {
+        [self animateLock];
+    }
+}
+
+- (void)outerCircleTapGesture:(UITapGestureRecognizer *)recognizer {
+    if (recognizer.state == UIGestureRecognizerStateEnded) {
+        [self _commitCompleted];
+    }
 }
 
 - (void)animateOut {
@@ -754,6 +767,10 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)__unused gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)__unused otherGestureRecognizer {
     return true;
+}
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    return [super hitTest:point withEvent:event];
 }
 
 @end
