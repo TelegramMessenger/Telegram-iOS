@@ -89,9 +89,8 @@ public class PeerMediaCollectionController: TelegramController {
                     self?.controllerInteraction?.openPeer(peer.id, navigation, nil)
                 }, callPeer: { peerId in
                     self?.controllerInteraction?.callPeer(peerId)
-                }, sendSticker: { file in
-                    self?.controllerInteraction?.sendSticker(file)
-                }, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
+                }, enqueueMessage: { _ in
+                }, sendSticker: nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
                 })
             }
             return false
@@ -369,6 +368,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, presentController: { _, _ in
         }, navigateFeed: {
         }, openGrouping: {
+        }, toggleSilentPost: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

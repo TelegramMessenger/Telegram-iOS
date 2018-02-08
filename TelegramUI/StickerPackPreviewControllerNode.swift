@@ -31,7 +31,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     var presentPreview: ((ViewController, Any?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
-    var sendSticker: ((TelegramMediaFile) -> Void)?
+    var sendSticker: ((TelegramMediaFile) -> Bool)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -111,9 +111,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         super.init()
         
         self.interaction = StickerPackPreviewInteraction(sendSticker: { [weak self] item in
-            if let strongSelf = self {
-                strongSelf.sendSticker?(item.file)
-                strongSelf.cancel?()
+            if let strongSelf = self, let sendSticker = strongSelf.sendSticker {
+                if sendSticker(item.file) {
+                    strongSelf.cancel?()
+                }
             }
         })
         

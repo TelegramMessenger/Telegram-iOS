@@ -23,15 +23,25 @@ private final class UniversalVideoContentHolder {
     var statusDisposable: Disposable?
     var statusValue: MediaPlayerStatus?
     
+    var bufferingStatusDisposable: Disposable?
+    var bufferingStatusValue: (IndexSet, Int)?
+    
     var playbackCompletedIndex: Int?
     
-    init(content: UniversalVideoContentNode & ASDisplayNode, statusUpdated: @escaping (MediaPlayerStatus?) -> Void, playbackCompleted: @escaping () -> Void) {
+    init(content: UniversalVideoContentNode & ASDisplayNode, statusUpdated: @escaping (MediaPlayerStatus?) -> Void, bufferingStatusUpdated: @escaping ((IndexSet, Int)?) -> Void, playbackCompleted: @escaping () -> Void) {
         self.content = content
         
-        self.statusDisposable = (content.status |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
+        self.statusDisposable = (content.status |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 strongSelf.statusValue = value
                 statusUpdated(value)
+            }
+        })
+        
+        self.bufferingStatusDisposable = (content.bufferingStatus |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.bufferingStatusValue = value
+                bufferingStatusUpdated(value)
             }
         })
         
@@ -42,6 +52,7 @@ private final class UniversalVideoContentHolder {
     
     deinit {
         self.statusDisposable?.dispose()
+        self.bufferingStatusDisposable?.dispose()
         if let playbackCompletedIndex = self.playbackCompletedIndex {
             self.content.removePlaybackCompleted(playbackCompletedIndex)
         }
@@ -115,9 +126,10 @@ private final class UniversalVideoContentHolder {
 private final class UniversalVideoContentHolderCallbacks {
     let playbackCompleted = Bag<() -> Void>()
     let status = Bag<(MediaPlayerStatus?) -> Void>()
+    let bufferingStatus = Bag<((IndexSet, Int)?) -> Void>()
     
     var isEmpty: Bool {
-        return self.playbackCompleted.isEmpty && self.status.isEmpty
+        return self.playbackCompleted.isEmpty && self.status.isEmpty && self.bufferingStatus.isEmpty
     }
 }
 
@@ -139,6 +151,14 @@ final class UniversalVideoContentManager {
                 if let strongSelf = self {
                     if let current = strongSelf.holderCallbacks[id] {
                         for subscriber in current.status.copyItems() {
+                            subscriber(value)
+                        }
+                    }
+                }
+            }, bufferingStatusUpdated: { [weak self] value in
+                if let strongSelf = self {
+                    if let current = strongSelf.holderCallbacks[id] {
+                        for subscriber in current.bufferingStatus.copyItems() {
                             subscriber(value)
                         }
                     }
@@ -187,6 +207,7 @@ final class UniversalVideoContentManager {
     }
     
     func addPlaybackCompleted(id: AnyHashable, _ f: @escaping () -> Void) -> Int {
+        assert(Queue.mainQueue().isCurrent())
         var callbacks: UniversalVideoContentHolderCallbacks
         if let current = self.holderCallbacks[id] {
             callbacks = current
@@ -237,5 +258,38 @@ final class UniversalVideoContentManager {
                 }
             }
         } |> runOn(Queue.mainQueue())
+    }
+    
+    func bufferingStatusSignal(content: UniversalVideoContent) -> Signal<(IndexSet, Int)?, NoError> {
+        return Signal { subscriber in
+            var callbacks: UniversalVideoContentHolderCallbacks
+            if let current = self.holderCallbacks[content.id] {
+                callbacks = current
+            } else {
+                callbacks = UniversalVideoContentHolderCallbacks()
+                self.holderCallbacks[content.id] = callbacks
+            }
+            
+            let index = callbacks.bufferingStatus.add({ value in
+                subscriber.putNext(value)
+            })
+            
+            if let current = self.holders[content.id] {
+                subscriber.putNext(current.bufferingStatusValue)
+            } else {
+                subscriber.putNext(nil)
+            }
+            
+            return ActionDisposable {
+                Queue.mainQueue().async {
+                    if let current = self.holderCallbacks[content.id] {
+                        current.status.remove(index)
+                        if current.playbackCompleted.isEmpty {
+                            self.holderCallbacks.removeValue(forKey: content.id)
+                        }
+                    }
+                }
+            }
+            } |> runOn(Queue.mainQueue())
     }
 }

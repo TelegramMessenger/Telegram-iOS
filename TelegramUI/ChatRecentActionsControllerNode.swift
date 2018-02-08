@@ -142,9 +142,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     self?.openPeer(peerId: peer.id, peer: peer)
                 }, callPeer: { peerId in
                     self?.controllerInteraction?.callPeer(peerId)
-                }, sendSticker: { file in
-                    self?.controllerInteraction?.sendSticker(file)
-                }, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
+                }, enqueueMessage: { _ in
+                }, sendSticker: nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
                     if let strongSelf = self {
                         /*strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {

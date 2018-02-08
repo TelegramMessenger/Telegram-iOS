@@ -52,7 +52,7 @@ final class OverlayPlayerController: ViewController {
                                 navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(message.id.peerId), messageId: messageId, animated: true)
                                 strongSelf.dismiss()
                             }
-                        }, externalShare: false)
+                        }, externalShare: true)
                         strongSelf.controllerNode.view.endEditing(true)
                         strongSelf.present(shareController, in: .window(.root))
                     }

@@ -100,7 +100,7 @@ func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Signal<Medi
             snapshotter.start(with: DispatchQueue.global(), completionHandler: { result, error in
                 if let image = result?.image {
                     if let data = UIImageJPEGRepresentation(image, 0.6) {
-                        subscriber.putNext(MediaResourceDataFetchResult.dataPart(data: data, range: 0 ..< data.count, complete: true))
+                        subscriber.putNext(MediaResourceDataFetchResult.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
                         subscriber.putCompletion()
                     }
                 }

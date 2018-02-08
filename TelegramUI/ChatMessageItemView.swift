@@ -71,6 +71,11 @@ struct ChatMessageItemLayoutConstants {
     }
 }
 
+enum ChatMessageItemBottomNeighbor {
+    case none
+    case merged(semi: Bool)
+}
+
 let defaultChatMessageItemLayoutConstants = ChatMessageItemLayoutConstants()
 
 public class ChatMessageItemView: ListViewItemNode {

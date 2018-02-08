@@ -8,6 +8,7 @@ import Display
 protocol UniversalVideoContentNode: class {
     var ready: Signal<Void, NoError> { get }
     var status: Signal<MediaPlayerStatus, NoError> { get }
+    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> { get }
         
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
     
@@ -91,6 +92,11 @@ final class UniversalVideoNode: ASDisplayNode {
         return self._status.get()
     }
     
+    private let _bufferingStatus = Promise<(IndexSet, Int)?>()
+    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> {
+        return self._bufferingStatus.get()
+    }
+    
     private let _ready = Promise<Void>()
     var ready: Signal<Void, NoError> {
         return self._ready.get()
@@ -144,6 +150,7 @@ final class UniversalVideoNode: ASDisplayNode {
         })
         
         self._status.set(self.manager.statusSignal(content: self.content))
+        self._bufferingStatus.set(self.manager.bufferingStatusSignal(content: self.content))
         
         self.decoration.setStatus(self.status)
         

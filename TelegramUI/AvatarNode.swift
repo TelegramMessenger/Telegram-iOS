@@ -139,7 +139,7 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                     savedMessagesIcon = true
             }
-        } else {
+        } else if peer.restrictionText == nil {
             representation = peer.smallProfileImage
         }
         let updatedState: AvatarNodeState = .peerAvatar(peer.id, peer.displayLetters, representation)

@@ -198,6 +198,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             })
             
+            self.scrubberView.setBufferingStatusSignal(videoNode.bufferingStatus)
+            
             self.statusDisposable.set((videoNode.status |> deliverOnMainQueue).start(next: { [weak self] value in
                 if let strongSelf = self {
                     var initialBuffering = false

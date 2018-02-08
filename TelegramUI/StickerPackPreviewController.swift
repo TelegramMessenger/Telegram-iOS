@@ -55,7 +55,12 @@ final class StickerPackPreviewController: ViewController {
             self?.present(controller, in: .window(.root), with: arguments)
         }
         self.controllerNode.sendSticker = { [weak self] file in
-            self?.sendSticker?(file)
+            if let sendSticker = self?.sendSticker {
+                sendSticker(file)
+                return true
+            } else {
+                return false
+            }
         }
         self.displayNodeDidLoad()
         self.stickerPackDisposable.set((self.stickerPackContents.get() |> deliverOnMainQueue).start(next: { [weak self] next in

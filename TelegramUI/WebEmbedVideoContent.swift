@@ -72,6 +72,11 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         return self._status.get()
     }
     
+    private let _bufferingStatus = Promise<(IndexSet, Int)?>()
+    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> {
+        return self._bufferingStatus.get()
+    }
+    
     private var seekId: Int = 0
     
     private let _ready = Promise<Void>()
@@ -201,6 +206,8 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
                 strongSelf._status.set(MediaPlayerStatus(generationTimestamp: value.generationTimestamp, duration: value.duration, timestamp: value.timestamp, seekId: strongSelf.seekId, status: value.status))
             }
         })
+        
+        self._bufferingStatus.set(.single(nil))
     }
     
     deinit {

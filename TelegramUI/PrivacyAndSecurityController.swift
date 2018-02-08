@@ -313,7 +313,7 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
             } else if !enableFor.isEmpty {
                 return strings.PrivacySettings_LastSeenContactsPlus("\(enableFor.count)").0
             } else if !disableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsMinus("\(enableFor.count)").0
+                return strings.PrivacySettings_LastSeenContactsMinus("\(disableFor.count)").0
             } else {
                 return strings.PrivacySettings_LastSeenContacts
             }

@@ -33,6 +33,14 @@ private final class AccessoryItemIconButton: HighlightableButton {
                 self.setImage(PresentationResourcesChat.chatInputTextFieldStickersImage(theme), for: [])
             case .inputButtons:
                 self.setImage(PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), for: [])
+            case .commands:
+                self.setImage(PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), for: [])
+            case let .silentPost(value):
+                if value {
+                    self.setImage(PresentationResourcesChat.chatInputTextFieldSilentPostOnImage(theme), for: [])
+                } else {
+                    self.setImage(PresentationResourcesChat.chatInputTextFieldSilentPostOffImage(theme), for: [])
+                }
             case let .messageAutoremoveTimeout(timeout):
                 if let timeout = timeout {
                     self.setImage(nil, for: [])
@@ -54,6 +62,14 @@ private final class AccessoryItemIconButton: HighlightableButton {
                 self.setImage(PresentationResourcesChat.chatInputTextFieldStickersImage(theme), for: [])
             case .inputButtons:
                 self.setImage(PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), for: [])
+            case .commands:
+                self.setImage(PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), for: [])
+            case let .silentPost(value):
+                if value {
+                    self.setImage(PresentationResourcesChat.chatInputTextFieldSilentPostOnImage(theme), for: [])
+                } else {
+                    self.setImage(PresentationResourcesChat.chatInputTextFieldSilentPostOffImage(theme), for: [])
+                }
             case let .messageAutoremoveTimeout(timeout):
                 if let timeout = timeout {
                     self.setImage(nil, for: [])
@@ -73,7 +89,7 @@ private final class AccessoryItemIconButton: HighlightableButton {
     
     var buttonWidth: CGFloat {
         switch self.item {
-            case .keyboard, .stickers, .inputButtons:
+            case .keyboard, .stickers, .inputButtons, .silentPost, .commands:
                 return (self.image(for: [])?.size.width ?? 0.0) + CGFloat(8.0)
             case let .messageAutoremoveTimeout(timeout):
                 return 24.0
@@ -1224,6 +1240,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
                             return (.inputButtons, nil)
                         })
+                    case .commands:
+                        self.interfaceInteraction?.updateTextInputState { _ in
+                            return ChatTextInputState(inputText: NSAttributedString(string: "/"))
+                        }
+                    case .silentPost:
+                        self.interfaceInteraction?.toggleSilentPost()
                     case .messageAutoremoveTimeout:
                         self.interfaceInteraction?.setupMessageAutoremoveTimeout()
                 }
@@ -1240,5 +1262,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         let result = super.hitTest(point, with: event)
         return result
+    }
+    
+    func frameForAccessoryButton(_ item: ChatTextInputAccessoryItem) -> CGRect? {
+        for (buttonItem, buttonNode) in self.accessoryItemButtons {
+            if buttonItem == item {
+                return buttonNode.frame
+            }
+        }
+        return nil
+    }
+    
+    func frameForInputActionButton() -> CGRect? {
+        if !self.micButton.alpha.isZero {
+            return self.micButton.frame.insetBy(dx: 0.0, dy: 6.0)
+        }
+        return nil
     }
 }

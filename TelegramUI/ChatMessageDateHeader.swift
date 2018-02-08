@@ -14,7 +14,6 @@ private let granularity: Int32 = 60 * 60 * 24
 
 final class ChatMessageDateHeader: ListViewItemHeader {
     private let timestamp: Int32
-    private let roundedUtcTimestamp: Int32
     private let roundedTimestamp: Int32
     
     let id: Int64
@@ -28,10 +27,8 @@ final class ChatMessageDateHeader: ListViewItemHeader {
         
         if timestamp == Int32.max {
             self.roundedTimestamp = timestamp / (granularity) * (granularity)
-            self.roundedUtcTimestamp = self.roundedTimestamp
         } else {
             self.roundedTimestamp = ((timestamp + timezoneOffset) / (granularity)) * (granularity)
-            self.roundedUtcTimestamp = ((timestamp) / (granularity)) * (granularity)
         }
         self.id = Int64(self.roundedTimestamp)
     }
@@ -41,7 +38,7 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     let height: CGFloat = 34.0
     
     func node() -> ListViewItemHeaderNode {
-        return ChatMessageDateHeaderNode(utcTimestamp: self.roundedUtcTimestamp, theme: self.theme, strings: self.strings)
+        return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, theme: self.theme, strings: self.strings)
     }
 }
 
@@ -83,15 +80,15 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     let backgroundNode: ASImageNode
     let stickBackgroundNode: ASImageNode
     
-    private let utcTimestamp: Int32
+    private let localTimestamp: Int32
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
     
-    init(utcTimestamp: Int32, theme: PresentationTheme, strings: PresentationStrings) {
-        self.utcTimestamp = utcTimestamp
+    init(localTimestamp: Int32, theme: PresentationTheme, strings: PresentationStrings) {
+        self.localTimestamp = localTimestamp
         self.theme = theme
         self.strings = strings
         
@@ -129,9 +126,9 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         
-        var t: time_t = time_t(utcTimestamp)
+        var t: time_t = time_t(localTimestamp)
         var timeinfo: tm = tm()
-        localtime_r(&t, &timeinfo)
+        gmtime_r(&t, &timeinfo)
         
         var now: time_t = time_t(nowTimestamp)
         var timeinfoNow: tm = tm()

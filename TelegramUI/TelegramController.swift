@@ -26,8 +26,8 @@ private func presentLiveLocationController(account: Account, peerId: PeerId, con
                 }, openUrl: { _ in
                 }, openPeer: { peer, navigation in
                 }, callPeer: { _ in
-                }, sendSticker: { _ in
-                }, setupTemporaryHiddenMedia: { _, _, _ in
+                }, enqueueMessage: { _ in 
+                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in
                 })
             }
         })

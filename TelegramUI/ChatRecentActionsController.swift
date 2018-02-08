@@ -135,6 +135,7 @@ final class ChatRecentActionsController: ViewController {
         }, presentController: { _, _ in
         }, navigateFeed: {
         }, openGrouping: {
+        }, toggleSilentPost: {
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView

@@ -41,7 +41,6 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.layoutParams = size
         
-        let spacing: CGFloat = 5.0
         let insets = UIEdgeInsetsMake(10.0, 10.0, 10.0, 10.0)
         
         let maxTextWidth = size.width - insets.left - insets.right - 18.0 * 2.0
@@ -50,6 +49,7 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.title, font: titleFont, textColor: self.theme.chat.serviceMessage.serviceMessagePrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let spacing: CGFloat = titleLayout.size.height.isZero ? 0.0 : 5.0
         let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.text, font: textFont, textColor: self.theme.chat.serviceMessage.serviceMessagePrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         
         let contentSize = CGSize(width: max(titleLayout.size.width, textLayout.size.width) + insets.left + insets.right, height: insets.top + insets.bottom + titleLayout.size.height + spacing + textLayout.size.height)

@@ -1,7 +1,7 @@
 #import "OngoingCallThreadLocalContext.h"
 
-#import "../submodules/libtgvoip/VoIPController.h"
-#import "../submodules/libtgvoip/os/darwin/TGLogWrapper.h"
+#import "../../libtgvoip/VoIPController.h"
+#import "../../libtgvoip/os/darwin/SetupLogging.h"
 
 #import <MtProtoKitDynamic/MtProtoKitDynamic.h>
 
@@ -94,7 +94,17 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         
         _controller = new tgvoip::VoIPController();
         _controller->implData = (__bridge void *)self;
+        
         _controller->SetStateCallback(&controllerStateCallback);
+        
+        /*master*/
+        /*auto callbacks = tgvoip::VoIPController::Callbacks();
+        callbacks.connectionStateChanged = &controllerStateCallback;
+        callbacks.groupCallKeyReceived = NULL;
+        callbacks.groupCallKeySent = NULL;
+        callbacks.signalBarCountChanged = NULL;
+        callbacks.upgradeToGroupCallRequested = NULL;
+        _controller->SetCallbacks(callbacks);*/
         
         tgvoip::VoIPController::crypto.sha1 = &TGCallSha1;
         tgvoip::VoIPController::crypto.sha256 = &TGCallSha256;
@@ -108,7 +118,7 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
     return self;
 }
 
-- (void)startWithKey:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections {
+- (void)startWithKey:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer {
     std::vector<tgvoip::Endpoint> endpoints;
     NSArray<OngoingCallConnectionDescription *> *connections = [@[primaryConnection] arrayByAddingObjectsFromArray:alternativeConnections];
     for (OngoingCallConnectionDescription *connection in connections) {
@@ -126,6 +136,8 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         tgvoip::IPv6Address addressv6(std::string(connection.ipv6.UTF8String));
         unsigned char peerTag[16];
         [connection.peerTag getBytes:peerTag length:16];
+        /*master*/
+        //endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, tgvoip::Endpoint::TYPE_UDP_RELAY, peerTag));
         endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, EP_TYPE_UDP_RELAY, peerTag));
     }
     
@@ -142,7 +154,8 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
     _controller->SetConfig(&config);
     
     _controller->SetEncryptionKey((char *)key.bytes, isOutgoing);
-    _controller->SetRemoteEndpoints(endpoints, _allowP2P);
+    /*master*/
+    _controller->SetRemoteEndpoints(endpoints, _allowP2P/*, 65*/);
     _controller->Start();
     
     _controller->Connect();
@@ -151,6 +164,8 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
 - (void)stop {
     if (_controller) {
         char *buffer = (char *)malloc(_controller->GetDebugLogLength());
+        /*master*/
+        //_controller->Stop();
         _controller->GetDebugLog(buffer);
         NSString *debugLog = [[NSString alloc] initWithUTF8String:buffer];
         
@@ -173,6 +188,17 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
 
 - (void)controllerStateChanged:(int)state {
     OngoingCallState callState = OngoingCallStateInitializing;
+    /*master*/
+    /*switch (state) {
+        case tgvoip::STATE_ESTABLISHED:
+            callState = OngoingCallStateConnected;
+            break;
+        case tgvoip::STATE_FAILED:
+            callState = OngoingCallStateFailed;
+            break;
+        default:
+            break;
+    }*/
     switch (state) {
         case STATE_ESTABLISHED:
             callState = OngoingCallStateConnected;

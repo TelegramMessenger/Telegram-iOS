@@ -7,17 +7,20 @@ import TelegramCore
 private final class StorageUsageControllerArguments {
     let account: Account
     let updateKeepMedia: () -> Void
+    let openClearAll: () -> Void
     let openPeerMedia: (PeerId) -> Void
     
-    init(account: Account, updateKeepMedia: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void) {
+    init(account: Account, updateKeepMedia: @escaping () -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void) {
         self.account = account
         self.updateKeepMedia = updateKeepMedia
+        self.openClearAll = openClearAll
         self.openPeerMedia = openPeerMedia
     }
 }
 
 private enum StorageUsageSection: Int32 {
     case keepMedia
+    case all
     case peers
 }
 
@@ -26,6 +29,9 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     case keepMediaInfo(PresentationTheme, String)
     
     case collecting(PresentationTheme, String)
+    
+    case clearAll(PresentationTheme, String, String)
+    
     case peersHeader(PresentationTheme, String)
     case peer(Int32, PresentationTheme, PresentationStrings, Peer, String)
     
@@ -33,7 +39,9 @@ private enum StorageUsageEntry: ItemListNodeEntry {
         switch self {
             case .keepMedia, .keepMediaInfo:
                 return StorageUsageSection.keepMedia.rawValue
-            case .collecting, .peersHeader, .peer:
+            case .collecting, .clearAll:
+                return StorageUsageSection.all.rawValue
+            case .peersHeader, .peer:
                 return StorageUsageSection.peers.rawValue
         }
     }
@@ -46,10 +54,12 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return 1
             case .collecting:
                 return 2
-            case .peersHeader:
+            case .clearAll:
                 return 3
+            case .peersHeader:
+                return 4
             case let .peer(index, _, _, _, _):
-                return 4 + index
+                return 5 + index
         }
     }
     
@@ -69,6 +79,12 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 }
             case let .collecting(lhsTheme, lhsText):
                 if case let .collecting(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .clearAll(lhsTheme, lhsText, lhsValue):
+                if case let .clearAll(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -119,6 +135,10 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return CalculatingCacheSizeItem(theme: theme, title: text, sectionId: self.section, style: .blocks)
             case let .peersHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .clearAll(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, icon: nil, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                    arguments.openClearAll()
+                })
             case let .peer(_, theme, strings, peer, value):
                 return ItemListPeerItem(theme: theme, strings: strings, account: arguments.account, peer: peer, aliasHandling: .threatSelfAsSaved, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
                     arguments.openPeerMedia(peer.id)
@@ -148,6 +168,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
     var addedHeader = false
     
     if let cacheStats = cacheStats, case let .result(stats) = cacheStats {
+        var peerSizes: Int64 = 0
         var statsByPeerId: [(PeerId, Int64)] = []
         for (peerId, categories) in stats.media {
             var combinedSize: Int64 = 0
@@ -157,7 +178,11 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
                 }
             }
             statsByPeerId.append((peerId, combinedSize))
+            peerSizes += combinedSize
         }
+        
+        entries.append(.clearAll(presentationData.theme, presentationData.strings.Cache_ClearCache, dataSizeString(Int(peerSizes + stats.otherSize + stats.cacheSize))))
+        
         var index: Int32 = 0
         for (peerId, size) in statsByPeerId.sorted(by: { $0.1 > $1.1 }) {
             if size >= 32 * 1024 {
@@ -242,6 +267,162 @@ func storageUsageController(account: Account) -> ViewController {
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller)
+    }, openClearAll: {
+        let _ = (statsPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
+            if let result = result, case let .result(stats) = result {
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                
+                var sizeIndex: [PeerCacheUsageCategory: (Bool, Int64)] = [:]
+                var otherSize: (Bool, Int64) = (true, 0)
+                
+                for (_, categories) in stats.media {
+                    for (category, media) in categories {
+                        var combinedSize: Int64 = 0
+                        for (_, size) in media {
+                            combinedSize += size
+                        }
+                        if combinedSize != 0 {
+                            sizeIndex[category] = (true, (sizeIndex[category]?.1 ?? 0) + combinedSize)
+                        }
+                    }
+                }
+                
+                if stats.cacheSize + stats.otherSize > 10 * 1024 {
+                    otherSize = (true, stats.cacheSize + stats.otherSize)
+                }
+                
+                var itemIndex = 0
+                
+                let updateTotalSize: () -> Void = { [weak controller] in
+                    controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
+                        let title: String
+                        var filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
+                        
+                        if otherSize.0 {
+                            filteredSize += otherSize.1
+                        }
+                        
+                        if filteredSize == 0 {
+                            title = presentationData.strings.Cache_ClearNone
+                        } else {
+                            title = presentationData.strings.Cache_Clear("\(dataSizeString(Int(filteredSize)))").0
+                        }
+                        
+                        if let item = item as? ActionSheetButtonItem {
+                            return ActionSheetButtonItem(title: title, color: filteredSize != 0 ? .accent : .disabled, enabled: filteredSize != 0, action: item.action)
+                        }
+                        return item
+                    })
+                }
+                
+                let toggleCheck: (PeerCacheUsageCategory?, Int) -> Void = { [weak controller] category, itemIndex in
+                    if let category = category {
+                        if let (value, size) = sizeIndex[category] {
+                            sizeIndex[category] = (!value, size)
+                        }
+                    } else {
+                        otherSize = (!otherSize.0, otherSize.1)
+                    }
+                    controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
+                        if let item = item as? ActionSheetCheckboxItem {
+                            return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
+                        }
+                        return item
+                    })
+                    updateTotalSize()
+                }
+                var items: [ActionSheetItem] = []
+                
+                let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
+                
+                var totalSize: Int64 = 0
+                
+                for categoryId in validCategories {
+                    if let (_, size) = sizeIndex[categoryId] {
+                        let categorySize: Int64 = size
+                        totalSize += categorySize
+                        let index = itemIndex
+                        items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(Int(categorySize)), value: true, action: { value in
+                            toggleCheck(categoryId, index)
+                        }))
+                        itemIndex += 1
+                    }
+                }
+                
+                if otherSize.1 != 0 {
+                    let index = itemIndex
+                    items.append(ActionSheetCheckboxItem(title: presentationData.strings.Localization_LanguageOther, label: dataSizeString(Int(otherSize.1)), value: true, action: { value in
+                        toggleCheck(nil, index)
+                    }))
+                    itemIndex += 1
+                }
+                
+                if !items.isEmpty {
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(Int(totalSize)))").0, action: {
+                        if let statsPromise = statsPromise {
+                            let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
+                            
+                            var clearMediaIds = Set<MediaId>()
+                            
+                            var media = stats.media
+                            for (peerId, categories) in stats.media {
+                                var categories = categories
+                                for category in clearCategories {
+                                    if let contents = categories[category] {
+                                        for (mediaId, _) in contents {
+                                            clearMediaIds.insert(mediaId)
+                                        }
+                                    }
+                                    categories.removeValue(forKey: category)
+                                }
+                                
+                                media[peerId] = categories
+                            }
+                            
+                            var clearResourceIds = Set<WrappedMediaResourceId>()
+                            for id in clearMediaIds {
+                                if let ids = stats.mediaResourceIds[id] {
+                                    for resourceId in ids {
+                                        clearResourceIds.insert(WrappedMediaResourceId(resourceId))
+                                    }
+                                }
+                            }
+                            
+                            var updatedOtherPaths = stats.otherPaths
+                            var updatedOtherSize = stats.otherSize
+                            var updatedCacheSize = stats.cacheSize
+                            
+                            var signal: Signal<Void, NoError> = clearCachedMediaResources(account: account, mediaResourceIds: clearResourceIds)
+                            if otherSize.0 {
+                                signal = signal |> then(account.postbox.mediaBox.removeOtherCachedResources(paths: stats.otherPaths))
+                            }
+                            
+                            if otherSize.0 {
+                                updatedOtherPaths = []
+                                updatedOtherSize = 0
+                                updatedCacheSize = 0
+                            }
+                            
+                            statsPromise.set(.single(.result(CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize))))
+                            
+                            clearDisposable.set(signal.start())
+                        }
+                        
+                        dismissAction()
+                    }))
+                    
+                    controller.setItemGroups([
+                        ActionSheetItemGroup(items: items),
+                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                        ])
+                    presentControllerImpl?(controller)
+                }
+            }
+        })
     }, openPeerMedia: { peerId in
         let _ = (statsPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
             if let result = result, case let .result(stats) = result {
@@ -340,7 +521,7 @@ func storageUsageController(account: Account) -> ViewController {
                                     }
                                 }
                                 
-                                statsPromise.set(.single(.result(CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers))))
+                                statsPromise.set(.single(.result(CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize))))
                                 
                                 clearDisposable.set(clearCachedMediaResources(account: account, mediaResourceIds: clearResourceIds).start())
                             }

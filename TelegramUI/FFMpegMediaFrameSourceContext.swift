@@ -79,15 +79,19 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     if streamable {
         let data: Signal<Data, NoError>
-        data = postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), tag: context.fetchTag, mode: .complete)
+        data = postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
         let semaphore = DispatchSemaphore(value: 0)
-        let _ = data.start(next: { data in
-            if data.count == readCount {
-                fetchedData = data
-                semaphore.signal()
-            }
-        })
-        semaphore.wait()
+        if readCount == 0 {
+            fetchedData = Data()
+        } else {
+            let _ = data.start(next: { data in
+                if data.count == readCount {
+                    fetchedData = data
+                    semaphore.signal()
+                }
+            })
+            semaphore.wait()
+        }
     } else {
         let data = postbox.mediaBox.resourceData(resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
         let range = context.readingOffset ..< (context.readingOffset + readCount)
@@ -144,7 +148,7 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
                 context.requestedCompleteFetch = false
             } else {
                 if streamable {
-                    context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: context.readingOffset ..< resourceSize, tag: fetchTag).start())
+                    context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, in: context.readingOffset ..< resourceSize, tag: fetchTag).start())
                 } else if !context.requestedCompleteFetch {
                     context.requestedCompleteFetch = true
                     context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResource(resource, tag: fetchTag).start())
@@ -210,7 +214,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         let resourceSize: Int = resource.size ?? 0
         
         if streamable {
-            self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: 0 ..< resourceSize, tag: self.fetchTag).start())
+            self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, in: 0 ..< resourceSize, tag: self.fetchTag).start())
         } else if !self.requestedCompleteFetch {
             self.requestedCompleteFetch = true
             self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResource(resource, tag: self.fetchTag).start())

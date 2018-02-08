@@ -248,13 +248,28 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     strongSelf.playPauseButton.isEnabled = false
                     strongSelf.backwardButton.isEnabled = false
                     strongSelf.forwardButton.isEnabled = false
-                    
                     displayData = nil
                 }
                 
                 if strongSelf.displayData != displayData {
                     strongSelf.displayData = displayData
                     strongSelf.updateLabels(transition: .immediate)
+                    
+                    if let source = value?.item.playbackData?.source {
+                        switch source {
+                            case let .telegramFile(file):
+                                if let size = file.size {
+                                    strongSelf.scrubberNode.bufferingStatus = postbox.mediaBox.resourceRangesStatus(file.resource)
+                                    |> map { ranges -> (IndexSet, Int) in
+                                        return (ranges, size)
+                                    }
+                                } else {
+                                    strongSelf.scrubberNode.bufferingStatus = nil
+                                }
+                        }
+                    } else {
+                        strongSelf.scrubberNode.bufferingStatus = nil
+                    }
                 }
             }
         })

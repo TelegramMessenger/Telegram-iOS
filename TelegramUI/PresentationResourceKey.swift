@@ -131,6 +131,9 @@ enum PresentationResourceKey: Int32 {
     case chatInputTextFieldStickersImage
     case chatInputTextFieldInputButtonsImage
     case chatInputTextFieldKeyboardImage
+    case chatInputTextFieldCommandsImage
+    case chatInputTextFieldSilentPostOnImage
+    case chatInputTextFieldSilentPostOffImage
     case chatInputTextFieldTimerImage
     
     case chatInputSearchPanelUpImage

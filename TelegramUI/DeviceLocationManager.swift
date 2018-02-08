@@ -128,3 +128,14 @@ final class DeviceLocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
 }
+
+func currentLocationManagerCoordinate(manager: DeviceLocationManager, timeout timeoutValue: Double) -> Signal<CLLocationCoordinate2D?, NoError> {
+    return (Signal { subscriber in
+        let disposable = manager.push(mode: .precise, updated: { coordinate in
+            subscriber.putNext(coordinate)
+            subscriber.putCompletion()
+        })
+        return disposable
+    } |> runOn(Queue.mainQueue()))
+    |> timeout(timeoutValue, queue: Queue.mainQueue(), alternate: .single(nil))
+}

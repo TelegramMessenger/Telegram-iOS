@@ -63,11 +63,11 @@ final class OngoingCallContext {
         }
     }
     
-    func start(key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, audioSessionActive: Signal<Bool, NoError>) {
+    func start(key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, audioSessionActive: Signal<Bool, NoError>) {
         self.audioSessionDisposable.set((audioSessionActive |> filter { $0 } |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.withContext { context in
-                    context.start(withKey: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription))
+                    context.start(withKey: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer)
                 }
             }
         }))

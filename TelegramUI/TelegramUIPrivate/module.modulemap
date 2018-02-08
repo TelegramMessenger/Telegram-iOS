@@ -24,4 +24,5 @@ module TelegramUIPrivateModule {
     header "../NumberPluralizationForm.h"
     header "../DeviceProximityManager.h"
     header "../RaiseToListenActivator.h"
+    header "../TGMimeTypeMap.h"
 }

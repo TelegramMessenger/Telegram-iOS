@@ -72,6 +72,11 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         return self._status.get()
     }
     
+    private let _bufferingStatus = Promise<(IndexSet, Int)?>()
+    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> {
+        return self._bufferingStatus.get()
+    }
+    
     private let _ready = Promise<Void>()
     var ready: Signal<Void, NoError> {
         return self._ready.get()
@@ -110,6 +115,14 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.addSubnode(self.imageNode)
         self.addSubnode(self.playerNode)
         self._status.set(self.player.status)
+        
+        if let size = file.size {
+            self._bufferingStatus.set(postbox.mediaBox.resourceRangesStatus(file.resource) |> map { ranges in
+                return (ranges, size)
+            })
+        } else {
+            self._bufferingStatus.set(.single(nil))
+        }
         
         self.imageNode.imageUpdated = { [weak self] in
             self?._ready.set(.single(Void()))

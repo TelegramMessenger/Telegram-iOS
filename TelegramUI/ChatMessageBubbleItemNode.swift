@@ -286,6 +286,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             let avatarInset: CGFloat
             var hasAvatar = false
             
+            var allowFullWidth = false
             switch item.chatLocation {
                 case let .peer(peerId):
                     if item.message.id.peerId == item.account.peerId {
@@ -304,6 +305,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             var isBroadcastChannel = false
                             if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                                 isBroadcastChannel = true
+                                allowFullWidth = true
                             }
                             
                             if !isBroadcastChannel {
@@ -314,6 +316,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         hasAvatar = true
                     }
                 case .group:
+                    allowFullWidth = true
                     hasAvatar = true
                     displayAuthorInfo = true
             }
@@ -365,9 +368,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
             
-            var tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
-            if needShareButton {
-                tmpWidth -= 32.0
+            var tmpWidth: CGFloat
+            if allowFullWidth {
+                tmpWidth = baseWidth
+                if needShareButton {
+                    tmpWidth -= 38.0
+                }
+            } else {
+                tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
+                if needShareButton && tmpWidth + 32.0 > baseWidth {
+                    tmpWidth = baseWidth - 32.0
+                }
             }
             let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
             

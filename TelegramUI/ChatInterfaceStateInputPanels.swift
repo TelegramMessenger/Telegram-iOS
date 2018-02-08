@@ -3,6 +3,10 @@ import AsyncDisplayKit
 import TelegramCore
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputPanelNode? {
+    if let peer = chatPresentationInterfaceState.peer, peer.restrictionText != nil {
+        return nil
+    }
+    
     if let _ = chatPresentationInterfaceState.search {
         var hasSelection = false
         if let selectionState = chatPresentationInterfaceState.interfaceState.selectionState, !selectionState.selectedIds.isEmpty {

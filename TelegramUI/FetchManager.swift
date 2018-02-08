@@ -230,7 +230,17 @@ private final class FetchManagerCategoryContext {
         }
     }
     
-    func cancelEntry(_ id: FetchManagerLocationEntryId) {
+    func cancelEntry(_ entryId: FetchManagerLocationEntryId) {
+        var id: FetchManagerLocationEntryId = entryId
+        if self.entries[id] == nil {
+            for (key, _) in self.entries {
+                if key.resourceId.isEqual(to: entryId.resourceId) {
+                    id = key
+                    break
+                }
+            }
+        }
+        
         if let _ = self.entries[id] {
             self.entries.removeValue(forKey: id)
             

@@ -415,6 +415,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                             if isVoice {
                                 if strongSelf.waveformScrubbingNode == nil {
                                     let waveformScrubbingNode = MediaPlayerScrubbingNode(content: .custom(backgroundNode: strongSelf.waveformNode, foregroundContentNode: strongSelf.waveformForegroundNode))
+                                    waveformScrubbingNode.hitTestSlop = UIEdgeInsetsMake(-10.0, 0.0, -10.0, 0.0)
                                     waveformScrubbingNode.seek = { timestamp in
                                         if let strongSelf = self, let account = strongSelf.account, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
                                             account.telegramApplicationContext.mediaManager.playlistControl(.seek(timestamp), type: type)
@@ -497,6 +498,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                             }
                                             switch status {
                                                 case let .fetchStatus(fetchStatus):
+                                                    strongSelf.waveformScrubbingNode?.enableScrubbing = false
                                                     switch fetchStatus {
                                                         case let .Fetching(isActive, progress):
                                                             var adjustedProgress = progress
@@ -520,6 +522,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                                             }
                                                     }
                                                 case let .playbackStatus(playbackStatus):
+                                                    strongSelf.waveformScrubbingNode?.enableScrubbing = true
                                                     switch playbackStatus {
                                                         case .playing:
                                                             state = .pause(statusForegroundColor)

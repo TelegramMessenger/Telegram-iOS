@@ -243,8 +243,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                         statusUpdated = true
                     }
                     
-                    var updatedVideoNode: UniversalVideoNode?
-                    var replaceVideoNode = false
+                    var replaceVideoNode: Bool?
                     var updateVideoFile: TelegramMediaFile?
                     
                     if mediaUpdated {
@@ -283,14 +282,11 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
                                 } else {
-                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: 17.0, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, file.fileId), file: file, enableSound: false), priority: .embedded)
-                                    videoNode.isUserInteractionEnabled = false
-                                    updatedVideoNode = videoNode
                                     replaceVideoNode = true
                                 }
                             } else {
                                 if hasCurrentVideoNode {
-                                    replaceVideoNode = true
+                                    replaceVideoNode = false
                                 }
                             }
                             
@@ -370,16 +366,19 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             strongSelf.statusNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             strongSelf.timeoutNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             
-                            if replaceVideoNode {
+                            if let replaceVideoNode = replaceVideoNode {
                                 if let videoNode = strongSelf.videoNode {
                                     videoNode.canAttachContent = false
                                     videoNode.removeFromSupernode()
                                     strongSelf.videoNode = nil
                                 }
                                 
-                                if let updatedVideoNode = updatedVideoNode {
-                                    strongSelf.videoNode = updatedVideoNode
-                                    strongSelf.insertSubnode(updatedVideoNode, aboveSubnode: strongSelf.imageNode)
+                                if replaceVideoNode, let updatedVideoFile = updateVideoFile {
+                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: 17.0, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, updatedVideoFile.fileId), file: updatedVideoFile, enableSound: false), priority: .embedded)
+                                    videoNode.isUserInteractionEnabled = false
+                                    
+                                    strongSelf.videoNode = videoNode
+                                    strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.imageNode)
                                 }
                             }
                             

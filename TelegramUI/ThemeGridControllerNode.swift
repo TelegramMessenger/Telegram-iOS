@@ -61,8 +61,16 @@ final class ThemeGridControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     
     private let present: (ViewController, Any?) -> Void
+    private let selectCustomWallpaper: () -> Void
     
     let ready = ValuePromise<Bool>()
+    
+    private let customWallpaperButton: HighlightableButtonNode
+    private var customWallpaperButtonBackground: ASDisplayNode
+    private var customWallpaperBackground: ASDisplayNode
+    private var customWallpaperSeparator: ASDisplayNode
+    private var customWallpaperButtonTopSeparator: ASDisplayNode
+    private var customWallpaperButtonBottomSeparator: ASDisplayNode
     
     private let gridNode: GridNode
     private var queuedTransitions: [ThemeGridEntryTransition] = []
@@ -70,13 +78,31 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void) {
+    init(account: Account, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, selectCustomWallpaper: @escaping () -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.present = present
+        self.selectCustomWallpaper = selectCustomWallpaper
         
         self.gridNode = GridNode()
         self.gridNode.showVerticalScrollIndicator = true
+        
+        self.customWallpaperButton = HighlightableButtonNode()
+        
+        self.customWallpaperButtonBackground = ASDisplayNode()
+        self.customWallpaperButtonBackground.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        
+        self.customWallpaperBackground = ASDisplayNode()
+        self.customWallpaperBackground.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        
+        self.customWallpaperSeparator = ASDisplayNode()
+        self.customWallpaperSeparator.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
+        
+        self.customWallpaperButtonTopSeparator = ASDisplayNode()
+        self.customWallpaperButtonTopSeparator.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
+        
+        self.customWallpaperButtonBottomSeparator = ASDisplayNode()
+        self.customWallpaperButtonBottomSeparator.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         super.init()
         
@@ -86,6 +112,26 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         
+        self.customWallpaperButton.setAttributedTitle(NSAttributedString(string: presentationData.strings.Wallpaper_PhotoLibrary, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor), for: [])
+        self.customWallpaperButton.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        self.customWallpaperButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.customWallpaperButton.backgroundColor = strongSelf.presentationData.theme.list.itemHighlightedBackgroundColor
+                } else {
+                    UIView.animate(withDuration: 0.3, animations: {
+                        strongSelf.customWallpaperButton.backgroundColor = nil
+                    })
+                }
+            }
+        }
+        
+        self.gridNode.addSubnode(self.customWallpaperBackground)
+        self.gridNode.addSubnode(self.customWallpaperSeparator)
+        self.gridNode.addSubnode(self.customWallpaperButtonTopSeparator)
+        self.gridNode.addSubnode(self.customWallpaperButtonBottomSeparator)
+        self.gridNode.addSubnode(self.customWallpaperButtonBackground)
+        self.gridNode.addSubnode(self.customWallpaperButton)
         self.addSubnode(self.gridNode)
         
         let previousEntries = Atomic<[ThemeGridControllerEntry]?>(value: nil)
@@ -119,6 +165,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 strongSelf.enqueueTransition(transition)
             }
         })
+        
+        self.customWallpaperButton.addTarget(self, action: #selector(self.customWallpaperPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -164,7 +212,17 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
         
-        insets.top += spacing
+        let buttonInset: CGFloat = 24.0 + 44.0 + 16.0
+        let buttonOffset = buttonInset + 10.0
+        
+        transition.updateFrame(node: self.customWallpaperBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset - 500.0), size: CGSize(width: layout.size.width, height: 16.0 + 44.0 + 16.0 + 500.0)))
+        transition.updateFrame(node: self.customWallpaperSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0 + 44.0 + 16.0 - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.customWallpaperButtonTopSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0 - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.customWallpaperButtonBottomSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0 + 44.0), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.customWallpaperButtonBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0), size: CGSize(width: layout.size.width, height: 44.0)))
+        transition.updateFrame(node: self.customWallpaperButton, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + 16.0), size: CGSize(width: layout.size.width, height: 44.0)))
+        
+        insets.top += spacing + buttonInset
         
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, preloadSize: 300.0, type: .fixed(itemSize: imageSize, lineSpacing: spacing)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
@@ -179,5 +237,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     func scrollToTop() {
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: GridNodeScrollToItem(index: 0, position: .top, transition: .animated(duration: 0.25, curve: .easeInOut), directionHint: .up, adjustForSection: true, adjustForTopInset: true), updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+    }
+    
+    @objc func customWallpaperPressed() {
+        self.selectCustomWallpaper()
     }
 }

@@ -40,6 +40,7 @@ public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) 
         if fetchResult.count != 0 {
             let asset = fetchResult.object(at: 0)
             let option = PHVideoRequestOptions()
+            option.isNetworkAccessAllowed = true
             option.deliveryMode = .highQualityFormat
             
             let alreadyReceivedAsset = Atomic<Bool>(value: false)
@@ -58,32 +59,33 @@ public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) 
                 let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
                     var value = stat()
                     if stat(path, &value) == 0 {
-                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                        /*if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
                             var range: Range<Int>?
                             let _ = updatedSize.modify { updatedSize in
                                 range = updatedSize ..< Int(value.st_size)
                                 return Int(value.st_size)
                             }
                             //print("size = \(Int(value.st_size)), range: \(range!)")
-                            subscriber.putNext(.dataPart(data: data, range: range!, complete: false))
-                        }
+                            subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                        }*/
                     }
                 }))!
                 let signalDisposable = signal.start(next: { next in
                     if let result = next as? TGMediaVideoConversionResult {
                         var value = stat()
                         if stat(result.fileURL.path, &value) == 0 {
-                            if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
+                            /*if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
                                 var range: Range<Int>?
                                 let _ = updatedSize.modify { updatedSize in
                                     range = updatedSize ..< Int(value.st_size)
                                     return Int(value.st_size)
                                 }
                                 //print("finish size = \(Int(value.st_size)), range: \(range!)")
-                                subscriber.putNext(.dataPart(data: data, range: range!, complete: false))
+                                subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
                                 subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
-                                subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
-                            }
+                                subscriber.putNext(.dataPart(resourceOffset: data.count, data: Data(), range: 0 ..< 0, complete: true))
+                            }*/
+                            subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
                         }
                         subscriber.putCompletion()
                     }
@@ -119,32 +121,33 @@ func fetchLocalFileVideoMediaResource(resource: LocalFileVideoMediaResource) -> 
         let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
             var value = stat()
             if stat(path, &value) == 0 {
-                if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                /*if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
                     var range: Range<Int>?
                     let _ = updatedSize.modify { updatedSize in
                         range = updatedSize ..< Int(value.st_size)
                         return Int(value.st_size)
                     }
                     //print("size = \(Int(value.st_size)), range: \(range!)")
-                    subscriber.putNext(.dataPart(data: data, range: range!, complete: false))
-                }
+                    subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                }*/
             }
         }))!
         let signalDisposable = signal.start(next: { next in
             if let result = next as? TGMediaVideoConversionResult {
                 var value = stat()
                 if stat(result.fileURL.path, &value) == 0 {
-                    if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
+                    subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
+                    /*if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
                         var range: Range<Int>?
                         let _ = updatedSize.modify { updatedSize in
                             range = updatedSize ..< Int(value.st_size)
                             return Int(value.st_size)
                         }
                         //print("finish size = \(Int(value.st_size)), range: \(range!)")
-                        subscriber.putNext(.dataPart(data: data, range: range!, complete: false))
+                        subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
                         subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
-                        subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
-                    }
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
+                    }*/
                 }
                 subscriber.putCompletion()
             }

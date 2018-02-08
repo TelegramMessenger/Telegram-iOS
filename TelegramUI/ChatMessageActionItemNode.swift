@@ -357,6 +357,8 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                     attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                 case let .customText(text, entities):
                     attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, fixedFont: titleFont)
+                case let .botDomainAccessGranted(domain):
+                    attributedString = NSAttributedString(string: "Granted access to \(domain)", font: titleFont, textColor: primaryTextColor)
                 case .unknown:
                     attributedString = nil
             }

@@ -7,6 +7,12 @@ import SSignalKit
 import UIKit
 import Display
 
+import TelegramUIPrivateModule
+
+func guessMimeTypeByFileExtension(_ ext: String) -> String {
+    return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
+}
+
 func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, account: Account, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false) {
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false

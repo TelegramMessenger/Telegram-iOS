@@ -29,6 +29,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let backgroundNode: ASDisplayNode
     let historyNode: ChatHistoryListNode
     let loadingNode: ChatLoadingNode
+    var restrictedNode: ChatRecentActionsEmptyNode?
     
     private var validLayout: ContainerViewLayout?
     
@@ -76,6 +77,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     var requestUpdateChatInterfaceState: (Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _ in }
+    var sendMessages: ([EnqueueMessage]) -> Void = { _ in }
     var displayAttachmentMenu: () -> Void = { }
     var displayPasteMenu: ([UIImage]) -> Void = { _ in }
     var updateTypingActivity: () -> Void = { }
@@ -231,11 +233,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         
                         if case let .peer(peerId) = strongSelf.chatLocation {
-                            let _ = (enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages) |> deliverOnMainQueue).start(next: { _ in
-                                if let strongSelf = self {
-                                    strongSelf.historyNode.scrollToEndOfHistory()
-                                }
-                            })
+                            strongSelf.sendMessages(messages)
                         }
                     }
                 }
@@ -304,6 +302,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 containerNode.cornerRadius = 15.0
                 containerNode.addSubnode(self.backgroundNode)
                 containerNode.addSubnode(self.historyNode)
+                if let restrictedNode = self.restrictedNode {
+                    containerNode.addSubnode(restrictedNode)
+                }
                 self.containerNode = containerNode
                 self.scrollContainerNode?.addSubnode(containerNode)
                 self.navigationBar.isHidden = true
@@ -329,6 +330,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 containerNode.removeFromSupernode()
                 self.insertSubnode(self.backgroundNode, at: 0)
                 self.insertSubnode(self.historyNode, aboveSubnode: self.backgroundNode)
+                if let restrictedNode = self.restrictedNode {
+                    self.insertSubnode(restrictedNode, aboveSubnode: self.historyNode)
+                }
                 self.navigationBar.isHidden = false
             }
             if let overlayNavigationBar = self.overlayNavigationBar {
@@ -520,6 +524,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.loadingNode.updateLayout(size: contentBounds.size, insets: insets, transition: transition)
         transition.updateFrame(node: self.loadingNode, frame: contentBounds)
+        
+        if let restrictedNode = self.restrictedNode {
+            transition.updateFrame(node: restrictedNode, frame: contentBounds)
+            restrictedNode.updateLayout(size: contentBounds.size, transition: transition)
+        }
         
         let listViewCurve: ListViewAnimationCurve
         if curve == 7 {
@@ -948,6 +957,22 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: animated)
             }
             
+            if let peer = chatPresentationInterfaceState.peer, let restrictionText = peer.restrictionText {
+                if self.restrictedNode == nil {
+                    let restrictedNode = ChatRecentActionsEmptyNode(theme: chatPresentationInterfaceState.theme)
+                    self.historyNode.supernode?.insertSubnode(restrictedNode, aboveSubnode: self.historyNode)
+                    self.restrictedNode = restrictedNode
+                }
+                self.restrictedNode?.setup(title: "", text: processedPeerRestrictionText(restrictionText))
+                self.historyNode.isHidden = true
+                self.navigateButtons.isHidden = true
+            } else if let restrictedNode = self.restrictedNode {
+                self.restrictedNode = nil
+                restrictedNode.removeFromSupernode()
+                self.historyNode.isHidden = false
+                self.navigateButtons.isHidden = false
+            }
+            
             let layoutTransition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
             
             if updatedInputFocus {
@@ -1066,6 +1091,24 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func currentInputPanelFrame() -> CGRect? {
         return self.inputPanelNode?.frame
+    }
+    
+    func frameForInputPanelAccessoryButton(_ item: ChatTextInputAccessoryItem) -> CGRect? {
+        if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
+            return textInputPanelNode.frameForAccessoryButton(item).flatMap {
+                return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
+            }
+        }
+        return nil
+    }
+    
+    func frameForInputActionButton() -> CGRect? {
+        if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
+            return textInputPanelNode.frameForInputActionButton().flatMap {
+                return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
+            }
+        }
+        return nil
     }
     
     var isTextInputPanelActive: Bool {

@@ -46,6 +46,11 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         return self._status.get()
     }
     
+    private let _bufferingStatus = Promise<(IndexSet, Int)?>()
+    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> {
+        return self._bufferingStatus.get()
+    }
+    
     private let _ready = Promise<Void>()
     var ready: Signal<Void, NoError> {
         return self._ready.get()
@@ -111,6 +116,8 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         playerItem.addObserver(self, forKeyPath: "playbackBufferEmpty", options: .new, context: nil)
         playerItem.addObserver(self, forKeyPath: "playbackLikelyToKeepUp", options: .new, context: nil)
         playerItem.addObserver(self, forKeyPath: "playbackBufferFull", options: .new, context: nil)
+        
+        self._bufferingStatus.set(.single(nil))
     }
     
     deinit {

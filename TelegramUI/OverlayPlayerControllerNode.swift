@@ -147,7 +147,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         openMessageImpl = { [weak self] id in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.historyNode.messageInCurrentHistoryView(id) {
-                return openChatMessage(account: strongSelf.account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _ in }, sendSticker: { _ in }, setupTemporaryHiddenMedia: { _, _, _ in })
+                return openChatMessage(account: strongSelf.account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _ in }, enqueueMessage: { _ in }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in })
             }
             return false
         }

@@ -55,6 +55,15 @@ public struct PresentationThemeSettings: PreferencesEntry {
     public let theme: PresentationThemeReference
     public let fontSize: PresentationFontSize
     
+    public var relatedResources: [MediaResourceId] {
+        switch self.chatWallpaper {
+            case let .image(representations):
+                return representations.map({ $0.resource.id })
+            default:
+                return []
+        }
+    }
+    
     public static var defaultSettings: PresentationThemeSettings {
         return PresentationThemeSettings(chatWallpaper: .color(0x000000), theme: .builtin(.nightAccent), fontSize: .regular)
     }

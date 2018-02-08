@@ -705,3 +705,15 @@ struct ChatPresentationInterfaceState: Equatable {
         return ChatPresentationInterfaceState(interfaceState: self.interfaceState, chatLocation: self.chatLocation, peer: self.peer, inputTextPanelState: self.inputTextPanelState, recordedMediaPreview: self.recordedMediaPreview, inputQueryResults: self.inputQueryResults, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, pinnedMessage: self.pinnedMessage, peerIsBlocked: self.peerIsBlocked, peerIsMuted: self.peerIsMuted, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview, editingUrlPreview: self.editingUrlPreview, search: self.search, searchQuerySuggestionResult: self.searchQuerySuggestionResult, chatWallpaper: self.chatWallpaper, theme: self.theme, strings: self.strings, fontSize: self.fontSize, accountPeerId: self.accountPeerId, mode: mode)
     }
 }
+
+func canSendMessagesToChat(_ state: ChatPresentationInterfaceState) -> Bool {
+    if let peer = state.peer {
+        if canSendMessagesToPeer(peer) {
+            return true
+        } else {
+            return false
+        }
+    } else {
+        return false
+    }
+}

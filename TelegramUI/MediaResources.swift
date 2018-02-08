@@ -44,7 +44,7 @@ public struct VideoLibraryMediaResourceId: MediaResourceId {
     
     public func isEqual(to: MediaResourceId) -> Bool {
         if let to = to as? VideoLibraryMediaResourceId {
-            return self.localIdentifier == to.localIdentifier
+            return self.localIdentifier == to.localIdentifier && self.adjustmentsDigest == to.adjustmentsDigest
         } else {
             return false
         }

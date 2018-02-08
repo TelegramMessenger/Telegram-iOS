@@ -16,7 +16,7 @@ func fetchExternalMusicAlbumArtResource(account: Account, resource: ExternalMusi
         subscriber.putNext(.reset)
         
         if resource.performer.isEmpty || resource.performer.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) == "unknown artist" || resource.title.isEmpty {
-            subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
+            subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
             subscriber.putCompletion()
             return EmptyDisposable
         } else {
@@ -48,27 +48,27 @@ func fetchExternalMusicAlbumArtResource(account: Account, resource: ExternalMusi
             let fetchDisposable = MetaDisposable()
             
             let disposable = fetchHttpResource(url: metaUrl).start(next: { result in
-                if case let .dataPart(data, _, complete) = result, complete {
+                if case let .dataPart(_, data, _, complete) = result, complete {
                     guard let dict = (try? JSONSerialization.jsonObject(with: data, options: [])) as? [String: Any] else {
-                        subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
                         subscriber.putCompletion()
                         return
                     }
                     
                     guard let results = dict["results"] as? [Any] else {
-                        subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
                         subscriber.putCompletion()
                         return
                     }
                     
                     guard let result = results.first as? [String: Any] else {
-                        subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
                         subscriber.putCompletion()
                         return
                     }
                     
                     guard var artworkUrl = result["artworkUrl100"] as? String else {
-                        subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
                         subscriber.putCompletion()
                         return
                     }
@@ -78,7 +78,7 @@ func fetchExternalMusicAlbumArtResource(account: Account, resource: ExternalMusi
                     }
                     
                     if artworkUrl.isEmpty {
-                        subscriber.putNext(.dataPart(data: Data(), range: 0 ..< 0, complete: true))
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
                         subscriber.putCompletion()
                         return
                     } else {

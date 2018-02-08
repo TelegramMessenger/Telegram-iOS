@@ -4,6 +4,8 @@ enum ChatTextInputAccessoryItem: Equatable {
     case keyboard
     case stickers
     case inputButtons
+    case commands
+    case silentPost(Bool)
     case messageAutoremoveTimeout(Int32?)
     
     static func ==(lhs: ChatTextInputAccessoryItem, rhs: ChatTextInputAccessoryItem) -> Bool {
@@ -22,6 +24,18 @@ enum ChatTextInputAccessoryItem: Equatable {
                 }
             case .inputButtons:
                 if case .inputButtons = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .commands:
+                if case .commands = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .silentPost(value):
+                if case .silentPost(value) = rhs {
                     return true
                 } else {
                     return false

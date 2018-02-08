@@ -199,6 +199,14 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     if let peer = chatPresentationInterfaceState.peer as? TelegramSecretChat {
                         accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
                     }
+                    if let peer = chatPresentationInterfaceState.peer as? TelegramChannel, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
+                        accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
+                    }
+                    if let peer = chatPresentationInterfaceState.peer as? TelegramUser {
+                        if let _ = peer.botInfo {
+                            accessoryItems.append(.commands)
+                        }
+                    }
                     accessoryItems.append(.stickers)
                     if let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup {
                         accessoryItems.append(.inputButtons)

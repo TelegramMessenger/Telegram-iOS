@@ -81,6 +81,10 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.rightTimestampNode.status = status
     }
     
+    func setBufferingStatusSignal(_ status: Signal<(IndexSet, Int)?, NoError>?) {
+        self.scrubberNode.bufferingStatus = status
+    }
+    
     override func layoutSubviews() {
         super.layoutSubviews()
         

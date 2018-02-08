@@ -70,10 +70,42 @@ final class ThemeGridController: ViewController {
     override func loadDisplayNode() {
         self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, present: { [weak self] controller, arguments in
             self?.present(controller, in: .window(.root), with: arguments)
+        }, selectCustomWallpaper: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.present(legacyImagePicker(theme: strongSelf.presentationData.theme, completion: { image in
+                    if let strongSelf = self, let image = image {
+                        strongSelf.present(legacyWallpaperEditor(theme: strongSelf.presentationData.theme, image: image, completion: { image in
+                            if let image = image {
+                                self?.applyCustomWallpaperImage(image)
+                            }
+                        }), in: .window(.root))
+                    }
+                }), in: .window(.root))
+            }
         })
         self._ready.set(self.controllerNode.ready.get())
         
         self.displayNodeDidLoad()
+    }
+    
+    private func applyCustomWallpaperImage(_ image: UIImage) {
+        guard let data = UIImageJPEGRepresentation(image, 0.8) else {
+            return
+        }
+        
+        let resource = LocalFileMediaResource(fileId: arc4random64())
+        self.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+        
+        let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)])
+        let _ = (updatePresentationThemeSettingsInteractively(postbox: self.account.postbox, { current in
+            if case .color(0x000000) = wallpaper {
+                return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, fontSize: .regular)
+            }
+            
+            return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, fontSize: current.fontSize)
+        }) |> deliverOnMainQueue).start(completed: { [weak self] in
+            let _ = (self?.navigationController as? NavigationController)?.popViewController(animated: true)
+        })
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

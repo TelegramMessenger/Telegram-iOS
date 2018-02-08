@@ -204,7 +204,7 @@ public final class PresentationCall {
                 presentationState = .terminated
             case let .requesting(ringing):
                 presentationState = .requesting(ringing)
-            case let .active(_, keyVisualHash, _):
+            case let .active(_, keyVisualHash, _, _):
                 let timestamp: Double
                 if let activeTimestamp = self.activeTimestamp {
                     timestamp = activeTimestamp
@@ -216,7 +216,7 @@ public final class PresentationCall {
         }
         
         switch sessionState.state {
-            case let .active(key, _, connections):
+            case let .active(key, _, connections, maxLayer):
                 if let audioSessionControl = audioSessionControl, !wasActive || previousControl == nil {
                     let audioSessionActive: Signal<Bool, NoError>
                     if let callKitIntegration = self.callKitIntegration {
@@ -233,7 +233,7 @@ public final class PresentationCall {
                         audioSessionActive = .single(true)
                     }
                     
-                    self.ongoingGontext.start(key: key, isOutgoing: sessionState.isOutgoing, connections: connections, audioSessionActive: audioSessionActive)
+                    self.ongoingGontext.start(key: key, isOutgoing: sessionState.isOutgoing, connections: connections, maxLayer: maxLayer, audioSessionActive: audioSessionActive)
                     if sessionState.isOutgoing {
                         self.callKitIntegration?.reportOutgoingCallConnected(uuid: sessionState.id, at: Date())
                     }

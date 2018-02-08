@@ -55,7 +55,7 @@ final class AudioWaveform: Equatable {
         let numSamples = self.samples.count / 2
         let bitstreamLength = (numSamples * 5) / 8 + (((numSamples * 5) % 8) == 0 ? 0 : 1)
         var result = Data()
-        result.count = bitstreamLength
+        result.count = bitstreamLength + 4
         
         let maxSample: Int32 = self.peak
         
@@ -63,10 +63,15 @@ final class AudioWaveform: Equatable {
             result.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int16>) -> Void in
                 for i in 0 ..< numSamples {
                     let value: Int32 = min(Int32(31), abs(Int32(samples[i])) * 31 / maxSample)
+                    if i == 99 {
+                        assert(true)
+                    }
                     setBits(data: bytes, bitOffset: i * 5, numBits: 5, value: value & Int32(31))
                 }
             }
         }
+        
+        result.count = bitstreamLength
         
         return result
     }

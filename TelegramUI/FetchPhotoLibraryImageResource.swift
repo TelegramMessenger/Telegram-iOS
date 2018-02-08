@@ -51,7 +51,7 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
                             UIGraphicsEndImageContext()
                             
                             if let scaledImage = scaledImage, let data = UIImageJPEGRepresentation(scaledImage, 0.6) {
-                                subscriber.putNext(.dataPart(data: data, range: 0 ..< data.count, complete: true))
+                                subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
                                 subscriber.putCompletion()
                             } else {
                                 subscriber.putCompletion()

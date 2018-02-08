@@ -14,13 +14,30 @@ enum ChatTextInputMediaRecordingButtonMode: Int32 {
     case video = 1
 }
 
+private func findTargetView(_ view: UIView, point: CGPoint) -> UIView? {
+    if view.bounds.contains(point) && view.tag == 0x01f2bca {
+        return view
+    }
+    for subview in view.subviews {
+        let frame = subview.frame
+        if let result = findTargetView(subview, point: point.offsetBy(dx: -frame.minX, dy: -frame.minY)) {
+            return result
+        }
+    }
+    return nil
+}
+
 private final class ChatTextInputMediaRecordingButtonPresenterContainer: UIView {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let result = findTargetView(self, point: point) {
+            return result
+        }
         for subview in self.subviews {
             if let result = subview.hitTest(point.offsetBy(dx: -subview.frame.minX, dy: -subview.frame.minY), with: event) {
                 return result
             }
         }
+        
         return super.hitTest(point, with: event)
     }
 }

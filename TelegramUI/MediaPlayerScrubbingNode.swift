@@ -82,15 +82,17 @@ private final class StandardMediaPlayerScrubbingNodeContentNode {
     let lineHeight: CGFloat
     let lineCap: MediaPlayerScrubbingNodeCap
     let backgroundNode: ASImageNode
+    let bufferingNode: MediaPlayerScrubbingBufferingNode
     let foregroundContentNode: ASImageNode
     let foregroundNode: MediaPlayerScrubbingForegroundNode
     let handleNode: ASDisplayNode?
     let handleNodeContainer: MediaPlayerScrubbingNodeButton?
     
-    init(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, backgroundNode: ASImageNode, foregroundContentNode: ASImageNode, foregroundNode: MediaPlayerScrubbingForegroundNode, handleNode: ASDisplayNode?, handleNodeContainer: MediaPlayerScrubbingNodeButton?) {
+    init(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, backgroundNode: ASImageNode, bufferingNode: MediaPlayerScrubbingBufferingNode, foregroundContentNode: ASImageNode, foregroundNode: MediaPlayerScrubbingForegroundNode, handleNode: ASDisplayNode?, handleNodeContainer: MediaPlayerScrubbingNodeButton?) {
         self.lineHeight = lineHeight
         self.lineCap = lineCap
         self.backgroundNode = backgroundNode
+        self.bufferingNode = bufferingNode
         self.foregroundContentNode = foregroundContentNode
         self.foregroundNode = foregroundNode
         self.handleNode = handleNode
@@ -117,6 +119,53 @@ private enum MediaPlayerScrubbingNodeContentNodes {
     case custom(CustomMediaPlayerScrubbingNodeContentNode)
 }
 
+private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
+    private let color: UIColor
+    private let containerNode: ASDisplayNode
+    private let foregroundNode: ASImageNode
+    
+    private var ranges: (IndexSet, Int)?
+    
+    init(color: UIColor, lineCap: MediaPlayerScrubbingNodeCap, lineHeight: CGFloat) {
+        self.color = color
+        
+        self.containerNode = ASDisplayNode()
+        self.containerNode.isLayerBacked = true
+        self.containerNode.clipsToBounds = true
+        
+        self.foregroundNode = ASImageNode()
+        self.foregroundNode.isLayerBacked = true
+        self.foregroundNode.displayWithoutProcessing = true
+        self.foregroundNode.displaysAsynchronously = false
+        self.foregroundNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: color)
+        
+        super.init()
+        
+        self.containerNode.addSubnode(self.foregroundNode)
+        self.addSubnode(self.containerNode)
+    }
+    
+    func updateStatus(_ ranges: IndexSet, _ size: Int) {
+        self.ranges = (ranges, size)
+        if !self.bounds.width.isZero {
+            self.updateLayout(size: self.bounds.size, transition: .animated(duration: 0.15, curve: .easeInOut))
+        }
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.foregroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+        if let ranges = self.ranges, !ranges.0.isEmpty, ranges.1 != 0 {
+            for range in ranges.0.rangeView {
+                let rangeWidth = min(size.width, (CGFloat(range.count) / CGFloat(ranges.1)) * size.width)
+                transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: rangeWidth, height: size.height)))
+                break
+            }
+        } else {
+            transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: 0.0, height: size.height)))
+        }
+    }
+}
+
 final class MediaPlayerScrubbingNode: ASDisplayNode {
     private let contentNodes: MediaPlayerScrubbingNodeContentNodes
     
@@ -129,6 +178,17 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
     var seek: ((Double) -> Void)?
     
     var ignoreSeekId: Int?
+    
+    var enableScrubbing: Bool = true {
+        didSet {
+            switch self.contentNodes {
+                case let .standard(node):
+                    node.handleNodeContainer?.isUserInteractionEnabled = self.enableScrubbing
+                case let .custom(node):
+                    node.handleNodeContainer?.isUserInteractionEnabled = self.enableScrubbing
+            }
+        }
+    }
     
     private var _statusValue: MediaPlayerStatus?
     private var statusValue: MediaPlayerStatus? {
@@ -168,6 +228,19 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
         }
     }
     
+    private var bufferingStatusDisposable: Disposable?
+    private var bufferingStatusValuePromise = Promise<(IndexSet, Int)?>()
+    
+    var bufferingStatus: Signal<(IndexSet, Int)?, NoError>? {
+        didSet {
+            if let bufferingStatus = self.bufferingStatus {
+                self.bufferingStatusValuePromise.set(bufferingStatus)
+            } else {
+                self.bufferingStatusValuePromise.set(.single(nil))
+            }
+        }
+    }
+    
     init(content: MediaPlayerScrubbingNodeContent) {
         switch content {
             case let .standard(lineHeight, lineCap, scrubberHandle, backgroundColor, foregroundColor):
@@ -175,6 +248,8 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 backgroundNode.isLayerBacked = true
                 backgroundNode.displaysAsynchronously = false
                 backgroundNode.displayWithoutProcessing = true
+                
+                let bufferingNode = MediaPlayerScrubbingBufferingNode(color: foregroundColor.withAlphaComponent(0.5), lineCap: lineCap, lineHeight: lineHeight)
                 
                 let foregroundContentNode = ASImageNode()
                 foregroundContentNode.isLayerBacked = true
@@ -220,13 +295,16 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                         handleNodeContainerImpl = handleNodeContainer
                 }
                 
-                self.contentNodes = .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNode: handleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
+                handleNodeContainerImpl?.isUserInteractionEnabled = self.enableScrubbing
+                
+                self.contentNodes = .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, bufferingNode: bufferingNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNode: handleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
             case let .custom(backgroundNode, foregroundContentNode):
                 let foregroundNode = MediaPlayerScrubbingForegroundNode()
                 foregroundNode.isLayerBacked = true
                 foregroundNode.clipsToBounds = true
                 
                 let handleNodeContainer = MediaPlayerScrubbingNodeButton()
+                handleNodeContainer.isUserInteractionEnabled = self.enableScrubbing
                 
                 self.contentNodes = .custom(CustomMediaPlayerScrubbingNodeContentNode(backgroundNode: backgroundNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNodeContainer: handleNodeContainer))
         }
@@ -236,6 +314,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
         switch self.contentNodes {
             case let .standard(node):
                 self.addSubnode(node.backgroundNode)
+                self.addSubnode(node.bufferingNode)
                 node.foregroundNode.addSubnode(node.foregroundContentNode)
                 self.addSubnode(node.foregroundNode)
                 
@@ -325,10 +404,25 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                     strongSelf.statusValue = status
                 }
             })
+        
+        self.bufferingStatusDisposable = (self.bufferingStatusValuePromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let strongSelf = self {
+                    switch strongSelf.contentNodes {
+                        case let .standard(node):
+                            if let status = status {
+                                node.bufferingNode.updateStatus(status.0, status.1)
+                            }
+                        case .custom:
+                            break
+                    }
+                }
+            })
     }
     
     deinit {
         self.statusDisposable?.dispose()
+        self.bufferingStatusDisposable?.dispose()
     }
     
     override var frame: CGRect {
@@ -388,6 +482,8 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 node.backgroundNode.frame = backgroundFrame
                 node.foregroundContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
                 
+                node.bufferingNode.frame = backgroundFrame
+                node.bufferingNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
                 
                 if let handleNode = node.handleNode {
                     var handleSize: CGSize = CGSize(width: 2.0, height: bounds.size.height)
@@ -574,14 +670,28 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.bounds.contains(point) {
+        var hitBounds = self.bounds
+        let hitTestSlop = self.hitTestSlop
+        hitBounds.origin.x += hitTestSlop.left
+        hitBounds.origin.y += hitTestSlop.top
+        hitBounds.size.width += -hitTestSlop.left - hitTestSlop.right
+        hitBounds.size.height += -hitTestSlop.top - hitTestSlop.bottom
+        
+        if hitBounds.contains(point) {
             switch self.contentNodes {
                 case let .standard(node):
-                    return node.handleNodeContainer?.view
+                    if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
+                        return handleNodeContainer.view
+                    } else {
+                        return nil
+                    }
                 case let .custom(node):
-                    return node.handleNodeContainer?.view
+                    if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
+                        return handleNodeContainer.view
+                    } else {
+                        return nil
+                    }
             }
-            return super.hitTest(point, with: event)
         } else {
             return nil
         }

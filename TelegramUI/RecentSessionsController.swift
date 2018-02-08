@@ -317,7 +317,7 @@ public func recentSessionsController(account: Account) -> ViewController {
                 return .complete()
         }
         
-        removeSessionDisposable.set((terminateAccountSession(account: account, hash: sessionId) |> then((applySessions |> mapError { _ in TerminateAccountSessionError.generic })) |> deliverOnMainQueue).start(error: { _ in
+        removeSessionDisposable.set((terminateAccountSession(account: account, hash: sessionId) |> then((applySessions |> mapError { _ in TerminateSessionError.generic })) |> deliverOnMainQueue).start(error: { _ in
             updateState {
                 return $0.withUpdatedRemovingSessionId(nil)
             }
