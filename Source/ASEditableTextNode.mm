@@ -26,6 +26,18 @@
 #import <AsyncDisplayKit/ASTextNodeWordKerner.h>
 #import <AsyncDisplayKit/ASThread.h>
 
+@implementation ASEditableTextNodeTargetForAction
+
+- (instancetype)initWithTarget:(id _Nullable)target {
+  self = [super init];
+  if (self != nil) {
+    _target = target;
+  }
+  return self;
+}
+
+@end
+
 /**
  @abstract Object to hold UITextView's pending UITextInputTraits
 **/
@@ -75,12 +87,14 @@
 
  See issue: https://github.com/facebook/AsyncDisplayKit/issues/1063
  */
+
 @interface ASPanningOverriddenUITextView : ASTextKitComponentsTextView
 {
   BOOL _shouldBlockPanGesture;
 }
 
 @property (nonatomic, copy) bool (^shouldPaste)();
+@property (nonatomic, copy) ASEditableTextNodeTargetForAction *(^targetForActionImpl)(SEL);
 
 @end
 
@@ -107,8 +121,20 @@
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender
 {
-  if (action == @selector(paste:))
+  if (_targetForActionImpl) {
+    ASEditableTextNodeTargetForAction *result = _targetForActionImpl(action);
+    if (result) {
+      return result.target != nil;
+    }
+  }
+  
+  if (action == @selector(paste:)) {
+    NSArray *items = [UIMenuController sharedMenuController].menuItems;
+    if (((UIMenuItem *)items.firstObject).action == @selector(toggleBoldface:)) {
+      return false;
+    }
     return true;
+  }
   
   if (action == @selector(toggleUnderline:)) {
     return false;
@@ -119,6 +145,12 @@
 
 - (id)targetForAction:(SEL)action withSender:(id)__unused sender
 {
+  if (_targetForActionImpl) {
+    ASEditableTextNodeTargetForAction *result = _targetForActionImpl(action);
+    if (result) {
+      return result.target;
+    }
+  }
   return [super targetForAction:action withSender:sender];
 }
 
@@ -263,6 +295,15 @@
       }
     }
     return true;
+  };
+  textView.targetForActionImpl = ^id(SEL action) {
+    __strong ASEditableTextNode *strongSelf = weakSelf;
+    if (strongSelf != nil) {
+      if ([strongSelf->_delegate respondsToSelector:@selector(editableTextNodeTargetForAction:)]) {
+        return [strongSelf->_delegate editableTextNodeTargetForAction:action];
+      }
+    }
+    return nil;
   };
   _textKitComponents.textView = textView;
   _textKitComponents.textView.scrollEnabled = _scrollEnabled;

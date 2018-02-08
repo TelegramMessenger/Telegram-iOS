@@ -23,6 +23,14 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol ASEditableTextNodeDelegate;
 @class ASTextKitComponents;
 
+@interface ASEditableTextNodeTargetForAction: NSObject
+
+@property (nonatomic, strong, readonly) id _Nullable target;
+
+- (instancetype)initWithTarget:(id _Nullable)target;
+
+@end
+
 /**
  @abstract Implements a node that supports text editing.
  @discussion Does not support layer backing.
@@ -141,6 +149,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)dropAutocorrection;
 
+
 @end
 
 @interface ASEditableTextNode (Unavailable)
@@ -209,6 +218,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)editableTextNodeDidFinishEditing:(ASEditableTextNode *)editableTextNode;
 
 - (BOOL)editableTextNodeShouldPaste:(ASEditableTextNode *)editableTextNode;
+- (ASEditableTextNodeTargetForAction * _Nullable)editableTextNodeTargetForAction:(SEL)action;
 
 @end
 
