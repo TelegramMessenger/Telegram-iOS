@@ -23,6 +23,7 @@
 - (void)contextDatacenterPublicKeysUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys;
 - (MTSignal *)fetchContextDatacenterPublicKeys:(MTContext *)context datacenterId:(NSInteger)datacenterId;
 - (void)contextApiEnvironmentUpdated:(MTContext *)context apiEnvironment:(MTApiEnvironment *)apiEnvironment;
+- (MTSignal *)isContextNetworkAccessAllowed:(MTContext *)context;
 
 @end
 
@@ -30,6 +31,7 @@
 
 @property (nonatomic, copy) void (^contextIsPasswordRequiredUpdated)(MTContext *, NSInteger);
 @property (nonatomic, copy) MTSignal *(^fetchContextDatacenterPublicKeys)(MTContext *, NSInteger);
+@property (nonatomic, copy) MTSignal *(^isContextNetworkAccessAllowed)(MTContext *);
 
 @end
 

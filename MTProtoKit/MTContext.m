@@ -54,6 +54,14 @@
     }
 }
 
+- (MTSignal *)isContextNetworkAccessAllowed:(MTContext *)context {
+    if (_isContextNetworkAccessAllowed) {
+        return _isContextNetworkAccessAllowed(context);
+    } else {
+        return nil;
+    }
+}
+
 @end
 
 @interface MTContext () <MTDiscoverDatacenterAddressActionDelegate, MTDatacenterAuthActionDelegate, MTDatacenterTransferAuthActionDelegate>
@@ -901,7 +909,25 @@
         {
             __weak MTContext *weakSelf = self;
             MTDatacenterAddressSet *addressSet = [self addressSetForDatacenterWithId:datacenterId];
-            _transportSchemeDisposableByDatacenterId[@(datacenterId)] = [[[MTDiscoverConnectionSignals discoverSchemeWithContext:self addressList:addressSet.addressList media:media isProxy:isProxy] onDispose:^
+            MTSignal *discoverSignal = [MTDiscoverConnectionSignals discoverSchemeWithContext:self addressList:addressSet.addressList media:media isProxy:isProxy];
+            MTSignal *conditionSignal = [MTSignal single:@(true)];
+            for (id<MTContextChangeListener> listener in _changeListeners) {
+                if ([listener respondsToSelector:@selector(isContextNetworkAccessAllowed:)]) {
+                    MTSignal *signal = [listener isContextNetworkAccessAllowed:self];
+                    if (signal != nil) {
+                        conditionSignal = signal;
+                    }
+                }
+            }
+            MTSignal *filteredSignal = [[conditionSignal mapToSignal:^(NSNumber *value) {
+                if ([value boolValue]) {
+                    return discoverSignal;
+                } else {
+                    return [MTSignal never];
+                }
+            }] take:1];
+
+            _transportSchemeDisposableByDatacenterId[@(datacenterId)] = [[filteredSignal onDispose:^
             {
                 __strong MTContext *strongSelf = weakSelf;
                 if (strongSelf != nil)

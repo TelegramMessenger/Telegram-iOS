@@ -90,6 +90,14 @@ static NSArray *defaultPublicKeys() {
 "Pji9NP3tJUFQjcECqcm0yV7/2d0t/pbCm+ZH1sadZspQCEPPrtbkQBlvHb4OLiIW\n"
 "PGHKSMeRFvp3IWcmdJqXahxLCUS1Eh6MAQIDAQAB\n"
 "-----END RSA PUBLIC KEY-----", @"key", [[NSNumber alloc] initWithUnsignedLongLong:0x5a181b2235057d98UL], @"fingerprint", nil],
+[[NSDictionary alloc] initWithObjectsAndKeys:@"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIIBCgKCAQEAr4v4wxMDXIaMOh8bayF/NyoYdpcysn5EbjTIOZC0RkgzsRj3SGlu\n"
+"52QSz+ysO41dQAjpFLgxPVJoOlxXokaOq827IfW0bGCm0doT5hxtedu9UCQKbE8j\n"
+"lDOk+kWMXHPZFJKWRgKgTu9hcB3y3Vk+JFfLpq3d5ZB48B4bcwrRQnzkx5GhWOFX\n"
+"x73ZgjO93eoQ2b/lDyXxK4B4IS+hZhjzezPZTI5upTRbs5ljlApsddsHrKk6jJNj\n"
+"8Ygs/ps8e6ct82jLXbnndC9s8HjEvDvBPH9IPjv5JUlmHMBFZ5vFQIfbpo0u0+1P\n"
+"n6bkEi5o7/ifoyVv2pAZTRwppTz0EuXD8QIDAQAB\n"
+"-----END RSA PUBLIC KEY-----", @"key", [[NSNumber alloc] initWithUnsignedLongLong:0x9692106da14b9f02UL], @"fingerprint", nil],
 nil];
     });
     return serverPublicKeys;
@@ -599,7 +607,9 @@ typedef enum {
                 NSData *authKey = MTExp(innerDataGA, b, innerDataDhPrime);
                 
                 NSData *authKeyHash = MTSha1(authKey);
-                int64_t authKeyId = *((int64_t *)(((uint8_t *)authKeyHash.bytes) + authKeyHash.length - 8));
+                
+                int64_t authKeyId = 0;
+                memcpy(&authKeyId, (((uint8_t *)authKeyHash.bytes) + authKeyHash.length - 8), 8);
                 NSMutableData *serverSaltData = [[NSMutableData alloc] init];
                 for (int i = 0; i < 8; i++)
                 {

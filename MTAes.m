@@ -268,13 +268,17 @@ static void ctr128_inc_aligned(unsigned char *counter)
                 n = (n + 1) % 16;
             }
             
+            if (((size_t)in|(size_t)out|(size_t)_ivec)%sizeof(size_t) != 0)
+                break;
+            
             while (len >= 16) {
                 size_t dataOutMoved;
                 CCCryptorUpdate(_cryptor, _ivec, 16, _ecount, 16, &dataOutMoved);
                 ctr128_inc_aligned(_ivec);
-                for (n = 0; n < 16; n += sizeof(size_t))
+                for (n = 0; n < 16; n += sizeof(size_t)) {
                     *(size_t *)(out + n) =
                     *(size_t *)(in + n) ^ *(size_t *)(_ecount + n);
+                }
                 len -= 16;
                 out += 16;
                 in += 16;

@@ -791,7 +791,7 @@ struct ctr_state {
         ((uint8_t *)&ackId)[0] = _quickAckByte;
         memcpy(((uint8_t *)&ackId) + 1, data.bytes, 3);
         ackId = (int32_t)OSSwapInt32(ackId);
-        ackId &= ((int32_t)0xffffffff ^ (int32_t)(1 << 31));
+        ackId &= ((uint32_t)0xffffffff ^ (uint32_t)(((uint32_t)1) << 31));
         
         id<MTTcpConnectionDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)])
