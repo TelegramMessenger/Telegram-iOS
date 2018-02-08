@@ -75,7 +75,7 @@ open class NavigationBar: ASDisplayNode {
     private let stripeNode: ASDisplayNode
     private let clippingNode: ASDisplayNode
     
-    var contentNode: NavigationBarContentNode?
+    public private(set) var contentNode: NavigationBarContentNode?
     
     private var itemTitleListenerKey: Int?
     private var itemTitleViewListenerKey: Int?
@@ -84,7 +84,7 @@ open class NavigationBar: ASDisplayNode {
     private var itemLeftButtonSetEnabledListenerKey: Int?
     
     private var itemRightButtonListenerKey: Int?
-    private var itemRightButtonSetEnabledListenerKey: Int?
+    private var itemRightButtonsListenerKey: Int?
     
     private var itemBadgeListenerKey: Int?
     
@@ -116,9 +116,9 @@ open class NavigationBar: ASDisplayNode {
                     self.itemRightButtonListenerKey = nil
                 }
                 
-                if let itemRightButtonSetEnabledListenerKey = self.itemRightButtonSetEnabledListenerKey {
-                    previousValue.rightBarButtonItem?.removeSetEnabledListener(itemRightButtonSetEnabledListenerKey)
-                    self.itemRightButtonSetEnabledListenerKey = nil
+                if let itemRightButtonsListenerKey = self.itemRightButtonsListenerKey {
+                    previousValue.removeSetMultipleRightBarButtonItemsListener(itemRightButtonsListenerKey)
+                    self.itemRightButtonsListenerKey = nil
                 }
                 
                 if let itemBadgeListenerKey = self.itemBadgeListenerKey {
@@ -165,19 +165,14 @@ open class NavigationBar: ASDisplayNode {
                 
                 self.itemRightButtonListenerKey = item.addSetRightBarButtonItemListener { [weak self] previousItem, currentItem, animated in
                     if let strongSelf = self {
-                        if let itemRightButtonSetEnabledListenerKey = strongSelf.itemRightButtonSetEnabledListenerKey {
-                            previousItem?.removeSetEnabledListener(itemRightButtonSetEnabledListenerKey)
-                            strongSelf.itemRightButtonSetEnabledListenerKey = nil
-                        }
-                        
-                        if let currentItem = currentItem {
-                            strongSelf.itemRightButtonSetEnabledListenerKey = currentItem.addSetEnabledListener { _ in
-                                if let strongSelf = self {
-                                    strongSelf.updateRightButton(animated: false)
-                                }
-                            }
-                        }
-                        
+                        strongSelf.updateRightButton(animated: animated)
+                        strongSelf.invalidateCalculatedLayout()
+                        strongSelf.requestLayout()
+                    }
+                }
+                
+                self.itemRightButtonsListenerKey = item.addSetMultipleRightBarButtonItemsListener { [weak self] items, animated in
+                    if let strongSelf = self {
                         strongSelf.updateRightButton(animated: animated)
                         strongSelf.invalidateCalculatedLayout()
                         strongSelf.requestLayout()
@@ -260,9 +255,9 @@ open class NavigationBar: ASDisplayNode {
                 self.previousItemListenerKey = previousItem.addSetTitleListener { [weak self] _, _ in
                     if let strongSelf = self, let previousItem = strongSelf.previousItem {
                         if let backBarButtonItem = previousItem.backBarButtonItem {
-                            strongSelf.backButtonNode.text = backBarButtonItem.title ?? ""
+                            strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "")
                         } else {
-                            strongSelf.backButtonNode.text = previousItem.title ?? ""
+                            strongSelf.backButtonNode.updateManualText(previousItem.title ?? "")
                         }
                         strongSelf.invalidateCalculatedLayout()
                         strongSelf.requestLayout()
@@ -272,9 +267,9 @@ open class NavigationBar: ASDisplayNode {
                 self.previousItemBackListenerKey = previousItem.addSetBackBarButtonItemListener { [weak self] _, _, _ in
                     if let strongSelf = self, let previousItem = strongSelf.previousItem {
                         if let backBarButtonItem = previousItem.backBarButtonItem {
-                            strongSelf.backButtonNode.text = backBarButtonItem.title ?? ""
+                            strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "")
                         } else {
-                            strongSelf.backButtonNode.text = previousItem.title ?? ""
+                            strongSelf.backButtonNode.updateManualText(previousItem.title ?? "")
                         }
                         strongSelf.invalidateCalculatedLayout()
                         strongSelf.requestLayout()
@@ -348,9 +343,8 @@ open class NavigationBar: ASDisplayNode {
                 self.backButtonArrow.removeFromSupernode()
                 self.badgeNode.removeFromSupernode()
                 
-                self.leftButtonNode.text = leftBarButtonItem.title ?? ""
-                self.leftButtonNode.bold = leftBarButtonItem.style == .done
-                self.leftButtonNode.isEnabled = leftBarButtonItem.isEnabled
+                self.leftButtonNode.updateItems([leftBarButtonItem])
+                
                 if self.leftButtonNode.supernode == nil {
                     self.clippingNode.addSubnode(self.leftButtonNode)
                 }
@@ -384,7 +378,7 @@ open class NavigationBar: ASDisplayNode {
                 }
                 
                 if let backTitle = backTitle {
-                    self.backButtonNode.text = backTitle
+                    self.backButtonNode.updateManualText(backTitle)
                     if self.backButtonNode.supernode == nil {
                         self.clippingNode.addSubnode(self.backButtonNode)
                         self.clippingNode.addSubnode(self.backButtonArrow)
@@ -414,7 +408,14 @@ open class NavigationBar: ASDisplayNode {
     
     private func updateRightButton(animated: Bool) {
         if let item = self.item {
-            if let rightBarButtonItem = item.rightBarButtonItem {
+            var items: [UIBarButtonItem] = []
+            if let rightBarButtonItems = item.rightBarButtonItems, !rightBarButtonItems.isEmpty {
+                items = rightBarButtonItems
+            } else if let rightBarButtonItem = item.rightBarButtonItem {
+                items = [rightBarButtonItem]
+            }
+            
+            if !items.isEmpty {
                 if animated, self.rightButtonNode.view.superview != nil {
                     if let snapshotView = self.rightButtonNode.view.snapshotContentTree() {
                         snapshotView.frame = self.rightButtonNode.frame
@@ -424,11 +425,7 @@ open class NavigationBar: ASDisplayNode {
                         })
                     }
                 }
-                self.rightButtonNode.text = rightBarButtonItem.title ?? ""
-                self.rightButtonNode.image = rightBarButtonItem.image
-                self.rightButtonNode.bold = rightBarButtonItem.style == .done
-                self.rightButtonNode.isEnabled = rightBarButtonItem.isEnabled
-                self.rightButtonNode.node = rightBarButtonItem.customDisplayNode
+                self.rightButtonNode.updateItems(items)
                 if self.rightButtonNode.supernode == nil {
                     self.clippingNode.addSubnode(self.rightButtonNode)
                 }
@@ -565,13 +562,13 @@ open class NavigationBar: ASDisplayNode {
         self.titleNode.truncationMode = .byTruncatingTail
         self.titleNode.isOpaque = false
         
-        self.backButtonNode.highlightChanged = { [weak self] highlighted in
-            if let strongSelf = self {
+        self.backButtonNode.highlightChanged = { [weak self] index, highlighted in
+            if let strongSelf = self, index == 0 {
                 strongSelf.backButtonArrow.alpha = (highlighted ? 0.4 : 1.0)
             }
         }
-        self.backButtonNode.pressed = { [weak self] in
-            if let strongSelf = self {
+        self.backButtonNode.pressed = { [weak self] index in
+            if let strongSelf = self, index == 0 {
                 if let leftBarButtonItem = strongSelf.item?.leftBarButtonItem, leftBarButtonItem.backButtonAppearance {
                     leftBarButtonItem.performActionOnTarget()
                 } else {
@@ -580,15 +577,25 @@ open class NavigationBar: ASDisplayNode {
             }
         }
         
-        self.leftButtonNode.pressed = { [weak self] in
-            if let item = self?.item, let leftBarButtonItem = item.leftBarButtonItem {
-                leftBarButtonItem.performActionOnTarget()
+        self.leftButtonNode.pressed = { [weak self] index in
+            if let item = self?.item {
+                if index == 0 {
+                        if let leftBarButtonItem = item.leftBarButtonItem {
+                    leftBarButtonItem.performActionOnTarget()
+                    }
+                }
             }
         }
         
-        self.rightButtonNode.pressed = { [weak self] in
-            if let item = self?.item, let rightBarButtonItem = item.rightBarButtonItem {
-                rightBarButtonItem.performActionOnTarget()
+        self.rightButtonNode.pressed = { [weak self] index in
+            if let item = self?.item {
+                if let rightBarButtonItems = item.rightBarButtonItems, !rightBarButtonItems.isEmpty {
+                    if index < rightBarButtonItems.count {
+                        rightBarButtonItems[index].performActionOnTarget()
+                    }
+                } else if let rightBarButtonItem = item.rightBarButtonItem {
+                    rightBarButtonItem.performActionOnTarget()
+                }
             }
         }
     }
@@ -645,7 +652,7 @@ open class NavigationBar: ASDisplayNode {
         var leftTitleInset: CGFloat = leftInset + 4.0
         var rightTitleInset: CGFloat = rightInset + 4.0
         if self.backButtonNode.supernode != nil {
-            let backButtonSize = self.backButtonNode.measure(CGSize(width: size.width, height: nominalHeight))
+            let backButtonSize = self.backButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight))
             leftTitleInset += backButtonSize.width + backButtonInset + 4.0 + 4.0
             
             let topHitTestSlop = (nominalHeight - backButtonSize.height) * 0.5
@@ -690,7 +697,7 @@ open class NavigationBar: ASDisplayNode {
                 self.badgeNode.alpha = 1.0
             }
         } else if self.leftButtonNode.supernode != nil {
-            let leftButtonSize = self.leftButtonNode.measure(CGSize(width: size.width, height: nominalHeight))
+            let leftButtonSize = self.leftButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight))
             leftTitleInset += leftButtonSize.width + leftButtonInset + 8.0 + 8.0
             
             self.leftButtonNode.alpha = 1.0
@@ -702,7 +709,7 @@ open class NavigationBar: ASDisplayNode {
         self.badgeNode.frame = CGRect(origin: backButtonArrowFrame.origin.offsetBy(dx: 7.0, dy: -9.0), size: badgeSize)
         
         if self.rightButtonNode.supernode != nil {
-            let rightButtonSize = self.rightButtonNode.measure(CGSize(width: size.width, height: nominalHeight))
+            let rightButtonSize = self.rightButtonNode.updateLayout(constrainedSize: (CGSize(width: size.width, height: nominalHeight)))
             rightTitleInset += rightButtonSize.width + leftButtonInset + 8.0 + 8.0
             self.rightButtonNode.alpha = 1.0
             self.rightButtonNode.frame = CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize)
@@ -716,7 +723,7 @@ open class NavigationBar: ASDisplayNode {
                     break
                 case .bottom:
                     if let transitionBackButtonNode = self.transitionBackButtonNode {
-                        let transitionBackButtonSize = transitionBackButtonNode.measure(CGSize(width: size.width, height: nominalHeight))
+                        let transitionBackButtonSize = transitionBackButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight))
                         let initialX: CGFloat = backButtonInset + size.width * 0.3
                         let finalX: CGFloat = floor((size.width - transitionBackButtonSize.width) / 2.0)
                         
@@ -831,7 +838,7 @@ open class NavigationBar: ASDisplayNode {
     private func makeTransitionBackButtonNode(accentColor: UIColor) -> NavigationButtonNode? {
         if self.backButtonNode.supernode != nil {
             let node = NavigationButtonNode()
-            node.text = self.backButtonNode.text
+            node.updateManualText(self.backButtonNode.manualText)
             node.color = accentColor
             return node
         } else {

@@ -6,8 +6,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 #endif
 
-private let usePerformanceTracker = false
-private let useDynamicTuning = false
 private let useBackgroundDeallocation = false
 
 private let infiniteScrollSize: CGFloat = 10000.0
@@ -34,13 +32,7 @@ private final class ListViewBackingLayer: CALayer {
     }
 }
 
-#if os(iOS)
-typealias ListBaseView = UIView
-#else
-typealias ListBaseView = NSView
-#endif
-
-final class ListViewBackingView: ListBaseView {
+final class ListViewBackingView: UIView {
     weak var target: ListView?
     
     override class var layerClass: AnyClass {
@@ -56,6 +48,7 @@ final class ListViewBackingView: ListBaseView {
     override func setNeedsDisplay() {
     }
     
+    #if os(iOS)
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.target?.touchesBegan(touches, with: event)
     }
@@ -80,6 +73,7 @@ final class ListViewBackingView: ListBaseView {
         }
         return super.hitTest(point, with: event)
     }
+    #endif
 }
 
 private final class ListViewTimerProxy: NSObject {
@@ -212,8 +206,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private let freeResistanceSlider = UISlider()
     private let scrollingResistanceSlider = UISlider()
     
-    //let performanceTracker: FBAnimationPerformanceTracker
-    
     private var selectionTouchLocation: CGPoint?
     private var selectionTouchDelayTimer: Foundation.Timer?
     private var selectionLongTapDelayTimer: Foundation.Timer?
@@ -246,10 +238,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         self.scroller = ListViewScroller()
         
-        /*var performanceTrackerConfig = FBAnimationPerformanceTracker.standardConfig()
-        performanceTrackerConfig.reportStackTraces = true
-        self.performanceTracker = FBAnimationPerformanceTracker(config: performanceTrackerConfig)*/
-        
         super.init()
         
         self.setViewBlock({ () -> UIView in
@@ -266,8 +254,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         
-        //self.performanceTracker.delegate = self
-        
         self.scroller.alwaysBounceVertical = true
         self.scroller.contentSize = CGSize(width: 0.0, height: infiniteScrollSize * 2.0)
         self.scroller.isHidden = true
@@ -282,38 +268,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+        #if os(iOS)
         if #available(iOS 10.0, *) {
             self.displayLink.preferredFramesPerSecond = 60
         }
+        #endif
         self.displayLink.isPaused = true
-        
-        if useDynamicTuning {
-            self.frictionSlider.addTarget(self, action: #selector(self.frictionSliderChanged(_:)), for: .valueChanged)
-            self.springSlider.addTarget(self, action: #selector(self.springSliderChanged(_:)), for: .valueChanged)
-            self.freeResistanceSlider.addTarget(self, action: #selector(self.freeResistanceSliderChanged(_:)), for: .valueChanged)
-            self.scrollingResistanceSlider.addTarget(self, action: #selector(self.scrollingResistanceSliderChanged(_:)), for: .valueChanged)
-            
-            self.frictionSlider.minimumValue = Float(testSpringFrictionLimits.0)
-            self.frictionSlider.maximumValue = Float(testSpringFrictionLimits.1)
-            self.frictionSlider.value = Float(testSpringFriction)
-            
-            self.springSlider.minimumValue = Float(testSpringConstantLimits.0)
-            self.springSlider.maximumValue = Float(testSpringConstantLimits.1)
-            self.springSlider.value = Float(testSpringConstant)
-            
-            self.freeResistanceSlider.minimumValue = Float(testSpringResistanceFreeLimits.0)
-            self.freeResistanceSlider.maximumValue = Float(testSpringResistanceFreeLimits.1)
-            self.freeResistanceSlider.value = Float(testSpringFreeResistance)
-            
-            self.scrollingResistanceSlider.minimumValue = Float(testSpringResistanceScrollingLimits.0)
-            self.scrollingResistanceSlider.maximumValue = Float(testSpringResistanceScrollingLimits.1)
-            self.scrollingResistanceSlider.value = Float(testSpringScrollingResistance)
-        
-            self.view.addSubview(self.frictionSlider)
-            self.view.addSubview(self.springSlider)
-            self.view.addSubview(self.freeResistanceSlider)
-            self.view.addSubview(self.scrollingResistanceSlider)
-        }
     }
     
     deinit {
@@ -342,26 +302,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
         
         self.waitingForNodesDisposable.dispose()
-    }
-    
-    @objc func frictionSliderChanged(_ slider: UISlider) {
-        testSpringFriction = CGFloat(slider.value)
-        print("friction: \(testSpringFriction)")
-    }
-    
-    @objc func springSliderChanged(_ slider: UISlider) {
-        testSpringConstant = CGFloat(slider.value)
-        print("spring: \(testSpringConstant)")
-    }
-    
-    @objc func freeResistanceSliderChanged(_ slider: UISlider) {
-        testSpringFreeResistance = CGFloat(slider.value)
-        print("free resistance: \(testSpringFreeResistance)")
-    }
-    
-    @objc func scrollingResistanceSliderChanged(_ slider: UISlider) {
-        testSpringScrollingResistance = CGFloat(slider.value)
-        print("free resistance: \(testSpringScrollingResistance)")
     }
     
     private func displayLinkEvent() {
@@ -451,9 +391,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             self.updateHeaderItemsFlashing(animated: true)
             
             self.lastContentOffsetTimestamp = 0.0
-            /*if usePerformanceTracker {
-                self.performanceTracker.stop()
-            }*/
         }
     }
     
@@ -462,10 +399,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.isDeceleratingAfterTracking = false
         self.resetHeaderItemsFlashTimer(start: true)
         self.updateHeaderItemsFlashing(animated: true)
-        
-        /*if usePerformanceTracker {
-            self.performanceTracker.stop()
-        }*/
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -1083,14 +1016,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 self.visibleSize = updateSizeAndInsets.size
                 self.insets = updateSizeAndInsets.insets
                 
-                if useDynamicTuning {
-                    let size = updateSizeAndInsets.size
-                    self.frictionSlider.frame = CGRect(x: 10.0, y: size.height - insets.bottom - 10.0 - self.frictionSlider.bounds.height, width: size.width - 20.0, height: self.frictionSlider.bounds.height)
-                    self.springSlider.frame = CGRect(x: 10.0, y: self.frictionSlider.frame.minY - self.springSlider.bounds.height, width: size.width - 20.0, height: self.springSlider.bounds.height)
-                    self.freeResistanceSlider.frame = CGRect(x: 10.0, y: self.springSlider.frame.minY - self.freeResistanceSlider.bounds.height, width: size.width - 20.0, height: self.freeResistanceSlider.bounds.height)
-                    self.scrollingResistanceSlider.frame = CGRect(x: 10.0, y: self.freeResistanceSlider.frame.minY - self.scrollingResistanceSlider.bounds.height, width: size.width - 20.0, height: self.scrollingResistanceSlider.bounds.height)
-                }
-                
                 let wasIgnoringScrollingEvents = self.ignoreScrollingEvents
                 self.ignoreScrollingEvents = true
                 self.scroller.frame = CGRect(origin: CGPoint(), size: updateSizeAndInsets.size)
@@ -1595,12 +1520,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
         apply().1()
         self.itemNodes.insert(node, at: nodeIndex)
-        
-        if useDynamicTuning {
-            self.insertSubnode(node, at: 0)
-        } else {
-            //self.addSubnode(node)
-        }
         
         var offsetHeight = node.apparentHeight
         var takenAnimation = false
@@ -2954,6 +2873,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
+    #if os(iOS)
     override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         let touchesPosition = touches.first!.location(in: self.view)
         
@@ -3043,6 +2963,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         self.updateScroller(transition: .immediate)
     }
+    #endif
     
     public func clearHighlightAnimated(_ animated: Bool) {
         if let highlightedItemIndex = self.highlightedItemIndex {
@@ -3096,6 +3017,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         return nil
     }
     
+    #if os(iOS)
     override open func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let selectionTouchLocation = self.selectionTouchLocation {
             let location = touches.first!.location(in: self.view)
@@ -3177,6 +3099,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 break
         }
     }
+    #endif
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
@@ -3189,6 +3112,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
+    #if os(iOS)
     fileprivate func internalHitTest(_ point: CGPoint, with event: UIEvent?) -> Bool {
         if self.limitHitTestToNodes {
             var foundHit = false
@@ -3204,4 +3128,5 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
         return true
     }
+    #endif
 }

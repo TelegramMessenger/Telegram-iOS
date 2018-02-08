@@ -38,6 +38,30 @@ public struct Font {
         }
     }
     
+    public static func semiboldItalic(_ size: CGFloat) -> UIFont {
+        if let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor.withSymbolicTraits([.traitBold, .traitItalic]) {
+            return UIFont(descriptor: descriptor, size: size)
+        } else {
+            return UIFont.italicSystemFont(ofSize: size)
+        }
+    }
+    
+    public static func monospace(_ size: CGFloat) -> UIFont {
+        return UIFont(name: "Menlo-Regular", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+    }
+    
+    public static func semiboldMonospace(_ size: CGFloat) -> UIFont {
+        return UIFont(name: "Menlo-Bold", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+    }
+    
+    public static func italicMonospace(_ size: CGFloat) -> UIFont {
+        return UIFont(name: "Menlo-Italic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+    }
+    
+    public static func semiboldItalicMonospace(_ size: CGFloat) -> UIFont {
+        return UIFont(name: "Menlo-BoldItalic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+    }
+    
     public static func italic(_ size: CGFloat) -> UIFont {
         return UIFont.italicSystemFont(ofSize: size)
     }

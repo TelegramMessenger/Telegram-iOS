@@ -54,6 +54,7 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         
         self.labelNode = ASTextNode()
         self.labelNode.maximumNumberOfLines = 1
+        self.labelNode.truncationMode = .byTruncatingTail
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
         

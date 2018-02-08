@@ -24,10 +24,10 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
     
     let action: TextAlertAction
     
-    init(action: TextAlertAction) {
+    init(theme: AlertControllerTheme, action: TextAlertAction) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = UIColor(rgb: 0xe0e5e6)
+        self.backgroundNode.backgroundColor = theme.highlightedItemColor
         self.backgroundNode.alpha = 0.0
         
         self.action = action
@@ -36,12 +36,12 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
         
         self.titleNode.maximumNumberOfLines = 2
         let font = Font.regular(17.0)
-        var color = UIColor(rgb: 0x007ee5)
+        var color = theme.accentColor
         switch action.type {
             case .defaultAction, .genericAction:
                 break
             case .destructiveAction:
-                color = UIColor(rgb: 0xff3b30)
+                color = theme.destructiveColor
         }
         self.setAttributedTitle(NSAttributedString(string: action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
         
@@ -86,7 +86,7 @@ final class TextAlertContentNode: AlertContentNode {
     private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
     
-    init(title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction]) {
+    init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction]) {
         if let title = title {
             let titleNode = ASTextNode()
             titleNode.attributedText = title
@@ -106,10 +106,10 @@ final class TextAlertContentNode: AlertContentNode {
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
-        self.actionNodesSeparator.backgroundColor = UIColor(rgb: 0xc9cdd7)
+        self.actionNodesSeparator.backgroundColor = theme.separatorColor
         
         self.actionNodes = actions.map { action -> TextAlertContentActionNode in
-            return TextAlertContentActionNode(action: action)
+            return TextAlertContentActionNode(theme: theme, action: action)
         }
         
         var actionVerticalSeparators: [ASDisplayNode] = []
@@ -117,7 +117,7 @@ final class TextAlertContentNode: AlertContentNode {
             for _ in 0 ..< actions.count - 1 {
                 let separatorNode = ASDisplayNode()
                 separatorNode.isLayerBacked = true
-                separatorNode.backgroundColor = UIColor(rgb: 0xc9cdd7)
+                separatorNode.backgroundColor = theme.separatorColor
                 actionVerticalSeparators.append(separatorNode)
             }
         }
@@ -216,13 +216,13 @@ final class TextAlertContentNode: AlertContentNode {
     }
 }
 
-public func textAlertController(title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction]) -> AlertController {
-    return AlertController(contentNode: TextAlertContentNode(title: title, text: text, actions: actions))
+public func textAlertController(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction]) -> AlertController {
+    return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions))
 }
 
-public func standardTextAlertController(title: String?, text: String, actions: [TextAlertAction]) -> AlertController {
+public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction]) -> AlertController {
     var dismissImpl: (() -> Void)?
-    let controller = AlertController(contentNode: TextAlertContentNode(title: title != nil ? NSAttributedString(string: title!, font: Font.medium(17.0), textColor: .black, paragraphAlignment: .center) : nil, text: NSAttributedString(string: text, font: title == nil ? Font.semibold(17.0) : Font.regular(13.0), textColor: .black, paragraphAlignment: .center), actions: actions.map { action in
+    let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title != nil ? NSAttributedString(string: title!, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center) : nil, text: NSAttributedString(string: text, font: title == nil ? Font.semibold(17.0) : Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center), actions: actions.map { action in
         return TextAlertAction(type: action.type, title: action.title, action: {
             dismissImpl?()
             action.action()

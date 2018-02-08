@@ -19,6 +19,10 @@ open class UIScrollView: UIView {
         }
     }
     
-    public var alwaysBoundsVertical: Bool = false
-    public var alwaysBoundsHorizontal: Bool = false
+    public var alwaysBounceVertical: Bool = false
+    public var alwaysBounceHorizontal: Bool = false
+    
+    public func setContentOffset(_ contentOffset: CGPoint, animated: Bool) {
+        self.contentOffset = contentOffset
+    }
 }

@@ -2,10 +2,10 @@ import Foundation
 import QuartzCore
 
 public struct UIEdgeInsets: Equatable {
-    public let top: CGFloat
-    public let left: CGFloat
-    public let bottom: CGFloat
-    public let right: CGFloat
+    public var top: CGFloat
+    public var left: CGFloat
+    public var bottom: CGFloat
+    public var right: CGFloat
     
     public init() {
         self.top = 0.0

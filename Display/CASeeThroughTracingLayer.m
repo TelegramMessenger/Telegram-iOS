@@ -44,10 +44,6 @@
             [(CASeeThroughTracingLayer *)sublayer _mirrorTransformToSublayers];
         }
     }
-    
-    if (_updateRelativePosition) {
-        _updateRelativePosition(sublayerParentOffset);
-    }
 }
 
 @end

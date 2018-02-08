@@ -9,17 +9,17 @@ final class AlertControllerNode: ASDisplayNode {
     
     var dismiss: (() -> Void)?
     
-    init(contentNode: AlertContentNode) {
+    init(contentNode: AlertContentNode, theme: AlertControllerTheme) {
         self.dimmingNode = ASDisplayNode()
         self.dimmingNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
         self.containerNode = ASDisplayNode()
-        self.containerNode.backgroundColor = .white
+        self.containerNode.backgroundColor = theme.backgroundColor
         self.containerNode.layer.cornerRadius = 14.0
         self.containerNode.layer.masksToBounds = true
         
         self.effectNode = ASDisplayNode(viewBlock: {
-            let view = UIView()//UIVisualEffectView(effect: UIBlurEffect(style: .light))
+            let view = UIView()
             return view
         })
         

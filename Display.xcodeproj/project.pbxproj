@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D00701982029CAD6006B9E34 /* TooltipController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701972029CAD6006B9E34 /* TooltipController.swift */; };
+		D007019A2029CAE2006B9E34 /* TooltipControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */; };
 		D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0078A671C92B21400DF6D92 /* StatusBar.swift */; };
 		D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */; };
 		D01159BB1F40E96C0039383E /* DisplayMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D01159B91F40E96C0039383E /* DisplayMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -62,6 +64,7 @@
 		D05174B41EAA833200A1BF36 /* CASeeThroughTracingLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */; };
 		D053CB601D22B4F200DD41DF /* CATracingLayer.h in Headers */ = {isa = PBXBuildFile; fileRef = D053CB5E1D22B4F200DD41DF /* CATracingLayer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D053CB611D22B4F200DD41DF /* CATracingLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = D053CB5F1D22B4F200DD41DF /* CATracingLayer.m */; };
+		D053DAD12018ECF900993D32 /* WindowCoveringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D053DAD02018ECF900993D32 /* WindowCoveringView.swift */; };
 		D05BE4AB1D1F25E3002BD72C /* PresentationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05BE4AA1D1F25E3002BD72C /* PresentationContext.swift */; };
 		D05CC2671B69316F00E235A3 /* Display.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2661B69316F00E235A3 /* Display.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D05CC26E1B69316F00E235A3 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05CC2631B69316F00E235A3 /* Display.framework */; };
@@ -90,7 +93,6 @@
 		D05CC3191B695A9600E235A3 /* NavigationBackButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC30D1B695A9500E235A3 /* NavigationBackButtonNode.swift */; };
 		D05CC31A1B695A9600E235A3 /* NavigationButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC30E1B695A9500E235A3 /* NavigationButtonNode.swift */; };
 		D05CC31B1B695A9600E235A3 /* NavigationTitleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC30F1B695A9500E235A3 /* NavigationTitleNode.swift */; };
-		D05CC31C1B695A9600E235A3 /* BarButtonItemWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3101B695A9600E235A3 /* BarButtonItemWrapper.swift */; };
 		D05CC31D1B695A9600E235A3 /* UIBarButtonItem+Proxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3111B695A9600E235A3 /* UIBarButtonItem+Proxy.m */; };
 		D05CC31E1B695A9600E235A3 /* UIBarButtonItem+Proxy.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC3121B695A9600E235A3 /* UIBarButtonItem+Proxy.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D05CC31F1B695A9600E235A3 /* NavigationControllerProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3131B695A9600E235A3 /* NavigationControllerProxy.m */; };
@@ -125,7 +127,6 @@
 		D0C2DFC61CC4431D0044FF83 /* ASTransformLayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBB1CC4431D0044FF83 /* ASTransformLayerNode.swift */; };
 		D0C2DFC71CC4431D0044FF83 /* ListViewItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBC1CC4431D0044FF83 /* ListViewItemNode.swift */; };
 		D0C2DFC81CC4431D0044FF83 /* Spring.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBD1CC4431D0044FF83 /* Spring.swift */; };
-		D0C2DFC91CC4431D0044FF83 /* ListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBE1CC4431D0044FF83 /* ListView.swift */; };
 		D0C2DFCA1CC4431D0044FF83 /* ListViewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBF1CC4431D0044FF83 /* ListViewItem.swift */; };
 		D0C2DFCB1CC4431D0044FF83 /* ListViewAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC01CC4431D0044FF83 /* ListViewAnimation.swift */; };
 		D0C2DFCD1CC4431D0044FF83 /* ListViewTransactionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC21CC4431D0044FF83 /* ListViewTransactionQueue.swift */; };
@@ -151,8 +152,11 @@
 		D0E1D6721CBC201E00B04029 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */; };
 		D0E35A031DE473B900BC6096 /* HighlightableButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E35A021DE473B900BC6096 /* HighlightableButton.swift */; };
 		D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E49C871B83A3580099E553 /* ImageCache.swift */; };
+		D0E8175E2014ED7D00B82BBB /* CADisplayLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8175C2014ED7D00B82BBB /* CADisplayLink.swift */; };
+		D0E8175F2014F18F00B82BBB /* ListViewTransactionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC21CC4431D0044FF83 /* ListViewTransactionQueue.swift */; };
 		D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */; };
 		D0F7AB371DCFF6F8009AD9A1 /* ListViewItemHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */; };
+		D0F8C3932014FB7C00236FC5 /* ListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBE1CC4431D0044FF83 /* ListView.swift */; };
 		D0FF9B301E7196F6000C66DB /* KeyboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FF9B2F1E7196F6000C66DB /* KeyboardManager.swift */; };
 /* End PBXBuildFile section */
 
@@ -167,6 +171,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		D00701972029CAD6006B9E34 /* TooltipController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipController.swift; sourceTree = "<group>"; };
+		D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipControllerNode.swift; sourceTree = "<group>"; };
 		D0078A671C92B21400DF6D92 /* StatusBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBar.swift; sourceTree = "<group>"; };
 		D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextFieldNode.swift; sourceTree = "<group>"; };
 		D01159B71F40E96B0039383E /* DisplayMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DisplayMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -211,6 +217,7 @@
 		D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CASeeThroughTracingLayer.m; sourceTree = "<group>"; };
 		D053CB5E1D22B4F200DD41DF /* CATracingLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CATracingLayer.h; sourceTree = "<group>"; };
 		D053CB5F1D22B4F200DD41DF /* CATracingLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CATracingLayer.m; sourceTree = "<group>"; };
+		D053DAD02018ECF900993D32 /* WindowCoveringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowCoveringView.swift; sourceTree = "<group>"; };
 		D05BE4AA1D1F25E3002BD72C /* PresentationContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationContext.swift; sourceTree = "<group>"; };
 		D05CC2631B69316F00E235A3 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D05CC2661B69316F00E235A3 /* Display.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Display.h; sourceTree = "<group>"; };
@@ -242,7 +249,6 @@
 		D05CC30D1B695A9500E235A3 /* NavigationBackButtonNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBackButtonNode.swift; sourceTree = "<group>"; };
 		D05CC30E1B695A9500E235A3 /* NavigationButtonNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationButtonNode.swift; sourceTree = "<group>"; };
 		D05CC30F1B695A9500E235A3 /* NavigationTitleNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationTitleNode.swift; sourceTree = "<group>"; };
-		D05CC3101B695A9600E235A3 /* BarButtonItemWrapper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BarButtonItemWrapper.swift; sourceTree = "<group>"; };
 		D05CC3111B695A9600E235A3 /* UIBarButtonItem+Proxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIBarButtonItem+Proxy.m"; sourceTree = "<group>"; };
 		D05CC3121B695A9600E235A3 /* UIBarButtonItem+Proxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIBarButtonItem+Proxy.h"; sourceTree = "<group>"; };
 		D05CC3131B695A9600E235A3 /* NavigationControllerProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NavigationControllerProxy.m; sourceTree = "<group>"; };
@@ -304,6 +310,7 @@
 		D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E35A021DE473B900BC6096 /* HighlightableButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HighlightableButton.swift; sourceTree = "<group>"; };
 		D0E49C871B83A3580099E553 /* ImageCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
+		D0E8175C2014ED7D00B82BBB /* CADisplayLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CADisplayLink.swift; sourceTree = "<group>"; };
 		D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuActionNode.swift; sourceTree = "<group>"; };
 		D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewItemHeader.swift; sourceTree = "<group>"; };
 		D0FF9B2F1E7196F6000C66DB /* KeyboardManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KeyboardManager.swift; sourceTree = "<group>"; };
@@ -338,6 +345,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D00701962029CAC4006B9E34 /* Tooltip */ = {
+			isa = PBXGroup;
+			children = (
+				D00701972029CAD6006B9E34 /* TooltipController.swift */,
+				D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */,
+			);
+			name = Tooltip;
+			sourceTree = "<group>";
+		};
 		D01159B81F40E96C0039383E /* DisplayMac */ = {
 			isa = PBXGroup;
 			children = (
@@ -351,6 +367,7 @@
 				D01847761FFA78C100075256 /* UIGestureRecognizer.swift */,
 				D01847781FFA7A4E00075256 /* UITouch.swift */,
 				D018477B1FFA7ABF00075256 /* UISlider.swift */,
+				D0E8175C2014ED7D00B82BBB /* CADisplayLink.swift */,
 			);
 			path = DisplayMac;
 			sourceTree = "<group>";
@@ -363,6 +380,7 @@
 				D087BFB41F75181D003FD209 /* ChildWindowHostView.swift */,
 				D0BB4EB91F96DCC60036D9DE /* WindowInputAccessoryHeightProvider.swift */,
 				D0CB788F1F9822F8004AB79B /* WindowPanRecognizer.swift */,
+				D053DAD02018ECF900993D32 /* WindowCoveringView.swift */,
 			);
 			name = Window;
 			sourceTree = "<group>";
@@ -579,7 +597,6 @@
 				D05CC30E1B695A9500E235A3 /* NavigationButtonNode.swift */,
 				D05CC30F1B695A9500E235A3 /* NavigationTitleNode.swift */,
 				D0C12A191F3375B400B3F66D /* NavigationBarTitleTransitionNode.swift */,
-				D05CC3101B695A9600E235A3 /* BarButtonItemWrapper.swift */,
 				D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */,
 				D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */,
 				D077B8E81F4637040046D27A /* NavigationBarBadge.swift */,
@@ -631,6 +648,7 @@
 				D015F7551D1B142300E269B5 /* Tab Bar */,
 				D015F7561D1B465600E269B5 /* Action Sheet */,
 				D03725BF1D6DF57B007FC290 /* Context Menu */,
+				D00701962029CAC4006B9E34 /* Tooltip */,
 				D0DA444A1E4DCA36005FDCA7 /* Alert */,
 			);
 			name = Controllers;
@@ -860,6 +878,7 @@
 				D01847691FFA756600075256 /* ListViewAccessoryItemNode.swift in Sources */,
 				D01847611FFA703B00075256 /* UIKit.swift in Sources */,
 				D01847701FFA773100075256 /* ListView.swift in Sources */,
+				D0E8175F2014F18F00B82BBB /* ListViewTransactionQueue.swift in Sources */,
 				D01847771FFA78C100075256 /* UIGestureRecognizer.swift in Sources */,
 				D01C06C21FC254F8001561AB /* ASDisplayNode.swift in Sources */,
 				D01847631FFA70FC00075256 /* UIView.swift in Sources */,
@@ -877,6 +896,7 @@
 				D018476F1FFA76FD00075256 /* ListViewAccessoryItem.swift in Sources */,
 				D018477A1FFA7A8800075256 /* ListViewOverscrollBackgroundNode.swift in Sources */,
 				D01847741FFA780400075256 /* UIScrollView.swift in Sources */,
+				D0E8175E2014ED7D00B82BBB /* CADisplayLink.swift in Sources */,
 				D01847681FFA749F00075256 /* ListViewAnimation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -891,6 +911,7 @@
 				D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */,
 				D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */,
 				D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */,
+				D053DAD12018ECF900993D32 /* WindowCoveringView.swift in Sources */,
 				D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */,
 				D0BB4EBA1F96DCC60036D9DE /* WindowInputAccessoryHeightProvider.swift in Sources */,
 				D05CC31F1B695A9600E235A3 /* NavigationControllerProxy.m in Sources */,
@@ -905,6 +926,7 @@
 				D0BE93191E8ED71100DCC1E6 /* NativeWindowHostView.swift in Sources */,
 				D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */,
 				D05174B41EAA833200A1BF36 /* CASeeThroughTracingLayer.m in Sources */,
+				D0F8C3932014FB7C00236FC5 /* ListView.swift in Sources */,
 				D03E7DE61C96B96E00C07816 /* NavigationBarTransitionContainer.swift in Sources */,
 				D0C85DD01D1C082E00124894 /* ActionSheetItemGroupsContainerNode.swift in Sources */,
 				D05CC2F71B6955D000E235A3 /* UIKitUtils.swift in Sources */,
@@ -916,9 +938,9 @@
 				D0C2DFD01CC4431D0044FF83 /* ListViewAccessoryItemNode.swift in Sources */,
 				D0DA44501E4DCBDE005FDCA7 /* AlertContentNode.swift in Sources */,
 				D0D94A171D3814F900740E02 /* UniversalTapRecognizer.swift in Sources */,
+				D00701982029CAD6006B9E34 /* TooltipController.swift in Sources */,
 				D015F7581D1B467200E269B5 /* ActionSheetController.swift in Sources */,
 				D0DA444C1E4DCA4A005FDCA7 /* AlertController.swift in Sources */,
-				D0C2DFC91CC4431D0044FF83 /* ListView.swift in Sources */,
 				D03E7DF91C96C5F200C07816 /* NSWeakReference.m in Sources */,
 				D0DC48541BF93D8B00F672FD /* TabBarController.swift in Sources */,
 				D03E7E011C974AB300C07816 /* DisplayLinkDispatcher.swift in Sources */,
@@ -933,7 +955,6 @@
 				D05CC2E71B69555800E235A3 /* CAAnimationUtils.swift in Sources */,
 				D05CC31B1B695A9600E235A3 /* NavigationTitleNode.swift in Sources */,
 				D04C468E1F4C97BE00D30FE1 /* PageControlNode.swift in Sources */,
-				D05CC31C1B695A9600E235A3 /* BarButtonItemWrapper.swift in Sources */,
 				D0C2DFCF1CC4431D0044FF83 /* ListViewScroller.swift in Sources */,
 				D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */,
 				D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */,
@@ -966,6 +987,7 @@
 				D02383821DDF798E004018B6 /* LegacyPresentedControllerNode.swift in Sources */,
 				D05CC2FC1B6955D000E235A3 /* UIKitUtils.m in Sources */,
 				D0C2DFC61CC4431D0044FF83 /* ASTransformLayerNode.swift in Sources */,
+				D007019A2029CAE2006B9E34 /* TooltipControllerNode.swift in Sources */,
 				D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */,
 				D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */,
 				D0CE67921F7DA11700FFB557 /* ActionSheetTheme.swift in Sources */,

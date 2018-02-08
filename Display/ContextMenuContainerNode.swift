@@ -45,6 +45,10 @@ final class ContextMenuContainerNode: ASDisplayNode {
     override func layout() {
         super.layout()
         
+        self.updateLayout(transition: .immediate)
+    }
+    
+    func updateLayout(transition: ContainedViewLayoutTransition) {
         //self.effectView.frame = self.bounds
         
         let maskParams = CachedMaskParams(size: self.bounds.size, relativeArrowPosition: self.relativeArrowPosition?.0 ?? self.bounds.size.width / 2.0, arrowOnBottom: self.relativeArrowPosition?.1 ?? true)
@@ -78,7 +82,12 @@ final class ContextMenuContainerNode: ASDisplayNode {
             path.close()
             
             self.cachedMaskParams = maskParams
-            (self.maskView.layer as? CAShapeLayer)?.path = path.cgPath
+            if let layer = self.maskView.layer as? CAShapeLayer {
+                if case let .animated(duration, curve) = transition, let previousPath = layer.path {
+                    layer.animate(from: previousPath, to: path.cgPath, keyPath: "path", timingFunction: curve.timingFunction, duration: duration)
+                }
+                layer.path = path.cgPath
+            }
         }
     }
 }

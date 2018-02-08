@@ -12,6 +12,7 @@ static const void *setSelectedImageListenerBagKey = &setSelectedImageListenerBag
 static const void *setTitleViewListenerBagKey = &setTitleViewListenerBagKey;
 static const void *setLeftBarButtonItemListenerBagKey = &setLeftBarButtonItemListenerBagKey;
 static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemListenerBagKey;
+static const void *setMultipleRightBarButtonItemsListenerKey = &setMultipleRightBarButtonItemsListenerKey;
 static const void *setBackBarButtonItemListenerBagKey = &setBackBarButtonItemListenerBagKey;
 static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 static const void *badgeKey = &badgeKey;
@@ -29,6 +30,8 @@ static const void *badgeKey = &badgeKey;
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setLeftBarButtonItem:animated:) newSelector:@selector(_ac91f40f_setLeftBarButtonItem:animated:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItem:) newSelector:@selector(_ac91f40f_setRightBarButtonItem:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItem:animated:) newSelector:@selector(_ac91f40f_setRightBarButtonItem:animated:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItems:) newSelector:@selector(_ac91f40f_setRightBarButtonItems:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItems:animated:) newSelector:@selector(_ac91f40f_setRightBarButtonItems:animated:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setBackBarButtonItem:) newSelector:@selector(_ac91f40f_setBackBarButtonItem:)];
     });
 }
@@ -110,6 +113,24 @@ static const void *badgeKey = &badgeKey;
     } else {
         [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
             listener(previousItem, rightBarButtonItem, animated);
+        }];
+    }
+}
+
+- (void)_ac91f40f_setRightBarButtonItems:(NSArray<UIBarButtonItem *> *)rightBarButtonItems {
+    [self setRightBarButtonItems:rightBarButtonItems animated:false];
+}
+
+- (void)_ac91f40f_setRightBarButtonItems:(NSArray<UIBarButtonItem *> *)rightBarButtonItems animated:(BOOL)animated
+{
+    [self _ac91f40f_setRightBarButtonItems:rightBarButtonItems animated:animated];
+    
+    UINavigationItem *targetItem = [self associatedObjectForKey:targetItemKey];
+    if (targetItem != nil) {
+        [targetItem setRightBarButtonItems:rightBarButtonItems animated:animated];
+    } else {
+        [(NSBag *)[self associatedObjectForKey:setMultipleRightBarButtonItemsListenerKey] enumerateItems:^(UINavigationItemSetMutipleBarButtonItemsListener listener) {
+            listener(rightBarButtonItems, animated);
         }];
     }
 }
@@ -216,6 +237,20 @@ static const void *badgeKey = &badgeKey;
 - (void)removeSetRightBarButtonItemListener:(NSInteger)key
 {
     [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] removeItem:key];
+}
+
+- (NSInteger)addSetMultipleRightBarButtonItemsListener:(UINavigationItemSetMutipleBarButtonItemsListener _Nonnull)listener {
+    NSBag *bag = [self associatedObjectForKey:setMultipleRightBarButtonItemsListenerKey];
+    if (bag == nil)
+    {
+        bag = [[NSBag alloc] init];
+        [self setAssociatedObject:bag forKey:setMultipleRightBarButtonItemsListenerKey];
+    }
+    return [bag addItem:[listener copy]];
+}
+
+- (void)removeSetMultipleRightBarButtonItemsListener:(NSInteger)key {
+    [(NSBag *)[self associatedObjectForKey:setMultipleRightBarButtonItemsListenerKey] removeItem:key];
 }
 
 - (NSInteger)addSetBackBarButtonItemListener:(UINavigationItemSetBarButtonItemListener)listener {

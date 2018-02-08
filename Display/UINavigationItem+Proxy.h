@@ -4,6 +4,7 @@ typedef void (^UINavigationItemSetTitleListener)(NSString * _Nullable, bool);
 typedef void (^UINavigationItemSetTitleViewListener)(UIView * _Nullable);
 typedef void (^UINavigationItemSetImageListener)(UIImage * _Nullable);
 typedef void (^UINavigationItemSetBarButtonItemListener)(UIBarButtonItem * _Nullable, UIBarButtonItem * _Nullable, BOOL);
+typedef void (^UINavigationItemSetMutipleBarButtonItemsListener)(NSArray<UIBarButtonItem *> * _Nullable, BOOL);
 typedef void (^UITabBarItemSetBadgeListener)(NSString * _Nullable);
 
 @interface UINavigationItem (Proxy)
@@ -20,6 +21,8 @@ typedef void (^UITabBarItemSetBadgeListener)(NSString * _Nullable);
 - (void)removeSetLeftBarButtonItemListener:(NSInteger)key;
 - (NSInteger)addSetRightBarButtonItemListener:(UINavigationItemSetBarButtonItemListener _Nonnull)listener;
 - (void)removeSetRightBarButtonItemListener:(NSInteger)key;
+- (NSInteger)addSetMultipleRightBarButtonItemsListener:(UINavigationItemSetMutipleBarButtonItemsListener _Nonnull)listener;
+- (void)removeSetMultipleRightBarButtonItemsListener:(NSInteger)key;
 - (NSInteger)addSetBackBarButtonItemListener:(UINavigationItemSetBarButtonItemListener _Nonnull)listener;
 - (void)removeSetBackBarButtonItemListener:(NSInteger)key;
 - (NSInteger)addSetBadgeListener:(UITabBarItemSetBadgeListener _Nonnull)listener;

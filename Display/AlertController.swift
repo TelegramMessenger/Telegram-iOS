@@ -1,17 +1,41 @@
 import Foundation
 import AsyncDisplayKit
 
+public final class AlertControllerTheme {
+    public let backgroundColor: UIColor
+    public let separatorColor: UIColor
+    public let highlightedItemColor: UIColor
+    public let primaryColor: UIColor
+    public let secondaryColor: UIColor
+    public let accentColor: UIColor
+    public let destructiveColor: UIColor
+    
+    public init(backgroundColor: UIColor, separatorColor: UIColor, highlightedItemColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, accentColor: UIColor, destructiveColor: UIColor) {
+        self.backgroundColor = backgroundColor
+        self.separatorColor = separatorColor
+        self.highlightedItemColor = highlightedItemColor
+        self.primaryColor = primaryColor
+        self.secondaryColor = secondaryColor
+        self.accentColor = accentColor
+        self.destructiveColor = destructiveColor
+    }
+}
+
 open class AlertController: ViewController {
     private var controllerNode: AlertControllerNode {
         return self.displayNode as! AlertControllerNode
     }
     
+    private let theme: AlertControllerTheme
     private let contentNode: AlertContentNode
     
-    public init(contentNode: AlertContentNode) {
+    public init(theme: AlertControllerTheme, contentNode: AlertContentNode) {
+        self.theme = theme
         self.contentNode = contentNode
         
         super.init(navigationBarTheme: nil)
+        
+        self.statusBar.statusBarStyle = .Ignore
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -19,7 +43,7 @@ open class AlertController: ViewController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = AlertControllerNode(contentNode: self.contentNode)
+        self.displayNode = AlertControllerNode(contentNode: self.contentNode, theme: self.theme)
         self.displayNodeDidLoad()
         
         self.controllerNode.dismiss = { [weak self] in

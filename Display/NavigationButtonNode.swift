@@ -1,7 +1,7 @@
 import UIKit
 import AsyncDisplayKit
 
-public class NavigationButtonNode: ASTextNode {
+private final class NavigationButtonItemNode: ASTextNode {
     private func fontForCurrentState() -> UIFont {
         return self.bold ? UIFont.boldSystemFont(ofSize: 17.0) : UIFont.systemFont(ofSize: 17.0)
     }
@@ -11,6 +11,25 @@ public class NavigationButtonNode: ASTextNode {
             NSAttributedStringKey.font: self.fontForCurrentState(),
             NSAttributedStringKey.foregroundColor: self.isEnabled ? self.color : UIColor.gray
         ]
+    }
+    
+    private var setEnabledListener: Int?
+    
+    var item: UIBarButtonItem? {
+        didSet {
+            if self.item !== oldValue {
+                if let oldValue = oldValue, let setEnabledListener = self.setEnabledListener {
+                    oldValue.removeSetEnabledListener(setEnabledListener)
+                    self.setEnabledListener = nil
+                }
+                
+                if let item = self.item {
+                    self.setEnabledListener = item.addSetEnabledListener { [weak self] value in
+                        self?.isEnabled = value
+                    }
+                }
+            }
+        }
     }
     
     private var _text: String?
@@ -174,13 +193,13 @@ public class NavigationButtonNode: ASTextNode {
             let alpha: CGFloat = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
             
             /*if animated {
-                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions.beginFromCurrentState, animations: { () -> Void in
-                    self.alpha = alpha
-                }, completion: nil)
-            }
-            else {*/
-                self.alpha = alpha
-                self.highlightChanged(highlighted)
+             UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions.beginFromCurrentState, animations: { () -> Void in
+             self.alpha = alpha
+             }, completion: nil)
+             }
+             else {*/
+            self.alpha = alpha
+            self.highlightChanged(highlighted)
             //}
         }
     }
@@ -192,9 +211,133 @@ public class NavigationButtonNode: ASTextNode {
         set(value) {
             if self.isEnabled != value {
                 super.isEnabled = value
-
+                
                 self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
+    }
+}
+
+
+final class NavigationButtonNode: ASDisplayNode {
+    private var nodes: [NavigationButtonItemNode] = []
+    
+    public var pressed: (Int) -> () = { _ in }
+    public var highlightChanged: (Int, Bool) -> () = { _, _ in }
+    
+    public var color: UIColor = UIColor(rgb: 0x007ee5) {
+        didSet {
+            if !self.color.isEqual(oldValue) {
+                for node in self.nodes {
+                    node.color = self.color
+                }
+            }
+        }
+    }
+    
+    override init() {
+        super.init()
+    }
+    
+    var manualText: String {
+        return self.nodes.first?.text ?? ""
+    }
+    
+    func updateManualText(_ text: String) {
+        let node: NavigationButtonItemNode
+        if self.nodes.count > 0 {
+            node = self.nodes[0]
+        } else {
+            node = NavigationButtonItemNode()
+            node.color = self.color
+            node.highlightChanged = { [weak node, weak self] value in
+                if let strongSelf = self, let node = node {
+                    if let index = strongSelf.nodes.index(where: { $0 === node }) {
+                        strongSelf.highlightChanged(index, value)
+                    }
+                }
+            }
+            node.pressed = { [weak self, weak node] in
+                if let strongSelf = self, let node = node {
+                    if let index = strongSelf.nodes.index(where: { $0 === node }) {
+                        strongSelf.pressed(index)
+                    }
+                }
+            }
+            self.nodes.append(node)
+            self.addSubnode(node)
+        }
+        node.item = nil
+        node.text = text
+        node.image = nil
+        node.bold = false
+        node.isEnabled = true
+        node.node = nil
+        
+        if 1 < self.nodes.count {
+            for i in 1 ..< self.nodes.count {
+                self.nodes[i].removeFromSupernode()
+            }
+            self.nodes.removeSubrange(1...)
+        }
+    }
+    
+    func updateItems(_ items: [UIBarButtonItem]) {
+        for i in 0 ..< items.count {
+            let node: NavigationButtonItemNode
+            if self.nodes.count > i {
+                node = self.nodes[i]
+            } else {
+                node = NavigationButtonItemNode()
+                node.color = self.color
+                node.highlightChanged = { [weak node, weak self] value in
+                    if let strongSelf = self, let node = node {
+                        if let index = strongSelf.nodes.index(where: { $0 === node }) {
+                            strongSelf.highlightChanged(index, value)
+                        }
+                    }
+                }
+                node.pressed = { [weak self, weak node] in
+                    if let strongSelf = self, let node = node {
+                        if let index = strongSelf.nodes.index(where: { $0 === node }) {
+                            strongSelf.pressed(index)
+                        }
+                    }
+                }
+                self.nodes.append(node)
+                self.addSubnode(node)
+            }
+            node.item = items[i]
+            node.text = items[i].title ?? ""
+            node.image = items[i].image
+            node.bold = items[i].style == .done
+            node.isEnabled = items[i].isEnabled
+            node.node = items[i].customDisplayNode
+        }
+        if items.count < self.nodes.count {
+            for i in items.count ..< self.nodes.count {
+                self.nodes[i].removeFromSupernode()
+            }
+            self.nodes.removeSubrange(items.count...)
+        }
+    }
+    
+    func updateLayout(constrainedSize: CGSize) -> CGSize                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            {
+        var nodeOrigin = CGPoint()
+        var totalSize = CGSize()
+        for node in self.nodes {
+            if !totalSize.width.isZero {
+                totalSize.width += 16.0
+                nodeOrigin.x += 16.0
+            }
+            var nodeSize = node.calculateSizeThatFits(constrainedSize)
+            nodeSize.width = ceil(nodeSize.width)
+            nodeSize.height = ceil(nodeSize.height)
+            totalSize.width += nodeSize.width
+            totalSize.height = max(totalSize.height, nodeSize.height)
+            node.frame = CGRect(origin: nodeOrigin, size: nodeSize)
+            nodeOrigin.x += node.bounds.width
+        }
+        return totalSize
     }
 }

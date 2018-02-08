@@ -7,10 +7,12 @@ class ListViewScroller: UIScrollView, UIGestureRecognizerDelegate {
     override init(frame: CGRect) {
         super.init(frame: frame)
         
+        #if os(iOS)
         self.scrollsToTop = false
         if #available(iOSApplicationExtension 11.0, *) {
             self.contentInsetAdjustmentBehavior = .never
         }
+        #endif
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -21,7 +23,9 @@ class ListViewScroller: UIScrollView, UIGestureRecognizerDelegate {
         return false
     }
     
+    #if os(iOS)
     override func touchesShouldCancel(in view: UIView) -> Bool {
         return true
     }
+    #endif
 }

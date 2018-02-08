@@ -28,7 +28,19 @@ open class UIView: NSObject {
         }
     }
     
-    init(frame: CGRect) {
+    open var isHidden: Bool {
+        get {
+            return self.layer.isHidden
+        } set(value) {
+            self.layer.isHidden = value
+        }
+    }
+    
+    open class var layerClass: AnyClass {
+        return CALayer.self
+    }
+    
+    public init(frame: CGRect) {
         self.layer = CALayer()
         self.layer.frame = frame
         
@@ -45,5 +57,26 @@ open class UIView: NSObject {
     
     public func bringSubview(toFront: UIView) {
         
+    }
+    
+    public func addSubview(_ subview: UIView) {
+        
+    }
+    
+    public func removeFromSuperview() {
+        
+    }
+    
+    open func setNeedsLayout() {
+    }
+    
+    open func layoutSubviews() {
+    }
+    
+    open func setNeedsDisplay() {
+    }
+    
+    open func snapshotView(afterScreenUpdates: Bool) -> UIView? {
+        return nil
     }
 }

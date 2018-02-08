@@ -9,6 +9,9 @@ open class ASDisplayNode: NSObject {
         preconditionFailure()
     }
     
+    weak var supernode: ASDisplayNode?
+    private(set) var subnodes: [ASDisplayNode] = []
+    
     open var frame: CGRect {
         get {
             return self.layer.frame
@@ -55,6 +58,14 @@ open class ASDisplayNode: NSObject {
     
     var isLayerBacked: Bool = false
     
+    var clipsToBounds: Bool {
+        get {
+            return self.layer.masksToBounds
+        } set(value) {
+            self.layer.masksToBounds = value
+        }
+    }
+    
     override init() {
         super.init()
     }
@@ -74,11 +85,27 @@ open class ASDisplayNode: NSObject {
         
     }
     
-    open func insertSubnode(belowSubnode: ASDisplayNode) {
+    open func insertSubnode(_ subnode: ASDisplayNode, belowSubnode: ASDisplayNode) {
         
     }
     
-    open func insertSubnode(aboveSubnode: ASDisplayNode) {
+    open func insertSubnode(_ subnode: ASDisplayNode, aboveSubnode: ASDisplayNode) {
         
     }
+    
+    open func insertSubnode(_ subnode: ASDisplayNode, at: Int) {
+        
+    }
+    
+    open func removeFromSupernode() {
+        
+    }
+    
+    func recursivelyEnsureDisplaySynchronously(_ synchronously: Bool) {
+        
+    }
+}
+
+func ASPerformMainThreadDeallocation(_ ref: inout AnyObject?) {
+    
 }

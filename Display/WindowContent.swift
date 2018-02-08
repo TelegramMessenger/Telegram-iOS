@@ -45,15 +45,11 @@ private struct WindowLayout: Equatable {
             return false
         }
         
-        if let lhsInputHeight = lhs.inputHeight {
-            if let rhsInputHeight = rhs.inputHeight {
-                if !lhsInputHeight.isEqual(to: rhsInputHeight) {
-                    return false
-                }
-            } else {
+        if let lhsInputHeight = lhs.inputHeight, let rhsInputHeight = rhs.inputHeight {
+            if !lhsInputHeight.isEqual(to: rhsInputHeight) {
                 return false
             }
-        } else if let _ = rhs.inputHeight {
+        } else if (lhs.inputHeight != nil) != (rhs.inputHeight != nil) {
             return false
         }
         
@@ -345,6 +341,7 @@ public class Window1 {
         }
     }
     
+    private var windowPanRecognizer: WindowPanRecognizer?
     private let keyboardGestureRecognizerDelegate = KeyboardGestureRecognizerDelegate()
     private var keyboardGestureBeginLocation: CGPoint?
     private var keyboardGestureAccessoryHeight: CGFloat?
@@ -431,7 +428,20 @@ public class Window1 {
         self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
                 let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
-                let keyboardHeight = max(0.0, UIScreen.main.bounds.size.height - keyboardFrame.minY)
+                
+                let screenHeight: CGFloat
+                
+                if true || !UIScreen.main.bounds.width.isEqual(to: strongSelf.windowLayout.size.width) {
+                    if keyboardFrame.width.isEqual(to: UIScreen.main.bounds.width) {
+                        screenHeight = UIScreen.main.bounds.height
+                    } else {
+                        screenHeight = UIScreen.main.bounds.width
+                    }
+                } else {
+                    screenHeight = UIScreen.main.bounds.height
+                }
+                
+                let keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
                 var duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
                     duration = 0.5
@@ -491,6 +501,7 @@ public class Window1 {
         recognizer.ended = { [weak self] point, velocity in
             self?.panGestureEnded(location: point, velocity: velocity)
         }
+        self.windowPanRecognizer = recognizer
         self.hostView.view.addGestureRecognizer(recognizer)
     }
     
@@ -536,6 +547,9 @@ public class Window1 {
     }
     
     public func cancelInteractiveKeyboardGestures() {
+        self.windowPanRecognizer?.isEnabled = false
+        self.windowPanRecognizer?.isEnabled = true
+        
         if self.windowLayout.upperKeyboardInputPositionBound != nil {
             self.updateLayout {
                 $0.update(upperKeyboardInputPositionBound: nil, transition: .animated(duration: 0.25, curve: .spring), overrideTransition: false)
@@ -594,7 +608,11 @@ public class Window1 {
                     rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
                 }
                 
-                self.hostView.view.addSubview(rootController.view)
+                if let coveringView = self.coveringView {
+                    self.hostView.view.insertSubview(rootController.view, belowSubview: coveringView)
+                } else {
+                    self.hostView.view.addSubview(rootController.view)
+                }
             }
         }
     }
@@ -613,10 +631,29 @@ public class Window1 {
             for controller in self._topLevelOverlayControllers {
                 controller.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
                 
-                self.hostView.view.addSubview(controller.view)
+                if let coveringView = self.coveringView {
+                    self.hostView.view.insertSubview(controller.view, belowSubview: coveringView)
+                } else {
+                    self.hostView.view.addSubview(controller.view)
+                }
             }
             
             self.presentationContext.topLevelSubview = self._topLevelOverlayControllers.first?.view
+        }
+    }
+    
+    public var coveringView: WindowCoveringView? {
+        didSet {
+            if self.coveringView !== oldValue {
+                oldValue?.removeFromSuperview()
+                if let coveringView = self.coveringView {
+                    self.hostView.view.addSubview(coveringView)
+                    if !self.windowLayout.size.width.isZero {
+                        coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
+                        coveringView.updateLayout(self.windowLayout.size)
+                    }
+                }
+            }
         }
     }
     
@@ -782,6 +819,11 @@ public class Window1 {
                             strongSelf.hostView.view.endEditing(true)
                         }
                     })
+                }
+                
+                if let coveringView = self.coveringView {
+                    coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
+                    coveringView.updateLayout(self.windowLayout.size)
                 }
             }
         }
