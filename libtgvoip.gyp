@@ -381,8 +381,12 @@
               'defines': [
                 'WEBRTC_POSIX',
               ],
-              'cflags_cc': [
-                '-msse2',
+              'conditions': [
+                [ '"<!(uname -p)" == "x86_64" or "<!(uname -p)" == "i686"', {
+                  'cflags_cc': [
+                    '-msse2',
+                  ],
+                }]
               ],
               'direct_dependent_settings': {
                 'libraries': [
