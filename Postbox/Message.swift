@@ -122,7 +122,7 @@ public struct MessageIndex: Comparable, Hashable {
         } else if self.id.namespace != 0 {
             return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace - 1, id: Int32.max - 1), timestamp: self.timestamp)
         } else if self.timestamp != 0 {
-            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: Int32.max - 1, id: Int32.max - 1), timestamp: self.timestamp - 1)
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: Int32(Int8.max) - 1, id: Int32.max - 1), timestamp: self.timestamp - 1)
         } else {
             return self
         }

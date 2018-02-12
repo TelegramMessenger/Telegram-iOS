@@ -88,7 +88,7 @@ class MessageHistoryTagsSummaryTable: Table {
     private var cachedSummaries: [MessageHistoryTagsSummaryKey: CachedEntry] = [:]
     private var updatedKeys = Set<MessageHistoryTagsSummaryKey>()
     
-    private let sharedKey = ValueBoxKey(length: 1 + 8 + 4)
+    private let sharedKey = ValueBoxKey(length: 4 + 8 + 4)
     
     init(valueBox: ValueBox, table: ValueBoxTable, invalidateTable: InvalidatedMessageHistoryTagsSummaryTable) {
         self.invalidateTable = invalidateTable

@@ -855,7 +855,7 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous")
-            //debugRestoreState(basePath: basePath, name: "previous")
+            debugRestoreState(basePath: basePath, name: "previous")
             #endif
             
             loop: while true {

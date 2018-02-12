@@ -586,8 +586,6 @@ final class MutableChatListView {
     
     func complete(postbox: Postbox, context: MutableChatListViewReplayContext) {
         if context.removedEntries {
-            
-            
             var addedEntries: [MutableChatListEntry] = []
             
             var latestAnchor: ChatListIndex?
