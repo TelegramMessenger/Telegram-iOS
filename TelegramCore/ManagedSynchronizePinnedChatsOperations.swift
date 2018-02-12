@@ -97,7 +97,7 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
                         let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: entry.tagLocalIndex)
                     })
                 
-                disposable.set(signal.start())
+                disposable.set((signal |> delay(2.0, queue: Queue.concurrentDefaultQueue())).start())
             }
         })
         
@@ -185,7 +185,7 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                 apiUnreadCount = unreadCount
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
-                            case let .dialogFeed(_, _, _, feedId, _, _, _, _, _):
+                            case let .dialogFeed(_, _, _, feedId, _, _, _, _):
                                 remoteItemIds.append(.group(PeerGroupId(rawValue: feedId)))
                                 continue loop
                         }

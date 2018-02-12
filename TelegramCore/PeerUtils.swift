@@ -41,7 +41,7 @@ public extension Peer {
     public var restrictionText: String? {
         switch self {
             case let user as TelegramUser:
-                return nil
+                return user.restrictionInfo?.reason
             case let channel as TelegramChannel:
                 return channel.restrictionInfo?.reason
             default:

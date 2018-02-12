@@ -106,7 +106,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 }
                 
                 notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
-            case let .dialogFeed(_, _, _, feedId, _, _, _, _, _):
+            case let .dialogFeed(_, _, _, feedId, _, _, _, _):
                 itemIds.append(.group(PeerGroupId(rawValue: feedId)))
                 referencedFeeds.insert(PeerGroupId(rawValue: feedId))
         }

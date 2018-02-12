@@ -100,7 +100,7 @@ private func fetchReadStateNext(network: Network, groupId: PeerGroupId) -> Signa
         switch result {
             case let .peerDialogs(dialogs, messages, _, _, _):
                 for dialog in dialogs {
-                    if case let .dialogFeed(_, _, topMessage, feedId, _, resultMaxReadPosition, _, _, _) = dialog {
+                    if case let .dialogFeed(_, _, topMessage, feedId, _, resultMaxReadPosition, _, _) = dialog {
                         assert(feedId == groupId.rawValue)
                         if let resultMaxReadPosition = resultMaxReadPosition {
                             switch resultMaxReadPosition {
@@ -124,7 +124,7 @@ private func fetchReadStateNext(network: Network, groupId: PeerGroupId) -> Signa
 }
 
 private func fetchReadState(network: Network, groupId: PeerGroupId) -> Signal<GroupFeedReadState?, NoError> {
-    return network.request(Api.functions.channels.getFeed(flags: 0, feedId: groupId.rawValue, offsetPosition: nil, addOffset: 0, limit: 1, maxPosition: nil, minPosition: nil, sourcesHash: 0, hash: 0))
+    return network.request(Api.functions.channels.getFeed(flags: 0, feedId: groupId.rawValue, offsetPosition: nil, addOffset: 0, limit: 1, maxPosition: nil, minPosition: nil, hash: 0))
         |> retryRequest
         |> map { result -> GroupFeedReadState? in
             switch result {

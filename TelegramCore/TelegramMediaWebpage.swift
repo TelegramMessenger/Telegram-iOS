@@ -234,6 +234,10 @@ public final class TelegramMediaWebpage: Media, Equatable {
         }
     }
     
+    public func isLikelyToBeUpdated() -> Bool {
+        return true
+    }
+    
     public func isEqual(_ other: Media) -> Bool {
         if let other = other as? TelegramMediaWebpage, self.webpageId == other.webpageId {
             return self == other

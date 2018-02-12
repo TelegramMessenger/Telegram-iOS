@@ -44,7 +44,7 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
         |> take(1)
         |> mapToSignal { peer in
             if let inputPeer = apiInputPeer(peer) {
-                //print("fetchMessageHistoryHole for \(peer.displayTitle)")
+                print("fetchMessageHistoryHole for \(peer.displayTitle) \(direction)")
                 let request: Signal<Api.messages.Messages, MTRpcError>
                 var maxIndexRequest: Signal<Api.messages.Messages?, MTRpcError> = .single(nil)
                 var implicitelyFillHole = false
@@ -343,7 +343,7 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
                 flags |= (1 << 2)
             }
             
-            request = source.request(Api.functions.channels.getFeed(flags: flags, feedId: groupId.rawValue, offsetPosition: offsetPosition, addOffset: addOffset, limit: Int32(selectedLimit), maxPosition: maxPositionAndClipIndex?.0, minPosition: minPositionAndClipIndex?.0, sourcesHash: 0, hash: 0))
+            request = source.request(Api.functions.channels.getFeed(flags: flags, feedId: groupId.rawValue, offsetPosition: offsetPosition, addOffset: addOffset, limit: Int32(selectedLimit), maxPosition: maxPositionAndClipIndex?.0, minPosition: minPositionAndClipIndex?.0, hash: 0))
             
             return request
                 |> retryRequest
