@@ -12,6 +12,7 @@ import Foundation
 public enum MessageActionCallbackResult {
     case none
     case alert(String)
+    case toast(String)
     case url(String)
 }
 
@@ -35,9 +36,13 @@ public func requestMessageActionCallback(account: Account, messageId: MessageId,
                         //messages.botCallbackAnswer#36585ea4 flags:# alert:flags.1?true has_url:flags.3?true message:flags.0?string url:flags.2?string cache_time:int = messages.BotCallbackAnswer;
 
                         switch result {
-                            case let .botCallbackAnswer(_, message, url, cacheTime):
+                            case let .botCallbackAnswer(flags, message, url, cacheTime):
                                 if let message = message {
-                                    return .alert(message)
+                                    if (flags & (1 << 1)) != 0 {
+                                        return .alert(message)
+                                    } else {
+                                        return .toast(message)
+                                    }
                                 } else if let url = url {
                                     return .url(url)
                                 } else {
