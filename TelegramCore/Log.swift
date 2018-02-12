@@ -90,15 +90,18 @@ public final class Logger {
     public func collectLogs() -> Signal<[(String, String)], NoError> {
         return Signal { subscriber in
             self.queue.async {
-                var result: [(String, String)] = []
+                var result: [(Date, String, String)] = []
                 if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: self.basePath), includingPropertiesForKeys: [URLResourceKey.creationDateKey], options: []) {
                     for url in files {
                         if url.lastPathComponent.hasPrefix("log-") {
-                            result.append((url.lastPathComponent, url.path))
+                            if let creationDate = (try? url.resourceValues(forKeys: Set([.creationDateKey])))?.creationDate {
+                                result.append((creationDate, url.lastPathComponent, url.path))
+                            }
                         }
                     }
                 }
-                subscriber.putNext(result)
+                result.sort(by: { $0.0 < $1.0 })
+                subscriber.putNext(result.map { ($0.1, $0.2) })
                 subscriber.putCompletion()
             }
             

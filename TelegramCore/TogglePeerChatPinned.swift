@@ -47,3 +47,8 @@ public func toggleItemPinned(postbox: Postbox, itemId: PinnedItemId) -> Signal<T
         }
     }
 }
+
+public func reorderPinnedItemIds(modifier: Modifier, itemIds: [PinnedItemId]) {
+    modifier.setPinnedItemIds(itemIds)
+    addSynchronizePinnedChatsOperation(modifier: modifier)
+}

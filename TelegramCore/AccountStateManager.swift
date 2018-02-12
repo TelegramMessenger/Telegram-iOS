@@ -490,7 +490,7 @@ public final class AccountStateManager {
                 let _ = (signal |> deliverOn(self.queue)).start(next: { [weak self] messages in
                     if let strongSelf = self {
                         for (message, _) in messages {
-                            Logger.shared.log("State" , "notify: \(String(describing: messageMainPeer(message)?.displayTitle)): \(message.id)")
+                            //Logger.shared.log("State" , "notify: \(String(describing: messageMainPeer(message)?.displayTitle)): \(message.id)")
                         }
                         
                         strongSelf.notificationMessagesPipe.putNext(messages)

@@ -57,12 +57,18 @@ private final class HistoryPreloadEntry: Comparable {
         return lhs.hole < rhs.hole
     }
     
-    func startIfNeeded(postbox: Postbox, download: Signal<Download, NoError>, queue: Queue) {
+    func startIfNeeded(postbox: Postbox, accountPeerId: PeerId, download: Signal<Download, NoError>, queue: Queue) {
         if !self.isStarted {
             self.isStarted = true
             
+            let hole = self.hole.hole
             let signal: Signal<Void, NoError> = .complete() |> delay(0.3, queue: queue) |> then(download |> take(1) |> deliverOn(queue) |> mapToSignal { download -> Signal<Void, NoError> in
-                return fetchMessageHistoryHole(source: .download(download), postbox: postbox, hole: self.hole.hole.hole, direction: self.hole.hole.direction, tagMask: nil, limit: 60)
+                switch hole.hole {
+                    case let .peer(peerHole):
+                        return fetchMessageHistoryHole(source: .download(download), postbox: postbox, hole: peerHole, direction: hole.direction, tagMask: nil, limit: 60)
+                    case let .groupFeed(groupId, lowerIndex, upperIndex):
+                        return fetchGroupFeedHole(source: .download(download), accountPeerId: accountPeerId, postbox: postbox, groupId: groupId, minIndex: lowerIndex, maxIndex: upperIndex, direction: hole.direction, limit: 60)
+                }
             })
             self.disposable.set(signal.start())
         }
@@ -99,10 +105,47 @@ private final class HistoryPreloadViewContext {
     }
 }
 
+private enum ChatHistoryPreloadEntity: Hashable {
+    case peer(PeerId)
+    case group(PeerGroupId)
+    
+    static func ==(lhs: ChatHistoryPreloadEntity, rhs: ChatHistoryPreloadEntity) -> Bool {
+        switch lhs {
+            case let .peer(id):
+                if case .peer(id) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .group(id):
+                if case .group(id) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    var hashValue: Int {
+        switch self {
+            case let .peer(id):
+                return id.hashValue
+            case let .group(id):
+                return id.hashValue
+        }
+    }
+}
+
+private struct ChatHistoryPreloadIndex {
+    let index: ChatListIndex
+    let entity: ChatHistoryPreloadEntity
+}
+
 final class ChatHistoryPreloadManager {
     private let queue = Queue()
     
     private let postbox: Postbox
+    private let accountPeerId: PeerId
     private let network: Network
     private let download = Promise<Download>()
     
@@ -111,18 +154,19 @@ final class ChatHistoryPreloadManager {
     
     private var automaticChatListDisposable: Disposable?
     
-    private var views: [PeerId: HistoryPreloadViewContext] = [:]
+    private var views: [ChatHistoryPreloadEntity: HistoryPreloadViewContext] = [:]
     
     private var entries: [HistoryPreloadEntry] = []
     
-    init(postbox: Postbox, network: Network, networkState: Signal<AccountNetworkState, NoError>) {
+    init(postbox: Postbox, network: Network, accountPeerId: PeerId, networkState: Signal<AccountNetworkState, NoError>) {
         self.postbox = postbox
         self.network = network
+        self.accountPeerId = accountPeerId
         self.download.set(network.download(datacenterId: network.datacenterId, tag: nil))
         
         self.automaticChatListDisposable = (postbox.tailChatListView(groupId: nil, count: 20, summaryComponents: ChatListEntrySummaryComponents()) |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
-                var indices: [(ChatListIndex, Bool, Bool)] = []
+                var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
                 for entry in view.0.entries {
                     if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _) = entry {
                         var hasUnread = false
@@ -135,7 +179,11 @@ final class ChatHistoryPreloadManager {
                                 isMuted = true
                             }
                         }
-                        indices.append((index, hasUnread, isMuted))
+                        indices.append((ChatHistoryPreloadIndex(index: index, entity: .peer(index.messageIndex.id.peerId)), hasUnread, isMuted))
+                    } else if case let .GroupReferenceEntry(groupId, index, _, _, counters) = entry {
+                        let hasUnread = counters.unreadCount != 0 || counters.unreadMutedCount != 0
+                        let isMuted = counters.unreadCount != 0
+                        indices.append((ChatHistoryPreloadIndex(index: index, entity: .group(groupId)), hasUnread, isMuted))
                     }
                 }
                 
@@ -155,7 +203,7 @@ final class ChatHistoryPreloadManager {
                     strongSelf.canPreloadHistoryValue = value
                     if value {
                         for i in 0 ..< min(3, strongSelf.entries.count) {
-                            strongSelf.entries[i].startIfNeeded(postbox: strongSelf.postbox, download: strongSelf.download.get() |> take(1), queue: strongSelf.queue)
+                            strongSelf.entries[i].startIfNeeded(postbox: strongSelf.postbox, accountPeerId: strongSelf.accountPeerId, download: strongSelf.download.get() |> take(1), queue: strongSelf.queue)
                         }
                     }
                 }
@@ -166,26 +214,26 @@ final class ChatHistoryPreloadManager {
         self.canPreloadHistoryDisposable?.dispose()
     }
     
-    func update(indices: [(ChatListIndex, Bool, Bool)]) {
+    private func update(indices: [(ChatHistoryPreloadIndex, Bool, Bool)]) {
         self.queue.async {
-            let validPeerIds = Set(indices.map { $0.0.messageIndex.id.peerId })
-            var removedPeerIds: [PeerId] = []
-            for (peerId, view) in self.views {
-                if !validPeerIds.contains(peerId) {
-                    removedPeerIds.append(peerId)
+            let validEntityIds = Set(indices.map { $0.0.entity })
+            var removedEntityIds: [ChatHistoryPreloadEntity] = []
+            for (entityId, view) in self.views {
+                if !validEntityIds.contains(entityId) {
+                    removedEntityIds.append(entityId)
                     if let hole = view.currentHole {
                         self.update(from: hole, to: nil)
                     }
                 }
             }
-            for peerId in removedPeerIds {
-                self.views.removeValue(forKey: peerId)
+            for entityId in removedEntityIds {
+                self.views.removeValue(forKey: entityId)
             }
             for (index, hasUnread, isMuted) in indices {
-                if let view = self.views[index.messageIndex.id.peerId] {
-                    if view.index != index || view.hasUnread != hasUnread || view.isMuted != isMuted {
+                if let view = self.views[index.entity] {
+                    if view.index != index.index || view.hasUnread != hasUnread || view.isMuted != isMuted {
                         let previousHole = view.currentHole
-                        view.index = index
+                        view.index = index.index
                         view.hasUnread = hasUnread
                         view.isMuted = isMuted
                         
@@ -195,12 +243,18 @@ final class ChatHistoryPreloadManager {
                         }
                     }
                 } else {
-                    let view = HistoryPreloadViewContext(index: index, hasUnread: hasUnread, isMuted: isMuted)
-                    self.views[index.messageIndex.id.peerId] = view
-                    let key: PostboxViewKey = .messageOfInterestHole(peerId: index.messageIndex.id.peerId, namespace: index.messageIndex.id.namespace, count: 60)
+                    let view = HistoryPreloadViewContext(index: index.index, hasUnread: hasUnread, isMuted: isMuted)
+                    self.views[index.entity] = view
+                    let key: PostboxViewKey
+                    switch index.entity {
+                        case let .peer(peerId):
+                            key = .messageOfInterestHole(location: .peer(peerId), namespace: Namespaces.Message.Cloud, count: 60)
+                        case let .group(groupId):
+                            key = .messageOfInterestHole(location: .group(groupId), namespace: Namespaces.Message.Cloud, count: 60)
+                    }
                     view.disposable.set((self.postbox.combinedView(keys: [key]) |> deliverOn(self.queue)).start(next: { [weak self] next in
                         if let strongSelf = self, let value = next.views[key] as? MessageOfInterestHolesView {
-                            if let view = strongSelf.views[index.messageIndex.id.peerId] {
+                            if let view = strongSelf.views[index.entity] {
                                 let previousHole = view.currentHole
                                 view.hole = value.closestHole
                                 let updatedHole = view.currentHole
@@ -252,7 +306,7 @@ final class ChatHistoryPreloadManager {
         
         if self.canPreloadHistoryValue {
             for i in 0 ..< min(3, self.entries.count) {
-                self.entries[i].startIfNeeded(postbox: self.postbox, download: self.download.get() |> take(1), queue: self.queue)
+                self.entries[i].startIfNeeded(postbox: self.postbox, accountPeerId: self.accountPeerId, download: self.download.get() |> take(1), queue: self.queue)
             }
         }
     }

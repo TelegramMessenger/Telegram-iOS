@@ -375,7 +375,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                 flags |= (1 << 0)
                 flags |= (1 << 2)
                 
-                signal = network.request(Api.functions.channels.getFeed(flags: flags, feedId: groupId.rawValue, offsetPosition: offsetPosition, addOffset: addOffset, limit: 200, maxPosition: nil, minPosition: minPosition, sourcesHash: 0, hash: hash))
+                signal = network.request(Api.functions.channels.getFeed(flags: flags, feedId: groupId.rawValue, offsetPosition: offsetPosition, addOffset: addOffset, limit: 200, maxPosition: nil, minPosition: minPosition, hash: hash))
             |> map { result -> ValidatedMessages in
                 switch result {
                     case let .feedMessages(_, _, _, _, messages, chats, users):

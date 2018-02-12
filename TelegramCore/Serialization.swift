@@ -13,7 +13,15 @@ public class BoxedMessage: NSObject {
     
     override public var description: String {
         get {
-            return "\(self.body)"
+            if let body = self.body as? RedactingCustomStringConvertible {
+                #if DEBUG
+                return body.redactingDescription(false)
+                #else
+                return body.redactingDescription(true)
+                #endif
+            } else {
+                return "\(self.body)"
+            }
         }
     }
 }

@@ -187,7 +187,7 @@ private func synchronizeGroupedPeers(modifier: Modifier, postbox: Postbox, netwo
                     })
                     modifier.updatePeerPresences(peerPresences)
                     
-                    return network.request(Api.functions.channels.setFeedBroadcasts(feedId: operation.groupId.rawValue, channels: inputChannels, alsoNewlyJoined: .boolFalse))
+                    return network.request(Api.functions.channels.setFeedBroadcasts(flags: 1 << 0, feedId: operation.groupId.rawValue, channels: inputChannels, alsoNewlyJoined: nil))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return postbox.modify { modifier -> Void in

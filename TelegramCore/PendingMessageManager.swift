@@ -54,6 +54,22 @@ private enum PendingMessageResult {
     case progress(Float)
 }
 
+private func failMessages(postbox: Postbox, ids: [MessageId]) -> Signal<Void, NoError> {
+    let modify = postbox.modify { modifier -> Void in
+        for id in ids {
+            modifier.updateMessage(id, update: { currentMessage in
+                var storeForwardInfo: StoreMessageForwardInfo?
+                if let forwardInfo = currentMessage.forwardInfo {
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                }
+                return .update(StoreMessage(id: id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+            })
+        }
+    }
+    
+    return modify
+}
+
 private final class PendingMessageRequestDependencyTag: NetworkRequestDependencyTag {
     let messageId: MessageId
     
@@ -481,15 +497,16 @@ public final class PendingMessageManager {
                 if let message = modifier.getMessage(id) {
                     messages.append((message, content))
                 } else {
-                    return .complete()
+                    return failMessages(postbox: postbox, ids: group.map { $0.0 })
                 }
             }
             
             messages.sort { MessageIndex($0.0) < MessageIndex($1.0) }
             
             if peerId.namespace == Namespaces.Peer.SecretChat {
-                assertionFailure()
-                return .complete()
+                //assertionFailure()
+                
+                return failMessages(postbox: postbox, ids: group.map { $0.0 })
             } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                 var isForward = false
                 var replyMessageId: Int32?
@@ -582,10 +599,10 @@ public final class PendingMessageManager {
                                     
                                     singleMedias.append(.inputSingleMedia(flags: singleFlags, media: inputMedia, randomId: uniqueId, message: text, entities: messageEntities))
                                 default:
-                                    return .complete()
+                                    return failMessages(postbox: postbox, ids: group.map { $0.0 })
                             }
                         } else {
-                            return .complete()
+                            return failMessages(postbox: postbox, ids: group.map { $0.0 })
                         }
                     }
                     
@@ -604,23 +621,11 @@ public final class PendingMessageManager {
                         }
                     }
                     |> `catch` { _ -> Signal<Void, NoError> in
-                        let modify = postbox.modify { modifier -> Void in
-                            for (id, _) in group {
-                                modifier.updateMessage(id, update: { currentMessage in
-                                    var storeForwardInfo: StoreMessageForwardInfo?
-                                    if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                    }
-                                    return .update(StoreMessage(id: id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
-                                })
-                            }
-                        }
-                        
-                        return modify
+                        return failMessages(postbox: postbox, ids: group.map { $0.0 })
                     }
             } else {
                 assertionFailure()
-                return .complete()
+                return failMessages(postbox: postbox, ids: group.map { $0.0 })
             }
         } |> switchToLatest
     }
