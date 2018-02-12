@@ -19,7 +19,7 @@ public enum PostboxViewKey: Hashable {
     case unreadCounts(items: [UnreadMessageCountsItem])
     case peerNotificationSettings(peerId: PeerId)
     case pendingPeerNotificationSettings
-    case messageOfInterestHole(peerId: PeerId, namespace: MessageId.Namespace, count: Int)
+    case messageOfInterestHole(location: MessageOfInterestViewLocation, namespace: MessageId.Namespace, count: Int)
     case chatListTopPeers(groupId: PeerGroupId)
     case groupFeedReadStateSyncOperations
     case localMessageTag(LocalMessageTags)
@@ -62,8 +62,8 @@ public enum PostboxViewKey: Hashable {
                 return 6 &+ 31 &* peerId.hashValue
             case .pendingPeerNotificationSettings:
                 return 7
-            case let .messageOfInterestHole(peerId, namespace, count):
-                return 8 &+ 31 &* peerId.hashValue &+ 31 &* namespace.hashValue &+ 31 &* count.hashValue
+            case let .messageOfInterestHole(location, namespace, count):
+                return 8 &+ 31 &* location.hashValue &+ 31 &* namespace.hashValue &+ 31 &* count.hashValue
             case let .chatListTopPeers(groupId):
                 return groupId.hashValue
             case .groupFeedReadStateSyncOperations:
@@ -249,8 +249,8 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutablePeerNotificationSettingsView(postbox: postbox, peerId: peerId)
         case .pendingPeerNotificationSettings:
             return MutablePendingPeerNotificationSettingsView(postbox: postbox)
-        case let .messageOfInterestHole(peerId, namespace, count):
-            return MutableMessageOfInterestHolesView(postbox: postbox, peerId: peerId, namespace: namespace, count: count)
+        case let .messageOfInterestHole(location, namespace, count):
+            return MutableMessageOfInterestHolesView(postbox: postbox, location: location, namespace: namespace, count: count)
         case let .chatListTopPeers(groupId):
             return MutableChatListTopPeersView(postbox: postbox, groupId: groupId)
         case .groupFeedReadStateSyncOperations:
