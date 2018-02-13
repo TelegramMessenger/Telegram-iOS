@@ -23,6 +23,7 @@
 - (void)showHideInterface;
 - (void)hideInterfaceAnimated;
 - (void)updateInterfaceVisibility;
+- (bool)isInterfaceHidden;
 
 - (void)addItemHeaderView:(UIView *)itemHeaderView;
 - (void)removeItemHeaderView:(UIView *)itemHeaderView;

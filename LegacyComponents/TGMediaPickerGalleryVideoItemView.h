@@ -26,6 +26,7 @@
 - (void)presentScrubbingPanelAfterReload:(bool)afterReload;
 
 - (void)prepareForEditing;
+- (void)returnFromEditing;
 
 - (UIImage *)screenImage;
 - (UIImage *)transitionImage;

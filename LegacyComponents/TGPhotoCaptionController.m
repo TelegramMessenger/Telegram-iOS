@@ -57,7 +57,7 @@
             return strongSelf.view;
         };
 
-        _captionMixin.finishedWithCaption = ^(NSString *caption)
+        _captionMixin.finishedWithCaption = ^(NSString *caption, NSArray *entities)
         {
             __strong TGPhotoCaptionController *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -66,7 +66,7 @@
             strongSelf->_dismissing = true;
             
             if (strongSelf.captionSet != nil)
-                strongSelf.captionSet(caption);
+                strongSelf.captionSet(caption, entities);
             
             if (strongSelf->_keyboardHeight == 0)
                 [strongSelf->_captionMixin.inputPanel setCollapsed:true animated:true];

@@ -259,7 +259,7 @@ typedef enum
             [UIView animateWithDuration:0.25 delay:0.0 options:UIViewAnimationOptionCurveEaseInOut animations:changeBlock completion:completionBlock];
         }
         
-        _sheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:_pallete itemViews:itemViews sizeClass:sizeClass dark:_dark];
+        _sheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:_pallete itemViews:itemViews sizeClass:sizeClass dark:_dark borderless:_borderless];
         _sheetView.menuRelayout = menuRelayout;
         _sheetView.menuWidth = sheetView.menuWidth;
         _sheetView.maxHeight = _maxHeight;
@@ -279,7 +279,7 @@ typedef enum
     {
         void (^configureBlock)(void) = ^
         {
-            _sheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:_pallete itemViews:itemViews sizeClass:sizeClass dark:_dark];
+            _sheetView = [[TGMenuSheetView alloc] initWithContext:_context pallete:_pallete itemViews:itemViews sizeClass:sizeClass dark:_dark borderless:_borderless];
             _sheetView.menuRelayout = menuRelayout;
             _sheetView.maxHeight = _maxHeight;
             if (self.isViewLoaded)

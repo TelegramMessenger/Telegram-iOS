@@ -57,7 +57,7 @@
 }
 
 - (CGFloat)inputContentOffset {
-    return _style == TGSearchBarStyleLightAlwaysPlain ? 5.0f : 0.0f;
+    return _style == TGSearchBarStyleLightAlwaysPlain ? 3.0f : 0.0f;
 }
 
 - (CGFloat)searchIconOffset {
@@ -65,7 +65,7 @@
 }
 
 - (CGFloat)inputHeight {
-    return _style == TGSearchBarStyleLightAlwaysPlain ? 40.0f : 28.0f;
+    return _style == TGSearchBarStyleLightAlwaysPlain ? 36.0f : 28.0f;
 }
 
 + (CGFloat)searchBarScopeHeight
@@ -422,7 +422,7 @@
         }
         else if (_style == TGSearchBarStyleLightAlwaysPlain)
         {
-            CGFloat diameter = 10.0f;
+            CGFloat diameter = 16.0f;
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(diameter, diameter), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
             CGContextSetFillColorWithColor(context, (_pallete != nil ? _pallete.highContrastBackgroundColor : UIColorRGB(0xe4e4e4)).CGColor);

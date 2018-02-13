@@ -146,6 +146,13 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         knobFrame = CGRectMake(knobFrame.origin.y, knobFrame.origin.x, knobFrame.size.width, knobFrame.size.height);
     }
     
+    CGFloat markPosition = visualMargin + visualTotalLength / (_maximumValue - _minimumValue) * (ABS(_minimumValue) + _startValue);
+    if (_markValue > FLT_EPSILON)
+    {
+        CGContextSetFillColorWithColor(context, _backColor.CGColor);
+        [self drawRectangle:backFrame cornerRadius:0.0f context:context];
+    }
+    
     if (_bordered)
     {
         CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.6f).CGColor);

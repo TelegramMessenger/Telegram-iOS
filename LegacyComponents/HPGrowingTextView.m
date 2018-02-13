@@ -52,7 +52,7 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
 
 - (NSDictionary *)defaultAttributes {
     if (_intrinsicTextFont == nil) {
-        return @{NSFontAttributeName: TGSystemFontOfSize(16)};
+        return @{NSFontAttributeName: TGSystemFontOfSize(17)};
     } else {
         if (_intrinsicTextColor)
             return @{NSFontAttributeName: _intrinsicTextFont, NSForegroundColorAttributeName: _intrinsicTextColor};
@@ -379,9 +379,16 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
 }
 
 - (void)setAttributedText:(NSAttributedString *)newText animated:(bool)animated {
+    [self setAttributedText:newText keepFormatting:false animated:animated];
+}
+
+- (void)setAttributedText:(NSAttributedString *)newText keepFormatting:(bool)keepFormatting animated:(bool)animated {
     NSMutableAttributedString *fixedFontString = [[NSMutableAttributedString alloc] initWithAttributedString:newText];
-    [fixedFontString removeAttribute:NSFontAttributeName range:NSMakeRange(0, fixedFontString.length)];
-    [fixedFontString addAttribute:NSFontAttributeName value:_intrinsicTextFont == nil ? [UIFont systemFontOfSize:16.0f] : _intrinsicTextFont range:NSMakeRange(0, fixedFontString.length)];
+    if (!keepFormatting)
+    {
+        [fixedFontString removeAttribute:NSFontAttributeName range:NSMakeRange(0, fixedFontString.length)];
+        [fixedFontString addAttribute:NSFontAttributeName value:_intrinsicTextFont == nil ? [UIFont systemFontOfSize:17.0f] : _intrinsicTextFont range:NSMakeRange(0, fixedFontString.length)];
+    }
     
     _internalTextView.attributedText = fixedFontString;
     _internalTextView.typingAttributes = [self defaultAttributes];

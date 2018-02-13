@@ -276,6 +276,20 @@ struct TGImageSizeRecord
     return false;
 }
 
+- (int)fileSizeForUrl:(NSString *)url
+{
+    if (url == nil)
+        return 0;
+    
+    for (std::vector<TGImageSizeRecord>::iterator it = sizes.begin(); it != sizes.end(); it++)
+    {
+        if ([url isEqualToString:it->url])
+            return it->fileSize;
+    }
+    
+    return 0;
+}
+
 - (NSDictionary *)allSizes
 {
     NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];

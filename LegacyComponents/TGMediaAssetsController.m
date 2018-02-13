@@ -475,7 +475,7 @@
     }
 }
 
-- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSString *))descriptionGenerator
+- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
 {
     bool storeAssets = (_editingContext != nil) && self.shouldStoreAssets;
     
@@ -492,7 +492,7 @@
     return value;
 }
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)__unused useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)__unused useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     NSMutableArray *selectedItems = [selectionContext.selectedItems mutableCopy];
@@ -582,6 +582,7 @@
                 if (intent == TGMediaAssetsControllerSendFileIntent)
                 {
                     NSString *caption = [editingContext captionForItem:asset];
+                    NSArray *entities = [editingContext entitiesForItem:asset];
                     
                     [signals addObject:[[[TGMediaAssetImageSignals imageDataForAsset:asset allowNetworkAccess:false] map:^NSDictionary *(TGMediaAssetImageData *assetData)
                     {
@@ -594,7 +595,7 @@
                         dict[@"fileName"] = assetData.fileName;
                         dict[@"mimeType"] = TGMimeTypeForFileUTI(assetData.fileUTI);
                         
-                        id generatedItem = descriptionGenerator(dict, caption, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                         return generatedItem;
                     }] catch:^SSignal *(id error)
                     {
@@ -611,7 +612,7 @@
                             dict[@"mimeType"] = TGMimeTypeForFileUTI(asset.uniformTypeIdentifier);
                             dict[@"fileName"] = asset.fileName;
                             
-                            id generatedItem = descriptionGenerator(dict, nil, nil);
+                            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                             return generatedItem;
                         }];
                     }]];
@@ -619,6 +620,7 @@
                 else
                 {
                     NSString *caption = [editingContext captionForItem:asset];
+                    NSArray *entities = [editingContext entitiesForItem:asset];
                     id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
                     NSNumber *timer = [editingContext timerForItem:asset];
                     
@@ -635,7 +637,7 @@
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                         return generatedItem;
                     }];
                     
@@ -650,6 +652,7 @@
                             dict[@"previewImage"] = image;
                             dict[@"livePhoto"] = @true;
                             dict[@"asset"] = asset;
+                            dict[@"adjustments"] = adjustments;
                             
                             if (adjustments.paintingData.stickers.count > 0)
                                 dict[@"stickers"] = adjustments.paintingData.stickers;
@@ -659,7 +662,7 @@
                             else if (groupedId != nil && !hasAnyTimers)
                                 dict[@"groupedId"] = groupedId;
                             
-                            id generatedItem = descriptionGenerator(dict, caption, nil);
+                            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                             return generatedItem;
                         }]];
                     }
@@ -705,7 +708,7 @@
                             else if (groupedId != nil && !hasAnyTimers)
                                 dict[@"groupedId"] = groupedId;
                             
-                            id generatedItem = descriptionGenerator(dict, caption, nil);
+                            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                             return generatedItem;
                         }] catch:^SSignal *(__unused id error)
                         {
@@ -723,6 +726,7 @@
                 if (intent == TGMediaAssetsControllerSendFileIntent)
                 {
                     NSString *caption = [editingContext captionForItem:asset];
+                    NSArray *entities = [editingContext entitiesForItem:asset];
                     id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
                     
                     [signals addObject:[inlineThumbnailSignal(asset) map:^id(UIImage *image)
@@ -737,7 +741,7 @@
                         if (adjustments.paintingData.stickers.count > 0)
                             dict[@"stickers"] = adjustments.paintingData.stickers;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                         return generatedItem;
                     }]];
                 }
@@ -745,6 +749,7 @@
                 {
                     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[editingContext adjustmentsForItem:asset];
                     NSString *caption = [editingContext captionForItem:asset];
+                    NSArray *entities = [editingContext entitiesForItem:asset];
                     NSNumber *timer = [editingContext timerForItem:asset];
                     
                     UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
@@ -791,7 +796,7 @@
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                         return generatedItem;
                     }]];
                     
@@ -802,8 +807,9 @@
                 
             case TGMediaAssetGifType:
             {
-                NSString *caption = editingContext ? [editingContext captionForItem:asset] : nil;
-
+                NSString *caption = [editingContext captionForItem:asset];
+                NSArray *entities = [editingContext entitiesForItem:asset];
+                
                 [signals addObject:[[[TGMediaAssetImageSignals imageDataForAsset:asset allowNetworkAccess:false] mapToSignal:^SSignal *(TGMediaAssetImageData *assetData)
                 {
                     NSString *tempFileName = TGTemporaryFileName(nil);
@@ -822,7 +828,7 @@
                             dict[@"mimeType"] = @"video/mp4";
                             dict[@"isAnimation"] = @true;
                             
-                            id generatedItem = descriptionGenerator(dict, caption, nil);
+                            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                             return generatedItem;
                         }];
                     }
@@ -836,7 +842,7 @@
                         dict[@"fileName"] = assetData.fileName;
                         dict[@"mimeType"] = TGMimeTypeForFileUTI(assetData.fileUTI);
                         
-                        id generatedItem = descriptionGenerator(dict, caption, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                         return [SSignal single:generatedItem];
                     }
                 }] catch:^SSignal *(id error)
@@ -852,7 +858,7 @@
                         dict[@"asset"] = asset;
                         dict[@"previewImage"] = image;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                         return generatedItem;
                     }];
                 }]];

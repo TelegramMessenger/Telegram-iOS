@@ -28,6 +28,7 @@
 
 @property (nonatomic, strong, readonly) SDisposableSet *disposables;
 
+@property (nonatomic, assign) bool borderless;
 @property (nonatomic, assign) bool requiuresDimView;
 @property (nonatomic, assign) bool requiresShadow;
 @property (nonatomic, assign) bool dismissesByOutsideTap;

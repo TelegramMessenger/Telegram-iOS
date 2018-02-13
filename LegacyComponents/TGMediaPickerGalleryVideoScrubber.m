@@ -874,7 +874,7 @@ typedef enum
 
 - (void)_updateScrubberAnimationsAndResetCurrentPosition:(bool)resetCurrentPosition zoomedIn:(bool)zoomedIn
 {
-    if (_duration < FLT_EPSILON)
+    if (isnan(_duration) || _duration < FLT_EPSILON)
         return;
 
     CGPoint point = [self _scrubberPositionForPosition:_value duration:_duration zoomedIn:zoomedIn];

@@ -110,6 +110,7 @@ extern NSString *TGMentionBoldAttributeName;
 
 - (void)setText:(NSString *)newText animated:(bool)animated;
 - (void)setAttributedText:(NSAttributedString *)newText animated:(bool)animated;
+- (void)setAttributedText:(NSAttributedString *)newText keepFormatting:(bool)keepFormatting animated:(bool)animated;
 - (void)selectRange:(NSRange)range force:(bool)force;
 
 - (NSString *)textWithEntities:(__autoreleasing NSArray<TGMessageEntity *> **)entities;

@@ -110,6 +110,32 @@ NSString *const TGLocationGoogleGeocodeLocale = @"en";
     }];
 }
 
++ (SSignal *)cityForCoordinate:(CLLocationCoordinate2D)coordinate
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        CLGeocoder *geocoder = [[CLGeocoder alloc] init];
+        [geocoder reverseGeocodeLocation:[[CLLocation alloc] initWithLatitude:coordinate.latitude longitude:coordinate.longitude] completionHandler:^(NSArray *placemarks, NSError *error)
+         {
+             if (error != nil)
+             {
+                 [subscriber putError:error];
+                 return;
+             }
+             else
+             {
+                 [subscriber putNext:[placemarks.firstObject locality]];
+                 [subscriber putCompletion];
+             }
+         }];
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [geocoder cancelGeocode];
+        }];
+    }];
+}
+
 + (SSignal *)driveEta:(CLLocationCoordinate2D)destinationCoordinate
 {
     if (iosMajorVersion() < 7)

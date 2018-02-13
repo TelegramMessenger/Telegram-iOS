@@ -20,6 +20,10 @@
 		09750FCE1F30E53A001B9886 /* TGClipboardGalleryMixin.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */; };
 		09870A151F7AB3650042CCE3 /* TGLocationPulseView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09870A131F7AB3650042CCE3 /* TGLocationPulseView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09870A161F7AB3650042CCE3 /* TGLocationPulseView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09870A141F7AB3650042CCE3 /* TGLocationPulseView.m */; };
+		098C0E5A20245179007B4539 /* TGMessageEntityPhone.h in Headers */ = {isa = PBXBuildFile; fileRef = 098C0E5820245179007B4539 /* TGMessageEntityPhone.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		098C0E5B20245179007B4539 /* TGMessageEntityPhone.m in Sources */ = {isa = PBXBuildFile; fileRef = 098C0E5920245179007B4539 /* TGMessageEntityPhone.m */; };
+		098C0E5E20245191007B4539 /* TGMessageEntityCashtag.h in Headers */ = {isa = PBXBuildFile; fileRef = 098C0E5C20245191007B4539 /* TGMessageEntityCashtag.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		098C0E5F20245191007B4539 /* TGMessageEntityCashtag.m in Sources */ = {isa = PBXBuildFile; fileRef = 098C0E5D20245191007B4539 /* TGMessageEntityCashtag.m */; };
 		09A8BD761F6B4C390043A393 /* TGLocationInfoCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */; };
 		09A8BD771F6B4C390043A393 /* TGLocationInfoCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */; };
 		09A8BD7A1F6B4C6E0043A393 /* TGLocationLiveCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09A8BD781F6B4C6E0043A393 /* TGLocationLiveCell.h */; };
@@ -1174,6 +1178,10 @@
 		09750FCC1F30E53A001B9886 /* TGClipboardGalleryMixin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryMixin.m; sourceTree = "<group>"; };
 		09870A131F7AB3650042CCE3 /* TGLocationPulseView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGLocationPulseView.h; sourceTree = "<group>"; };
 		09870A141F7AB3650042CCE3 /* TGLocationPulseView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGLocationPulseView.m; sourceTree = "<group>"; };
+		098C0E5820245179007B4539 /* TGMessageEntityPhone.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityPhone.h; sourceTree = "<group>"; };
+		098C0E5920245179007B4539 /* TGMessageEntityPhone.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityPhone.m; sourceTree = "<group>"; };
+		098C0E5C20245191007B4539 /* TGMessageEntityCashtag.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityCashtag.h; sourceTree = "<group>"; };
+		098C0E5D20245191007B4539 /* TGMessageEntityCashtag.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityCashtag.m; sourceTree = "<group>"; };
 		09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationInfoCell.h; sourceTree = "<group>"; };
 		09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationInfoCell.m; sourceTree = "<group>"; };
 		09A8BD781F6B4C6E0043A393 /* TGLocationLiveCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveCell.h; sourceTree = "<group>"; };
@@ -2540,6 +2548,8 @@
 				D01777A71F1F961D0044446D /* TGMessageEntityBold.m */,
 				D01777A81F1F961D0044446D /* TGMessageEntityBotCommand.h */,
 				D01777A91F1F961D0044446D /* TGMessageEntityBotCommand.m */,
+				098C0E5C20245191007B4539 /* TGMessageEntityCashtag.h */,
+				098C0E5D20245191007B4539 /* TGMessageEntityCashtag.m */,
 				D01777AA1F1F961D0044446D /* TGMessageEntityCode.h */,
 				D01777AB1F1F961D0044446D /* TGMessageEntityCode.m */,
 				D01777AC1F1F961D0044446D /* TGMessageEntityEmail.h */,
@@ -2552,6 +2562,8 @@
 				D01777B31F1F961D0044446D /* TGMessageEntityMention.m */,
 				D01777B41F1F961D0044446D /* TGMessageEntityMentionName.h */,
 				D01777B51F1F961D0044446D /* TGMessageEntityMentionName.m */,
+				098C0E5820245179007B4539 /* TGMessageEntityPhone.h */,
+				098C0E5920245179007B4539 /* TGMessageEntityPhone.m */,
 				D01777B61F1F961D0044446D /* TGMessageEntityPre.h */,
 				D01777B71F1F961D0044446D /* TGMessageEntityPre.m */,
 				D01777B81F1F961D0044446D /* TGMessageEntityTextUrl.h */,
@@ -4328,6 +4340,7 @@
 				D07BCB701F2B6A5600ED97AA /* TGEmbedVinePlayerView.h in Headers */,
 				D07BC9131F2A380D00ED97AA /* TGPaintNeonBrush.h in Headers */,
 				D0177A701F2201F00044446D /* TGModernGalleryDefaultHeaderView.h in Headers */,
+				098C0E5A20245179007B4539 /* TGMessageEntityPhone.h in Headers */,
 				D07BCB781F2B6DB900ED97AA /* TGEmbedCoubPlayerView.h in Headers */,
 				D07BC7271F2A2A5300ED97AA /* UICollectionView+Utils.h in Headers */,
 				D01777661F1F8FE60044446D /* TGStringUtils.h in Headers */,
@@ -4338,6 +4351,7 @@
 				D07BC8041F2A2C0B00ED97AA /* PGPhotoBlurPass.h in Headers */,
 				D07BC8411F2A2D7900ED97AA /* TGPhotoCaptionController.h in Headers */,
 				D017785D1F1F961D0044446D /* TGActionMediaAttachment.h in Headers */,
+				098C0E5E20245191007B4539 /* TGMessageEntityCashtag.h in Headers */,
 				09FAA0B31F42F0E90099E8E7 /* TGEmbedTwitchPlayerView.h in Headers */,
 				D07BCA011F2A9A2B00ED97AA /* TGMediaPickerGalleryPhotoItemView.h in Headers */,
 				D07BC8081F2A2C0B00ED97AA /* PGPhotoEnhanceColorConversionFilter.h in Headers */,
@@ -4497,6 +4511,7 @@
 				D07BC99E1F2A494000ED97AA /* TGStickerCollectionViewCell.m in Sources */,
 				D01779851F2107D70044446D /* mdb.c in Sources */,
 				D0177B171F2641B10044446D /* PGCameraCaptureSession.m in Sources */,
+				098C0E5B20245179007B4539 /* TGMessageEntityPhone.m in Sources */,
 				D07BCA8B1F2B443700ED97AA /* TGMediaAssetsGifCell.m in Sources */,
 				D07BCB1E1F2B646A00ED97AA /* TGPasscodePinView.m in Sources */,
 				D07BCB1A1F2B646A00ED97AA /* TGPasscodeEntryKeyboardView.m in Sources */,
@@ -4923,6 +4938,7 @@
 				D01778F01F20CAE60044446D /* TGOverlayControllerWindow.m in Sources */,
 				D01778341F1F961D0044446D /* TGWebPageMediaAttachment.m in Sources */,
 				D07BCA9D1F2B443700ED97AA /* TGMediaAssetsUtils.m in Sources */,
+				098C0E5F20245191007B4539 /* TGMessageEntityCashtag.m in Sources */,
 				D01778431F1F961D0044446D /* TGDocumentAttributeVideo.m in Sources */,
 				D01778101F1F961D0044446D /* TGMessageEntity.m in Sources */,
 				D07BC7241F2A29E400ED97AA /* TGPhotoToolsController.m in Sources */,

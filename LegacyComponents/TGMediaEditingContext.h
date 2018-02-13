@@ -59,8 +59,10 @@
 - (SSignal *)fullSizeImageUrlForItem:(id<TGMediaEditableItem>)item;
 
 - (NSString *)captionForItem:(NSObject<TGMediaEditableItem> *)item;
+- (NSArray *)entitiesForItem:(NSObject<TGMediaEditableItem> *)item;
+
 - (SSignal *)captionSignalForItem:(NSObject<TGMediaEditableItem> *)item;
-- (void)setCaption:(NSString *)caption forItem:(NSObject<TGMediaEditableItem> *)item;
+- (void)setCaption:(NSString *)caption entities:(NSArray *)entities forItem:(NSObject<TGMediaEditableItem> *)item;
 
 - (NSObject<TGMediaEditAdjustments> *)adjustmentsForItem:(NSObject<TGMediaEditableItem> *)item;
 - (SSignal *)adjustmentsSignalForItem:(NSObject<TGMediaEditableItem> *)item;

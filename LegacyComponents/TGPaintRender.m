@@ -136,6 +136,10 @@ typedef struct
 
 + (void)_paintFromPoint:(TGPaintPoint *)lastLocation toPoint:(TGPaintPoint *)location state:(TGPaintRenderState *)state
 {
+    CGFloat lastP = lastLocation.z;
+    CGFloat p = location.z;
+    CGFloat pDelta = p - lastP;
+    
     CGFloat f, distance = TGPaintDistance(lastLocation.CGPoint, location.CGPoint);
     CGPoint vector = TGPaintSubtractPoints(location.CGPoint, lastLocation.CGPoint);
     CGPoint unitVector = CGPointMake(1.0f, 1.0f);
@@ -143,6 +147,9 @@ typedef struct
     
     CGFloat brushWeight = state.brushWeight * state.scale;
     CGFloat step = MAX(1.0f, state.spacing * brushWeight);
+    
+    CGFloat pressure = lastP;
+    CGFloat pressureStep = 0.0f;
     
     if (distance > 0.0f)
         unitVector = TGPaintMultiplyPoint(vector, 1.0f / distance);
@@ -158,7 +165,7 @@ typedef struct
     
     [state appendValuesCount:count];
     
-    for (f = state.remainder; f <= distance; f += step)
+    for (f = state.remainder; f <= distance; f += step, pressure += pressureStep)
     {
         CGFloat alpha = boldenFirst ? boldenedAlpha : state.alpha;
         [state addPoint:start size:brushWeight angle:vectorAngle alpha:alpha index:i];
@@ -168,6 +175,8 @@ typedef struct
         i++;
         
         boldenFirst = false;
+        
+        pressureStep = pDelta / (distance / step);
     }
     
     if (boldenLast)

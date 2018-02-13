@@ -8,7 +8,7 @@
 
 @interface TGPhotoCaptionController : TGPhotoEditorTabController
 
-@property (nonatomic, copy) void (^captionSet)(NSString *caption);
+@property (nonatomic, copy) void (^captionSet)(NSString *caption, NSArray *entities);
 
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 

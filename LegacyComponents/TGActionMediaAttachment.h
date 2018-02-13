@@ -43,6 +43,7 @@ typedef enum {
     TGMessageActionPaymentSent = 29,
     TGMessageActionText = 30,
     TGMessageActionGroupCall = 31,
+    TGMessageActionBotAllowed = 32,
     TGMessageActionCustom = 1000
 } TGMessageAction;
 

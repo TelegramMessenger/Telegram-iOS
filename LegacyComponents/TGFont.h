@@ -12,6 +12,7 @@ UIFont *TGUltralightSystemFontOfSize(CGFloat size);
 UIFont *TGMediumSystemFontOfSize(CGFloat size);
 UIFont *TGSemiboldSystemFontOfSize(CGFloat size);
 UIFont *TGItalicSystemFontOfSize(CGFloat size);
+UIFont *TGFixedSystemFontOfSize(CGFloat size);
 
 CTFontRef TGCoreTextSystemFontOfSize(CGFloat size);
 CTFontRef TGCoreTextMediumFontOfSize(CGFloat size);

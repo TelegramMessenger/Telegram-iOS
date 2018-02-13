@@ -125,6 +125,7 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
     
     UIUserInterfaceSizeClass _sizeClass;
     bool _dark;
+    bool _borderless;
     
     id _panHandlingItemView;
     bool _expectsPreciseContentTouch;
@@ -137,13 +138,13 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
 
 @implementation TGMenuSheetView
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context pallete:(TGMenuSheetPallete *)pallete itemViews:(NSArray *)itemViews sizeClass:(UIUserInterfaceSizeClass)sizeClass dark:(bool)dark
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context pallete:(TGMenuSheetPallete *)pallete itemViews:(NSArray *)itemViews sizeClass:(UIUserInterfaceSizeClass)sizeClass dark:(bool)dark borderless:(bool)borderless
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
     {
         _context = context;
-        self.backgroundColor = [UIColor clearColor];
+        _borderless = borderless;
         _dark = dark;
         _pallete = pallete;
         
@@ -152,6 +153,7 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
         
         _sizeClass = sizeClass;
         
+        self.backgroundColor = [UIColor clearColor];
         [self addItemViews:itemViews];
     }
     return self;
@@ -377,7 +379,7 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
 
 - (UIEdgeInsets)edgeInsets
 {
-    if (_sizeClass == UIUserInterfaceSizeClassRegular)
+    if (_sizeClass == UIUserInterfaceSizeClassRegular || _borderless)
         return UIEdgeInsetsZero;
 
     return TGMenuSheetPhoneEdgeInsets;
@@ -824,8 +826,9 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
     
     if (hasRegularItems)
     {
-        _mainBackgroundView.frame = CGRectMake(edgeInsetLeft, topInset, width, MIN(contentHeight, maxHeight));
-        _scrollView.frame = _mainBackgroundView.bounds;
+        CGFloat additionalHeight = _borderless ? 256.0f : 0.0f;
+        _mainBackgroundView.frame = CGRectMake(edgeInsetLeft, topInset, width, MIN(contentHeight, maxHeight) + additionalHeight);
+        _scrollView.frame = CGRectMake(0.0f, 0.0f, _mainBackgroundView.frame.size.width, _mainBackgroundView.frame.size.height - additionalHeight);
         _scrollView.contentSize = CGSizeMake(width, contentHeight);
     }
     

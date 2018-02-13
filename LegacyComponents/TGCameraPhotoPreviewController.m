@@ -290,11 +290,12 @@
         }
         
         NSString *caption = [editingContext captionForItem:strongSelf->_image];
+        NSArray *entities = [editingContext entitiesForItem:strongSelf->_image];
         NSArray *stickers = [editingContext adjustmentsForItem:strongSelf->_image].paintingData.stickers;
         NSNumber *timer = [editingContext timerForItem:strongSelf->_image];
         [[imageSignal deliverOn:[SQueue mainQueue]] startWithNext:^(UIImage *result)
         {
-            strongSelf.sendPressed(self, result, caption, stickers, timer);
+            strongSelf.sendPressed(self, result, caption, entities, stickers, timer);
             strongSelf.view.userInteractionEnabled = true;
             strongSelf->_dismissing = false;
         }];
@@ -338,13 +339,13 @@
         [strongSelf setInterfaceHidden:true animated:true];
     };
     
-    _captionMixin.finishedWithCaption = ^(NSString *caption)
+    _captionMixin.finishedWithCaption = ^(NSString *caption, NSArray *entities)
     {
         __strong TGCameraPhotoPreviewController *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
-        [strongSelf->_editingContext setCaption:caption forItem:strongSelf->_image];
+        [strongSelf->_editingContext setCaption:caption entities:entities forItem:strongSelf->_image];
         
         PGPhotoEditorValues *values = (PGPhotoEditorValues *)[strongSelf->_editingContext adjustmentsForItem:strongSelf->_image];
         [strongSelf updateEditorButtonsForEditorValues:values];
@@ -927,7 +928,7 @@
         [strongSelf reset];
     };
     
-    controller.captionSet = ^(NSString *caption)
+    controller.captionSet = ^(NSString *caption, NSArray *entities)
     {
         __strong TGCameraPhotoPreviewController *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -935,7 +936,7 @@
         
         [strongSelf reset];
         
-        [strongSelf->_editingContext setCaption:caption forItem:strongSelf->_image];
+        [strongSelf->_editingContext setCaption:caption entities:entities forItem:strongSelf->_image];
     };
     
     controller.requestToolbarsHidden = ^(bool hidden, bool animated)

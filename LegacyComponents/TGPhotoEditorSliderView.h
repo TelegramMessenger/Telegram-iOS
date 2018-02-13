@@ -14,6 +14,8 @@
 @property (nonatomic, assign) CGFloat startValue;
 @property (nonatomic, assign) CGFloat value;
 
+@property (nonatomic, assign) CGFloat markValue;
+
 @property (nonatomic, readonly) bool knobStartedDragging;
 
 @property (nonatomic, assign) CGFloat knobPadding;

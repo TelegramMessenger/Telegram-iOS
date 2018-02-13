@@ -79,7 +79,10 @@
 
 - (TGPhotoEditorTab)toolbarTabs
 {
-    return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorQualityTab | TGPhotoEditorTimerTab;
+    if (self.asset.subtypes & TGMediaAssetSubtypePhotoLive)
+        return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab | TGPhotoEditorTimerTab;
+    else
+        return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorQualityTab | TGPhotoEditorTimerTab;
 }
 
 - (Class)viewClass

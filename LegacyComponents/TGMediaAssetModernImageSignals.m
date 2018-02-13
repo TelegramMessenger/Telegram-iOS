@@ -184,30 +184,69 @@
     return [SSignal fail:nil];
 }
 
-+ (SSignal *)livePhotoForAsset:(TGMediaAsset *)asset
++ (SSignal *)livePhotoForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess
 {
     if (iosMajorVersion() < 9 || (iosMajorVersion() == 9 && iosMinorVersion() < 1))
         return [SSignal fail:nil];
-        
-    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    
+    SSignal *(^requestSignal)(bool) = ^(bool networkAccessAllowed)
     {
-        PHLivePhotoRequestOptions *options = [PHLivePhotoRequestOptions new];
-        options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
-        options.networkAccessAllowed = true;
-        PHImageRequestID token = [[self imageManager] requestLivePhotoForAsset:asset.backingAsset targetSize:[UIScreen mainScreen].bounds.size contentMode:PHImageContentModeDefault options:options resultHandler:^(PHLivePhoto * _Nullable livePhoto, NSDictionary * _Nullable info)
+        return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
         {
-            if (livePhoto != nil)
+            PHLivePhotoRequestOptions *options = [PHLivePhotoRequestOptions new];
+            options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
+            if (networkAccessAllowed)
             {
-                [subscriber putNext:livePhoto];
-                [subscriber putCompletion];
+                options.networkAccessAllowed = true;
+                options.progressHandler = ^(double progress, __unused NSError *error, __unused BOOL *stop, __unused NSDictionary *info)
+                {
+                    [subscriber putNext:@(progress)];
+                };
             }
+            PHImageRequestID token = [[self imageManager] requestLivePhotoForAsset:asset.backingAsset targetSize:PHImageManagerMaximumSize contentMode:PHImageContentModeDefault options:options resultHandler:^(PHLivePhoto * _Nullable livePhoto, NSDictionary * _Nullable info)
+            {
+                bool cancelled = [info[PHImageCancelledKey] boolValue];
+                if (cancelled)
+                    return;
+                
+                if (livePhoto == nil && !networkAccessAllowed)
+                {
+                    [subscriber putError:@true];
+                    return;
+                }
+                
+                if (livePhoto != nil)
+                {
+                    [subscriber putNext:livePhoto];
+                    [subscriber putCompletion];
+                }
+                else
+                {
+                    [subscriber putError:nil];
+                }
+            }];
+            
+            return [[SBlockDisposable alloc] initWithBlock:^
+            {
+                [[self imageManager] cancelImageRequest:token];
+            }];
         }];
-        
-        return [[SBlockDisposable alloc] initWithBlock:^
+    };
+    
+    if (allowNetworkAccess)
+    {
+        return [requestSignal(false) catch:^SSignal *(id error)
         {
-            [[self imageManager] cancelImageRequest:token];
+            if ([error isKindOfClass:[NSNumber class]])
+                return requestSignal(true);
+            
+            return [SSignal fail:error];
         }];
-    }];
+    }
+    else
+    {
+        return requestSignal(false);
+    }
 }
 
 + (SSignal *)imageDataForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess
@@ -687,29 +726,87 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
-        PHVideoRequestOptions *options = [[PHVideoRequestOptions alloc] init];
-        options.networkAccessAllowed = true;
-        options.progressHandler = ^(double progress, __unused NSError *error, __unused BOOL *stop, __unused NSDictionary *info)
-        {
-            [subscriber putNext:@(progress)];
-        };
+        PHImageRequestID token = PHInvalidImageRequestID;
         
-        PHImageRequestID token = [[self imageManager] requestPlayerItemForVideo:asset.backingAsset options:options resultHandler:^(AVPlayerItem *playerItem, __unused NSDictionary *info)
+        if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
         {
-            bool cancelled = [info[PHImageCancelledKey] boolValue];
-            if (cancelled)
-                return;
+            PHLivePhotoRequestOptions *requestOptions = [[PHLivePhotoRequestOptions alloc] init];
+            requestOptions.networkAccessAllowed = true;
+            requestOptions.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
+            token = [[self imageManager] requestLivePhotoForAsset:asset.backingAsset targetSize:PHImageManagerMaximumSize contentMode:PHImageContentModeDefault options:requestOptions resultHandler:^(PHLivePhoto * _Nullable livePhoto, NSDictionary * _Nullable info)
+            {
+                bool cancelled = [info[PHImageCancelledKey] boolValue];
+                if (cancelled)
+                    return;
+                
+                if (asset != nil)
+                {
+                    NSArray *assetResources = [PHAssetResource assetResourcesForLivePhoto:livePhoto];
+                    PHAssetResource *videoResource = nil;
+                    for (PHAssetResource *resource in assetResources)
+                    {
+                        if (resource.type == PHAssetResourceTypePairedVideo)
+                        {
+                            videoResource = resource;
+                            break;
+                        }
+                    }
+                    
+                    if (videoResource != nil)
+                    {
+                        NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.mov", [NSString stringWithFormat:@"%.0f", [[NSDate date] timeIntervalSince1970]]]];
+                        NSURL *fileUrl = [NSURL fileURLWithPath:filePath];
+                        
+                        [[PHAssetResourceManager defaultManager] writeDataForAssetResource:videoResource toFile:fileUrl options:nil completionHandler:^(NSError * _Nullable error)
+                        {
+                            if (error == nil)
+                            {
+                                [subscriber putNext:[[AVPlayerItem alloc] initWithURL:fileUrl]];
+                                [subscriber putCompletion];
+                            }
+                            else
+                            {
+                                [subscriber putError:nil];
+                            }
+                        }];
+                    }
+                    else
+                    {
+                        [subscriber putError:nil];
+                    }
+                }
+                else
+                {
+                    [subscriber putError:nil];
+                }
+            }];
+        }
+        else
+        {
+            PHVideoRequestOptions *options = [[PHVideoRequestOptions alloc] init];
+            options.networkAccessAllowed = true;
+            options.progressHandler = ^(double progress, __unused NSError *error, __unused BOOL *stop, __unused NSDictionary *info)
+            {
+                [subscriber putNext:@(progress)];
+            };
             
-            if (playerItem != nil)
+            token = [[self imageManager] requestPlayerItemForVideo:asset.backingAsset options:options resultHandler:^(AVPlayerItem *playerItem, __unused NSDictionary *info)
             {
-                [subscriber putNext:playerItem];
-                [subscriber putCompletion];
-            }
-            else
-            {
-                [subscriber putError:nil];
-            }
-        }];
+                bool cancelled = [info[PHImageCancelledKey] boolValue];
+                if (cancelled)
+                    return;
+                
+                if (playerItem != nil)
+                {
+                    [subscriber putNext:playerItem];
+                    [subscriber putCompletion];
+                }
+                else
+                {
+                    [subscriber putError:nil];
+                }
+            }];
+        }
         
         return [[SBlockDisposable alloc] initWithBlock:^
         {
@@ -728,91 +825,77 @@
             
             if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
             {
-                PHLivePhotoRequestOptions *requestOptions = [[PHLivePhotoRequestOptions alloc] init];
-                requestOptions.networkAccessAllowed = networkAccessAllowed;
-                if (networkAccessAllowed)
+                NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.mov", asset.identifier]];
+                NSURL *fileUrl = [NSURL fileURLWithPath:filePath];
+                if ([[NSFileManager defaultManager] fileExistsAtPath:filePath])
                 {
-                    requestOptions.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
-                    requestOptions.progressHandler = ^(double progress, __unused NSError *error, __unused BOOL *stop, __unused NSDictionary *info)
-                    {
-                        [subscriber putNext:@(progress)];
-                    };
+                    [subscriber putNext:[[AVURLAsset alloc] initWithURL:fileUrl options:nil]];
+                    [subscriber putCompletion];
                 }
-                
-//                [[PHImageManager defaultManager] requestLivePhotoForAsset:asset targetSize:[UIScreen mainScreen].bounds.size contentMode:PHImageContentModeDefault options:options resultHandler:^(PHLivePhoto * _Nullable livePhoto, NSDictionary * _Nullable info) {
-//                    if(livePhoto){
-//                        NSArray* assetResources = [PHAssetResource assetResourcesForLivePhoto:livePhoto];
-//                        PHAssetResource* videoResource = nil;
-//                        for(PHAssetResource* resource in assetResources){
-//                            if (resource.type == PHAssetResourceTypePairedVideo) {
-//                                videoResource = resource;
-//                                break;
-//                            }
-//                        }
-//                        if(videoResource){
-//                            [[PHAssetResourceManager defaultManager] writeDataForAssetResource:videoResource toFile:fileUrl options:nil completionHandler:^(NSError * _Nullable error) {
-//                                if(!error){
-//                                    completionBlock(fileUrl);
-//                                }else{
-//                                    completionBlock(nil);
-//                                }
-//                            }];
-//                        }else{
-//                            completionBlock(nil);
-                
-                token = [[self imageManager] requestLivePhotoForAsset:asset.backingAsset targetSize:[UIScreen mainScreen].bounds.size contentMode:PHImageContentModeDefault options:requestOptions resultHandler:^(PHLivePhoto * _Nullable livePhoto, NSDictionary * _Nullable info)
+                else
                 {
-                    bool cancelled = [info[PHImageCancelledKey] boolValue];
-                    if (cancelled)
-                        return;
-                    
-                    if (livePhoto == nil && !networkAccessAllowed)
+                    PHLivePhotoRequestOptions *requestOptions = [[PHLivePhotoRequestOptions alloc] init];
+                    requestOptions.networkAccessAllowed = networkAccessAllowed;
+                    if (networkAccessAllowed)
                     {
-                        [subscriber putError:@true];
-                        return;
+                        requestOptions.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
+                        requestOptions.progressHandler = ^(double progress, __unused NSError *error, __unused BOOL *stop, __unused NSDictionary *info)
+                        {
+                            [subscriber putNext:@(progress)];
+                        };
                     }
                     
-                    if (asset != nil)
+                    token = [[self imageManager] requestLivePhotoForAsset:asset.backingAsset targetSize:PHImageManagerMaximumSize contentMode:PHImageContentModeDefault options:requestOptions resultHandler:^(PHLivePhoto * _Nullable livePhoto, NSDictionary * _Nullable info)
                     {
-                        NSArray *assetResources = [PHAssetResource assetResourcesForLivePhoto:livePhoto];
-                        PHAssetResource *videoResource = nil;
-                        for (PHAssetResource *resource in assetResources)
+                        bool cancelled = [info[PHImageCancelledKey] boolValue];
+                        if (cancelled)
+                            return;
+                        
+                        if (livePhoto == nil && !networkAccessAllowed)
                         {
-                            if (resource.type == PHAssetResourceTypePairedVideo)
-                            {
-                                videoResource = resource;
-                                break;
-                            }
+                            [subscriber putError:@true];
+                            return;
                         }
                         
-                        if (videoResource != nil)
+                        if (asset != nil)
                         {
-                            NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.mov", [NSString stringWithFormat:@"%.0f", [[NSDate date] timeIntervalSince1970]]]];
-                            NSURL *fileUrl = [NSURL fileURLWithPath:filePath];
-                            
-                            [[PHAssetResourceManager defaultManager] writeDataForAssetResource:videoResource toFile:fileUrl options:nil completionHandler:^(NSError * _Nullable error)
+                            NSArray *assetResources = [PHAssetResource assetResourcesForLivePhoto:livePhoto];
+                            PHAssetResource *videoResource = nil;
+                            for (PHAssetResource *resource in assetResources)
                             {
-                                if (error == nil)
+                                if (resource.type == PHAssetResourceTypePairedVideo)
                                 {
-                                    [subscriber putNext:[[AVURLAsset alloc] initWithURL:fileUrl options:nil]];
-                                    [subscriber putCompletion];
+                                    videoResource = resource;
+                                    break;
                                 }
-                                else
+                            }
+                            
+                            if (videoResource != nil)
+                            {
+                                [[PHAssetResourceManager defaultManager] writeDataForAssetResource:videoResource toFile:fileUrl options:nil completionHandler:^(NSError * _Nullable error)
                                 {
-                                    [subscriber putError:nil];
-                                }
-                            }];
+                                    if (error == nil)
+                                    {
+                                        [subscriber putNext:[[AVURLAsset alloc] initWithURL:fileUrl options:nil]];
+                                        [subscriber putCompletion];
+                                    }
+                                    else
+                                    {
+                                        [subscriber putError:nil];
+                                    }
+                                }];
+                            }
+                            else
+                            {
+                                [subscriber putError:nil];
+                            }
                         }
                         else
                         {
                             [subscriber putError:nil];
                         }
-                    }
-                    else
-                    {
-                        [subscriber putError:nil];
-                    }
-                }];
+                    }];
+                }
             }
             else
             {

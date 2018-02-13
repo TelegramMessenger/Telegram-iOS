@@ -273,6 +273,7 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 - (bool)hasUnreadContent;
 
 - (int32_t)actualDate;
+- (NSString *)caption;
 
 @end
 
@@ -291,3 +292,11 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 
 @end
 
+@interface TGMessageIndex : NSObject
+
+@property (nonatomic, readonly) int64_t peerId;
+@property (nonatomic, readonly) int32_t messageId;
+
++ (instancetype)indexWithPeerId:(int64_t)peerId messageId:(int32_t)messageId;
+
+@end

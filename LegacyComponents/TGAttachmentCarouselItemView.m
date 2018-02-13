@@ -656,7 +656,10 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         if (cell.isZoomed != _zoomedIn)
         {
             cell.isZoomed = _zoomedIn;
-            [cell setSignal:[self _signalForItem:asset refresh:true onlyThumbnail:false]];
+            if (cell.asset == nil)
+                [cell setAsset:asset signal:[self _signalForItem:asset refresh:true onlyThumbnail:false]];
+            else
+                [cell setSignal:[self _signalForItem:asset refresh:true onlyThumbnail:false]];
         }
     }
 }
@@ -971,16 +974,16 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         pivotIndex = _pivotOutItemIndex;
 
         if (self.frame.size.width <= 320)
-            limit = 3;
+            limit = 4;
         else
-            limit = 5;
+            limit = 6;
     }
+    
+    cell.selectionContext = _selectionContext;
+    cell.editingContext = _editingContext;
     
     if (!(pivotIndex != NSNotFound && (indexPath.row < pivotIndex - limit || indexPath.row > pivotIndex + limit)))
     {
-        cell.selectionContext = _selectionContext;
-        cell.editingContext = _editingContext;
-        
         if (![asset isEqual:cell.asset] || cell.isZoomed != _zoomedIn)
         {
             cell.isZoomed = _zoomedIn;

@@ -96,6 +96,12 @@ UIFont *TGItalicSystemFontOfSize(CGFloat size)
     return [UIFont italicSystemFontOfSize:size];
 }
 
+
+UIFont *TGFixedSystemFontOfSize(CGFloat size)
+{
+    return [UIFont fontWithName:@"Courier" size:size];
+}
+
 @implementation TGFont
 
 + (UIFont *)systemFontOfSize:(CGFloat)size

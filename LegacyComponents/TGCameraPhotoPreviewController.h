@@ -18,7 +18,7 @@
 @property (nonatomic, copy) void (^photoEditorHidden)(void);
 
 @property (nonatomic, copy) void(^retakePressed)(void);
-@property (nonatomic, copy) void(^sendPressed)(TGOverlayController *controller, UIImage *resultImage, NSString *caption, NSArray *stickers, NSNumber *timer);
+@property (nonatomic, copy) void(^sendPressed)(TGOverlayController *controller, UIImage *resultImage, NSString *caption, NSArray *entities, NSArray *stickers, NSNumber *timer);
 
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, assign) bool shouldStoreAssets;

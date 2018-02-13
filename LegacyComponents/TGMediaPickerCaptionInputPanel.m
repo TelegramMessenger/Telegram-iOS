@@ -1,5 +1,8 @@
 #import "TGMediaPickerCaptionInputPanel.h"
 
+#import "TGMessage.h"
+#import "TGInputTextTag.h"
+
 #import "LegacyComponentsInternal.h"
 #import "TGImageUtils.h"
 #import "TGFont.h"
@@ -30,6 +33,8 @@ static void setViewFrame(UIView *view, CGRect frame)
     NSString *_caption;
     bool _dismissing;
     bool _dismissDisabled;
+    
+    NSArray *_entities;
     
     UIView *_wrapperView;
     UIView *_backgroundView;
@@ -162,7 +167,6 @@ static void setViewFrame(UIView *view, CGRect frame)
     UIEdgeInsets inputFieldInternalEdgeInsets = [self _inputFieldInternalEdgeInsets];
     _inputField = [[HPGrowingTextView alloc] initWithKeyCommandController:_keyCommandController];
     _inputField.frame = CGRectMake(inputFieldInternalEdgeInsets.left, inputFieldInternalEdgeInsets.top + TGRetinaPixel, _inputFieldClippingContainer.frame.size.width - inputFieldInternalEdgeInsets.left - 24, _inputFieldClippingContainer.frame.size.height);
-    _inputField.disableFormatting = true;
     _inputField.textColor = [UIColor whiteColor];
     _inputField.placeholderView = _placeholderLabel;
     _inputField.font = TGSystemFontOfSize(16);
@@ -183,7 +187,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     
     _inputField.internalTextView.scrollIndicatorInsets = UIEdgeInsetsMake(-inputFieldInternalEdgeInsets.top, 0, 5 - TGRetinaPixel, 0);
     
-    _inputField.text = _caption;
+    [_inputField setAttributedText:[TGMediaPickerCaptionInputPanel attributedStringForText:_caption entities:_entities fontSize:16.0f] keepFormatting:true animated:false];
     
     [_inputFieldClippingContainer addSubview:_inputField];
 }
@@ -219,15 +223,17 @@ static void setViewFrame(UIView *view, CGRect frame)
     if (_inputField.internalTextView.isFirstResponder)
         [TGHacks applyCurrentKeyboardAutocorrectionVariant];
     
-    NSMutableString *text = [[NSMutableString alloc] initWithString:_inputField.text == nil ? @"" : _inputField.text];
+    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithAttributedString:_inputField.text == nil ? [[NSAttributedString alloc] initWithString:@""] : _inputField.attributedText]; //[[NSMutableAttributedString alloc] initWithString:_inputField.text == nil ? @"" : _inputField.text];
+    NSMutableString *usualString = [text.string mutableCopy];
     int textLength = (int)text.length;
     for (int i = 0; i < textLength; i++)
     {
-        unichar c = [text characterAtIndex:i];
+        unichar c = [usualString characterAtIndex:i];
         
         if (c == ' ' || c == '\t' || c == '\n')
         {
             [text deleteCharactersInRange:NSMakeRange(i, 1)];
+            [usualString deleteCharactersInRange:NSMakeRange(i, 1)];
             i--;
             textLength--;
         }
@@ -237,22 +243,26 @@ static void setViewFrame(UIView *view, CGRect frame)
     
     for (int i = textLength - 1; i >= 0; i--)
     {
-        unichar c = [text characterAtIndex:i];
+        unichar c = [usualString characterAtIndex:i];
         
         if (c == ' ' || c == '\t' || c == '\n')
         {
             [text deleteCharactersInRange:NSMakeRange(i, 1)];
+            [usualString deleteCharactersInRange:NSMakeRange(i, 1)];
             textLength--;
         }
         else
             break;
     }
     
-    _inputField.internalTextView.text = text;
+    _inputField.internalTextView.attributedText = text;
+    
+    __autoreleasing NSArray *entities = nil;
+    NSString *finalText = [_inputField textWithEntities:&entities];
     
     id<TGMediaPickerCaptionInputPanelDelegate> delegate = self.delegate;
-    if ([delegate respondsToSelector:@selector(inputPanelRequestedSetCaption:text:)])
-        [delegate inputPanelRequestedSetCaption:self text:text];
+    if ([delegate respondsToSelector:@selector(inputPanelRequestedSetCaption:text:entities:)])
+        [delegate inputPanelRequestedSetCaption:self text:finalText entities:entities];
     
     _dismissing = true;
     
@@ -362,17 +372,18 @@ static void setViewFrame(UIView *view, CGRect frame)
 
 - (void)setCaption:(NSString *)caption
 {
-    [self setCaption:caption animated:false];
+    [self setCaption:caption entities:nil animated:false];
 }
 
-- (void)setCaption:(NSString *)caption animated:(bool)animated
+- (void)setCaption:(NSString *)caption entities:(NSArray *)entities animated:(bool)animated
 {
     NSString *previousCaption = _caption;
     _caption = caption;
+    _entities = entities;
     
     if (animated)
     {
-        _inputFieldOnelineLabel.text = [self oneLinedCaptionForText:caption];
+        _inputFieldOnelineLabel.attributedText = [self oneLinedCaptionForText:caption entities:entities];
         
         if ([previousCaption isEqualToString:caption] || (previousCaption.length == 0 && caption.length == 0))
             return;
@@ -415,13 +426,48 @@ static void setViewFrame(UIView *view, CGRect frame)
     }
     else
     {
-        _inputFieldOnelineLabel.text = [self oneLinedCaptionForText:caption];
+        _inputFieldOnelineLabel.attributedText = [self oneLinedCaptionForText:caption entities:entities];
         _inputFieldOnelineLabel.hidden = (caption.length == 0);
         _placeholderLabel.hidden = !_inputFieldOnelineLabel.hidden;
         _fieldBackground.alpha = _placeholderLabel.hidden ? 1.0f : 0.0f;
     }
     
-    _inputField.text = caption;
+    [self.inputField setAttributedText:[TGMediaPickerCaptionInputPanel attributedStringForText:_caption entities:_entities fontSize:16.0f] keepFormatting:true animated:false];
+}
+
++ (NSAttributedString *)attributedStringForText:(NSString *)text entities:(NSArray *)entities fontSize:(CGFloat)fontSize {
+    if (text == nil) {
+        return nil;
+    }
+    NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:text attributes:@{NSFontAttributeName: TGSystemFontOfSize(fontSize)}];
+    for (id entity in entities) {
+        if ([entity isKindOfClass:[TGMessageEntityMentionName class]]) {
+            TGMessageEntityMentionName *mentionEntity = entity;
+            static int64_t nextId = 1000000;
+            int64_t uniqueId = nextId;
+            nextId++;
+            @try {
+                [attributedString addAttributes:@{TGMentionUidAttributeName: [[TGInputTextTag alloc] initWithUniqueId:uniqueId left:true attachment:@(mentionEntity.userId)]} range:mentionEntity.range];
+            } @catch(NSException *e) {
+            }
+        }
+        else if (iosMajorVersion() >= 7) {
+            if ([entity isKindOfClass:[TGMessageEntityBold class]]) {
+                TGMessageEntityBold *boldEntity = entity;
+                @try {
+                    [attributedString addAttributes:@{NSFontAttributeName: TGBoldSystemFontOfSize(fontSize)} range:boldEntity.range];
+                } @catch(NSException *e) {
+                }
+            } else if ([entity isKindOfClass:[TGMessageEntityItalic class]]) {
+                TGMessageEntityItalic *italicEntity = entity;
+                @try {
+                    [attributedString addAttributes:@{NSFontAttributeName: TGItalicSystemFontOfSize(fontSize)} range:italicEntity.range];
+                } @catch(NSException *e) {
+                }
+            }
+        }
+    }
+    return attributedString;
 }
 
 - (void)updateCounterWithText:(NSString *)text
@@ -530,7 +576,12 @@ static void setViewFrame(UIView *view, CGRect frame)
 - (void)growingTextViewDidEndEditing:(HPGrowingTextView *)__unused growingTextView
 {
     _caption = _inputField.text;
-    _inputFieldOnelineLabel.text = [self oneLinedCaptionForText:_caption];
+    
+    __autoreleasing NSArray *entities = nil;
+    [_inputField textWithEntities:&entities];
+    _entities = entities;
+    
+    _inputFieldOnelineLabel.attributedText = [self oneLinedCaptionForText:_caption entities:_entities];
     _inputFieldOnelineLabel.alpha = 0.0f;
     _inputFieldOnelineLabel.hidden = false;
     
@@ -707,7 +758,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     self.caption = [NSString stringWithFormat:@"%@\n", self.caption];
 }
 
-- (NSString *)oneLinedCaptionForText:(NSString *)text
+- (NSMutableAttributedString *)oneLinedCaptionForText:(NSString *)text entities:(NSArray *)entities
 {
     static NSString *tokenString = nil;
     if (tokenString == nil)
@@ -719,14 +770,14 @@ static void setViewFrame(UIView *view, CGRect frame)
     if (text == nil)
         return nil;
     
-    NSMutableString *string = [[NSMutableString alloc] initWithString:text];
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithAttributedString:[TGMediaPickerCaptionInputPanel attributedStringForText:text entities:entities fontSize:16.0f]];
     
     for (NSUInteger i = 0; i < string.length; i++)
     {
         unichar c = [text characterAtIndex:i];
         if (c == '\t' || c == '\n')
         {
-            [string insertString:tokenString atIndex:i];
+            [string insertAttributedString:[[NSAttributedString alloc] initWithString:tokenString attributes:@{NSFontAttributeName:TGSystemFontOfSize(16.0f)}] atIndex:i];
             break;
         }
     }

@@ -269,7 +269,8 @@ typedef enum {
 @property (nonatomic, strong) TGChannelAdminRights *channelAdminRights;
 @property (nonatomic, strong) TGChannelBannedRights *channelBannedRights;
 
-@property (nonatomic) int32_t feedId;
+@property (nonatomic, strong) NSNumber *feedId;
+- (int64_t)conversationFeedId;
 
 - (id)initWithConversationId:(int64_t)conversationId unreadCount:(int)unreadCount serviceUnreadCount:(int)serviceUnreadCount;
 
@@ -296,5 +297,7 @@ typedef enum {
 - (bool)isMessageUnread:(int32_t)messageId date:(int32_t)messageDate outgoing:(bool)outgoing;
 
 - (bool)pinnedToTop;
+
+- (int32_t)searchMessageId;
 
 @end

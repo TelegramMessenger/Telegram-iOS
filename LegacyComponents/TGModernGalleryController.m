@@ -110,6 +110,11 @@
     return [super preferredScreenEdgesDeferringSystemGestures];
 }
 
+- (bool)prefersHomeIndicatorAutoHidden
+{
+    return [_view isInterfaceHidden];
+}
+
 - (void)complexDismiss
 {
     if (_completedTransitionOut != nil)
@@ -301,6 +306,9 @@
 - (void)itemViewDidRequestInterfaceShowHide:(TGModernGalleryItemView *)__unused itemView
 {
     [_view showHideInterface];
+    
+    if ([self respondsToSelector:@selector(setNeedsUpdateOfHomeIndicatorAutoHidden)])
+        [self setNeedsUpdateOfHomeIndicatorAutoHidden];
 }
 
 - (void)itemViewDidRequestGalleryDismissal:(TGModernGalleryItemView *)__unused itemView animated:(bool)animated
@@ -1623,12 +1631,12 @@ static CGFloat transformRotation(CGAffineTransform transform)
             
             [_view.interfaceView itemFocused:_model.items[_lastReportedFocusedIndex] itemView:currentItemView];
             
-            [_defaultHeaderView setItem:_model.items[_lastReportedFocusedIndex]];
-            [_defaultFooterView setItem:_model.items[_lastReportedFocusedIndex]];
-            
             if (previousFocusedIndex < _model.items.count)
                 [[self itemViewForItem:_model.items[previousFocusedIndex]] setFocused:false];
             [[self itemViewForItem:_model.items[_lastReportedFocusedIndex]] setFocused:true];
+            
+            [_defaultHeaderView setItem:_model.items[_lastReportedFocusedIndex]];
+            [_defaultFooterView setItem:_model.items[_lastReportedFocusedIndex]];
         }
     }
     

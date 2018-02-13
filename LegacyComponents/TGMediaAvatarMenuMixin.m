@@ -310,7 +310,7 @@
         [strongCameraView attachPreviewViewAnimated:true];
     };
     
-    controller.finishedWithPhoto = ^(__unused TGOverlayController *controller, UIImage *resultImage, __unused NSString *caption, __unused NSArray *stickers, __unused NSNumber *timer)
+    controller.finishedWithPhoto = ^(__unused TGOverlayController *controller, UIImage *resultImage, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer)
     {
         __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
         if (strongSelf == nil)

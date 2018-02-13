@@ -7,6 +7,7 @@
 @optional
 - (void)setTransitionOutProgress:(CGFloat)transitionOutProgress manual:(bool)manual;
 - (void)setContentHidden:(bool)contentHidden;
+- (void)setCustomContentView:(UIView *)contentView;
 
 - (void)setInterItemTransitionProgress:(CGFloat)progress;
 

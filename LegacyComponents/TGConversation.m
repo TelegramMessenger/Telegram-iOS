@@ -456,7 +456,7 @@
 
 @implementation TGConversation
 
-- (id)initWithConversationId:(int64_t)conversationId unreadCount:(int)unreadCount serviceUnreadCount:(int)serviceUnreadCount
+- (instancetype)initWithConversationId:(int64_t)conversationId unreadCount:(int)unreadCount serviceUnreadCount:(int)serviceUnreadCount
 {
     self = [super init];
     if (self != nil)
@@ -525,7 +525,9 @@
         _channelAdminRights = [coder decodeObjectForCKey:"car"];
         _channelBannedRights = [coder decodeObjectForCKey:"cbr"];
         _messageFlags = [coder decodeInt64ForCKey:"mf"];
-        _feedId = [coder decodeInt32ForCKey:"fi"];
+        
+        int32_t feedId = [coder decodeInt32ForCKey:"fi"];
+        _feedId = feedId != -1 ? @(feedId) : nil;
     }
     return self;
 }
@@ -576,7 +578,7 @@
     [coder encodeObject:_channelAdminRights forCKey:"car"];
     [coder encodeObject:_channelBannedRights forCKey:"cbr"];
     [coder encodeInt64:_messageFlags forCKey:"mf"];
-    [coder encodeInt32:_feedId forCKey:"fi"];
+    [coder encodeInt32:_feedId != nil ? _feedId.intValue : -1 forCKey:"fi"];
 }
 
 - (id)copyWithZone:(NSZone *)__unused zone
@@ -678,6 +680,10 @@
     _deliveryError = message.deliveryState == TGMessageDeliveryStateFailed;
     _deliveryState = message.deliveryState;
     _messageFlags = message.flags;
+    if (_maxKnownMessageId > TGMessageLocalMidBaseline)
+        _maxKnownMessageId = 0;
+    if (message.mid < TGMessageLocalMidBaseline && (message.mid > _maxKnownMessageId))
+        _maxKnownMessageId = message.mid;
 }
 
 - (void)mergeEmptyMessage {
@@ -1031,7 +1037,7 @@
     }
     self.channelAdminRights = conversation.channelAdminRights;
     self.channelBannedRights = conversation.channelBannedRights;
-    self.feedId = conversation.feedId;
+    _feedId = conversation->_feedId;
 }
 
 - (void)mergeChannel:(TGConversation *)channel {
@@ -1054,8 +1060,8 @@
         self.channelAdminRights = channel.channelAdminRights;
         self.channelBannedRights = channel.channelBannedRights;
         
-        if (channel.flags & (1 << 18))
-            self.feedId = channel.feedId;
+        if (channel->_feedId != nil)
+            _feedId = channel->_feedId;
     }
     self.everybodyCanAddMembers = channel.everybodyCanAddMembers;
     _channelIsReadOnly = channel.channelIsReadOnly;
@@ -1287,6 +1293,16 @@
 
 - (bool)pinnedToTop {
     return _pinnedDate >= TGConversationPinnedDateBase;
+}
+
+- (int64_t)conversationFeedId {
+    if (_feedId.intValue == 0)
+        return 0;
+    return TGPeerIdFromAdminLogId(_feedId.intValue);
+}
+
+- (int32_t)searchMessageId {
+    return [self.additionalProperties[@"searchMessageId"] intValue];
 }
 
 @end

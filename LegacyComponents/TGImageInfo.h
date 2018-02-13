@@ -24,6 +24,7 @@
 - (NSString *)imageUrlForSizeLargerThanSize:(CGSize)size actualSize:(CGSize *)actualSize;
 
 - (bool)containsSizeWithUrl:(NSString *)url;
+- (int)fileSizeForUrl:(NSString *)url;
 
 - (NSDictionary *)allSizes;
 - (bool)empty;

@@ -406,6 +406,8 @@ const NSInteger TGYTPlayerStateBufferingCode = 3;
             }
             
             NSString *timeParam = params[@"t"];
+            if (timeParam == nil)
+                timeParam = params[@"time_continue"];
             if (timeParam != nil)
             {
                 NSTimeInterval position = 0.0;

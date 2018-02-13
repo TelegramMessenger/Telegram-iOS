@@ -147,6 +147,14 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
     _scrollView.frame = scrollViewFrame;
 }
 
+- (bool)isInterfaceHidden
+{
+    if ([_interfaceView allowsHide])
+        return _interfaceView.alpha < FLT_EPSILON;
+    else
+        return true;
+}
+
 - (void)showHideInterface
 {
     if ([_interfaceView allowsHide])

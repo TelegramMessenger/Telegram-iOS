@@ -137,24 +137,10 @@
             strongSelf->_donePressed(strongSelf->_currentItem);
         };
         
-        static dispatch_once_t onceToken;
-        static UIImage *muteBackground;
-        dispatch_once(&onceToken, ^
-        {
-            CGRect rect = CGRectMake(0, 0, 39.0f, 39.0f);
-            UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
-            CGContextRef context = UIGraphicsGetCurrentContext();
-            CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.6f).CGColor);
-            CGContextFillEllipseInRect(context, CGRectInset(rect, 3, 3));
-            
-            muteBackground = UIGraphicsGetImageFromCurrentImageContext();
-            UIGraphicsEndImageContext();
-        });
-        
         _muteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 39.0f, 39.0f)];
         _muteButton.hidden = true;
         _muteButton.adjustsImageWhenHighlighted = false;
-        [_muteButton setBackgroundImage:muteBackground forState:UIControlStateNormal];
+        [_muteButton setBackgroundImage:[TGPhotoEditorInterfaceAssets gifBackgroundImage] forState:UIControlStateNormal];
         [_muteButton setImage:[TGPhotoEditorInterfaceAssets gifIcon] forState:UIControlStateNormal];
         [_muteButton setImage:[TGPhotoEditorInterfaceAssets gifActiveIcon] forState:UIControlStateSelected];
         [_muteButton setImage:[TGPhotoEditorInterfaceAssets gifActiveIcon]  forState:UIControlStateSelected | UIControlStateHighlighted];
@@ -296,17 +282,24 @@
             [strongSelf setItemHeaderViewHidden:true animated:true];
         };
         
-        _captionMixin.finishedWithCaption = ^(NSString *caption)
+        _captionMixin.finishedWithCaption = ^(NSString *caption, NSArray *entities)
         {
             __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
             
+            TGModernGalleryItemView *currentItemView = strongSelf->_currentItemView;
+            if ([currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]])
+            {
+                TGMediaPickerGalleryVideoItemView *videoItemView = (TGMediaPickerGalleryVideoItemView *)strongSelf->_currentItemView;
+                [videoItemView returnFromEditing];
+            }
+            
             [strongSelf setSelectionInterfaceHidden:false delay:0.25 animated:true];
             [strongSelf setItemHeaderViewHidden:false animated:true];
             
             if (strongSelf.captionSet != nil)
-                strongSelf.captionSet(strongSelf->_currentItem, caption);
+                strongSelf.captionSet(strongSelf->_currentItem, caption, entities);
             
             [strongSelf updateEditorButtonsForItem:strongSelf->_currentItem animated:false];
         };
@@ -538,7 +531,7 @@
             [strongSelf->_portraitToolbarView setEditButtonsEnabled:available animated:true];
             [strongSelf->_landscapeToolbarView setEditButtonsEnabled:available animated:true];
             
-            bool sendableAsGif = [strongItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]]; // || ([strongItemView.item isKindOfClass:[TGMediaPickerGalleryPhotoItem class]] && ((TGMediaPickerGalleryPhotoItem *)strongItemView.item).asset.subtypes & TGMediaAssetSubtypePhotoLive);
+            bool sendableAsGif = [strongItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
             strongSelf->_muteButton.hidden = !sendableAsGif;
         }
     }]];
@@ -682,13 +675,15 @@
             [strongSelf updateEditorButtonsForAdjustments:adjustments dimensions:originalSize timer:timer];
         }]];
         
-        [_captionDisposable setDisposable:[[galleryEditableItem.editingContext captionSignalForItem:editableMediaItem] startWithNext:^(NSString *caption)
+        [_captionDisposable setDisposable:[[galleryEditableItem.editingContext captionSignalForItem:editableMediaItem] startWithNext:^(NSDictionary *captionWithEntities)
         {
             __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
             
-            [strongSelf->_captionMixin setCaption:caption animated:animated];
+            NSString *caption = captionWithEntities[@"caption"];
+            NSArray *entities = captionWithEntities[@"entities"];
+            [strongSelf->_captionMixin setCaption:caption entities:entities animated:animated];
         }]];
     }
     else
@@ -696,7 +691,7 @@
         [_adjustmentsDisposable setDisposable:nil];
         [_captionDisposable setDisposable:nil];
         [self updateEditorButtonsForAdjustments:nil dimensions:CGSizeZero timer:nil];
-        [_captionMixin setCaption:nil animated:animated];
+        [_captionMixin setCaption:nil entities:nil animated:animated];
     }
 }
 
@@ -705,11 +700,7 @@
     TGPhotoEditorTab highlightedButtons = [TGPhotoEditorTabController highlightedButtonsForEditorValues:adjustments forAvatar:false];
     TGPhotoEditorTab disabledButtons = TGPhotoEditorNoneTab;
     
-    if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]])
-    {
-        TGMediaVideoEditAdjustments *videoAdjustments = (TGMediaVideoEditAdjustments *)adjustments;
-        _muteButton.selected = videoAdjustments.sendAsGif;
-    }
+    _muteButton.selected = adjustments.sendAsGif;
     
     TGPhotoEditorButton *qualityButton = [_portraitToolbarView buttonForTab:TGPhotoEditorQualityTab];
     if (qualityButton != nil)
@@ -773,6 +764,9 @@
         if (value > 0)
             highlightedButtons |= TGPhotoEditorTimerTab;
     }
+    
+    if (adjustments.sendAsGif)
+        disabledButtons |= TGPhotoEditorToolsTab | TGPhotoEditorQualityTab;
     
     [_portraitToolbarView setEditButtonsHighlighted:highlightedButtons];
     [_landscapeToolbarView setEditButtonsHighlighted:highlightedButtons];
@@ -1095,7 +1089,7 @@
         return;
     
     TGModernGalleryItemView *currentItemView = _currentItemView;
-    bool sendableAsGif = [currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]]; // || ([currentItemView.item isKindOfClass:[TGMediaPickerGalleryPhotoItem class]] && ((TGMediaPickerGalleryPhotoItem *)currentItemView.item).asset.subtypes & TGMediaAssetSubtypePhotoLive);
+    bool sendableAsGif = [currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]] || ([currentItemView.item isKindOfClass:[TGMediaPickerGalleryPhotoItem class]] && ((TGMediaPickerGalleryPhotoItem *)currentItemView.item).asset.subtypes & TGMediaAssetSubtypePhotoLive);
     if (sendableAsGif)
         [(TGMediaPickerGalleryVideoItemView *)currentItemView toggleSendAsGif];
 }
@@ -1296,7 +1290,7 @@
             break;
             
         default:
-            frame = CGRectMake(screenEdges.left + 5, screenEdges.top + 5, _muteButton.frame.size.width, _muteButton.frame.size.height);
+            frame = CGRectMake(screenEdges.left + 5, screenEdges.top + 6, _muteButton.frame.size.width, _muteButton.frame.size.height);
             break;
     }
     

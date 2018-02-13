@@ -4,19 +4,19 @@ typedef enum
 {
     TGPhotoEditorNoneTab        = 0,
     TGPhotoEditorCropTab        = 1 << 0,
-    TGPhotoEditorToolsTab       = 1 << 1,
-    TGPhotoEditorRotateTab      = 1 << 3,
-    TGPhotoEditorPaintTab       = 1 << 4,
-    TGPhotoEditorStickerTab     = 1 << 5,
-    TGPhotoEditorTextTab        = 1 << 6,
+    TGPhotoEditorStickerTab     = 1 << 1,
+    TGPhotoEditorPaintTab       = 1 << 2,
+    TGPhotoEditorEraserTab      = 1 << 3,
+    TGPhotoEditorTextTab        = 1 << 4,
+    TGPhotoEditorToolsTab       = 1 << 5,
+    TGPhotoEditorRotateTab      = 1 << 6,
     TGPhotoEditorQualityTab     = 1 << 7,
-    TGPhotoEditorEraserTab      = 1 << 8,
+    TGPhotoEditorTimerTab       = 1 << 8,
     TGPhotoEditorMirrorTab      = 1 << 9,
     TGPhotoEditorAspectRatioTab = 1 << 10,
-    TGPhotoEditorBlurTab        = 1 << 11,
-    TGPhotoEditorCurvesTab      = 1 << 12,
-    TGPhotoEditorTintTab        = 1 << 13,
-    TGPhotoEditorTimerTab       = 1 << 14
+    TGPhotoEditorTintTab        = 1 << 11,
+    TGPhotoEditorBlurTab        = 1 << 12,
+    TGPhotoEditorCurvesTab      = 1 << 13,
 } TGPhotoEditorTab;
 
 typedef enum

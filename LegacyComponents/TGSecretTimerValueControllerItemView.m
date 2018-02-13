@@ -28,7 +28,7 @@
         _numberLabel.backgroundColor = nil;
         _numberLabel.opaque = false;
         _numberLabel.font = TGSystemFontOfSize(24.0f);
-        if (dark)
+        if (dark && iosMajorVersion() > 7)
             _numberLabel.textColor = [UIColor whiteColor];
         [self addSubview:_numberLabel];
         
@@ -36,7 +36,7 @@
         _unitLabel.backgroundColor = nil;
         _unitLabel.opaque = false;
         _unitLabel.font = TGMediumSystemFontOfSize(16.0f);
-        if (dark)
+        if (dark && iosMajorVersion() > 7)
             _unitLabel.textColor = [UIColor whiteColor];
         [self addSubview:_unitLabel];
     }

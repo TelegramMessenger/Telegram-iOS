@@ -36,8 +36,9 @@
 
 @property (nonatomic, readonly, strong) id<TGMediaEditableItem> item;
 @property (nonatomic, readonly, strong) NSString *caption;
+@property (nonatomic, readonly, strong) NSArray *entities;
 
-+ (instancetype)captionUpdateWithItem:(id<TGMediaEditableItem>)item caption:(NSString *)caption;
++ (instancetype)captionUpdateWithItem:(id<TGMediaEditableItem>)item caption:(NSString *)caption entities:(NSArray *)entities;
 
 @end
 
@@ -64,6 +65,7 @@
     NSString *_contextId;
     
     NSMutableDictionary *_captions;
+    NSMutableDictionary *_entities;
     NSMutableDictionary *_adjustments;
     NSMutableDictionary *_timers;
     NSNumber *_timer;
@@ -111,6 +113,7 @@
         _queue = [[SQueue alloc] init];
 
         _captions = [[NSMutableDictionary alloc] init];
+        _entities = [[NSMutableDictionary alloc] init];
         _adjustments = [[NSMutableDictionary alloc] init];
         _timers = [[NSMutableDictionary alloc] init];
         
@@ -342,7 +345,16 @@
     return _captions[itemId];
 }
 
-- (void)setCaption:(NSString *)caption forItem:(id<TGMediaEditableItem>)item
+- (NSArray *)entitiesForItem:(NSObject<TGMediaEditableItem> *)item
+{
+    NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
+    if (itemId == nil)
+        return nil;
+    
+    return _entities[itemId];
+}
+
+- (void)setCaption:(NSString *)caption entities:(NSArray *)entities forItem:(id<TGMediaEditableItem>)item
 {
     NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
     if (itemId == nil)
@@ -353,7 +365,12 @@
     else
         [_captions removeObjectForKey:itemId];
     
-    _captionPipe.sink([TGMediaCaptionUpdate captionUpdateWithItem:item caption:caption]);
+    if (entities.count > 0)
+        _entities[itemId] = entities;
+    else
+        [_entities removeObjectForKey:itemId];
+    
+    _captionPipe.sink([TGMediaCaptionUpdate captionUpdateWithItem:item caption:caption entities:entities]);
 }
 
 - (SSignal *)captionSignalForItem:(NSObject<TGMediaEditableItem> *)item
@@ -364,10 +381,28 @@
         return [update.item.uniqueIdentifier isEqualToString:uniqueIdentifier];
     }] map:^NSString *(TGMediaCaptionUpdate *update)
     {
-        return update.caption;
+        return [self _dictionaryWithCaption:update.caption entities:update.entities];;
     }];
     
-    return [[SSignal single:[self captionForItem:item]] then:updateSignal];
+    return [[SSignal single:[self _captionWithEntitiesForItem:item]] then:updateSignal];
+}
+
+- (NSDictionary *)_captionWithEntitiesForItem:(id<TGMediaEditableItem>)item
+{
+    return [self _dictionaryWithCaption:[self captionForItem:item] entities:[self entitiesForItem:item]];
+}
+
+- (NSDictionary *)_dictionaryWithCaption:(NSString *)caption entities:(NSArray *)entities
+{
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+    if (caption.length == 0)
+        return nil;
+    
+    dict[@"caption"] = caption;
+    if (entities.count > 0)
+        dict[@"entities"] = entities;
+    
+    return dict;
 }
 
 #pragma mark -
@@ -938,11 +973,12 @@
 
 @implementation TGMediaCaptionUpdate
 
-+ (instancetype)captionUpdateWithItem:(id<TGMediaEditableItem>)item caption:(NSString *)caption
++ (instancetype)captionUpdateWithItem:(id<TGMediaEditableItem>)item caption:(NSString *)caption entities:(NSArray *)entities
 {
     TGMediaCaptionUpdate *update = [[TGMediaCaptionUpdate alloc] init];
     update->_item = item;
     update->_caption = caption;
+    update->_entities = entities;
     return update;
 }
 

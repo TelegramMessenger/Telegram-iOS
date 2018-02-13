@@ -11,7 +11,9 @@
 @property (nonatomic, readonly) int32_t packHash;
 @property (nonatomic, readonly) bool hidden;
 @property (nonatomic, readonly) bool isMask;
+@property (nonatomic, readonly) bool isFeatured;
+@property (nonatomic, readonly) int32_t installedDate;
 
-- (instancetype)initWithPackReference:(id<TGStickerPackReference>)packReference title:(NSString *)title stickerAssociations:(NSArray *)stickerAssociations documents:(NSArray *)documents packHash:(int32_t)packHash hidden:(bool)hidden isMask:(bool)isMask;
+- (instancetype)initWithPackReference:(id<TGStickerPackReference>)packReference title:(NSString *)title stickerAssociations:(NSArray *)stickerAssociations documents:(NSArray *)documents packHash:(int32_t)packHash hidden:(bool)hidden isMask:(bool)isMask isFeatured:(bool)isFeatured installedDate:(int32_t)installedDate;
 
 @end

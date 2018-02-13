@@ -53,7 +53,7 @@ typedef enum
 
 @property (nonatomic, strong) NSString *recipientName;
 
-@property (nonatomic, copy) NSDictionary *(^descriptionGenerator)(id, NSString *, NSString *);
+@property (nonatomic, copy) NSDictionary *(^descriptionGenerator)(id, NSString *, NSArray *, NSString *);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
 @property (nonatomic, copy) void (^completionBlock)(NSArray *signals);
 @property (nonatomic, copy) void (^dismissalBlock)(void);
@@ -65,7 +65,7 @@ typedef enum
 
 - (UIBarButtonItem *)rightBarButtonItem;
 
-- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSString *))descriptionGenerator;
+- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator;
 
 - (void)completeWithAvatarImage:(UIImage *)image;
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem;
@@ -74,6 +74,6 @@ typedef enum
 
 + (TGMediaAssetType)assetTypeForIntent:(TGMediaAssetsControllerIntent)intent;
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos;
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos;
 
 @end

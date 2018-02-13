@@ -34,7 +34,7 @@
 
 @property (nonatomic, copy) void (^handleInternalPan)(UIPanGestureRecognizer *);
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context pallete:(TGMenuSheetPallete *)pallete itemViews:(NSArray *)itemViews sizeClass:(UIUserInterfaceSizeClass)sizeClass dark:(bool)dark;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context pallete:(TGMenuSheetPallete *)pallete itemViews:(NSArray *)itemViews sizeClass:(UIUserInterfaceSizeClass)sizeClass dark:(bool)dark borderless:(bool)borderless;
 
 - (void)setItemViews:(NSArray *)itemViews animated:(bool)animated;
 

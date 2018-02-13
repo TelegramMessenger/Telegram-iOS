@@ -98,7 +98,7 @@
             
             [strongSelf setCurrentItemWithIndex:index];
         };
-        _interfaceView.captionSet = ^(id<TGModernGalleryEditableItem> item, NSString *caption)
+        _interfaceView.captionSet = ^(id<TGModernGalleryEditableItem> item, NSString *caption, NSArray *entities)
         {
             __strong TGClipboardGalleryModel *strongSelf = weakSelf;
             if (strongSelf == nil || strongSelf.saveItemCaption == nil)
@@ -106,7 +106,7 @@
             
             __strong TGModernGalleryController *controller = strongSelf.controller;
             if ([controller.currentItem conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
-                strongSelf.saveItemCaption(((id<TGModernGalleryEditableItem>)item).editableMediaItem, caption);
+                strongSelf.saveItemCaption(((id<TGModernGalleryEditableItem>)item).editableMediaItem, caption, entities);
         };
         _interfaceView.timerRequested = ^
         {
@@ -366,14 +366,14 @@
             strongSelf.didFinishRenderingFullSizeImage(item.editableMediaItem, image);
     };
     
-    controller.captionSet = ^(NSString *caption)
+    controller.captionSet = ^(NSString *caption, NSArray *entities)
     {
         __strong TGClipboardGalleryModel *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
         if (strongSelf.saveItemCaption != nil)
-            strongSelf.saveItemCaption(item.editableMediaItem, caption);
+            strongSelf.saveItemCaption(item.editableMediaItem, caption, entities);
     };
     
     controller.requestToolbarsHidden = ^(bool hidden, bool animated)

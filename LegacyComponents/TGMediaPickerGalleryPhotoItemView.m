@@ -359,8 +359,13 @@
 
 - (void)toggleSendAsGif
 {
+    CGSize originalSize = self.item.asset.dimensions;
     PGPhotoEditorValues *adjustments = (PGPhotoEditorValues *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
-    PGPhotoEditorValues *updatedAdjustments = [PGPhotoEditorValues editorValuesWithOriginalSize:adjustments.originalSize cropRect:adjustments.cropRect cropRotation:adjustments.cropRotation cropOrientation:adjustments.cropOrientation cropLockedAspectRatio:adjustments.cropLockedAspectRatio cropMirrored:adjustments.cropMirrored toolValues:adjustments.toolValues paintingData:adjustments.paintingData sendAsGif:!adjustments.sendAsGif];
+    CGRect cropRect = adjustments.cropRect;
+    if (cropRect.size.width < FLT_EPSILON)
+        cropRect = CGRectMake(0.0f, 0.0f, originalSize.width, originalSize.height);
+    
+    PGPhotoEditorValues *updatedAdjustments = [PGPhotoEditorValues editorValuesWithOriginalSize:originalSize cropRect:cropRect cropRotation:adjustments.cropRotation cropOrientation:adjustments.cropOrientation cropLockedAspectRatio:adjustments.cropLockedAspectRatio cropMirrored:adjustments.cropMirrored toolValues:adjustments.toolValues paintingData:adjustments.paintingData sendAsGif:!adjustments.sendAsGif];
     [self.item.editingContext setAdjustments:updatedAdjustments forItem:self.item.editableMediaItem];
     
     bool sendAsGif = !adjustments.sendAsGif;
@@ -385,8 +390,8 @@
             [_tooltipContainerView showMenuFromRect:iconViewFrame animated:false];
         }
         
-        //if (self.item.selectionContext != nil)
-        //    [self.item.selectionContext setItem:self.item.selectableMediaItem selected:true];
+        if (self.item.selectionContext != nil)
+            [self.item.selectionContext setItem:self.item.selectableMediaItem selected:true];
     }
 }
 

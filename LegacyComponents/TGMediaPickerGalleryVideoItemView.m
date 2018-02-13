@@ -419,7 +419,7 @@
                 strongSelf->_sendAsGif = adjustments.sendAsGif;
                 [strongSelf _mutePlayer:adjustments.sendAsGif];
                 
-                if (adjustments.sendAsGif)
+                if (adjustments.sendAsGif || (strongSelf.item.asset.subtypes & TGMediaAssetSubtypePhotoLive))
                     [strongSelf setPlayButtonHidden:true animated:false];
             }
             else
@@ -491,7 +491,7 @@
         
         TGMediaPickerGalleryVideoItem *item = strongSelf.item;
         NSTimeInterval videoDuration = next.doubleValue;
-        strongSelf->_videoDuration = videoDuration;;
+        strongSelf->_videoDuration = videoDuration;
         
         strongSelf->_scrubberView.allowsTrimming = (!item.asFile && ((item.asset != nil && !(item.asset.subtypes & TGMediaAssetSubtypeVideoHighFrameRate)) || item.avAsset != nil) && videoDuration >= TGVideoEditMinimumTrimmableDuration);
         
@@ -523,10 +523,13 @@
 
 - (void)presentScrubbingPanelAfterReload:(bool)afterReload
 {
-    if (afterReload)
-        [_scrubberView reloadData];
-    else
-        [self setScrubbingPanelHidden:false animated:true];
+    if (![self usePhotoBehavior])
+    {
+        if (afterReload)
+            [_scrubberView reloadData];
+        else
+            [self setScrubbingPanelHidden:false animated:true];
+    }
 }
 
 - (void)setScrubbingPanelApperanceLocked:(bool)locked
@@ -595,6 +598,21 @@
     [self setScrubbingPanelApperanceLocked:true];
     [self setPlayButtonHidden:true animated:true];
     [self stop];
+}
+
+- (bool)usePhotoBehavior
+{
+    TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
+    if (!((self.item.asset.subtypes & TGMediaAssetSubtypePhotoLive) && !adjustments.sendAsGif))
+        return false;
+    
+    return true;
+}
+
+- (void)returnFromEditing
+{
+    if (![self usePhotoBehavior])
+        [self setPlayButtonHidden:false animated:true];
 }
 
 - (void)setFrame:(CGRect)frame
@@ -683,7 +701,8 @@
 
 - (void)singleTap
 {
-    [self togglePlayback];
+    if (![self usePhotoBehavior])
+        [self togglePlayback];
 }
 
 - (void)setIsVisible:(bool)isVisible
@@ -850,7 +869,10 @@
         __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
         if (strongSelf != nil)
         {
-            [subscriber putNext:@(strongSelf->_downloaded)];
+            TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[strongSelf.item.editingContext adjustmentsForItem:strongSelf.item.editableMediaItem];
+            
+            bool available = strongSelf->_downloaded || ((strongSelf.item.asset.subtypes & TGMediaAssetSubtypePhotoLive) && !adjustments.sendAsGif);
+            [subscriber putNext:@(available)];
             strongSelf->_currentAvailabilityObserver = ^(bool available)
             {
                 [subscriber putNext:@(available)];
@@ -974,6 +996,16 @@
         strongSelf->_player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
         [strongSelf->_player addObserver:strongSelf forKeyPath:@"rate" options:NSKeyValueObservingOptionNew context:nil];
         
+        if (!strongSelf->_downloaded)
+        {
+            strongSelf->_downloaded = true;
+            
+            [strongSelf->_videoDurationVar set:[SSignal single:@(CMTimeGetSeconds(playerItem.asset.duration))]];
+            
+            if (strongSelf->_currentAvailabilityObserver != nil)
+                strongSelf->_currentAvailabilityObserver(true);
+        }
+        
         strongSelf->_didPlayToEndObserver = [[TGObserverProxy alloc] initWithTarget:strongSelf targetSelector:@selector(playerItemDidPlayToEndTime:) name:AVPlayerItemDidPlayToEndTimeNotification object:playerItem];
         
         strongSelf->_videoView = [[TGModernGalleryVideoView alloc] initWithFrame:strongSelf->_playerView.bounds player:strongSelf->_player];
@@ -1081,7 +1113,8 @@
         self.isPlaying = false;
         [_player pause];
     
-        [self setPlayButtonHidden:false animated:true];
+        if (![self usePhotoBehavior])
+            [self setPlayButtonHidden:false animated:true];
         
         [_positionTimer invalidate];
         _positionTimer = nil;
@@ -1260,7 +1293,8 @@
             [parentView addSubview:_tooltipContainerView];
             
             NSMutableArray *actions = [[NSMutableArray alloc] init];
-            [actions addObject:[[NSDictionary alloc] initWithObjectsAndKeys:TGLocalized(@"MediaPicker.VideoMuteDescription"), @"title", nil]];
+            NSString *text = (self.item.asset.subtypes & TGMediaAssetSubtypePhotoLive) ? TGLocalized(@"MediaPicker.LivePhotoDescription") : TGLocalized(@"MediaPicker.VideoMuteDescription");
+            [actions addObject:@{@"title":text}];
             _tooltipContainerView.menuView.forceArrowOnTop = true;
             _tooltipContainerView.menuView.multiline = true;
             [_tooltipContainerView.menuView setButtonsAndActions:actions watcherHandle:nil];
@@ -1372,11 +1406,13 @@
     if (timestamps.count == 0)
         return;
     
+    AVAsset *avAsset = self.item.avAsset ?: _player.currentItem.asset;
+    
     SSignal *thumbnailsSignal = nil;
-    if (self.item.asset != nil)
+    if (self.item.asset != nil && !(self.item.asset.subtypes & TGMediaAssetSubtypePhotoLive))
         thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAsset:self.item.asset size:size timestamps:timestamps];
-    else if (self.item.avAsset != nil)
-        thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAVAsset:self.item.avAsset size:size timestamps:timestamps];
+    else if (avAsset != nil)
+        thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps];
 
     _requestingThumbnails = true;
     
@@ -1395,10 +1431,8 @@
     } completed:^
     {
         __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        strongSelf->_requestingThumbnails = false;
+        if (strongSelf != nil)
+            strongSelf->_requestingThumbnails = false;
     }]];
 }
 

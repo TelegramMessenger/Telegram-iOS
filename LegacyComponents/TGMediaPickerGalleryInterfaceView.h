@@ -12,7 +12,7 @@
 
 @interface TGMediaPickerGalleryInterfaceView : UIView <TGModernGalleryInterfaceView>
 
-@property (nonatomic, copy) void (^captionSet)(id<TGModernGalleryItem>, NSString *);
+@property (nonatomic, copy) void (^captionSet)(id<TGModernGalleryItem>, NSString *, NSArray *);
 @property (nonatomic, copy) void (^donePressed)(id<TGModernGalleryItem>);
 
 @property (nonatomic, copy) void (^photoStripItemSelected)(NSInteger index);

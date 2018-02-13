@@ -192,61 +192,145 @@
     if (tabs == _currentTabs)
         return;
     
-    UIView *transitionView = nil;
+    NSArray *buttons = [_buttonsWrapperView.subviews copy];
+    NSMutableArray *transitionViews = [[NSMutableArray alloc] init];
     if (animated && _currentTabs != TGPhotoEditorNoneTab)
     {
-        transitionView = [_buttonsWrapperView snapshotViewAfterScreenUpdates:false];
-        transitionView.frame = _buttonsWrapperView.frame;
-        [_buttonsWrapperView.superview addSubview:transitionView];
+        for (TGPhotoEditorButton *button in buttons)
+        {
+            if (![button isKindOfClass:[TGPhotoEditorButton class]])
+                continue;
+            
+            if (!(tabs & button.tag))
+            {
+                UIView *transitionView = [button snapshotViewAfterScreenUpdates:false];
+                if (transitionView != nil)
+                {
+                    transitionView.frame = button.frame;
+                    [button.superview addSubview:transitionView];
+                    [transitionViews addObject:transitionView];
+                }
+                [button removeFromSuperview];
+            }
+        }
     }
     
+    TGPhotoEditorTab previousTabs = _currentTabs;
     _currentTabs = tabs;
     
-    NSArray *buttons = [_buttonsWrapperView.subviews copy];
-    for (UIView *view in buttons)
-        [view removeFromSuperview];
+    NSMutableArray *newButtons = [[NSMutableArray alloc] init];
+    if ((_currentTabs & TGPhotoEditorCropTab) && !(previousTabs & TGPhotoEditorCropTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorCropTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorStickerTab) && !(previousTabs & TGPhotoEditorStickerTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorStickerTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorPaintTab) && !(previousTabs & TGPhotoEditorPaintTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorPaintTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorEraserTab) && !(previousTabs & TGPhotoEditorEraserTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorEraserTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorTextTab) && !(previousTabs & TGPhotoEditorTextTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorTextTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorToolsTab) && !(previousTabs & TGPhotoEditorToolsTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorToolsTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorRotateTab) && !(previousTabs & TGPhotoEditorRotateTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorRotateTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorQualityTab) && !(previousTabs & TGPhotoEditorQualityTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorQualityTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorTimerTab) && !(previousTabs & TGPhotoEditorTimerTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorTimerTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorMirrorTab) && !(previousTabs & TGPhotoEditorMirrorTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorMirrorTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorAspectRatioTab) && !(previousTabs & TGPhotoEditorAspectRatioTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorAspectRatioTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorTintTab) && !(previousTabs & TGPhotoEditorTintTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorTintTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorBlurTab) && !(previousTabs & TGPhotoEditorBlurTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorBlurTab];
+        [newButtons addObject:button];
+    }
+    if ((_currentTabs & TGPhotoEditorCurvesTab) && !(previousTabs & TGPhotoEditorCurvesTab))
+    {
+        TGPhotoEditorButton *button = [self createButtonForTab:TGPhotoEditorCurvesTab];
+        [newButtons addObject:button];
+    }
     
-    if (_currentTabs & TGPhotoEditorCropTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorCropTab]];
-    if (_currentTabs & TGPhotoEditorStickerTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorStickerTab]];
-    if (_currentTabs & TGPhotoEditorPaintTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorPaintTab]];
-    if (_currentTabs & TGPhotoEditorEraserTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorEraserTab]];
-    if (_currentTabs & TGPhotoEditorTextTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorTextTab]];
-    if (_currentTabs & TGPhotoEditorToolsTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorToolsTab]];
-    if (_currentTabs & TGPhotoEditorRotateTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorRotateTab]];
-    if (_currentTabs & TGPhotoEditorQualityTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorQualityTab]];
-    if (_currentTabs & TGPhotoEditorTimerTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorTimerTab]];
-    if (_currentTabs & TGPhotoEditorMirrorTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorMirrorTab]];
-    if (_currentTabs & TGPhotoEditorAspectRatioTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorAspectRatioTab]];
-    if (_currentTabs & TGPhotoEditorTintTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorTintTab]];
-    if (_currentTabs & TGPhotoEditorBlurTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorBlurTab]];
-    if (_currentTabs & TGPhotoEditorCurvesTab)
-        [_buttonsWrapperView addSubview:[self createButtonForTab:TGPhotoEditorCurvesTab]];
+    for (TGPhotoEditorButton *button in newButtons)
+    {
+        bool added = false;
+        for (UIView *exisingButton in _buttonsWrapperView.subviews)
+        {
+            if (exisingButton.tag > button.tag)
+            {
+                [_buttonsWrapperView insertSubview:button belowSubview:exisingButton];
+                added = true;
+                break;
+            }
+        }
+        
+        if (!added)
+            [_buttonsWrapperView addSubview:button];
+        
+        if (animated)
+            button.alpha = 0.0f;
+    }
     
     [self setNeedsLayout];
     
     if (animated)
     {
-        _buttonsWrapperView.alpha = 0.0f;
         [UIView animateWithDuration:0.15 animations:^
         {
-            _buttonsWrapperView.alpha = 1.0f;
-            transitionView.alpha = 0.0f;
+            for (TGPhotoEditorButton *button in newButtons)
+            {
+                button.alpha = 1.0f;
+            }
+            
+            for (UIView *transitionView in transitionViews)
+            {
+                transitionView.alpha = 0.0f;
+            }
         } completion:^(__unused BOOL finished)
         {
-            [transitionView removeFromSuperview];
+            for (UIView *transitionView in transitionViews)
+            {
+                transitionView.alpha = 0.0f;
+            }
         }];
     }
 }
@@ -286,7 +370,10 @@
 - (void)setActiveTab:(TGPhotoEditorTab)tab
 {
     for (TGPhotoEditorButton *button in _buttonsWrapperView.subviews)
-        [button setSelected:(button.tag == tab) animated:false];
+    {
+        if ([button isKindOfClass:[TGPhotoEditorButton class]])
+            [button setSelected:(button.tag == tab) animated:false];
+    }
 }
 
 - (void)setDoneButtonEnabled:(bool)enabled animated:(bool)animated
@@ -330,23 +417,35 @@
     if (animated)
     {
         for (TGPhotoEditorButton *button in _buttonsWrapperView.subviews)
-            button.hidden = false;
+        {
+            if ([button isKindOfClass:[TGPhotoEditorButton class]])
+                button.hidden = false;
+        }
         
         [UIView animateWithDuration:0.2f
                          animations:^
         {
             for (TGPhotoEditorButton *button in _buttonsWrapperView.subviews)
-                button.alpha = targetAlpha;
+            {
+                if ([button isKindOfClass:[TGPhotoEditorButton class]])
+                    button.alpha = targetAlpha;
+            }
         } completion:^(__unused BOOL finished)
         {
             for (TGPhotoEditorButton *button in _buttonsWrapperView.subviews)
-                button.hidden = hidden;
+            {
+                if ([button isKindOfClass:[TGPhotoEditorButton class]])
+                    button.hidden = hidden;
+            }
         }];
     }
     else
     {
         for (TGPhotoEditorButton *button in _buttonsWrapperView.subviews)
         {
+            if (![button isKindOfClass:[TGPhotoEditorButton class]])
+                continue;
+            
             button.alpha = (float)targetAlpha;
             button.hidden = hidden;
         }
@@ -356,19 +455,28 @@
 - (void)setEditButtonsHighlighted:(TGPhotoEditorTab)buttons
 {
     for (TGPhotoEditorButton *button in _buttonsWrapperView.subviews)
-        button.active = (buttons & button.tag);
+    {
+        if ([button isKindOfClass:[TGPhotoEditorButton class]])
+            button.active = (buttons & button.tag);
+    }
 }
 
 - (void)setEditButtonsDisabled:(TGPhotoEditorTab)buttons
 {
     for (TGPhotoEditorButton *button in _buttonsWrapperView.subviews)
-        button.disabled = (buttons & button.tag);
+    {
+        if ([button isKindOfClass:[TGPhotoEditorButton class]])
+            button.disabled = (buttons & button.tag);
+    }
 }
 
 - (TGPhotoEditorButton *)buttonForTab:(TGPhotoEditorTab)tab
 {
     for (TGPhotoEditorButton *button in _buttonsWrapperView.subviews)
     {
+        if (![button isKindOfClass:[TGPhotoEditorButton class]])
+            continue;
+        
         if (button.tag == tab)
             return button;
     }
@@ -402,7 +510,13 @@
     }
     _buttonsWrapperView.frame = _backgroundView.bounds;
     
-    NSArray *buttons = _buttonsWrapperView.subviews;
+    NSMutableArray *buttons = [[NSMutableArray alloc] init];
+    
+    for (TGPhotoEditorButton *button in _buttonsWrapperView.subviews)
+    {
+        if ([button isKindOfClass:[TGPhotoEditorButton class]])
+            [buttons addObject:button];
+    }
     
     CGFloat offset = 8.0f;
     if (self.frame.size.width > self.frame.size.height)

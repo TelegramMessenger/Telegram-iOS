@@ -64,7 +64,7 @@ static inline CGSize TGPaintMultiplySizeScalar(CGSize size, CGFloat scale)
 
 typedef void(^dispatch_cancelable_block_t)(BOOL cancel);
 
-static dispatch_cancelable_block_t dispatch_after_delay(NSTimeInterval delay, dispatch_queue_t queue, dispatch_block_t block)
+static inline dispatch_cancelable_block_t dispatch_after_delay(NSTimeInterval delay, dispatch_queue_t queue, dispatch_block_t block)
 {
     if (block == nil)
         return nil;
@@ -92,7 +92,7 @@ static dispatch_cancelable_block_t dispatch_after_delay(NSTimeInterval delay, di
     return cancelableBlock;
 }
 
-static void cancel_block(dispatch_cancelable_block_t block)
+static inline void cancel_block(dispatch_cancelable_block_t block)
 {
     if (block == nil)
         return;

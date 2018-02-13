@@ -44,6 +44,7 @@ typedef enum
 + (SSignal *)imageForAsset:(TGMediaAsset *)asset imageType:(TGMediaAssetImageType)imageType size:(CGSize)size allowNetworkAccess:(bool)allowNetworkAccess;
 
 + (SSignal *)livePhotoForAsset:(TGMediaAsset *)asset;
++ (SSignal *)livePhotoForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess;
 
 + (SSignal *)imageDataForAsset:(TGMediaAsset *)asset;
 + (SSignal *)imageDataForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess;

@@ -1058,7 +1058,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 TGDispatchOnMainThread(^
                 {
                     if (strongSelf.finishedWithPhoto != nil)
-                        strongSelf.finishedWithPhoto(nil, resultImage, nil, nil, nil);
+                        strongSelf.finishedWithPhoto(nil, resultImage, nil, nil, nil, nil);
                     
                     if (strongSelf.shouldStoreCapturedAssets)
                     {
@@ -1140,14 +1140,14 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 [[[LegacyComponentsGlobals provider] applicationInstance] setIdleTimerDisabled:true];
             };
             
-            controller.sendPressed = ^(TGOverlayController *controller, UIImage *resultImage, NSString *caption, NSArray *stickers, NSNumber *timer)
+            controller.sendPressed = ^(TGOverlayController *controller, UIImage *resultImage, NSString *caption, NSArray *entities, NSArray *stickers, NSNumber *timer)
             {
                 __strong TGCameraController *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
                 
                 if (strongSelf.finishedWithPhoto != nil)
-                    strongSelf.finishedWithPhoto(controller, resultImage, caption, stickers, timer);
+                    strongSelf.finishedWithPhoto(controller, resultImage, caption, entities, stickers, timer);
                 
                 if (strongSelf->_shortcut)
                     return;
@@ -1301,11 +1301,11 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         [editingContext setImage:resultImage thumbnailImage:thumbnailImage forItem:editableItem synchronous:false];
     };
     
-    model.saveItemCaption = ^(__unused id<TGMediaEditableItem> item, NSString *caption)
+    model.saveItemCaption = ^(__unused id<TGMediaEditableItem> item, NSString *caption, NSArray *entities)
     {
         __strong TGCameraController *strongSelf = weakSelf;
         if (strongSelf != nil)
-            [strongSelf->_editingContext setCaption:caption forItem:videoItem.avAsset];
+            [strongSelf->_editingContext setCaption:caption entities:entities forItem:videoItem.avAsset];
     };
     
     model.interfaceView.hasSwipeGesture = false;
@@ -1334,6 +1334,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         
         TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[strongSelf->_editingContext adjustmentsForItem:videoItem.avAsset];
         NSString *caption = [strongSelf->_editingContext captionForItem:videoItem.avAsset];
+        NSArray *entities = [strongSelf->_editingContext entitiesForItem:videoItem.avAsset];
         NSNumber *timer = [strongSelf->_editingContext timerForItem:videoItem.avAsset];
         
         SSignal *thumbnailSignal = [SSignal single:thumbnailImage];
@@ -1355,7 +1356,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         [[thumbnailSignal deliverOn:[SQueue mainQueue]] startWithNext:^(UIImage *thumbnailImage)
         {
             if (strongSelf.finishedWithVideo != nil)
-                strongSelf.finishedWithVideo(strongController, url, thumbnailImage, duration, dimensions, adjustments, caption, adjustments.paintingData.stickers, timer);
+                strongSelf.finishedWithVideo(strongController, url, thumbnailImage, duration, dimensions, adjustments, caption, entities, adjustments.paintingData.stickers, timer);
         }];
         
         if (strongSelf->_shortcut)

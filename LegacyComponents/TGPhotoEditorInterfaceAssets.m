@@ -117,14 +117,19 @@
     return TGComponentsImageNamed(@"PhotoEditorCurvesIcon.png");
 }
 
++ (UIImage *)gifBackgroundImage
+{
+    return TGComponentsImageNamed(@"PhotoEditorGifShadow.png");
+}
+
 + (UIImage *)gifIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorMute.png");
+    return TGComponentsImageNamed(@"PhotoEditorGif.png");
 }
 
 + (UIImage *)gifActiveIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorMuteActive.png");
+    return TGTintedImage([self gifIcon], [self accentColor]);
 }
 
 + (UIImage *)groupIcon

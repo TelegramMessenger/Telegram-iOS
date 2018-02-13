@@ -1208,6 +1208,33 @@ typedef enum {
     return nil;
 }
 
+- (NSString *)caption
+{
+    bool captionable = false;
+    NSString *currentCaption = nil;
+    
+    for (id attachment in self.mediaAttachments) {
+        if ([attachment isKindOfClass:[TGImageMediaAttachment class]]) {
+            currentCaption = ((TGImageMediaAttachment *)attachment).caption;
+            captionable = true;
+        } else if ([attachment isKindOfClass:[TGVideoMediaAttachment class]]) {
+            currentCaption = ((TGVideoMediaAttachment *)attachment).caption;
+            captionable = true;
+        } else if ([attachment isKindOfClass:[TGDocumentMediaAttachment class]]) {
+            currentCaption = ((TGDocumentMediaAttachment *)attachment).caption;
+            captionable = true;
+        }
+    }
+    
+    if (!captionable)
+        return nil;
+    
+    if (currentCaption.length > 0)
+        return currentCaption;
+    else
+        return self.text;
+}
+
 @end
 
 @interface TGMediaId ()
@@ -1254,3 +1281,27 @@ typedef enum {
 
 @end
 
+
+@implementation TGMessageIndex
+
++ (instancetype)indexWithPeerId:(int64_t)peerId messageId:(int32_t)messageId
+{
+    TGMessageIndex *pair = [[TGMessageIndex alloc] init];
+    pair->_peerId = peerId;
+    pair->_messageId = messageId;
+    return pair;
+}
+
+- (BOOL)isEqual:(id)object
+{
+    if (object == self)
+        return true;
+    
+    if (!object || ![object isKindOfClass:[self class]])
+        return false;
+    
+    TGMessageIndex *pair = (TGMessageIndex *)object;
+    return (_peerId == pair->_peerId && _messageId == pair->_messageId);
+}
+
+@end

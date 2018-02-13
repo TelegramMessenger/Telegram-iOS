@@ -48,7 +48,5 @@ typedef enum
 - (instancetype)initWithPoints:(NSArray *)points;
 - (void)addPoint:(TGPaintPoint *)point;
 
-- (NSArray *)flattenedPoints;
-
 @end
 

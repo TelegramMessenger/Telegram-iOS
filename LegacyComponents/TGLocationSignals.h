@@ -11,6 +11,7 @@ typedef enum {
 
 + (SSignal *)searchNearbyPlacesWithQuery:(NSString *)query coordinate:(CLLocationCoordinate2D)coordinate service:(TGLocationPlacesService)service;
 + (SSignal *)reverseGeocodeCoordinate:(CLLocationCoordinate2D)coordinate;
++ (SSignal *)cityForCoordinate:(CLLocationCoordinate2D)coordinate;
 + (SSignal *)driveEta:(CLLocationCoordinate2D)coordinate;
 
 + (void)storeLastKnownUserLocation:(CLLocation *)location;

@@ -4,7 +4,7 @@
 
 #import "TGPaintingData.h"
 
-const NSTimeInterval TGVideoEditMinimumTrimmableDuration = 3.0;
+const NSTimeInterval TGVideoEditMinimumTrimmableDuration = 1.0;
 const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
 
 @implementation TGVideoEditAdjustments

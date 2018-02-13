@@ -1308,7 +1308,12 @@ static unsigned char strToChar (char a, char b)
 
 - (bool)containsSingleEmoji
 {
-    return self.length > 0 && self.length < 16 && [self emojiArray:true].count == 1;
+    if (self.length > 0 && self.length < 16)
+    {
+        NSArray *emojis = [self emojiArray:false];
+        return emojis.count == 1 && [emojis.firstObject isEqualToString:self];
+    }
+    return false;
 }
 
 - (bool)isEmoji
