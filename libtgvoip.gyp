@@ -382,7 +382,7 @@
                 'WEBRTC_POSIX',
               ],
               'conditions': [
-                [ '"<!(uname -m)" == "x86_64" or "<!(uname -m)" == "i686"', {
+                [ '"<!(uname -m)" == "i686"', {
                   'cflags_cc': [
                     '-msse2',
                   ],
