@@ -14,6 +14,9 @@
 #define TGVOIP_IN_AUDIO_IO
 #include "PulseAudioLoader.h"
 #undef TGVOIP_IN_AUDIO_IO
+#if !defined(__GLIBC__)
+#include <libgen.h>
+#endif
 
 #define BUFFER_SIZE 960
 #define CHECK_ERROR(res, msg) if(res!=0){LOGE(msg " failed: %s", pa_strerror(res)); failed=true; return;}
