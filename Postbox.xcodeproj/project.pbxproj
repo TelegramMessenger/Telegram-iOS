@@ -61,6 +61,8 @@
 		D04614312004E24600EC0EF2 /* LocalMessageHistoryTagsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D046142F2004E24600EC0EF2 /* LocalMessageHistoryTagsTable.swift */; };
 		D04614332004F2CC00EC0EF2 /* LocalMessageTagsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04614322004F2CC00EC0EF2 /* LocalMessageTagsView.swift */; };
 		D04614342004F2CC00EC0EF2 /* LocalMessageTagsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04614322004F2CC00EC0EF2 /* LocalMessageTagsView.swift */; };
+		D048B33D203C838500038D05 /* PostboxUpgrade_15to16.swift in Sources */ = {isa = PBXBuildFile; fileRef = D048B33C203C838500038D05 /* PostboxUpgrade_15to16.swift */; };
+		D048B33E203C838500038D05 /* PostboxUpgrade_15to16.swift in Sources */ = {isa = PBXBuildFile; fileRef = D048B33C203C838500038D05 /* PostboxUpgrade_15to16.swift */; };
 		D049EAF01E44D9B900A2CD3A /* PostboxStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAEF1E44D9B900A2CD3A /* PostboxStateView.swift */; };
 		D049EAF11E44D9B900A2CD3A /* PostboxStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAEF1E44D9B900A2CD3A /* PostboxStateView.swift */; };
 		D050F2651E4A5B4800988324 /* fts3_tokenizer.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516741B2EC90400AE42E0 /* fts3_tokenizer.h */; };
@@ -404,6 +406,7 @@
 		D044E1621B2AD677001EE087 /* MurMurHash32.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MurMurHash32.m; sourceTree = "<group>"; };
 		D046142F2004E24600EC0EF2 /* LocalMessageHistoryTagsTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalMessageHistoryTagsTable.swift; sourceTree = "<group>"; };
 		D04614322004F2CC00EC0EF2 /* LocalMessageTagsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalMessageTagsView.swift; sourceTree = "<group>"; };
+		D048B33C203C838500038D05 /* PostboxUpgrade_15to16.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_15to16.swift; sourceTree = "<group>"; };
 		D049EAEF1E44D9B900A2CD3A /* PostboxStateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxStateView.swift; sourceTree = "<group>"; };
 		D055BD321B7D3D2D00F06C0A /* MediaBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaBox.swift; sourceTree = "<group>"; };
 		D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccessChallengeDataView.swift; sourceTree = "<group>"; };
@@ -660,6 +663,7 @@
 				D0F02CE11E9922F50065DEE2 /* PostboxUpgrade_12to13.swift */,
 				D0CE8CF21F70249400AA2DB0 /* PostboxUpgrade_13to14.swift */,
 				D0943B011FDB01D8001522CC /* PostboxUpgrade_14to15.swift */,
+				D048B33C203C838500038D05 /* PostboxUpgrade_15to16.swift */,
 			);
 			name = Upgrade;
 			sourceTree = "<group>";
@@ -1167,6 +1171,7 @@
 				D073CEA01DCBF3C1007511FD /* ItemCollectionsView.swift in Sources */,
 				D0BE383A1E7C1FD4000079AF /* ItemCollectionInfoView.swift in Sources */,
 				D0B418491D7DFE20004562A4 /* ChatListView.swift in Sources */,
+				D048B33E203C838500038D05 /* PostboxUpgrade_15to16.swift in Sources */,
 				D0F7B1D61E045C6A007EB8A5 /* ContactTable.swift in Sources */,
 				D0943B031FDB01D8001522CC /* PostboxUpgrade_14to15.swift in Sources */,
 				D0F7B1D11E045C6A007EB8A5 /* PeerTable.swift in Sources */,
@@ -1341,6 +1346,7 @@
 				D0C26D6F1FE2E737004ABF18 /* GroupFeedReadState.swift in Sources */,
 				D0FA0AC71E77F0A2005BB9B7 /* ItemCollectionInfosView.swift in Sources */,
 				D0F019FD1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift in Sources */,
+				D048B33D203C838500038D05 /* PostboxUpgrade_15to16.swift in Sources */,
 				D0F9E8651C58CB7F00037222 /* ChatListTable.swift in Sources */,
 				D0E1D30C1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift in Sources */,
 				D0F9E8711C5A0E9B00037222 /* PeerTable.swift in Sources */,

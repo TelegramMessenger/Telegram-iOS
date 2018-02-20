@@ -396,7 +396,9 @@ final class MediaBoxPartialFile {
             self.statusRequests.removeAll()
             self.fd.sync()
             let linkResult = link(self.path, self.completePath)
-            assert(linkResult == 0)
+            if linkResult != 0 {
+                //assert(linkResult == 0)
+            }
             self.completed(self.fileMap.sum)
         }
     }

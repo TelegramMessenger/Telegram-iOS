@@ -37,6 +37,14 @@ final class MutableOrderedItemListView: MutablePostboxView {
                                 break inner
                             }
                         }
+                    case let .update(itemId, content):
+                        inner: for i in 0 ..< self.items.count {
+                            if self.items[i].id == itemId {
+                                self.items[i] = OrderedItemListEntry(id: itemId, contents: content)
+                                updated = true
+                                break inner
+                            }
+                        }
                 }
             }
         }

@@ -173,6 +173,13 @@ public final class MediaBox {
         }
     }
     
+    public func moveResourceData(_ id: MediaResourceId, fromTempPath: String) {
+        self.dataQueue.async {
+            let paths = self.storePathsForId(id)
+            let _ = try? FileManager.default.moveItem(at: URL(fileURLWithPath: fromTempPath), to: URL(fileURLWithPath: paths.complete))
+        }
+    }
+    
     public func moveResourceData(from: MediaResourceId, to: MediaResourceId) {
         self.dataQueue.async {
             let pathsFrom = self.storePathsForId(from)
@@ -241,9 +248,9 @@ public final class MediaBox {
                             }
                         }
                         
-                        disposable.set(ActionDisposable {
+                        disposable.set(ActionDisposable { [weak statusContext] in
                             self.statusQueue.async {
-                                if let current = self.statusContexts[WrappedMediaResourceId(resource.id)] {
+                                if let current = self.statusContexts[WrappedMediaResourceId(resource.id)], current ===  statusContext {
                                     current.subscribers.remove(index)
                                     if current.subscribers.isEmpty {
                                         self.statusContexts.removeValue(forKey: WrappedMediaResourceId(resource.id))

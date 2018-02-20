@@ -16,19 +16,6 @@ private func makeKeyValueForChatListPinningIndex(_ index: UInt16?) -> UInt16 {
     }
 }
 
-/*
- private func key(_ index: ChatListIndex, type: ChatListEntryType) -> ValueBoxKey {
- let key = ValueBoxKey(length: 2 + 4 + 4 + 4 + 8 + 1)
- key.setUInt16(0, value: keyValueForChatListPinningIndex(index.pinningIndex))
- key.setInt32(2, value: index.messageIndex.timestamp)
- key.setInt32(2 + 4, value: index.messageIndex.id.namespace)
- key.setInt32(2 + 4 + 4, value: index.messageIndex.id.id)
- key.setInt64(2 + 4 + 4 + 4, value: index.messageIndex.id.peerId.toInt64())
- key.setInt8(2 + 4 + 4 + 4 + 8, value: type.rawValue)
- return key
- }
- */
-
 private func extractPreviousKey(_ key: ValueBoxKey) -> (pinningIndex: UInt16?, index: MessageIndex, type: Int8) {
     return (
         pinningIndex: extractPinningIndexFromKeyValue(key.getUInt16(0)),

@@ -4,6 +4,7 @@ enum OrderedItemListOperation {
     case replace([OrderedItemListEntry])
     case addOrMoveToFirstPosition(OrderedItemListEntry, Int?)
     case remove(MemoryBuffer)
+    case update(MemoryBuffer, OrderedItemListEntryContents)
 }
 
 private enum OrderedItemListKeyNamespace: UInt8 {
@@ -82,6 +83,16 @@ final class OrderedItemListTable: Table {
             return OrderedItemListEntry(id: itemId, contents: contents)
         } else {
             return nil
+        }
+    }
+    
+    func updateItem(collectionId: Int32, itemId: MemoryBuffer, item: OrderedItemListEntryContents, operations: inout [Int32: [OrderedItemListOperation]]) {
+        if let _ = self.indexTable.get(collectionId: collectionId, id: itemId) as? OrderedItemListEntryContents {
+            self.indexTable.set(collectionId: collectionId, id: itemId, content: item)
+            if operations[collectionId] == nil {
+                operations[collectionId] = []
+            }
+            operations[collectionId]!.append(.update(itemId, item))
         }
     }
     

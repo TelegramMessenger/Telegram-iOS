@@ -5,10 +5,63 @@ private enum MetadataPrefix: Int8 {
     case PeerHistoryInitialized = 1
     case PeerNextMessageIdByNamespace = 2
     case NextStableMessageId = 3
-    case ChatListTotalUnreadCount = 4
+    case ChatListTotalUnreadState = 4
     case NextPeerOperationLogIndex = 5
     case ChatListGroupInitialized = 6
     case GroupFeedIndexInitialized = 7
+}
+
+public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
+    public var messageCount: Int32
+    
+    public init(messageCount: Int32) {
+        self.messageCount = messageCount
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.messageCount = decoder.decodeInt32ForKey("m", orElse: 0)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.messageCount, forKey: "m")
+    }
+    
+    public static func ==(lhs: ChatListTotalUnreadCounters, rhs: ChatListTotalUnreadCounters) -> Bool {
+        if lhs.messageCount != rhs.messageCount {
+            return false
+        }
+        return true
+    }
+}
+
+public struct ChatListTotalUnreadState: PostboxCoding, Equatable {
+    public var absoluteCounters: ChatListTotalUnreadCounters
+    public var filteredCounters: ChatListTotalUnreadCounters
+    
+    public init(absoluteCounters: ChatListTotalUnreadCounters, filteredCounters: ChatListTotalUnreadCounters) {
+        self.absoluteCounters = absoluteCounters
+        self.filteredCounters = filteredCounters
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.absoluteCounters = decoder.decodeObjectForKey("a", decoder: { ChatListTotalUnreadCounters(decoder: $0) }) as! ChatListTotalUnreadCounters
+        self.filteredCounters = decoder.decodeObjectForKey("f", decoder: { ChatListTotalUnreadCounters(decoder: $0) }) as! ChatListTotalUnreadCounters
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObject(self.absoluteCounters, forKey: "a")
+        encoder.encodeObject(self.filteredCounters, forKey: "f")
+    }
+    
+    public static func ==(lhs: ChatListTotalUnreadState, rhs: ChatListTotalUnreadState) -> Bool {
+        if lhs.absoluteCounters != rhs.absoluteCounters {
+            return false
+        }
+        if lhs.filteredCounters != rhs.filteredCounters {
+            return false
+        }
+        return true
+    }
 }
 
 private enum InitializedChatListKey: Hashable {
@@ -80,8 +133,8 @@ final class MessageHistoryMetadataTable: Table {
     private var nextMessageStableId: UInt32?
     private var nextMessageStableIdUpdated = false
     
-    private var chatListTotalUnreadCount: Int32?
-    private var chatListTotalUnreadCountUpdated = false
+    private var chatListTotalUnreadState: ChatListTotalUnreadState?
+    private var chatListTotalUnreadStateUpdated = false
     
     private var nextPeerOperationLogIndex: UInt32?
     private var nextPeerOperationLogIndexUpdated = false
@@ -272,27 +325,28 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func getChatListTotalUnreadCount() -> Int32 {
-        if let cached = self.chatListTotalUnreadCount {
+    func getChatListTotalUnreadState() -> ChatListTotalUnreadState {
+        if let cached = self.chatListTotalUnreadState {
             return cached
         } else {
-            if let value = self.valueBox.get(self.table, key: self.key(.ChatListTotalUnreadCount)) {
-                var count: Int32 = 0
-                value.read(&count, offset: 0, length: 4)
-                self.chatListTotalUnreadCount = count
-                return count
+            if let value = self.valueBox.get(self.table, key: self.key(.ChatListTotalUnreadState)), let state = PostboxDecoder(buffer: value).decodeObjectForKey("_", decoder: {
+                ChatListTotalUnreadState(decoder: $0)
+            }) as? ChatListTotalUnreadState {
+                self.chatListTotalUnreadState = state
+                return state
             } else {
-                self.chatListTotalUnreadCount = 0
-                return 0
+                let state = ChatListTotalUnreadState(absoluteCounters: ChatListTotalUnreadCounters(messageCount: 0), filteredCounters: ChatListTotalUnreadCounters(messageCount: 0))
+                self.chatListTotalUnreadState = state
+                return state
             }
         }
     }
     
-    func setChatListTotalUnreadCount(_ value: Int32) {
-        let current = self.getChatListTotalUnreadCount()
-        if current != value {
-            self.chatListTotalUnreadCount = value
-            self.chatListTotalUnreadCountUpdated = true
+    func setChatListTotalUnreadState(_ state: ChatListTotalUnreadState) {
+        let current = self.getChatListTotalUnreadState()
+        if current != state {
+            self.chatListTotalUnreadState = state
+            self.chatListTotalUnreadStateUpdated = true
         }
     }
     
@@ -303,8 +357,8 @@ final class MessageHistoryMetadataTable: Table {
         self.updatedPeerNextMessageIdByNamespace.removeAll()
         self.nextMessageStableId = nil
         self.nextMessageStableIdUpdated = false
-        self.chatListTotalUnreadCount = nil
-        self.chatListTotalUnreadCountUpdated = false
+        self.chatListTotalUnreadState = nil
+        self.chatListTotalUnreadStateUpdated = false
     }
     
     override func beforeCommit() {
@@ -339,12 +393,13 @@ final class MessageHistoryMetadataTable: Table {
             }
         }
         
-        if self.chatListTotalUnreadCountUpdated {
-            if let value = self.chatListTotalUnreadCount {
-                var count: Int32 = value
-                self.valueBox.set(self.table, key: self.key(.ChatListTotalUnreadCount), value: MemoryBuffer(memory: &count, capacity: 4, length: 4, freeWhenDone: false))
+        if self.chatListTotalUnreadStateUpdated {
+            if let state = self.chatListTotalUnreadState {
+                let buffer = PostboxEncoder()
+                buffer.encodeObject(state, forKey: "_")
+                self.valueBox.set(self.table, key: self.key(.ChatListTotalUnreadState), value: buffer.readBufferNoCopy())
             }
-            self.chatListTotalUnreadCountUpdated = false
+            self.chatListTotalUnreadStateUpdated = false
         }
     }
 }

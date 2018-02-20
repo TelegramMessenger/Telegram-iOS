@@ -409,7 +409,7 @@ final class MessageHistoryTable: Table {
     
     private func processIndexOperationsCommitAccumulatedRemoveIndices(peerId: PeerId, accumulatedRemoveIndices: inout [(MessageIndex, Bool)], updatedCombinedState: inout CombinedPeerReadState?, invalidateReadState: inout Bool, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], outputOperations: inout [MessageHistoryOperation], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], groupFeedOperations: inout [PeerGroupId : [GroupFeedIndexOperation]], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) {
         if !accumulatedRemoveIndices.isEmpty {
-            let (combinedState, invalidate) = self.readStateTable.deleteMessages(peerId, indices: accumulatedRemoveIndices.map { $0.0 }, incomingStatsInIndices: { peerId, namespace, indices in
+            let (combinedState, invalidate) = self.readStateTable.deleteMessages(peerId, indices: accumulatedRemoveIndices.filter({ $0.1 }).map({ $0.0 }), incomingStatsInIndices: { peerId, namespace, indices in
                 return self.incomingMessageStatsInIndices(peerId, namespace: namespace, indices: indices)
             })
             if let combinedState = combinedState {
@@ -729,7 +729,10 @@ final class MessageHistoryTable: Table {
     
     func clearHistory(peerId: PeerId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], groupFeedOperations: inout [PeerGroupId : [GroupFeedIndexOperation]], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) {
         let indices = self.allIndices(peerId)
-        self.removeMessages(indices.map { $0.id }, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        for index in indices.holes {
+            self.fillHole(index.id, fillType: HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), tagMask: nil, messages: [], operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        }
+        self.removeMessages(indices.messages.map { $0.id }, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     func removeAllMessagesWithAuthor(peerId: PeerId, authorId: PeerId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], groupFeedOperations: inout [PeerGroupId : [GroupFeedIndexOperation]], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) {
@@ -3034,14 +3037,19 @@ final class MessageHistoryTable: Table {
         return messageIds
     }
     
-    func allIndices(_ peerId: PeerId) -> [MessageIndex] {
-        var indices: [MessageIndex] = []
-        self.valueBox.range(self.table, start: self.key(MessageIndex.lowerBound(peerId: peerId)).predecessor, end: self.key(MessageIndex.upperBound(peerId: peerId)).successor, keys: { key in
+    func allIndices(_ peerId: PeerId) -> (messages: [MessageIndex], holes: [MessageIndex]) {
+        var messages: [MessageIndex] = []
+        var holes: [MessageIndex] = []
+        self.valueBox.range(self.table, start: self.key(MessageIndex.lowerBound(peerId: peerId)).predecessor, end: self.key(MessageIndex.upperBound(peerId: peerId)).successor, values: { key, value in
             let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4), id: key.getInt32(8 + 4 + 4)), timestamp: key.getInt32(8))
-            indices.append(index)
+            if extractIntermediateEntryIsMessage(value: value) {
+                messages.append(index)
+            } else {
+                holes.append(index)
+            }
             return true
         }, limit: 0)
-        return indices
+        return (messages, holes)
     }
     
     func allMessageIndices(_ peerId: PeerId) -> [MessageIndex] {

@@ -14,7 +14,7 @@ public enum AdditionalMessageHistoryViewData {
     case cachedPeerDataMessages(PeerId)
     case peerChatState(PeerId)
     case peerGroupState(PeerGroupId)
-    case totalUnreadCount
+    case totalUnreadState
     case peerNotificationSettings(PeerId)
 }
 
@@ -23,7 +23,7 @@ public enum AdditionalMessageHistoryViewDataEntry {
     case cachedPeerDataMessages(PeerId, [MessageId: Message]?)
     case peerChatState(PeerId, PeerChatState?)
     case peerGroupState(PeerGroupId, PeerGroupState?)
-    case totalUnreadCount(Int32)
+    case totalUnreadState(ChatListTotalUnreadState)
     case peerNotificationSettings(PeerNotificationSettings?)
 }
 
@@ -423,7 +423,7 @@ private func monthUpperBoundIndex(peerId: PeerId, index: MessageMonthIndex) -> M
 
 public enum MessageHistoryViewPeerIds: Equatable {
     case single(PeerId)
-    case associated(PeerId, PeerId?)
+    case associated(PeerId, MessageId?)
     case group(PeerGroupId)
     
     public static func ==(lhs: MessageHistoryViewPeerIds, rhs: MessageHistoryViewPeerIds) -> Bool {
@@ -450,6 +450,46 @@ public enum MessageHistoryViewPeerIds: Equatable {
     }
 }
 
+private func clipMessages(peerIds: MessageHistoryViewPeerIds, entries: [MutableMessageHistoryEntry]) -> [MutableMessageHistoryEntry] {
+    switch peerIds {
+        case .single, .group:
+            return entries
+        case let .associated(_, associatedId):
+            if let associatedId = associatedId {
+                var result: [MutableMessageHistoryEntry] = []
+                for entry in entries {
+                    switch entry {
+                        case let .MessageEntry(message, _, _):
+                            if message.id.peerId == associatedId.peerId {
+                                if message.id.namespace == associatedId.namespace && message.id.id <= associatedId.id {
+                                    result.append(entry)
+                                }
+                            } else {
+                                result.append(entry)
+                            }
+                        case let .IntermediateMessageEntry(message, _, _):
+                            if message.id.peerId == associatedId.peerId {
+                                if message.id.namespace == associatedId.namespace && message.id.id <= associatedId.id {
+                                    result.append(entry)
+                                }
+                            } else {
+                                result.append(entry)
+                            }
+                        case .HoleEntry:
+                            result.append(entry)
+                    }
+                }
+                return result
+            } else {
+                return entries
+            }
+    }
+}
+
+private func clipAround(peerIds: MessageHistoryViewPeerIds, _ data: (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?)) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?) {
+    return (entries: clipMessages(peerIds: peerIds, entries: data.entries), lower: data.lower, upper: data.upper)
+}
+
 private func fetchAround(postbox: Postbox, peerIds: MessageHistoryViewPeerIds, index: InternalMessageHistoryAnchorIndex, count: Int, tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?) {
     var ids: [PeerId] = []
     switch peerIds {
@@ -458,7 +498,7 @@ private func fetchAround(postbox: Postbox, peerIds: MessageHistoryViewPeerIds, i
         case let .associated(mainId, associatedId):
             ids.append(mainId)
             if let associatedId = associatedId {
-                ids.append(associatedId)
+                ids.append(associatedId.peerId)
             }
         case let .group(groupId):
             switch index {
@@ -473,11 +513,11 @@ private func fetchAround(postbox: Postbox, peerIds: MessageHistoryViewPeerIds, i
     
     switch index {
         case let .message(index: index, _):
-            return postbox.fetchAroundHistoryEntries(peerIds: ids, index: index, count: count, tagMask: tagMask)
+            return clipAround(peerIds: peerIds, postbox.fetchAroundHistoryEntries(peerIds: ids, index: index, count: count, tagMask: tagMask))
         case .upperBound:
-            return postbox.fetchAroundHistoryEntries(peerIds: ids, index: MessageIndex.absoluteUpperBound(), count: count, tagMask: tagMask)
+            return clipAround(peerIds: peerIds, postbox.fetchAroundHistoryEntries(peerIds: ids, index: MessageIndex.absoluteUpperBound(), count: count, tagMask: tagMask))
         case .lowerBound:
-            return postbox.fetchAroundHistoryEntries(peerIds: ids, index: MessageIndex.absoluteLowerBound(), count: count, tagMask: tagMask)
+            return clipAround(peerIds: peerIds, postbox.fetchAroundHistoryEntries(peerIds: ids, index: MessageIndex.absoluteLowerBound(), count: count, tagMask: tagMask))
     }
 }
 
@@ -690,12 +730,18 @@ final class MutableMessageHistoryView {
     
     func updatePeerIds(transaction: PostboxTransaction) {
         switch self.peerIds {
-            case .single, .group:
+            case .group:
                 break
+            case let .single(peerId):
+                if let updatedData = transaction.currentUpdatedCachedPeerData[peerId] {
+                    if updatedData.associatedHistoryMessageId != nil {
+                        self.peerIds = .associated(peerId, updatedData.associatedHistoryMessageId)
+                    }
+                }
             case let .associated(peerId, associatedId):
                 if let updatedData = transaction.currentUpdatedCachedPeerData[peerId] {
-                    if updatedData.associatedHistoryPeerId != associatedId {
-                        self.peerIds = .associated(peerId, updatedData.associatedHistoryPeerId)
+                    if updatedData.associatedHistoryMessageId != associatedId {
+                        self.peerIds = .associated(peerId, updatedData.associatedHistoryMessageId)
                     }
                 }
         }
@@ -722,7 +768,7 @@ final class MutableMessageHistoryView {
                     case let .associated(mainPeerId, associatedPeerId):
                         ids.insert(mainPeerId)
                         if let associatedPeerId = associatedPeerId {
-                            ids.insert(associatedPeerId)
+                            ids.insert(associatedPeerId.peerId)
                         }
                     case let .group(groupId):
                         if let operations = transaction.currentGroupFeedOperations[groupId] {
@@ -1008,7 +1054,7 @@ final class MutableMessageHistoryView {
                         self.additionalDatas[i] = .peerGroupState(groupId, postbox.peerGroupStateTable.get(groupId))
                         hasChanges = true
                     }
-                case .totalUnreadCount:
+                case .totalUnreadState:
                     break
                 case .peerNotificationSettings:
                     break
@@ -1205,13 +1251,13 @@ final class MutableMessageHistoryView {
             case let .associated(mainId, associatedId):
                 ids.append(mainId)
                 if let associatedId = associatedId {
-                    ids.append(associatedId)
+                    ids.append(associatedId.peerId)
                 }
             case let .group(groupId):
                 return postbox.fetchEarlierGroupFeedEntries(groupId: groupId, index: index, count: count)
         }
         
-        return postbox.fetchEarlierHistoryEntries(peerIds: ids, index: index, count: count, tagMask: self.tagMask)
+        return clipMessages(peerIds: peerIds, entries: postbox.fetchEarlierHistoryEntries(peerIds: ids, index: index, count: count, tagMask: self.tagMask))
     }
     
     private func fetchLater(postbox: Postbox, index: MessageIndex?, count: Int) -> [MutableMessageHistoryEntry] {
@@ -1222,13 +1268,13 @@ final class MutableMessageHistoryView {
             case let .associated(mainId, associatedId):
                 ids.append(mainId)
                 if let associatedId = associatedId {
-                    ids.append(associatedId)
+                    ids.append(associatedId.peerId)
                 }
             case let .group(groupId):
                 return postbox.fetchLaterGroupFeedEntries(groupId: groupId, index: index, count: count)
         }
         
-        return postbox.fetchLaterHistoryEntries(ids, index: index, count: count, tagMask: self.tagMask)
+        return clipMessages(peerIds: peerIds, entries: postbox.fetchLaterHistoryEntries(ids, index: index, count: count, tagMask: self.tagMask))
     }
     
     func complete(postbox: Postbox, context: MutableMessageHistoryViewReplayContext) {
@@ -1492,11 +1538,19 @@ public final class MessageHistoryView {
         var laterId = mutableView.later?.index
         
         var entries: [MessageHistoryEntry] = []
+        var removeUpperHolePeerId: PeerId?
+        if case let .associated(_, associatedId) = mutableView.peerIds {
+            removeUpperHolePeerId = associatedId?.peerId
+        }
         if let transientReadStates = mutableView.transientReadStates, case let .peer(states) = transientReadStates {
             for entry in mutableView.entries {
                 switch entry {
                     case let .HoleEntry(hole, location, _):
-                        entries.append(.HoleEntry(hole, location))
+                        if let removeUpperHolePeerId = removeUpperHolePeerId, removeUpperHolePeerId == hole.maxIndex.id.peerId, hole.maxIndex.timestamp >= Int32.max - 1 {
+                            // skip hole
+                        } else {
+                            entries.append(.HoleEntry(hole, location))
+                        }
                     case let .MessageEntry(message, location, monthLocation):
                         let read: Bool
                         if message.flags.contains(.Incoming) {
@@ -1515,7 +1569,11 @@ public final class MessageHistoryView {
             for entry in mutableView.entries {
                 switch entry {
                     case let .HoleEntry(hole, location, _):
-                        entries.append(.HoleEntry(hole, location))
+                        if let removeUpperHolePeerId = removeUpperHolePeerId, removeUpperHolePeerId == hole.maxIndex.id.peerId, hole.maxIndex.timestamp >= Int32.max - 1 {
+                            // skip hole
+                        } else {
+                            entries.append(.HoleEntry(hole, location))
+                        }
                     case let .MessageEntry(message, location, monthLocation):
                         entries.append(.MessageEntry(message, false, location, monthLocation))
                     case .IntermediateMessageEntry:

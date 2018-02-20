@@ -228,7 +228,13 @@ final class MessageHistoryReadStateTable: Table {
                     
                     self.markReadStatesAsUpdated(peerId, namespaces: states.namespaces)
                     
-                    states.namespaces[namespace] = currentState.withAddedCount(Int32(-knownCount))
+                    var updatedState = currentState.withAddedCount(Int32(-knownCount))
+                    if updatedState.count < 0 {
+                        invalidate = true
+                        updatedState = currentState.withAddedCount(-updatedState.count)
+                    }
+                    
+                    states.namespaces[namespace] = updatedState
                     updated = true
                 } else {
                     invalidate = true
