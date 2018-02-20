@@ -459,6 +459,10 @@ public extension MessageAttribute {
 public struct MessageGroupInfo: Equatable {
     public let stableId: UInt32
     
+    public init(stableId: UInt32) {
+        self.stableId = stableId
+    }
+    
     public static func ==(lhs: MessageGroupInfo, rhs: MessageGroupInfo) -> Bool {
         return lhs.stableId == rhs.stableId
     }
@@ -506,6 +510,11 @@ public final class Message {
         self.peers = peers
         self.associatedMessages = associatedMessages
         self.associatedMessageIds = associatedMessageIds
+        
+        if media.isEmpty && text.isEmpty {
+            var bp:Int = 0
+            bp += 1
+        }
     }
     
     public func withUpdatedFlags(_ flags: MessageFlags) -> Message {
