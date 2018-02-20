@@ -377,6 +377,9 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         if file.resource.headerSize != 0 {
             hintFileIsLarge = true
         }
+        if file.attributes.count == 1, case .FileName = file.attributes[0] {
+            hintFileIsLarge = true
+        }
         let upload = multipartUpload(network: network, postbox: postbox, source: .resource(file.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes)), hintFileSize: hintSize, hintFileIsLarge: hintFileIsLarge)
             |> mapError { _ -> PendingMessageUploadError in return .generic }
         var alreadyTransformed = false
