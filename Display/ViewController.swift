@@ -30,7 +30,7 @@ open class ViewControllerPresentationArguments {
 }
 
 @objc open class ViewController: UIViewController, ContainableController {
-    private var containerLayout = ContainerViewLayout()
+    private var validLayout: ContainerViewLayout?
     private let presentationContext: PresentationContext
     
     public final var supportedOrientations: UIInterfaceOrientationMask = .all
@@ -60,6 +60,8 @@ open class ViewControllerPresentationArguments {
     
     public private(set) var presentationArguments: Any?
     
+    public var tabBarItemDebugTapAction: (() -> Void)?
+    
     private var _displayNode: ASDisplayNode?
     public final var displayNode: ASDisplayNode {
         get {
@@ -85,6 +87,8 @@ open class ViewControllerPresentationArguments {
     
     public let statusBar: StatusBar
     public let navigationBar: NavigationBar?
+    
+    private var previewingContext: Any?
     
     public var displayNavigationBar = true
     
@@ -172,7 +176,7 @@ open class ViewControllerPresentationArguments {
     }
     
     open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        self.containerLayout = layout
+        self.validLayout = layout
         
         if !self.isViewLoaded {
             self.loadView()
@@ -221,6 +225,7 @@ open class ViewControllerPresentationArguments {
                 self.displayNode.addSubnode(navigationBar)
             }
         }
+        self.view.autoresizingMask = []
         self.view.addSubview(self.statusBar.view)
         self.presentationContext.view = self.view
     }
@@ -238,8 +243,8 @@ open class ViewControllerPresentationArguments {
     }
     
     public func requestLayout(transition: ContainedViewLayoutTransition) {
-        if self.isViewLoaded {
-            self.containerLayoutUpdated(self.containerLayout, transition: transition)
+        if self.isViewLoaded, let validLayout = self.validLayout {
+            self.containerLayoutUpdated(validLayout, transition: transition)
         }
     }
     
@@ -293,6 +298,11 @@ open class ViewControllerPresentationArguments {
         }
     }
     
+    public func presentInGlobalOverlay(_ controller: ViewController, with arguments: Any? = nil) {
+        controller.presentationArguments = arguments
+        self.window?.presentInGlobalOverlay(controller)
+    }
+    
     open override func viewWillDisappear(_ animated: Bool) {
         self.activeInputViewCandidate = findCurrentResponder(self.view)
         
@@ -312,5 +322,28 @@ open class ViewControllerPresentationArguments {
     }
     
     open func dismiss(completion: (() -> Void)? = nil) {
+    }
+    
+    @available(iOSApplicationExtension 9.0, *)
+    open func registerForPreviewing(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme, onlyNative: Bool) {
+        if self.traitCollection.forceTouchCapability == .available {
+            let _ = super.registerForPreviewing(with: delegate, sourceView: sourceView)
+        } else if !onlyNative {
+            if self.previewingContext == nil {
+                let previewingContext = SimulatedViewControllerPreviewing(theme: theme, delegate: delegate, sourceView: sourceView, node: self.displayNode, present: { [weak self] c, a in
+                    self?.presentInGlobalOverlay(c, with: a)
+                })
+                self.previewingContext = previewingContext
+            }
+        }
+    }
+    
+    @available(iOSApplicationExtension 9.0, *)
+    open override func unregisterForPreviewing(withContext previewing: UIViewControllerPreviewing) {
+        if self.previewingContext != nil {
+            self.previewingContext = nil
+        } else {
+            super.unregisterForPreviewing(withContext: previewing)
+        }
     }
 }

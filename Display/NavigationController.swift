@@ -21,7 +21,7 @@ private class NavigationControllerView: UIView {
 open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
     public private(set) weak var overlayPresentingController: ViewController?
     
-    private var containerLayout = ContainerViewLayout()
+    private var validLayout: ContainerViewLayout?
     
     private var navigationTransitionCoordinator: NavigationTransitionCoordinator?
     
@@ -72,10 +72,10 @@ open class NavigationController: UINavigationController, ContainableController, 
         if !self.isViewLoaded {
             self.loadView()
         }
-        self.containerLayout = layout
+        self.validLayout = layout
         transition.updateFrame(view: self.view, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
         
-        let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging)
+        let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging)
         
         if let topViewController = self.topViewController {
             if let topViewController = topViewController as? ContainableController {
@@ -101,6 +101,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     open override func loadView() {
         self.view = NavigationControllerView()
         self.view.clipsToBounds = true
+        self.view.autoresizingMask = []
         
         if #available(iOSApplicationExtension 11.0, *) {
             self.navigationBar.prefersLargeTitles = false
@@ -224,17 +225,21 @@ open class NavigationController: UINavigationController, ContainableController, 
         if !controller.hasActiveInput {
             self.view.endEditing(true)
         }
-        let appliedLayout = self.containerLayout.withUpdatedInputHeight(controller.hasActiveInput ? self.containerLayout.inputHeight : nil)
-        controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
-        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
-            if let strongSelf = self {
-                let containerLayout = strongSelf.containerLayout.withUpdatedInputHeight(controller.hasActiveInput ? strongSelf.containerLayout.inputHeight : nil)
-                if containerLayout != appliedLayout {
-                    controller.containerLayoutUpdated(containerLayout, transition: .immediate)
+        if let validLayout = self.validLayout {
+            let appliedLayout = validLayout.withUpdatedInputHeight(controller.hasActiveInput ? validLayout.inputHeight : nil)
+            controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
+            self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
+                if let strongSelf = self, let validLayout = strongSelf.validLayout {
+                    let containerLayout = validLayout.withUpdatedInputHeight(controller.hasActiveInput ? validLayout.inputHeight : nil)
+                    if containerLayout != appliedLayout {
+                        controller.containerLayoutUpdated(containerLayout, transition: .immediate)
+                    }
+                    strongSelf.pushViewController(controller, animated: true)
                 }
-                strongSelf.pushViewController(controller, animated: true)
-            }
-        }))
+            }))
+        } else {
+            self.pushViewController(controller, animated: false)
+        }
     }
     
     open override func pushViewController(_ viewController: UIViewController, animated: Bool) {
@@ -247,7 +252,9 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     public func replaceTopController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
         self.view.endEditing(true)
-        controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
+        if let validLayout = self.validLayout {
+            controller.containerLayoutUpdated(validLayout, transition: .immediate)
+        }
         self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 ready?.set(true)
@@ -261,7 +268,9 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     public func replaceAllButRootController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
         self.view.endEditing(true)
-        controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
+        if let validLayout = self.validLayout {
+            controller.containerLayoutUpdated(validLayout, transition: .immediate)
+        }
         self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 ready?.set(true)
@@ -323,15 +332,17 @@ open class NavigationController: UINavigationController, ContainableController, 
             let topViewController = viewControllers[viewControllers.count - 1] as UIViewController
             
             if let controller = topViewController as? ContainableController {
-                var layoutToApply = self.containerLayout
-                var hasActiveInput = false
-                if let controller = controller as? ViewController {
-                    hasActiveInput = controller.hasActiveInput
+                if let validLayout = self.validLayout {
+                    var layoutToApply = validLayout
+                    var hasActiveInput = false
+                    if let controller = controller as? ViewController {
+                        hasActiveInput = controller.hasActiveInput
+                    }
+                    if !hasActiveInput {
+                        layoutToApply = layoutToApply.withUpdatedInputHeight(nil)
+                    }
+                    controller.containerLayoutUpdated(layoutToApply, transition: .immediate)
                 }
-                if !hasActiveInput {
-                    layoutToApply = layoutToApply.withUpdatedInputHeight(nil)
-                }
-                controller.containerLayoutUpdated(layoutToApply, transition: .immediate)
             } else {
                 topViewController.view.frame = CGRect(origin: CGPoint(), size: self.view.bounds.size)
             }
@@ -452,7 +463,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             self._presentedViewController = controller
             
             self.view.endEditing(true)
-            controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
+            if let validLayout = self.validLayout {
+                controller.containerLayoutUpdated(validLayout, transition: .immediate)
+            }
             
             var ready: Signal<Bool, Void> = .single(true)
             

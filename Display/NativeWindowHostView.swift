@@ -11,6 +11,7 @@ private let defaultOrientations: UIInterfaceOrientationMask = {
 
 private class WindowRootViewController: UIViewController {
     var presentController: ((UIViewController, PresentationSurfaceLevel, Bool, (() -> Void)?) -> Void)?
+    
     var orientations: UIInterfaceOrientationMask = defaultOrientations {
         didSet {
             if oldValue != self.orientations {
@@ -73,6 +74,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     var updateIsUpdatingOrientationLayout: ((Bool) -> Void)?
     var updateToInterfaceOrientation: (() -> Void)?
     var presentController: ((ViewController, PresentationSurfaceLevel) -> Void)?
+    var presentControllerInGlobalOverlay: ((_ controller: ViewController) -> Void)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     var presentNativeImpl: ((UIViewController) -> Void)?
     var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
@@ -150,6 +152,10 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.presentController?(controller, level)
     }
     
+    func presentInGlobalOverlay(_ controller: ViewController) {
+        self.presentControllerInGlobalOverlay?(controller)
+    }
+    
     func presentNative(_ controller: UIViewController) {
         self.presentNativeImpl?(controller)
     }
@@ -224,6 +230,10 @@ public func nativeWindowHostView() -> WindowHostView {
     
     window.presentController = { [weak hostView] controller, level in
         hostView?.present?(controller, level)
+    }
+    
+    window.presentControllerInGlobalOverlay = { [weak hostView] controller in
+        hostView?.presentInGlobalOverlay?(controller)
     }
     
     window.presentNativeImpl = { [weak hostView] controller in

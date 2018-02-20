@@ -106,6 +106,10 @@ static bool notyfyingShiftState = false;
     });
 }
 
+- (BOOL)isPresentedInPreviewingContext {
+    return ![self.presentingViewController isKindOfClass:[UIViewControllerPresentingProxy class]];
+}
+
 - (void)setIgnoreAppearanceMethodInvocations:(BOOL)ignoreAppearanceMethodInvocations
 {
     [self setAssociatedObject:@(ignoreAppearanceMethodInvocations) forKey:UIViewControllerIgnoreAppearanceMethodInvocationsKey];

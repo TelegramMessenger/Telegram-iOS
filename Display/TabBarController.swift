@@ -26,7 +26,7 @@ public final class TabBarControllerTheme {
 }
 
 open class TabBarController: ViewController {
-    private var containerLayout = ContainerViewLayout()
+    private var validLayout: ContainerViewLayout?
     
     private var tabBarControllerNode: TabBarControllerNode {
         get {
@@ -88,10 +88,32 @@ open class TabBarController: ViewController {
         }
     }
     
+    private var debugTapCounter: (Double, Int) = (0.0, 0)
+    
     override open func loadDisplayNode() {
         self.displayNode = TabBarControllerNode(theme: self.theme, itemSelected: { [weak self] index in
             if let strongSelf = self {
-                strongSelf.controllers[index].containerLayoutUpdated(strongSelf.containerLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
+                if strongSelf.selectedIndex == index {
+                    let timestamp = CACurrentMediaTime()
+                    if strongSelf.debugTapCounter.0 < timestamp - 0.4 {
+                        strongSelf.debugTapCounter.0 = timestamp
+                        strongSelf.debugTapCounter.1 = 0
+                    }
+                        
+                    if strongSelf.debugTapCounter.0 >= timestamp - 0.4 {
+                        strongSelf.debugTapCounter.0 = timestamp
+                        strongSelf.debugTapCounter.1 += 1
+                    }
+                    
+                    if strongSelf.debugTapCounter.1 >= 10 {
+                        strongSelf.debugTapCounter.1 = 0
+                        
+                        strongSelf.controllers[index].tabBarItemDebugTapAction?()
+                    }
+                }
+                if let validLayout = strongSelf.validLayout {
+                    strongSelf.controllers[index].containerLayoutUpdated(validLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
+                }
                 strongSelf.pendingControllerDisposable.set((strongSelf.controllers[index].ready.get() |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
                         strongSelf.selectedIndex = index
@@ -127,7 +149,9 @@ open class TabBarController: ViewController {
         var displayNavigationBar = false
         if let currentController = self.currentController {
             currentController.willMove(toParentViewController: self)
-            currentController.containerLayoutUpdated(self.containerLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
+            if let validLayout = self.validLayout {
+                currentController.containerLayoutUpdated(validLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
+            }
             self.tabBarControllerNode.currentControllerView = currentController.view
             currentController.navigationBar?.isHidden = true
             self.addChildViewController(currentController)
@@ -149,13 +173,15 @@ open class TabBarController: ViewController {
             self.setDisplayNavigationBar(displayNavigationBar)
         }
         
-        self.tabBarControllerNode.containerLayoutUpdated(self.containerLayout, transition: .immediate)
+        if let validLayout = self.validLayout {
+            self.tabBarControllerNode.containerLayoutUpdated(validLayout, transition: .immediate)
+        }
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.containerLayout = layout
+        self.validLayout = layout
         
         self.tabBarControllerNode.containerLayoutUpdated(layout, transition: transition)
         

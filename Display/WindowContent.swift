@@ -162,7 +162,26 @@ private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> Container
         resolvedSafeInsets.right = 44.0
     }
     
-    return ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.onScreenNavigationHeight ?? 00, right: 0.0), safeInsets: resolvedSafeInsets, statusBarHeight: resolvedStatusBarHeight, inputHeight: updatedInputHeight, inputHeightIsInteractivellyChanging: layout.upperKeyboardInputPositionBound != nil && layout.upperKeyboardInputPositionBound != layout.size.height && layout.inputHeight != nil)
+    var standardInputHeight: CGFloat = 216.0
+    var predictiveHeight: CGFloat = 42.0
+    
+    if layout.size.width.isEqual(to: 320.0) || layout.size.width.isEqual(to: 375.0) {
+        standardInputHeight = 216.0
+        predictiveHeight = 42.0
+    } else if layout.size.width.isEqual(to: 414.0) {
+        standardInputHeight = 226.0
+        predictiveHeight = 42.0
+    } else if layout.size.width.isEqual(to: 480.0) || layout.size.width.isEqual(to: 568.0) || layout.size.width.isEqual(to: 667.0) || layout.size.width.isEqual(to: 736.0) {
+        standardInputHeight = 162.0
+        predictiveHeight = 38.0
+    } else if layout.size.width.isEqual(to: 768.0) || layout.size.width.isEqual(to: 1024.0) {
+        standardInputHeight = 264.0
+        predictiveHeight = 42.0
+    }
+    
+    standardInputHeight += predictiveHeight
+    
+    return ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.onScreenNavigationHeight ?? 00, right: 0.0), safeInsets: resolvedSafeInsets, statusBarHeight: resolvedStatusBarHeight, inputHeight: updatedInputHeight, standardInputHeight: standardInputHeight, inputHeightIsInteractivellyChanging: layout.upperKeyboardInputPositionBound != nil && layout.upperKeyboardInputPositionBound != layout.size.height && layout.inputHeight != nil)
 }
 
 private func encodeText(_ string: String, _ key: Int) -> String {
@@ -250,6 +269,7 @@ public final class WindowHostView {
     let updatePreferNavigationUIHidden: (Bool) -> Void
     
     var present: ((ViewController, PresentationSurfaceLevel) -> Void)?
+    var presentInGlobalOverlay: ((_ controller: ViewController) -> Void)?
     var presentNative: ((UIViewController) -> Void)?
     var updateSize: ((CGSize) -> Void)?
     var layoutSubviews: (() -> Void)?
@@ -276,6 +296,7 @@ public struct WindowTracingTags {
 
 public protocol WindowHost {
     func present(_ controller: ViewController, on level: PresentationSurfaceLevel)
+    func presentInGlobalOverlay(_ controller: ViewController)
     func invalidateDeferScreenEdgeGestures()
     func invalidatePreferNavigationUIHidden()
     func cancelInteractiveKeyboardGestures()
@@ -324,6 +345,7 @@ public class Window1 {
     private var cachedHasPreview: Bool = false
     
     private let presentationContext: PresentationContext
+    private let overlayPresentationContext: GlobalOverlayPresentationContext
     
     private var tracingStatusBarsInvalidated = false
     private var shouldUpdateDeferScreenEdgeGestures = false
@@ -372,9 +394,14 @@ public class Window1 {
         
         self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForScreenSize(boundsSize), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, safeInsets: safeInsetsForScreenSize(boundsSize), onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil)
         self.presentationContext = PresentationContext()
+        self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost)
         
         self.hostView.present = { [weak self] controller, level in
             self?.present(controller, on: level)
+        }
+        
+        self.hostView.presentInGlobalOverlay = { [weak self] controller in
+            self?.presentInGlobalOverlay(controller)
         }
         
         self.hostView.presentNative = { [weak self] controller in
@@ -415,6 +442,7 @@ public class Window1 {
         
         self.presentationContext.view = self.hostView.view
         self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
+        self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
         
         self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self {
@@ -568,6 +596,10 @@ public class Window1 {
                     return result
                 }
             }
+        }
+        
+        if let result = self.overlayPresentationContext.hitTest(point, with: event) {
+            return result
         }
         
         for controller in self._topLevelOverlayControllers.reversed() {
@@ -802,6 +834,7 @@ public class Window1 {
                 if childLayoutUpdated {
                     self._rootController?.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                     self.presentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
+                    self.overlayPresentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                 
                     for controller in self.topLevelOverlayControllers {
                         controller.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
@@ -831,6 +864,10 @@ public class Window1 {
     
     public func present(_ controller: ViewController, on level: PresentationSurfaceLevel) {
         self.presentationContext.present(controller, on: level)
+    }
+    
+    public func presentInGlobalOverlay(_ controller: ViewController) {
+        self.overlayPresentationContext.present(controller)
     }
     
     public func presentNative(_ controller: UIViewController) {

@@ -226,15 +226,15 @@ class StatusBarManager {
                 self.host.statusBarStyle = statusBarStyle
             }
             if let statusBarWindow = self.host.statusBarWindow {
-                statusBarWindow.alpha = globalStatusBar.1
+                statusBarView.alpha = globalStatusBar.1
                 var statusBarBounds = statusBarWindow.bounds
                 if !statusBarBounds.origin.y.isEqual(to: globalStatusBar.2) {
                     statusBarBounds.origin.y = globalStatusBar.2
                     statusBarWindow.bounds = statusBarBounds
                 }
             }
-        } else if let statusBarWindow = self.host.statusBarWindow {
-            statusBarWindow.alpha = 0.0
+        } else {
+            statusBarView.alpha = 0.0
         }
     }
 }

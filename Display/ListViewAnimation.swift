@@ -124,6 +124,19 @@ public final class ListViewAnimation {
         self.completed = completed
     }
     
+    init<T: Interpolatable>(copying: ListViewAnimation, update: @escaping (CGFloat, T) -> Void, completed: @escaping (Bool) -> Void = { _ in }) {
+        self.from = copying.from
+        self.to = copying.to
+        self.duration = copying.duration
+        self.curve = copying.curve
+        self.startTime = copying.startTime
+        self.interpolator = copying.interpolator
+        self.update = { progress, value in
+            update(progress, value as! T)
+        }
+        self.completed = completed
+    }
+    
     public func completeAt(_ timestamp: Double) -> Bool {
         if timestamp >= self.startTime + self.duration {
             self.completed(true)

@@ -430,6 +430,27 @@ open class ListViewItemNode: ASDisplayNode {
         self.setAnimationForKey("height", animation: animation)
     }
     
+    func copyHeightAndApparentHeightAnimations(to otherNode: ListViewItemNode) {
+        if let animation = self.animationForKey("apparentHeight") {
+            let updatedAnimation = ListViewAnimation(copying: animation, update: { [weak otherNode] (progress: CGFloat, currentValue: CGFloat) -> Void in
+                if let strongSelf = otherNode {
+                    let frame = strongSelf.frame
+                    strongSelf.frame = CGRect(origin: frame.origin, size: CGSize(width: frame.width, height: currentValue))
+                }
+            })
+            otherNode.setAnimationForKey("height", animation: updatedAnimation)
+        }
+        
+        if let animation = self.animationForKey("apparentHeight") {
+            let updatedAnimation = ListViewAnimation(copying: animation, update: { [weak otherNode] (progress: CGFloat, currentValue: CGFloat) -> Void in
+                if let strongSelf = otherNode {
+                    strongSelf.apparentHeight = currentValue
+                }
+            })
+            otherNode.setAnimationForKey("apparentHeight", animation: updatedAnimation)
+        }
+    }
+    
     public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat, CGFloat) -> Void)? = nil) {
         let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] progress, currentValue in
             if let strongSelf = self {
@@ -482,6 +503,10 @@ open class ListViewItemNode: ASDisplayNode {
     }
     
     open func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+    }
+    
+    open func isReorderable(at point: CGPoint) -> Bool {
+        return false
     }
     
     open func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {

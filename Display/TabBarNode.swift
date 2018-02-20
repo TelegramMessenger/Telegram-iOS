@@ -197,6 +197,16 @@ class TabBarNode: ASDisplayNode {
         self.addSubnode(self.separatorNode)
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(TabBarTapRecognizer(tap: { [weak self] point in
+            if let strongSelf = self {
+                strongSelf.tapped(at: point)
+            }
+        }))
+    }
+    
     func updateTheme(_ theme: TabBarControllerTheme) {
         if self.theme !== theme {
             self.theme = theme
@@ -354,11 +364,8 @@ class TabBarNode: ASDisplayNode {
         }
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesBegan(touches, with: event)
-        
-        if let touch = touches.first, let bottomInset = self.validLayout?.3 {
-            let location = touch.location(in: self.view)
+    private func tapped(at location: CGPoint) {
+        if let bottomInset = self.validLayout?.3 {
             if location.y > self.bounds.size.height - bottomInset {
                 return
             }

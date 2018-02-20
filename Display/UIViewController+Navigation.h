@@ -7,6 +7,7 @@ typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
 
 @interface UIViewController (Navigation)
 
+- (BOOL)isPresentedInPreviewingContext;
 - (void)setIgnoreAppearanceMethodInvocations:(BOOL)ignoreAppearanceMethodInvocations;
 - (BOOL)ignoreAppearanceMethodInvocations;
 - (void)navigation_setNavigationController:(UINavigationController * _Nullable)navigationControlller;

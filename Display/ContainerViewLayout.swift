@@ -45,25 +45,17 @@ public struct ContainerViewLayout: Equatable {
     public let safeInsets: UIEdgeInsets
     public let statusBarHeight: CGFloat?
     public let inputHeight: CGFloat?
+    public let standardInputHeight: CGFloat
     public let inputHeightIsInteractivellyChanging: Bool
     
-    public init() {
-        self.size = CGSize()
-        self.metrics = LayoutMetrics()
-        self.intrinsicInsets = UIEdgeInsets()
-        self.safeInsets = UIEdgeInsets()
-        self.statusBarHeight = nil
-        self.inputHeight = nil
-        self.inputHeightIsInteractivellyChanging = false
-    }
-    
-    public init(size: CGSize, metrics: LayoutMetrics, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat?, inputHeight: CGFloat?, inputHeightIsInteractivellyChanging: Bool) {
+    public init(size: CGSize, metrics: LayoutMetrics, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat?, inputHeight: CGFloat?, standardInputHeight: CGFloat, inputHeightIsInteractivellyChanging: Bool) {
         self.size = size
         self.metrics = metrics
         self.intrinsicInsets = intrinsicInsets
         self.safeInsets = safeInsets
         self.statusBarHeight = statusBarHeight
         self.inputHeight = inputHeight
+        self.standardInputHeight = standardInputHeight
         self.inputHeightIsInteractivellyChanging = inputHeightIsInteractivellyChanging
     }
     
@@ -79,15 +71,15 @@ public struct ContainerViewLayout: Equatable {
     }
     
     public func addedInsets(insets: UIEdgeInsets) -> ContainerViewLayout {
-        return ContainerViewLayout(size: self.size, metrics: self.metrics, intrinsicInsets: UIEdgeInsets(top: self.intrinsicInsets.top + insets.top, left: self.intrinsicInsets.left + insets.left, bottom: self.intrinsicInsets.bottom + insets.bottom, right: self.intrinsicInsets.right + insets.right), safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: self.inputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging)
+        return ContainerViewLayout(size: self.size, metrics: self.metrics, intrinsicInsets: UIEdgeInsets(top: self.intrinsicInsets.top + insets.top, left: self.intrinsicInsets.left + insets.left, bottom: self.intrinsicInsets.bottom + insets.bottom, right: self.intrinsicInsets.right + insets.right), safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: self.inputHeight, standardInputHeight: self.standardInputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging)
     }
     
     public func withUpdatedInputHeight(_ inputHeight: CGFloat?) -> ContainerViewLayout {
-        return ContainerViewLayout(size: self.size, metrics: self.metrics, intrinsicInsets: self.intrinsicInsets, safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: inputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging)
+        return ContainerViewLayout(size: self.size, metrics: self.metrics, intrinsicInsets: self.intrinsicInsets, safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: inputHeight, standardInputHeight: self.standardInputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging)
     }
     
     public func withUpdatedMetrics(_ metrics: LayoutMetrics) -> ContainerViewLayout {
-        return ContainerViewLayout(size: self.size, metrics: metrics, intrinsicInsets: self.intrinsicInsets, safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: self.inputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging)
+        return ContainerViewLayout(size: self.size, metrics: metrics, intrinsicInsets: self.intrinsicInsets, safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: self.inputHeight, standardInputHeight: self.standardInputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging)
     }
 
     public static func ==(lhs: ContainerViewLayout, rhs: ContainerViewLayout) -> Bool {
@@ -128,6 +120,10 @@ public struct ContainerViewLayout: Equatable {
                 return false
             }
         } else if let _ = rhs.inputHeight {
+            return false
+        }
+        
+        if !lhs.standardInputHeight.isEqual(to: rhs.standardInputHeight) {
             return false
         }
         

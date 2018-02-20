@@ -102,34 +102,6 @@ public struct GridNodeUpdateLayout {
     }
 }
 
-/*private func binarySearch(_ inputArr: [GridNodePresentationItem], searchItem: CGFloat) -> Int? {
-    if inputArr.isEmpty {
-        return nil
-    }
-    
-    var lowerPosition = inputArr[0].frame.origin.y + inputArr[0].frame.size.height
-    var upperPosition = inputArr[inputArr.count - 1].frame.origin.y
-    
-    if lowerPosition > upperPosition {
-        return nil
-    }
-    
-    while (true) {
-        let currentPosition = (lowerIndex + upperIndex) / 2
-        if (inputArr[currentIndex] == searchItem) {
-            return currentIndex
-        } else if (lowerIndex > upperIndex) {
-            return nil
-        } else {
-            if (inputArr[currentIndex] > searchItem) {
-                upperIndex = currentIndex - 1
-            } else {
-                lowerIndex = currentIndex + 1
-            }
-        }
-    }
-}*/
-
 public enum GridNodeStationaryItems {
     case none
     case all
@@ -263,6 +235,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     public var visibleItemsUpdated: ((GridNodeVisibleItems) -> Void)?
     public var presentationLayoutUpdated: ((GridNodeCurrentPresentationLayout, ContainedViewLayoutTransition) -> Void)?
+    public var scrollingCompleted: (() -> Void)?
     
     public final var floatingSections = false
     
@@ -397,11 +370,13 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             self.updateItemNodeVisibilititesAndScrolling()
+            self.scrollingCompleted?()
         }
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.updateItemNodeVisibilititesAndScrolling()
+        self.scrollingCompleted?()
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {

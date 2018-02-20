@@ -34,6 +34,7 @@ public enum StatusBarStyle {
 private enum StatusBarItemType {
     case Generic
     case Battery
+    case Activity
 }
 
 func makeStatusBarProxy(_ statusBarStyle: StatusBarStyle, statusBar: UIView) -> StatusBarProxyNode {
@@ -90,7 +91,22 @@ private class StatusBarItemNode: ASDisplayNode {
                 UIGraphicsPopContext()
             }
         }
-        let type: StatusBarItemType = self.targetView.checkIsKind(of: batteryItemClass!) ? .Battery : .Generic
+        //dumpViews(self.targetView)
+        var type: StatusBarItemType = self.targetView.checkIsKind(of: batteryItemClass!) ? .Battery : .Generic
+        if case .Generic = type {
+            var hasActivityBackground = false
+            var hasText = false
+            for subview in self.targetView.subviews {
+                if let stringClass = stringClass, subview.checkIsKind(of: stringClass) {
+                    hasText = true
+                } else if let activityClass = activityClass, subview.checkIsKind(of: activityClass) {
+                    hasActivityBackground = true
+                }
+            }
+            if hasActivityBackground && hasText {
+                type = .Activity
+            }
+        }
         tintStatusBarItem(context, type: type, style: statusBarStyle)
         self.contents = context.generateImage()?.cgImage
         
@@ -229,6 +245,8 @@ private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemTyp
                     }
                 }
             }
+    case .Activity:
+        break
     case .Generic:
         var pixel = context.bytes.assumingMemoryBound(to: UInt32.self)
         let end = context.bytes.advanced(by: context.length).assumingMemoryBound(to: UInt32.self)
@@ -259,12 +277,36 @@ private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemTyp
     }
 }
 
-private let batteryItemClass: AnyClass? = { () -> AnyClass? in
+private let foregroundClass: AnyClass? = {
+    var nameString = "StatusBar"
+    if CFAbsoluteTimeGetCurrent() > 0 {
+        nameString += "ForegroundView"
+    }
+    return NSClassFromString("_UI" + nameString)
+}()
+
+private let batteryItemClass: AnyClass? = {
     var nameString = "StatusBarBattery"
     if CFAbsoluteTimeGetCurrent() > 0 {
         nameString += "ItemView"
     }
     return NSClassFromString("UI" + nameString)
+}()
+
+private let activityClass: AnyClass? = {
+    var nameString = "StatusBarBackground"
+    if CFAbsoluteTimeGetCurrent() > 0 {
+        nameString += "ActivityView"
+    }
+    return NSClassFromString("_UI" + nameString)
+}()
+
+private let stringClass: AnyClass? = {
+    var nameString = "StatusBar"
+    if CFAbsoluteTimeGetCurrent() > 0 {
+        nameString += "StringView"
+    }
+    return NSClassFromString("_UI" + nameString)
 }()
 
 private class StatusBarProxyNodeTimerTarget: NSObject {
@@ -327,7 +369,15 @@ class StatusBarProxyNode: ASDisplayNode {
         self.clipsToBounds = true
         //self.backgroundColor = UIColor.blueColor().colorWithAlphaComponent(0.2)
         
+        var rootView: UIView = statusBar
         for subview in statusBar.subviews {
+            if let foregroundClass = foregroundClass, subview.checkIsKind(of: foregroundClass) {
+                rootView = subview
+                break
+            }
+        }
+        
+        for subview in rootView.subviews {
             let itemNode = StatusBarItemNode(statusBarStyle: statusBarStyle, targetView: subview)
             self.itemNodes.append(itemNode)
             self.addSubnode(itemNode)
@@ -343,10 +393,20 @@ class StatusBarProxyNode: ASDisplayNode {
     private func updateItems() {
         let statusBar = self.statusBar
         
+        var rootView: UIView = statusBar
+        for subview in statusBar.subviews {
+            if let foregroundClass = foregroundClass, subview.checkIsKind(of: foregroundClass) {
+                rootView = subview
+                break
+            }
+        }
+        
+        //dumpViews(self.statusBar)
+        
         var i = 0
         while i < self.itemNodes.count {
             var found = false
-            for subview in statusBar.subviews {
+            for subview in rootView.subviews {
                 if self.itemNodes[i].targetView == subview {
                     found = true
                     break
@@ -362,7 +422,7 @@ class StatusBarProxyNode: ASDisplayNode {
             }
         }
         
-        for subview in statusBar.subviews {
+        for subview in rootView.subviews {
             var found = false
             for itemNode in self.itemNodes {
                 if itemNode.targetView == subview {

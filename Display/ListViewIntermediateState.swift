@@ -145,15 +145,25 @@ public struct ListViewUpdateSizeAndInsets {
 public struct ListViewItemRange: Equatable {
     public let firstIndex: Int
     public let lastIndex: Int
+    
+    public static func ==(lhs: ListViewItemRange, rhs: ListViewItemRange) -> Bool {
+        return lhs.firstIndex == rhs.firstIndex && lhs.lastIndex == rhs.lastIndex
+    }
 }
 
-public func ==(lhs: ListViewItemRange, rhs: ListViewItemRange) -> Bool {
-    return lhs.firstIndex == rhs.firstIndex && lhs.lastIndex == rhs.lastIndex
+public struct ListViewVisibleItemRange: Equatable {
+    public let firstIndex: Int
+    public let firstIndexFullyVisible: Bool
+    public let lastIndex: Int
+    
+    public static func ==(lhs: ListViewVisibleItemRange, rhs: ListViewVisibleItemRange) -> Bool {
+        return lhs.firstIndex == rhs.firstIndex && lhs.firstIndexFullyVisible == rhs.firstIndexFullyVisible && lhs.lastIndex == rhs.lastIndex
+    }
 }
 
 public struct ListViewDisplayedItemRange: Equatable {
     public let loadedRange: ListViewItemRange?
-    public let visibleRange: ListViewItemRange?
+    public let visibleRange: ListViewVisibleItemRange?
 }
 
 public func ==(lhs: ListViewDisplayedItemRange, rhs: ListViewDisplayedItemRange) -> Bool {

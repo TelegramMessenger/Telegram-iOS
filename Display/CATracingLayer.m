@@ -367,6 +367,14 @@ static void traceLayerSurfaces(int32_t tracingTag, int depth, CALayer * _Nonnull
 
 @implementation UITracingLayerView
 
+- (void)setFrame:(CGRect)frame {
+    [super setFrame:frame];
+}
+
+- (void)setAutoresizingMask:(UIViewAutoresizing)autoresizingMask {
+    [super setAutoresizingMask:0];
+}
+
 + (Class)layerClass {
     return [CATracingLayer class];
 }
