@@ -13,6 +13,7 @@
 #import <LegacyComponents/TGMessageImageViewOverlayView.h>
 
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
+#import <LegacyComponents/TGMediaSelectionContext.h>
 
 @interface TGMediaPickerGalleryGifItemView ()
 {
@@ -97,7 +98,7 @@
 {
     [super setItem:item synchronously:synchronously];
     
-    _imageSize = item.asset.dimensions;
+    _imageSize = item.asset.originalSize;
     [self _layoutPlayerView];
     
     if (item.asset == nil)
@@ -106,7 +107,7 @@
     }
     else
     {
-        SSignal *imageSignal = [TGMediaAssetImageSignals imageForAsset:item.asset imageType:(item.immediateThumbnailImage != nil) ? TGMediaAssetImageTypeScreen : TGMediaAssetImageTypeFastScreen size:CGSizeMake(1280, 1280)];
+        SSignal *imageSignal = [TGMediaAssetImageSignals imageForAsset:(TGMediaAsset *)item.asset imageType:(item.immediateThumbnailImage != nil) ? TGMediaAssetImageTypeScreen : TGMediaAssetImageTypeFastScreen size:CGSizeMake(1280, 1280)];
         
         if (item.immediateThumbnailImage != nil)
             imageSignal = [[SSignal single:item.immediateThumbnailImage] then:imageSignal];
@@ -114,7 +115,7 @@
         [self.imageView setSignal:imageSignal];
         
         __weak TGMediaPickerGalleryGifItemView *weakSelf = self;
-        [_gifDataDisposable setDisposable:[[TGMediaAssetImageSignals imageDataForAsset:item.asset] startWithNext:^(id next)
+        [_gifDataDisposable setDisposable:[[TGMediaAssetImageSignals imageDataForAsset:(TGMediaAsset *)item.asset] startWithNext:^(id next)
         {
             __strong TGMediaPickerGalleryGifItemView *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -148,7 +149,7 @@
         _attributesDisposable = [[SMetaDisposable alloc] init];
     
     __weak TGMediaPickerGalleryGifItemView *weakSelf = self;
-    [_attributesDisposable setDisposable:[[[TGMediaAssetImageSignals fileAttributesForAsset:item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(TGMediaAssetImageFileAttributes *next)
+    [_attributesDisposable setDisposable:[[[TGMediaAssetImageSignals fileAttributesForAsset:(TGMediaAsset *)item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(TGMediaAssetImageFileAttributes *next)
     {
         __strong TGMediaPickerGalleryGifItemView *strongSelf = weakSelf;
         if (strongSelf == nil)

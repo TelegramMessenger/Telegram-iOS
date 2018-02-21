@@ -2,6 +2,7 @@
 #import <UIKit/UIKit.h>
 #import <LegacyComponents/PGCamera.h>
 
+@class SSignal;
 @class TGModernButton;
 @class TGCameraShutterButton;
 @class TGCameraModeControl;
@@ -39,6 +40,7 @@
 @property (nonatomic, copy) void(^shutterReleased)(bool fromHardwareButton);
 @property (nonatomic, copy) void(^cancelPressed)(void);
 @property (nonatomic, copy) void(^donePressed)(void);
+@property (nonatomic, copy) void(^resultPressed)(void);
 
 @property (nonatomic, copy) void (^deleteSegmentButtonPressed)(void);
 
@@ -82,6 +84,9 @@
 - (void)removeLastSegment;
 
 - (void)showMomentCaptureDismissWarningWithCompletion:(void (^)(bool dismiss))completion;
+
+- (void)setResultSignal:(SSignal *)signal;
+- (void)hideResultUntilNext;
 
 - (UIInterfaceOrientation)interfaceOrientation;
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)orientation animated:(bool)animated;

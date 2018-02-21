@@ -1,9 +1,12 @@
 #import <LegacyComponents/TGOverlayControllerWindow.h>
 #import <LegacyComponents/TGOverlayController.h>
 #import <LegacyComponents/LegacyComponentsContext.h>
+#import <LegacyComponents/TGMediaSelectionContext.h>
 
 @class PGCamera;
 @class TGCameraPreviewView;
+@class TGMediaSelectionContext;
+@class TGMediaEditingContext;
 @class TGSuggestionContext;
 @class TGVideoEditAdjustments;
 
@@ -22,6 +25,8 @@ typedef enum {
 @property (nonatomic, assign) bool shouldStoreCapturedAssets;
 
 @property (nonatomic, assign) bool allowCaptions;
+@property (nonatomic, assign) bool allowCaptionEntities;
+@property (nonatomic, assign) bool allowGrouping;
 @property (nonatomic, assign) bool inhibitDocumentCaptions;
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
@@ -29,6 +34,7 @@ typedef enum {
 
 @property (nonatomic, strong) NSString *recipientName;
 
+@property (nonatomic, copy) void(^finishedWithResults)(TGOverlayController *controller, TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem);
 @property (nonatomic, copy) void(^finishedWithPhoto)(TGOverlayController *controller, UIImage *resultImage, NSString *caption, NSArray *entities, NSArray *stickers, NSNumber *timer);
 @property (nonatomic, copy) void(^finishedWithVideo)(TGOverlayController *controller, NSURL *videoURL, UIImage *previewImage, NSTimeInterval duration, CGSize dimensions, TGVideoEditAdjustments *adjustments, NSString *caption, NSArray *entities, NSArray *stickers, NSNumber *timer);
 
@@ -39,8 +45,9 @@ typedef enum {
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia intent:(TGCameraControllerIntent)intent;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia camera:(PGCamera *)camera previewView:(TGCameraPreviewView *)previewView intent:(TGCameraControllerIntent)intent;
 
-- (void)beginTransitionInFromRect:(CGRect)rect;
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator;
 
+- (void)beginTransitionInFromRect:(CGRect)rect;
 - (void)_dismissTransitionForResultController:(TGOverlayController *)resultController;
 
 + (UIInterfaceOrientation)_interfaceOrientationForDeviceOrientation:(UIDeviceOrientation)orientation;

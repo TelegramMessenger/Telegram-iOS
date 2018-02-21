@@ -446,6 +446,14 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
 	return _internalTextView.textColor;
 }
 
+- (UIColor *)accentColor
+{
+    if (_accentColor != nil)
+        return _accentColor;
+    
+    return TGAccentColor();
+}
+
 - (void)setTextAlignment:(NSTextAlignment)aligment
 {
 	_internalTextView.textAlignment = aligment;
@@ -690,7 +698,7 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
                             if (j == candidateStart) {
                                 [removeTags addObject:@(tagAndRange.tag.uniqueId)];
                                 //[mutableString addAttribute:NSForegroundColorAttributeName value:TGAccentColor() range:tagAndRange.range];
-                                [_internalTextView.textStorage addAttribute:NSForegroundColorAttributeName value:TGAccentColor() range:tagAndRange.range];
+                                [_internalTextView.textStorage addAttribute:NSForegroundColorAttributeName value:self.accentColor range:tagAndRange.range];
                             } else {
                                 //[mutableString removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                                 [_internalTextView.textStorage removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
@@ -744,7 +752,7 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
                             } else {
                                 [removeTags addObject:@(tagAndRange.tag.uniqueId)];
                                 //[mutableString addAttribute:NSForegroundColorAttributeName value:TGAccentColor() range:tagAndRange.range];
-                                [_internalTextView.textStorage addAttribute:NSForegroundColorAttributeName value:TGAccentColor() range:tagAndRange.range];
+                                [_internalTextView.textStorage addAttribute:NSForegroundColorAttributeName value:self.accentColor range:tagAndRange.range];
                             }
                         }
                     }
@@ -864,9 +872,9 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
     static NSCharacterSet *characterSet = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
-                  {
-                      characterSet = [NSCharacterSet alphanumericCharacterSet];
-                  });
+    {
+        characterSet = [NSCharacterSet alphanumericCharacterSet];
+    });
     
     NSString *replacementText = [hashtag stringByAppendingString:@" "];
     

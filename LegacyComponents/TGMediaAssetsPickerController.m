@@ -317,9 +317,9 @@
     };
 }
 
-- (TGMediaPickerModernGalleryMixin *)_galleryMixinForContext:(id<LegacyComponentsContext>)context item:(id)item thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext hasCaptions:(bool)hasCaptions inhibitDocumentCaptions:(bool)inhibitDocumentCaptions asFile:(bool)asFile
+- (TGMediaPickerModernGalleryMixin *)_galleryMixinForContext:(id<LegacyComponentsContext>)context item:(id)item thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities inhibitDocumentCaptions:(bool)inhibitDocumentCaptions asFile:(bool)asFile
 {
-    return [[TGMediaPickerModernGalleryMixin alloc] initWithContext:context item:item fetchResult:_fetchResult parentController:self thumbnailImage:thumbnailImage selectionContext:selectionContext editingContext:editingContext suggestionContext:suggestionContext hasCaptions:hasCaptions hasTimer:self.hasTimer inhibitDocumentCaptions:inhibitDocumentCaptions asFile:asFile itemsLimit:0 recipientName:self.recipientName];
+    return [[TGMediaPickerModernGalleryMixin alloc] initWithContext:context item:item fetchResult:_fetchResult parentController:self thumbnailImage:thumbnailImage selectionContext:selectionContext editingContext:editingContext suggestionContext:suggestionContext hasCaptions:hasCaptions allowCaptionEntities:allowCaptionEntities hasTimer:self.hasTimer inhibitDocumentCaptions:inhibitDocumentCaptions asFile:asFile itemsLimit:0 recipientName:self.recipientName];
 }
 
 - (TGMediaPickerModernGalleryMixin *)galleryMixinForIndexPath:(NSIndexPath *)indexPath previewMode:(bool)previewMode outAsset:(TGMediaAsset **)outAsset
@@ -334,10 +334,9 @@
     if ([cell isKindOfClass:[TGMediaPickerCell class]])
         thumbnailImage = cell.imageView.image;
     
-    bool hasCaptions = self.captionsEnabled;
     bool asFile = (_intent == TGMediaAssetsControllerSendFileIntent);
     
-    TGMediaPickerModernGalleryMixin *mixin = [self _galleryMixinForContext:_context item:asset thumbnailImage:thumbnailImage selectionContext:self.selectionContext editingContext:self.editingContext suggestionContext:self.suggestionContext hasCaptions:hasCaptions inhibitDocumentCaptions:self.inhibitDocumentCaptions asFile:asFile];
+    TGMediaPickerModernGalleryMixin *mixin = [self _galleryMixinForContext:_context item:asset thumbnailImage:thumbnailImage selectionContext:self.selectionContext editingContext:self.editingContext suggestionContext:self.suggestionContext hasCaptions:self.captionsEnabled allowCaptionEntities:self.allowCaptionEntities inhibitDocumentCaptions:self.inhibitDocumentCaptions asFile:asFile];
     
     __weak TGMediaAssetsPickerController *weakSelf = self;
     mixin.thumbnailSignalForItem = ^SSignal *(id item)

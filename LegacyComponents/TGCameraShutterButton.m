@@ -87,6 +87,7 @@
 {
     CGFloat padding = [self innerPadding];
     CGFloat squarePadding = [self squarePadding];
+    CGFloat radius = (self.frame.size.width - padding * 2) / 2.0f;
     
     if (animated)
     {
@@ -107,6 +108,27 @@
                 {
                     _buttonView.backgroundColor = [TGCameraInterfaceAssets redColor];
                 }];
+                
+                if (_buttonView.layer.cornerRadius < 5)
+                {
+                    JNWSpringAnimation *cornersAnimation = [JNWSpringAnimation animationWithKeyPath:@"cornerRadius"];
+                    cornersAnimation.fromValue = @(_buttonView.layer.cornerRadius);
+                    cornersAnimation.toValue = @(radius);
+                    cornersAnimation.mass = 5;
+                    cornersAnimation.damping = 100;
+                    cornersAnimation.stiffness = 300;
+                    [_buttonView.layer addAnimation:cornersAnimation forKey:@"cornerRadius"];
+                    _buttonView.layer.cornerRadius = radius;
+                    
+                    JNWSpringAnimation *boundsAnimation = [JNWSpringAnimation animationWithKeyPath:@"bounds"];
+                    boundsAnimation.fromValue = [NSValue valueWithCGRect:_buttonView.layer.bounds];
+                    boundsAnimation.toValue = [NSValue valueWithCGRect:CGRectMake(0, 0, self.frame.size.width - padding * 2, self.frame.size.height - padding * 2)];
+                    boundsAnimation.mass = 5;
+                    boundsAnimation.damping = 100;
+                    boundsAnimation.stiffness = 300;
+                    [_buttonView.layer addAnimation:boundsAnimation forKey:@"bounds"];
+                    _buttonView.layer.bounds = CGRectMake(0, 0, self.frame.size.width - padding * 2, self.frame.size.height - padding * 2);
+                }
             }
                 break;
                 

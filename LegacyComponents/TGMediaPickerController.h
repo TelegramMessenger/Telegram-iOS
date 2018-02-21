@@ -20,6 +20,7 @@
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, assign) bool localMediaCacheEnabled;
 @property (nonatomic, assign) bool captionsEnabled;
+@property (nonatomic, assign) bool allowCaptionEntities;
 @property (nonatomic, assign) bool inhibitDocumentCaptions;
 @property (nonatomic, assign) bool shouldStoreAssets;
 @property (nonatomic, assign) bool hasTimer;

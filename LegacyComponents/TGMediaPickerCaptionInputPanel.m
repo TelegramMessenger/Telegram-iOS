@@ -168,8 +168,10 @@ static void setViewFrame(UIView *view, CGRect frame)
     _inputField = [[HPGrowingTextView alloc] initWithKeyCommandController:_keyCommandController];
     _inputField.frame = CGRectMake(inputFieldInternalEdgeInsets.left, inputFieldInternalEdgeInsets.top + TGRetinaPixel, _inputFieldClippingContainer.frame.size.width - inputFieldInternalEdgeInsets.left - 24, _inputFieldClippingContainer.frame.size.height);
     _inputField.textColor = [UIColor whiteColor];
+    _inputField.disableFormatting = !_allowEntities;
     _inputField.placeholderView = _placeholderLabel;
     _inputField.font = TGSystemFontOfSize(16);
+    _inputField.accentColor = UIColorRGB(0x78b1f9);
     _inputField.clipsToBounds = true;
     _inputField.backgroundColor = nil;
     _inputField.opaque = false;
@@ -190,6 +192,12 @@ static void setViewFrame(UIView *view, CGRect frame)
     [_inputField setAttributedText:[TGMediaPickerCaptionInputPanel attributedStringForText:_caption entities:_entities fontSize:16.0f] keepFormatting:true animated:false];
     
     [_inputFieldClippingContainer addSubview:_inputField];
+}
+
+- (void)setAllowEntities:(bool)allowEntities
+{
+    _allowEntities = allowEntities;
+    _inputField.disableFormatting = !_allowEntities;
 }
 
 - (void)handleFieldBackgroundTap:(UITapGestureRecognizer *)__unused gestureRecognizer

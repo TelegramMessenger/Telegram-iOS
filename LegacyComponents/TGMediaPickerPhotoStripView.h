@@ -16,6 +16,7 @@
 @property (nonatomic, copy) void (^itemSelected)(NSInteger index);
 @property (nonatomic, copy) SSignal *(^thumbnailSignalForItem)(id item);
 
+- (bool)isInternalHidden;
 - (void)setHidden:(bool)hidden animated:(bool)animated;
 
 - (void)reloadData;

@@ -20,6 +20,8 @@
 - (void)fadeInAnimated:(bool)animated;
 - (void)fadeOutAnimated:(bool)animated;
 
+- (void)blink;
+
 - (CGPoint)devicePointOfInterestForPoint:(CGPoint)point;
 
 @end

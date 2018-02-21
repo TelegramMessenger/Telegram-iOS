@@ -21,6 +21,7 @@
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic) bool allowCaptions;
+@property (nonatomic) bool allowCaptionEntities;
 @property (nonatomic) bool inhibitDocumentCaptions;
 @property (nonatomic) bool hasTimer;
 

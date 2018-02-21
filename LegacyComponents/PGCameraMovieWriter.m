@@ -282,7 +282,7 @@
 
 + (NSString *)tempOutputPath
 {
-    return [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"cam_%x.mp4", (int)arc4random()]];
+    return [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"camvideo_%x.mp4", (int)arc4random()]];
 }
 
 @end

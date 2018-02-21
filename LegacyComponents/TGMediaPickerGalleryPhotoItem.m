@@ -10,7 +10,7 @@
 
 - (NSString *)uniqueId
 {
-    return self.asset.identifier;
+    return self.asset.uniqueIdentifier;
 }
 
 - (id<TGMediaSelectableItem>)selectableMediaItem

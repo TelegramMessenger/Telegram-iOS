@@ -46,6 +46,7 @@
 #import "TGMenuSheetController.h"
 
 #import <LegacyComponents/AVURLAsset+TGMediaItem.h>
+#import "TGCameraCapturedVideo.h"
 
 @interface TGPhotoEditorController () <ASWatcher, TGViewControllerNavigationBarAppearance, UIDocumentInteractionControllerDelegate>
 {
@@ -1441,7 +1442,11 @@
             [[SQueue concurrentDefaultQueue] dispatch:^
             {
                 id<TGMediaEditableItem> item = _item;
-                SSignal *assetSignal = [item isKindOfClass:[TGMediaAsset class]] ? [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)item] : [SSignal single:((AVAsset *)item)];
+                SSignal *assetSignal = [SSignal complete];
+                if ([item isKindOfClass:[TGMediaAsset class]])
+                    assetSignal = [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)item];
+                else if ([item isKindOfClass:[TGCameraCapturedVideo class]])
+                    assetSignal = [SSignal single:((TGCameraCapturedVideo *)item).avAsset];
                 
                 [assetSignal startWithNext:^(AVAsset *asset)
                 {

@@ -56,4 +56,6 @@
 + (UIColor *)sliderBackColor;
 + (UIColor *)sliderTrackColor;
 
++ (UIImage *)cameraIcon;
+
 @end

@@ -6,6 +6,7 @@
     SMetaDisposable *_selectionChangedDisposable;
     
     NSMutableArray *_items;
+    bool _keepItems;
 }
 @end
 
@@ -13,11 +14,23 @@
 
 - (instancetype)initWithSelectionContext:(TGMediaSelectionContext *)selectionContext
 {
+    return [self initWithSelectionContext:selectionContext items:nil];
+}
+
+- (instancetype)initWithSelectionContext:(TGMediaSelectionContext *)selectionContext items:(NSArray *)items
+{
     self = [super init];
     if (self != nil)
     {
-        _items = [selectionContext.selectedItems mutableCopy];
-        
+        if (items == nil)
+        {
+            _items = [selectionContext.selectedItems mutableCopy];
+        }
+        else
+        {
+            _items = [items mutableCopy];
+            _keepItems = true;
+        }
         _selectionContext = selectionContext;
         
         __weak TGMediaPickerGallerySelectedItemsModel *weakSelf = self;
@@ -28,12 +41,17 @@
             if (strongSelf == nil)
                 return;
             
+            if (strongSelf.selectionUpdated != nil)
+                strongSelf.selectionUpdated(false, false, false, strongSelf.selectedCount);
+            
             if (next.sender == strongSelf)
                 return;
             
             if (next.selected)
+            {
                 [strongSelf addSelectedItem:next.item];
-            else
+            }
+            else if (!strongSelf->_keepItems)
                 [strongSelf removeSelectedItem:next.item];
         }]];
     }

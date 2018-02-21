@@ -312,4 +312,9 @@
     return UIColorRGB(0xcccccc);
 }
 
++ (UIImage *)cameraIcon
+{
+    return TGComponentsImageNamed(@"PhotoEditorCamera.png");
+}
+
 @end

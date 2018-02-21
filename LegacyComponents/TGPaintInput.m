@@ -46,7 +46,9 @@
     TGPaintPoint *cur = _points[2];
     
     CGPoint midPoint1 = TGPaintMultiplyPoint(TGPaintAddPoints(prev1.CGPoint, prev2.CGPoint), 0.5f);
+    CGFloat midPressure1 = (prev1.z + prev2.z) * 0.5f;
     CGPoint midPoint2 = TGPaintMultiplyPoint(TGPaintAddPoints(cur.CGPoint, prev1.CGPoint), 0.5f);
+    CGFloat midPressure2 = (cur.z + prev2.z) * 0.5f;
     
     NSInteger segmentDistance = 2;
     CGFloat distance = TGPaintDistance(midPoint1, midPoint2);
@@ -56,8 +58,13 @@
     CGFloat step = 1.0f / numberOfSegments;
     for (NSInteger j = 0; j < numberOfSegments; j++)
     {
-        CGPoint pos = TGPaintAddPoints(TGPaintAddPoints(TGPaintMultiplyPoint(midPoint1, pow(1 - t, 2)), TGPaintMultiplyPoint(prev1.CGPoint, 2.0 * (1 - t) * t)), TGPaintMultiplyPoint(midPoint2, t * t));
-        TGPaintPoint *newPoint = [TGPaintPoint pointWithCGPoint:pos z:1.0f];
+        CGFloat f1 = pow(1 - t, 2);
+        CGFloat f2 = 2.0 * (1 - t) * t;
+        CGFloat f3 = t * t;
+        
+        CGPoint pos = TGPaintAddPoints(TGPaintAddPoints(TGPaintMultiplyPoint(midPoint1, f1), TGPaintMultiplyPoint(prev1.CGPoint, f2)), TGPaintMultiplyPoint(midPoint2, f3));
+        CGFloat pressure = (midPressure1 * f1 + prev1.z * f2) + (midPressure2 * f3);
+        TGPaintPoint *newPoint = [TGPaintPoint pointWithCGPoint:pos z:pressure];
         if (_first)
         {
             newPoint.edge = true;
@@ -67,7 +74,7 @@
         t += step;
     }
     
-    TGPaintPoint *finalPoint = [TGPaintPoint pointWithCGPoint:midPoint2 z:1.0f];
+    TGPaintPoint *finalPoint = [TGPaintPoint pointWithCGPoint:midPoint2 z:midPressure2];
     if (ended)
         finalPoint.edge = true;
     [points addObject:finalPoint];
@@ -110,7 +117,16 @@
     if (distanceMoved < 8.0f)
         return;
     
-    TGPaintPoint *point = [TGPaintPoint pointWithX:location.x y:location.y z:1.0f];
+    const CGFloat speedFactor = 3.0f;
+    CGPoint velocity = [recognizer velocityInView:recognizer.view];
+    CGFloat speed = TGPaintDistance(CGPointZero, velocity) / 1000.0f;
+    CGFloat pressure = TGPaintSineCurve(1.0f - MIN(speedFactor, speed) / speedFactor);
+    pressure = 1.0f - pressure;
+    
+    if (_pointsCount != 0)
+        pressure = (pressure + _points[_pointsCount - 1].z) / 2.0f;
+    
+    TGPaintPoint *point = [TGPaintPoint pointWithX:location.x y:location.y z:pressure];
     _points[_pointsCount++] = point;
     
     if (_pointsCount == 3)

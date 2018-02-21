@@ -93,10 +93,11 @@ extern NSString *TGMentionBoldAttributeName;
 @property (nonatomic) bool oneTimeLongAnimation;
 
 @property (nonatomic, weak) id<HPGrowingTextViewDelegate> delegate;
-@property (nonatomic,strong) NSString *text;
+@property (nonatomic, strong) NSString *text;
 @property (nonatomic, strong) NSAttributedString *attributedText;
-@property (nonatomic,strong) UIFont *font;
-@property (nonatomic,strong) UIColor *textColor;
+@property (nonatomic, strong) UIFont *font;
+@property (nonatomic, strong) UIColor *textColor;
+@property (nonatomic, strong) UIColor *accentColor;
 @property (nonatomic) NSTextAlignment textAlignment;
 
 @property (nonatomic, readonly) bool ignoreChangeNotification;

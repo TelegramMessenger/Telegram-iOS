@@ -6,7 +6,7 @@
 
 @implementation TGMediaPickerGalleryItem
 
-- (instancetype)initWithAsset:(TGMediaAsset *)asset
+- (instancetype)initWithAsset:(id<TGMediaEditableItem, TGMediaSelectableItem>)asset
 {    
     self = [super init];
     if (self != nil)

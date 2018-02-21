@@ -114,6 +114,7 @@
         pickerController.suggestionContext = strongController.suggestionContext;
         pickerController.localMediaCacheEnabled = strongController.localMediaCacheEnabled;
         pickerController.captionsEnabled = strongController.captionsEnabled;
+        pickerController.allowCaptionEntities = strongController.allowCaptionEntities;
         pickerController.inhibitDocumentCaptions = strongController.inhibitDocumentCaptions;
         pickerController.liveVideoUploadEnabled = strongController.liveVideoUploadEnabled;
         pickerController.catchToolbarView = catchToolbarView;
@@ -148,6 +149,12 @@
 {
     _captionsEnabled = captionsEnabled;
     self.pickerController.captionsEnabled = captionsEnabled;
+}
+
+- (void)setAllowCaptionEntities:(bool)allowCaptionEntities
+{
+    _allowCaptionEntities = allowCaptionEntities;
+    self.pickerController.allowCaptionEntities = allowCaptionEntities;
 }
 
 - (void)setInhibitDocumentCaptions:(bool)inhibitDocumentCaptions

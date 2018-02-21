@@ -642,9 +642,16 @@ typedef enum
     if (type == TGMenuSheetAnimationPresent)
     {
         UIViewAnimationOptions options = UIViewAnimationOptionAllowUserInteraction | UIViewAnimationOptionAllowAnimatedContent;
-        if (iosMajorVersion() >= 7)
-            options |= 7 << 16;
-        [UIView animateWithDuration:0.3 delay:0.0 options:options animations:changeBlock completion:completionBlock];
+        if (self.borderless && iosMajorVersion() >= 7)
+        {
+            [UIView animateWithDuration:0.45 delay:0.0 usingSpringWithDamping:0.8f initialSpringVelocity:0.2 options:options animations:changeBlock completion:completionBlock];
+        }
+        else
+        {
+            if (iosMajorVersion() >= 7)
+                options |= 7 << 16;
+            [UIView animateWithDuration:0.3 delay:0.0 options:options animations:changeBlock completion:completionBlock];
+        }
     }
     else
     {
@@ -791,7 +798,7 @@ typedef enum
             if (velocity > 200.0f && allowDismissal)
             {
                 [self setDimViewHidden:true animated:true];
-                [self animateSheetViewToPosition:_sheetView.menuHeight velocity:velocity type:TGMenuSheetAnimationDismiss completion:^
+                [self animateSheetViewToPosition:_sheetView.menuHeight + [self safeAreaInsetForOrientation:self.interfaceOrientation].bottom velocity:velocity type:TGMenuSheetAnimationDismiss completion:^
                 {
                     [self dismissAnimated:false];
                 }];

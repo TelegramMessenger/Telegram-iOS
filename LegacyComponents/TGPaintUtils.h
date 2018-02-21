@@ -62,6 +62,17 @@ static inline CGSize TGPaintMultiplySizeScalar(CGSize size, CGFloat scale)
     return CGSizeMake(size.width * scale, size.height * scale);
 }
 
+static inline CGFloat TGPaintSineCurve(CGFloat input)
+{
+    input *= M_PI;
+    input -= M_PI_2;
+    
+    CGFloat result = sin(input) + 1.0f;
+    result /= 2.0f;
+    
+    return result;
+}
+
 typedef void(^dispatch_cancelable_block_t)(BOOL cancel);
 
 static inline dispatch_cancelable_block_t dispatch_after_delay(NSTimeInterval delay, dispatch_queue_t queue, dispatch_block_t block)

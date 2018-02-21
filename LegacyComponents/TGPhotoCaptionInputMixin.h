@@ -12,6 +12,7 @@
 @property (nonatomic, assign) UIInterfaceOrientation interfaceOrientation;
 @property (nonatomic, readonly) CGFloat keyboardHeight;
 @property (nonatomic, assign) CGFloat contentAreaHeight;
+@property (nonatomic, assign) bool allowEntities;
 
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 

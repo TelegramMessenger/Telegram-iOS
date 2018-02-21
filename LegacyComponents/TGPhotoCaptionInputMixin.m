@@ -40,6 +40,12 @@
     [_inputPanel removeFromSuperview];
 }
 
+- (void)setAllowEntities:(bool)allowEntities
+{
+    _allowEntities = allowEntities;
+    _inputPanel.allowEntities = allowEntities;
+}
+
 - (void)createInputPanelIfNeeded
 {
     if (_inputPanel != nil)
@@ -49,6 +55,7 @@
     
     CGSize screenSize = parentView.frame.size;
     _inputPanel = [[TGMediaPickerCaptionInputPanel alloc] initWithKeyCommandController:_keyCommandController frame:CGRectMake(0, 0, screenSize.width, [_inputPanel heightForInputFieldHeight:0])];
+    _inputPanel.allowEntities = _allowEntities;
     _inputPanel.bottomMargin = 0;
     _inputPanel.delegate = self;
     

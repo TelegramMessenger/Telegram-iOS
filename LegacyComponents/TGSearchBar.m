@@ -242,6 +242,11 @@
     return self;
 }
 
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
+{
+    return [super hitTest:point withEvent:event];
+}
+
 + (UIImage *)searchBarIcon:(UIColor *)color
 {
     UIGraphicsBeginImageContextWithOptions(CGSizeMake(13, 13), false, 0.0f);

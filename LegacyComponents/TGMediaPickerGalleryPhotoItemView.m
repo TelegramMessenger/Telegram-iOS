@@ -6,6 +6,7 @@
 #import "TGFont.h"
 #import "TGStringUtils.h"
 
+#import <LegacyComponents/TGMediaAsset.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
@@ -105,7 +106,7 @@
 {
     [super setItem:item synchronously:synchronously];
     
-    _imageSize = item.asset.dimensions;
+    _imageSize = item.asset.originalSize;
     [self reset];
     
     if (item.asset == nil)
@@ -135,7 +136,15 @@
             }];
         };
 
-        SSignal *assetSignal = [TGMediaAssetImageSignals imageForAsset:item.asset imageType:(item.immediateThumbnailImage != nil) ? TGMediaAssetImageTypeScreen : TGMediaAssetImageTypeFastScreen size:CGSizeMake(1280, 1280)];
+        SSignal *assetSignal = [SSignal single:nil];
+        if ([item.asset isKindOfClass:[TGMediaAsset class]])
+        {
+            assetSignal = [TGMediaAssetImageSignals imageForAsset:(TGMediaAsset *)item.asset imageType:(item.immediateThumbnailImage != nil) ? TGMediaAssetImageTypeScreen : TGMediaAssetImageTypeFastScreen size:CGSizeMake(1280, 1280)];
+        }
+        else
+        {
+            assetSignal = [item.asset screenImageSignal:0.0];
+        }
         
         SSignal *imageSignal = assetSignal;
         if (item.editingContext != nil)
@@ -217,18 +226,21 @@
         if (_attributesDisposable == nil)
             _attributesDisposable = [[SMetaDisposable alloc] init];
         
-        [_attributesDisposable setDisposable:[[[TGMediaAssetImageSignals fileAttributesForAsset:item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(TGMediaAssetImageFileAttributes *next)
+        if ([item.asset isKindOfClass:[TGMediaAsset class]])
         {
-            __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            NSString *extension = next.fileName.pathExtension.uppercaseString;
-            NSString *fileSize = [TGStringUtils stringForFileSize:next.fileSize precision:2];
-            NSString *dimensions = [NSString stringWithFormat:@"%dx%d", (int)next.dimensions.width, (int)next.dimensions.height];
-            
-            strongSelf->_fileInfoLabel.text = [NSString stringWithFormat:@"%@ • %@ • %@", extension, fileSize, dimensions];
-        }]];
+            [_attributesDisposable setDisposable:[[[TGMediaAssetImageSignals fileAttributesForAsset:(TGMediaAsset *)item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(TGMediaAssetImageFileAttributes *next)
+            {
+                __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                NSString *extension = next.fileName.pathExtension.uppercaseString;
+                NSString *fileSize = [TGStringUtils stringForFileSize:next.fileSize precision:2];
+                NSString *dimensions = [NSString stringWithFormat:@"%dx%d", (int)next.dimensions.width, (int)next.dimensions.height];
+                
+                strongSelf->_fileInfoLabel.text = [NSString stringWithFormat:@"%@ • %@ • %@", extension, fileSize, dimensions];
+            }]];
+        }
     }
 }
 
@@ -359,7 +371,7 @@
 
 - (void)toggleSendAsGif
 {
-    CGSize originalSize = self.item.asset.dimensions;
+    CGSize originalSize = self.item.asset.originalSize;
     PGPhotoEditorValues *adjustments = (PGPhotoEditorValues *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
     CGRect cropRect = adjustments.cropRect;
     if (cropRect.size.width < FLT_EPSILON)

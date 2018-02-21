@@ -24,6 +24,10 @@
 		098C0E5B20245179007B4539 /* TGMessageEntityPhone.m in Sources */ = {isa = PBXBuildFile; fileRef = 098C0E5920245179007B4539 /* TGMessageEntityPhone.m */; };
 		098C0E5E20245191007B4539 /* TGMessageEntityCashtag.h in Headers */ = {isa = PBXBuildFile; fileRef = 098C0E5C20245191007B4539 /* TGMessageEntityCashtag.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		098C0E5F20245191007B4539 /* TGMessageEntityCashtag.m in Sources */ = {isa = PBXBuildFile; fileRef = 098C0E5D20245191007B4539 /* TGMessageEntityCashtag.m */; };
+		0995BFAE20331A8900AA2700 /* TGCameraCapturedPhoto.h in Headers */ = {isa = PBXBuildFile; fileRef = 0995BFAC20331A8900AA2700 /* TGCameraCapturedPhoto.h */; };
+		0995BFAF20331A8900AA2700 /* TGCameraCapturedPhoto.m in Sources */ = {isa = PBXBuildFile; fileRef = 0995BFAD20331A8900AA2700 /* TGCameraCapturedPhoto.m */; };
+		0995BFB220331BD600AA2700 /* TGCameraCapturedVideo.h in Headers */ = {isa = PBXBuildFile; fileRef = 0995BFB020331BD600AA2700 /* TGCameraCapturedVideo.h */; };
+		0995BFB320331BD600AA2700 /* TGCameraCapturedVideo.m in Sources */ = {isa = PBXBuildFile; fileRef = 0995BFB120331BD600AA2700 /* TGCameraCapturedVideo.m */; };
 		09A8BD761F6B4C390043A393 /* TGLocationInfoCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */; };
 		09A8BD771F6B4C390043A393 /* TGLocationInfoCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */; };
 		09A8BD7A1F6B4C6E0043A393 /* TGLocationLiveCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09A8BD781F6B4C6E0043A393 /* TGLocationLiveCell.h */; };
@@ -1182,6 +1186,10 @@
 		098C0E5920245179007B4539 /* TGMessageEntityPhone.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityPhone.m; sourceTree = "<group>"; };
 		098C0E5C20245191007B4539 /* TGMessageEntityCashtag.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGMessageEntityCashtag.h; sourceTree = "<group>"; };
 		098C0E5D20245191007B4539 /* TGMessageEntityCashtag.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGMessageEntityCashtag.m; sourceTree = "<group>"; };
+		0995BFAC20331A8900AA2700 /* TGCameraCapturedPhoto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGCameraCapturedPhoto.h; sourceTree = "<group>"; };
+		0995BFAD20331A8900AA2700 /* TGCameraCapturedPhoto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGCameraCapturedPhoto.m; sourceTree = "<group>"; };
+		0995BFB020331BD600AA2700 /* TGCameraCapturedVideo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGCameraCapturedVideo.h; sourceTree = "<group>"; };
+		0995BFB120331BD600AA2700 /* TGCameraCapturedVideo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGCameraCapturedVideo.m; sourceTree = "<group>"; };
 		09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationInfoCell.h; sourceTree = "<group>"; };
 		09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationInfoCell.m; sourceTree = "<group>"; };
 		09A8BD781F6B4C6E0043A393 /* TGLocationLiveCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveCell.h; sourceTree = "<group>"; };
@@ -3283,6 +3291,10 @@
 				D07BCA681F2B3CE700ED97AA /* TGCameraController.m */,
 				D07BCA691F2B3CE700ED97AA /* TGCameraFocusCrosshairsControl.h */,
 				D07BCA6A1F2B3CE700ED97AA /* TGCameraFocusCrosshairsControl.m */,
+				0995BFAC20331A8900AA2700 /* TGCameraCapturedPhoto.h */,
+				0995BFAD20331A8900AA2700 /* TGCameraCapturedPhoto.m */,
+				0995BFB020331BD600AA2700 /* TGCameraCapturedVideo.h */,
+				0995BFB120331BD600AA2700 /* TGCameraCapturedVideo.m */,
 			);
 			name = Camera;
 			sourceTree = "<group>";
@@ -4079,6 +4091,7 @@
 				D07BC86F1F2A2F5300ED97AA /* HPTextViewInternal.h in Headers */,
 				D017794B1F20FFF60044446D /* TGMediaAssetMomentList.h in Headers */,
 				D07BCA4B1F2A9DAB00ED97AA /* TGModernAnimatedImagePlayer.h in Headers */,
+				0995BFAE20331A8900AA2700 /* TGCameraCapturedPhoto.h in Headers */,
 				D07BC9231F2A380D00ED97AA /* TGPaintState.h in Headers */,
 				D07BCBED1F2B72DC00ED97AA /* STKCoreFoundationDataSource.h in Headers */,
 				D07BC9A21F2A49C200ED97AA /* TGItemPreviewController.h in Headers */,
@@ -4197,6 +4210,7 @@
 				D07BC90B1F2A380D00ED97AA /* TGPaintFaceDetector.h in Headers */,
 				D07BCA481F2A9CE300ED97AA /* TGModernMediaListSelectableItem.h in Headers */,
 				D07BC9F31F2A9A2B00ED97AA /* TGMediaPickerController.h in Headers */,
+				0995BFB220331BD600AA2700 /* TGCameraCapturedVideo.h in Headers */,
 				D07BC8161F2A2C0B00ED97AA /* PGPhotoGaussianBlurFilter.h in Headers */,
 				D017783B1F1F961D0044446D /* TGStickerPackReference.h in Headers */,
 				D01779DF1F2139980044446D /* POPAction.h in Headers */,
@@ -4490,6 +4504,7 @@
 				D07BCBA91F2B6F6300ED97AA /* CBAssetDownloadManager.m in Sources */,
 				09A8BD7B1F6B4C6E0043A393 /* TGLocationLiveCell.m in Sources */,
 				D07BCBBE1F2B6F6300ED97AA /* CBCoubVideoSource.m in Sources */,
+				0995BFAF20331A8900AA2700 /* TGCameraCapturedPhoto.m in Sources */,
 				D07BCBAB1F2B6F6300ED97AA /* CBChunkDownloadOperation.m in Sources */,
 				D07BCACA1F2B4E6200ED97AA /* TGMediaAvatarMenuMixin.m in Sources */,
 				D01778D81F2014E10044446D /* TGPopoverController.m in Sources */,
@@ -4844,6 +4859,7 @@
 				D07BC9611F2A3F0A00ED97AA /* TGGradientLabel.m in Sources */,
 				D07BC9101F2A380D00ED97AA /* TGPaintingWrapperView.m in Sources */,
 				D02660591F34A7F8000E2DC5 /* TGLocationCurrentLocationCell.m in Sources */,
+				0995BFB320331BD600AA2700 /* TGCameraCapturedVideo.m in Sources */,
 				D07BC82B1F2A2C0B00ED97AA /* PGWarmthTool.m in Sources */,
 				D01778F81F20CDAC0044446D /* TGHacks.m in Sources */,
 				D07BC86C1F2A2F3800ED97AA /* HPGrowingTextView.m in Sources */,

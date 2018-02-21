@@ -77,7 +77,7 @@
             };
         }
         
-        _interfaceView = [[TGMediaPickerGalleryInterfaceView alloc] initWithContext:_context focusItem:focusItem selectionContext:selectionContext editingContext:editingContext hasSelectionPanel:hasSelectionPanel recipientName:recipientName];
+        _interfaceView = [[TGMediaPickerGalleryInterfaceView alloc] initWithContext:_context focusItem:focusItem selectionContext:selectionContext editingContext:editingContext hasSelectionPanel:hasSelectionPanel hasCameraButton:false recipientName:recipientName];
         _interfaceView.hasCaptions = hasCaptions;
         _interfaceView.hasTimer = hasTimer;
         [_interfaceView setEditorTabPressed:^(TGPhotoEditorTab tab)

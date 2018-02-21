@@ -199,6 +199,23 @@
     }
 }
 
+- (void)blink
+{
+    [UIView animateWithDuration:0.07f delay:0.0f options:UIViewAnimationOptionCurveLinear animations:^
+    {
+        _fadeView.alpha = 1.0f;
+    } completion:^(BOOL finished)
+    {
+        [UIView animateWithDuration:0.07f delay:0.0f options:UIViewAnimationOptionCurveLinear animations:^
+        {
+            _fadeView.alpha = 0.0f;
+        } completion:^(BOOL finished)
+        {    
+            
+        }];
+    }];
+}
+
 - (void)beginTransitionWithSnapshotImage:(UIImage *)image animated:(bool)animated
 {
     [_snapshotView removeFromSuperview];

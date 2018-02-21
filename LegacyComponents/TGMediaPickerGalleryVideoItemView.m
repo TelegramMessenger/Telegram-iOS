@@ -12,6 +12,7 @@
 #import <LegacyComponents/TGObserverProxy.h>
 #import <LegacyComponents/TGTimerTarget.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
+#import <LegacyComponents/TGMediaAsset.h>
 
 #import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
@@ -317,7 +318,7 @@
         _downloadDisposable = [[SMetaDisposable alloc] init];
     
     __weak TGMediaPickerGalleryVideoItemView *weakSelf = self;
-    [_downloadDisposable setDisposable:[[[TGMediaAssetImageSignals avAssetForVideoAsset:self.item.asset allowNetworkAccess:true] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
+    [_downloadDisposable setDisposable:[[[TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)self.item.asset allowNetworkAccess:true] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
     {
         __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -377,7 +378,15 @@
     SSignal *imageSignal = nil;
     if (item.asset != nil)
     {
-        SSignal *assetSignal = [TGMediaAssetImageSignals imageForAsset:item.asset imageType:(item.immediateThumbnailImage != nil) ? TGMediaAssetImageTypeScreen : TGMediaAssetImageTypeFastScreen size:CGSizeMake(1280, 1280)];
+        SSignal *assetSignal = [SSignal single:nil];
+        if ([item.asset isKindOfClass:[TGMediaAsset class]])
+        {
+            assetSignal = [TGMediaAssetImageSignals imageForAsset:(TGMediaAsset *)item.asset imageType:(item.immediateThumbnailImage != nil) ? TGMediaAssetImageTypeScreen : TGMediaAssetImageTypeFastScreen size:CGSizeMake(1280, 1280)];
+        }
+        else
+        {
+            assetSignal = [item.asset screenImageSignal:0.0];
+        }
         
         imageSignal = assetSignal;
         if (item.editingContext != nil)
@@ -419,7 +428,7 @@
                 strongSelf->_sendAsGif = adjustments.sendAsGif;
                 [strongSelf _mutePlayer:adjustments.sendAsGif];
                 
-                if (adjustments.sendAsGif || (strongSelf.item.asset.subtypes & TGMediaAssetSubtypePhotoLive))
+                if (adjustments.sendAsGif || ([strongSelf itemIsLivePhoto]))
                     [strongSelf setPlayButtonHidden:true animated:false];
             }
             else
@@ -493,7 +502,7 @@
         NSTimeInterval videoDuration = next.doubleValue;
         strongSelf->_videoDuration = videoDuration;
         
-        strongSelf->_scrubberView.allowsTrimming = (!item.asFile && ((item.asset != nil && !(item.asset.subtypes & TGMediaAssetSubtypeVideoHighFrameRate)) || item.avAsset != nil) && videoDuration >= TGVideoEditMinimumTrimmableDuration);
+        strongSelf->_scrubberView.allowsTrimming = (!item.asFile && ((item.asset != nil && ![strongSelf itemIsHighFramerateVideo])) && videoDuration >= TGVideoEditMinimumTrimmableDuration);
         
         TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[item.editingContext adjustmentsForItem:item.editableMediaItem];
         if (adjustments != nil && fabs(adjustments.trimEndValue - adjustments.trimStartValue) > DBL_EPSILON)
@@ -603,10 +612,26 @@
 - (bool)usePhotoBehavior
 {
     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
-    if (!((self.item.asset.subtypes & TGMediaAssetSubtypePhotoLive) && !adjustments.sendAsGif))
+    if (![self itemIsLivePhoto] || adjustments.sendAsGif)
         return false;
     
     return true;
+}
+
+- (bool)itemIsLivePhoto
+{
+    if ([self.item.asset isKindOfClass:[TGMediaAsset class]])
+        return ((TGMediaAsset *)self.item.asset).subtypes & TGMediaAssetSubtypePhotoLive;
+    
+    return false;
+}
+
+- (bool)itemIsHighFramerateVideo
+{
+    if ([self.item.asset isKindOfClass:[TGMediaAsset class]])
+        return ((TGMediaAsset *)self.item.asset).subtypes & TGMediaAssetSubtypeVideoHighFrameRate;
+    
+    return false;
 }
 
 - (void)returnFromEditing
@@ -871,7 +896,7 @@
         {
             TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[strongSelf.item.editingContext adjustmentsForItem:strongSelf.item.editableMediaItem];
             
-            bool available = strongSelf->_downloaded || ((strongSelf.item.asset.subtypes & TGMediaAssetSubtypePhotoLive) && !adjustments.sendAsGif);
+            bool available = strongSelf->_downloaded || ([strongSelf itemIsLivePhoto] && !adjustments.sendAsGif);
             [subscriber putNext:@(available)];
             strongSelf->_currentAvailabilityObserver = ^(bool available)
             {
@@ -981,8 +1006,8 @@
     [self inhibitVolumeOverlay];
     
     SSignal *itemSignal = nil;
-    if (self.item.asset != nil)
-        itemSignal = [TGMediaAssetImageSignals playerItemForVideoAsset:self.item.asset];
+    if ([self.item.asset isKindOfClass:[TGMediaAsset class]])
+        itemSignal = [TGMediaAssetImageSignals playerItemForVideoAsset:(TGMediaAsset *)self.item.asset];
     else if (self.item.avAsset != nil)
         itemSignal = [SSignal single:[AVPlayerItem playerItemWithAsset:self.item.avAsset]];
     
@@ -1293,7 +1318,7 @@
             [parentView addSubview:_tooltipContainerView];
             
             NSMutableArray *actions = [[NSMutableArray alloc] init];
-            NSString *text = (self.item.asset.subtypes & TGMediaAssetSubtypePhotoLive) ? TGLocalized(@"MediaPicker.LivePhotoDescription") : TGLocalized(@"MediaPicker.VideoMuteDescription");
+            NSString *text = [self itemIsLivePhoto] ? TGLocalized(@"MediaPicker.LivePhotoDescription") : TGLocalized(@"MediaPicker.VideoMuteDescription");
             [actions addObject:@{@"title":text}];
             _tooltipContainerView.menuView.forceArrowOnTop = true;
             _tooltipContainerView.menuView.multiline = true;
@@ -1409,7 +1434,7 @@
     AVAsset *avAsset = self.item.avAsset ?: _player.currentItem.asset;
     
     SSignal *thumbnailsSignal = nil;
-    if (self.item.asset != nil && !(self.item.asset.subtypes & TGMediaAssetSubtypePhotoLive))
+    if ([self.item.asset isKindOfClass:[TGMediaAsset class]] && ![self itemIsLivePhoto])
         thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAsset:self.item.asset size:size timestamps:timestamps];
     else if (avAsset != nil)
         thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps];

@@ -154,7 +154,6 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     }
     
     CGFloat backgroundOverflow = iosMajorVersion() >= 7 ? 20.0f : 0.0f;
-    
     if (![self isKindOfClass:[TGTransparentNavigationBar class]])
     {
         _backgroundContainerView = [[UIView alloc] initWithFrame:CGRectMake(0, -backgroundOverflow, self.bounds.size.width, backgroundOverflow + self.bounds.size.height)];

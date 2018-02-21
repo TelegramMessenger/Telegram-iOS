@@ -15,6 +15,7 @@
 - (void)setCaption:(NSString *)caption entities:(NSArray *)entities animated:(bool)animated;
 
 @property (nonatomic, readonly) HPGrowingTextView *inputField;
+@property (nonatomic, assign) bool allowEntities;
 
 @property (nonatomic, assign) CGFloat bottomMargin;
 @property (nonatomic, assign, getter=isCollapsed) bool collapsed;

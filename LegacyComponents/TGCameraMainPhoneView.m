@@ -1,5 +1,6 @@
 #import "TGCameraMainPhoneView.h"
 
+#import <SSignalKit/SSignalKit.h>
 #import "LegacyComponentsInternal.h"
 #import "TGImageUtils.h"
 #import "TGFont.h"
@@ -54,10 +55,13 @@
     UIView *_bottomPanelView;
     UIView *_bottomPanelBackgroundView;
     
-    UIView *_videoLandscapePanelView;;
+    UIView *_videoLandscapePanelView;
     
     TGCameraFlashControl *_flashControl;
     TGCameraFlashActiveView *_flashActiveView;
+    
+    TGModernButton *_resultButton;
+    SMetaDisposable *_resultDisposable;
     
     CGFloat _topPanelOffset;
     CGFloat _topPanelHeight;
@@ -185,6 +189,14 @@
         [_shutterButton addTarget:self action:@selector(shutterButtonPressed) forControlEvents:UIControlEventTouchDown];
         [_bottomPanelView addSubview:_shutterButton];
         
+        _resultButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 49.0f, 49.0f)];
+        _resultButton.clipsToBounds = true;
+        _resultButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
+        _resultButton.hidden = true;
+        _resultButton.layer.cornerRadius = 3.0f;
+        [_resultButton addTarget:self action:@selector(resultButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+        [_bottomPanelView addSubview:_resultButton];
+        
         _modeControl = [[TGCameraModeControl alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, _modeControlHeight)];
         [_bottomPanelView addSubview:_modeControl];
         
@@ -302,6 +314,68 @@
 - (void)dealloc
 {
      [_actionHandle reset];
+}
+
+- (void)setResultSignal:(SSignal *)signal
+{
+    if (_resultDisposable == nil)
+        _resultDisposable = [[SMetaDisposable alloc] init];
+    
+    __weak TGCameraMainPhoneView *weakSelf = self;
+    [_resultDisposable setDisposable:[[signal deliverOn:[SQueue mainQueue]] startWithNext:^(UIImage *next)
+    {
+        __strong TGCameraMainPhoneView *strongSelf = weakSelf;
+        if (strongSelf != nil)
+            [strongSelf setResultImage:next];
+    }]];
+}
+
+- (void)setResultImage:(UIImage *)image
+{
+    if (image == nil)
+    {
+        _resultButton.hidden = true;
+        _cancelButton.hidden = false;
+    }
+    else
+    {
+        if (_resultButton.alpha < FLT_EPSILON)
+        {
+            _resultButton.transform = CGAffineTransformMakeScale(0.45f, 0.45f);
+            [UIView animateWithDuration:0.2 animations:^
+            {
+                _resultButton.alpha = 1.0f;
+            } completion:nil];
+            [UIView animateWithDuration:0.3 delay:0.0 usingSpringWithDamping:1.1 initialSpringVelocity:0.1 options:kNilOptions animations:^{
+                _resultButton.transform = CGAffineTransformIdentity;
+            } completion:^(BOOL finished) {
+                _resultButton.userInteractionEnabled = true;
+            }];
+        }
+        else
+        {
+            _resultButton.userInteractionEnabled = true;
+        }
+        _resultButton.hidden = false;
+        _cancelButton.hidden = true;
+        
+        [_resultButton setImage:image forState:UIControlStateNormal];
+    }
+}
+
+- (void)hideResultUntilNext
+{
+    _resultButton.userInteractionEnabled = false;
+    [UIView animateWithDuration:0.2 animations:^
+    {
+        _resultButton.alpha = 0.0f;
+    }];
+}
+
+- (void)resultButtonPressed
+{
+    if (self.resultPressed != nil)
+        self.resultPressed();
 }
 
 - (void)setupTooltip
@@ -455,7 +529,7 @@
         if (!hidden)
         {
             _modeControl.hidden = false;
-            _cancelButton.hidden = false;
+            _cancelButton.hidden = !_resultButton.hidden;
             _flashControl.hidden = false;
             _flipButton.hidden = false;
             _bottomPanelBackgroundView.hidden = false;
@@ -465,6 +539,7 @@
                          animations:^
         {
             CGFloat alpha = hidden ? 0.0f : 1.0f;
+            _resultButton.alpha = alpha;
             _modeControl.alpha = alpha;
             _cancelButton.alpha = alpha;
             _flashControl.alpha = alpha;
@@ -474,8 +549,9 @@
         {
             if (finished)
             {
+                _resultButton.userInteractionEnabled = !hidden;
                 _modeControl.hidden = hidden;
-                _cancelButton.hidden = hidden;
+                _cancelButton.hidden = hidden || !_resultButton.hidden;
                 _flashControl.hidden = hidden;
                 _flipButton.hidden = hidden;
                 _bottomPanelBackgroundView.hidden = hidden;
@@ -489,7 +565,7 @@
         CGFloat alpha = hidden ? 0.0f : 1.0f;
         _modeControl.hidden = hidden;
         _modeControl.alpha = alpha;
-        _cancelButton.hidden = hidden;
+        _cancelButton.hidden = hidden || !_resultButton.hidden;
         _cancelButton.alpha = alpha;
         _flashControl.hidden = hidden;
         _flashControl.alpha = alpha;
@@ -497,6 +573,9 @@
         _flipButton.alpha = alpha;
         _bottomPanelBackgroundView.hidden = hidden;
         _bottomPanelBackgroundView.alpha = alpha;
+        
+        _resultButton.alpha = alpha;
+        _resultButton.userInteractionEnabled = !hidden;
     }
 }
 
@@ -721,6 +800,7 @@
     _shutterButton.frame = CGRectMake(round((self.frame.size.width - _shutterButton.frame.size.width) / 2), _modeControlHeight, _shutterButton.frame.size.width, _shutterButton.frame.size.height);
     _cancelButton.frame = CGRectMake(0, round(_shutterButton.center.y - _cancelButton.frame.size.height / 2.0f), _cancelButton.frame.size.width, _cancelButton.frame.size.height);
     _doneButton.frame = CGRectMake(_bottomPanelView.frame.size.width - _doneButton.frame.size.width, round(_shutterButton.center.y - _doneButton.frame.size.height / 2.0f), _doneButton.frame.size.width, _doneButton.frame.size.height);
+    _resultButton.frame = CGRectMake(15.0f, round(_shutterButton.center.y - _resultButton.frame.size.height / 2.0f), _resultButton.frame.size.width, _resultButton.frame.size.height);
     
     _flipButton.frame = CGRectMake(self.frame.size.width - _flipButton.frame.size.width - 4.0f - 7.0f, round(_shutterButton.center.y - _flipButton.frame.size.height / 2.0f), _flipButton.frame.size.width, _flipButton.frame.size.height);
     

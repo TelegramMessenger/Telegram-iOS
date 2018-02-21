@@ -20,6 +20,8 @@
 
 @interface TGMediaPickerPhotoStripView () <TGDraggableCollectionViewDataSource, UICollectionViewDelegate>
 {
+    bool _internalHidden;
+    
     UIView *_wrapperView;
     UIVisualEffectView *_effectView;
     UIImageView *_backgroundView;
@@ -168,12 +170,22 @@
     }];
 }
 
+- (bool)isInternalHidden
+{
+    return _internalHidden;
+}
+
+- (void)setHidden:(BOOL)hidden
+{
+    _internalHidden = hidden;
+    [super setHidden:hidden];
+}
+
 - (void)setHidden:(bool)hidden animated:(bool)animated
 {
     if (animated)
     {
-        self.hidden = false;
-        
+        _internalHidden = hidden;
         if (hidden)
         {
             if ([_wrapperView.pop_animationKeys containsObject:@"hide_opacity"] || [_wrapperView.pop_animationKeys containsObject:@"hide_center"])
@@ -219,6 +231,8 @@
         }
         else
         {
+            super.hidden = false;
+            
             if ([_wrapperView.pop_animationKeys containsObject:@"show_opacity"] || [_wrapperView.pop_animationKeys containsObject:@"show_center"])
                 return;
             

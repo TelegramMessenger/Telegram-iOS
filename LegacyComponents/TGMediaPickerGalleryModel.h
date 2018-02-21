@@ -42,7 +42,7 @@
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context items:(NSArray *)items focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer inhibitDocumentCaptions:(bool)inhibitDocumentCaptions hasSelectionPanel:(bool)hasSelectionPanel recipientName:(NSString *)recipientName;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context items:(NSArray *)items focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities hasTimer:(bool)hasTimer inhibitDocumentCaptions:(bool)inhibitDocumentCaptions hasSelectionPanel:(bool)hasSelectionPanel hasCamera:(bool)hasCamera recipientName:(NSString *)recipientName;
 
 - (void)setCurrentItem:(id<TGMediaSelectableItem>)item direction:(TGModernGalleryScrollAnimationDirection)direction;
 

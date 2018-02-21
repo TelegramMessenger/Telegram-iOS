@@ -20,17 +20,20 @@
 @property (nonatomic, copy) void (^timerRequested)(void);
 
 @property (nonatomic, assign) bool hasCaptions;
+@property (nonatomic, assign) bool allowCaptionEntities;
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, assign) bool inhibitDocumentCaptions;
 @property (nonatomic, assign) bool usesSimpleLayout;
 @property (nonatomic, assign) bool hasSwipeGesture;
 @property (nonatomic, assign) bool usesFadeOutForDismissal;
 
+@property (nonatomic, assign) bool capturing;
+
 @property (nonatomic, readonly) TGPhotoEditorTab currentTabs;
 
 @property (nonatomic, readonly) UIView *timerButton;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasSelectionPanel:(bool)hasSelectionPanel recipientName:(NSString *)recipientName;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasSelectionPanel:(bool)hasSelectionPanel hasCameraButton:(bool)hasCameraButton recipientName:(NSString *)recipientName;
 
 - (void)setSelectedItemsModel:(TGMediaPickerGallerySelectedItemsModel *)selectedItemsModel;
 - (void)setEditorTabPressed:(void (^)(TGPhotoEditorTab tab))editorTabPressed;

@@ -9,6 +9,7 @@
 
 @optional
 @property (nonatomic, readonly) CGSize originalSize;
+@property (nonatomic, readonly) NSTimeInterval originalDuration;
 
 - (SSignal *)thumbnailImageSignal;
 - (SSignal *)screenImageSignal:(NSTimeInterval)position;
