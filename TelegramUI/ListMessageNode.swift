@@ -26,7 +26,7 @@ class ListMessageNode: ListViewItemNode {
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> ASDisplayNode? {
+    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         return nil
     }
     

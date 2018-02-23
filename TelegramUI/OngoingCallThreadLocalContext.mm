@@ -95,16 +95,16 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         _controller = new tgvoip::VoIPController();
         _controller->implData = (__bridge void *)self;
         
-        _controller->SetStateCallback(&controllerStateCallback);
+        /*releasable*/
+        //_controller->SetStateCallback(&controllerStateCallback);
         
-        /*master*/
-        /*auto callbacks = tgvoip::VoIPController::Callbacks();
+        auto callbacks = tgvoip::VoIPController::Callbacks();
         callbacks.connectionStateChanged = &controllerStateCallback;
         callbacks.groupCallKeyReceived = NULL;
         callbacks.groupCallKeySent = NULL;
         callbacks.signalBarCountChanged = NULL;
         callbacks.upgradeToGroupCallRequested = NULL;
-        _controller->SetCallbacks(callbacks);*/
+        _controller->SetCallbacks(callbacks);
         
         tgvoip::VoIPController::crypto.sha1 = &TGCallSha1;
         tgvoip::VoIPController::crypto.sha256 = &TGCallSha256;
@@ -136,9 +136,9 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         tgvoip::IPv6Address addressv6(std::string(connection.ipv6.UTF8String));
         unsigned char peerTag[16];
         [connection.peerTag getBytes:peerTag length:16];
-        /*master*/
-        //endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, tgvoip::Endpoint::TYPE_UDP_RELAY, peerTag));
-        endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, EP_TYPE_UDP_RELAY, peerTag));
+        endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, tgvoip::Endpoint::TYPE_UDP_RELAY, peerTag));
+        /*releasable*/
+        //endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, EP_TYPE_UDP_RELAY, peerTag));
     }
     
     voip_config_t config;
@@ -154,8 +154,8 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
     _controller->SetConfig(&config);
     
     _controller->SetEncryptionKey((char *)key.bytes, isOutgoing);
-    /*master*/
-    _controller->SetRemoteEndpoints(endpoints, _allowP2P/*, 65*/);
+    /*releasable*/
+    _controller->SetRemoteEndpoints(endpoints, _allowP2P, 65);
     _controller->Start();
     
     _controller->Connect();
@@ -164,8 +164,8 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
 - (void)stop {
     if (_controller) {
         char *buffer = (char *)malloc(_controller->GetDebugLogLength());
-        /*master*/
-        //_controller->Stop();
+        /*releasable*/
+        _controller->Stop();
         _controller->GetDebugLog(buffer);
         NSString *debugLog = [[NSString alloc] initWithUTF8String:buffer];
         
@@ -188,8 +188,8 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
 
 - (void)controllerStateChanged:(int)state {
     OngoingCallState callState = OngoingCallStateInitializing;
-    /*master*/
-    /*switch (state) {
+    /*releasable*/
+    switch (state) {
         case tgvoip::STATE_ESTABLISHED:
             callState = OngoingCallStateConnected;
             break;
@@ -198,8 +198,8 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
             break;
         default:
             break;
-    }*/
-    switch (state) {
+    }
+    /*switch (state) {
         case STATE_ESTABLISHED:
             callState = OngoingCallStateConnected;
             break;
@@ -208,7 +208,7 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
             break;
         default:
             break;
-    }
+    }*/
     
     if (callState != _state) {
         _state = callState;

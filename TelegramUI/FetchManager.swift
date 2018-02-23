@@ -406,6 +406,8 @@ final class FetchManager {
             self.withCategoryContext(category, { context in
                 context.cancelEntry(FetchManagerLocationEntryId(location: location, resourceId: resource.id, locationKey: locationKey))
             })
+            
+            self.postbox.mediaBox.cancelInteractiveResourceFetch(resource)
         }
     }
     

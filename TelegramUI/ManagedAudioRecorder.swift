@@ -175,8 +175,9 @@ final class ManagedAudioRecorderContext {
     private var processSamples = false
     
     private var toneTimer: SwiftSignalKit.Timer?
+    private var idleTimerExtensionDisposable: Disposable?
     
-    init(queue: Queue, mediaManager: MediaManager, micLevel: ValuePromise<Float>, recordingState: ValuePromise<AudioRecordingState>, beginWithTone: Bool, beganWithTone: @escaping (Bool) -> Void) {
+    init(queue: Queue, mediaManager: MediaManager, pushIdleTimerExtension: @escaping () -> Disposable, micLevel: ValuePromise<Float>, recordingState: ValuePromise<AudioRecordingState>, beginWithTone: Bool, beganWithTone: @escaping (Bool) -> Void) {
         assert(queue.isCurrent())
         
         self.id = getNextRecorderContextId()
@@ -283,10 +284,16 @@ final class ManagedAudioRecorderContext {
         addAudioUnitHolder(self.id, queue, self.audioUnit)
         
         self.oggWriter.begin(with: self.dataItem)
+        
+        self.idleTimerExtensionDisposable = (Signal<Void, NoError> { subscriber in
+            return pushIdleTimerExtension()
+        } |> delay(5.0, queue: queue)).start()
     }
     
     deinit {
         assert(self.queue.isCurrent())
+        
+        self.idleTimerExtensionDisposable?.dispose()
         
         removeAudioRecorderContext(self.id)
         removeAudioUnitHolder(self.id)
@@ -650,11 +657,18 @@ final class ManagedAudioRecorder {
         return self.recordingStateValue.get()
     }
     
-    init(mediaManager: MediaManager, beginWithTone: Bool, beganWithTone: @escaping (Bool) -> Void) {
+    init(mediaManager: MediaManager, pushIdleTimerExtension: @escaping () -> Disposable, beginWithTone: Bool, beganWithTone: @escaping (Bool) -> Void) {
         self.beginWithTone = beginWithTone
         self.queue.async {
-            let context = ManagedAudioRecorderContext(queue: self.queue, mediaManager: mediaManager, micLevel: self.micLevelValue, recordingState: self.recordingStateValue, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
+            let context = ManagedAudioRecorderContext(queue: self.queue, mediaManager: mediaManager, pushIdleTimerExtension: pushIdleTimerExtension, micLevel: self.micLevelValue, recordingState: self.recordingStateValue, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
             self.contextRef = Unmanaged.passRetained(context)
+        }
+    }
+    
+    deinit {
+        let contextRef = self.contextRef
+        self.queue.async {
+            contextRef?.release()
         }
     }
     

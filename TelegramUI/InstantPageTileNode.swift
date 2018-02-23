@@ -22,7 +22,7 @@ final class InstantPageTileNode: ASDisplayNode {
         super.init()
         
         self.isLayerBacked = true
-        self.isOpaque = true
+        self.isOpaque = false
         self.backgroundColor = backgroundColor
     }
     

@@ -34,9 +34,11 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
             node.contentSize = CGSize(width: 41.0, height: 41.0)
             node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             node.inputNodeInteraction = self.inputNodeInteraction
-            node.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
             completion(node, {
-                return (nil, {})
+                return (nil, {
+                    node.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
+                    node.updateAppearanceTransition(transition: .immediate)
+                })
             })
         }
     }
@@ -117,8 +119,16 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     }
     
     func updateIsHighlighted() {
+        assert(Queue.mainQueue().isCurrent())
         if let currentCollectionId = self.currentCollectionId, let inputNodeInteraction = self.inputNodeInteraction {
             self.highlightNode.isHidden = inputNodeInteraction.highlightedItemCollectionId != currentCollectionId
+        }
+    }
+    
+    func updateAppearanceTransition(transition: ContainedViewLayoutTransition) {
+        assert(Queue.mainQueue().isCurrent())
+        if let inputNodeInteraction = self.inputNodeInteraction {
+            transition.updateSublayerTransformScale(node: self, scale: inputNodeInteraction.appearanceTransition)
         }
     }
 }

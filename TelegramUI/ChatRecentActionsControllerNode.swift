@@ -121,7 +121,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, present: { c, a in
                     self?.presentController(c, a)
                 }, transitionNode: { messageId, media in
-                    var selectedNode: ASDisplayNode?
+                    var selectedNode: (ASDisplayNode, () -> UIView?)?
                     if let strongSelf = self {
                         strongSelf.listNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView {
@@ -186,7 +186,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 strongSelf.pushController(searchController)
             }
         }, updateInputState: { _ in }, openMessageShareMenu: { _ in
-        }, presentController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action in
+        }, presentController: { _, _ in }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action in
             if let strongSelf = self {
                 switch action {
                 case let .url(url):
@@ -605,7 +605,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 switch result {
                     case let .externalUrl(url):
                         if let navigationController = strongSelf.getNavigationController() {
-                            openExternalUrl(url: url, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: navigationController)
+                            openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: navigationController)
                         }
                     case let .peer(peerId):
                         strongSelf.openPeer(peerId: peerId, peer: nil)
@@ -628,6 +628,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 strongSelf.openPeer(peerId: peerId, peer: nil)
                             }
                         }), nil)
+                    case .proxy:
+                        openResolvedUrl(result, account: strongSelf.account, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, _ in
+                            if let strongSelf = self {
+                                strongSelf.openPeer(peerId: peerId, peer: nil)
+                            }
+                        }, present: { c, a in
+                            self?.presentController(c, a)
+                        })
                 }
             }
         }))

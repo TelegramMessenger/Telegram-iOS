@@ -85,7 +85,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let displaySize = CGSize(width: 200.0, height: 200.0)
         let telegramFile = self.telegramFile
         let layoutConstants = self.layoutConstants
@@ -131,7 +131,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 avatarInset = 0.0
             }
             
-            var layoutInsets = UIEdgeInsets(top: mergedTop ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
+            var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
             if dateHeaderAtBottom {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
             }
@@ -169,17 +169,11 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     sentViaBot = true
                 }
             }
-            
-            var dateText = stringForMessageTimestamp(timestamp: item.message.timestamp, timeFormat: item.presentationData.timeFormat)
-            
-            if let author = item.message.author as? TelegramUser {
-                if author.botInfo != nil {
-                    sentViaBot = true
-                }
-                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                    dateText = "\(author.displayTitle), \(dateText)"
-                }
+            if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                sentViaBot = true
             }
+            
+            let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
             
             let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
             
@@ -436,6 +430,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     }
     
     override func updateHighlightedState(animated: Bool) {
+        super.updateHighlightedState(animated: animated)
+        
         if let item = self.item {
             var highlighted = false
             if let highlightedState = item.controllerInteraction.highlightedState {

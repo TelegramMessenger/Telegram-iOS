@@ -76,7 +76,7 @@ private func mediaIsNotMergeable(_ media: Media) -> Bool {
     return false
 }
 
-private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs: Message) -> Bool {
+private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs: Message) -> ChatMessageMerge {
     var lhsEffectiveAuthor: Peer? = lhs.author
     var rhsEffectiveAuthor: Peer? = rhs.author
     if lhs.id.peerId == accountPeerId {
@@ -93,27 +93,27 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
     if abs(lhs.timestamp - rhs.timestamp) < Int32(5 * 60) && lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id {
         for media in lhs.media {
             if mediaIsNotMergeable(media) {
-                return false
+                return .semanticallyMerged
             }
         }
         for media in rhs.media {
             if mediaIsNotMergeable(media) {
-                return false
+                return .semanticallyMerged
             }
         }
         for attribute in lhs.attributes {
             if let attribute = attribute as? ReplyMarkupMessageAttribute {
                 if attribute.flags.contains(.inline) && !attribute.rows.isEmpty {
-                    return false
+                    return .semanticallyMerged
                 }
                 break
             }
         }
         
-        return true
+        return .fullyMerged
     }
     
-    return false
+    return .none
 }
 
 func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -> Bool{
@@ -154,6 +154,20 @@ public enum ChatMessageItemAdditionalContent {
     case eventLogPreviousMessage(Message)
     case eventLogPreviousDescription(Message)
     case eventLogPreviousLink(Message)
+}
+
+enum ChatMessageMerge {
+    case none
+    case fullyMerged
+    case semanticallyMerged
+    
+    var merged: Bool {
+        if case .none = self {
+            return false
+        } else {
+            return true
+        }
+    }
 }
 
 public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
@@ -303,20 +317,20 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    final func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: Bool, bottom: Bool, dateAtBottom: Bool) {
-        var mergedTop = false
-        var mergedBottom = false
+    final func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool) {
+        var mergedTop: ChatMessageMerge = .none
+        var mergedBottom: ChatMessageMerge = .none
         var dateAtBottom = false
         if let top = top as? ChatMessageItem {
             if top.header.id != self.header.id {
-                mergedBottom = false
+                mergedBottom = .none
             } else {
                 mergedBottom = messagesShouldBeMerged(accountPeerId: self.account.peerId, message, top.message)
             }
         }
         if let bottom = bottom as? ChatMessageItem {
             if bottom.header.id != self.header.id {
-                mergedTop = false
+                mergedTop = .none
                 dateAtBottom = true
             } else {
                 mergedTop = messagesShouldBeMerged(accountPeerId: self.account.peerId, bottom.message, message)
@@ -325,10 +339,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             if bottom.header.id != self.header.id {
                 dateAtBottom = true
             }
-        } else if let bottom = bottom as? ChatHoleItem {
-            //if bottom.header.id != self.header.id {
-                dateAtBottom = true
-            //}
+        } else if let _ = bottom as? ChatHoleItem {
+            dateAtBottom = true
         } else {
             dateAtBottom = true
         }

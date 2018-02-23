@@ -200,17 +200,11 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                             sentViaBot = true
                         }
                     }
-                    
-                    var dateText = stringForMessageTimestamp(timestamp: message.timestamp, timeFormat: presentationData.timeFormat)
-                    
-                    if let author = message.author as? TelegramUser {
-                        if author.botInfo != nil {
-                            sentViaBot = true
-                        }
-                        if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                            dateText = "\(author.displayTitle), \(dateText)"
-                        }
+                    if let author = message.author as? TelegramUser, author.botInfo != nil {
+                        sentViaBot = true
                     }
+                    
+                    let dateText = stringForMessageTimestampStatus(message: message, timeFormat: presentationData.timeFormat, strings: presentationData.strings)
                     
                     let (size, apply) = statusLayout(presentationData.theme, presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, constrainedSize)
                     statusSize = size
@@ -304,7 +298,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 let maxVoiceLength: CGFloat = 30.0
                 let minVoiceLength: CGFloat = 2.0
                 
-                let minLayoutWidth: CGFloat
+                var minLayoutWidth: CGFloat
                 if hasThumbnail {
                     minLayoutWidth = max(titleLayout.size.width, descriptionLayout.size.width) + 86.0
                 } else if isVoice {
@@ -312,6 +306,10 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     minLayoutWidth = minVoiceWidth + (maxVoiceWidth - minVoiceWidth) * (calcDuration - minVoiceLength) / (maxVoiceLength - minVoiceLength)
                 } else {
                     minLayoutWidth = max(titleLayout.size.width, descriptionLayout.size.width) + 44.0 + 8.0
+                }
+                
+                if let statusSize = statusSize {
+                    minLayoutWidth = max(minLayoutWidth, statusSize.width)
                 }
                 
                 let fileIconImage: UIImage?
@@ -368,6 +366,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     
                     var statusFrame: CGRect?
                     if let statusSize = statusSize {
+                        fittedLayoutSize.width = max(fittedLayoutSize.width, statusSize.width)
                         statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width, y: fittedLayoutSize.height - statusSize.height + 10.0), size: statusSize)
                     }
                     
@@ -597,15 +596,17 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         }
     }
     
-    func transitionNode(media: Media) -> ASDisplayNode? {
-        if let file = self.file, file.isEqual(media) {
-            return self.iconNode
+    func transitionNode(media: Media) -> (ASDisplayNode, () -> UIView?)? {
+        if let iconNode = self.iconNode, let file = self.file, file.isEqual(media) {
+            return (iconNode, { [weak iconNode] in
+                return iconNode?.view.snapshotContentTree(unhide: true)
+            })
         } else {
             return nil
         }
     }
     
-    func updateHiddenMedia(_ media: [Media]?) {
+    func updateHiddenMedia(_ media: [Media]?) -> Bool {
         var isHidden = false
         if let file = self.file, let media = media {
             for m in media {
@@ -616,5 +617,6 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
             }
         }
         self.iconNode?.isHidden = isHidden
+        return isHidden
     }
 }

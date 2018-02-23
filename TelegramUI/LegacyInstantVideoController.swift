@@ -25,10 +25,10 @@ final class InstantVideoController: LegacyController {
     
     private var dismissedVideo = false
     
-    override init(presentation: LegacyControllerPresentation, theme: PresentationTheme?) {
+    override init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, initialLayout: ContainerViewLayout? = nil) {
         self.audioStatus = InstantVideoControllerRecordingStatus(micLevel: self.micLevelValue.get())
         
-        super.init(presentation: presentation, theme: theme)
+        super.init(presentation: presentation, theme: theme, initialLayout: initialLayout)
     }
     
     required public init(coder aDecoder: NSCoder) {

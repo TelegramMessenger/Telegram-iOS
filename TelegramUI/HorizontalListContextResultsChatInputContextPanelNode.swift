@@ -55,6 +55,7 @@ private func preparedTransition(from fromEntries: [HorizontalListContextResultsC
 
 final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputContextPanelNode {
     private var theme: PresentationTheme
+    private var strings: PresentationStrings
     
     private let listView: ListView
     private let separatorNode: ASDisplayNode
@@ -66,6 +67,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     
     override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
+        self.strings = strings
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -91,6 +93,37 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         super.didLoad()
         
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
+            if let strongSelf = self {
+                let convertedPoint = strongSelf.listView.view.convert(point, from: strongSelf.view)
+                
+                if !strongSelf.listView.bounds.contains(convertedPoint) {
+                    return nil
+                }
+                
+                var selectedItemNodeAndContent: (ASDisplayNode, PeekControllerContent)?
+                strongSelf.listView.forEachItemNode { itemNode in
+                    if itemNode.frame.contains(convertedPoint), let itemNode = itemNode as? HorizontalListContextResultsChatInputPanelItemNode, let item = itemNode.item {
+                        selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: [
+                            PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
+                                item.resultSelected(item.result)
+                            })
+                        ]))
+                    }
+                }
+                return .single(selectedItemNodeAndContent)
+            }
+            return nil
+        }, present: { [weak self] content, sourceNode in
+            if let strongSelf = self {
+                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
+                    return sourceNode
+                })
+                strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
+                return controller
+            }
+            return nil
+        }))
     }
     
     func updateResults(_ results: ChatContextResultCollection) {

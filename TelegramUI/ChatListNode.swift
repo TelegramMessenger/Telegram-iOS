@@ -477,6 +477,70 @@ final class ChatListNode: ListView {
                 }
             }
         }
+        self.reorderItem = { [weak self] fromIndex, toIndex, transactionOpaqueState in
+            if let strongSelf = self, let filteredEntries = (transactionOpaqueState as? ChatListOpaqueTransactionState)?.chatListView.filteredEntries {
+                if fromIndex >= 0 && fromIndex < filteredEntries.count && toIndex >= 0 && toIndex < filteredEntries.count {
+                    let fromEntry = filteredEntries[filteredEntries.count - 1 - fromIndex]
+                    let toEntry = filteredEntries[filteredEntries.count - 1 - toIndex]
+                    
+                    var referenceId: PinnedItemId?
+                    var beforeAll = false
+                    switch toEntry {
+                        case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _):
+                            referenceId = .peer(index.messageIndex.id.peerId)
+                        case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
+                            referenceId = .group(groupId)
+                        case .SearchEntry:
+                            beforeAll = true
+                        default:
+                            break
+                    }
+                    
+                    if let _ = fromEntry.index.pinningIndex {
+                        let _ = (strongSelf.account.postbox.modify { modifier -> Void in
+                            var itemIds = modifier.getPinnedItemIds()
+                            
+                            var itemId: PinnedItemId?
+                            switch fromEntry {
+                                case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _):
+                                    itemId = .peer(index.messageIndex.id.peerId)
+                                case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
+                                    itemId = .group(groupId)
+                                default:
+                                    break
+                            }
+                            
+                            if let itemId = itemId {
+                                itemIds = itemIds.filter({ $0 != itemId })
+                                if let referenceId = referenceId {
+                                    var inserted = false
+                                    for i in 0 ..< itemIds.count {
+                                        if itemIds[i] == referenceId {
+                                            if fromIndex < toIndex {
+                                                itemIds.insert(itemId, at: i + 1)
+                                            } else {
+                                                itemIds.insert(itemId, at: i)
+                                            }
+                                            inserted = true
+                                            break
+                                        }
+                                    }
+                                    if !inserted {
+                                        itemIds.append(itemId)
+                                    }
+                                } else if beforeAll {
+                                    itemIds.insert(itemId, at: 0)
+                                } else {
+                                    itemIds.append(itemId)
+                                }
+                                reorderPinnedItemIds(modifier: modifier, itemIds: itemIds)
+                                //modifier.setPinnedItemIds(itemIds)
+                            }
+                        }).start()
+                    }
+                }
+            }
+        }
     }
     
     deinit {

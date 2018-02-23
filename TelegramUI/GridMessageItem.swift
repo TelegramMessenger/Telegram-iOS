@@ -306,9 +306,12 @@ final class GridMessageItemNode: GridItemNode {
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> ASDisplayNode? {
+    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         if self.messageId == id {
-            return self.imageNode
+            let imageNode = self.imageNode
+            return (self.imageNode, { [weak imageNode] in
+                return imageNode?.view.snapshotContentTree(unhide: true)
+            })
         } else {
             return nil
         }

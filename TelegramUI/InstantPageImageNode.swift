@@ -82,9 +82,12 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> ASDisplayNode? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
         if media == self.media {
-            return self.imageNode
+            let imageNode = self.imageNode
+            return (self.imageNode, { [weak imageNode] in
+                return imageNode?.view.snapshotContentTree(unhide: true)
+            })
         } else {
             return nil
         }

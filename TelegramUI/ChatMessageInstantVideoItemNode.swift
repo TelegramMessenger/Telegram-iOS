@@ -114,7 +114,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         self.view.addGestureRecognizer(replyRecognizer)
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let displaySize = CGSize(width: 212.0, height: 212.0)
         let previousFile = self.telegramFile
         let layoutConstants = self.layoutConstants
@@ -261,7 +261,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     forwardSource = forwardInfo.author
                     forwardAuthorSignature = nil
                 }
-                let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - imageSize.width + 30.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
+                let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - imageSize.width + 6.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
                 forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData.theme, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 
                 if let currentForwardBackgroundNode = currentForwardBackgroundNode {
@@ -298,17 +298,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     sentViaBot = true
                 }
             }
-            
-            var dateText = stringForMessageTimestamp(timestamp: item.message.timestamp, timeFormat: item.presentationData.timeFormat)
-            
-            if let author = item.message.author as? TelegramUser {
-                if author.botInfo != nil {
-                    sentViaBot = true
-                }
-                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                    dateText = "\(author.displayTitle), \(dateText)"
-                }
+            if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                sentViaBot = true
             }
+            
+            let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
             
             let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
             

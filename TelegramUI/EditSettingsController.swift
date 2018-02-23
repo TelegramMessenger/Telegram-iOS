@@ -476,7 +476,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {
-            var result: (ASDisplayNode, CGRect)?
+            var result: ((ASDisplayNode, () -> UIView?), CGRect)?
             controller.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
                     result = itemNode.avatarTransitionNode()

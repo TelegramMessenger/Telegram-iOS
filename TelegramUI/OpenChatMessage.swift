@@ -6,7 +6,18 @@ import TelegramCore
 import SwiftSignalKit
 import PassKit
 
-func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> ASDisplayNode?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((TelegramMediaFile) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
+private enum ChatMessageGalleryControllerData {
+    case url(String)
+    case pass(TelegramMediaFile)
+    case instantPage(InstantPageGalleryController, Int, Media)
+    case map(TelegramMediaMap)
+    case stickerPack(StickerPackReference)
+    case audio(TelegramMediaFile)
+    case gallery(GalleryController)
+    case other(Media)
+}
+
+private func chatMessageGalleryControllerData(account: Account, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, synchronousLoad: Bool) -> ChatMessageGalleryControllerData? {
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: [InstantPageGalleryEntry]?
@@ -17,8 +28,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
             galleryMedia = image
         } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             if content.embedUrl != nil && !webEmbedVideoContentSupportsWebpage(content) {
-                openUrl(content.url)
-                return true
+                return .url(content.url)
             } else {
                 if let file = content.file {
                     galleryMedia = file
@@ -58,138 +68,189 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 navigationController.replaceTopController(controller, animated: false, ready: ready)
             }
         })
-        setupTemporaryHiddenMedia(gallery.hiddenMedia, centralIndex, galleryMedia)
-        
-        dismissInput()
-        present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry in
-            var selectedTransitionNode: ASDisplayNode?
-            if entry.index == centralIndex {
-                selectedTransitionNode = transitionNode(message.id, galleryMedia)
-            }
-            if let selectedTransitionNode = selectedTransitionNode {
-                return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
-            }
-            return nil
-        }))
-        return true
+        return .instantPage(gallery, centralIndex, galleryMedia)
     } else if let galleryMedia = galleryMedia {
         if let mapMedia = galleryMedia as? TelegramMediaMap {
-            dismissInput()
-            present(legacyLocationController(message: message, mapMedia: mapMedia, account: account, openPeer: { peer in
-                openPeer(peer, .info)
-            }, sendLiveLocation: { coordinate, period in
-                let outMessage: EnqueueMessage = .message(text: "", attributes: [], media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period), replyToMessageId: nil, localGroupingKey: nil)
-                enqueueMessage(outMessage)
-            }, stopLiveLocation: {
-                account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
-            }), nil)
+            return .map(mapMedia)
         } else if let file = galleryMedia as? TelegramMediaFile, file.isSticker {
             for attribute in file.attributes {
                 if case let .Sticker(_, reference, _) = attribute {
                     if let reference = reference {
-                        let controller = StickerPackPreviewController(account: account, stickerPack: reference)
-                        controller.sendSticker = sendSticker
-                        dismissInput()
-                        present(controller, nil)
+                        return .stickerPack(reference)
                     }
                     break
                 }
             }
         } else if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice || file.isInstantVideo {
-            let location: PeerMessagesPlaylistLocation
-            let playerType: MediaManagerPlayerType
-            if (file.isVoice || file.isInstantVideo) && message.tags.contains(.voiceOrInstantVideo) {
-                location = .messages(peerId: message.id.peerId, tagMask: .voiceOrInstantVideo, at: message.id)
-                playerType = .voice
-            } else if file.isMusic && message.tags.contains(.music) {
-                location = .messages(peerId: message.id.peerId, tagMask: .music, at: message.id)
-                playerType = .music
-            } else {
-                location = .singleMessage(message.id)
-                playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
-            }
-            account.telegramApplicationContext.mediaManager.setPlaylist(PeerMessagesMediaPlaylist(postbox: account.postbox, network: account.network, location: location), type: playerType)
+            return .audio(file)
         } else if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "application/vnd.apple.pkpass" || (file.fileName != nil && file.fileName!.lowercased().hasSuffix(".pkpass")) {
-            let _ = (account.postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true))
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { data in
-                guard let navigationController = navigationController else {
-                    return
-                }
-                if data.complete, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                    var error: NSError?
-                    let pass = PKPass(data: content, error: &error)
-                    if error == nil {
-                        let controller = PKAddPassesViewController(pass: pass)
-                        if let window = navigationController.view.window {
-                            window.rootViewController?.present(controller, animated: true)
-                        }
-                    }
-                }
-            })
+            return .pass(file)
         } else {
-            let gallery = GalleryController(account: account, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, replaceRootController: { [weak navigationController] controller, ready in
+            let gallery = GalleryController(account: account, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                 navigationController?.replaceTopController(controller, animated: false, ready: ready)
             }, baseNavigationController: navigationController)
-            
-            dismissInput()
-            present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
-                let selectedTransitionNode = transitionNode(messageId, media)
-                if let selectedTransitionNode = selectedTransitionNode {
-                    return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
-                }
-                return nil
-            }))
+            return .gallery(gallery)
         }
-        return true
-    } else if let contact = otherMedia as? TelegramMediaContact {
-        let _ = (account.postbox.modify { modifier -> (Peer?, Bool?) in
-            if let peerId = contact.peerId {
-                return (modifier.getPeer(peerId), modifier.isPeerContact(peerId: peerId))
-            } else {
-                return (nil, nil)
-            }
-            } |> deliverOnMainQueue).start(next: { peer, isContact in
-                guard let peer = peer else {
-                    return
-                }
+    }
+    if let otherMedia = otherMedia {
+        return .other(otherMedia)
+    } else {
+        return nil
+    }
+}
+
+enum ChatMessagePreviewControllerData {
+    case instantPage(InstantPageGalleryController, Int, Media)
+    case gallery(GalleryController)
+}
+
+func chatMessagePreviewControllerData(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
+    if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, synchronousLoad: true) {
+        switch mediaData {
+            case let .gallery(gallery):
+                return .gallery(gallery)
+            case let .instantPage(gallery, centralIndex, galleryMedia):
+                return .instantPage(gallery, centralIndex, galleryMedia)
+            default:
+                break
+        }
+    }
+    return nil
+}
+
+func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((TelegramMediaFile) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void) -> Bool {
+    if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, synchronousLoad: false) {
+        switch mediaData {
+            case let .url(url):
+                openUrl(url)
+                return true
+            case let .pass(file):
+                let _ = (account.postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true))
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { data in
+                        guard let navigationController = navigationController else {
+                            return
+                        }
+                        if data.complete, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                            var error: NSError?
+                            let pass = PKPass(data: content, error: &error)
+                            if error == nil {
+                                let controller = PKAddPassesViewController(pass: pass)
+                                if let window = navigationController.view.window {
+                                    window.rootViewController?.present(controller, animated: true)
+                                }
+                            }
+                        }
+                    })
+                return true
+            case let .instantPage(gallery, centralIndex, galleryMedia):
+                setupTemporaryHiddenMedia(gallery.hiddenMedia, centralIndex, galleryMedia)
                 
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                let controller = ActionSheetController(presentationTheme: presentationData.theme)
-                let dismissAction: () -> Void = { [weak controller] in
-                    controller?.dismissAnimated()
-                }
-                var items: [ActionSheetItem] = []
-            
-                if let peerId = contact.peerId {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_SendMessage, action: {
-                        dismissAction()
-                        
-                        openPeer(peer, .chat(textInputState: nil, messageId: nil))
-                    }))
-                    if let isContact = isContact, !isContact {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_AddContact, action: {
-                            dismissAction()
-                            let _ = addContactPeerInteractively(account: account, peerId: peerId, phone: contact.phoneNumber).start()
-                        }))
-                    }
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_TelegramCall, action: {
-                        dismissAction()
-                        callPeer(peerId)
-                    }))
-                }
-                items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
-                    dismissAction()
-                    account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(contact.phoneNumber).replacingOccurrences(of: " ", with: ""))")
-                }))
-                controller.setItemGroups([
-                    ActionSheetItemGroup(items: items),
-                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                    ])
                 dismissInput()
-                present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-            })
-        return true
+                present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry in
+                    var selectedTransitionNode: (ASDisplayNode, () -> UIView?)?
+                    if entry.index == centralIndex {
+                        selectedTransitionNode = transitionNode(message.id, galleryMedia)
+                    }
+                    if let selectedTransitionNode = selectedTransitionNode {
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                    }
+                    return nil
+                }))
+                return true
+            case let .map(mapMedia):
+                dismissInput()
+                present(legacyLocationController(message: message, mapMedia: mapMedia, account: account, openPeer: { peer in
+                    openPeer(peer, .info)
+                }, sendLiveLocation: { coordinate, period in
+                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period), replyToMessageId: nil, localGroupingKey: nil)
+                    enqueueMessage(outMessage)
+                }, stopLiveLocation: {
+                    account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
+                }), nil)
+                return true
+            case let .stickerPack(reference):
+                let controller = StickerPackPreviewController(account: account, stickerPack: reference)
+                controller.sendSticker = sendSticker
+                dismissInput()
+                present(controller, nil)
+                return true
+            case let .audio(file):
+                let location: PeerMessagesPlaylistLocation
+                let playerType: MediaManagerPlayerType
+                if (file.isVoice || file.isInstantVideo) && message.tags.contains(.voiceOrInstantVideo) {
+                    location = .messages(peerId: message.id.peerId, tagMask: .voiceOrInstantVideo, at: message.id)
+                    playerType = .voice
+                } else if file.isMusic && message.tags.contains(.music) {
+                    location = .messages(peerId: message.id.peerId, tagMask: .music, at: message.id)
+                    playerType = .music
+                } else {
+                    location = .singleMessage(message.id)
+                    playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
+                }
+                account.telegramApplicationContext.mediaManager.setPlaylist(PeerMessagesMediaPlaylist(postbox: account.postbox, network: account.network, location: location), type: playerType)
+                return true
+            case let .gallery(gallery):
+                dismissInput()
+                present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
+                    let selectedTransitionNode = transitionNode(messageId, media)
+                    if let selectedTransitionNode = selectedTransitionNode {
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                    }
+                    return nil
+                }))
+                return true
+            case let .other(otherMedia):
+                if let contact = otherMedia as? TelegramMediaContact {
+                    let _ = (account.postbox.modify { modifier -> (Peer?, Bool?) in
+                        if let peerId = contact.peerId {
+                            return (modifier.getPeer(peerId), modifier.isPeerContact(peerId: peerId))
+                        } else {
+                            return (nil, nil)
+                        }
+                    } |> deliverOnMainQueue).start(next: { peer, isContact in
+                        guard let peer = peer else {
+                            return
+                        }
+                        
+                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                        let dismissAction: () -> Void = { [weak controller] in
+                            controller?.dismissAnimated()
+                        }
+                        var items: [ActionSheetItem] = []
+                        
+                        if let peerId = contact.peerId {
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_SendMessage, action: {
+                                dismissAction()
+                                
+                                openPeer(peer, .chat(textInputState: nil, messageId: nil))
+                            }))
+                            if let isContact = isContact, !isContact {
+                                items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_AddContact, action: {
+                                    dismissAction()
+                                    let _ = addContactPeerInteractively(account: account, peerId: peerId, phone: contact.phoneNumber).start()
+                                }))
+                            }
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_TelegramCall, action: {
+                                dismissAction()
+                                callPeer(peerId)
+                            }))
+                        }
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
+                            dismissAction()
+                            account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(contact.phoneNumber).replacingOccurrences(of: " ", with: ""))")
+                        }))
+                        controller.setItemGroups([
+                            ActionSheetItemGroup(items: items),
+                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                            ])
+                        dismissInput()
+                        present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    })
+                    return true
+                }
+        }
     }
     return false
 }

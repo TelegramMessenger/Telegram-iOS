@@ -108,7 +108,7 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     func item(_ arguments: FeaturedStickerPacksControllerArguments) -> ListViewItem {
         switch self {
             case let .pack(_, theme, strings, info, unread, topItem, count, installed):
-                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false), enabled: true, sectionId: self.section, action: {
+                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { _, _ in
                 }, addPack: {
@@ -128,14 +128,6 @@ private struct FeaturedStickerPacksControllerState: Equatable {
     }
 }
 
-private func stringForStickerCount(_ count: Int32) -> String {
-    if count == 1 {
-        return "1 sticker"
-    } else {
-        return "\(count) stickers"
-    }
-}
-
 private func featuredStickerPacksControllerEntries(presentationData: PresentationData, state: FeaturedStickerPacksControllerState, view: CombinedView, featured: [FeaturedStickerPackItem], unreadPacks: [ItemCollectionId: Bool]) -> [FeaturedStickerPacksEntry] {
     var entries: [FeaturedStickerPacksEntry] = []
     
@@ -151,7 +143,7 @@ private func featuredStickerPacksControllerEntries(presentationData: Presentatio
                 if let value = unreadPacks[item.info.id] {
                     unread = value
                 }
-                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, unread, item.topItems.first, stringForStickerCount(item.info.count), installedPacks.contains(item.info.id)))
+                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, unread, item.topItems.first, presentationData.strings.StickerPack_StickerCount(item.info.count), installedPacks.contains(item.info.id)))
                 index += 1
             }
         }

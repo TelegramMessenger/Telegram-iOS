@@ -385,7 +385,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 }
                 
                 if hasMissed {
-                    statusAttributedString = NSAttributedString(string: item.strings.Calls_Missed, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                    statusAttributedString = NSAttributedString(string: item.strings.Notification_CallMissedShort, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                 } else if hasIncoming && hasOutgoing {
                     statusAttributedString = NSAttributedString(string: item.strings.Notification_CallOutgoingShort + ", " + item.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                 } else if hasIncoming {

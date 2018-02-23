@@ -27,6 +27,7 @@ final class ChatMediaInputSettingsItem: ListViewItem {
             node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             node.inputNodeInteraction = self.inputNodeInteraction
             node.updateTheme(theme: self.theme)
+            node.updateAppearanceTransition(transition: .immediate)
             completion(node, {
                 return (nil, {})
             })
@@ -85,6 +86,12 @@ final class ChatMediaInputSettingsItemNode: ListViewItemNode {
             self.theme = theme
             
             self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelSettingsIconImage(theme)
+        }
+    }
+    
+    func updateAppearanceTransition(transition: ContainedViewLayoutTransition) {
+        if let inputNodeInteraction = self.inputNodeInteraction {
+            transition.updateSublayerTransformScale(node: self, scale: inputNodeInteraction.appearanceTransition)
         }
     }
 }

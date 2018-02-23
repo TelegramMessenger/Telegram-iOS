@@ -1,0 +1,287 @@
+import Foundation
+import Display
+import AsyncDisplayKit
+import SwiftSignalKit
+import Postbox
+import TelegramCore
+
+class MediaInputPaneTrendingItem: ListViewItem {
+    let account: Account
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    let interaction: TrendingPaneInteraction
+    let info: StickerPackCollectionInfo
+    let topItems: [StickerPackItem]
+    let installed: Bool
+    let unread: Bool
+    
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: TrendingPaneInteraction, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool, unread: Bool) {
+        self.account = account
+        self.theme = theme
+        self.strings = strings
+        self.interaction = interaction
+        self.info = info
+        self.topItems = topItems
+        self.installed = installed
+        self.unread = unread
+    }
+    
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+        async {
+            let node = MediaInputPaneTrendingItemNode()
+            let (layout, apply) = node.asyncLayout()(self, params)
+            
+            node.contentSize = layout.contentSize
+            node.insets = layout.insets
+            
+            completion(node, {
+                return (nil, { apply() })
+            })
+        }
+    }
+    
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        if let node = node as? MediaInputPaneTrendingItemNode {
+            Queue.mainQueue().async {
+                let makeLayout = node.asyncLayout()
+                
+                async {
+                    let (layout, apply) = makeLayout(self, params)
+                    Queue.mainQueue().async {
+                        completion(layout, {
+                            apply()
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
+private let titleFont = Font.bold(16.0)
+private let statusFont = Font.regular(15.0)
+private let buttonFont = Font.medium(13.0)
+
+private final class TrendingTopItemNode: TransformImageNode {
+    var file: TelegramMediaFile? = nil
+    let loadDisposable = MetaDisposable()
+}
+
+class MediaInputPaneTrendingItemNode: ListViewItemNode {
+    private let titleNode: TextNode
+    private let descriptionNode: TextNode
+    private let unreadNode: ASImageNode
+    private let installTextNode: TextNode
+    private let installBackgroundNode: ASImageNode
+    private let installButtonNode: HighlightTrackingButtonNode
+    private var itemNodes: [TrendingTopItemNode]
+    
+    private var item: MediaInputPaneTrendingItem?
+    private let preloadDisposable = MetaDisposable()
+    
+    init() {
+        self.titleNode = TextNode()
+        self.titleNode.isLayerBacked = true
+        self.titleNode.contentMode = .left
+        self.titleNode.contentsScale = UIScreen.main.scale
+        
+        self.descriptionNode = TextNode()
+        self.descriptionNode.isLayerBacked = true
+        self.descriptionNode.contentMode = .left
+        self.descriptionNode.contentsScale = UIScreen.main.scale
+        
+        self.unreadNode = ASImageNode()
+        self.unreadNode.isLayerBacked = true
+        self.unreadNode.displayWithoutProcessing = true
+        self.unreadNode.displaysAsynchronously = false
+        
+        self.installTextNode = TextNode()
+        self.installTextNode.isLayerBacked = true
+        self.installTextNode.contentMode = .left
+        self.installTextNode.contentsScale = UIScreen.main.scale
+        
+        self.installBackgroundNode = ASImageNode()
+        self.installBackgroundNode.isLayerBacked = true
+        self.installBackgroundNode.displayWithoutProcessing = true
+        self.installBackgroundNode.displaysAsynchronously = false
+        
+        self.installButtonNode = HighlightTrackingButtonNode()
+        
+        self.itemNodes = []
+        
+        super.init(layerBacked: false, dynamicBounce: false)
+        
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.descriptionNode)
+        self.addSubnode(self.unreadNode)
+        self.addSubnode(self.installBackgroundNode)
+        self.addSubnode(self.installTextNode)
+        self.addSubnode(self.installButtonNode)
+        
+        self.installButtonNode.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.installBackgroundNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.installBackgroundNode.alpha = 0.4
+                    strongSelf.installTextNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.installTextNode.alpha = 0.4
+                } else {
+                    strongSelf.installBackgroundNode.alpha = 1.0
+                    strongSelf.installBackgroundNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.installTextNode.alpha = 1.0
+                    strongSelf.installTextNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        
+        self.installButtonNode.addTarget(self, action: #selector(self.installPressed), forControlEvents: .touchUpInside)
+    }
+    
+    deinit {
+        self.preloadDisposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+    
+    func asyncLayout() -> (_ item: MediaInputPaneTrendingItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, () -> Void) {
+        let makeInstallLayout = TextNode.asyncLayout(self.installTextNode)
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
+        
+        let currentItem = self.item
+        
+        return { item, params in
+            var updateButtonBackgroundImage: UIImage?
+            if currentItem?.theme !== item.theme {
+                updateButtonBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddPackButtonImage(item.theme)
+            }
+            let unreadImage = PresentationResourcesItemList.stickerUnreadDotImage(item.theme)
+            
+            let leftInset: CGFloat = 14.0
+            let rightInset: CGFloat = 16.0
+            
+            let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Stickers_Install, font: buttonFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.info.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0 - installLayout.size.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.StickerPack_StickerCount(item.info.count), font: statusFont, textColor: item.theme.chat.inputMediaPanel.stickersSectionTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let contentSize: CGSize = CGSize(width: params.width, height: 116.0)
+            let insets: UIEdgeInsets = UIEdgeInsets(top: 8.0, left: 0.0, bottom: 0.0, right: 0.0)
+            
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            
+            var topItems = item.topItems
+            if topItems.count > 5 {
+                topItems.removeSubrange(5 ..< topItems.count)
+            }
+            
+            return (layout, { [weak self] in
+                if let strongSelf = self {
+                    if item.topItems.count < Int(item.info.count) && item.topItems.count < 5 && strongSelf.item?.info.id != item.info.id {
+                        strongSelf.preloadDisposable.set(preloadedFeaturedStickerSet(network: item.account.network, postbox: item.account.postbox, id: item.info.id).start())
+                    }
+                    strongSelf.item = item
+                    
+                    let _ = installApply()
+                    let _ = titleApply()
+                    let _ = descriptionApply()
+                    
+                    if let updateButtonBackgroundImage = updateButtonBackgroundImage {
+                        strongSelf.installBackgroundNode.image = updateButtonBackgroundImage
+                    }
+                    
+                    let installWidth: CGFloat = installLayout.size.width + 20.0
+                    let buttonFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - installWidth, y: 4.0), size: CGSize(width: installWidth, height: 26.0))
+                    strongSelf.installBackgroundNode.frame = buttonFrame
+                    strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
+                    strongSelf.installButtonNode.frame = buttonFrame
+                    
+                    if item.installed {
+                        strongSelf.installButtonNode.isHidden = true
+                        strongSelf.installBackgroundNode.isHidden = true
+                        strongSelf.installTextNode.isHidden = true
+                    } else {
+                        strongSelf.installButtonNode.isHidden = false
+                        strongSelf.installBackgroundNode.isHidden = false
+                        strongSelf.installTextNode.isHidden = false
+                    }
+                    
+                    let titleFrame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: 2.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = titleFrame
+                    strongSelf.descriptionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: 23.0), size: descriptionLayout.size)
+                    
+                    if false && item.unread {
+                        strongSelf.unreadNode.isHidden = false
+                    } else {
+                        strongSelf.unreadNode.isHidden = true
+                    }
+                    if let image = unreadImage {
+                        strongSelf.unreadNode.image = image
+                        strongSelf.unreadNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: titleFrame.minY + 7.0), size: image.size)
+                    }
+                    
+                    var offset: CGFloat = params.leftInset + leftInset
+                    let itemSize = CGSize(width: 68.0, height: 68.0)
+                    
+                    for i in 0 ..< topItems.count {
+                        let file = topItems[i].file
+                        let node: TrendingTopItemNode
+                        if i < strongSelf.itemNodes.count {
+                            node = strongSelf.itemNodes[i]
+                        } else {
+                            node = TrendingTopItemNode()
+                            node.contentAnimations = [.subsequentUpdates]
+                            strongSelf.itemNodes.append(node)
+                            strongSelf.addSubnode(node)
+                        }
+                        if file.fileId != node.file?.fileId {
+                            node.file = file
+                            node.setSignal(chatMessageSticker(account: item.account, file: file, small: true))
+                            node.loadDisposable.set(freeMediaFileInteractiveFetched(account: item.account, file: file).start())
+                        }
+                        if let dimensions = file.dimensions {
+                            let imageSize = dimensions.aspectFitted(itemSize)
+                            node.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+                            node.frame = CGRect(origin: CGPoint(x: offset, y: 48.0), size: imageSize)
+                            offset += imageSize.width + 4.0
+                        }
+                    }
+                    
+                    if topItems.count < strongSelf.itemNodes.count {
+                        for i in (topItems.count ..< strongSelf.itemNodes.count).reversed() {
+                            strongSelf.itemNodes[i].removeFromSupernode()
+                            strongSelf.itemNodes.remove(at: i)
+                        }
+                    }
+                }
+            })
+        }
+    }
+    
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+    }
+    
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    @objc func installPressed() {
+        if let item = self.item {
+            item.interaction.installPack(item.info)
+        }
+    }
+
+    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            if let item = self.item {
+                item.interaction.openPack(item.info)
+            }
+        }
+    }
+}

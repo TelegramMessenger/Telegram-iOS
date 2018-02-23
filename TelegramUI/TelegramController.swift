@@ -44,6 +44,9 @@ public class TelegramController: ViewController {
     private var locationBroadcastDisposable: Disposable?
     
     private(set) var playlistStateAndType: (SharedMediaPlaylistItem, MusicPlaybackSettingsOrder, MediaManagerPlayerType)?
+    
+    var tempVoicePlaylistEnded: (() -> Void)?
+    
     private var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     
     private var locationBroadcastMode: LocationBroadcastNavigationAccessoryPanelMode?
@@ -79,7 +82,14 @@ public class TelegramController: ViewController {
                             if let playlistStateAndType = playlistStateAndType {
                                 strongSelf.playlistStateAndType = (playlistStateAndType.0.item, playlistStateAndType.0.order, playlistStateAndType.1)
                             } else {
+                                var voiceEnded = false
+                                if strongSelf.playlistStateAndType?.2 == .voice {
+                                    voiceEnded = true
+                                }
                                 strongSelf.playlistStateAndType = nil
+                                if voiceEnded {
+                                    strongSelf.tempVoicePlaylistEnded?()
+                                }
                             }
                             strongSelf.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
                         }

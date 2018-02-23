@@ -128,7 +128,7 @@ class CalculatingCacheSizeItemNode: ListViewItemNode {
                     if let current = strongSelf.activityIndicator {
                         activityIndicator = current
                     } else {
-                        activityIndicator = ActivityIndicator(type: .custom(item.theme.list.itemAccentColor, 20.0), speed: ActivityIndicatorSpeed.slow)
+                        activityIndicator = ActivityIndicator(type: .custom(item.theme.list.itemAccentColor, 20.0, 2.0), speed: ActivityIndicatorSpeed.slow)
                         strongSelf.addSubnode(activityIndicator)
                     }
                     
@@ -136,7 +136,7 @@ class CalculatingCacheSizeItemNode: ListViewItemNode {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
-                        activityIndicator.type = .custom(item.theme.list.itemAccentColor, 20.0)
+                        activityIndicator.type = .custom(item.theme.list.itemAccentColor, 20.0, 2.0)
                     }
                     
                     let _ = titleApply()

@@ -12,13 +12,15 @@ private final class PasscodeOptionsControllerArguments {
     let changePasscode: () -> Void
     let changePasscodeTimeout: () -> Void
     let changeTouchId: (Bool) -> Void
+    let toggleSimplePasscode: (Bool) -> Void
     
-    init(turnPasscodeOn: @escaping () -> Void, turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void) {
+    init(turnPasscodeOn: @escaping () -> Void, turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void, toggleSimplePasscode: @escaping (Bool) -> Void) {
         self.turnPasscodeOn = turnPasscodeOn
         self.turnPasscodeOff = turnPasscodeOff
         self.changePasscode = changePasscode
         self.changePasscodeTimeout = changePasscodeTimeout
         self.changeTouchId = changeTouchId
+        self.toggleSimplePasscode = toggleSimplePasscode
     }
 }
 
@@ -34,12 +36,13 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
     
     case autoLock(PresentationTheme, String, String)
     case touchId(PresentationTheme, String, Bool)
+    case simplePasscode(PresentationTheme, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
             case .togglePasscode, .changePasscode, .settingInfo:
                 return PasscodeOptionsSection.setting.rawValue
-            case .autoLock, .touchId:
+            case .autoLock, .touchId, .simplePasscode:
                 return PasscodeOptionsSection.options.rawValue
         }
     }
@@ -55,6 +58,8 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
             case .autoLock:
                 return 3
             case .touchId:
+                return 4
+            case .simplePasscode:
                 return 4
         }
     }
@@ -91,6 +96,12 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .simplePasscode(lhsTheme, lhsText, lhsValue):
+                if case let .simplePasscode(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -121,6 +132,10 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
             case let .touchId(theme, title, value):
                 return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.changeTouchId(value)
+                })
+            case let .simplePasscode(theme, title, value):
+                return ItemListSwitchItem(theme: theme, title: title, value: value, enableInteractiveChanges: false, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleSimplePasscode(value)
                 })
         }
     }
@@ -194,6 +209,11 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
                         entries.append(.touchId(presentationData.theme, presentationData.strings.PasscodeSettings_UnlockWithFaceId, passcodeOptionsData.presentationSettings.enableBiometrics))
                 }
             }
+            var simplePasscode = false
+            if case .numericalPassword = passcodeOptionsData.accessChallenge {
+                simplePasscode = true
+            }
+            entries.append(.simplePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_SimplePasscode, simplePasscode))
     }
     
     return entries
@@ -349,6 +369,38 @@ func passcodeOptionsController(account: Account) -> ViewController {
                 return current.withUpdatedEnableBiometrics(value)
             }).start()
         })
+    }, toggleSimplePasscode: { value in
+        var dismissImpl: (() -> Void)?
+        
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
+        let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: value ? TGPasscodeEntryControllerModeSetupSimple : TGPasscodeEntryControllerModeSetupComplex, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
+            if let result = result {
+                let challenge = value ? PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil) : PostboxAccessChallengeData.plaintextPassword(value: result, timeout: nil, attempts: nil)
+                let _ = account.postbox.modify({ modifier -> Void in
+                    modifier.setAccessChallengeData(challenge)
+                    updatePresentationPasscodeSettingsInternal(modifier: modifier, { current in
+                        return current.withUpdatedAutolockTimeout(1 * 60 * 60)
+                    })
+                }).start()
+                
+                let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+                    passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge).withUpdatedPresentationSettings(data.presentationSettings.withUpdatedAutolockTimeout(1 * 60 * 60))))
+                })
+                
+                dismissImpl?()
+            } else {
+                dismissImpl?()
+            }
+        })!
+        legacyController.bind(controller: controller)
+        legacyController.supportedOrientations = .portrait
+        legacyController.statusBar.statusBarStyle = .White
+        presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        dismissImpl = { [weak legacyController] in
+            legacyController?.dismiss()
+        }
     })
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
@@ -390,7 +442,14 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
-            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeVerifySimple, cancelEnabled: true, allowTouchId: false, attemptData: attemptData, completion: { value in
+            let mode: TGPasscodeEntryControllerMode
+            switch challenge {
+                case .none, .numericalPassword:
+                    mode = TGPasscodeEntryControllerModeVerifySimple
+                case .plaintextPassword:
+                    mode = TGPasscodeEntryControllerModeVerifyComplex
+            }
+            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: mode, cancelEnabled: true, allowTouchId: false, attemptData: attemptData, completion: { value in
                 if value != nil {
                     completion(false)
                 }

@@ -327,12 +327,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {
         guard let videoNode = self.videoNode else {
             return
         }
         
-        if let node = node as? OverlayMediaItemNode {
+        if let node = node.0 as? OverlayMediaItemNode {
             var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
             let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
             
@@ -345,20 +345,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.account.telegramApplicationContext.mediaManager.setOverlayVideoNode(nil)
         } else {
-            var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
-            let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
-            let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+            var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
+            let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
+            let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
             let transformedCopyViewFinalFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
             
-            let surfaceCopyView = node.view.snapshotContentTree()!
-            let copyView = node.view.snapshotContentTree()!
+            let surfaceCopyView = node.1()!
+            let copyView = node.1()!
             
             addToTransitionSurface(surfaceCopyView)
             
             var transformedSurfaceFrame: CGRect?
             var transformedSurfaceFinalFrame: CGRect?
             if let contentSurface = surfaceCopyView.superview {
-                transformedSurfaceFrame = node.view.convert(node.view.bounds, to: contentSurface)
+                transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
                 transformedSurfaceFinalFrame = videoNode.view.convert(videoNode.view.bounds, to: contentSurface)
             }
             
@@ -399,7 +399,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
             
             if let pictureInPictureNode = self.pictureInPictureNode {
-                let transformedPlaceholderFrame = node.view.convert(node.view.bounds, to: pictureInPictureNode.view)
+                let transformedPlaceholderFrame = node.0.view.convert(node.0.view.bounds, to: pictureInPictureNode.view)
                 let transform = CATransform3DScale(pictureInPictureNode.layer.transform, transformedPlaceholderFrame.size.width / pictureInPictureNode.layer.bounds.size.width, transformedPlaceholderFrame.size.height / pictureInPictureNode.layer.bounds.size.height, 1.0)
                 pictureInPictureNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: pictureInPictureNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
                 
@@ -413,30 +413,30 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+    override func animateOut(to node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         guard let videoNode = self.videoNode else {
             completion()
             return
         }
         
-        var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
-        let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
-        let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
+        let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewInitialFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
         
         var positionCompleted = false
         var boundsCompleted = false
         var copyCompleted = false
         
-        let copyView = node.view.snapshotContentTree()!
-        let surfaceCopyView = node.view.snapshotContentTree()!
+        let copyView = node.1()!
+        let surfaceCopyView = node.1()!
         
         addToTransitionSurface(surfaceCopyView)
         
         var transformedSurfaceFrame: CGRect?
         var transformedSurfaceCopyViewInitialFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
-            transformedSurfaceFrame = node.view.convert(node.view.bounds, to: contentSurface)
+            transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
             transformedSurfaceCopyViewInitialFrame = videoNode.view.convert(videoNode.view.bounds, to: contentSurface)
         }
         
@@ -493,7 +493,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         if let pictureInPictureNode = self.pictureInPictureNode {
-            let transformedPlaceholderFrame = node.view.convert(node.view.bounds, to: pictureInPictureNode.view)
+            let transformedPlaceholderFrame = node.0.view.convert(node.0.view.bounds, to: pictureInPictureNode.view)
             let pictureInPictureTransform = CATransform3DScale(pictureInPictureNode.layer.transform, transformedPlaceholderFrame.size.width / pictureInPictureNode.layer.bounds.size.width, transformedPlaceholderFrame.size.height / pictureInPictureNode.layer.bounds.size.height, 1.0)
             pictureInPictureNode.layer.animate(from: NSValue(caTransform3D: pictureInPictureNode.layer.transform), to: NSValue(caTransform3D: pictureInPictureTransform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
             })
@@ -652,7 +652,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         
                         (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { _, _ in
                             if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
-                                return GalleryTransitionArguments(transitionNode: overlayNode, addToTransitionSurface: { [weak overlaySupernode, weak overlayNode] view in
+                                return GalleryTransitionArguments(transitionNode: (overlayNode, { [weak overlayNode] in
+                                    return overlayNode?.view.snapshotContentTree()
+                                }), addToTransitionSurface: { [weak overlaySupernode, weak overlayNode] view in
                                     overlaySupernode?.view.addSubview(view)
                                     overlayNode?.canAttachContent = false
                                 })

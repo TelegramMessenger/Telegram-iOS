@@ -108,19 +108,21 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
 }
 
 final class GalleryTransitionArguments {
-    let transitionNode: ASDisplayNode
+    let transitionNode: (ASDisplayNode, () -> UIView?)
     let addToTransitionSurface: (UIView) -> Void
     
-    init(transitionNode: ASDisplayNode, addToTransitionSurface: @escaping (UIView) -> Void) {
+    init(transitionNode: (ASDisplayNode, () -> UIView?), addToTransitionSurface: @escaping (UIView) -> Void) {
         self.transitionNode = transitionNode
         self.addToTransitionSurface = addToTransitionSurface
     }
 }
 
 final class GalleryControllerPresentationArguments {
+    let animated: Bool
     let transitionArguments: (MessageId, Media) -> GalleryTransitionArguments?
     
-    init(transitionArguments: @escaping (MessageId, Media) -> GalleryTransitionArguments?) {
+    init(animated: Bool = true, transitionArguments: @escaping (MessageId, Media) -> GalleryTransitionArguments?) {
+        self.animated = animated
         self.transitionArguments = transitionArguments
     }
 }
@@ -163,6 +165,8 @@ class GalleryController: ViewController {
     }
     private var didSetReady = false
     
+    private var adjustedForInitialPreviewingLayout = false
+    
     var temporaryDoNotWaitForReady = false
     
     private let disposable = MetaDisposable()
@@ -184,7 +188,7 @@ class GalleryController: ViewController {
     
     private var hiddenMediaManagerIndex: Int?
     
-    init(account: Account, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+    init(account: Account, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
         self.account = account
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
@@ -228,74 +232,109 @@ class GalleryController: ViewController {
                 }
             }
             |> take(1)
-            |> deliverOnMainQueue
         
+        let semaphore: DispatchSemaphore?
+        if synchronousLoad {
+            semaphore = DispatchSemaphore(value: 0)
+        } else {
+            semaphore = nil
+        }
+        
+        let syncResult = Atomic<(Bool, (() -> Void)?)>(value: (false, nil))
         self.disposable.set(messageView.start(next: { [weak self] view in
-            if let strongSelf = self {
-                if let view = view {
-                    let entries = view.entries.filter { entry in
-                        if case .MessageEntry = entry {
-                            return true
+            let f: () -> Void = {
+                if let strongSelf = self {
+                    if let view = view {
+                        let entries = view.entries.filter { entry in
+                            if case .MessageEntry = entry {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        var centralEntryStableId: UInt32?
+                        loop: for i in 0 ..< entries.count {
+                            switch entries[i] {
+                                case let .MessageEntry(message, _, _, _):
+                                    switch source {
+                                        case let .peerMessagesAtId(messageId):
+                                            if message.id == messageId {
+                                                centralEntryStableId = message.stableId
+                                                break loop
+                                            }
+                                        case let .standaloneMessage(m):
+                                            if message.id == m.id {
+                                                centralEntryStableId = message.stableId
+                                                break loop
+                                            }
+                                    }
+                                default:
+                                    break
+                            }
+                        }
+                        if invertItemOrder {
+                            strongSelf.entries = entries.reversed()
+                            if let centralEntryStableId = centralEntryStableId {
+                                strongSelf.centralEntryStableId = centralEntryStableId
+                            }
                         } else {
-                            return false
-                        }
-                    }
-                    var centralEntryStableId: UInt32?
-                    loop: for i in 0 ..< entries.count {
-                        switch entries[i] {
-                            case let .MessageEntry(message, _, _, _):
-                                switch source {
-                                    case let .peerMessagesAtId(messageId):
-                                        if message.id == messageId {
-                                            centralEntryStableId = message.stableId
-                                            break loop
-                                        }
-                                    case let .standaloneMessage(m):
-                                        if message.id == m.id {
-                                            centralEntryStableId = message.stableId
-                                            break loop
-                                        }
-                                }
-                            default:
-                                break
-                        }
-                    }
-                    if invertItemOrder {
-                        strongSelf.entries = entries.reversed()
-                        if let centralEntryStableId = centralEntryStableId {
+                            strongSelf.entries = entries
                             strongSelf.centralEntryStableId = centralEntryStableId
                         }
-                    } else {
-                        strongSelf.entries = entries
-                        strongSelf.centralEntryStableId = centralEntryStableId
-                    }
-                    if strongSelf.isViewLoaded {
-                        var items: [GalleryItem] = []
-                        var centralItemIndex: Int?
-                        for entry in strongSelf.entries {
-                            if let item = galleryItemForEntry(account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, entry: entry, streamVideos: streamSingleVideo) {
-                                if case let .MessageEntry(message, _, _, _) = entry, message.stableId == strongSelf.centralEntryStableId {
-                                    centralItemIndex = items.count
+                        if strongSelf.isViewLoaded {
+                            var items: [GalleryItem] = []
+                            var centralItemIndex: Int?
+                            for entry in strongSelf.entries {
+                                if let item = galleryItemForEntry(account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, entry: entry, streamVideos: streamSingleVideo) {
+                                    if case let .MessageEntry(message, _, _, _) = entry, message.stableId == strongSelf.centralEntryStableId {
+                                        centralItemIndex = items.count
+                                    }
+                                    items.append(item)
                                 }
-                                items.append(item)
                             }
-                        }
-                        
-                        strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
-                        
-                        if strongSelf.temporaryDoNotWaitForReady {
-                            strongSelf.didSetReady = true
-                            strongSelf._ready.set(.single(true))
-                        } else {
-                            let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
-                                strongSelf?.didSetReady = true
+                            
+                            strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
+                            
+                            if strongSelf.temporaryDoNotWaitForReady {
+                                strongSelf.didSetReady = true
+                                strongSelf._ready.set(.single(true))
+                            } else {
+                                let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
+                                    strongSelf?.didSetReady = true
+                                }
+                                strongSelf._ready.set(ready |> map { true })
                             }
-                            strongSelf._ready.set(ready |> map { true })
                         }
                     }
                 }
             }
+            var process = false
+            let _ = syncResult.modify { processed, _ in
+                if !processed {
+                    return (processed, f)
+                }
+                process = true
+                return (true, nil)
+            }
+            semaphore?.signal()
+            if process {
+                Queue.mainQueue().async {
+                    f()
+                }
+            }
         }))
+        
+        if let semaphore = semaphore {
+            let _ = semaphore.wait(timeout: DispatchTime.now() + 1.0)
+        }
+        
+        var syncResultApply: (() -> Void)?
+        let _ = syncResult.modify { processed, f in
+            syncResultApply = f
+            return (true, nil)
+        }
+        
+        syncResultApply?()
         
         self.centralItemAttributesDisposable.add(self.centralItemTitle.get().start(next: { [weak self] title in
             self?.navigationItem.title = title
@@ -499,12 +538,16 @@ class GalleryController: ViewController {
         }
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+    }
+    
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         var nodeAnimatesItself = false
         
-        if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
+        if let centralItemNode = self.galleryNode.pager.centralItemNode() {
             if case let .MessageEntry(message, _, _, _) = self.entries[centralItemNode.index] {
                 self.centralItemTitle.set(centralItemNode.title())
                 self.centralItemTitleView.set(centralItemNode.titleView())
@@ -512,17 +555,29 @@ class GalleryController: ViewController {
                 self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
                 self.centralItemFooterContentNode.set(centralItemNode.footerContent())
                 
-                if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
-                    nodeAnimatesItself = true
-                    centralItemNode.activateAsInitial()
-                    centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
-                    
-                    self._hiddenMedia.set(.single((message.id, media)))
+                if let media = mediaForMessage(message: message) {
+                    if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments, let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
+                        nodeAnimatesItself = true
+                        centralItemNode.activateAsInitial()
+                        
+                        if presentationArguments.animated {
+                            centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                        }
+                        
+                        self._hiddenMedia.set(.single((message.id, media)))
+                    }
                 }
             }
         }
         
-        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+        if !self.isPresentedInPreviewingContext() {
+            self.galleryNode.setControlsHidden(false, animated: false)
+            if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
+                if presentationArguments.animated {
+                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+                }
+            }
+        }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -530,5 +585,15 @@ class GalleryController: ViewController {
         
         self.galleryNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        
+        if !self.adjustedForInitialPreviewingLayout && self.isPresentedInPreviewingContext() {
+            self.adjustedForInitialPreviewingLayout = true
+            self.galleryNode.setControlsHidden(true, animated: false)
+            if let centralItemNode = self.galleryNode.pager.centralItemNode(), let itemSize = centralItemNode.contentSize() {
+                self.preferredContentSize = itemSize.aspectFitted(self.view.bounds.size)
+                self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                centralItemNode.activateAsInitial()
+            }
+        }
     }
 }

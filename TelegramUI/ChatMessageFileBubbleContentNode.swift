@@ -63,12 +63,12 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 automaticDownload = item.controllerInteraction.automaticMediaDownloadSettings.categories.getVoice(item.message.id.peerId)
             }
             
-            let (initialWidth, refineLayout) = interactiveFileLayout(item.account, item.presentationData, item.message, selectedFile!, automaticDownload, item.message.effectivelyIncoming(item.account.peerId), statusType, CGSize(width: constrainedSize.width, height: constrainedSize.height))
+            let (initialWidth, refineLayout) = interactiveFileLayout(item.account, item.presentationData, item.message, selectedFile!, automaticDownload, item.message.effectivelyIncoming(item.account.peerId), statusType, CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height))
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackgroundForEmptyWallpapers: false, forceFullCorners: false)
             
             return (contentProperties, nil, initialWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { constrainedSize, position in
-                let (refinedWidth, finishLayout) = refineLayout(constrainedSize)
+                let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height))
                 
                 return (refinedWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { boundingWidth in
                     let (fileSize, fileApply) = finishLayout(boundingWidth - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right)
@@ -87,7 +87,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> ASDisplayNode? {
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         if self.item?.message.id == messageId {
             return self.interactiveFileNode.transitionNode(media: media)
         } else {
@@ -95,8 +95,8 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func updateHiddenMedia(_ media: [Media]?) {
-        self.interactiveFileNode.updateHiddenMedia(media)
+    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
+        return self.interactiveFileNode.updateHiddenMedia(media)
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double) {

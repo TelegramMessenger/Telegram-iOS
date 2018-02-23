@@ -512,12 +512,14 @@ public final class MediaManager: NSObject {
         return (activeContext.mediaPlayer, activeContext.addContextSubscriber(priority: priority, activate: activate, deactivate: deactivate))
     }
     
-    func audioRecorder(beginWithTone: Bool, beganWithTone: @escaping (Bool) -> Void) -> Signal<ManagedAudioRecorder?, NoError> {
+    func audioRecorder(beginWithTone: Bool, applicationBindings: TelegramApplicationBindings, beganWithTone: @escaping (Bool) -> Void) -> Signal<ManagedAudioRecorder?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.queue.async {
-                let audioRecorder = ManagedAudioRecorder(mediaManager: self, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
+                let audioRecorder = ManagedAudioRecorder(mediaManager: self, pushIdleTimerExtension: { [weak applicationBindings] in
+                    return applicationBindings?.pushIdleTimerExtension() ?? EmptyDisposable
+                }, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
                 subscriber.putNext(audioRecorder)
                 
                 disposable.set(ActionDisposable {

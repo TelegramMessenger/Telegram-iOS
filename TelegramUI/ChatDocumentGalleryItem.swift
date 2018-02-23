@@ -230,9 +230,9 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
         return self._title.get()
     }
     
-    override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
-        var transformedFrame = node.view.convert(node.view.bounds, to: self.webView)
-        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.webView.superview)
+    override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.webView)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.webView.superview)
         
         self.webView.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.webView.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
         
@@ -246,17 +246,17 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
         self.statusNodeContainer.layer.animateScale(from: 0.5, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
-    override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
-        var transformedFrame = node.view.convert(node.view.bounds, to: self.webView)
-        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.webView.superview)
-        let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+    override func animateOut(to node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.webView)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.webView.superview)
+        let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewInitialFrame = self.webView.convert(self.webView.bounds, to: self.view)
         
         var positionCompleted = false
         var boundsCompleted = false
         var copyCompleted = false
         
-        let copyView = node.view.snapshotContentTree()!
+        let copyView = node.1()!
         
         self.view.insertSubview(copyView, belowSubview: self.webView)
         copyView.frame = transformedSelfFrame

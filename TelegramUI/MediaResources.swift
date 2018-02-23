@@ -51,40 +51,90 @@ public struct VideoLibraryMediaResourceId: MediaResourceId {
     }
 }
 
+public enum VideoLibraryMediaResourceConversion: PostboxCoding, Equatable {
+    case passthrough
+    case compress(VideoMediaResourceAdjustments?)
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("v", orElse: 0) {
+            case 0:
+                self = .passthrough
+            case 1:
+                self = .compress(decoder.decodeObjectForKey("adj", decoder: { VideoMediaResourceAdjustments(decoder: $0) }) as? VideoMediaResourceAdjustments)
+            default:
+                self = .compress(nil)
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+            case .passthrough:
+                encoder.encodeInt32(0, forKey: "v")
+            case let .compress(adjustments):
+                encoder.encodeInt32(1, forKey: "v")
+                if let adjustments = adjustments {
+                    encoder.encodeObject(adjustments, forKey: "adj")
+                } else {
+                    encoder.encodeNil(forKey: "adj")
+                }
+        }
+    }
+    
+    public static func ==(lhs: VideoLibraryMediaResourceConversion, rhs: VideoLibraryMediaResourceConversion) -> Bool {
+        switch lhs {
+            case .passthrough:
+                if case .passthrough = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .compress(lhsAdjustments):
+                if case let .compress(rhsAdjustments) = rhs, lhsAdjustments == rhsAdjustments {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 public final class VideoLibraryMediaResource: TelegramMediaResource {
     public let localIdentifier: String
-    public let adjustments: VideoMediaResourceAdjustments?
+    public let conversion: VideoLibraryMediaResourceConversion
     
     public var headerSize: Int32 {
         return 32 * 1024
     }
     
-    public init(localIdentifier: String, adjustments: VideoMediaResourceAdjustments?) {
+    public init(localIdentifier: String, conversion: VideoLibraryMediaResourceConversion) {
         self.localIdentifier = localIdentifier
-        self.adjustments = adjustments
+        self.conversion = conversion
     }
     
     public required init(decoder: PostboxDecoder) {
         self.localIdentifier = decoder.decodeStringForKey("i", orElse: "")
-        self.adjustments = decoder.decodeObjectForKey("a", decoder: { VideoMediaResourceAdjustments(decoder: $0) }) as? VideoMediaResourceAdjustments
+        self.conversion = (decoder.decodeObjectForKey("conv", decoder: { VideoLibraryMediaResourceConversion(decoder: $0) }) as? VideoLibraryMediaResourceConversion) ?? .compress(nil)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.localIdentifier, forKey: "i")
-        if let adjustments = self.adjustments {
-            encoder.encodeObject(adjustments, forKey: "a")
-        } else {
-            encoder.encodeNil(forKey: "a")
-        }
+        encoder.encodeObject(self.conversion, forKey: "conv")
     }
     
     public var id: MediaResourceId {
-        return VideoLibraryMediaResourceId(localIdentifier: self.localIdentifier, adjustmentsDigest: self.adjustments?.digest)
+        var adjustmentsDigest: MemoryBuffer?
+        switch self.conversion {
+            case .passthrough:
+                break
+            case let .compress(adjustments):
+                adjustmentsDigest = adjustments?.digest
+        }
+        return VideoLibraryMediaResourceId(localIdentifier: self.localIdentifier, adjustmentsDigest: adjustmentsDigest)
     }
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? VideoLibraryMediaResource {
-            return self.localIdentifier == to.localIdentifier && self.adjustments == to.adjustments
+            return self.localIdentifier == to.localIdentifier && self.conversion == to.conversion
         } else {
             return false
         }

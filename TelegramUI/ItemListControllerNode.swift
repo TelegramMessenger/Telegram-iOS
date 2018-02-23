@@ -115,6 +115,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
     var dismiss: (() -> Void)?
     
     var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)?
+    var reorderEntry: ((Int, Int, [Entry]) -> Void)?
     
     var enableInteractiveDismiss = false {
         didSet {
@@ -149,6 +150,14 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                         return item
                     })
                     visibleEntriesUpdated(iterator)
+                }
+            }
+        }
+        
+        self.listNode.reorderItem = { [weak self] fromIndex, toIndex, opaqueTransactionState in
+            if let strongSelf = self, let reorderEntry = strongSelf.reorderEntry, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState<Entry>)?.mergedEntries {
+                if fromIndex >= 0 && fromIndex < mergedEntries.count && toIndex >= 0 && toIndex < mergedEntries.count {
+                    reorderEntry(fromIndex, toIndex, mergedEntries)
                 }
             }
         }

@@ -307,7 +307,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         return .none
     }
     
-    override func updateHiddenMedia(_ media: [Media]?) {
+    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
         if let media = media {
             var updatedMedia = media
             for item in media {
@@ -324,13 +324,13 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     updatedMedia = mediaList
                 }
             }
-            self.contentNode.updateHiddenMedia(updatedMedia)
+            return self.contentNode.updateHiddenMedia(updatedMedia)
         } else {
-            self.contentNode.updateHiddenMedia(nil)
+            return self.contentNode.updateHiddenMedia(nil)
         }
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> ASDisplayNode? {
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         if self.item?.message.id != messageId {
             return nil
         }

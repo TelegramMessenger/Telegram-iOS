@@ -9,6 +9,7 @@ struct ItemListStickerPackItemEditing: Equatable {
     let editable: Bool
     let editing: Bool
     let revealed: Bool
+    let reorderable: Bool
     
     static func ==(lhs: ItemListStickerPackItemEditing, rhs: ItemListStickerPackItemEditing) -> Bool {
         if lhs.editable != rhs.editable {
@@ -18,6 +19,9 @@ struct ItemListStickerPackItemEditing: Equatable {
             return false
         }
         if lhs.revealed != rhs.revealed {
+            return false
+        }
+        if lhs.reorderable != rhs.reorderable {
             return false
         }
         return true
@@ -145,6 +149,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     private var layoutParams: (ItemListStickerPackItem, ListViewItemLayoutParams, ItemListNeighbors)?
     
     private var editableControlNode: ItemListEditableControlNode?
+    private var reorderControlNode: ItemListEditableReorderControlNode?
     
     private let fetchDisposable = MetaDisposable()
     
@@ -217,6 +222,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
+        let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
         let previousFile = self.layoutParams?.0.topItem?.file
         
         var currentDisabledOverlayNode = self.disabledOverlayNode
@@ -265,26 +271,33 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             
             let leftInset: CGFloat = 65.0 + params.leftInset
             
-            var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
-            
-            let editingOffset: CGFloat
-            if item.editing.editing {
-                let sizeAndApply = editableControlLayout(59.0, item.theme, false)
-                editableControlSizeAndApply = sizeAndApply
-                editingOffset = sizeAndApply.0.width
-            } else {
-                editingOffset = 0.0
-            }
-            
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - 10.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            
             let insets = itemListNeighborsGroupedInsets(neighbors)
             let contentSize = CGSize(width: params.width, height: 59.0)
             let separatorHeight = UIScreenPixel
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
+            
+            var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
+            var reorderControlSizeAndApply: (CGSize, () -> ItemListEditableReorderControlNode)?
+            
+            var editingOffset: CGFloat = 0.0
+            var reorderInset: CGFloat = 0.0
+            
+            if item.editing.editing {
+                let sizeAndApply = editableControlLayout(59.0, item.theme, false)
+                editableControlSizeAndApply = sizeAndApply
+                editingOffset = sizeAndApply.0.width
+                
+                if item.editing.reorderable {
+                    let sizeAndApply = reorderControlLayout(contentSize.height, item.theme)
+                    reorderControlSizeAndApply = sizeAndApply
+                    reorderInset = sizeAndApply.0.width
+                }
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - 10.0 - reorderInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - reorderInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
@@ -384,6 +397,23 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         transition.updateAlpha(node: editableControlNode, alpha: 0.0)
                         transition.updateFrame(node: editableControlNode, frame: editableControlFrame, completion: { [weak editableControlNode] _ in
                             editableControlNode?.removeFromSupernode()
+                        })
+                    }
+                    
+                    if let reorderControlSizeAndApply = reorderControlSizeAndApply {
+                        if strongSelf.reorderControlNode == nil {
+                            let reorderControlNode = reorderControlSizeAndApply.1()
+                            strongSelf.reorderControlNode = reorderControlNode
+                            strongSelf.addSubnode(reorderControlNode)
+                            let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)
+                            reorderControlNode.frame = reorderControlFrame
+                            reorderControlNode.alpha = 0.0
+                            transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
+                        }
+                    } else if let reorderControlNode = strongSelf.reorderControlNode {
+                        strongSelf.reorderControlNode = nil
+                        transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in
+                            reorderControlNode?.removeFromSupernode()
                         })
                     }
                     
@@ -567,5 +597,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         if let (item, _, _) = self.layoutParams {
             item.addPack()
         }
+    }
+    
+    override func isReorderable(at point: CGPoint) -> Bool {
+        if let reorderControlNode = self.reorderControlNode, reorderControlNode.frame.contains(point) {
+            return true
+        }
+        return false
     }
 }

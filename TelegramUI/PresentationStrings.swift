@@ -1520,6 +1520,11 @@ public final class PresentationStrings {
     public let Notifications_MessageNotifications: String
     public let ChannelMembers_WhoCanAddMembersAdminsHelp: String
     public let DialogList_DeleteBotConversationConfirmation: String
+    private let _DialogList_MultipleTyping: String
+    private let _DialogList_MultipleTyping_r: [(Int, NSRange)]
+    public func DialogList_MultipleTyping(_ _0: String, _ _1: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(_DialogList_MultipleTyping, self._DialogList_MultipleTyping_r, [_0, _1])
+    }
     public let Conversation_ClousStorageInfo_Description2: String
     private let _Time_MonthOfYear_m5: String
     private let _Time_MonthOfYear_m5_r: [(Int, NSRange)]
@@ -2456,6 +2461,7 @@ public final class PresentationStrings {
     public let Channel_AdminLog_EmptyFilterText: String
     public let Channel_AdminLog_EmptyText: String
     public let PrivacySettings_DeleteAccountTitle: String
+    public let Peer_DeletedUser: String
     public let PrivacyLastSeenSettings_CustomShareSettings_Delete: String
     private let _ENCRYPTED_MESSAGE: String
     private let _ENCRYPTED_MESSAGE_r: [(Int, NSRange)]
@@ -5771,6 +5777,8 @@ public final class PresentationStrings {
         self.Notifications_MessageNotifications = getValue(dict, "Notifications.MessageNotifications")
         self.ChannelMembers_WhoCanAddMembersAdminsHelp = getValue(dict, "ChannelMembers.WhoCanAddMembersAdminsHelp")
         self.DialogList_DeleteBotConversationConfirmation = getValue(dict, "DialogList.DeleteBotConversationConfirmation")
+        self._DialogList_MultipleTyping = getValue(dict, "DialogList.MultipleTyping")
+        self._DialogList_MultipleTyping_r = extractArgumentRanges(self._DialogList_MultipleTyping)
         self.Conversation_ClousStorageInfo_Description2 = getValue(dict, "Conversation.ClousStorageInfo.Description2")
         self._Time_MonthOfYear_m5 = getValue(dict, "Time.MonthOfYear_m5")
         self._Time_MonthOfYear_m5_r = extractArgumentRanges(self._Time_MonthOfYear_m5)
@@ -6389,6 +6397,7 @@ public final class PresentationStrings {
         self.Channel_AdminLog_EmptyFilterText = getValue(dict, "Channel.AdminLog.EmptyFilterText")
         self.Channel_AdminLog_EmptyText = getValue(dict, "Channel.AdminLog.EmptyText")
         self.PrivacySettings_DeleteAccountTitle = getValue(dict, "PrivacySettings.DeleteAccountTitle")
+        self.Peer_DeletedUser = getValue(dict, "Peer.DeletedUser")
         self.PrivacyLastSeenSettings_CustomShareSettings_Delete = getValue(dict, "PrivacyLastSeenSettings.CustomShareSettings.Delete")
         self._ENCRYPTED_MESSAGE = getValue(dict, "ENCRYPTED_MESSAGE")
         self._ENCRYPTED_MESSAGE_r = extractArgumentRanges(self._ENCRYPTED_MESSAGE)

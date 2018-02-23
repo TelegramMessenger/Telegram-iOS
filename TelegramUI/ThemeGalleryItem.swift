@@ -101,13 +101,13 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
-        var transformedFrame = node.view.convert(node.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.imageNode.view.superview)
-        let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+    override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+        let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
         
-        let copyView = node.view.snapshotContentTree()!
+        let copyView = node.1()!
         
         self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
@@ -137,17 +137,17 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
         })
     }
     
-    override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
-        var transformedFrame = node.view.convert(node.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.imageNode.view.superview)
-        let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+    override func animateOut(to node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+        let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
         
         var positionCompleted = false
         var boundsCompleted = false
         var copyCompleted = false
         
-        let copyView = node.view.snapshotContentTree()!
+        let copyView = node.1()!
         
         self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame

@@ -12,6 +12,7 @@ private struct MessageContextMenuData {
     let canPin: Bool
     let canEdit: Bool
     let resourceStatus: MediaResourceStatus?
+    let messageActions: ChatAvailableMessageActions
 }
 
 private let starIconEmpty = UIImage(bundleImageName: "Chat/Context Menu/StarIconEmpty")?.precomposed()
@@ -47,9 +48,25 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     return canReply
 }
 
-func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], interfaceInteraction: ChatPanelInterfaceInteraction?, debugStreamSingleVideo: @escaping (MessageId) -> Void) -> Signal<ContextMenuController?, NoError> {
+enum ChatMessageContextMenuActionColor {
+    case accent
+    case destructive
+}
+
+struct ChatMessageContextMenuSheetAction {
+    let color: ChatMessageContextMenuActionColor
+    let title: String
+    let action: () -> Void
+}
+
+enum ChatMessageContextMenuAction {
+    case context(ContextMenuAction)
+    case sheet(ChatMessageContextMenuSheetAction)
+}
+
+func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], interfaceInteraction: ChatPanelInterfaceInteraction?, debugStreamSingleVideo: @escaping (MessageId) -> Void) -> Signal<[ChatMessageContextMenuAction], NoError> {
     guard let interfaceInteraction = interfaceInteraction else {
-        return .single(nil)
+        return .single([])
     }
     
     let dataSignal: Signal<MessageContextMenuData, NoError>
@@ -142,7 +159,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             
             if !hasUneditableAttributes {
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                if message.timestamp >= timestamp - 60 * 60 * 24 * 2 {
+                if message.timestamp >= timestamp - 60 * 60 * 24 * 2 || message.id.peerId == account.peerId {
                     canEdit = true
                 }
             }
@@ -172,30 +189,30 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             |> map(Optional.init)
     }
     
-    dataSignal = combineLatest(loadStickerSaveStatusSignal, loadResourceStatusSignal)
-        |> map { stickerSaveStatus, resourceStatus -> MessageContextMenuData in
-        return MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, resourceStatus: resourceStatus)
+    dataSignal = combineLatest(loadStickerSaveStatusSignal, loadResourceStatusSignal, chatAvailableMessageActions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: Set(messages.map { $0.id })))
+    |> map { stickerSaveStatus, resourceStatus, messageActions -> MessageContextMenuData in
+        return MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, resourceStatus: resourceStatus, messageActions: messageActions)
     }
     
-    return dataSignal |> deliverOnMainQueue |> map { data -> ContextMenuController? in
-        var actions: [ContextMenuAction] = []
+    return dataSignal |> deliverOnMainQueue |> map { data -> [ChatMessageContextMenuAction] in
+        var actions: [ChatMessageContextMenuAction] = []
         
         if let starStatus = data.starStatus, let image = starStatus ? starIconFilled : starIconEmpty {
-            actions.append(ContextMenuAction(content: .icon(image), action: {
+            actions.append(.context(ContextMenuAction(content: .icon(image), action: {
                 interfaceInteraction.toggleMessageStickerStarred(messages[0].id)
-            }))
+            })))
         }
         
         if data.canReply {
-            actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuReply), action: {
+            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuReply), action: {
                 interfaceInteraction.setupReplyMessage(messages[0].id)
-            }))
+            })))
         }
         
         if data.canEdit {
-            actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_Edit), action: {
+            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_Edit, action: {
                 interfaceInteraction.setupEditMessage(messages[0].id)
-            }))
+            })))
         }
         
         let resourceAvailable: Bool
@@ -207,7 +224,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if !messages[0].text.isEmpty || resourceAvailable {
             let message = messages[0]
-            actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy), action: {
+            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy), action: {
                 if resourceAvailable {
                     for media in message.media {
                         if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
@@ -237,18 +254,18 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 } else {
                     UIPasteboard.general.string = message.text
                 }
-            }))
+            })))
         }
         
         if data.canPin {
             if chatPresentationInterfaceState.pinnedMessage?.id != messages[0].id {
-                actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_Pin), action: {
+                actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_Pin, action: {
                     interfaceInteraction.pinMessage(messages[0].id)
-                }))
+                })))
             } else {
-                actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_Unpin), action: {
+                actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_Unpin, action: {
                     interfaceInteraction.unpinMessage()
-                }))
+                })))
             }
         }
         
@@ -259,29 +276,36 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if let file = media as? TelegramMediaFile {
                     if file.isVideo {
                         if file.isAnimated {
-                            actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_LinkDialogSave), action: {
+                            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, action: {
                                 let _ = addSavedGif(postbox: account.postbox, file: file).start()
-                            }))
+                            })))
                         } else if !GlobalExperimentalSettings.isAppStoreBuild {
-                            actions.append(ContextMenuAction(content: .text("Stream"), action: {
+                            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: "Stream", action: {
                                 debugStreamSingleVideo(message.id)
-                            }))
+                            })))
                         }
                         break
                     }
                 }
             }
         }
-    actions.append(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuMore), action: {
+    actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuMore), action: {
             interfaceInteraction.beginMessageSelection(messages.map { $0.id })
-        }))
+        })))
         
-        if !actions.isEmpty {
-            let contextMenuController = ContextMenuController(actions: actions)
-            return contextMenuController
-        } else {
-            return nil
+        if data.messageActions.options.contains(.forward) {
+            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, action: {
+                    interfaceInteraction.forwardMessages(messages)
+            })))
         }
+        
+        if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
+            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .destructive, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, action: {
+                interfaceInteraction.deleteMessages(messages)
+            })))
+        }
+        
+        return actions
     }
 }
 

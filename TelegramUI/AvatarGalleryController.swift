@@ -47,9 +47,11 @@ enum AvatarGalleryEntry: Equatable {
 }
 
 final class AvatarGalleryControllerPresentationArguments {
+    let animated: Bool
     let transitionArguments: (AvatarGalleryEntry) -> GalleryTransitionArguments?
     
-    init(transitionArguments: @escaping (AvatarGalleryEntry) -> GalleryTransitionArguments?) {
+    init(animated: Bool = true, transitionArguments: @escaping (AvatarGalleryEntry) -> GalleryTransitionArguments?) {
+        self.animated = animated
         self.transitionArguments = transitionArguments
     }
 }
@@ -104,6 +106,8 @@ class AvatarGalleryController: ViewController {
     }
     private var didSetReady = false
     
+    private var adjustedForInitialPreviewingLayout = false
+    
     private let disposable = MetaDisposable()
     
     private var entries: [AvatarGalleryEntry] = []
@@ -122,7 +126,7 @@ class AvatarGalleryController: ViewController {
     
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     
-    init(account: Account, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
+    init(account: Account, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.replaceRootController = replaceRootController
@@ -144,20 +148,59 @@ class AvatarGalleryController: ViewController {
         let entriesSignal: Signal<[AvatarGalleryEntry], NoError> = .single(initialAvatarGalleryEntries(peer: peer)) |> then(remoteEntriesSignal)
         
         let presentationData = self.presentationData
-        self.disposable.set((entriesSignal |> deliverOnMainQueue).start(next: { [weak self] entries in
-            if let strongSelf = self {
-                strongSelf.entries = entries
-                strongSelf.centralEntryIndex = 0
-                if strongSelf.isViewLoaded {
-                    strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ PeerAvatarImageGalleryItem(account: account, strings: presentationData.strings, entry: $0) }), centralItemIndex: 0, keepFirst: true)
-                    
-                    let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
-                        strongSelf?.didSetReady = true
+        
+        let semaphore: DispatchSemaphore?
+        if synchronousLoad {
+            semaphore = DispatchSemaphore(value: 0)
+        } else {
+            semaphore = nil
+        }
+        
+        let syncResult = Atomic<(Bool, (() -> Void)?)>(value: (false, nil))
+        
+        self.disposable.set(entriesSignal.start(next: { [weak self] entries in
+            let f: () -> Void = {
+                if let strongSelf = self {
+                    strongSelf.entries = entries
+                    strongSelf.centralEntryIndex = 0
+                    if strongSelf.isViewLoaded {
+                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ PeerAvatarImageGalleryItem(account: account, strings: presentationData.strings, entry: $0) }), centralItemIndex: 0, keepFirst: true)
+                        
+                        let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
+                            strongSelf?.didSetReady = true
+                        }
+                        strongSelf._ready.set(ready |> map { true })
                     }
-                    strongSelf._ready.set(ready |> map { true })
+                }
+            }
+            
+            var process = false
+            let _ = syncResult.modify { processed, _ in
+                if !processed {
+                    return (processed, f)
+                }
+                process = true
+                return (true, nil)
+            }
+            semaphore?.signal()
+            if process {
+                Queue.mainQueue().async {
+                    f()
                 }
             }
         }))
+        
+        if let semaphore = semaphore {
+            let _ = semaphore.wait(timeout: DispatchTime.now() + 1.0)
+        }
+        
+        var syncResultApply: (() -> Void)?
+        let _ = syncResult.modify { processed, f in
+            syncResultApply = f
+            return (true, nil)
+        }
+        
+        syncResultApply?()
         
         self.centralItemAttributesDisposable.add(self.centralItemTitle.get().start(next: { [weak self] title in
             if let strongSelf = self {
@@ -282,6 +325,10 @@ class AvatarGalleryController: ViewController {
         self._ready.set(ready |> map { true })
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+    }
+    
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
@@ -295,13 +342,22 @@ class AvatarGalleryController: ViewController {
             
             if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]) {
                 nodeAnimatesItself = true
-                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                if presentationArguments.animated {
+                    centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                }
                 
                 self._hiddenMedia.set(.single(self.entries[centralItemNode.index]))
             }
         }
         
-        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+        if !self.isPresentedInPreviewingContext() {
+            self.galleryNode.setControlsHidden(false, animated: false)
+            if let presentationArguments = self.presentationArguments as? AvatarGalleryControllerPresentationArguments {
+                if presentationArguments.animated {
+                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+                }
+            }
+        }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -309,5 +365,15 @@ class AvatarGalleryController: ViewController {
         
         self.galleryNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        
+        if !self.adjustedForInitialPreviewingLayout && self.isPresentedInPreviewingContext() {
+            self.adjustedForInitialPreviewingLayout = true
+            self.galleryNode.setControlsHidden(true, animated: false)
+            if let centralItemNode = self.galleryNode.pager.centralItemNode(), let itemSize = centralItemNode.contentSize() {
+                self.preferredContentSize = itemSize.aspectFitted(self.view.bounds.size)
+                self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                centralItemNode.activateAsInitial()
+            }
+        }
     }
 }

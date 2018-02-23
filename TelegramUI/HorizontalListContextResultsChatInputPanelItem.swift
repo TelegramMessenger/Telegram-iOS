@@ -6,9 +6,9 @@ import SwiftSignalKit
 import Postbox
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
-    fileprivate let account: Account
-    fileprivate let result: ChatContextResult
-    private let resultSelected: (ChatContextResult) -> Void
+    let account: Account
+    let result: ChatContextResult
+    let resultSelected: (ChatContextResult) -> Void
     
     let selectable: Bool = true
     
@@ -79,6 +79,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
     private var videoLayer: (SoftwareVideoThumbnailLayer, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     private var currentImageResource: TelegramMediaResource?
     private var currentVideoFile: TelegramMediaFile?
+    
+    private(set) var item: HorizontalListContextResultsChatInputPanelItem?
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -275,6 +277,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             
             return (nodeLayout, { _ in
                 if let strongSelf = self {
+                    strongSelf.item = item
                     strongSelf.currentImageResource = imageResource
                     strongSelf.currentVideoFile = videoFile
                     

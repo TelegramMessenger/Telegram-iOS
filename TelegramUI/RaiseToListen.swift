@@ -20,4 +20,12 @@ final class RaiseToListenManager {
             return deactivate()
         })
     }
+    
+    func activateBasedOnProximity() {
+        self.activator.activateBasedOnProximity()
+    }
+    
+    func applicationResignedActive() {
+        self.activator.applicationResignedActive()
+    }
 }

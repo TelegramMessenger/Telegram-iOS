@@ -41,7 +41,7 @@ final class instantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
         self.webView.frame = self.bounds
     }
     
-    func transitionNode(media: InstantPageMedia) -> ASDisplayNode? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
         return nil
     }
     

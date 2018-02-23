@@ -73,7 +73,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         bubbleInsets = layoutConstants.image.bubbleInsets
                     }
                     
-                    sizeCalculation = .constrained(CGSize(width: constrainedSize.width, height: constrainedSize.height))
+                    sizeCalculation = .constrained(CGSize(width: constrainedSize.width - bubbleInsets.left - bubbleInsets.right, height: constrainedSize.height))
                 case .mosaic:
                     bubbleInsets = UIEdgeInsets()
                     sizeCalculation = .unconstrained
@@ -96,7 +96,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: updatedPosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
                 
-                let (refinedWidth, finishLayout) = refineLayout(constrainedSize, imageCorners)
+                let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - bubbleInsets.left - bubbleInsets.right, height: constrainedSize.height), imageCorners)
                 
                 return (refinedWidth + bubbleInsets.left + bubbleInsets.right, { boundingWidth in
                     let (imageSize, imageApply) = finishLayout(boundingWidth - bubbleInsets.left - bubbleInsets.right)
@@ -116,31 +116,11 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             sentViaBot = true
                         }
                     }
-                    
-                    var dateText = stringForMessageTimestamp(timestamp: item.message.timestamp, timeFormat: item.presentationData.timeFormat)
-                    
-                    var authorTitle: String?
-                    if let author = item.message.author as? TelegramUser {
-                        if author.botInfo != nil {
-                            sentViaBot = true
-                        }
-                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                            authorTitle = author.displayTitle
-                        }
-                    } else {
-                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                            for attribute in item.message.attributes {
-                                if let attribute = attribute as? AuthorSignatureMessageAttribute {
-                                    authorTitle = attribute.signature
-                                    break
-                                }
-                            }
-                        }
+                    if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                        sentViaBot = true
                     }
                     
-                    if let authorTitle = authorTitle, !authorTitle.isEmpty {
-                        dateText = "\(authorTitle), \(dateText)"
-                    }
+                    let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
                     
                     let statusType: ChatMessageDateAndStatusType?
                     var statusHorizontalOffset: CGFloat = 0.0
@@ -157,23 +137,8 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                     statusType = .ImageOutgoing(.Sent(read: item.read))
                                 }
                             }
-                        case let .mosaic(position):
-                            if let mosaicStatusHorizontalOffset = position.mosaicStatusHorizontalOffset {
-                                statusHorizontalOffset = mosaicStatusHorizontalOffset
-                                if item.message.effectivelyIncoming(item.account.peerId) {
-                                    statusType = .ImageIncoming
-                                } else {
-                                    if item.message.flags.contains(.Failed) {
-                                        statusType = .ImageOutgoing(.Failed)
-                                    } else if item.message.flags.isSending {
-                                        statusType = .ImageOutgoing(.Sending)
-                                    } else {
-                                        statusType = .ImageOutgoing(.Sent(read: item.read))
-                                    }
-                                }
-                            } else {
-                                statusType = nil
-                            }
+                        case .mosaic:
+                            statusType = nil
                         default:
                             statusType = nil
                     }
@@ -221,18 +186,8 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
  
                                 let dateAndStatusFrame = CGRect(origin: CGPoint(x: layoutSize.width - bubbleInsets.right - layoutConstants.image.statusInsets.right - statusSize.width + statusHorizontalOffset, y: layoutSize.height -  bubbleInsets.bottom - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
                                 
-                                if case .unconstrained = sizeCalculation {
-                                    strongSelf.dateAndStatusNode.clipsToBounds = true
-                                    
-                                    let deltaWidth = dateAndStatusFrame.size.width - layoutSize.width + layoutConstants.image.statusInsets.right - statusHorizontalOffset
-                                    let adjustedFrame = CGRect(origin: CGPoint(x: 0.0, y: dateAndStatusFrame.minY), size: CGSize(width: layoutSize.width, height: dateAndStatusFrame.height))
-                                    strongSelf.dateAndStatusNode.frame = adjustedFrame
-                                    strongSelf.dateAndStatusNode.bounds = CGRect(origin: CGPoint(x: deltaWidth, y: 0.0), size: adjustedFrame.size)
-                                } else {
-                                    strongSelf.dateAndStatusNode.clipsToBounds = false
-                                    strongSelf.dateAndStatusNode.frame = dateAndStatusFrame
-                                    strongSelf.dateAndStatusNode.bounds = CGRect(origin: CGPoint(), size: dateAndStatusFrame.size)
-                                }
+                                strongSelf.dateAndStatusNode.frame = dateAndStatusFrame
+                                strongSelf.dateAndStatusNode.bounds = CGRect(origin: CGPoint(), size: dateAndStatusFrame.size)
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
                             }
@@ -272,14 +227,26 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> ASDisplayNode? {
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isEqual(media) {
-            return self.interactiveImageNode
+            let interactiveImageNode = self.interactiveImageNode
+            return (self.interactiveImageNode, { [weak interactiveImageNode] in
+                return interactiveImageNode?.view.snapshotContentTree(unhide: true)
+            })
         }
         return nil
     }
     
-    override func updateHiddenMedia(_ media: [Media]?) {
+    override func peekPreviewContent(at point: CGPoint) -> (Message, Media)? {
+        if let message = self.item?.message, let currentMedia = self.media {
+            if self.interactiveImageNode.frame.contains(point) {
+                return (message, currentMedia)
+            }
+        }
+        return nil
+    }
+    
+    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
         var mediaHidden = false
         if let currentMedia = self.media, let media = media {
             for item in media {
@@ -291,6 +258,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         self.interactiveImageNode.isHidden = mediaHidden
+        return mediaHidden
     }
     
     override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {

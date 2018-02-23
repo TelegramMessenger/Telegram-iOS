@@ -90,6 +90,9 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 string.addAttribute(NSAttributedStringKey.font, value: italicFont, range: range)
             case .Mention:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
+                if linkColor.isEqual(baseColor) {
+                    string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+                }
                 if linkFont !== baseFont {
                     string.addAttribute(NSAttributedStringKey.font, value: linkFont, range: range)
                 }
@@ -99,6 +102,9 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 string.addAttribute(NSAttributedStringKey(rawValue: TextNode.TelegramPeerTextMentionAttribute), value: nsString!.substring(with: range), range: range)
             case let .TextMention(peerId):
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
+                if linkColor.isEqual(baseColor) {
+                    string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+                }
                 if linkFont !== baseFont {
                     string.addAttribute(NSAttributedStringKey.font, value: linkFont, range: range)
                 }
@@ -118,16 +124,25 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                             skipEntity = true
                             let combinedRange = NSRange(location: range.location, length: nextRange.location + nextRange.length - range.location)
                             string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: combinedRange)
+                            if linkColor.isEqual(baseColor) {
+                                string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: combinedRange)
+                            }
                             string.addAttribute(NSAttributedStringKey(rawValue: TextNode.TelegramHashtagAttribute), value: TelegramHashtag(peerName: peerName, hashtag: hashtag), range: combinedRange)
                         }
                     }
                 }
                 if !skipEntity {
                     string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
+                    if linkColor.isEqual(baseColor) {
+                        string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+                    }
                     string.addAttribute(NSAttributedStringKey(rawValue: TextNode.TelegramHashtagAttribute), value: TelegramHashtag(peerName: nil, hashtag: hashtag), range: range)
                 }
             case .BotCommand:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
+                if linkColor.isEqual(baseColor) {
+                    string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+                }
                 if nsString == nil {
                     nsString = text as NSString
                 }

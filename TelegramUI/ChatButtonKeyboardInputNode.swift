@@ -5,8 +5,6 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-private let defaultPortraitPanelHeight: CGFloat = UIScreenScale.isEqual(to: 3.0) ? 271.0 : 258.0
-
 private final class ChatButtonKeyboardInputButtonNode: ASButtonNode {
     var button: ReplyMarkupButton?
     
@@ -66,11 +64,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         }
     }
     
-    private func heightForWidth(width: CGFloat) -> CGFloat {
-        return defaultPortraitPanelHeight
-    }
-    
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: UIScreenPixel)))
         
         if self.theme !== interfaceState.theme {
@@ -101,7 +95,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
             let columnSpacing: CGFloat = 6.0
             let rowSpacing: CGFloat = 5.0
             
-            var panelHeight = self.heightForWidth(width: width)
+            var panelHeight = standardInputHeight
             
             let rowsHeight = verticalInset + CGFloat(markup.rows.count) * buttonHeight + CGFloat(max(0, markup.rows.count - 1)) * rowSpacing + verticalInset
             if !markup.flags.contains(.fit) && rowsHeight < panelHeight {
@@ -142,13 +136,13 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
             }
             
             if markup.flags.contains(.fit) {
-                panelHeight = min(panelHeight, rowsHeight)
+                panelHeight = min(panelHeight, rowsHeight + bottomInset)
             }
             
             transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
             self.scrollNode.view.contentSize = CGSize(width: width, height: rowsHeight)
             
-            return panelHeight + bottomInset
+            return panelHeight
         } else {
             return 0.0
         }

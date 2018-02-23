@@ -35,6 +35,8 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
             node.inputNodeInteraction = self.inputNodeInteraction
             node.setItem(item: self)
             node.updateTheme(theme: self.theme)
+            node.updateIsHighlighted()
+            node.updateAppearanceTransition(transition: .immediate)
             completion(node, {
                 return (nil, {
                     
@@ -120,6 +122,12 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
     func updateIsHighlighted() {
         if let currentCollectionId = self.currentCollectionId, let inputNodeInteraction = self.inputNodeInteraction {
             self.highlightNode.isHidden = inputNodeInteraction.highlightedItemCollectionId != currentCollectionId
+        }
+    }
+    
+    func updateAppearanceTransition(transition: ContainedViewLayoutTransition) {
+        if let inputNodeInteraction = self.inputNodeInteraction {
+            transition.updateSublayerTransformScale(node: self, scale: inputNodeInteraction.appearanceTransition)
         }
     }
     

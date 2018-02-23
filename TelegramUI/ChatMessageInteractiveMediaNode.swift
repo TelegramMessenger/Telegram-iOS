@@ -220,7 +220,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 boundingSize = CGSize(width: boundingWidth, height: fittedSize.height).cropped(CGSize(width: CGFloat.greatestFiniteMagnitude, height: layoutConstants.image.maxDimensions.height))
                                 boundingSize.height = max(boundingSize.height, layoutConstants.image.minDimensions.height)
                                 boundingSize.width = max(boundingSize.width, layoutConstants.image.minDimensions.width)
-                                drawingSize = nativeSize.aspectFitted(boundingSize)
+                                drawingSize = nativeSize.aspectFittedWithOverflow(boundingSize, leeway: 4.0)
                             }
                         case .unconstrained:
                             boundingSize = constrainedSize

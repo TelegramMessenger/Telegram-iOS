@@ -214,7 +214,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> ASDisplayNode? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
         return nil
     }
     

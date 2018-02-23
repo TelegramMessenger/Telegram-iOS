@@ -107,17 +107,11 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         sentViaBot = true
                     }
                 }
-                
-                var dateText = stringForMessageTimestamp(timestamp: item.message.timestamp, timeFormat: item.presentationData.timeFormat)
-                
-                if let author = item.message.author as? TelegramUser {
-                    if author.botInfo != nil {
-                        sentViaBot = true
-                    }
-                    if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                        dateText = "\(author.displayTitle), \(dateText)"
-                    }
+                if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                    sentViaBot = true
                 }
+                
+                let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {

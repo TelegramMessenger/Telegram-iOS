@@ -221,9 +221,12 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                 if item.message.text != urlString {
                                    mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.theme.list.itemPrimaryTextColor))
                                 }
-                                    
+                                
                                 let urlAttributedString = NSMutableAttributedString()
                                 urlAttributedString.append(NSAttributedString(string: urlString, font: descriptionFont, textColor: item.theme.list.itemAccentColor))
+                                if item.theme.list.itemAccentColor.isEqual(item.theme.list.itemPrimaryTextColor) {
+                                    urlAttributedString.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
+                                }
                                 urlAttributedString.addAttribute(NSAttributedStringKey(rawValue: TextNode.UrlAttribute), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
                                 mutableDescriptionText.append(urlAttributedString)
 
@@ -388,9 +391,12 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         }
     }
     
-    override func transitionNode(id: MessageId, media: Media) -> ASDisplayNode? {
+    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         if let item = self.item, item.message.id == id, self.iconImageNode.supernode != nil {
-            return self.iconImageNode
+            let iconImageNode = self.iconImageNode
+            return (self.iconImageNode, { [weak iconImageNode] in
+                return iconImageNode?.view.snapshotContentTree(unhide: true)
+            })
         }
         return nil
     }
@@ -409,7 +415,13 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     func activateMedia() {
         if let item = self.item, let currentPrimaryUrl = self.currentPrimaryUrl {
             if let webpage = self.currentMedia as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
-                item.controllerInteraction.openInstantPage(item.message)
+                if websiteType(of: content) == .instagram {
+                    if !item.controllerInteraction.openMessage(item.message) {
+                        item.controllerInteraction.openInstantPage(item.message)
+                    }
+                } else {
+                    item.controllerInteraction.openInstantPage(item.message)
+                }
             } else {
                 if !item.controllerInteraction.openMessage(item.message) {
                     item.controllerInteraction.openUrl(currentPrimaryUrl)

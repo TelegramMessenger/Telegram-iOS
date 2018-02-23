@@ -133,7 +133,7 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         return { _, _, _, _, _ in
             return (ListViewItemNodeLayout(contentSize: CGSize(width: 32.0, height: 32.0), insets: UIEdgeInsets()), { _ in
                 
@@ -141,7 +141,11 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> ASDisplayNode? {
+    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
+        return nil
+    }
+    
+    func peekPreviewContent(at point: CGPoint) -> (Message, Media)? {
         return nil
     }
     
@@ -152,6 +156,13 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     func updateHighlightedState(animated: Bool) {
+        if let item = self.item {
+            if item.content.firstMessage.stableId == item.controllerInteraction.contextHighlightedState?.messageStableId {
+                self.isHighligtedInOverlay = true
+            } else {
+                self.isHighligtedInOverlay = false
+            }
+        }
     }
     
     func updateAutomaticMediaDownloadSettings() {

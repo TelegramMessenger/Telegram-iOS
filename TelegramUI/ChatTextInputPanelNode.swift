@@ -839,6 +839,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if self.contextPlaceholderNode !== contextPlaceholderNode {
                 contextPlaceholderNode.displaysAsynchronously = false
+                contextPlaceholderNode.isLayerBacked = true
                 self.contextPlaceholderNode = contextPlaceholderNode
                 self.insertSubnode(contextPlaceholderNode, aboveSubnode: self.textPlaceholderNode)
             }

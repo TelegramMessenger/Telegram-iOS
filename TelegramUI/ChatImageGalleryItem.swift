@@ -203,21 +203,21 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             }))
     }
     
-    override func animateIn(from node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void) {
-        var transformedFrame = node.view.convert(node.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.imageNode.view.superview)
-        let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+    override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+        let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
         
-        let surfaceCopyView = node.view.snapshotContentTree()!
-        let copyView = node.view.snapshotContentTree()!
+        let surfaceCopyView = node.1()!
+        let copyView = node.1()!
         
         addToTransitionSurface(surfaceCopyView)
         
         var transformedSurfaceFrame: CGRect?
         var transformedSurfaceFinalFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
-            transformedSurfaceFrame = node.view.convert(node.view.bounds, to: contentSurface)
+            transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
             transformedSurfaceFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: contentSurface)
         }
         
@@ -232,52 +232,54 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         surfaceCopyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         
-        copyView.layer.animatePosition(from: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak copyView] _ in
+        let positionDuration: Double = 0.21
+        
+        copyView.layer.animatePosition(from: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak copyView] _ in
             copyView?.removeFromSuperview()
         })
         let scale = CGSize(width: transformedCopyViewFinalFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewFinalFrame.size.height / transformedSelfFrame.size.height)
         copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
         
         if let transformedSurfaceFrame = transformedSurfaceFrame, let transformedSurfaceFinalFrame = transformedSurfaceFinalFrame {
-            surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak surfaceCopyView] _ in
+            surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak surfaceCopyView] _ in
                 surfaceCopyView?.removeFromSuperview()
             })
             let scale = CGSize(width: transformedSurfaceFinalFrame.size.width / transformedSurfaceFrame.size.width, height: transformedSurfaceFinalFrame.size.height / transformedSurfaceFrame.size.height)
             surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
         }
         
-        self.imageNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.imageNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        self.imageNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.imageNode.layer.position, duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring)
         self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
         
         transformedFrame.origin = CGPoint()
         self.imageNode.layer.animateBounds(from: transformedFrame, to: self.imageNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
         
-        self.statusNodeContainer.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.statusNodeContainer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        self.statusNodeContainer.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.statusNodeContainer.position, duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring)
         self.statusNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
         self.statusNodeContainer.layer.animateScale(from: 0.5, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
-    override func animateOut(to node: ASDisplayNode, addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+    override func animateOut(to node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         self.fetchDisposable.set(nil)
         
-        var transformedFrame = node.view.convert(node.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.imageNode.view.superview)
-        let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+        let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
         
         var positionCompleted = false
         var boundsCompleted = false
         var copyCompleted = false
         
-        let copyView = node.view.snapshotContentTree()!
-        let surfaceCopyView = node.view.snapshotContentTree()!
+        let copyView = node.1()!
+        let surfaceCopyView = node.1()!
         
         addToTransitionSurface(surfaceCopyView)
         
         var transformedSurfaceFrame: CGRect?
         var transformedSurfaceCopyViewInitialFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
-            transformedSurfaceFrame = node.view.convert(node.view.bounds, to: contentSurface)
+            transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
             transformedSurfaceCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: contentSurface)
         }
         

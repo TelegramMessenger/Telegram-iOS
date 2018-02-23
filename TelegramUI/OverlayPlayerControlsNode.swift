@@ -237,7 +237,13 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                         
                         switch value.looping {
                             case .none:
-                                strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: strongSelf.theme.list.itemPrimaryTextColor)
+                                let baseColor: UIColor
+                                if strongSelf.theme.list.itemPrimaryTextColor.isEqual(strongSelf.theme.list.itemAccentColor) {
+                                    baseColor = strongSelf.theme.list.controlSecondaryColor
+                                } else {
+                                    baseColor = strongSelf.theme.list.itemPrimaryTextColor
+                                }
+                                strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: baseColor)
                             case .item:
                                 strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/RepeatOne"), color: strongSelf.theme.list.itemPrimaryTextColor)
                             case .all:

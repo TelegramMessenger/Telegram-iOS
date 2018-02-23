@@ -3,7 +3,7 @@ import AsyncDisplayKit
 
 enum ActivityIndicatorType: Equatable {
     case navigationAccent(PresentationTheme)
-    case custom(UIColor, CGFloat)
+    case custom(UIColor, CGFloat, CGFloat)
     
     static func ==(lhs: ActivityIndicatorType, rhs: ActivityIndicatorType) -> Bool {
         switch lhs {
@@ -13,8 +13,8 @@ enum ActivityIndicatorType: Equatable {
                 } else {
                     return false
                 }
-            case let .custom(lhsColor, lhsDiameter):
-                if case let .custom(rhsColor, rhsDiameter) = rhs, lhsColor.isEqual(rhsColor), lhsDiameter == rhsDiameter {
+            case let .custom(lhsColor, lhsDiameter, lhsWidth):
+                if case let .custom(rhsColor, rhsDiameter, rhsWidth) = rhs, lhsColor.isEqual(rhsColor), lhsDiameter == rhsDiameter, lhsWidth == rhsWidth {
                     return true
                 } else {
                     return false
@@ -34,8 +34,8 @@ final class ActivityIndicator: ASDisplayNode {
             switch type {
                 case let .navigationAccent(theme):
                     self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
-                case let .custom(color, diameter):
-                    self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter)
+                case let .custom(color, diameter, lineWidth):
+                    self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
             }
         }
     }
@@ -56,8 +56,8 @@ final class ActivityIndicator: ASDisplayNode {
         switch type {
             case let .navigationAccent(theme):
                 self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
-            case let .custom(color, diameter):
-                self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter)
+            case let .custom(color, diameter, lineWidth):
+                self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
         }
         
         super.init()
@@ -96,7 +96,7 @@ final class ActivityIndicator: ASDisplayNode {
         switch self.type {
             case .navigationAccent:
                 return CGSize(width: 22.0, height: 22.0)
-            case let .custom(_, diameter):
+            case let .custom(_, diameter, _):
                 return CGSize(width: diameter, height: diameter)
         }
     }
@@ -110,7 +110,7 @@ final class ActivityIndicator: ASDisplayNode {
         switch self.type {
             case .navigationAccent:
                 indicatorSize = CGSize(width: 22.0, height: 22.0)
-            case let .custom(_, diameter):
+            case let .custom(_, diameter, _):
                 indicatorSize = CGSize(width: diameter, height: diameter)
         }
         self.indicatorNode.frame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)

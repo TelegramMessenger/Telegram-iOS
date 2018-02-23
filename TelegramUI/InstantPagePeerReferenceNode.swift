@@ -85,7 +85,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         self.joinNode = HighlightableButtonNode()
         self.joinNode.hitTestSlop = UIEdgeInsets(top: -17.0, left: -17.0, bottom: -17.0, right: -17.0)
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.panelAccentColor, 22.0))
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.panelAccentColor, 22.0, 2.0))
         
         self.checkNode = ASImageNode()
         self.checkNode.isLayerBacked = true
@@ -177,7 +177,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         
         if themeUpdated {
             self.checkNode.image = generateTintedImage(image: UIImage(bundleImageName: "Instant View/PanelCheck"), color: self.theme.panelSecondaryColor)
-            self.activityIndicator.type = .custom(self.theme.panelAccentColor, 22.0)
+            self.activityIndicator.type = .custom(self.theme.panelAccentColor, 22.0, 2.0)
         }
         self.setNeedsLayout()
     }
@@ -242,7 +242,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> ASDisplayNode? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
         return nil
     }
     

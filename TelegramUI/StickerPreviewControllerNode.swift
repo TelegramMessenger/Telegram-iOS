@@ -58,10 +58,6 @@ final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.imageNode.frame = imageFrame
             
             self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0), y: -textSize.height - textSpacing), size: textSize)
-            
-            /*let boundingFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - boundingSize.width) / 2.0), y: (bounds.size.height - boundingSize.height) / 2.0), size: boundingSize)
-            let textSize = CGSize(width: 32.0, height: 24.0)
-            self.textNode.frame = CGRect(origin: CGPoint(x: boundingFrame.maxX - 1.0 - textSize.width, y: boundingFrame.height + 10.0 - textSize.height), size: textSize)*/
         }
     }
     

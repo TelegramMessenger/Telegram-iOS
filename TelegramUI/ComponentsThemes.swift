@@ -38,3 +38,10 @@ public extension AlertControllerTheme {
         self.init(backgroundColor: authTheme.backgroundColor, separatorColor: authTheme.separatorColor, highlightedItemColor: authTheme.itemHighlightedBackgroundColor, primaryColor: authTheme.primaryColor, secondaryColor: authTheme.textPlaceholderColor, accentColor: authTheme.accentColor, destructiveColor: authTheme.destructiveColor)
     }
 }
+
+extension PeekControllerTheme {
+    convenience init(presentationTheme: PresentationTheme) {
+        let actionSheet = presentationTheme.actionSheet
+        self.init(isDark: actionSheet.backgroundType == .dark, menuBackgroundColor: actionSheet.opaqueItemBackgroundColor, menuItemHighligtedColor: actionSheet.opaqueItemHighlightedBackgroundColor, menuItemSeparatorColor: actionSheet.opaqueItemSeparatorColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor)
+    }
+}

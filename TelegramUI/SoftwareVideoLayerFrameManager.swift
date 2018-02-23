@@ -100,7 +100,7 @@ final class SoftwareVideoLayerFrameManager {
             self.polling = true
             let maxPts = self.maxPts
             self.queue.addTask(ThreadPoolTask { [weak self] state in
-                if state.cancelled {
+                if state.cancelled.with({ $0 }) {
                     return
                 }
                 if let strongSelf = self {

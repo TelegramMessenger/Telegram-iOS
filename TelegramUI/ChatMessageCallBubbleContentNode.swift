@@ -127,15 +127,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     buttonImage = PresentationResourcesChat.chatBubbleOutgoingCallButtonImage(item.presentationData.theme)
                 }
                 
-                var dateText = stringForMessageTimestamp(timestamp: item.message.timestamp, timeFormat: item.presentationData.timeFormat)
-                
-                if let duration = callDuration, duration != 0 {
-                    if duration >= 60 {
-                        dateText += ", " + item.presentationData.strings.Call_Minutes(duration / 60)
-                    } else {
-                        dateText += ", " + item.presentationData.strings.Call_Seconds(duration)
-                    }
-                }
+                let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
                 
                 var attributedLabel: NSAttributedString?
                 attributedLabel = NSAttributedString(string: dateText, font: labelFont, textColor: message.effectivelyIncoming(item.account.peerId) ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)

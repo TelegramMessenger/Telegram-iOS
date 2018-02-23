@@ -126,11 +126,11 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlo
             let backgroundInset: CGFloat = 14.0
             let item = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0 - backgroundInset * 2.0)
             item.frame = item.frame.offsetBy(dx: horizontalInset, dy: backgroundInset)
-            let backgroundItem = InstantPageShapeItem(frame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: item.frame.size.height + backgroundInset * 2.0)), shapeFrame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: item.frame.size.height + backgroundInset * 2.0)), shape: .rect, color: UIColor(rgb: 0xF5F8FC))
+            let backgroundItem = InstantPageShapeItem(frame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: item.frame.size.height + backgroundInset * 2.0)), shapeFrame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: item.frame.size.height + backgroundInset * 2.0)), shape: .rect, color: theme.codeBlockBackgroundColor)
             return InstantPageLayout(origin: CGPoint(), contentSize: CGSize(width: boundingWidth, height: item.frame.size.height + backgroundInset * 2.0), items: [backgroundItem, item])
         case let .footer(text):
             let styleStack = InstantPageTextStyleStack()
-            styleStack.push(.fontSize(15.0))
+            setupStyleStack(styleStack, theme: theme, category: .caption, link: false)
             let item = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0)
             item.frame = item.frame.offsetBy(dx: horizontalInset, dy: 0.0)
             return InstantPageLayout(origin: CGPoint(), contentSize: item.frame.size, items: [item])
@@ -206,7 +206,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlo
             }
             contentSize.height += verticalInset
             
-            let shapeItem = InstantPageShapeItem(frame: CGRect(origin: CGPoint(x: horizontalInset, y: 0.0), size: CGSize(width: 3.0, height: contentSize.height)), shapeFrame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 3.0, height: contentSize.height)), shape: .roundLine, color: UIColor.black)
+            let shapeItem = InstantPageShapeItem(frame: CGRect(origin: CGPoint(x: horizontalInset, y: 0.0), size: CGSize(width: 3.0, height: contentSize.height)), shapeFrame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 3.0, height: contentSize.height)), shape: .roundLine, color: theme.textCategories.paragraph.color)
             
             items.append(shapeItem)
             
@@ -443,7 +443,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlo
             
             contentSize.height += verticalInset
             
-            items.append(InstantPageShapeItem(frame: CGRect(origin: CGPoint(x: horizontalInset, y: 0.0), size: CGSize(width: 3.0, height: contentSize.height)), shapeFrame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 3.0, height: contentSize.height)), shape: .roundLine, color: .black))
+            items.append(InstantPageShapeItem(frame: CGRect(origin: CGPoint(x: horizontalInset, y: 0.0), size: CGSize(width: 3.0, height: contentSize.height)), shapeFrame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 3.0, height: contentSize.height)), shape: .roundLine, color: theme.textCategories.paragraph.color))
             
             if case .empty = caption {
             } else {

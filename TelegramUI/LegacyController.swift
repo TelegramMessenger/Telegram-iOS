@@ -120,6 +120,7 @@ final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     public func setStatusBarHidden(_ hidden: Bool, with animation: UIStatusBarAnimation) {
         if let controller = self.controller {
             controller.statusBar.isHidden = hidden
+            self.updateDeferScreenEdgeGestures()
         }
     }
     
@@ -213,6 +214,17 @@ final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     func setApplicationStatusBarAlpha(_ alpha: CGFloat) {
         if let controller = self.controller {
             controller.statusBar.alpha = alpha
+            self.updateDeferScreenEdgeGestures()
+        }
+    }
+    
+    private func updateDeferScreenEdgeGestures() {
+        if let controller = self.controller {
+            if controller.statusBar.isHidden || controller.statusBar.alpha.isZero {
+                controller.deferScreenEdgeGestures = [.top]
+            } else {
+                controller.deferScreenEdgeGestures = []
+            }
         }
     }
 
@@ -229,7 +241,11 @@ final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     
     func safeAreaInset() -> UIEdgeInsets {
         if let controller = self.controller as? LegacyController, let validLayout = controller.validLayout {
-            return validLayout.safeInsets
+            var safeInsets = validLayout.safeInsets
+            if safeInsets.top.isEqual(to: 44.0) {
+                safeInsets.bottom = 34.0
+            }
+            return safeInsets
         }
         return UIEdgeInsets()
     }
@@ -268,8 +284,9 @@ public class LegacyController: ViewController {
     var controllerLoaded: (() -> Void)?
     public var presentationCompleted: (() -> Void)?
     
-    public init(presentation: LegacyControllerPresentation, theme: PresentationTheme?) {
+    public init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, initialLayout: ContainerViewLayout? = nil) {
         self.presentation = presentation
+        self.validLayout = initialLayout
         
         super.init(navigationBarTheme: nil)
         
@@ -376,6 +393,7 @@ public class LegacyController: ViewController {
     }
     
     override open func dismiss(completion: (() -> Void)? = nil) {
+        self.view.endEditing(true)
         switch self.presentation {
             case .modal:
                 self.controllerNode.animateModalOut { [weak self] in

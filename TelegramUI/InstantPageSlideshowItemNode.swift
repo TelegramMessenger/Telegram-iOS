@@ -50,7 +50,7 @@ private final class InstantPageSlideshowItemNode: ASDisplayNode {
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> ASDisplayNode? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
         if let node = self.contentNode as? InstantPageNode {
             return node.transitionNode(media: media)
         }
@@ -352,7 +352,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> ASDisplayNode? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
         for node in self.itemNodes {
             if let transitionNode = node.transitionNode(media: media) {
                 return transitionNode
@@ -395,12 +395,12 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
         super.layout()
         
         self.pagerNode.frame = self.bounds
-        self.pagerNode.containerLayoutUpdated(ContainerViewLayout(size: self.bounds.size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+        self.pagerNode.containerLayoutUpdated(ContainerViewLayout(size: self.bounds.size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
         
         self.pageControlNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.bounds.size.height - 20.0), size: CGSize(width: self.bounds.size.width, height: 20.0))
     }
     
-    func transitionNode(media: InstantPageMedia) -> ASDisplayNode? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
         return self.pagerNode.transitionNode(media: media)
     }
     

@@ -40,6 +40,7 @@ final class ChatRecentActionsController: ViewController {
         }, setupEditMessage: { _ in
         }, beginMessageSelection: { _ in
         }, deleteSelectedMessages: {
+        }, deleteMessages: { _ in
         }, forwardSelectedMessages: { [weak self] in
             /*if let strongSelf = self {
                 if let forwardMessageIdsSet = strongSelf.interfaceState.selectionState?.selectedIds {
@@ -76,6 +77,7 @@ final class ChatRecentActionsController: ViewController {
                     strongSelf.present(controller, in: .window(.root))
                 }
             }*/
+        }, forwardMessages: { _ in
         }, shareSelectedMessages: { [weak self] in
             /*if let strongSelf = self, let selectedIds = strongSelf.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
                 let _ = (strongSelf.account.postbox.modify { modifier -> [Message] in
@@ -133,6 +135,7 @@ final class ChatRecentActionsController: ViewController {
         }, beginCall: {
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
+        }, presentGlobalOverlayController: { _, _ in
         }, navigateFeed: {
         }, openGrouping: {
         }, toggleSilentPost: {

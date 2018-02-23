@@ -47,7 +47,6 @@ private enum SettingsSection: Int32 {
     case media
     case generalSettings
     case help
-    case debug
 }
 
 private enum SettingsEntry: ItemListNodeEntry {
@@ -67,7 +66,6 @@ private enum SettingsEntry: ItemListNodeEntry {
     
     case askAQuestion(PresentationTheme, UIImage?, String)
     case faq(PresentationTheme, UIImage?, String)
-    case debug(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -79,8 +77,6 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return SettingsSection.generalSettings.rawValue
             case .askAQuestion, .faq:
                 return SettingsSection.help.rawValue
-            case .debug:
-                return SettingsSection.debug.rawValue
         }
     }
     
@@ -112,8 +108,6 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return 11
             case .faq:
                 return 12
-            case .debug:
-                return 13
         }
     }
     
@@ -223,12 +217,6 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .debug(lhsTheme, lhsText):
-                if case let .debug(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
         }
     }
     
@@ -293,10 +281,6 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openFaq()
                 })
-            case let .debug(theme, text):
-                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.pushController(debugController(account: arguments.account, accountManager: arguments.accountManager))
-                })
         }
     }
 }
@@ -345,10 +329,6 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         
         entries.append(.askAQuestion(presentationData.theme, SettingsItemIcons.support, presentationData.strings.Settings_Support))
         entries.append(.faq(presentationData.theme, SettingsItemIcons.faq, presentationData.strings.Settings_FAQ))
-        
-        if !GlobalExperimentalSettings.isAppStoreBuild {
-            entries.append(.debug(presentationData.theme, "Debug"))
-        }
     }
     
     return entries
@@ -573,7 +553,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {
-            var result: (ASDisplayNode, CGRect)?
+            var result: ((ASDisplayNode, () -> UIView?), CGRect)?
             controller.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
                     result = itemNode.avatarTransitionNode()
@@ -599,6 +579,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
         if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
             navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(account.peerId))
         }
+    }
+    controller.tabBarItemDebugTapAction = {
+        pushControllerImpl?(debugController(account: account, accountManager: accountManager))
     }
     return controller
 }

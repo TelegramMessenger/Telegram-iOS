@@ -549,7 +549,6 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             }
             
             let galleryController = AvatarGalleryController(account: account, peer: peer, remoteEntries: cachedAvatarEntries.with { $0 }, replaceRootController: { controller, ready in
-                
             })
             hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
                 avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
@@ -869,7 +868,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {
-            var result: (ASDisplayNode, CGRect)?
+            var result: ((ASDisplayNode, () -> UIView?), CGRect)?
             controller.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
                     result = itemNode.avatarTransitionNode()

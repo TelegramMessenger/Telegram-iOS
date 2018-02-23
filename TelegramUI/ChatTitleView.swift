@@ -36,7 +36,7 @@ private final class ChatTitleNetworkStatusNode: ASDisplayNode {
         self.titleNode.isOpaque = false
         self.titleNode.isUserInteractionEnabled = false
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.secondaryTextColor, 22.0), speed: .slow)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5), speed: .slow)
         let activityIndicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         self.activityIndicator.frame = CGRect(origin: CGPoint(), size: activityIndicatorSize)
         

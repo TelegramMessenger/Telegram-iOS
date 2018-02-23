@@ -82,7 +82,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                 var minTimestamp: Int32?
                 var maxTimestamp: Int32?
                 for (_, item, _) in indicesAndItems {
-                    if case .PeerEntry = item {
+                    if case .PeerEntry = item, item.index.pinningIndex == nil {
                         let timestamp = item.index.messageIndex.timestamp
                         
                         if minTimestamp == nil || timestamp < minTimestamp! {

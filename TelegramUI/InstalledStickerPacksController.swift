@@ -321,7 +321,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
             var index: Int32 = 0
             for entry in packsEntries {
                 if let info = entry.info as? StickerPackCollectionInfo {
-                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, stringForStickerCount(info.count == 0 ? entry.count : info.count), true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id)))
+                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, stringForStickerCount(info.count == 0 ? entry.count : info.count), true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id, reorderable: true)))
                     index += 1
                 }
             }
@@ -436,6 +436,9 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
                         updateState {
                             $0.withUpdatedEditing(false)
                         }
+                        if case .modal = mode {
+                            dismissImpl?()
+                        }
                     })
                 } else {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
@@ -458,6 +461,68 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     }
     
     let controller = ItemListController(account: account, state: signal)
+    
+    controller.reorderEntry = { fromIndex, toIndex, entries in
+        let fromEntry = entries[fromIndex]
+        guard case let .pack(_, _, _, fromPackInfo, _, _, _, _) = fromEntry else {
+            return
+        }
+        var referenceId: ItemCollectionId?
+        var beforeAll = false
+        var afterAll = false
+        if toIndex < entries.count {
+            switch entries[toIndex] {
+                case let .pack(_, _, _, toPackInfo, _, _, _, _):
+                    referenceId = toPackInfo.id
+                default:
+                    if entries[toIndex] < fromEntry {
+                        beforeAll = true
+                    } else {
+                        afterAll = true
+                    }
+            }
+        } else {
+            afterAll = true
+        }
+        
+        let _ = (account.postbox.modify { modifier -> Void in
+            var infos = modifier.getItemCollectionsInfos(namespace: namespaceForMode(mode))
+            var reorderInfo: ItemCollectionInfo?
+            for i in 0 ..< infos.count {
+                if infos[i].0 == fromPackInfo.id {
+                    reorderInfo = infos[i].1
+                    infos.remove(at: i)
+                    break
+                }
+            }
+            if let reorderInfo = reorderInfo {
+                if let referenceId = referenceId {
+                    var inserted = false
+                    for i in 0 ..< infos.count {
+                        if infos[i].0 == referenceId {
+                            if fromIndex < toIndex {
+                                infos.insert((fromPackInfo.id, reorderInfo), at: i + 1)
+                            } else {
+                                infos.insert((fromPackInfo.id, reorderInfo), at: i)
+                            }
+                            inserted = true
+                            break
+                        }
+                    }
+                    if !inserted {
+                        infos.append((fromPackInfo.id, reorderInfo))
+                    }
+                } else if beforeAll {
+                    infos.insert((fromPackInfo.id, reorderInfo), at: 0)
+                } else if afterAll {
+                    infos.append((fromPackInfo.id, reorderInfo))
+                }
+                modifier.replaceItemCollectionInfos(namespace: namespaceForMode(mode), itemCollectionInfos: infos)
+                addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: namespaceForMode(mode))
+            }
+        }).start()
+    }
+    
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

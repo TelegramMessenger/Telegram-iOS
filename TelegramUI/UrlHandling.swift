@@ -13,6 +13,7 @@ private enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case stickerPack(String)
     case join(String)
+    case proxy(host: String, port: Int32, username: String?, password: String?)
 }
 
 private enum ParsedUrl {
@@ -28,6 +29,7 @@ enum ResolvedUrl {
     case channelMessage(peerId: PeerId, messageId: MessageId)
     case stickerPack(name: String)
     case instantView(TelegramMediaWebpage, String?)
+    case proxy(host: String, port: Int32, username: String?, password: String?)
     case join(String)
 }
 
@@ -41,14 +43,40 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
             let peerName: String = pathComponents[0]
             if pathComponents.count == 1 {
                 if let queryItems = components.queryItems {
-                    for queryItem in queryItems {
-                        if let value = queryItem.value {
-                            if queryItem.name == "start" {
-                                return .peerName(peerName, .botStart(value))
-                            } else if queryItem.name == "startgroup" {
-                                return .peerName(peerName, .groupBotStart(value))
-                            } else if queryItem.name == "game" {
-                                return nil
+                    if peerName == "socks" {
+                        var server: String?
+                        var port: String?
+                        var user: String?
+                        var pass: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "server" || queryItem.name == "proxy" {
+                                        server = value
+                                    } else if queryItem.name == "port" {
+                                        port = value
+                                    } else if queryItem.name == "user" {
+                                        user = value
+                                    } else if queryItem.name == "pass" {
+                                        pass = value
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if let server = server, !server.isEmpty, let port = port, let portValue = Int32(port) {
+                            return .proxy(host: server, port: portValue, username: user, password: pass)
+                        }
+                    } else {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "start" {
+                                    return .peerName(peerName, .botStart(value))
+                                } else if queryItem.name == "startgroup" {
+                                    return .peerName(peerName, .groupBotStart(value))
+                                } else if queryItem.name == "game" {
+                                    return nil
+                                }
                             }
                         }
                     }
@@ -99,6 +127,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             return .single(.stickerPack(name: name))
         case let .join(link):
             return .single(.join(link))
+        case let .proxy(host, port, username, password):
+            return .single(.proxy(host: host, port: port, username: username, password: password))
     }
 }
 

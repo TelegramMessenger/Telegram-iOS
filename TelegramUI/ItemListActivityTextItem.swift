@@ -67,7 +67,7 @@ class ItemListActivityTextItemNode: ListViewItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(.black, 16.0))
+        self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(.black, 16.0, 2.0))
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -110,7 +110,7 @@ class ItemListActivityTextItemNode: ListViewItemNode {
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size)
                     strongSelf.activityIndicator.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: CGSize(width: 16.0, height: 16.0))
                     
-                    strongSelf.activityIndicator.type = .custom(item.theme.list.itemAccentColor, 16.0)
+                    strongSelf.activityIndicator.type = .custom(item.theme.list.itemAccentColor, 16.0, 2.0)
                     
                     if item.displayActivity {
                         strongSelf.activityIndicator.isHidden = false

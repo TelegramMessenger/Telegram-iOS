@@ -68,6 +68,8 @@ final class InstantPageTheme {
     
     let textCategories: InstantPageTextCategories
     
+    let codeBlockBackgroundColor: UIColor
+    
     let textHighlightColor: UIColor
     let linkHighlightColor: UIColor
     
@@ -77,9 +79,10 @@ final class InstantPageTheme {
     let panelSecondaryColor: UIColor
     let panelAccentColor: UIColor
     
-    init(pageBackgroundColor: UIColor, textCategories: InstantPageTextCategories, textHighlightColor: UIColor, linkHighlightColor: UIColor, panelBackgroundColor: UIColor, panelHighlightedBackgroundColor: UIColor, panelPrimaryColor: UIColor, panelSecondaryColor: UIColor, panelAccentColor: UIColor) {
+    init(pageBackgroundColor: UIColor, textCategories: InstantPageTextCategories, codeBlockBackgroundColor: UIColor, textHighlightColor: UIColor, linkHighlightColor: UIColor, panelBackgroundColor: UIColor, panelHighlightedBackgroundColor: UIColor, panelPrimaryColor: UIColor, panelSecondaryColor: UIColor, panelAccentColor: UIColor) {
         self.pageBackgroundColor = pageBackgroundColor
         self.textCategories = textCategories
+        self.codeBlockBackgroundColor = codeBlockBackgroundColor
         self.textHighlightColor = textHighlightColor
         self.linkHighlightColor = linkHighlightColor
         self.panelBackgroundColor = panelBackgroundColor
@@ -90,7 +93,7 @@ final class InstantPageTheme {
     }
     
     func withUpdatedFontStyles(sizeMultiplier: CGFloat, forceSerif: Bool) -> InstantPageTheme {
-        return InstantPageTheme(pageBackgroundColor: pageBackgroundColor, textCategories: self.textCategories.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), textHighlightColor: textHighlightColor, linkHighlightColor: linkHighlightColor, panelBackgroundColor: panelBackgroundColor, panelHighlightedBackgroundColor: panelHighlightedBackgroundColor, panelPrimaryColor: panelPrimaryColor, panelSecondaryColor: panelSecondaryColor, panelAccentColor: panelAccentColor)
+        return InstantPageTheme(pageBackgroundColor: pageBackgroundColor, textCategories: self.textCategories.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), codeBlockBackgroundColor: codeBlockBackgroundColor, textHighlightColor: textHighlightColor, linkHighlightColor: linkHighlightColor, panelBackgroundColor: panelBackgroundColor, panelHighlightedBackgroundColor: panelHighlightedBackgroundColor, panelPrimaryColor: panelPrimaryColor, panelSecondaryColor: panelSecondaryColor, panelAccentColor: panelAccentColor)
     }
 }
 
@@ -102,6 +105,7 @@ private let lightTheme = InstantPageTheme(
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: .black),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x79828b))
     ),
+    codeBlockBackgroundColor: UIColor(rgb: 0xf5f8fc),
     textHighlightColor: UIColor(rgb: 0, alpha: 0.12),
     linkHighlightColor: UIColor(rgb: 0, alpha: 0.12),
     panelBackgroundColor: UIColor(rgb: 0xf3f4f5),
@@ -119,6 +123,7 @@ private let sepiaTheme = InstantPageTheme(
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x4f321d)),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x927e6b))
     ),
+    codeBlockBackgroundColor: UIColor(rgb: 0xefe7d6),
     textHighlightColor: UIColor(rgb: 0, alpha: 0.1),
     linkHighlightColor: UIColor(rgb: 0, alpha: 0.1),
     panelBackgroundColor: UIColor(rgb: 0xefe7d6),
@@ -136,6 +141,7 @@ private let grayTheme = InstantPageTheme(
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xcecece)),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xa0a0a0))
     ),
+    codeBlockBackgroundColor: UIColor(rgb: 0x555556),
     textHighlightColor: UIColor(rgb: 0, alpha: 0.16),
     linkHighlightColor: UIColor(rgb: 0, alpha: 0.16),
     panelBackgroundColor: UIColor(rgb: 0x555556),
@@ -153,6 +159,7 @@ private let darkTheme = InstantPageTheme(
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xb0b0b0)),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x6a6a6a))
     ),
+    codeBlockBackgroundColor: UIColor(rgb: 0x131313),
     textHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.1),
     linkHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.1),
     panelBackgroundColor: UIColor(rgb: 0x131313),

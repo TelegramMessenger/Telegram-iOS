@@ -3,6 +3,24 @@ import Postbox
 import SwiftSignalKit
 import LegacyComponents
 
+private final class AVURLAssetCopyItem: MediaResourceDataFetchCopyLocalItem {
+    private let url: URL
+    
+    init(url: URL) {
+        self.url = url
+    }
+    
+    func copyTo(url: URL) -> Bool {
+        var success = true
+        do {
+            try FileManager.default.copyItem(at: self.url, to: url)
+        } catch {
+            success = false
+        }
+        return success
+    }
+}
+
 private final class VideoConversionWatcher: TGMediaVideoFileWatcher {
     private let update: (String, Int) -> Void
     private var path: String?
@@ -45,15 +63,33 @@ public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) 
             
             let alreadyReceivedAsset = Atomic<Bool>(value: false)
             requestId = PHImageManager.default().requestAVAsset(forVideo: asset, options: option, resultHandler: { avAsset, _, _ in
+                if avAsset == nil {
+                    return
+                }
+                
                 if alreadyReceivedAsset.swap(true) {
                     return
                 }
                 
                 var adjustments: TGVideoEditAdjustments?
-                if let videoAdjustments = resource.adjustments {
-                    if let dict = NSKeyedUnarchiver.unarchiveObject(with: videoAdjustments.data.makeData()) as? [AnyHashable : Any] {
-                        adjustments = TGVideoEditAdjustments(dictionary: dict)
-                    }
+                switch resource.conversion {
+                    case .passthrough:
+                        if let asset = avAsset as? AVURLAsset {
+                            var value = stat()
+                            if stat(asset.url.path, &value) == 0 {
+                                subscriber.putNext(.copyLocalItem(AVURLAssetCopyItem(url: asset.url)))
+                                subscriber.putCompletion()
+                            }
+                            return
+                        } else {
+                            adjustments = nil
+                        }
+                    case let .compress(adjustmentsValue):
+                        if let adjustmentsValue = adjustmentsValue {
+                            if let dict = NSKeyedUnarchiver.unarchiveObject(with: adjustmentsValue.data.makeData()) as? [AnyHashable : Any] {
+                                adjustments = TGVideoEditAdjustments(dictionary: dict)
+                            }
+                        }
                 }
                 let updatedSize = Atomic<Int>(value: 0)
                 let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
@@ -175,21 +211,38 @@ public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResour
             option.deliveryMode = .highQualityFormat
             
             let alreadyReceivedAsset = Atomic<Bool>(value: false)
-            requestId = PHImageManager.default().requestAVAsset(forVideo: asset, options: option, resultHandler: { avAsset, _, _ in
+            requestId = PHImageManager.default().requestAVAsset(forVideo: asset, options: option, resultHandler: { avAsset, _, info in
+                if avAsset == nil {
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
+                    return
+                }
+                
                 if alreadyReceivedAsset.swap(true) {
                     return
                 }
                 
                 var adjustments: TGVideoEditAdjustments?
-                if let videoAdjustments = resource.adjustments {
-                    if let dict = NSKeyedUnarchiver.unarchiveObject(with: videoAdjustments.data.makeData()) as? [AnyHashable : Any] {
-                        adjustments = TGVideoEditAdjustments(dictionary: dict)
-                    }
+                var isPassthrough = false
+                switch resource.conversion {
+                    case .passthrough:
+                        isPassthrough = true
+                        adjustments = nil
+                    case let .compress(adjustmentsValue):
+                        if let adjustmentsValue = adjustmentsValue {
+                            if let dict = NSKeyedUnarchiver.unarchiveObject(with: adjustmentsValue.data.makeData()) as? [AnyHashable : Any] {
+                                adjustments = TGVideoEditAdjustments(dictionary: dict)
+                            }
+                        }
                 }
                 let signal = TGMediaVideoConverter.hash(for: avAsset, adjustments: adjustments)!
                 let signalDisposable = signal.start(next: { next in
                     if let next = next as? String, let data = next.data(using: .utf8) {
-                        subscriber.putNext(data)
+                        var updatedData = data
+                        if isPassthrough {
+                            updatedData.reverse()
+                        }
+                        subscriber.putNext(updatedData)
                     } else {
                         subscriber.putNext(nil)
                     }

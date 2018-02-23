@@ -13,8 +13,9 @@ public final class TelegramApplicationBindings {
     public let applicationInForeground: Signal<Bool, NoError>
     public let applicationIsActive: Signal<Bool, NoError>
     public let clearMessageNotifications: ([MessageId]) -> Void
+    public let pushIdleTimerExtension: () -> Disposable
     
-    public init(isMainApp: Bool, openUrl: @escaping (String) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void) {
+    public init(isMainApp: Bool, openUrl: @escaping (String) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable) {
         self.isMainApp = isMainApp
         self.openUrl = openUrl
         self.canOpenUrl = canOpenUrl
@@ -23,6 +24,7 @@ public final class TelegramApplicationBindings {
         self.applicationInForeground = applicationInForeground
         self.applicationIsActive = applicationIsActive
         self.clearMessageNotifications = clearMessageNotifications
+        self.pushIdleTimerExtension = pushIdleTimerExtension
     }
 }
 
@@ -97,14 +99,21 @@ public final class TelegramApplicationContext {
         self.presentationDataDisposable.set(self._presentationData.get().start(next: { [weak self] next in
             if let strongSelf = self {
                 var stringsUpdated = false
+                var themeUpdated = false
                 let _ = strongSelf.currentPresentationData.modify { current in
                     if next.strings !== current.strings {
                         stringsUpdated = true
+                    }
+                    if next.theme !== current.theme {
+                        themeUpdated = true
                     }
                     return next
                 }
                 if stringsUpdated {
                     updateLegacyLocalization(strings: next.strings)
+                }
+                if themeUpdated {
+                    updateLegacyTheme()
                 }
             }
         }))

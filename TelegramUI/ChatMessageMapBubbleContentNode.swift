@@ -183,6 +183,9 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                         sentViaBot = true
                     }
                 }
+                if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                    sentViaBot = true
+                }
                 
                 if let selectedMedia = selectedMedia {
                     if selectedMedia.liveBroadcastingTimeout != nil {
@@ -190,16 +193,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                var dateText = stringForMessageTimestamp(timestamp: item.message.timestamp, timeFormat: item.presentationData.timeFormat)
-                
-                if let author = item.message.author as? TelegramUser {
-                    if author.botInfo != nil {
-                        sentViaBot = true
-                    }
-                    if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                        dateText = "\(author.displayTitle), \(dateText)"
-                    }
-                }
+                let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
@@ -435,14 +429,17 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> ASDisplayNode? {
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isEqual(media) {
-            return self.imageNode
+            let imageNode = self.imageNode
+            return (self.imageNode, { [weak imageNode] in
+                return imageNode?.view.snapshotContentTree(unhide: true)
+            })
         }
         return nil
     }
     
-    override func updateHiddenMedia(_ media: [Media]?) {
+    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
         var mediaHidden = false
         if let currentMedia = self.media, let media = media {
             for item in media {
@@ -454,6 +451,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         self.imageNode.isHidden = mediaHidden
+        return mediaHidden
     }
     
     override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {

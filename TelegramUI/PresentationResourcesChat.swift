@@ -353,6 +353,12 @@ struct PresentationResourcesChat {
         })
     }
     
+    static func chatInputMediaPanelAddPackButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputMediaPanelAddPackButtonImage.rawValue, { theme in
+            return generateStretchableFilledCircleImage(diameter: 8.0, color: nil, strokeColor: theme.chat.inputPanel.panelControlAccentColor, strokeWidth: 1.0, backgroundColor: nil)
+        })
+    }
+    
     static func chatInputButtonPanelButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputButtonPanelButtonImage.rawValue, { theme in
             return generateInputPanelButtonBackgroundImage(fillColor: theme.chat.inputButtonPanel.buttonFillColor, strokeColor: theme.chat.inputButtonPanel.buttonStrokeColor)
@@ -477,6 +483,12 @@ struct PresentationResourcesChat {
     static func chatInputPanelAttachmentButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelAttachmentButtonImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: theme.chat.inputPanel.panelControlColor)
+        })
+    }
+    
+    static func chatInputPanelExpandButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelExpandButtonImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconExpandInput"), color: theme.chat.inputPanel.panelControlColor)
         })
     }
     

@@ -167,7 +167,7 @@ final class SelectablePeerNode: ASDisplayNode {
             
             if selected {
                 if self.checkView == nil {
-                    let checkView = TGCheckButtonView(style: TGCheckButtonStyleShare, pallete: TGCheckButtonPallete(defaultBackgroundColor: self.theme.checkBackgroundColor, accentBackgroundColor: self.theme.checkBackgroundColor, defaultBorderColor: .clear, mediaBorderColor: .clear, chatBorderColor: .clear, check: self.theme.checkFillColor, blueColor: self.theme.checkFillColor, barBackgroundColor: self.theme.checkBackgroundColor))!
+                    let checkView = TGCheckButtonView(style: TGCheckButtonStyleShare, pallete: TGCheckButtonPallete(defaultBackgroundColor: self.theme.checkBackgroundColor, accentBackgroundColor: self.theme.checkFillColor, defaultBorderColor: .clear, mediaBorderColor: .clear, chatBorderColor: .clear, check: self.theme.checkColor, blueColor: self.theme.checkFillColor, barBackgroundColor: self.theme.checkBackgroundColor))!
                     
                     self.checkView = checkView
                     checkView.isUserInteractionEnabled = false

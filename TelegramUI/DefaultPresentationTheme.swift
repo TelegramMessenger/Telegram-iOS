@@ -382,7 +382,8 @@ private let actionSheet = PresentationThemeActionSheet(
     inputBackgroundColor: UIColor(rgb: 0xe9e9e9),
     inputPlaceholderColor: UIColor(rgb: 0x818086),
     inputTextColor: .black,
-    inputClearButtonColor: UIColor(rgb: 0x7b7b81)
+    inputClearButtonColor: UIColor(rgb: 0x7b7b81),
+    checkContentColor: .white
 )
 
 private let inAppNotification = PresentationThemeInAppNotification(

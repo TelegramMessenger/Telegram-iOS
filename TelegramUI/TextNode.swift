@@ -394,6 +394,10 @@ final class TextNode: ASDisplayNode {
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+        if isCancelled() {
+            return
+        }
+        
         let context = UIGraphicsGetCurrentContext()!
         
         context.setAllowsAntialiasing(true)

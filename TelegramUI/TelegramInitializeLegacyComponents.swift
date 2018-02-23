@@ -16,6 +16,10 @@ func updateLegacyLocalization(strings: PresentationStrings) {
     legacyLocalization = TGLocalization(version: 0, code: strings.languageCode, dict: strings.dict, isActive: true)
 }
 
+func updateLegacyTheme() {
+    TGCheckButtonView.resetCache()
+}
+
 public func updateLegacyComponentsAccount(_ account: Account?) {
     legacyComponentsAccount = account
 }

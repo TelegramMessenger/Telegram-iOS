@@ -57,9 +57,16 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
     private let textColor: UIColor
     var defaultDuration: Double?
     
+    private var updateTimer: SwiftSignalKit.Timer?
+    
     private var statusValue: MediaPlayerStatus? {
         didSet {
             if self.statusValue != oldValue {
+                if let statusValue = statusValue, case .playing = statusValue.status {
+                    self.ensureHasTimer()
+                } else {
+                    self.stopTimer()
+                }
                 self.updateTimestamp()
             }
         }
@@ -103,16 +110,38 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
     
     deinit {
         self.statusDisposable?.dispose()
+        self.updateTimer?.invalidate()
+    }
+    
+    private func ensureHasTimer() {
+        if self.updateTimer == nil {
+            let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                self?.updateTimestamp()
+            }, queue: Queue.mainQueue())
+            self.updateTimer = timer
+            timer.start()
+        }
+    }
+    
+    private func stopTimer() {
+        self.updateTimer?.invalidate()
+        self.updateTimer = nil
     }
     
     func updateTimestamp() {
         if let statusValue = self.statusValue, Double(0.0).isLess(than: statusValue.duration) {
+            let timestampSeconds: Double
+            if !statusValue.generationTimestamp.isZero {
+                timestampSeconds = statusValue.timestamp + (CACurrentMediaTime() - statusValue.generationTimestamp)
+            } else {
+                timestampSeconds = statusValue.timestamp
+            }
             switch self.mode {
                 case .normal:
-                    let timestamp = Int32(statusValue.timestamp)
+                    let timestamp = Int32(timestampSeconds)
                     self.state = MediaPlayerTimeTextNodeState(hours: timestamp / (60 * 60), minutes: timestamp % (60 * 60) / 60, seconds: timestamp % 60)
                 case .reversed:
-                    let timestamp = abs(Int32(statusValue.timestamp - statusValue.duration))
+                    let timestamp = abs(Int32(timestampSeconds - statusValue.duration))
                     self.state = MediaPlayerTimeTextNodeState(hours: timestamp / (60 * 60), minutes: timestamp % (60 * 60) / 60, seconds: timestamp % 60)
             }
         } else if let defaultDuration = self.defaultDuration {
@@ -138,8 +167,12 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
         
         if let parameters = parameters as? MediaPlayerTimeTextNodeParameters {
             let text: String
-            if let minutes = parameters.state.minutes, let seconds = parameters.state.seconds {
-                text = String(format: "%d:%02d", minutes, seconds)
+            if let hours = parameters.state.hours, let minutes = parameters.state.minutes, let seconds = parameters.state.seconds {
+                if hours != 0 {
+                    text = String(format: "%d:%02d:%02d", hours, minutes, seconds)
+                } else {
+                    text = String(format: "%d:%02d", minutes, seconds)
+                }
             } else {
                 text = "-:--"
             }

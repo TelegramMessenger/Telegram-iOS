@@ -298,17 +298,11 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     sentViaBot = true
                 }
             }
-            
-            var dateText = stringForMessageTimestamp(timestamp: message.timestamp, timeFormat: presentationData.timeFormat)
-            
-            if let author = message.author as? TelegramUser {
-                if author.botInfo != nil {
-                    sentViaBot = true
-                }
-                if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                    dateText = "\(author.displayTitle), \(dateText)"
-                }
+            if let author = message.author as? TelegramUser, author.botInfo != nil {
+                sentViaBot = true
             }
+            
+            let dateText = stringForMessageTimestampStatus(message: message, timeFormat: presentationData.timeFormat, strings: presentationData.strings)
             
             var webpageGalleryMediaCount: Int?
             for media in message.media {
@@ -824,7 +818,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         }
     }
     
-    func updateHiddenMedia(_ media: [Media]?) {
+    func updateHiddenMedia(_ media: [Media]?) -> Bool {
         if let currentMedia = self.media {
             if let media = media {
                 var found = false
@@ -836,18 +830,24 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
                 if let contentImageNode = self.contentImageNode {
                     contentImageNode.isHidden = found
+                    return found
                 }
             } else if let contentImageNode = self.contentImageNode {
                 contentImageNode.isHidden = false
             }
         }
+        return false
     }
     
-    func transitionNode(media: Media) -> ASDisplayNode? {
-        if let image = self.media as? TelegramMediaImage, image.isEqual(media) {
-            return self.contentImageNode
-        } else if let file = self.media as? TelegramMediaFile, file.isEqual(media) {
-            return self.contentImageNode
+    func transitionNode(media: Media) -> (ASDisplayNode, () -> UIView?)? {
+        if let contentImageNode = self.contentImageNode, let image = self.media as? TelegramMediaImage, image.isEqual(media) {
+            return (contentImageNode, { [weak contentImageNode] in
+                return contentImageNode?.view.snapshotContentTree(unhide: true)
+            })
+        } else if let contentImageNode = self.contentImageNode, let file = self.media as? TelegramMediaFile, file.isEqual(media) {
+            return (contentImageNode, { [weak contentImageNode] in
+                return contentImageNode?.view.snapshotContentTree(unhide: true)
+            })
         }
         return nil
     }

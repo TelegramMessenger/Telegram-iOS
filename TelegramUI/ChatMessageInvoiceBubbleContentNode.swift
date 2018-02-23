@@ -106,11 +106,11 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
         return .none
     }
     
-    override func updateHiddenMedia(_ media: [Media]?) {
-        self.contentNode.updateHiddenMedia(media)
+    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
+        return self.contentNode.updateHiddenMedia(media)
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> ASDisplayNode? {
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         if self.item?.message.id != messageId {
             return nil
         }

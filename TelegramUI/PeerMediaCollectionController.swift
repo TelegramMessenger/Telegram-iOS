@@ -8,7 +8,7 @@ import TelegramCore
 import SafariServices
 
 public class PeerMediaCollectionController: TelegramController {
-    private var containerLayout = ContainerViewLayout()
+    private var validLayout: ContainerViewLayout?
     
     private let account: Account
     private let peerId: PeerId
@@ -172,7 +172,7 @@ public class PeerMediaCollectionController: TelegramController {
             }, updateInputState: { _ in
             }, openMessageShareMenu: { _ in
             }, presentController: { _, _ in
-            }, callPeer: { _ in
+            }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in
             }, longTap: { [weak self] content in
                 if let strongSelf = self {
                     switch content {
@@ -273,6 +273,7 @@ public class PeerMediaCollectionController: TelegramController {
                     }))
                 }
             }
+        }, deleteMessages: { _ in
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let forwardMessageIdsSet = strongSelf.interfaceState.selectionState?.selectedIds {
@@ -309,6 +310,7 @@ public class PeerMediaCollectionController: TelegramController {
                     strongSelf.present(controller, in: .window(.root))
                 }
             }
+        }, forwardMessages: { _ in
         }, shareSelectedMessages: { [weak self] in
             if let strongSelf = self, let selectedIds = strongSelf.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
                 let _ = (strongSelf.account.postbox.modify { modifier -> [Message] in
@@ -366,6 +368,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, beginCall: {
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
+        }, presentGlobalOverlayController: { _, _ in
         }, navigateFeed: {
         }, openGrouping: {
         }, toggleSilentPost: {
@@ -459,7 +462,7 @@ public class PeerMediaCollectionController: TelegramController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.containerLayout = layout
+        self.validLayout = layout
         
         self.mediaCollectionDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition,  listViewTransaction: { updateSizeAndInsets in
             self.mediaCollectionDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)

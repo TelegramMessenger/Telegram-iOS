@@ -158,6 +158,12 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.messageDisposable.dispose()
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+    
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         if self.theme !== theme {
             self.theme = theme
@@ -212,6 +218,12 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     @objc func closePressed() {
         if let dismiss = self.dismiss {
             dismiss()
+        }
+    }
+    
+    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.interfaceInteraction?.navigateToMessage(self.messageId)
         }
     }
 }

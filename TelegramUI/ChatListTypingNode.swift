@@ -149,15 +149,38 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                         string = NSAttributedString(string: text, font: textFont, textColor: color)
                     } else {
                         let text: String
-                        if let _ = commonKey, case .typingText = activities[0].1 {
-                            text = strings.DialogList_SingleTypingSuffix(activities[0].0.compactDisplayTitle).0
+                        if let _ = commonKey {
+                            let peerTitle = activities[0].0.compactDisplayTitle
+                            switch activities[0].1 {
+                                case .uploadingVideo:
+                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).0
+                                case .uploadingInstantVideo:
+                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).0
+                                case .uploadingPhoto:
+                                    text = strings.DialogList_SingleUploadingPhotoSuffix(peerTitle).0
+                                case .uploadingFile:
+                                    text = strings.DialogList_SingleUploadingFileSuffix(peerTitle).0
+                                case .recordingVoice:
+                                    text = strings.DialogList_SingleRecordingAudioSuffix(peerTitle).0
+                                case .recordingInstantVideo:
+                                    text = strings.DialogList_SingleRecordingVideoMessageSuffix(peerTitle).0
+                                case .playingGame:
+                                    text = strings.DialogList_SinglePlayingGameSuffix(peerTitle).0
+                                case .typingText:
+                                    text = strings.DialogList_SingleTypingSuffix(peerTitle).0
+                            }
                         } else {
                             text = activities[0].0.compactDisplayTitle
                         }
                         string = NSAttributedString(string: text, font: textFont, textColor: color)
                     }
                 } else {
-                    string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).0, font: textFont, textColor: color)
+                    if activities.count > 1 {
+                        let peerTitle = activities[0].0.compactDisplayTitle
+                        string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).0).0, font: textFont, textColor: color)
+                    } else {
+                        string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).0, font: textFont, textColor: color)
+                    }
                 }
             } else {
                 string = nil

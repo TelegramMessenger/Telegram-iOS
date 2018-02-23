@@ -213,7 +213,7 @@ private func archivedStickerPacksControllerEntries(presentationData: Presentatio
         var index: Int32 = 0
         for item in packs {
             if !installedIds.contains(item.info.id) {
-                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, stringForStickerCount(item.info.count, strings: presentationData.strings), !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id)))
+                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, stringForStickerCount(item.info.count, strings: presentationData.strings), !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id, reorderable: false)))
                 index += 1
             }
         }

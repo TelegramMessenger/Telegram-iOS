@@ -21,9 +21,11 @@ private final class NotificationsAndSoundsArguments {
     let updateInAppVibration: (Bool) -> Void
     let updateInAppPreviews: (Bool) -> Void
     
+    let updateTotalUnreadCountStyle: (Bool) -> Void
+    
     let resetNotifications: () -> Void
     
-    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, soundSelectionDisposable: MetaDisposable, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void) {
+    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, soundSelectionDisposable: MetaDisposable, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void) {
         self.account = account
         self.presentController = presentController
         self.soundSelectionDisposable = soundSelectionDisposable
@@ -36,6 +38,7 @@ private final class NotificationsAndSoundsArguments {
         self.updateInAppSounds = updateInAppSounds
         self.updateInAppVibration = updateInAppVibration
         self.updateInAppPreviews = updateInAppPreviews
+        self.updateTotalUnreadCountStyle = updateTotalUnreadCountStyle
         self.resetNotifications = resetNotifications
     }
 }
@@ -44,6 +47,7 @@ private enum NotificationsAndSoundsSection: Int32 {
     case messages
     case groups
     case inApp
+    case unreadCountStyle
     case reset
 }
 
@@ -65,6 +69,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     case inAppVibrate(PresentationTheme, String, Bool)
     case inAppPreviews(PresentationTheme, String, Bool)
     
+    case unreadCountStyle(PresentationTheme, String, Bool)
+    
     case reset(PresentationTheme, String)
     case resetNotice(PresentationTheme, String)
     
@@ -76,6 +82,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return NotificationsAndSoundsSection.groups.rawValue
             case .inAppHeader, .inAppSounds, .inAppVibrate, .inAppPreviews:
                 return NotificationsAndSoundsSection.inApp.rawValue
+            case .unreadCountStyle:
+                return NotificationsAndSoundsSection.unreadCountStyle.rawValue
             case .reset, .resetNotice:
                 return NotificationsAndSoundsSection.reset.rawValue
         }
@@ -111,10 +119,12 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return 12
             case .inAppPreviews:
                 return 13
-            case .reset:
+            case .unreadCountStyle:
                 return 14
-            case .resetNotice:
+            case .reset:
                 return 15
+            case .resetNotice:
+                return 16
         }
     }
     
@@ -204,6 +214,12 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .unreadCountStyle(lhsTheme, lhsText, lhsValue):
+                if case let .unreadCountStyle(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .reset(lhsTheme, lhsText):
                 if case let .reset(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -277,6 +293,10 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateInAppPreviews(updatedValue)
                 })
+            case let .unreadCountStyle(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                    arguments.updateTotalUnreadCountStyle(updatedValue)
+                })
             case let .reset(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.resetNotifications()
@@ -314,6 +334,8 @@ private func notificationsAndSoundsEntries(globalSettings: GlobalNotificationSet
     entries.append(.inAppSounds(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsSounds, inAppSettings.playSounds))
     entries.append(.inAppVibrate(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsVibrate, inAppSettings.vibrate))
     entries.append(.inAppPreviews(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsPreview, inAppSettings.displayPreviews))
+    
+    entries.append(.unreadCountStyle(presentationData.theme, "Include muted chats", inAppSettings.totalUnreadCountDisplayStyle == .raw))
     
     entries.append(.reset(presentationData.theme, presentationData.strings.Notifications_ResetAllNotifications))
     entries.append(.resetNotice(presentationData.theme, presentationData.strings.Notifications_ResetAllNotificationsHelp))
@@ -373,6 +395,10 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
     }, updateInAppPreviews: { value in
         let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
             return settings.withUpdatedDisplayPreviews(value)
+        }).start()
+    }, updateTotalUnreadCountStyle: { value in
+        let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
+            return settings.withUpdatedTotalUnreadCountDisplayStyle(value ? .raw : .filtered)
         }).start()
     }, resetNotifications: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }

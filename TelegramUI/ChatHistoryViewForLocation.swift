@@ -195,12 +195,12 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
                 if case .peer(peerIdValue) = chatLocation {
                     cachedDataMessages = value
                 }
-            case let .totalUnreadCount(totalUnreadCount):
+            case let .totalUnreadState(totalUnreadState):
                 switch chatLocation {
                     case let .peer(peerId):
                         if let combinedReadStates = view.combinedReadStates {
                             if case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId] {
-                                readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalUnreadCount: totalUnreadCount, notificationSettings: notificationSettings)
+                                readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalUnreadCount: totalUnreadState.filteredCounters.messageCount, notificationSettings: notificationSettings)
                             }
                         }
                     case .group:

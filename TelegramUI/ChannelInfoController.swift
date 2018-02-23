@@ -23,10 +23,10 @@ private final class ChannelInfoControllerArguments {
     let leaveChannel: () -> Void
     let deleteChannel: () -> Void
     let displayAddressNameContextMenu: (String) -> Void
-    let displayAboutContextMenu: (String) -> Void
+    let displayContextMenu: (ChannelInfoEntryTag, String) -> Void
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayContextMenu: @escaping (ChannelInfoEntryTag, String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -44,7 +44,7 @@ private final class ChannelInfoControllerArguments {
         self.leaveChannel = leaveChannel
         self.deleteChannel = deleteChannel
         self.displayAddressNameContextMenu = displayAddressNameContextMenu
-        self.displayAboutContextMenu = displayAboutContextMenu
+        self.displayContextMenu = displayContextMenu
         self.aboutLinkAction = aboutLinkAction
     }
 }
@@ -58,6 +58,7 @@ private enum ChannelInfoSection: ItemListSectionId {
 
 private enum ChannelInfoEntryTag {
     case about
+    case link
 }
 
 private enum ChannelInfoEntry: ItemListNodeEntry {
@@ -260,14 +261,16 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
             case let .about(theme, text, value):
                 return ItemListTextWithLabelItem(theme: theme, label: text, text: value, enabledEntitiyTypes: [.url, .mention, .hashtag], multiline: true, sectionId: self.section, action: nil, longTapAction: {
-                    arguments.displayAboutContextMenu(value)
+                    arguments.displayContextMenu(ChannelInfoEntryTag.about, value)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)
                 }, tag: ChannelInfoEntryTag.about)
             case let .addressName(theme, text, value):
                 return ItemListTextWithLabelItem(theme: theme, label: text, text: "https://t.me/\(value)", enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.displayAddressNameContextMenu("https://t.me/\(value)")
-                })
+                }, longTapAction: {
+                    arguments.displayContextMenu(ChannelInfoEntryTag.link, "https://t.me/\(value)")
+                }, tag: ChannelInfoEntryTag.link)
             case let .channelPhotoSetup(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.changeProfilePhoto()
@@ -537,7 +540,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
     var updateHiddenAvatarImpl: (() -> Void)?
     
-    var displayAboutContextMenuImpl: ((String) -> Void)?
+    var displayContextMenuImpl: ((ChannelInfoEntryTag, String) -> Void)?
     var aboutLinkActionImpl: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
     let arguments = ChannelInfoControllerArguments(account: account, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
@@ -741,8 +744,8 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }, displayAddressNameContextMenu: { text in
         let shareController = ShareController(account: account, subject: .url(text))
         presentControllerImpl?(shareController, nil)
-    }, displayAboutContextMenu: { text in
-        displayAboutContextMenuImpl?(text)
+    }, displayContextMenu: { tag, text in
+        displayContextMenuImpl?(tag, text)
     }, aboutLinkAction: { action, itemLink in
         aboutLinkActionImpl?(action, itemLink)
     })
@@ -865,7 +868,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {
-            var result: (ASDisplayNode, CGRect)?
+            var result: ((ASDisplayNode, () -> UIView?), CGRect)?
             controller.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
                     result = itemNode.avatarTransitionNode()
@@ -887,14 +890,14 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             }
         }
     }
-    displayAboutContextMenuImpl = { [weak controller] text in
+    displayContextMenuImpl = { [weak controller] tag, text in
         if let strongController = controller {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             var resultItemNode: ListViewItemNode?
             let _ = strongController.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListTextWithLabelItemNode {
-                    if let tag = itemNode.tag as? ChannelInfoEntryTag {
-                        if tag == .about {
+                    if let itemTag = itemNode.tag as? ChannelInfoEntryTag {
+                        if itemTag == tag {
                             resultItemNode = itemNode
                             return true
                         }

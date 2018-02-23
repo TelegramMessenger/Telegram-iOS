@@ -361,7 +361,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             additionalData.append(.cachedPeerDataMessages(peerId))
             additionalData.append(.peerNotificationSettings(peerId))
         }
-        additionalData.append(.totalUnreadCount)
+        additionalData.append(.totalUnreadState)
         
         let historyViewUpdate = self.chatHistoryLocation
             |> distinctUntilChanged
@@ -523,6 +523,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if let visible = displayedRange.visibleRange {
                         let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
                         
+                        var readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
+                        if !visible.firstIndexFullyVisible {
+                            readIndexRange.1 -= 1
+                        }
+                        
                         var messageIdsWithViewCount: [MessageId] = []
                         var messageIdsWithUnseenPersonalMention: [MessageId] = []
                         for i in (indexRange.0 ... indexRange.1) {
@@ -539,7 +544,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     }
                                     for attribute in message.attributes {
                                         if attribute is ViewCountMessageAttribute {
-                                            messageIdsWithViewCount.append(message.id)
+                                            if message.id.namespace == Namespaces.Message.Cloud {
+                                                messageIdsWithViewCount.append(message.id)
+                                            }
                                         } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
                                             hasUnsonsumedContent = true
                                         }
@@ -560,7 +567,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         }
                                         for attribute in message.attributes {
                                             if attribute is ViewCountMessageAttribute {
-                                                messageIdsWithViewCount.append(message.id)
+                                                if message.id.namespace == Namespaces.Message.Cloud {
+                                                    messageIdsWithViewCount.append(message.id)
+                                                }
                                             } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
                                                 hasUnsonsumedContent = true
                                             }
@@ -582,15 +591,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             strongSelf.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
                         }
                         
-                        let (maxIncomingIndex, maxOverallIndex) = maxMessageIndexForEntries(historyView.filteredEntries, indexRange: indexRange)
-                        
-                        if let maxIncomingIndex = maxIncomingIndex {
-                            strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxIncomingIndex)
-                        }
-                        
-                        if let maxOverallIndex = maxOverallIndex, maxOverallIndex != strongSelf.maxVisibleMessageIndexReported {
-                            strongSelf.maxVisibleMessageIndexReported = maxOverallIndex
-                            strongSelf.maxVisibleMessageIndexUpdated?(maxOverallIndex)
+                        if readIndexRange.0 <= readIndexRange.1 {
+                            let (maxIncomingIndex, maxOverallIndex) = maxMessageIndexForEntries(historyView.filteredEntries, indexRange: readIndexRange)
+                            
+                            if let maxIncomingIndex = maxIncomingIndex {
+                                strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxIncomingIndex)
+                            }
+                            
+                            if let maxOverallIndex = maxOverallIndex, maxOverallIndex != strongSelf.maxVisibleMessageIndexReported {
+                                strongSelf.maxVisibleMessageIndexReported = maxOverallIndex
+                                strongSelf.maxVisibleMessageIndexUpdated?(maxOverallIndex)
+                            }
                         }
                     }
                     
@@ -671,6 +682,31 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState) -> Void) {
         self.loadStateUpdated = f
+    }
+    
+    public func scrollScreenToTop() {
+        var currentMessage: Message?
+        if let historyView = self.historyView {
+            if let visibleRange = self.displayedItemRange.loadedRange {
+                var index = historyView.filteredEntries.count - 1
+                loop: for entry in historyView.filteredEntries {
+                    if index >= visibleRange.firstIndex && index <= visibleRange.lastIndex {
+                        if case let .MessageEntry(message, _, _, _, _) = entry {
+                            currentMessage = message
+                            break loop
+                        } else if case let .MessageGroupEntry(_, messages, _) = entry {
+                            currentMessage = messages.first?.0
+                            break loop
+                        }
+                    }
+                    index -= 1
+                }
+            }
+        }
+        
+        if let currentMessage = currentMessage {
+            self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: .message(MessageIndex(currentMessage)), anchorIndex: .message(MessageIndex(currentMessage)), sourceIndex: .upperBound, scrollPosition: .top(0.0), animated: true))
+        }
     }
     
     public func scrollToStartOfHistory() {
@@ -850,9 +886,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         strongSelf.account.postbox.updateMessageHistoryViewVisibleRange(transition.historyView.originalView.id, earliestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.lastIndex].index, latestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.firstIndex].index)
                         
                         if let visible = visibleRange.visibleRange {
-                            let (messageIndex, _) = maxMessageIndexForEntries(transition.historyView.filteredEntries, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visible.firstIndex))
-                            if let messageIndex = messageIndex {
-                                strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
+                            var visibleFirstIndex = visible.firstIndex
+                            if !visible.firstIndexFullyVisible {
+                                visibleFirstIndex += 1
+                            }
+                            if visibleFirstIndex <= visible.lastIndex {
+                                let (messageIndex, _) =  maxMessageIndexForEntries(transition.historyView.filteredEntries, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
+                                if let messageIndex = messageIndex {
+                                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
+                                }
                             }
                         }
                     }

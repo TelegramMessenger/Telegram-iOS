@@ -5,11 +5,10 @@ private func generateShareButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationShare"), color: theme.rootController.navigationBar.accentTextColor)
 }
 
-func generateIndefiniteActivityIndicatorImage(color: UIColor, diameter: CGFloat = 22.0) -> UIImage? {
+func generateIndefiniteActivityIndicatorImage(color: UIColor, diameter: CGFloat = 22.0, lineWidth: CGFloat = 2.0) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setStrokeColor(color.cgColor)
-        let lineWidth: CGFloat = 2.0
         context.setLineWidth(lineWidth)
         context.setLineCap(.round)
         let cutoutAngle: CGFloat = CGFloat.pi * 30.0 / 180.0

@@ -159,7 +159,17 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)? {
         didSet {
-            (self.displayNode as! ItemListControllerNode<Entry>).visibleEntriesUpdated = self.visibleEntriesUpdated
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode<Entry>).visibleEntriesUpdated = self.visibleEntriesUpdated
+            }
+        }
+    }
+    
+    var reorderEntry: ((Int, Int, [Entry]) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode<Entry>).reorderEntry = self.reorderEntry
+            }
         }
     }
     
@@ -352,6 +362,8 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         }
         displayNode.enableInteractiveDismiss = self.enableInteractiveDismiss
+        displayNode.visibleEntriesUpdated = self.visibleEntriesUpdated
+        displayNode.reorderEntry = self.reorderEntry
         self.displayNode = displayNode
         super.displayNodeDidLoad()
         self._ready.set((self.displayNode as! ItemListControllerNode<Entry>).ready)

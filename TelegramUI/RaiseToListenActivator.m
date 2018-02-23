@@ -1,5 +1,6 @@
 #import "RaiseToListenActivator.h"
 
+#import <UIKit/UIKit.h>
 #import <SSignalKit/SSignalKit.h>
 
 #import "DeviceProximityManager.h"
@@ -44,6 +45,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
     STimer *_timer;
     
     id _manager;
+    CFTimeInterval _activationTimestamp;
 }
 
 @end
@@ -109,10 +111,6 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
 }
 
 - (bool)shouldActivate {
-    /*if ([TGMusicPlayer isHeadsetPluggedIn]) {
-        return false;
-    }*/
-    
     if (_shouldActivate) {
         return _shouldActivate();
     }
@@ -136,6 +134,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
         
         if (_proximityState) {
             _activated = true;
+            _activationTimestamp = CACurrentMediaTime();
             if (_activate) {
                 _activate();
             }
@@ -165,6 +164,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
                 [_timer invalidate];
                 _timer = nil;
                 _activated = true;
+                _activationTimestamp = CACurrentMediaTime();
                 
                 if (_activate) {
                     _activate();
@@ -181,6 +181,28 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
             }
         }
     });
+}
+
+- (void)activateBasedOnProximity {
+    if ([[DeviceProximityManager shared] currentValue]) {
+        [self startCheckingProximity];
+    }
+}
+
+- (void)applicationResignedActive {
+    if (_activated) {
+        CFTimeInterval duration =  CACurrentMediaTime() - _activationTimestamp;
+        if (duration > 0.0 && duration < 1.0) {
+            [_timer invalidate];
+            _timer = nil;
+            [self stopCheckingProximity];
+            
+            _activated = false;
+            if (_deactivate) {
+                _deactivate();
+            }
+        }
+    }
 }
 
 @end

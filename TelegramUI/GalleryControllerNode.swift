@@ -8,7 +8,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
     var navigationBar: NavigationBar?
     let footerNode: GalleryFooterNode
     var toolbarNode: ASDisplayNode?
-    var transitionDataForCentralItem: (() -> (ASDisplayNode?, (UIView) -> Void)?)?
+    var transitionDataForCentralItem: (() -> ((ASDisplayNode, () -> UIView?)?, (UIView) -> Void)?)?
     var dismiss: (() -> Void)?
     
     var containerLayout: (CGFloat, ContainerViewLayout)?
@@ -52,13 +52,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         
         self.pager.toggleControlsVisibility = { [weak self] in
             if let strongSelf = self {
-                strongSelf.areControlsHidden = !strongSelf.areControlsHidden
-                UIView.animate(withDuration: 0.3, animations: {
-                    let alpha: CGFloat = strongSelf.areControlsHidden ? 0.0 : 1.0
-                    strongSelf.navigationBar?.alpha = alpha
-                    strongSelf.statusBar?.alpha = alpha
-                    strongSelf.footerNode.alpha = alpha
-                })
+                strongSelf.setControlsHidden(!strongSelf.areControlsHidden, animated: true)
             }
         }
         
@@ -123,6 +117,23 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         
         self.pager.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: layout.size)
         self.pager.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+    }
+    
+    func setControlsHidden(_ hidden: Bool, animated: Bool) {
+        self.areControlsHidden = hidden
+        if animated {
+            UIView.animate(withDuration: 0.3, animations: {
+                let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
+                self.navigationBar?.alpha = alpha
+                self.statusBar?.alpha = alpha
+                self.footerNode.alpha = alpha
+            })
+        } else {
+            let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
+            self.navigationBar?.alpha = alpha
+            self.statusBar?.alpha = alpha
+            self.footerNode.alpha = alpha
+        }
     }
     
     func animateIn(animateContent: Bool) {

@@ -113,6 +113,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
     private var contentNodes: [ChatMessageBubbleContentNode] = []
+    private var mosaicStatusNode: ChatMessageDateAndStatusNode?
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
     private var shareButtonNode: HighlightableButtonNode?
@@ -253,7 +254,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         self.view.addGestureRecognizer(replyRecognizer)
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         var currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))))] = []
         for contentNode in self.contentNodes {
             if let message = contentNode.item?.message {
@@ -265,6 +266,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let forwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         let replyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
+        
+        let mosaicStatusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.mosaicStatusNode)
         
         let currentShareButtonNode = self.shareButtonNode
         
@@ -294,10 +297,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             ignoreForward = true
                             effectiveAuthor = forwardInfo.author
                         }
-                        displayAuthorInfo = !mergedTop && incoming && effectiveAuthor != nil
+                        displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
                     } else {
                         effectiveAuthor = firstMessage.author
-                        displayAuthorInfo = !mergedTop && incoming && peerId.isGroupOrChannel &&  effectiveAuthor != nil
+                        displayAuthorInfo = !mergedTop.merged && incoming && peerId.isGroupOrChannel &&  effectiveAuthor != nil
                     }
                 
                     if peerId != item.account.peerId {
@@ -424,8 +427,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             var contentPropertiesAndLayouts: [(CGSize?, ChatMessageBubbleContentProperties, ChatMessageBubblePreparePosition, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void)))] = []
             
-            let topNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedTop ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
-            let bottomNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedBottom ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
+            let topNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedTop.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
+            let bottomNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedBottom.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
             
             var canPossiblyHideBackground = false
             if case .color = item.presentationData.wallpaper {
@@ -577,6 +580,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             let lastNodeTopPosition: ChatMessageBubbleRelativePosition = .None(bottomNodeMergeStatus)
             
             var calculatedGroupFramesAndSize: ([(CGRect, MosaicItemPosition)], CGSize)?
+            var mosaicStatusSizeAndApply: (CGSize, (Bool) -> ChatMessageDateAndStatusNode)?
             
             if let mosaicRange = mosaicRange {
                 let maxSize = layoutConstants.image.maxDimensions.fittedToWidthOrSmaller(maximumContentWidth - layoutConstants.image.bubbleInsets.left - layoutConstants.image.bubbleInsets.right)
@@ -589,6 +593,43 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 calculatedGroupFramesAndSize = (framesAndPositions, size)
                 
                 maximumNodeWidth = size.width
+                
+                if mosaicRange.upperBound == contentPropertiesAndLayouts.count {
+                    let message = item.content.firstMessage
+                    
+                    var edited = false
+                    var sentViaBot = false
+                    var viewCount: Int?
+                    for attribute in message.attributes {
+                        if let _ = attribute as? EditedMessageAttribute {
+                            edited = true
+                        } else if let attribute = attribute as? ViewCountMessageAttribute {
+                            viewCount = attribute.count
+                        } else if let _ = attribute as? InlineBotMessageAttribute {
+                            sentViaBot = true
+                        }
+                    }
+                    if let author = message.author as? TelegramUser, author.botInfo != nil {
+                        sentViaBot = true
+                    }
+                    
+                    let dateText = stringForMessageTimestampStatus(message: message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
+                    
+                    let statusType: ChatMessageDateAndStatusType
+                    if message.effectivelyIncoming(item.account.peerId) {
+                        statusType = .ImageIncoming
+                    } else {
+                        if message.flags.contains(.Failed) {
+                            statusType = .ImageOutgoing(.Failed)
+                        } else if message.flags.isSending {
+                            statusType = .ImageOutgoing(.Sending)
+                        } else {
+                            statusType = .ImageOutgoing(.Sent(read: item.read))
+                        }
+                    }
+                    
+                    mosaicStatusSizeAndApply = mosaicStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
+                }
             }
             
             var headerSize = CGSize()
@@ -811,12 +852,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         }
                     }
                     
-                    var mosaicStatusHorizontalOffset: CGFloat?
-                    if position.contains(.bottom) {
-                        mosaicStatusHorizontalOffset = size.width - framesAndPositions[mosaicIndex].0.maxX
-                    }
-                    
-                    let (_, contentNodeFinalize) = contentNodeLayout(framesAndPositions[mosaicIndex].0.size, .mosaic(position: ChatMessageBubbleContentMosaicPosition(topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight, mosaicStatusHorizontalOffset: mosaicStatusHorizontalOffset)))
+                    let (_, contentNodeFinalize) = contentNodeLayout(framesAndPositions[mosaicIndex].0.size, .mosaic(position: ChatMessageBubbleContentMosaicPosition(topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight)))
                     
                     contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize))
                     
@@ -846,6 +882,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             contentPosition = .linear(top: .Neighbour, bottom: .Neighbour)
                     }
                     let (contentNodeWidth, contentNodeFinalize) = contentNodeLayout(CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude), contentPosition)
+                    #if DEBUG
+                    if contentNodeWidth > maximumNodeWidth {
+                        print("\(contentNodeWidth) > \(maximumNodeWidth)")
+                    }
+                    #endif
                     maxContentWidth = max(maxContentWidth, contentNodeWidth)
                     
                     contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize))
@@ -855,6 +896,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var contentSize = CGSize(width: maxContentWidth, height: 0.0)
             var contentNodeFramesPropertiesAndApply: [(CGRect, ChatMessageBubbleContentProperties, (ListViewItemUpdateAnimation) -> Void)] = []
             var contentNodesHeight: CGFloat = 0.0
+            var mosaicStatusOrigin: CGPoint?
             for i in 0 ..< contentNodePropertiesAndFinalize.count {
                 let (properties, finalize) = contentNodePropertiesAndFinalize[i]
                 
@@ -868,10 +910,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     }
                     
                     let (_, apply) = finalize(maxContentWidth)
-                    contentNodeFramesPropertiesAndApply.append((framesAndPositions[mosaicIndex].0.offsetBy(dx: 0.0, dy: contentNodesHeight), properties, apply))
+                    let contentNodeFrame = framesAndPositions[mosaicIndex].0.offsetBy(dx: 0.0, dy: contentNodesHeight)
+                    contentNodeFramesPropertiesAndApply.append((contentNodeFrame, properties, apply))
                     
                     if mosaicIndex == mosaicRange.upperBound - 1 {
                         contentNodesHeight += size.height
+                        
+                        mosaicStatusOrigin = contentNodeFrame.bottomRight
                     }
                 } else {
                     if i == 0 && !headerSize.height.isZero {
@@ -902,7 +947,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
             }
             
-            var layoutInsets = UIEdgeInsets(top: mergedTop ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
+            var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
             if dateHeaderAtBottom {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
             }
@@ -940,11 +985,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var udpdatedMergedTop = mergedBottom
             var udpdatedMergedBottom = mergedTop
             if mosaicRange == nil {
-                if headerSize.height.isZero, contentNodePropertiesAndFinalize.first?.0.forceFullCorners ?? false {
-                    udpdatedMergedTop = false
-                }
                 if contentNodePropertiesAndFinalize.first?.0.forceFullCorners ?? false {
-                    udpdatedMergedBottom = false
+                    udpdatedMergedTop = .semanticallyMerged
+                }
+                if headerSize.height.isZero && contentNodePropertiesAndFinalize.first?.0.forceFullCorners ?? false {
+                    udpdatedMergedBottom = .none
                 }
             }
             
@@ -957,7 +1002,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         transition = .animated(duration: duration, curve: .spring)
                     }
                     
-                    let mergeType = ChatMessageBackgroundMergeType(top: udpdatedMergedTop, bottom: udpdatedMergedBottom, side: actionButtonsSizeAndApply != nil)
+                    var forceBackgroundSide = false
+                    if actionButtonsSizeAndApply != nil {
+                        forceBackgroundSide = true
+                    } else if case .semanticallyMerged = udpdatedMergedTop {
+                        forceBackgroundSide = true
+                    }
+                    let mergeType = ChatMessageBackgroundMergeType(top: udpdatedMergedTop == .fullyMerged, bottom: udpdatedMergedBottom == .fullyMerged, side: forceBackgroundSide)
                     let backgroundType: ChatMessageBackgroundType
                     if hideBackground {
                         backgroundType = .none
@@ -1083,6 +1134,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             }
                         }
                         contentNodeIndex += 1
+                    }
+                    
+                    if let mosaicStatusOrigin = mosaicStatusOrigin, let (size, apply) = mosaicStatusSizeAndApply {
+                        let mosaicStatusNode = apply(false)
+                        if mosaicStatusNode !== strongSelf.mosaicStatusNode {
+                            strongSelf.mosaicStatusNode?.removeFromSupernode()
+                            strongSelf.mosaicStatusNode = mosaicStatusNode
+                            strongSelf.addSubnode(mosaicStatusNode)
+                        }
+                        let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
+                        mosaicStatusNode.frame = CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size)
+                    } else if let mosaicStatusNode = strongSelf.mosaicStatusNode {
+                        strongSelf.mosaicStatusNode = nil
+                        mosaicStatusNode.removeFromSupernode()
                     }
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
@@ -1448,7 +1513,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         return super.hitTest(point, with: event)
     }
     
-    override func transitionNode(id: MessageId, media: Media) -> ASDisplayNode? {
+    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         for contentNode in self.contentNodes {
             if let result = contentNode.transitionNode(messageId: id, media: media) {
                 return result
@@ -1457,11 +1522,37 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         return nil
     }
     
+    override func peekPreviewContent(at point: CGPoint) -> (Message, Media)? {
+        for contentNode in self.contentNodes {
+            let frame = contentNode.frame
+            if let result = contentNode.peekPreviewContent(at: point.offsetBy(dx: -frame.minX, dy: -frame.minY)) {
+                return result
+            }
+        }
+        return nil
+    }
+    
     override func updateHiddenMedia() {
+        var hasHiddenMosaicStatus = false
         if let item = self.item {
             for contentNode in self.contentNodes {
                 if let contentItem = contentNode.item {
-                    contentNode.updateHiddenMedia(item.controllerInteraction.hiddenMedia[contentItem.message.id])
+                    if contentNode.updateHiddenMedia(item.controllerInteraction.hiddenMedia[contentItem.message.id]) {
+                        if let mosaicStatusNode = self.mosaicStatusNode, mosaicStatusNode.frame.intersects(contentNode.frame) {
+                            hasHiddenMosaicStatus = true
+                        }
+                    }
+                }
+            }
+        }
+        
+        if let mosaicStatusNode = self.mosaicStatusNode {
+            if mosaicStatusNode.alpha.isZero != hasHiddenMosaicStatus {
+                if hasHiddenMosaicStatus {
+                    mosaicStatusNode.alpha = 0.0
+                } else {
+                    mosaicStatusNode.alpha = 1.0
+                    mosaicStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -1556,6 +1647,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     override func updateHighlightedState(animated: Bool) {
+        super.updateHighlightedState(animated: animated)
+        
         if let item = self.item {
             var highlighted = false
             if let highlightedState = item.controllerInteraction.highlightedState {

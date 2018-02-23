@@ -9,7 +9,7 @@ final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContainerNode 
     private let activityIndicator: ActivityIndicator
     
     init(theme: PresentationTheme) {
-        self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(theme.actionSheet.controlAccentColor, 50.0))
+        self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(theme.actionSheet.controlAccentColor, 50.0, 2.0))
         
         super.init()
         

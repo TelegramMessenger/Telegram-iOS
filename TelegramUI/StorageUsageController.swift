@@ -181,7 +181,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
             peerSizes += combinedSize
         }
         
-        entries.append(.clearAll(presentationData.theme, presentationData.strings.Cache_ClearCache, dataSizeString(Int(peerSizes + stats.otherSize + stats.cacheSize))))
+        entries.append(.clearAll(presentationData.theme, presentationData.strings.Cache_ClearCache, dataSizeString(Int(peerSizes + stats.otherSize + stats.cacheSize + stats.tempSize))))
         
         var index: Int32 = 0
         for (peerId, size) in statsByPeerId.sorted(by: { $0.1 > $1.1 }) {
@@ -291,8 +291,8 @@ func storageUsageController(account: Account) -> ViewController {
                     }
                 }
                 
-                if stats.cacheSize + stats.otherSize > 10 * 1024 {
-                    otherSize = (true, stats.cacheSize + stats.otherSize)
+                if stats.cacheSize + stats.otherSize + stats.tempSize > 10 * 1024 {
+                    otherSize = (true, stats.cacheSize + stats.otherSize + stats.tempSize)
                 }
                 
                 var itemIndex = 0
@@ -395,19 +395,32 @@ func storageUsageController(account: Account) -> ViewController {
                             var updatedOtherPaths = stats.otherPaths
                             var updatedOtherSize = stats.otherSize
                             var updatedCacheSize = stats.cacheSize
+                            var updatedTempPaths = stats.tempPaths
+                            var updatedTempSize = stats.tempSize
                             
                             var signal: Signal<Void, NoError> = clearCachedMediaResources(account: account, mediaResourceIds: clearResourceIds)
                             if otherSize.0 {
-                                signal = signal |> then(account.postbox.mediaBox.removeOtherCachedResources(paths: stats.otherPaths))
+                                let removeTempFiles: Signal<Void, NoError> = Signal { subscriber in
+                                    let fileManager = FileManager.default
+                                    for path in stats.tempPaths {
+                                        let _ = try? fileManager.removeItem(atPath: path)
+                                    }
+                                    
+                                    subscriber.putCompletion()
+                                    return EmptyDisposable
+                                } |> runOn(Queue.concurrentDefaultQueue())
+                                signal = signal |> then(account.postbox.mediaBox.removeOtherCachedResources(paths: stats.otherPaths)) |> then(removeTempFiles)
                             }
                             
                             if otherSize.0 {
                                 updatedOtherPaths = []
                                 updatedOtherSize = 0
                                 updatedCacheSize = 0
+                                updatedTempPaths = []
+                                updatedTempSize = 0
                             }
                             
-                            statsPromise.set(.single(.result(CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize))))
+                            statsPromise.set(.single(.result(CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize))))
                             
                             clearDisposable.set(signal.start())
                         }
@@ -521,7 +534,7 @@ func storageUsageController(account: Account) -> ViewController {
                                     }
                                 }
                                 
-                                statsPromise.set(.single(.result(CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize))))
+                                statsPromise.set(.single(.result(CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize))))
                                 
                                 clearDisposable.set(clearCachedMediaResources(account: account, mediaResourceIds: clearResourceIds).start())
                             }

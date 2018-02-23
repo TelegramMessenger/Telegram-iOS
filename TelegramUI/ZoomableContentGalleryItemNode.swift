@@ -203,4 +203,12 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
             self.centerScrollViewContents(transition: self.ignoreZoomTransition ?? .immediate)
         }
     }
+    
+    override func contentSize() -> CGSize? {
+        if let (_, contentNode) = self.zoomableContent {
+            let size = contentNode.view.convert(contentNode.bounds, to: self.view).size
+            return CGSize(width: floor(size.width), height: floor(size.height))
+        }
+        return nil
+    }
 }

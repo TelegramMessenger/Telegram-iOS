@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-final class ChatMediaInputGifPane: ASDisplayNode, UIScrollViewDelegate {
+final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     private let account: Account
     private let controllerInteraction: ChatControllerInteraction
     
@@ -26,10 +26,14 @@ final class ChatMediaInputGifPane: ASDisplayNode, UIScrollViewDelegate {
         self.disposable.dispose()
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         self.multiplexedNode?.bottomInset = bottomInset
-        self.multiplexedNode?.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height))
+        self.multiplexedNode?.frame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: size.height - topInset))
+    }
+    
+    func fileAt(point: CGPoint) -> TelegramMediaFile? {
+        return self.multiplexedNode?.fileAt(point: point)
     }
     
     override func willEnterHierarchy() {
@@ -64,23 +68,6 @@ final class ChatMediaInputGifPane: ASDisplayNode, UIScrollViewDelegate {
             
             multiplexedNode.fileSelected = { [weak self] file in
                 self?.controllerInteraction.sendGif(file)
-            }
-            multiplexedNode.fileLongPressed = { [weak self] file in
-                if let strongSelf = self, let multiplexedNode = strongSelf.multiplexedNode, let itemFrame = multiplexedNode.frameForItem(file.fileId) {
-                    let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
-                    let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(presentationData.strings.Common_Delete), action: {
-                        if let strongSelf = self {
-                            let _ = removeSavedGif(postbox: strongSelf.account.postbox, mediaId: file.fileId).start()
-                        }
-                    })])
-                    strongSelf.controllerInteraction.presentController(contextMenuController, ContextMenuControllerPresentationArguments(sourceNodeAndRect: {
-                        if let strongSelf = self, let multiplexedNode = strongSelf.multiplexedNode {
-                            return (strongSelf, multiplexedNode.convert(itemFrame, to: strongSelf.view).insetBy(dx: -2.0, dy: -2.0).offsetBy(dx: multiplexedNode.frame.minX, dy: multiplexedNode.frame.minY))
-                        } else {
-                            return nil
-                        }
-                    }))
-                }
             }
         }
     }

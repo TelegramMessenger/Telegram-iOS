@@ -144,7 +144,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     
     func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: Peer, chatPeer: Peer?) {
         if self.currentState == nil || self.currentState!.0 !== account || !arePeersEqual(self.currentState!.1, peer) {
-            let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: .green, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.opaqueItemBackgroundColor)
+            let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: theme.chatList.secretTitleColor, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.checkContentColor)
             self.peerNode.theme = itemTheme
             self.peerNode.setup(account: account, strings: strings, peer: peer, chatPeer: chatPeer)
             self.currentState = (account, peer, chatPeer)

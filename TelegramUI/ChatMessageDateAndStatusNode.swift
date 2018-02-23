@@ -493,4 +493,24 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             })
         }
     }
+    
+    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
+        let currentLayout = node?.asyncLayout()
+        return { theme, strings, edited, impressionCount, dateText, type, constrainedSize in
+            let resultNode: ChatMessageDateAndStatusNode
+            let resultSizeAndApply: (CGSize, (Bool) -> Void)
+            if let node = node, let currentLayout = currentLayout {
+                resultNode = node
+                resultSizeAndApply = currentLayout(theme, strings, edited, impressionCount, dateText, type, constrainedSize)
+            } else {
+                resultNode = ChatMessageDateAndStatusNode()
+                resultSizeAndApply = resultNode.asyncLayout()(theme, strings, edited, impressionCount, dateText, type, constrainedSize)
+            }
+            
+            return (resultSizeAndApply.0, { animated in
+                resultSizeAndApply.1(animated)
+                return resultNode
+            })
+        }
+    }
 }

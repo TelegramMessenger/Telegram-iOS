@@ -27,12 +27,10 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
                         if self.activityIndicator.layer.superlayer == nil {
                             self.addSubnode(self.activityIndicator)
                         }
-                        //self.activityIndicator.startAnimating()
                     } else {
                         if self.activityIndicator.layer.superlayer != nil {
                             self.activityIndicator.removeFromSupernode()
                         }
-                        //self.activityIndicator.stopAnimating()
                     }
                 }
                 self.setNeedsLayout()
@@ -67,7 +65,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
         self.titleNode.isOpaque = false
         self.titleNode.isUserInteractionEnabled = false
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.secondaryTextColor, 22.0), speed: .slow)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5), speed: .slow)
         let activityIndicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         self.activityIndicator.frame = CGRect(origin: CGPoint(), size: activityIndicatorSize)
         
@@ -85,7 +83,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
         
         self.buttonView.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if highlighted && strongSelf.activityIndicator.isHidden {
+                if highlighted && (strongSelf.activityIndicator.isHidden || strongSelf.activityIndicator.layer.superlayer == nil) {
                     strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.lockView.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
@@ -111,8 +109,6 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
         
         let size = self.bounds.size
         
-        self.buttonView.frame = CGRect(origin: CGPoint(), size: size)
-        
         var indicatorPadding: CGFloat = 0.0
         let indicatorSize = self.activityIndicator.bounds.size
         
@@ -125,6 +121,9 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
         
         let titleFrame = CGRect(origin: CGPoint(x: indicatorPadding + floor((size.width - titleSize.width - indicatorPadding) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
         self.titleNode.frame = titleFrame
+        
+        let buttonX = max(0.0, titleFrame.minX - 10.0)
+        self.buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: 0.0), size: CGSize(width: min(titleFrame.maxX + 28.0, size.width) - buttonX, height: size.height))
         
         self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 4.0, width: 2.0, height: 2.0)
         

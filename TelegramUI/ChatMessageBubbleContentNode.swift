@@ -38,7 +38,6 @@ struct ChatMessageBubbleContentMosaicPosition {
     let topRight: ChatMessageBubbleContentMosaicNeighbor
     let bottomLeft: ChatMessageBubbleContentMosaicNeighbor
     let bottomRight: ChatMessageBubbleContentMosaicNeighbor
-    let mosaicStatusHorizontalOffset: CGFloat?
 }
 
 enum ChatMessageBubbleContentPosition {
@@ -115,11 +114,16 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         })
     }
     
-    func transitionNode(messageId: MessageId, media: Media) -> ASDisplayNode? {
+    func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         return nil
     }
     
-    func updateHiddenMedia(_ media: [Media]?) {
+    func peekPreviewContent(at point: CGPoint) -> (Message, Media)? {
+        return nil
+    }
+    
+    func updateHiddenMedia(_ media: [Media]?) -> Bool {
+        return false
     }
     
     func updateAutomaticMediaDownloadSettings(_ settings: AutomaticMediaDownloadSettings) {

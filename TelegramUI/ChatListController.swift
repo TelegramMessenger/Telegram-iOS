@@ -82,12 +82,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             }
         })
         
-        self.badgeDisposable = (account.postbox.unreadMessageCountsView(items: [.total]) |> deliverOnMainQueue).start(next: { [weak self] view in
+        self.badgeDisposable = (renderedTotalUnreadCount(postbox: account.postbox) |> deliverOnMainQueue).start(next: { [weak self] count in
             if let strongSelf = self {
-                var count: Int32 = 0
-                if let total = view.count(for: .total) {
-                    count = total
-                }
                 if count == 0 {
                     strongSelf.tabBarItem.badgeValue = ""
                 } else {
@@ -332,7 +328,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         if !self.didSetup3dTouch {
             self.didSetup3dTouch = true
             if #available(iOSApplicationExtension 9.0, *) {
-                self.registerForPreviewing(with: self, sourceView: self.view)
+                self.registerForPreviewing(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: false)
             }
         }
     }
@@ -424,7 +420,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                         }
                     })
                     chatController.canReadHistory.set(false)
-                    chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                    chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return chatController
                 } else if let messageId = action as? MessageId {
                     if #available(iOSApplicationExtension 9.0, *) {
@@ -435,10 +431,20 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                     
                     let chatController = ChatController(account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId)
                     chatController.canReadHistory.set(false)
-                    chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                    chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return chatController
                 }
             }
+            return nil
+        }
+        
+        var isEditing = false
+        self.chatListDisplayNode.chatListNode.updateState { state in
+            isEditing = state.editing
+            return state
+        }
+        
+        if isEditing {
             return nil
         }
         
@@ -460,11 +466,11 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 case let .peer(_, peer, _, _, _, _, _):
                     let chatController = ChatController(account: self.account, chatLocation: .peer(peer.peerId))
                     chatController.canReadHistory.set(false)
-                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return chatController
                 case let .groupReference(groupId, _, _, _):
                     let chatListController = ChatListController(account: self.account, groupId: groupId, controlsHistoryPreload: false)
-                    chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                    chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return chatListController
             }
         } else {

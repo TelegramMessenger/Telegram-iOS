@@ -60,7 +60,6 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     private let timebase: CMTimebase
     
     var fileSelected: ((TelegramMediaFile) -> Void)?
-    var fileLongPressed: ((TelegramMediaFile) -> Void)?
     var enableVideoNodes = false
     
     init(account: Account) {
@@ -122,10 +121,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
         
         self.delegate = self
         
-        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
-        recognizer.tapActionAtPoint = { _ in
-            return .waitForSingleTap
-        }
+        let recognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.addGestureRecognizer(recognizer)
     }
     
@@ -368,20 +364,9 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     
     @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let (gesture, point) = recognizer.lastRecognizedGestureAndLocation {
-                for item in self.displayItems {
-                    if item.frame.contains(point) {
-                        switch gesture {
-                            case .tap:
-                                self.fileSelected?(item.file)
-                            case .longTap:
-                                self.fileLongPressed?(item.file)
-                            default:
-                                break
-                        }
-                        break
-                    }
-                }
+            let point = recognizer.location(in: self)
+            if let file = self.offsetFileAt(point: point) {
+                self.fileSelected?(file)
             }
         }
     }
@@ -390,6 +375,20 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
         for item in self.displayItems {
             if item.file.fileId == id {
                 return item.frame
+            }
+        }
+        return nil
+    }
+    
+    func fileAt(point: CGPoint) -> TelegramMediaFile? {
+        let offsetPoint = point.offsetBy(dx: 0.0, dy: self.bounds.minY)
+        return self.offsetFileAt(point: offsetPoint)
+    }
+    
+    private func offsetFileAt(point: CGPoint) -> TelegramMediaFile? {
+        for item in self.displayItems {
+            if item.frame.contains(point) {
+                return item.file
             }
         }
         return nil

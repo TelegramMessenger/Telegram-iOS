@@ -7,15 +7,17 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
     let value: Bool
+    let enableInteractiveChanges: Bool
     let enabled: Bool
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let updated: (Bool) -> Void
     
-    init(theme: PresentationTheme, title: String, value: Bool, enabled: Bool = true, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
+    init(theme: PresentationTheme, title: String, value: Bool, enableInteractiveChanges: Bool = true, enabled: Bool = true, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
         self.theme = theme
         self.title = title
         self.value = value
+        self.enableInteractiveChanges = enableInteractiveChanges
         self.enabled = enabled
         self.sectionId = sectionId
         self.style = style
@@ -67,6 +69,7 @@ class ItemListSwitchItemNode: ListViewItemNode {
     
     private let titleNode: TextNode
     private var switchNode: SwitchNode
+    private let switchGestureNode: ASDisplayNode
     private var disabledOverlayNode: ASDisplayNode?
     
     private var item: ItemListSwitchItem?
@@ -86,16 +89,20 @@ class ItemListSwitchItemNode: ListViewItemNode {
         self.titleNode.isLayerBacked = true
         self.switchNode = SwitchNode()
         
+        self.switchGestureNode = ASDisplayNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.switchNode)
+        self.addSubnode(self.switchGestureNode)
     }
     
     override func didLoad() {
         super.didLoad()
         
         (self.switchNode.view as? UISwitch)?.addTarget(self, action: #selector(self.switchValueChanged(_:)), for: .valueChanged)
+        self.switchGestureNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
     func asyncLayout() -> (_ item: ItemListSwitchItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
@@ -239,11 +246,14 @@ class ItemListSwitchItemNode: ListViewItemNode {
                         }
                         let switchSize = switchView.bounds.size
                         
-                        strongSelf.switchNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - switchSize.width - 15.0, y:6.0), size: switchSize)
+                        strongSelf.switchNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - switchSize.width - 15.0, y: 6.0), size: switchSize)
+                        strongSelf.switchGestureNode.frame = strongSelf.switchNode.frame
                         if switchView.isOn != item.value {
                             switchView.setOn(item.value, animated: animated)
                         }
+                        switchView.isUserInteractionEnabled = item.enableInteractiveChanges
                     }
+                    strongSelf.switchGestureNode.isHidden = item.enableInteractiveChanges
                 }
             })
         }
@@ -259,7 +269,15 @@ class ItemListSwitchItemNode: ListViewItemNode {
     
     @objc func switchValueChanged(_ switchView: UISwitch) {
         if let item = self.item {
-            item.updated(switchView.isOn)
+            let value = switchView.isOn
+            item.updated(value)
+        }
+    }
+    
+    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if let item = self.item, let switchView = self.switchNode.view as? UISwitch, case .ended = recognizer.state {
+            let value = switchView.isOn
+            item.updated(!value)
         }
     }
 }

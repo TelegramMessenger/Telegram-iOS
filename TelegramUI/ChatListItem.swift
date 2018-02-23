@@ -205,6 +205,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let mutedIconNode: ASImageNode
     
     var editableControlNode: ItemListEditableControlNode?
+    var reorderControlNode: ItemListEditableReorderControlNode?
     
     var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams)?
     
@@ -367,6 +368,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let inputActivitiesLayout = self.inputActivitiesNode.asyncLayout()
         let badgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
+        let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
         
         let currentItem = self.layoutParams?.0
         
@@ -446,12 +448,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentSecretIconImage: UIImage?
             
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
+            var reorderControlSizeAndApply: (CGSize, () -> ItemListEditableReorderControlNode)?
             
             let editingOffset: CGFloat
+            var reorderInset: CGFloat = 0.0
             if item.editing {
                 let sizeAndApply = editableControlLayout(itemHeight, item.presentationData.theme, isPeerGroup)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0.width
+                
+                if item.index.pinningIndex != nil {
+                    let sizeAndApply = reorderControlLayout(itemHeight, item.presentationData.theme)
+                    reorderControlSizeAndApply = sizeAndApply
+                    reorderInset = sizeAndApply.0.width
+                }
             } else {
                 editingOffset = 0.0
             }
@@ -617,6 +627,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
+            badgeSize = max(badgeSize, reorderInset)
+            
             let (authorLayout, authorApply) = authorLayout(TextNodeLayoutArguments(attributedString: hideAuthor ? nil : authorAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
             let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
@@ -711,6 +723,34 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition.updateFrame(node: editableControlNode, frame: editableControlFrame, completion: { [weak editableControlNode] _ in
                             editableControlNode?.removeFromSupernode()
                         })
+                    }
+                    
+                    if let reorderControlSizeAndApply = reorderControlSizeAndApply {
+                        if strongSelf.reorderControlNode == nil {
+                            let reorderControlNode = reorderControlSizeAndApply.1()
+                            strongSelf.reorderControlNode = reorderControlNode
+                            strongSelf.addSubnode(reorderControlNode)
+                            let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)
+                            reorderControlNode.frame = reorderControlFrame
+                            reorderControlNode.alpha = 0.0
+                            transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
+                            
+                            transition.updateAlpha(node: strongSelf.dateNode, alpha: 0.0)
+                            transition.updateAlpha(node: strongSelf.badgeTextNode, alpha: 0.0)
+                            transition.updateAlpha(node: strongSelf.badgeBackgroundNode, alpha: 0.0)
+                            transition.updateAlpha(node: strongSelf.mentionBadgeNode, alpha: 0.0)
+                            transition.updateAlpha(node: strongSelf.statusNode, alpha: 0.0)
+                        }
+                    } else if let reorderControlNode = strongSelf.reorderControlNode {
+                        strongSelf.reorderControlNode = nil
+                        transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in
+                            reorderControlNode?.removeFromSupernode()
+                        })
+                        transition.updateAlpha(node: strongSelf.dateNode, alpha: 1.0)
+                        transition.updateAlpha(node: strongSelf.badgeTextNode, alpha: 1.0)
+                        transition.updateAlpha(node: strongSelf.badgeBackgroundNode, alpha: 1.0)
+                        transition.updateAlpha(node: strongSelf.mentionBadgeNode, alpha: 1.0)
+                        transition.updateAlpha(node: strongSelf.statusNode, alpha: 1.0)
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: leftInset - 78.0 + editingOffset + 10.0 + revealOffset, y: 7.0), size: CGSize(width: 60.0, height: 60.0))
@@ -966,6 +1006,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
+            if let reorderControlNode = self.reorderControlNode {
+                var reorderControlFrame = reorderControlNode.frame
+                reorderControlFrame.origin.x = params.width - params.rightInset - reorderControlFrame.size.width + offset
+                transition.updateFrame(node: reorderControlNode, frame: reorderControlFrame)
+            }
+            
             let leftInset: CGFloat = params.leftInset + 78.0
             
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
@@ -1090,5 +1136,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             self.setRevealOptionsOpened(false, animated: true)
             self.revealOptionsInteractivelyClosed()
         }
+    }
+    
+    override func isReorderable(at point: CGPoint) -> Bool {
+        if let reorderControlNode = self.reorderControlNode, reorderControlNode.frame.contains(point) {
+            return true
+        }
+        return false
     }
 }
