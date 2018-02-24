@@ -1339,7 +1339,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
         var animateIn = false
         
         self.historyNode.updateNodeHighlightsAnimated(animated)
@@ -1352,8 +1352,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.messageActionSheetControllerAdditionalInset = nil
             }
             if let stableId = self.controllerInteraction.contextHighlightedState?.messageStableId {
-                let controller = ChatMessageActionSheetController(theme: self.chatPresentationInterfaceState.theme, actions: sheetActions ?? [], dismissed: { [weak self] in
+                let contextMenuController = displayContextMenuController?.0
+                let controller = ChatMessageActionSheetController(theme: self.chatPresentationInterfaceState.theme, actions: sheetActions ?? [], dismissed: { [weak self, weak contextMenuController] in
                     self?.displayMessageActionSheet(stableId: nil, sheetActions: nil, displayContextMenuController: nil)
+                    contextMenuController?.dismiss()
                 })
                 self.messageActionSheetController = (controller, stableId)
                 self.controllerInteraction.presentGlobalOverlayController(controller, nil)

@@ -60,6 +60,7 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
     private let actionNodes: [MessageActionButtonNode]
     
     private let feedback = HapticFeedback()
+    private var validLayout: ContainerViewLayout?
     
     init(theme: PresentationTheme, actions: [ChatMessageContextMenuSheetAction], dismissed: @escaping () -> Void) {
         self.theme = theme
@@ -68,7 +69,6 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
         
         self.inputDimNode = ASDisplayNode()
         self.inputDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
-        self.inputDimNode.isLayerBacked = true
         
         self.itemsContainerNode = ASDisplayNode()
         self.itemsContainerNode.backgroundColor = theme.actionSheet.opaqueItemBackgroundColor
@@ -94,6 +94,12 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
         self.feedback.prepareImpact()
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.inputDimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTap(_:))))
+    }
+    
     func animateIn(transition: ContainedViewLayoutTransition) {
         self.inputDimNode.alpha = 0.0
         transition.updateAlpha(node: self.inputDimNode, alpha: 1.0)
@@ -110,7 +116,9 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
     }
     
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
-        var height: CGFloat = 14.0
+        self.validLayout = layout
+        
+        var height: CGFloat = max(14.0, layout.intrinsicInsets.bottom)
         
         let inputHeight = layout.inputHeight ?? 0.0
         transition.updateFrame(node: self.inputDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - inputHeight), size: CGSize(width: layout.size.width, height: inputHeight)))
@@ -138,6 +146,11 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
             let subpoint = self.view.convert(point, to: self.itemsContainerNode.view)
             return itemsContainerNode.hitTest(subpoint, with: event)
         }
+        if let validLayout = self.validLayout, let inputHeight = validLayout.inputHeight {
+            if point.y >= validLayout.size.height - inputHeight {
+                return self.inputDimNode.view
+            }
+        }
         return nil
     }
     
@@ -148,6 +161,12 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
                 self.dismissed()
                 break
             }
+        }
+    }
+    
+    @objc func dimTap(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.dismissed()
         }
     }
 }

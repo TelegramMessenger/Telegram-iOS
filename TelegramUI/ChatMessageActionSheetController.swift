@@ -27,4 +27,8 @@ final class ChatMessageActionSheetController: ViewController {
         self.displayNode = ChatMessageActionSheetControllerNode(theme: self.theme, actions: self.actions, dismissed: self.dismissed)
         self.displayNodeDidLoad()
     }
+    
+    override func dismiss(completion: (() -> Void)? = nil) {
+        self.presentingViewController?.dismiss(animated: false, completion: nil)
+    }
 }

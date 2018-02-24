@@ -315,12 +315,12 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                             }
                             
                             if !contextActions.isEmpty {
-                                contextMenuController = ContextMenuController(actions: contextActions)
+                                contextMenuController = ContextMenuController(actions: contextActions, catchTapsOutside: true)
                             }
                             
                             contextMenuController?.dismissed = {
                                 if let strongSelf = self {
-                                    //strongSelf.chatDisplayNode.displayMessageActionSheet(stableId: nil, displayContextMenuController: nil)
+                                    strongSelf.chatDisplayNode.displayMessageActionSheet(stableId: nil, sheetActions: nil, displayContextMenuController: nil)
                                 }
                             }
                             
