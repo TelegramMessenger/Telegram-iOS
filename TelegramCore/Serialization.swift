@@ -5,6 +5,77 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
+private let apiPrefix = "TelegramCore.Api."
+private let apiPrefixLength = apiPrefix.count
+
+private func recursiveDescription(redact: Bool, of value: Any) -> String {
+    if let value = value as? RedactingCustomStringConvertible {
+        return value.redactingDescription(redact)
+    } else {
+        let mirror = Mirror(reflecting: value)
+        var result = ""
+        if let displayStyle = mirror.displayStyle {
+            switch displayStyle {
+                case .enum:
+                    result.append(_typeName(mirror.subjectType))
+                    if result.hasPrefix(apiPrefix) {
+                        result.removeSubrange(result.startIndex ..< result.index(result.startIndex, offsetBy: apiPrefixLength))
+                    }
+                    
+                    inner: for child in mirror.children {
+                        if let label = child.label {
+                            result.append(".")
+                            result.append(label)
+                        }
+                        let valueMirror = Mirror(reflecting: child.value)
+                        if let displayStyle = valueMirror.displayStyle {
+                            switch displayStyle {
+                                case .tuple:
+                                    var hadChildren = false
+                                    for child in valueMirror.children {
+                                        if !hadChildren {
+                                            hadChildren = true
+                                            result.append("(")
+                                        } else {
+                                            result.append(", ")
+                                        }
+                                        if let label = child.label {
+                                            result.append(label)
+                                            result.append(": ")
+                                        }
+                                        result.append(recursiveDescription(redact: redact, of: child.value))
+                                    }
+                                    if hadChildren {
+                                        result.append(")")
+                                    }
+                                default:
+                                    break
+                            }
+                        }
+                        break
+                    }
+                case .collection:
+                    result.append("[")
+                    var isFirst = true
+                    for child in mirror.children {
+                        if isFirst {
+                            isFirst = false
+                        } else {
+                            result.append(", ")
+                        }
+                        result.append(recursiveDescription(redact: redact, of: child.value))
+                    }
+                    result.append("]")
+                default:
+                    result.append("\(value)")
+            }
+        } else {
+            result.append("\(value)")
+        }
+        return result
+    }
+}
+
 public class BoxedMessage: NSObject {
     public let body: Any
     public init(_ body: Any) {
@@ -13,22 +84,29 @@ public class BoxedMessage: NSObject {
     
     override public var description: String {
         get {
-            if let body = self.body as? RedactingCustomStringConvertible {
-                #if DEBUG
+            let redact: Bool
+            #if DEBUG
+                redact = false
+            #else
+                redact = true
+            #endif
+            return recursiveDescription(redact: redact, of: self.body)
+            /*if let body = self.body as? RedactingCustomStringConvertible {
+                
                 return body.redactingDescription(false)
                 #else
                 return body.redactingDescription(true)
                 #endif
             } else {
                 return "\(self.body)"
-            }
+            }*/
         }
     }
 }
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 76
+        return 77
     }
     
     public func parseMessage(_ data: Data!) -> Any! {
@@ -64,7 +142,7 @@ public class Serialization: NSObject, MTSerialization {
         return { response -> MTDatacenterAddressListData! in
             if let config = parse(Buffer(data: response)) {
                 switch config {
-                    case let .config(_, _, _, _, _, dcOptions, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                    case let .config(_, _, _, _, _, dcOptions, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                         var addressDict: [NSNumber: [Any]] = [:]
                         for option in dcOptions {
                             switch option {

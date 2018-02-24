@@ -462,7 +462,10 @@ public struct SecretFileMediaResourceId: MediaResourceId {
 public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMultipartFetchableResource {
     public let fileId: Int64
     public let accessHash: Int64
-    public let size: Int?
+    public var size: Int? {
+        return Int(self.decryptedSize)
+    }
+    public let containerSize: Int32
     public let decryptedSize: Int32
     public let datacenterId: Int
     public let key: SecretFileEncryptionKey
@@ -471,10 +474,10 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMulti
         return .inputEncryptedFileLocation(id: self.fileId, accessHash: self.accessHash)
     }
     
-    public init(fileId: Int64, accessHash: Int64, size: Int?, decryptedSize: Int32, datacenterId: Int, key: SecretFileEncryptionKey) {
+    public init(fileId: Int64, accessHash: Int64, containerSize: Int32, decryptedSize: Int32, datacenterId: Int, key: SecretFileEncryptionKey) {
         self.fileId = fileId
         self.accessHash = accessHash
-        self.size = size
+        self.containerSize = containerSize
         self.decryptedSize = decryptedSize
         self.datacenterId = datacenterId
         self.key = key
@@ -483,11 +486,7 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMulti
     public init(decoder: PostboxDecoder) {
         self.fileId = decoder.decodeInt64ForKey("i", orElse: 0)
         self.accessHash = decoder.decodeInt64ForKey("a", orElse: 0)
-        if let size = decoder.decodeOptionalInt32ForKey("s") {
-            self.size = Int(size)
-        } else {
-            self.size = nil
-        }
+        self.containerSize = decoder.decodeInt32ForKey("s", orElse: 0)
         self.decryptedSize = decoder.decodeInt32ForKey("ds", orElse: 0)
         self.datacenterId = Int(decoder.decodeInt32ForKey("d", orElse: 0))
         self.key = decoder.decodeObjectForKey("k", decoder: { SecretFileEncryptionKey(decoder: $0) }) as! SecretFileEncryptionKey
@@ -496,11 +495,7 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMulti
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.fileId, forKey: "i")
         encoder.encodeInt64(self.accessHash, forKey: "a")
-        if let size = self.size {
-            encoder.encodeInt32(Int32(size), forKey: "s")
-        } else {
-            encoder.encodeNil(forKey: "s")
-        }
+        encoder.encodeInt32(self.containerSize, forKey: "s")
         encoder.encodeInt32(self.decryptedSize, forKey: "ds")
         encoder.encodeInt32(Int32(self.datacenterId), forKey: "d")
         encoder.encodeObject(self.key, forKey: "k")
@@ -518,7 +513,7 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMulti
             if self.accessHash != to.accessHash {
                 return false
             }
-            if self.size != to.size {
+            if self.containerSize != to.containerSize {
                 return false
             }
             if self.decryptedSize != to.decryptedSize {

@@ -280,21 +280,21 @@ private func requestClearHistory(postbox: Postbox, network: Network, stateManage
         |> mapToSignal { result -> Signal<Void, Bool> in
             if let result = result {
                 switch result {
-                case let .affectedHistory(pts, ptsCount, offset):
-                    stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
-                    if offset == 0 {
-                        return .fail(true)
-                    } else {
-                        return .complete()
-                    }
+                    case let .affectedHistory(pts, ptsCount, offset):
+                        stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                        if offset == 0 {
+                            return .fail(true)
+                        } else {
+                            return .complete()
+                        }
                 }
             } else {
                 return .fail(true)
             }
     }
     return (signal |> restart)
-        |> `catch` { _ -> Signal<Void, NoError> in
-            return .complete()
+    |> `catch` { _ -> Signal<Void, NoError> in
+        return .complete()
     }
 }
 

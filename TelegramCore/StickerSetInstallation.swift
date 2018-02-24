@@ -16,79 +16,84 @@ public enum RequestStickerSetError {
 public enum RequestStickerSetResult {
     case local(info: ItemCollectionInfo, items: [ItemCollectionItem])
     case remote(info: ItemCollectionInfo, items: [ItemCollectionItem], installed: Bool)
+    
+    public var items: [ItemCollectionItem] {
+        switch self {
+            case let .local(_, items):
+                return items
+            case let .remote(_, items, _):
+                return items
+        }
+    }
 }
 
-public func requestStickerSet(account:Account, reference: StickerPackReference) -> Signal<RequestStickerSetResult, RequestStickerSetError> {
-    
-    let collectionId:ItemCollectionId?
-    let input:Api.InputStickerSet
+public func requestStickerSet(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<RequestStickerSetResult, RequestStickerSetError> {
+    let collectionId: ItemCollectionId?
+    let input: Api.InputStickerSet
     
     switch reference {
-    case let .name(name):
-        collectionId = nil
-        input = .inputStickerSetShortName(shortName: name)
-    case let .id(id, accessHash):
-        collectionId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id)
-        input = .inputStickerSetID(id: id, accessHash: accessHash)
+        case let .name(name):
+            collectionId = nil
+            input = .inputStickerSetShortName(shortName: name)
+        case let .id(id, accessHash):
+            collectionId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id)
+            input = .inputStickerSetID(id: id, accessHash: accessHash)
     }
     
-    let localSignal:(ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, Void> = { collectionId in
-        return account.postbox.modify { modifier -> (ItemCollectionInfo, [ItemCollectionItem])? in
+    let localSignal: (ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, Void> = { collectionId in
+        return postbox.modify { modifier -> (ItemCollectionInfo, [ItemCollectionItem])? in
             return modifier.getItemCollectionInfoItems(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: collectionId)
         }
     }
     
-    let remoteSignal = account.network.request(Api.functions.messages.getStickerSet(stickerset: input))
+    let remoteSignal = network.request(Api.functions.messages.getStickerSet(stickerset: input))
         |> mapError { _ -> RequestStickerSetError in
             return .invalid
         }
         |> map { result -> RequestStickerSetResult in
             var items: [ItemCollectionItem] = []
-            let info:ItemCollectionInfo
-            let installed:Bool
+            let info: ItemCollectionInfo
+            let installed: Bool
             switch result {
-            case let .stickerSet(set, packs, documents):
-
-                info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
-                
-                switch set {
-                case let .stickerSet(data):
-                    installed = (data.flags & (1 << 0) != 0)
-                }
-                
-                var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
-                for pack in packs {
-                    switch pack {
-                    case let .stickerPack(text, fileIds):
-                        let key = ValueBoxKey(text).toMemoryBuffer()
-                        for fileId in fileIds {
-                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                            if indexKeysByFile[mediaId] == nil {
-                                indexKeysByFile[mediaId] = [key]
-                            } else {
-                                indexKeysByFile[mediaId]!.append(key)
+                case let .stickerSet(set, packs, documents):
+                    info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
+                    
+                    switch set {
+                        case let .stickerSet(data):
+                            installed = (data.flags & (1 << 0) != 0)
+                    }
+                    
+                    var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
+                    for pack in packs {
+                        switch pack {
+                        case let .stickerPack(text, fileIds):
+                            let key = ValueBoxKey(text).toMemoryBuffer()
+                            for fileId in fileIds {
+                                let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                if indexKeysByFile[mediaId] == nil {
+                                    indexKeysByFile[mediaId] = [key]
+                                } else {
+                                    indexKeysByFile[mediaId]!.append(key)
+                                }
                             }
+                            break
                         }
-                        break
                     }
-                }
-                
-                for apiDocument in documents {
-                    if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
-                        let fileIndexKeys: [MemoryBuffer]
-                        if let indexKeys = indexKeysByFile[id] {
-                            fileIndexKeys = indexKeys
-                        } else {
-                            fileIndexKeys = []
+                    
+                    for apiDocument in documents {
+                        if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
+                            let fileIndexKeys: [MemoryBuffer]
+                            if let indexKeys = indexKeysByFile[id] {
+                                fileIndexKeys = indexKeys
+                            } else {
+                                fileIndexKeys = []
+                            }
+                            items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
                         }
-                        items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
                     }
-                }
-                break
             }
             return .remote(info: info, items: items, installed: installed)
     }
-    
     
     if let collectionId = collectionId {
         return localSignal(collectionId) |> mapError {_ in return .generic} |> mapToSignal { result -> Signal<RequestStickerSetResult, RequestStickerSetError> in
@@ -101,8 +106,6 @@ public func requestStickerSet(account:Account, reference: StickerPackReference) 
     } else {
         return remoteSignal
     }
-    
-    
 }
 
 public enum InstallStickerSetError {

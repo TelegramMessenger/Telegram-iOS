@@ -69,6 +69,36 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
     } |> switchToLatest
 }
 
+public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: ItemCollectionId) -> Signal<Void, NoError> {
+    return postbox.modify { modifier -> Signal<Void, NoError> in
+        if let pack = modifier.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
+            if pack.topItems.count < 5 && pack.topItems.count < pack.info.count {
+                return requestStickerSet(postbox: postbox, network: network, reference: .id(id: pack.info.id.id, accessHash: pack.info.accessHash))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<RequestStickerSetResult?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    if let result = result {
+                        return postbox.modify { modifier -> Void in
+                            if let pack = modifier.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
+                                var items = result.items.map({ $0 as? StickerPackItem }).flatMap({ $0 })
+                                if items.count > 5 {
+                                    items.removeSubrange(5 ..< items.count)
+                                }
+                                modifier.updateOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue, item: FeaturedStickerPackItem(info: pack.info, topItems: items, unread: pack.unread))
+                            }
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
+            }
+        }
+        return .complete()
+    } |> switchToLatest
+}
+
 func parsePreviewStickerSet(_ set: Api.StickerSetCovered) -> (StickerPackCollectionInfo, [StickerPackItem]) {
     switch set {
         case let .stickerSetCovered(set, cover):

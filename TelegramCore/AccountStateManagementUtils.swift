@@ -1757,6 +1757,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     var updatedCalls: [Api.PhoneCall] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
+    var recentlyUsedStickers: [MediaId: (MessageIndex, TelegramMediaFile)] = [:]
+    var recentlyUsedGifs: [MediaId: (MessageIndex, TelegramMediaFile)] = [:]
     var syncRecentGifs = false
     var langPackDifferences: [Api.LangPackDifference] = []
     var pollLangPack = false
@@ -1814,6 +1816,40 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                                 updatedTypingActivities[chatPeerId] = [authorId: activityValue]
                             } else {
                                 updatedTypingActivities[chatPeerId]![authorId] = activityValue
+                            }
+                        }
+                        
+                        if !message.flags.contains(.Incoming), message.forwardInfo == nil {
+                            inner: for media in message.media {
+                                if let file = media as? TelegramMediaFile {
+                                    for attribute in file.attributes {
+                                        switch attribute {
+                                            case .Sticker:
+                                                if let index = message.index {
+                                                    if let (currentIndex, _) = recentlyUsedStickers[file.fileId] {
+                                                        if currentIndex < index {
+                                                            recentlyUsedStickers[file.fileId] = (index, file)
+                                                        }
+                                                    } else {
+                                                        recentlyUsedStickers[file.fileId] = (index, file)
+                                                    }
+                                                }
+                                            case .Animated:
+                                                if let index = message.index {
+                                                    if let (currentIndex, _) = recentlyUsedGifs[file.fileId] {
+                                                        if currentIndex < index {
+                                                            recentlyUsedGifs[file.fileId] = (index, file)
+                                                        }
+                                                    } else {
+                                                        recentlyUsedGifs[file.fileId] = (index, file)
+                                                    }
+                                                }
+                                            default:
+                                                break
+                                        }
+                                    }
+                                    break inner
+                                }
                             }
                         }
                     }
@@ -2017,7 +2053,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                 })
             case let .UpdateInstalledStickerPacks(operation):
                 stickerPackOperations.append(operation)
-            case let .UpdateRecentGifs:
+            case .UpdateRecentGifs:
                 syncRecentGifs = true
             case let .UpdateChatInputState(peerId, inputState):
                 modifier.updatePeerChatInterfaceState(peerId, update: { current in
@@ -2159,8 +2195,24 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
         }
     }
     
+    if !recentlyUsedStickers.isEmpty {
+        let stickerFiles: [TelegramMediaFile] = recentlyUsedStickers.values.sorted(by: {
+            return $0.0 < $1.0
+        }).map({ $0.1 })
+        for file in stickerFiles {
+            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+        }
+    }
+    
     if syncRecentGifs {
         addSynchronizeSavedGifsOperation(modifier: modifier, operation: .sync)
+    } else {
+        let gifFiles: [TelegramMediaFile] = recentlyUsedGifs.values.sorted(by: {
+            return $0.0 < $1.0
+        }).map({ $0.1 })
+        for file in gifFiles {
+            modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+        }
     }
     
     for chatPeerId in updatedSecretChatTypingActivities {

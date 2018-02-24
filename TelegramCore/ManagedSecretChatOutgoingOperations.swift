@@ -332,7 +332,6 @@ private enum BoxedDecryptedMessage {
             case let .layer8(message):
                 let _ = message.serialize(buffer, true)
             case let .layer46(message):
-                //decryptedMessageLayer#1be31789 random_bytes:bytes layer:int in_seq_no:int out_seq_no:int message:DecryptedMessage = DecryptedMessageLayer;
                 buffer.appendInt32(0x1be31789)
                 let randomBytes = malloc(15)!
                 arc4random_buf(randomBytes, 15)

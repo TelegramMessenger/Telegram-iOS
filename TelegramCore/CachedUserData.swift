@@ -14,7 +14,7 @@ public final class CachedUserData: CachedPeerData {
     
     public let peerIds = Set<PeerId>()
     public let messageIds = Set<MessageId>()
-    public let associatedHistoryPeerId: PeerId? = nil
+    public let associatedHistoryMessageId: MessageId? = nil
     
     init() {
         self.about = nil
