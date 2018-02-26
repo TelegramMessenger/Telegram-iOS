@@ -101,11 +101,11 @@ func managedSynchronizeInstalledStickerPacksOperations(postbox: Postbox, network
                     }
                     return .complete()
                 })
-                    |> then(postbox.modify { modifier -> Void in
-                        let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
-                    })
+                |> then(postbox.modify { modifier -> Void in
+                    let _ = modifier.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                })
                 
-                disposable.set(signal.start())
+                disposable.set((signal |> delay(2.0, queue: Queue.concurrentDefaultQueue())).start())
             }
         })
         

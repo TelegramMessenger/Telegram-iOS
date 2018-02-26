@@ -21,14 +21,18 @@ public struct CacheUsageStats {
     public let otherSize: Int64
     public let otherPaths: [String]
     public let cacheSize: Int64
+    public let tempPaths: [String]
+    public let tempSize: Int64
     
-    public init(media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], mediaResourceIds: [MediaId: [MediaResourceId]], peers: [PeerId: Peer], otherSize: Int64, otherPaths: [String], cacheSize: Int64) {
+    public init(media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], mediaResourceIds: [MediaId: [MediaResourceId]], peers: [PeerId: Peer], otherSize: Int64, otherPaths: [String], cacheSize: Int64, tempPaths: [String], tempSize: Int64) {
         self.media = media
         self.mediaResourceIds = mediaResourceIds
         self.peers = peers
         self.otherSize = otherSize
         self.otherPaths = otherPaths
         self.cacheSize = cacheSize
+        self.tempPaths = tempPaths
+        self.tempSize = tempSize
     }
 }
 
@@ -139,6 +143,23 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
                     return account.postbox.mediaBox.collectOtherResourceUsage(excludeIds: allResourceIds)
                     |> mapError { _ in return CollectCacheUsageStatsError.generic }
                     |> mapToSignal { otherSize, otherPaths, cacheSize in
+                        var tempPaths: [String] = []
+                        var tempSize: Int64 = 0
+                        #if os(iOS)
+                            if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: NSTemporaryDirectory()), includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey]) {
+                                for url in enumerator {
+                                    if let url = url as? URL {
+                                        if let isDirectoryValue = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectoryValue {
+                                            tempPaths.append(url.path)
+                                        } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize {
+                                            tempPaths.append(url.path)
+                                            tempSize += Int64(fileSizeValue)
+                                        }
+                                    }
+                                }
+                            }
+                        #endif
+                        
                         return account.postbox.modify { modifier -> CacheUsageStats in
                             var peers: [PeerId: Peer] = [:]
                             for peerId in finalMedia.keys {
@@ -146,7 +167,7 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
                                     peers[peer.id] = peer
                                 }
                             }
-                            return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: otherSize, otherPaths: otherPaths, cacheSize: cacheSize)
+                            return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: otherSize, otherPaths: otherPaths, cacheSize: cacheSize, tempPaths: tempPaths, tempSize: tempSize)
                         } |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
                         |> mapToSignal { stats -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
                             return .fail(.done(stats))

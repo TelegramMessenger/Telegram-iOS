@@ -46,6 +46,19 @@ final class SynchronizeMarkFeaturedStickerPacksAsSeenOperation: PostboxCoding {
     }
 }
 
+public func addSynchronizeInstalledStickerPacksOperation(modifier: Modifier, namespace: ItemCollectionId.Namespace) {
+    let operationNamespace: SynchronizeInstalledStickerPacksOperationNamespace
+    switch namespace {
+        case Namespaces.ItemCollection.CloudStickerPacks:
+            operationNamespace = .stickers
+        case Namespaces.ItemCollection.CloudMaskPacks:
+            operationNamespace = .masks
+        default:
+            return
+    }
+    addSynchronizeInstalledStickerPacksOperation(modifier: modifier, namespace: operationNamespace)
+}
+
 func addSynchronizeInstalledStickerPacksOperation(modifier: Modifier, namespace: SynchronizeInstalledStickerPacksOperationNamespace) {
     var updateLocalIndex: Int32?
     let tag: PeerOperationLogTag

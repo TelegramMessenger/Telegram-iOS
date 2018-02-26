@@ -33,11 +33,12 @@ private final class MultipartDownloadState {
         self.decryptedSize = decryptedSize
     }
     
-    func transform(data: Data) -> Data {
+    func transform(offset: Int, data: Data) -> Data {
         if self.aesKey.count != 0 {
             var decryptedData = data
             assert(decryptedSize != nil)
             assert(decryptedData.count % 16 == 0)
+            assert(offset == Int(self.currentSize))
             decryptedData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                 self.aesIv.withUnsafeMutableBytes { (iv: UnsafeMutablePointer<UInt8>) -> Void in
                     MTAesDecryptBytesInplaceAndModifyIv(bytes, decryptedData.count, self.aesKey, iv)
@@ -493,20 +494,26 @@ private final class MultipartFetchManager {
             return
         }
         var rangesToFetch = currentRanges.subtracting(self.currentFilledRanges)
+        let isSingleContinuousRange = rangesToFetch.rangeView.count == 1
         for offset in self.fetchedParts.keys.sorted() {
             if let (_, data) = self.fetchedParts[offset] {
                 let partRange = offset ..< (offset + data.count)
                 rangesToFetch.remove(integersIn: partRange)
-                if let minOffset = currentRanges.rangeView.first?.lowerBound {
-                    if true || minOffset >= offset {
-                        self.currentFilledRanges.insert(integersIn: partRange)
-                        self.fetchedParts.removeValue(forKey: offset)
-                        self.partReady(offset, self.state.transform(data: data))
-                    } else {
-                        if !currentRanges.intersects(integersIn: partRange) {
-                            self.fetchedParts.removeValue(forKey: offset)
+                
+                var hasEarlierFetchingPart = false
+                if isSingleContinuousRange {
+                    inner: for key in self.fetchingParts.keys {
+                        if key < offset {
+                            hasEarlierFetchingPart = true
+                            break inner
                         }
                     }
+                }
+                
+                if !hasEarlierFetchingPart {
+                    self.currentFilledRanges.insert(integersIn: partRange)
+                    self.fetchedParts.removeValue(forKey: offset)
+                    self.partReady(offset, self.state.transform(offset: offset, data: data))
                 }
             }
         }
@@ -521,7 +528,11 @@ private final class MultipartFetchManager {
             if rangesToFetch.isEmpty && self.fetchingParts.isEmpty && !self.completeSizeReported {
                 self.completeSizeReported = true
                 assert(self.fetchedParts.isEmpty)
-                self.reportCompleteSize(completeSize)
+                if let decryptedSize = self.state.decryptedSize {
+                    self.reportCompleteSize(Int(decryptedSize))
+                } else {
+                    self.reportCompleteSize(completeSize)
+                }
             }
         }
         
@@ -726,6 +737,10 @@ func multipartFetch(account: Account, resource: TelegramMultipartFetchableResour
         } else {
             assertionFailure("multipartFetch: unsupported resource type \(resource)")
             return EmptyDisposable
+        }
+        
+        if encryptionKey != nil {
+            subscriber.putNext(.reset)
         }
         
         let manager = MultipartFetchManager(size: size, ranges: ranges, encryptionKey: encryptionKey, decryptedSize: decryptedSize, location: location, takeDownloader: { id, cdn in

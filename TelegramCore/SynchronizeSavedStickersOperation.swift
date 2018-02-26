@@ -165,7 +165,7 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
 
 public func addSavedSticker(modifier: Modifier, file: TelegramMediaFile, stringRepresentations: [String]) {
     if let resource = file.resource as? CloudDocumentMediaResource {
-        modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: SavedStickerItem(file: file, stringRepresentations: stringRepresentations)), removeTailIfCountExceeds: 30)
+        modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: SavedStickerItem(file: file, stringRepresentations: stringRepresentations)), removeTailIfCountExceeds: 5)
         addSynchronizeSavedStickersOperation(modifier: modifier, operation: .add(id: resource.fileId, accessHash: resource.accessHash))
     }
 }

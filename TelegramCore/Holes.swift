@@ -40,6 +40,7 @@ enum FetchMessageHistoryHoleSource {
 }
 
 func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Postbox, hole: MessageHistoryHole, direction: MessageHistoryViewRelativeHoleDirection, tagMask: MessageTags?, limit: Int = 100) -> Signal<Void, NoError> {
+    assert(tagMask == nil || tagMask!.rawValue != 0)
     return postbox.loadedPeerWithId(hole.maxIndex.id.peerId)
         |> take(1)
         |> mapToSignal { peer in
