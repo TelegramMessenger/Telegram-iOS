@@ -232,62 +232,53 @@ public final class PendingMessageManager {
         
         let disposable = MetaDisposable()
         let messages = self.postbox.messagesAtIds(ids)
-            |> deliverOn(self.queue)
-            |> afterDisposed { [weak self, weak disposable] in
-                if let strongSelf = self, let strongDisposable = disposable {
-                    strongSelf.beginSendingMessagesDisposables.remove(strongDisposable)
-                }
+        |> deliverOn(self.queue)
+        |> afterDisposed { [weak self, weak disposable] in
+            if let strongSelf = self, let strongDisposable = disposable {
+                strongSelf.beginSendingMessagesDisposables.remove(strongDisposable)
+            }
         }
         self.beginSendingMessagesDisposables.add(disposable)
         disposable.set(messages.start(next: { [weak self] messages in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
                 
-                //var groupIds = Set<Int64>()
+                var currentGroupId: Int64? = nil
                 
-                var currentGroupId:Int64? = nil
-                
-                for message in messages.filter({!$0.flags.contains(.Sending)}).sorted(by: { $0.id < $1.id }) {
+                for message in messages.filter({ !$0.flags.contains(.Sending) }).sorted(by: { $0.id < $1.id }) {
                     guard let messageContext = strongSelf.messageContexts[message.id] else {
                         continue
                     }
                     
-                    
                     let contentToUpload = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, message: message)
                     
                     switch contentToUpload {
-                    case let .ready(content):
-                        
-                        
-                        if let groupingKey = message.groupingKey {
-                            strongSelf.beginSendingMessage(messageContext: messageContext, messageId: message.id, groupId: message.groupingKey, content: content)
-                            if let current = currentGroupId, current != groupingKey {
-                                strongSelf.beginSendingGroupIfPossible(groupId: current)
-                            }
-                        } else {
-                            if let currentGroupId = currentGroupId {
-                                strongSelf.beginSendingGroupIfPossible(groupId: currentGroupId)
+                        case let .ready(content):
+                            if let groupingKey = message.groupingKey {
                                 strongSelf.beginSendingMessage(messageContext: messageContext, messageId: message.id, groupId: message.groupingKey, content: content)
+                                if let current = currentGroupId, current != groupingKey {
+                                    strongSelf.beginSendingGroupIfPossible(groupId: current)
+                                }
                             } else {
+                                if let currentGroupId = currentGroupId {
+                                    strongSelf.beginSendingGroupIfPossible(groupId: currentGroupId)
+                                }
                                 strongSelf.beginSendingMessage(messageContext: messageContext, messageId: message.id, groupId: message.groupingKey, content: content)
                             }
-                        }
-                        
-                        currentGroupId = message.groupingKey
-                        
-                    case let .upload(uploadSignal):
-                        if strongSelf.canBeginUploadingMessage(id: message.id) {
-                            strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: uploadSignal)
-                        } else {
-                            messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: uploadSignal)
-                        }
+                            
+                            currentGroupId = message.groupingKey
+                        case let .upload(uploadSignal):
+                            if strongSelf.canBeginUploadingMessage(id: message.id) {
+                                strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: uploadSignal)
+                            } else {
+                                messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: uploadSignal)
+                            }
                     }
                 }
                 
                 if let currentGroupId = currentGroupId {
                     strongSelf.beginSendingGroupIfPossible(groupId: currentGroupId)
                 }
-                
             }
         }))
     }
