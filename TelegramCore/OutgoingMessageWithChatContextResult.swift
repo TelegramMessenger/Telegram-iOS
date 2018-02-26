@@ -133,6 +133,8 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                 case let .internalReference(id, type, title, description, image, file, message):
                     if type == "game" {
                         return .message(text: "", attributes: attributes, media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: title ?? "", description: description ?? "", image: image, file: file), replyToMessageId: nil, localGroupingKey: nil)
+                    } else if let file = file, type == "gif" {
+                        return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil, localGroupingKey: nil)
                     } else if let image = image {
                         return .message(text: caption, attributes: attributes, media: image, replyToMessageId: nil, localGroupingKey: nil)
                     } else if let file = file {
