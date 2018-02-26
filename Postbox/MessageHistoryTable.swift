@@ -1133,7 +1133,9 @@ final class MessageHistoryTable: Table {
             let (_, lowerGroup) = lowerEntryAndGroup
             let (_, upperGroup) = upperEntryAndGroup
             
-            switch (lowerGroup, upperGroup) {
+            NSLog("\(lowerEntryAndGroup.1), \(upperEntryAndGroup.1)")
+            
+            switch (lowerEntryAndGroup.1, upperEntryAndGroup.1) {
                 case (.none, .none):
                     groupInfo = self.generateNewGroupInfo()
                 case (.none, .otherGroup):
@@ -1958,8 +1960,8 @@ final class MessageHistoryTable: Table {
             let updatedIndex = MessageIndex(id: index.id, timestamp: timestamp)
             
             self.valueBox.remove(self.table, key: self.key(index))
-            
-            let updatedGroupInfo = self.updateMovingGroupInfo(index: index, updatedIndex: updatedIndex, groupingKey: previousMessage.groupingKey, previousInfo: previousMessage.groupInfo, updatedGroupInfos: &updatedGroupInfos)
+            //TODO changed updatedIndex -> index
+            let updatedGroupInfo = self.updateMovingGroupInfo(index: index, updatedIndex: index, groupingKey: previousMessage.groupingKey, previousInfo: previousMessage.groupInfo, updatedGroupInfos: &updatedGroupInfos)
             if let updatedGroupInfo = updatedGroupInfo, previousMessage.groupInfo != updatedGroupInfo {
                 updatedGroupInfos[index.id] = updatedGroupInfo
             }

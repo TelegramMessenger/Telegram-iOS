@@ -1120,4 +1120,14 @@ public final class MediaBox {
             return EmptyDisposable
         }
     }
+    
+    public func clearFileContexts() -> Signal<Void, Void> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                self.fileContexts.removeAll()
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
 }
