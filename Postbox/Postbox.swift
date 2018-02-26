@@ -2104,7 +2104,17 @@ public final class Postbox {
         return result
     }
     
+    #if DEBUG
+    private let debugIsInTransactionValue = Atomic<Bool>(value: false)
+    public var debugIsInTransaction: Bool {
+        return self.debugIsInTransactionValue.with { $0 }
+    }
+    #endif
+    
     private func internalTransaction<T>(_ f: (Modifier) -> T) -> (result: T, updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
+        #if DEBUG
+        let _ = self.debugIsInTransactionValue.swap(true)
+        #endif
         self.valueBox.begin()
         self.afterBegin()
         let modifier = Modifier(postbox: self)
@@ -2112,6 +2122,9 @@ public final class Postbox {
         modifier.disposed = true
         let (updatedTransactionState, updatedMasterClientId) = self.beforeCommit()
         self.valueBox.commit()
+        #if DEBUG
+        let _ = self.debugIsInTransactionValue.swap(false)
+        #endif
         
         if let currentUpdatedState = self.currentUpdatedState {
             self.statePipe.putNext(currentUpdatedState)
