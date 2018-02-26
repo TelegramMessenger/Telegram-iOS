@@ -1133,9 +1133,7 @@ final class MessageHistoryTable: Table {
             let (_, lowerGroup) = lowerEntryAndGroup
             let (_, upperGroup) = upperEntryAndGroup
             
-            NSLog("\(lowerEntryAndGroup.1), \(upperEntryAndGroup.1)")
-            
-            switch (lowerEntryAndGroup.1, upperEntryAndGroup.1) {
+            switch (lowerGroup, upperGroup) {
                 case (.none, .none):
                     groupInfo = self.generateNewGroupInfo()
                 case (.none, .otherGroup):
@@ -1961,13 +1959,16 @@ final class MessageHistoryTable: Table {
             
             self.valueBox.remove(self.table, key: self.key(index))
             //TODO changed updatedIndex -> index
+            #if os(iOS)
+                assert(false)
+            #endif
             let updatedGroupInfo = self.updateMovingGroupInfo(index: index, updatedIndex: index, groupingKey: previousMessage.groupingKey, previousInfo: previousMessage.groupInfo, updatedGroupInfos: &updatedGroupInfos)
             if let updatedGroupInfo = updatedGroupInfo, previousMessage.groupInfo != updatedGroupInfo {
                 updatedGroupInfos[index.id] = updatedGroupInfo
             }
             
             let updatedMessage = IntermediateMessage(stableId: previousMessage.stableId, stableVersion: previousMessage.stableVersion + 1, id: previousMessage.id, globallyUniqueId: previousMessage.globallyUniqueId, groupingKey: previousMessage.groupingKey, groupInfo: updatedGroupInfo, timestamp: timestamp, flags: previousMessage.flags, tags: previousMessage.tags, globalTags: previousMessage.globalTags, localTags: previousMessage.localTags, forwardInfo: previousMessage.forwardInfo, authorId: previousMessage.authorId, text: previousMessage.text, attributesData: previousMessage.attributesData, embeddedMediaData: previousMessage.embeddedMediaData, referencedMedia: previousMessage.referencedMedia)
-            self.storeIntermediateMessage(updatedMessage, sharedKey: self.key(index))
+            self.storeIntermediateMessage(updatedMessage, sharedKey: self.key(updatedIndex))
             
             let tags = previousMessage.tags.rawValue
             if tags != 0 {
