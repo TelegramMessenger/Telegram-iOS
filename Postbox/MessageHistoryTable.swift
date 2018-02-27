@@ -1960,7 +1960,7 @@ final class MessageHistoryTable: Table {
             self.valueBox.remove(self.table, key: self.key(index))
             //TODO changed updatedIndex -> index
             #if os(iOS)
-                assert(false)
+                //assert(false)
             #endif
             let updatedGroupInfo = self.updateMovingGroupInfo(index: index, updatedIndex: index, groupingKey: previousMessage.groupingKey, previousInfo: previousMessage.groupInfo, updatedGroupInfos: &updatedGroupInfos)
             if let updatedGroupInfo = updatedGroupInfo, previousMessage.groupInfo != updatedGroupInfo {
