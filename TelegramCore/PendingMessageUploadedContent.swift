@@ -105,7 +105,11 @@ private enum PredownloadedResource {
     case none
 }
 
-private func maybePredownloadedImageResource(postbox: Postbox, resource: MediaResource) -> Signal<PredownloadedResource, PendingMessageUploadError> {
+private func maybePredownloadedImageResource(postbox: Postbox, peerId: PeerId, resource: MediaResource) -> Signal<PredownloadedResource, PendingMessageUploadError> {
+    if peerId.namespace == Namespaces.Peer.SecretChat {
+        return .single(.none)
+    }
+    
     return Signal<Signal<PredownloadedResource, PendingMessageUploadError>, PendingMessageUploadError> { subscriber in
         let data = postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false)).start(next: { data in
             if data.complete {
@@ -154,7 +158,11 @@ private func maybePredownloadedImageResource(postbox: Postbox, resource: MediaRe
     } |> switchToLatest
 }
 
-private func maybePredownloadedFileResource(postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, resource: MediaResource) -> Signal<PredownloadedResource, PendingMessageUploadError> {
+private func maybePredownloadedFileResource(postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, peerId: PeerId, resource: MediaResource) -> Signal<PredownloadedResource, PendingMessageUploadError> {
+    if peerId.namespace == Namespaces.Peer.SecretChat {
+        return .single(.none)
+    }
+    
     return auxiliaryMethods.fetchResourceMediaReferenceHash(resource)
         |> mapToSignal { hash -> Signal<PredownloadedResource, NoError> in
             if let hash = hash {
@@ -185,7 +193,7 @@ private func maybeCacheUploadedResource(postbox: Postbox, key: CachedSentMediaRe
 
 private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerId: PeerId, image: TelegramMediaImage, text: String, autoremoveAttribute: AutoremoveTimeoutMessageAttribute?) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
     if let largestRepresentation = largestImageRepresentation(image.representations) {
-        let predownloadedResource: Signal<PredownloadedResource, PendingMessageUploadError> = maybePredownloadedImageResource(postbox: postbox, resource: largestRepresentation.resource)
+        let predownloadedResource: Signal<PredownloadedResource, PendingMessageUploadError> = maybePredownloadedImageResource(postbox: postbox, peerId: peerId, resource: largestRepresentation.resource)
         return predownloadedResource
             |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                 var referenceKey: CachedSentMediaReferenceKey?
@@ -359,7 +367,7 @@ public func statsCategoryForFileWithAttributes(_ attributes: [TelegramMediaFileA
 }
 
 private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, peerId: PeerId, messageId: MessageId?, text: String, attributes: [MessageAttribute], file: TelegramMediaFile) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
-    return maybePredownloadedFileResource(postbox: postbox, auxiliaryMethods: auxiliaryMethods, resource: file.resource) |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
+    return maybePredownloadedFileResource(postbox: postbox, auxiliaryMethods: auxiliaryMethods, peerId: peerId, resource: file.resource) |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
         var referenceKey: CachedSentMediaReferenceKey?
         switch result {
             case let .media(media):

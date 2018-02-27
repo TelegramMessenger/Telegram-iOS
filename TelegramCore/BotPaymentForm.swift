@@ -138,7 +138,7 @@ public struct BotPaymentForm {
     public let canSaveCredentials: Bool
     public let passwordMissing: Bool
     public let invoice: BotPaymentInvoice
-    public let providerId: Int32
+    public let providerId: PeerId
     public let url: String
     public let nativeProvider: BotPaymentNativeProvider?
     public let savedInfo: BotPaymentRequestedInfo?
@@ -229,7 +229,7 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
                                     parsedSavedCredentials = .card(id: id, title: title)
                             }
                         }
-                        return BotPaymentForm(canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: providerId, url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
+                        return BotPaymentForm(canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: providerId), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
                 }
             } |> mapError { _ -> BotPaymentFormRequestError in return .generic }
         }

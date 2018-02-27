@@ -9,12 +9,47 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public enum CallSessionError {
+public enum CallSessionError: Equatable {
     case generic
     case privacyRestricted
     case notSupportedByPeer
     case serverProvided(String)
     case disconnected
+    
+    public static func ==(lhs: CallSessionError, rhs: CallSessionError) -> Bool {
+        switch lhs {
+            case .generic:
+                if case .generic = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .privacyRestricted:
+                if case .privacyRestricted = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .notSupportedByPeer:
+                if case .notSupportedByPeer = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .serverProvided(text):
+                if case .serverProvided(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .disconnected:
+                if case .disconnected = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public enum CallSessionEndedType {
@@ -23,14 +58,31 @@ public enum CallSessionEndedType {
     case missed
 }
 
-public enum CallSessionTerminationReason {
+public enum CallSessionTerminationReason: Equatable {
     case ended(CallSessionEndedType)
     case error(CallSessionError)
+    
+    public static func ==(lhs: CallSessionTerminationReason, rhs: CallSessionTerminationReason) -> Bool {
+        switch lhs {
+            case let .ended(type):
+                if case .ended(type) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .error(error):
+                if case .error(error) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public struct ReportCallRating  {
-    public let id:Int64
-    public let accessHash:Int64
+    public let id: Int64
+    public let accessHash: Int64
 }
 
 enum CallSessionInternalState {

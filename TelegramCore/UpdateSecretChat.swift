@@ -52,7 +52,7 @@ func updateSecretChat(accountPeerId: PeerId, modifier: Modifier, chat: Api.Encry
                         case .basicLayer:
                             layer = .layer8
                         case let .sequenceBasedLayer(sequenceState):
-                            layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                            layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
                     }
                     if let layer = layer {
                         updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: currentPeer.id, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
