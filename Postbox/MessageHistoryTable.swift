@@ -591,7 +591,7 @@ final class MessageHistoryTable: Table {
                     processIndexOperationsCommitAccumulatedRemoveIndices(peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
                     
                     var updatedGroupInfos: [MessageId: MessageGroupInfo] = [:]
-                    let tagsAndGlobalTags = self.justUpdateTimestamp(index, timestamp: timestamp, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, updatedGroupInfos: &updatedGroupInfos, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+                    let tagsAndGlobalTags = self.justUpdateTimestamp(index, timestamp: timestamp, unsentMessageOperations: &unsentMessageOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, updatedGroupInfos: &updatedGroupInfos, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
                     outputOperations.append(.UpdateTimestamp(index, timestamp))
                     if !updatedGroupInfos.isEmpty {
                         outputOperations.append(.UpdateGroupInfos(updatedGroupInfos))
@@ -1004,11 +1004,20 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
-    func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation],  updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], groupFeedOperations: inout [PeerGroupId : [GroupFeedIndexOperation]], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) {
+    func offsetPendingMessagesTimestamps(lowerBound: MessageId, excludeIds: Set<MessageId>, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation],  updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], groupFeedOperations: inout [PeerGroupId : [GroupFeedIndexOperation]], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) {
+        var peerMessageIds: [MessageId] = []
         for messageId in self.unsentTable.get() {
             if messageId.peerId == lowerBound.peerId && messageId.namespace == lowerBound.namespace && messageId.id > lowerBound.id {
-                self.updateMessageTimestamp(messageId, timestamp: timestamp, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+                if !excludeIds.contains(messageId) {
+                    peerMessageIds.append(messageId)
+                }
             }
+        }
+        
+        peerMessageIds.sort()
+        
+        for messageId in peerMessageIds.reversed() {
+            self.updateMessageTimestamp(messageId, timestamp: timestamp, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
         }
     }
     
@@ -1953,9 +1962,57 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    private func justUpdateTimestamp(_ index: MessageIndex, timestamp: Int32, updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], updatedGroupInfos: inout [MessageId: MessageGroupInfo], groupFeedOperations: inout [PeerGroupId : [GroupFeedIndexOperation]], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) -> (MessageTags, GlobalMessageTags)? {
+    private func justUpdateTimestamp(_ index: MessageIndex, timestamp: Int32, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], updatedGroupInfos: inout [MessageId: MessageGroupInfo], groupFeedOperations: inout [PeerGroupId : [GroupFeedIndexOperation]], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) -> (MessageTags, GlobalMessageTags)? {
         if let previousMessage = self.getMessage(index) {
+            var storeForwardInfo: StoreMessageForwardInfo?
+            if let forwardInfo = previousMessage.forwardInfo {
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.authorId, sourceId: forwardInfo.sourceId, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+            }
+            
+            var parsedAttributes: [MessageAttribute] = []
+            var parsedMedia: [Media] = []
+            
+            let attributesData = previousMessage.attributesData.sharedBufferNoCopy()
+            if attributesData.length > 4 {
+                var attributeCount: Int32 = 0
+                attributesData.read(&attributeCount, offset: 0, length: 4)
+                for _ in 0 ..< attributeCount {
+                    var attributeLength: Int32 = 0
+                    attributesData.read(&attributeLength, offset: 0, length: 4)
+                    if let attribute = PostboxDecoder(buffer: MemoryBuffer(memory: attributesData.memory + attributesData.offset, capacity: Int(attributeLength), length: Int(attributeLength), freeWhenDone: false)).decodeRootObject() as? MessageAttribute {
+                        parsedAttributes.append(attribute)
+                    }
+                    attributesData.skip(Int(attributeLength))
+                }
+            }
+            
+            let embeddedMediaData = previousMessage.embeddedMediaData.sharedBufferNoCopy()
+            if embeddedMediaData.length > 4 {
+                var embeddedMediaCount: Int32 = 0
+                embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
+                for _ in 0 ..< embeddedMediaCount {
+                    var mediaLength: Int32 = 0
+                    embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
+                    if let media = PostboxDecoder(buffer: MemoryBuffer(memory: embeddedMediaData.memory + embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
+                        parsedMedia.append(media)
+                    }
+                    embeddedMediaData.skip(Int(mediaLength))
+                }
+            }
+            
+            for mediaId in previousMessage.referencedMedia {
+                if let media = self.messageMediaTable.get(mediaId, embedded: { _, _ in
+                    return nil
+                }) {
+                    parsedMedia.append(media)
+                }
+            }
+            
             let updatedIndex = MessageIndex(id: index.id, timestamp: timestamp)
+            
+            let _ = self.justUpdate(index, message: InternalStoreMessage(id: previousMessage.id, timestamp: timestamp, globallyUniqueId: previousMessage.globallyUniqueId, groupingKey: previousMessage.groupingKey, flags: StoreMessageFlags(previousMessage.flags), tags: previousMessage.tags, globalTags: previousMessage.globalTags, localTags: previousMessage.localTags, forwardInfo: storeForwardInfo, authorId: previousMessage.authorId, text: previousMessage.text, attributes: parsedAttributes, media: parsedMedia), sharedKey: self.key(updatedIndex), sharedBuffer: WriteBuffer(), sharedEncoder: PostboxEncoder(), unsentMessageOperations: &unsentMessageOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, updatedGroupInfos: &updatedGroupInfos, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+            return (previousMessage.tags, previousMessage.globalTags)
+            
             
             self.valueBox.remove(self.table, key: self.key(index))
             //TODO changed updatedIndex -> index
@@ -1966,6 +2023,8 @@ final class MessageHistoryTable: Table {
             if let updatedGroupInfo = updatedGroupInfo, previousMessage.groupInfo != updatedGroupInfo {
                 updatedGroupInfos[index.id] = updatedGroupInfo
             }
+            
+            //for media in previousMessage.referencedMedia
             
             let updatedMessage = IntermediateMessage(stableId: previousMessage.stableId, stableVersion: previousMessage.stableVersion + 1, id: previousMessage.id, globallyUniqueId: previousMessage.globallyUniqueId, groupingKey: previousMessage.groupingKey, groupInfo: updatedGroupInfo, timestamp: timestamp, flags: previousMessage.flags, tags: previousMessage.tags, globalTags: previousMessage.globalTags, localTags: previousMessage.localTags, forwardInfo: previousMessage.forwardInfo, authorId: previousMessage.authorId, text: previousMessage.text, attributesData: previousMessage.attributesData, embeddedMediaData: previousMessage.embeddedMediaData, referencedMedia: previousMessage.referencedMedia)
             self.storeIntermediateMessage(updatedMessage, sharedKey: self.key(updatedIndex))
