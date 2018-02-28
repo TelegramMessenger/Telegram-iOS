@@ -593,6 +593,8 @@
 		D0F8C39E20178B9B00236FC5 /* GroupFeedPeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */; };
 		D0F8C3A02017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8C39F2017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift */; };
 		D0F8C3A12017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8C39F2017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift */; };
+		D0FA08BB2046B37900DD23FC /* ContentPrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08BA2046B37900DD23FC /* ContentPrivacySettings.swift */; };
+		D0FA08BC2046B37900DD23FC /* ContentPrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08BA2046B37900DD23FC /* ContentPrivacySettings.swift */; };
 		D0FA0ABD1E76C908005BB9B7 /* TwoStepVerification.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */; };
 		D0FA35051EA6135D00E56FFA /* CacheStorageSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA35041EA6135D00E56FFA /* CacheStorageSettings.swift */; };
 		D0FA35061EA6135D00E56FFA /* CacheStorageSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA35041EA6135D00E56FFA /* CacheStorageSettings.swift */; };
@@ -957,6 +959,7 @@
 		D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReplyMarkupMessageAttribute.swift; sourceTree = "<group>"; };
 		D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupFeedPeers.swift; sourceTree = "<group>"; };
 		D0F8C39F2017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalTelegramCoreConfiguration.swift; sourceTree = "<group>"; };
+		D0FA08BA2046B37900DD23FC /* ContentPrivacySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentPrivacySettings.swift; sourceTree = "<group>"; };
 		D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerification.swift; sourceTree = "<group>"; };
 		D0FA35041EA6135D00E56FFA /* CacheStorageSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CacheStorageSettings.swift; sourceTree = "<group>"; };
 		D0FA35071EA632E400E56FFA /* CollectCacheUsageStats.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CollectCacheUsageStats.swift; sourceTree = "<group>"; };
@@ -1028,6 +1031,7 @@
 				D01C7ED51EF5E468008305F1 /* ProxySettings.swift */,
 				D0B167221F9F972E00976B40 /* LoggingSettings.swift */,
 				D0AF32301FACEDEC0097362B /* CoreSettings.swift */,
+				D0FA08BA2046B37900DD23FC /* ContentPrivacySettings.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -2079,6 +2083,7 @@
 				D0B85AC51F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift in Sources */,
 				D0B843C31DA7FF30005F29E1 /* NBPhoneMetaDataGenerator.m in Sources */,
 				C2366C861E4F403C0097CCFF /* AddressNames.swift in Sources */,
+				D0FA08BB2046B37900DD23FC /* ContentPrivacySettings.swift in Sources */,
 				D0F8C39D20178B9B00236FC5 /* GroupFeedPeers.swift in Sources */,
 				D0B843C11DA7FF30005F29E1 /* NBPhoneMetaData.m in Sources */,
 				D0528E601E65B94E00E2FEF5 /* SingleMessageView.swift in Sources */,
@@ -2298,6 +2303,7 @@
 				C210DD631FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift in Sources */,
 				D0B8440F1DAB91CD005F29E1 /* Either.swift in Sources */,
 				D0DC35511DE36908000195EB /* RequestChatContextResults.swift in Sources */,
+				D0FA08BC2046B37900DD23FC /* ContentPrivacySettings.swift in Sources */,
 				D08CAA8D1ED81EDF0000FDA8 /* Localizations.swift in Sources */,
 				D0F7B1EC1E045C87007EB8A5 /* SearchPeers.swift in Sources */,
 				D001F3EF1E128A1C007A8C60 /* AccountIntermediateState.swift in Sources */,

@@ -25,6 +25,7 @@ public struct Namespaces {
         public static let CloudSecretFile: Int32 = 10
         public static let CloudGame: Int32 = 11
         public static let CloudInvoice: Int32 = 12
+        public static let LocalWebpage: Int32 = 13
     }
     
     public struct Peer {
@@ -132,6 +133,7 @@ private enum PreferencesKeyValues: Int32 {
     case proxySettings = 5
     case loggingSettings = 6
     case coreSettings = 7
+    case contentPrivacySettings = 8
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -186,6 +188,12 @@ public struct PreferencesKeys {
     public static let coreSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.coreSettings.rawValue)
+        return key
+    }()
+    
+    public static let contentPrivacySettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.contentPrivacySettings.rawValue)
         return key
     }()
 }

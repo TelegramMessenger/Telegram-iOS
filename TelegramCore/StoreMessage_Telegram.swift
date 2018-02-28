@@ -299,7 +299,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                     return (TelegramMediaExpiredContent(data: .file), nil)
                 }
             case let .messageMediaWebPage(webpage):
-                if let mediaWebpage = telegramMediaWebpageFromApiWebpage(webpage) {
+                if let mediaWebpage = telegramMediaWebpageFromApiWebpage(webpage, url: nil) {
                     return (mediaWebpage, nil)
                 }
             case .messageMediaUnsupported:
@@ -475,7 +475,7 @@ extension StoreMessage {
                 }
                 
                 if let viaBotId = viaBotId {
-                    attributes.append(InlineBotMessageAttribute(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: viaBotId)))
+                    attributes.append(InlineBotMessageAttribute(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: viaBotId), title: nil))
                 }
                 
                 if let replyToMsgId = replyToMsgId {

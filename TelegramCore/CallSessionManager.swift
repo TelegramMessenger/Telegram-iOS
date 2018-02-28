@@ -179,6 +179,8 @@ private final class CallSessionContext {
     var state: CallSessionInternalState
     let subscribers = Bag<(CallSession) -> Void>()
     
+    let acknowledgeIncomingCallDisposable = MetaDisposable()
+    
     var isEmpty: Bool {
         if case .terminated = self.state {
             return self.subscribers.isEmpty
@@ -191,6 +193,10 @@ private final class CallSessionContext {
         self.peerId = peerId
         self.isOutgoing = isOutgoing
         self.state = state
+    }
+    
+    deinit {
+        self.acknowledgeIncomingCallDisposable.dispose()
     }
 }
 
@@ -304,7 +310,9 @@ private final class CallSessionManagerContext {
         
         if randomStatus == 0 {
             let internalId = CallSessionInternalId()
-            self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: false, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b))
+            let context = CallSessionContext(peerId: peerId, isOutgoing: false, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b))
+            self.contexts[internalId] = context
+            context.acknowledgeIncomingCallDisposable.set(self.network.request(Api.functions.phone.receivedCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash))).start())
             self.contextIdByStableId[stableId] = internalId
             self.contextUpdated(internalId: internalId)
             self.ringingStatesUpdated()

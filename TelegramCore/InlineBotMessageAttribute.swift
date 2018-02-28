@@ -6,21 +6,41 @@ import Foundation
 #endif
 
 public class InlineBotMessageAttribute: MessageAttribute {
-    public let peerId: PeerId
+    public let peerId: PeerId?
+    public let title: String?
     
     public var associatedPeerIds: [PeerId] {
-        return [self.peerId]
+        if let peerId = self.peerId {
+            return [peerId]
+        } else {
+            return []
+        }
     }
     
-    init(peerId: PeerId) {
+    init(peerId: PeerId?, title: String?) {
         self.peerId = peerId
+        self.title = title
     }
     
     required public init(decoder: PostboxDecoder) {
-        self.peerId = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
+        if let peerId = decoder.decodeOptionalInt64ForKey("i") {
+            self.peerId = PeerId(peerId)
+        } else {
+            self.peerId = nil
+        }
+        self.title = decoder.decodeOptionalStringForKey("t")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64(self.peerId.toInt64(), forKey: "i")
+        if let peerId = self.peerId {
+            encoder.encodeInt64(peerId.toInt64(), forKey: "i")
+        } else {
+            encoder.encodeNil(forKey: "i")
+        }
+        if let title = self.title {
+            encoder.encodeString(title, forKey: "t")
+        } else {
+            encoder.encodeNil(forKey: "t")
+        }
     }
 }

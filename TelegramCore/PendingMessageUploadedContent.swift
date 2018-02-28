@@ -40,7 +40,9 @@ func messageContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods
     var autoremoveAttribute: AutoremoveTimeoutMessageAttribute?
     for attribute in attributes {
         if let attribute = attribute as? OutgoingChatContextResultMessageAttribute {
-            contextResult = attribute
+            if peerId.namespace != Namespaces.Peer.SecretChat {
+                contextResult = attribute
+            }
         } else if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
             autoremoveAttribute = attribute
         }
@@ -332,9 +334,14 @@ private enum UploadedMediaTransform {
     case done(Media?)
 }
 
+private enum UploadedMediaThumbnailResult {
+    case file(Api.InputFile)
+    case none
+}
+
 private enum UploadedMediaThumbnail {
     case pending
-    case done(Api.InputFile?)
+    case done(UploadedMediaThumbnailResult)
 }
 
 private func uploadedThumbnail(network: Network, postbox: Postbox, image: TelegramMediaImageRepresentation) -> Signal<Api.InputFile?, PendingMessageUploadError> {
@@ -441,27 +448,40 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         return .single(.pending)
                     case let .done(media):
                         if let media = media as? TelegramMediaFile, let smallestThumbnail = smallestImageRepresentation(media.previewRepresentations) {
-                            return uploadedThumbnail(network: network, postbox: postbox, image: smallestThumbnail)
-                                |> mapError { _ -> PendingMessageUploadError in return .generic }
-                                |> map { result in
-                                    return .done(result)
-                                }
+                            if peerId.namespace == Namespaces.Peer.SecretChat {
+                                return .single(.done(.none))
+                            } else {
+                                return uploadedThumbnail(network: network, postbox: postbox, image: smallestThumbnail)
+                                    |> mapError { _ -> PendingMessageUploadError in return .generic }
+                                    |> map { result in
+                                        if let result = result {
+                                            return .done(.file(result))
+                                        } else {
+                                            return .done(.none)
+                                        }
+                                    }
+                            }
                         } else {
-                            return .single(.done(nil))
+                            return .single(.done(.none))
                         }
                 }
             })
     
         return combineLatest(upload, thumbnail)
-            |> mapToSignal { content, media -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
+            |> mapToSignal { content, thumbnailResult -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                 switch content {
                     case let .progress(progress):
                         return .single(.progress(progress))
                     case let .inputFile(inputFile):
-                        if case let .done(thumbnail) = media {
+                        if case let .done(thumbnail) = thumbnailResult {
                             var flags: Int32 = 0
                             
-                            if let _ = thumbnail {
+                            var thumbnailFile: Api.InputFile?
+                            if case let .file(file) = thumbnail {
+                                thumbnailFile = file
+                            }
+                            
+                            if let thumbnailFile = thumbnailFile {
                                 flags |= 1 << 2
                             }
                             
@@ -473,10 +493,8 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                 }
                             }
                             
-                            //flags |= 1 << 3
-                            
                             if ttlSeconds != nil  {
-                                return .single(.content(.media(.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnail, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: nil, ttlSeconds: ttlSeconds), text)))
+                                return .single(.content(.media(.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: nil, ttlSeconds: ttlSeconds), text)))
                             }
                             
                             return postbox.modify { modifier -> Api.InputPeer? in
@@ -485,7 +503,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                             |> mapError { _ -> PendingMessageUploadError in return .generic }
                             |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                 if let inputPeer = inputPeer {
-                                    return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: .inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnail, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: nil, ttlSeconds: ttlSeconds)))
+                                    return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: .inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: nil, ttlSeconds: ttlSeconds)))
                                         |> mapError { _ -> PendingMessageUploadError in return .generic }
                                         |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                             switch result {
@@ -506,7 +524,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                             return .complete()
                         }
                     case let .inputSecretFile(file, size, key):
-                        if case .done = media {
+                        if case .done = thumbnailResult {
                             return .single(.content(.secretMedia(file, size, key)))
                         } else {
                             return .complete()

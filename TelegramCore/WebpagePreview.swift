@@ -21,7 +21,7 @@ public func webpagePreview(account: Account, url: String, webpageId: MediaId? = 
                 |> mapToSignal { result -> Signal<TelegramMediaWebpage?, NoError> in
                     switch result {
                         case let .messageMediaWebPage(webpage):
-                            if let media = telegramMediaWebpageFromApiWebpage(webpage) {
+                            if let media = telegramMediaWebpageFromApiWebpage(webpage, url: url) {
                                 if case .Loaded = media.content {
                                     return .single(media)
                                 } else {
@@ -45,9 +45,9 @@ public func actualizedWebpage(postbox: Postbox, network: Network, webpage: Teleg
                 return .single(.webPageNotModified)
             }
             |> mapToSignal { result -> Signal<TelegramMediaWebpage, NoError> in
-                if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
+                if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
                     return postbox.modify { modifier -> TelegramMediaWebpage in
-                        modifier.updateMedia(updatedWebpage.webpageId, update: updatedWebpage)
+                        modifier.updateMedia(webpage.webpageId, update: updatedWebpage)
                         return updatedWebpage
                     }
                 } else {

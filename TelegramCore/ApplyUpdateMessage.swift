@@ -55,6 +55,10 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var sentStickers: [TelegramMediaFile] = []
         var sentGifs: [TelegramMediaFile] = []
         
+        if let updatedTimestamp = updatedTimestamp {
+            modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([message.id]), timestamp: updatedTimestamp)
+        }
+        
         modifier.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
@@ -140,9 +144,6 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             
             return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
         })
-        if let updatedTimestamp = updatedTimestamp {
-            modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, timestamp: updatedTimestamp)
-        }
         for file in sentStickers {
             modifier.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
         }
@@ -197,6 +198,10 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         var sentGifs: [TelegramMediaFile] = []
         
         var updatedGroupingKey: Int64?
+        
+        if let latestIndex = mapping.last?.1 {
+            modifier.offsetPendingMessagesTimestamps(lowerBound: latestIndex.id, excludeIds: Set(mapping.map { $0.0.id }), timestamp: latestIndex.timestamp)
+        }
         
         for (message, _, updatedMessage) in mapping {
             modifier.updateMessage(message.id, update: { currentMessage in
@@ -257,10 +262,6 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         
         if let updatedGroupingKey = updatedGroupingKey {
             modifier.updateMessageGroupingKeysAtomically(mapping.map { $0.1.id }, groupingKey: updatedGroupingKey)
-        }
-        
-        if let latestIndex = mapping.last?.1 {
-            modifier.offsetPendingMessagesTimestamps(lowerBound: latestIndex.id, timestamp: latestIndex.timestamp)
         }
         
         for file in sentStickers {

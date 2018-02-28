@@ -24,7 +24,7 @@ func secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(modi
     switch state.embeddedState {
         case .basicLayer:
             var updatedState = state
-            updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: topSupportedLayer.secretChatLayer, actionGloballyUniqueId: arc4random64(), layerSupport: topSupportedLayer.rawValue), state: updatedState)
+            updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: .layer8, actionGloballyUniqueId: arc4random64(), layerSupport: topSupportedLayer.rawValue), state: updatedState)
             return updatedState
         case let .sequenceBasedLayer(sequenceState):
             var updatedState = state
