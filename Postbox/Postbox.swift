@@ -374,9 +374,9 @@ public final class Modifier {
         self.postbox?.updateMessage(id, update: update)
     }
     
-    public func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32) {
+    public func offsetPendingMessagesTimestamps(lowerBound: MessageId, excludeIds: Set<MessageId>, timestamp: Int32) {
         assert(!self.disposed)
-        self.postbox?.offsetPendingMessagesTimestamps(lowerBound: lowerBound, timestamp: timestamp)
+        self.postbox?.offsetPendingMessagesTimestamps(lowerBound: lowerBound, excludeIds: excludeIds, timestamp: timestamp)
     }
     
     public func updateMessageGroupingKeysAtomically(_ ids: [MessageId], groupingKey: Int64) {
@@ -1973,8 +1973,8 @@ public final class Postbox {
         }
     }
     
-    fileprivate func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32) {
-        self.messageHistoryTable.offsetPendingMessagesTimestamps(lowerBound: lowerBound, timestamp: timestamp, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, groupFeedOperations: &self.currentGroupFeedOperations, localTagsOperations: &self.currentLocalTagsOperations)
+    fileprivate func offsetPendingMessagesTimestamps(lowerBound: MessageId, excludeIds: Set<MessageId>, timestamp: Int32) {
+        self.messageHistoryTable.offsetPendingMessagesTimestamps(lowerBound: lowerBound, excludeIds: excludeIds, timestamp: timestamp, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, groupFeedOperations: &self.currentGroupFeedOperations, localTagsOperations: &self.currentLocalTagsOperations)
     }
     
     fileprivate func updateMessageGroupingKeysAtomically(_ ids: [MessageId], groupingKey: Int64) {

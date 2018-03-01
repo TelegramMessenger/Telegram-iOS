@@ -10,7 +10,6 @@ final class MutablePeerView: MutablePostboxView {
     var peerIsContact: Bool
     
     init(postbox: Postbox, peerId: PeerId) {
-        let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
         let cachedData = postbox.cachedPeerDataTable.get(peerId)
         let peerIsContact = postbox.contactsTable.isContact(peerId: peerId)
         
@@ -23,7 +22,6 @@ final class MutablePeerView: MutablePostboxView {
         }
         
         self.peerId = peerId
-        self.notificationSettings = notificationSettings
         self.cachedData = cachedData
         self.peerIsContact = peerIsContact
         var peerIds = Set<PeerId>()
@@ -51,6 +49,9 @@ final class MutablePeerView: MutablePostboxView {
             if let presence = getPeerPresence(associatedPeerId) {
                 self.peerPresences[associatedPeerId] = presence
             }
+            self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(associatedPeerId)
+        } else {
+            self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
         }
         for id in messageIds {
             if let message = postbox.getMessage(id) {
@@ -188,8 +189,20 @@ final class MutablePeerView: MutablePostboxView {
             updated = true
         }
         
-        if let notificationSettings = updatedNotificationSettings[self.peerId] {
-            self.notificationSettings = notificationSettings
+        if let peer = self.peers[self.peerId] {
+            if let associatedPeerId = peer.associatedPeerId {
+                if let notificationSettings = updatedNotificationSettings[associatedPeerId] {
+                    self.notificationSettings = notificationSettings
+                    updated = true
+                }
+            } else {
+                if let notificationSettings = updatedNotificationSettings[peer.id] {
+                    self.notificationSettings = notificationSettings
+                    updated = true
+                }
+            }
+        } else if self.notificationSettings != nil {
+            self.notificationSettings = nil
             updated = true
         }
         
