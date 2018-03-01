@@ -35,6 +35,10 @@ public struct ItemCollectionViewEntryIndex: Comparable {
 public struct ItemCollectionViewEntry {
     public let index: ItemCollectionViewEntryIndex
     public let item: ItemCollectionItem
+    public init(index: ItemCollectionViewEntryIndex, item: ItemCollectionItem) {
+        self.index = index
+        self.item = item
+    }
 }
 
 private func fetchLowerEntries(namespaces: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32, itemIndex: ItemCollectionItemIndex, count: Int, lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, lowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) -> [ItemCollectionViewEntry] {
