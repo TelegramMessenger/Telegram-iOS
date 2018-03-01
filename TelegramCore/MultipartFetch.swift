@@ -247,7 +247,7 @@ private final class MultipartCdnHashSource {
                     var parsedPartHashes: [Int32: Data] = [:]
                     for part in partHashes {
                         switch part {
-                            case let .cdnFileHash(offset, limit, bytes):
+                            case let .fileHash(offset, limit, bytes):
                                 assert(limit == 128 * 1024)
                                 parsedPartHashes[offset] = bytes.makeData()
                         }
@@ -322,7 +322,7 @@ private enum MultipartFetchSource {
                                                 var parsedPartHashes: [Int32: Data] = [:]
                                                 for part in partHashes {
                                                     switch part {
-                                                        case let .cdnFileHash(offset, limit, bytes):
+                                                        case let .fileHash(offset, limit, bytes):
                                                             assert(limit == 128 * 1024)
                                                             parsedPartHashes[offset] = bytes.makeData()
                                                     }
@@ -591,9 +591,9 @@ private final class MultipartFetchManager {
                                     case let .cdn(_, fileToken, _, _, _, masterDownload, _):
                                         if !strongSelf.reuploadingToCdn {
                                             strongSelf.reuploadingToCdn = true
-                                            let reupload: Signal<[Api.CdnFileHash], NoError> = masterDownload.get() |> mapToSignal { download -> Signal<[Api.CdnFileHash], NoError> in
+                                            let reupload: Signal<[Api.FileHash], NoError> = masterDownload.get() |> mapToSignal { download -> Signal<[Api.FileHash], NoError> in
                                                 return download.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)))
-                                                    |> `catch` { _ -> Signal<[Api.CdnFileHash], NoError> in
+                                                    |> `catch` { _ -> Signal<[Api.FileHash], NoError> in
                                                         return .single([])
                                                 }
                                             }

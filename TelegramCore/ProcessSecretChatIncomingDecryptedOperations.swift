@@ -726,34 +726,32 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
     }
 }
 
-private func parseEntities(_ entities: [SecretApi73.MessageEntity]?) -> TextEntitiesMessageAttribute {
+private func parseEntities(_ entities: [SecretApi73.MessageEntity]) -> TextEntitiesMessageAttribute {
     var result: [MessageTextEntity] = []
-    if let entities = entities {
-        for entity in entities {
-            switch entity {
-                case let .messageEntityMention(offset, length):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Mention))
-                case let .messageEntityHashtag(offset, length):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Hashtag))
-                case let .messageEntityBotCommand(offset, length):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BotCommand))
-                case let .messageEntityUrl(offset, length):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Url))
-                case let .messageEntityEmail(offset, length):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Email))
-                case let .messageEntityBold(offset, length):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Bold))
-                case let .messageEntityItalic(offset, length):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
-                case let .messageEntityCode(offset, length):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Code))
-                case let .messageEntityPre(offset, length, _):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre))
-                case let .messageEntityTextUrl(offset, length, url):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
-                case .messageEntityUnknown:
-                    break
-            }
+    for entity in entities {
+        switch entity {
+            case let .messageEntityMention(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Mention))
+            case let .messageEntityHashtag(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Hashtag))
+            case let .messageEntityBotCommand(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BotCommand))
+            case let .messageEntityUrl(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Url))
+            case let .messageEntityEmail(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Email))
+            case let .messageEntityBold(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Bold))
+            case let .messageEntityItalic(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
+            case let .messageEntityCode(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Code))
+            case let .messageEntityPre(offset, length, _):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre))
+            case let .messageEntityTextUrl(offset, length, url):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
+            case .messageEntityUnknown:
+                break
         }
     }
     return TextEntitiesMessageAttribute(entities: result)
@@ -771,7 +769,9 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttl, countdownBeginTime: nil))
             }
             
-            attributes.append(parseEntities(entities))
+            if let entitiesAttribute = entities.flatMap(parseEntities) {
+                attributes.append(entitiesAttribute)
+            }
             
             if let viaBotName = viaBotName, !viaBotName.isEmpty {
                 attributes.append(InlineBotMessageAttribute(peerId: nil, title: viaBotName))
