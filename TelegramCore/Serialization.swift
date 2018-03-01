@@ -90,16 +90,11 @@ public class BoxedMessage: NSObject {
             #else
                 redact = true
             #endif
-            return recursiveDescription(redact: redact, of: self.body)
-            /*if let body = self.body as? RedactingCustomStringConvertible {
-                
-                return body.redactingDescription(false)
-                #else
-                return body.redactingDescription(true)
-                #endif
+            if let body = self.body as? RedactingCustomStringConvertible {
+                return body.redactingDescription(redact)
             } else {
-                return "\(self.body)"
-            }*/
+                return recursiveDescription(redact: redact, of: self.body)
+            }
         }
     }
 }

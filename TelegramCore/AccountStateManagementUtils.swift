@@ -701,7 +701,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                             case let .webPageEmpty(id):
                                 updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
                             default:
-                                if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage) {
+                                if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
                                     updatedState.updateMedia(webpage.webpageId, media: webpage)
                                 }
                         }
@@ -838,7 +838,7 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                     case let .webPageEmpty(id):
                         updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
                     default:
-                        if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage) {
+                        if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
                             updatedState.updateMedia(webpage.webpageId, media: webpage)
                         }
                 }
@@ -1539,7 +1539,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
                                             case let .webPageEmpty(id):
                                                 updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
                                             default:
-                                                if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage) {
+                                                if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
                                                     updatedState.updateMedia(webpage.webpageId, media: webpage)
                                                 }
                                         }
@@ -1975,7 +1975,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, modifier: Modif
                     peerIdsWithAddedSecretMessages.insert(peerId)
                 }
             case let .ReadSecretOutbox(peerId, maxTimestamp, actionTimestamp):
-                applyOutgoingReadMaxIndex(modifier: modifier, index: MessageIndex.upperBound(peerId: peerId, timestamp: maxTimestamp, namespace: Namespaces.Message.Local), beginAt: actionTimestamp)
+                applyOutgoingReadMaxIndex(modifier: modifier, index: MessageIndex.upperBound(peerId: peerId, timestamp: maxTimestamp, namespace: Namespaces.Message.Local), beginCountdownAt: actionTimestamp)
             case let .AddPeerInputActivity(chatPeerId, peerId, activity):
                 if let peerId = peerId {
                     if updatedTypingActivities[chatPeerId] == nil {

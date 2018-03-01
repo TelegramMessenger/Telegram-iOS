@@ -44,32 +44,66 @@ public func applyMaxReadIndexInteractively(postbox: Postbox, network: Network, s
     }
 }
 
-func applyOutgoingReadMaxIndex(modifier: Modifier, index: MessageIndex, beginAt timestamp: Int32) {
+func applyOutgoingReadMaxIndex(modifier: Modifier, index: MessageIndex, beginCountdownAt timestamp: Int32) {
     let messageIds = modifier.applyOutgoingReadMaxIndex(index)
     if index.id.peerId.namespace == Namespaces.Peer.SecretChat {
         for id in messageIds {
-            if let message = modifier.getMessage(id), !message.flags.contains(.Incoming) {
-                for attribute in message.attributes {
-                    if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
-                        if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && !message.containsSecretMedia {
-                            modifier.updateMessage(message.id, update: { currentMessage in
-                                var storeForwardInfo: StoreMessageForwardInfo?
-                                if let forwardInfo = currentMessage.forwardInfo {
-                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+            applySecretOutgoingMessageReadActions(modifier: modifier, id: id, beginCountdownAt: timestamp)
+        }
+    }
+}
+
+func maybeReadSecretOutgoingMessage(modifier: Modifier, index: MessageIndex) {
+    guard index.id.peerId.namespace == Namespaces.Peer.SecretChat else {
+        assertionFailure()
+        return
+    }
+    guard index.id.namespace == Namespaces.Message.Local else {
+        assertionFailure()
+        return
+    }
+    
+    guard let combinedState = modifier.getCombinedPeerReadState(index.id.peerId) else {
+        return
+    }
+    
+    if combinedState.isOutgoingMessageIndexRead(index) {
+        applySecretOutgoingMessageReadActions(modifier: modifier, id: index.id, beginCountdownAt: index.timestamp)
+    }
+}
+
+func applySecretOutgoingMessageReadActions(modifier: Modifier, id: MessageId, beginCountdownAt timestamp: Int32) {
+    guard id.peerId.namespace == Namespaces.Peer.SecretChat else {
+        assertionFailure()
+        return
+    }
+    guard id.namespace == Namespaces.Message.Local else {
+        assertionFailure()
+        return
+    }
+    
+    if let message = modifier.getMessage(id), !message.flags.contains(.Incoming) {
+        if message.flags.intersection([.Unsent, .Sending, .Failed]).isEmpty {
+            for attribute in message.attributes {
+                if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+                    if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && !message.containsSecretMedia {
+                        modifier.updateMessage(message.id, update: { currentMessage in
+                            var storeForwardInfo: StoreMessageForwardInfo?
+                            if let forwardInfo = currentMessage.forwardInfo {
+                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                            }
+                            let updatedAttributes = currentMessage.attributes.map({ currentAttribute -> MessageAttribute in
+                                if let currentAttribute = currentAttribute as? AutoremoveTimeoutMessageAttribute {
+                                    return AutoremoveTimeoutMessageAttribute(timeout: currentAttribute.timeout, countdownBeginTime: timestamp)
+                                } else {
+                                    return currentAttribute
                                 }
-                                let updatedAttributes = currentMessage.attributes.map({ currentAttribute -> MessageAttribute in
-                                    if let currentAttribute = currentAttribute as? AutoremoveTimeoutMessageAttribute {
-                                        return AutoremoveTimeoutMessageAttribute(timeout: currentAttribute.timeout, countdownBeginTime: timestamp)
-                                    } else {
-                                        return currentAttribute
-                                    }
-                                })
-                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
                             })
-                            modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: id)
-                        }
-                        break
+                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
+                        })
+                        modifier.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: id)
                     }
+                    break
                 }
             }
         }

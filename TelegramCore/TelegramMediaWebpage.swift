@@ -191,7 +191,7 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
 }
 
 public enum TelegramMediaWebpageContent {
-    case Pending(Int32)
+    case Pending(Int32, String?)
     case Loaded(TelegramMediaWebpageLoadedContent)
 }
 
@@ -213,7 +213,7 @@ public final class TelegramMediaWebpage: Media, Equatable {
         self.webpageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         
         if decoder.decodeInt32ForKey("ct", orElse: 0) == 0 {
-            self.content = .Pending(decoder.decodeInt32ForKey("pendingDate", orElse: 0))
+            self.content = .Pending(decoder.decodeInt32ForKey("pendingDate", orElse: 0), decoder.decodeOptionalStringForKey("pendingUrl"))
         } else {
             self.content = .Loaded(TelegramMediaWebpageLoadedContent(decoder: decoder))
         }
@@ -225,9 +225,14 @@ public final class TelegramMediaWebpage: Media, Equatable {
         encoder.encodeBytes(buffer, forKey: "i")
         
         switch self.content {
-            case let .Pending(date):
+            case let .Pending(date, url):
                 encoder.encodeInt32(0, forKey: "ct")
                 encoder.encodeInt32(date, forKey: "pendingDate")
+                if let url = url {
+                    encoder.encodeString(url, forKey: "pendingUrl")
+                } else {
+                    encoder.encodeNil(forKey: "pendingUrl")
+                }
             case let .Loaded(loadedContent):
                 encoder.encodeInt32(1, forKey: "ct")
                 loadedContent.encode(encoder)
@@ -251,10 +256,14 @@ public final class TelegramMediaWebpage: Media, Equatable {
         }
         
         switch lhs.content {
-            case let .Pending(lhsDate):
+            case let .Pending(lhsDate, lhsUrl):
                 switch rhs.content {
-                    case let .Pending(rhsDate) where lhsDate == rhsDate:
-                        return true
+                    case let .Pending(rhsDate, rhsUrl):
+                        if lhsDate == rhsDate, lhsUrl == rhsUrl {
+                            return true
+                        } else {
+                            return false
+                        }
                     default:
                         return false
                 }
@@ -269,12 +278,12 @@ public final class TelegramMediaWebpage: Media, Equatable {
     }
 }
 
-func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage) -> TelegramMediaWebpage? {
+func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) -> TelegramMediaWebpage? {
     switch webpage {
         case .webPageNotModified:
             return nil
         case let .webPagePending(id, date):
-            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Pending(date))
+            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Pending(date, url))
         case let .webPage(_, id, url, displayUrl, hash, type, siteName, title, description, photo, embedUrl, embedType, embedWidth, embedHeight, duration, author, document, cachedPage):
             var embedSize: CGSize?
             if let embedWidth = embedWidth, let embedHeight = embedHeight {

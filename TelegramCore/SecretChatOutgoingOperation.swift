@@ -78,6 +78,16 @@ struct SecretChatOutgoingFile: PostboxCoding {
 
 enum SecretChatSequenceBasedLayer: Int32 {
     case layer46 = 46
+    case layer73 = 73
+    
+    var secretChatLayer: SecretChatLayer {
+        switch self {
+            case .layer46:
+                return .layer46
+            case .layer73:
+                return .layer73
+        }
+    }
 }
 
 private enum SecretChatOutgoingOperationValue: Int32 {

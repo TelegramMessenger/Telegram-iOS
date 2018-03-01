@@ -234,7 +234,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
                                 case .basicLayer:
                                     layer = .layer8
                                 case let .sequenceBasedLayer(sequenceState):
-                                    layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                                    layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
                             }
                             if let layer = layer {
                                 updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: peerId, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
@@ -326,6 +326,7 @@ private func pfsAcceptKey(postbox: Postbox, network: Network, peerId: PeerId, la
 private enum BoxedDecryptedMessage {
     case layer8(SecretApi8.DecryptedMessage)
     case layer46(SecretApi46.DecryptedMessage)
+    case layer73(SecretApi73.DecryptedMessage)
     
     func serialize(_ buffer: Buffer, role: SecretChatRole, sequenceInfo: SecretChatOperationSequenceInfo?) {
         switch self {
@@ -338,6 +339,26 @@ private enum BoxedDecryptedMessage {
                 serializeBytes(Buffer(memory: randomBytes, size: 15, capacity: 15, freeWhenDone: false), buffer: buffer, boxed: false)
                 free(randomBytes)
                 buffer.appendInt32(46)
+                
+                if let sequenceInfo = sequenceInfo {
+                    let inSeqNo = sequenceInfo.topReceivedOperationIndex * 2 + (role == .creator ? 0 : 1)
+                    let outSeqNo = sequenceInfo.operationIndex * 2 + (role == .creator ? 1 : 0)
+                    buffer.appendInt32(inSeqNo)
+                    buffer.appendInt32(outSeqNo)
+                } else {
+                    buffer.appendInt32(0)
+                    buffer.appendInt32(0)
+                    assertionFailure()
+                }
+                
+                let _ = message.serialize(buffer, true)
+            case let .layer73(message):
+                buffer.appendInt32(0x1be31789)
+                let randomBytes = malloc(15)!
+                arc4random_buf(randomBytes, 15)
+                serializeBytes(Buffer(memory: randomBytes, size: 15, capacity: 15, freeWhenDone: false), buffer: buffer, boxed: false)
+                free(randomBytes)
+                buffer.appendInt32(73)
                 
                 if let sequenceInfo = sequenceInfo {
                     let inSeqNo = sequenceInfo.topReceivedOperationIndex * 2 + (role == .creator ? 0 : 1)
@@ -450,11 +471,96 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute]) -
     return result
 }
 
-private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, layer: SecretChatLayer) -> BoxedDecryptedMessage {
-    var media: Media? = message.media.first
+private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute]) -> [SecretApi73.DocumentAttribute] {
+    var result: [SecretApi73.DocumentAttribute] = []
+    for attribute in attributes {
+        switch attribute {
+            case let .FileName(fileName):
+                result.append(.documentAttributeFilename(fileName: fileName))
+            case .Animated:
+                result.append(.documentAttributeAnimated)
+            case let .Sticker(displayText, packReference, _):
+                var stickerSet: SecretApi73.InputStickerSet = .inputStickerSetEmpty
+                if let packReference = packReference, case let .name(name) = packReference {
+                    stickerSet = .inputStickerSetShortName(shortName: name)
+                }
+                result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
+            case let .ImageSize(size):
+                result.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
+            case let .Video(duration, size, videoFlags):
+                var flags: Int32 = 0
+                if videoFlags.contains(.instantRoundVideo) {
+                    flags |= 1 << 0
+                }
+                result.append(.documentAttributeVideo(flags: flags, duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
+            case let .Audio(isVoice, duration, title, performer, waveform):
+                var flags: Int32 = 0
+                if isVoice {
+                    flags |= (1 << 10)
+                }
+                if let _ = title {
+                    flags |= Int32(1 << 0)
+                }
+                if let _ = performer {
+                    flags |= Int32(1 << 1)
+                }
+                var waveformBuffer: Buffer?
+                if let waveform = waveform {
+                    flags |= Int32(1 << 2)
+                    waveformBuffer = Buffer(data: waveform.makeData())
+                }
+                result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
+            case .HasLinkedStickers:
+                break
+        }
+    }
+    return result
+}
+
+private func decryptedEntities73(_ entities: [MessageTextEntity]?) -> [SecretApi73.MessageEntity]? {
+    guard let entities = entities else {
+        return nil
+    }
+    
+    var result: [SecretApi73.MessageEntity] = []
+    for entity in entities {
+        switch entity.type {
+            case .Unknown:
+                break
+            case .Mention:
+                result.append(.messageEntityMention(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
+            case .Hashtag:
+                result.append(.messageEntityHashtag(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
+            case .BotCommand:
+                result.append(.messageEntityBotCommand(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
+            case .Url:
+                result.append(.messageEntityUrl(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
+            case .Email:
+                result.append(.messageEntityEmail(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
+            case .Bold:
+                result.append(.messageEntityBold(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
+            case .Italic:
+                result.append(.messageEntityItalic(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
+            case .Code:
+                result.append(.messageEntityCode(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
+            case .Pre:
+                result.append(.messageEntityPre(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count), language: ""))
+            case let .TextUrl(url):
+                result.append(.messageEntityTextUrl(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count), url: url))
+            case .TextMention:
+                break
+            case .PhoneNumber:
+                break
+        }
+    }
+    return result
+}
+
+private func boxedDecryptedMessage(modifier: Modifier, message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, thumbnailData: [MediaId: Data], layer: SecretChatLayer) -> BoxedDecryptedMessage {
+    let media: Media? = message.media.first
     var messageAutoremoveTimeout: Int32 = 0
-    var replyGlobalId:Int64? = nil
-    var flags:Int32 = 0
+    var replyGlobalId: Int64? = nil
+    var flags: Int32 = 0
     for attribute in message.attributes {
         if let attribute = attribute as? ReplyMessageAttribute {
             if let message = message.associatedMessages[attribute.messageId] {
@@ -465,30 +571,83 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
         }
     }
     
+    var viaBotName: String?
+    var entities: [MessageTextEntity]?
+    
     for attribute in message.attributes {
         if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
             messageAutoremoveTimeout = attribute.timeout
-            break
+        } else if let attribute = attribute as? InlineBotMessageAttribute {
+            if let title = attribute.title {
+                viaBotName = title
+            } else if let peerId = attribute.peerId, let peer = modifier.getPeer(peerId), let addressName = peer.addressName {
+                viaBotName = addressName
+            }
+        } else if let attribute = attribute as? TextEntitiesMessageAttribute {
+            entities = attribute.entities
         }
     }
     
     if let media = media {
         if let image = media as? TelegramMediaImage, let uploadedFile = uploadedFile, let largestRepresentation = largestImageRepresentation(image.representations) {
+            let thumbW: Int32
+            let thumbH: Int32
+            let thumb: Buffer
+            if let smallestRepresentation = smallestImageRepresentation(image.representations), let data = thumbnailData[image.imageId] {
+                thumbW = Int32(smallestRepresentation.dimensions.width)
+                thumbH = Int32(smallestRepresentation.dimensions.height)
+                thumb = Buffer(data: data)
+            } else {
+                thumbW = 90
+                thumbH = 90
+                thumb = Buffer()
+            }
+            
             switch layer {
                 case .layer8:
                     let randomBytesData = malloc(15)!
                     arc4random_buf(randomBytesData, 15)
                     let randomBytes = Buffer(memory: randomBytesData, size: 15, capacity: 15, freeWhenDone: true)
                     
-                    let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: Buffer(), thumbW: 90, thumbH: 90, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
+                    let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                     
                     return .layer8(.decryptedMessage(randomId: globallyUniqueId, randomBytes: randomBytes, message: message.text, media: decryptedMedia))
                 case .layer46:
-                    let decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: Buffer(), thumbW: 90, thumbH: 90, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
                     flags |= (1 << 9)
-                    return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: replyGlobalId))
+                    return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: viaBotName, replyToRandomId: replyGlobalId))
+                case .layer73:
+                    if let _ = viaBotName {
+                        flags |= (1 << 11)
+                    }
+                    let decryptedEntites = entities.flatMap(decryptedEntities73)
+                    if let _ = decryptedEntites {
+                        flags |= (1 << 7)
+                    }
+                    let decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
+                    flags |= (1 << 9)
+                    if message.groupingKey != nil {
+                        flags |= (1 << 17)
+                    }
+                    return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
             }
         } else if let file = media as? TelegramMediaFile {
+            let thumbW: Int32
+            let thumbH: Int32
+            let thumb: Buffer
+            if let smallestRepresentation = smallestImageRepresentation(file.previewRepresentations), let data = thumbnailData[file.fileId] {
+                thumbW = Int32(smallestRepresentation.dimensions.width)
+                thumbH = Int32(smallestRepresentation.dimensions.height)
+                thumb = Buffer(data: data)
+            } else {
+                thumbW = 0
+                thumbH = 0
+                thumb = Buffer()
+            }
+            
             switch layer {
                 case .layer8:
                     if let uploadedFile = uploadedFile {
@@ -496,7 +655,7 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
                         arc4random_buf(randomBytesData, 15)
                         let randomBytes = Buffer(memory: randomBytesData, size: 15, capacity: 15, freeWhenDone: true)
                         
-                        let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: Buffer(), thumbW: 0, thumbH: 0, fileName: file.fileName ?? "file", mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
+                        let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, fileName: file.fileName ?? "file", mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                     
                         return .layer8(.decryptedMessage(randomId: globallyUniqueId, randomBytes: randomBytes, message: message.text, media: decryptedMedia))
                     }
@@ -517,18 +676,99 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
                         if let voiceDuration = voiceDuration {
                             decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                         } else {
-                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: Buffer(), thumbW: 0, thumbH: 0, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes46(file.attributes), caption: "")
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes46(file.attributes), caption: "")
                         }
                     } else {
                         if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
-                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: SecretApi46.PhotoSize.photoSizeEmpty(type: "s"), dcId: Int32(resource.datacenterId), attributes: decryptedAttributes46(file.attributes))
+                            let thumb: SecretApi46.PhotoSize
+                            if let smallestRepresentation = smallestImageRepresentation(file.previewRepresentations), let thumbResource = smallestRepresentation.resource as? CloudFileMediaResource {
+                                thumb = .photoSize(type: "s", location: .fileLocation(dcId: Int32(thumbResource.datacenterId), volumeId: thumbResource.volumeId, localId: thumbResource.localId, secret: thumbResource.secret), w: Int32(smallestRepresentation.dimensions.width), h: Int32(smallestRepresentation.dimensions.height), size: thumbResource.size.flatMap(Int32.init) ?? 0)
+                            } else {
+                                thumb = SecretApi46.PhotoSize.photoSizeEmpty(type: "s")
+                            }
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes46(file.attributes))
                         }
                     }
                     
                     if let decryptedMedia = decryptedMedia {
+                        if let _ = viaBotName {
+                            flags |= (1 << 11)
+                        }
                         flags |= (1 << 9)
-                        return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: nil, replyToRandomId: replyGlobalId))
+                        return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: viaBotName, replyToRandomId: replyGlobalId))
                     }
+                case .layer73:
+                    var decryptedMedia: SecretApi73.DecryptedMessageMedia?
+                    
+                    if let uploadedFile = uploadedFile {
+                        var voiceDuration: Int32?
+                        for attribute in file.attributes {
+                            if case let .Audio(isVoice, duration, _, _, _) = attribute {
+                                if isVoice {
+                                    voiceDuration = Int32(duration)
+                                }
+                                break
+                            }
+                        }
+                        
+                        if let voiceDuration = voiceDuration {
+                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
+                        } else {
+                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes73(file.attributes), caption: "")
+                        }
+                    } else {
+                        if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
+                            let thumb: SecretApi73.PhotoSize
+                            if let smallestRepresentation = smallestImageRepresentation(file.previewRepresentations), let thumbResource = smallestRepresentation.resource as? CloudFileMediaResource {
+                                thumb = .photoSize(type: "s", location: .fileLocation(dcId: Int32(thumbResource.datacenterId), volumeId: thumbResource.volumeId, localId: thumbResource.localId, secret: thumbResource.secret), w: Int32(smallestRepresentation.dimensions.width), h: Int32(smallestRepresentation.dimensions.height), size: thumbResource.size.flatMap(Int32.init) ?? 0)
+                            } else {
+                                thumb = SecretApi73.PhotoSize.photoSizeEmpty(type: "s")
+                            }
+                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: resource.fileId, accessHash: resource.accessHash, date: 0, mimeType: file.mimeType, size: Int32(size), thumb: thumb, dcId: Int32(resource.datacenterId), attributes: decryptedAttributes73(file.attributes))
+                        }
+                    }
+                    
+                    if let decryptedMedia = decryptedMedia {
+                        if let _ = viaBotName {
+                            flags |= (1 << 11)
+                        }
+                        let decryptedEntites = entities.flatMap(decryptedEntities73)
+                        if let _ = decryptedEntites {
+                            flags |= (1 << 7)
+                        }
+                        flags |= (1 << 9)
+                        return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
+                    }
+            }
+        } else if let webpage = media as? TelegramMediaWebpage {
+            var url: String?
+            if case let .Loaded(content) = webpage.content {
+                url = content.url
+            }
+            
+            if let url = url, !url.isEmpty {
+                switch layer {
+                    case .layer8:
+                        break
+                    case .layer46:
+                        if let _ = viaBotName {
+                            flags |= (1 << 11)
+                        }
+                        let decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaWebPage(url: url)
+                        flags |= (1 << 9)
+                        return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: viaBotName, replyToRandomId: replyGlobalId))
+                    case .layer73:
+                        if let _ = viaBotName {
+                            flags |= (1 << 11)
+                        }
+                        let decryptedEntites = entities.flatMap(decryptedEntities73)
+                        if let _ = decryptedEntites {
+                            flags |= (1 << 7)
+                        }
+                        let decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaWebPage(url: url)
+                        flags |= (1 << 9)
+                        return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
+                }
             }
         }
     }
@@ -541,7 +781,19 @@ private func boxedDecryptedMessage(message: Message, globallyUniqueId: Int64, up
             
             return .layer8(.decryptedMessage(randomId: globallyUniqueId, randomBytes: randomBytes, message: message.text, media: .decryptedMessageMediaEmpty))
         case .layer46:
-            return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: .decryptedMessageMediaEmpty, entities: nil, viaBotName: nil, replyToRandomId: replyGlobalId))
+            if let _ = viaBotName {
+                flags |= (1 << 11)
+            }
+            return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: .decryptedMessageMediaEmpty, entities: nil, viaBotName: viaBotName, replyToRandomId: replyGlobalId))
+        case .layer73:
+            if let _ = viaBotName {
+                flags |= (1 << 11)
+            }
+            let decryptedEntites = entities.flatMap(decryptedEntities73)
+            if let _ = decryptedEntites {
+                flags |= (1 << 7)
+            }
+            return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: .decryptedMessageMediaEmpty, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
     }
 }
 
@@ -557,6 +809,8 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
                     return .layer8(.decryptedMessageService(randomId: actionGloballyUniqueId, randomBytes: randomBytes, action: .decryptedMessageActionDeleteMessages(randomIds: globallyUniqueIds)))
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionDeleteMessages(randomIds: globallyUniqueIds)))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionDeleteMessages(randomIds: globallyUniqueIds)))
             }
         case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
             switch layer {
@@ -568,6 +822,8 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
                     return .layer8(.decryptedMessageService(randomId: actionGloballyUniqueId, randomBytes: randomBytes, action: .decryptedMessageActionScreenshotMessages(randomIds: globallyUniqueIds)))
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionScreenshotMessages(randomIds: globallyUniqueIds)))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionScreenshotMessages(randomIds: globallyUniqueIds)))
             }
         case let .clearHistory(layer, actionGloballyUniqueId):
             switch layer {
@@ -578,11 +834,15 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
                     return .layer8(.decryptedMessageService(randomId: actionGloballyUniqueId, randomBytes: randomBytes, action: .decryptedMessageActionFlushHistory))
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionFlushHistory))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionFlushHistory))
             }
         case let .resendOperations(layer, actionGloballyUniqueId, fromSeqNo, toSeqNo):
             switch layer {
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionResend(startSeqNo: fromSeqNo, endSeqNo: toSeqNo)))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionResend(startSeqNo: fromSeqNo, endSeqNo: toSeqNo)))
             }
         case let .reportLayerSupport(layer, actionGloballyUniqueId, layerSupport):
             switch layer {
@@ -594,31 +854,43 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
                     return .layer8(.decryptedMessageService(randomId: actionGloballyUniqueId, randomBytes: randomBytes, action: .decryptedMessageActionNotifyLayer(layer: layerSupport)))
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionNotifyLayer(layer: layerSupport)))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionNotifyLayer(layer: layerSupport)))
             }
         case let .pfsRequestKey(layer, actionGloballyUniqueId, rekeySessionId, gA):
             switch layer {
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionRequestKey(exchangeId: rekeySessionId, gA: Buffer(buffer: gA))))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionRequestKey(exchangeId: rekeySessionId, gA: Buffer(buffer: gA))))
             }
         case let .pfsAcceptKey(layer, actionGloballyUniqueId, rekeySessionId, gB, keyFingerprint):
             switch layer {
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionAcceptKey(exchangeId: rekeySessionId, gB: Buffer(buffer: gB), keyFingerprint: keyFingerprint)))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionAcceptKey(exchangeId: rekeySessionId, gB: Buffer(buffer: gB), keyFingerprint: keyFingerprint)))
             }
         case let .pfsAbortSession(layer, actionGloballyUniqueId, rekeySessionId):
             switch layer {
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionAbortKey(exchangeId: rekeySessionId)))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionAbortKey(exchangeId: rekeySessionId)))
             }
         case let .pfsCommitKey(layer, actionGloballyUniqueId, rekeySessionId, keyFingerprint):
             switch layer {
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionCommitKey(exchangeId: rekeySessionId, keyFingerprint: keyFingerprint)))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionCommitKey(exchangeId: rekeySessionId, keyFingerprint: keyFingerprint)))
             }
         case let .noop(layer, actionGloballyUniqueId):
             switch layer {
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionNoop))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionNoop))
             }
         case let .readMessageContents(layer, actionGloballyUniqueId, globallyUniqueIds):
             switch layer {
@@ -630,6 +902,8 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
                     return .layer8(.decryptedMessageService(randomId: actionGloballyUniqueId, randomBytes: randomBytes, action: .decryptedMessageActionReadMessages(randomIds: globallyUniqueIds)))
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionReadMessages(randomIds: globallyUniqueIds)))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionReadMessages(randomIds: globallyUniqueIds)))
             }
         case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout, _):
             switch layer {
@@ -641,6 +915,8 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
                     return .layer8(.decryptedMessageService(randomId: actionGloballyUniqueId, randomBytes: randomBytes, action: .decryptedMessageActionSetMessageTTL(ttlSeconds: timeout)))
                 case .layer46:
                     return .layer46(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionSetMessageTTL(ttlSeconds: timeout)))
+                case .layer73:
+                    return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionSetMessageTTL(ttlSeconds: timeout)))
             }
     }
 }
@@ -681,7 +957,7 @@ private func replaceOutgoingOperationWithEmptyMessage(modifier: Modifier, peerId
             case .basicLayer:
                 layer = .layer8
             case let .sequenceBasedLayer(sequenceState):
-                layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
         }
     }
     if let layer = layer {
@@ -699,50 +975,108 @@ private func replaceOutgoingOperationWithEmptyMessage(modifier: Modifier, peerId
     }
 }
 
+private func resourceThumbnailData(mediaBox: MediaBox, resource: MediaResource, mediaId: MediaId) -> Signal<(MediaId, Data)?, NoError> {
+    return mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> take(1)
+        |> map { data -> (MediaId, Data)? in
+            if data.complete, data.size < 1024 * 16, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                return (mediaId, content)
+            } else {
+                return nil
+            }
+        }
+}
+
+private func messageWithThumbnailData(mediaBox: MediaBox, message: Message) -> Signal<[MediaId: Data], NoError> {
+    var signals: [Signal<(MediaId, Data)?, NoError>] = []
+    for media in message.media {
+        if let image = media as? TelegramMediaImage {
+            if let smallestRepresentation = smallestImageRepresentation(image.representations) {
+                signals.append(resourceThumbnailData(mediaBox: mediaBox, resource: smallestRepresentation.resource, mediaId: image.imageId))
+            }
+        } else if let file = media as? TelegramMediaFile {
+            if let smallestRepresentation = smallestImageRepresentation(file.previewRepresentations) {
+                signals.append(resourceThumbnailData(mediaBox: mediaBox, resource: smallestRepresentation.resource, mediaId: file.fileId))
+            }
+        }
+    }
+    return combineLatest(signals)
+    |> map { values in
+        var result: [MediaId: Data] = [:]
+        for value in values {
+            if let value = value {
+                result[value.0] = value.1
+            }
+        }
+        return result
+    }
+}
+
 private func sendMessage(postbox: Postbox, network: Network, messageId: MessageId, file: SecretChatOutgoingFile?, tagLocalIndex: Int32, wasDelivered: Bool, layer: SecretChatLayer) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Signal<Void, NoError> in
-        if let state = modifier.getPeerChatState(messageId.peerId) as? SecretChatState, let peer = modifier.getPeer(messageId.peerId) as? TelegramSecretChat {
-            if let message = modifier.getMessage(messageId), let globallyUniqueId = message.globallyUniqueId {
-                let decryptedMessage = boxedDecryptedMessage(message: message, globallyUniqueId: globallyUniqueId, uploadedFile: file, layer: layer)
-                return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: file, asService: wasDelivered, wasDelivered: wasDelivered)
-                    |> mapToSignal { result in
-                        return postbox.modify { modifier -> Void in
-                            if result == nil {
-                                replaceOutgoingOperationWithEmptyMessage(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
-                            } else {
-                                markOutgoingOperationAsCompleted(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
-                            }
-                            modifier.updateMessage(message.id, update: { currentMessage in
-                                var flags = StoreMessageFlags(currentMessage.flags)
+    return postbox.modify { modifier -> Signal<[MediaId: Data], NoError> in
+        if let message = modifier.getMessage(messageId) {
+            return messageWithThumbnailData(mediaBox: postbox.mediaBox, message: message)
+        } else {
+            return .single([:])
+        }
+    }
+    |> switchToLatest
+    |> mapToSignal { thumbnailData -> Signal<Void, NoError> in
+        return postbox.modify { modifier -> Signal<Void, NoError> in
+            if let state = modifier.getPeerChatState(messageId.peerId) as? SecretChatState, let peer = modifier.getPeer(messageId.peerId) as? TelegramSecretChat {
+                if let message = modifier.getMessage(messageId), let globallyUniqueId = message.globallyUniqueId {
+                    let decryptedMessage = boxedDecryptedMessage(modifier: modifier, message: message, globallyUniqueId: globallyUniqueId, uploadedFile: file, thumbnailData: thumbnailData, layer: layer)
+                    return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: file, asService: wasDelivered, wasDelivered: wasDelivered)
+                        |> mapToSignal { result in
+                            return postbox.modify { modifier -> Void in
+                                if result == nil {
+                                    replaceOutgoingOperationWithEmptyMessage(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
+                                } else {
+                                    markOutgoingOperationAsCompleted(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
+                                }
+                                
                                 var timestamp = message.timestamp
                                 if let result = result {
                                     switch result {
                                         case let .sentEncryptedMessage(date):
                                             timestamp = date
-                                        case let .sentEncryptedFile(date, file):
+                                        case let .sentEncryptedFile(date, _):
                                             timestamp = date
                                     }
-                                    flags.remove(.Unsent)
-                                    flags.remove(.Sending)
-                                } else {
-                                    flags = [.Failed]
                                 }
-                                var storeForwardInfo: StoreMessageForwardInfo?
-                                if let forwardInfo = currentMessage.forwardInfo {
-                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                }
-                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
-                            })
-                        }
+                                
+                                modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([messageId]), timestamp: timestamp)
+                                
+                                modifier.updateMessage(message.id, update: { currentMessage in
+                                    var flags = StoreMessageFlags(currentMessage.flags)
+                                    if let _ = result {
+                                        flags.remove(.Unsent)
+                                        flags.remove(.Sending)
+                                    } else {
+                                        flags = [.Failed]
+                                    }
+                                    var storeForwardInfo: StoreMessageForwardInfo?
+                                    if let forwardInfo = currentMessage.forwardInfo {
+                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                    }
+                                    
+                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                                })
+                                
+                                maybeReadSecretOutgoingMessage(modifier: modifier, index: MessageIndex(id: message.id, timestamp: timestamp))
+                            }
+                    }
+                } else {
+                    replaceOutgoingOperationWithEmptyMessage(modifier: modifier, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: arc4random64())
+                    modifier.deleteMessages([messageId])
+                    //assertionFailure()
+                    return .complete()
                 }
             } else {
-                assertionFailure()
-                return .never()
+                return .complete()
             }
-        } else {
-            return .complete()
-        }
-    } |> switchToLatest
+        } |> switchToLatest
+    }
 }
 
 private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId: PeerId, action: SecretMessageAction, tagLocalIndex: Int32, wasDelivered: Bool) -> Signal<Void, NoError> {
@@ -758,6 +1092,7 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
                             markOutgoingOperationAsCompleted(modifier: modifier, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
                         }
                         if let messageId = action.messageId {
+                            var resultTimestamp: Int32?
                             modifier.updateMessage(messageId, update: { currentMessage in
                                 var flags = StoreMessageFlags(currentMessage.flags)
                                 var timestamp = currentMessage.timestamp
@@ -773,12 +1108,17 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
                                 } else {
                                     flags = [.Failed]
                                 }
+                                resultTimestamp = timestamp
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                                 }
                                 return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
                             })
+                            
+                            if let resultTimestamp = resultTimestamp {
+                                maybeReadSecretOutgoingMessage(modifier: modifier, index: MessageIndex(id: messageId, timestamp: resultTimestamp))
+                            }
                         }
                     }
                 }
@@ -791,12 +1131,23 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
 private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer: TelegramSecretChat, state: SecretChatState, operationIndex: Int32, decryptedMessage: BoxedDecryptedMessage, globallyUniqueId: Int64, file: SecretChatOutgoingFile?, asService: Bool, wasDelivered: Bool) -> Signal<Api.messages.SentEncryptedMessage?, NoError> {
     let payload = Buffer()
     var sequenceInfo: SecretChatOperationSequenceInfo?
-    var maybeKey: SecretChatKey?
+    var maybeParameters: SecretChatEncryptionParameters?
+    
+    let mode: SecretChatEncryptionMode
+    switch decryptedMessage {
+        case .layer8, .layer46:
+            mode = .v1
+        default:
+            mode = .v2(role: state.role)
+    }
+    
     switch state.embeddedState {
         case .terminated, .handshake:
             break
         case .basicLayer:
-            maybeKey = state.keychain.indefinitelyValidKey()
+            if let key = state.keychain.indefinitelyValidKey() {
+                maybeParameters = SecretChatEncryptionParameters(key: key, mode: mode)
+            }
         case let .sequenceBasedLayer(sequenceState):
             let topReceivedOperationIndex: Int32
             if let topProcessedCanonicalIncomingOperationIndex = sequenceState.topProcessedCanonicalIncomingOperationIndex {
@@ -805,18 +1156,20 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
                 topReceivedOperationIndex = -1
             }
             let canonicalOperationIndex = sequenceState.canonicalOutgoingOperationIndex(operationIndex)
-            maybeKey = state.keychain.latestKey(validForSequenceBasedCanonicalIndex: canonicalOperationIndex)
-            Logger.shared.log("SecretChat", "sending message with index \(canonicalOperationIndex) key \(String(describing: maybeKey?.fingerprint))")
+            if let key = state.keychain.latestKey(validForSequenceBasedCanonicalIndex: canonicalOperationIndex) {
+                maybeParameters = SecretChatEncryptionParameters(key: key, mode: mode)
+            }
+            Logger.shared.log("SecretChat", "sending message with index \(canonicalOperationIndex) key \(String(describing: maybeParameters?.key.fingerprint))")
             sequenceInfo = SecretChatOperationSequenceInfo(topReceivedOperationIndex: topReceivedOperationIndex, operationIndex: canonicalOperationIndex)
     }
     
-    guard let key = maybeKey else {
+    guard let parameters = maybeParameters else {
         Logger.shared.log("SecretChat", "no valid key found")
         return .single(nil)
     }
     
     decryptedMessage.serialize(payload, role: state.role, sequenceInfo: sequenceInfo)
-    let encryptedPayload = encryptedMessageContents(key: key, data: MemoryBuffer(payload))
+    let encryptedPayload = encryptedMessageContents(parameters: parameters, data: MemoryBuffer(payload))
     let sendMessage: Signal<Api.messages.SentEncryptedMessage, MTRpcError>
     let inputPeer = Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)
     

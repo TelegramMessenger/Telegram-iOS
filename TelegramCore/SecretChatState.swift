@@ -13,6 +13,7 @@ public enum SecretChatRole: Int32 {
 enum SecretChatLayer: Int32 {
     case layer8 = 8
     case layer46 = 46
+    case layer73 = 73
 }
 
 public struct SecretChatKeySha1Fingerprint: PostboxCoding, Equatable {
@@ -240,24 +241,24 @@ enum SecretChatHandshakeState: PostboxCoding, Equatable {
 }
 
 struct SecretChatLayerNegotiationState: PostboxCoding, Equatable {
-    let activeLayer: Int32
+    let activeLayer: SecretChatSequenceBasedLayer
     let locallyRequestedLayer: Int32?
     let remotelyRequestedLayer: Int32?
     
-    init(activeLayer: Int32, locallyRequestedLayer: Int32?, remotelyRequestedLayer: Int32?) {
+    init(activeLayer: SecretChatSequenceBasedLayer, locallyRequestedLayer: Int32?, remotelyRequestedLayer: Int32?) {
         self.activeLayer = activeLayer
         self.locallyRequestedLayer = locallyRequestedLayer
         self.remotelyRequestedLayer = remotelyRequestedLayer
     }
     
     init(decoder: PostboxDecoder) {
-        self.activeLayer = decoder.decodeInt32ForKey("a", orElse: 0)
+        self.activeLayer = SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("a", orElse: 0)) ?? .layer46
         self.locallyRequestedLayer = decoder.decodeOptionalInt32ForKey("lr")
         self.remotelyRequestedLayer = decoder.decodeOptionalInt32ForKey("rr")
     }
     
     func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.activeLayer, forKey: "a")
+        encoder.encodeInt32(self.activeLayer.rawValue, forKey: "a")
         if let locallyRequestedLayer = self.locallyRequestedLayer {
             encoder.encodeInt32(locallyRequestedLayer, forKey: "lr")
         } else {
@@ -281,6 +282,14 @@ struct SecretChatLayerNegotiationState: PostboxCoding, Equatable {
             return false
         }
         return true
+    }
+    
+    func withUpdatedActiveLayer(_ activeLayer: SecretChatSequenceBasedLayer) -> SecretChatLayerNegotiationState {
+        return SecretChatLayerNegotiationState(activeLayer: activeLayer, locallyRequestedLayer: self.locallyRequestedLayer, remotelyRequestedLayer: self.remotelyRequestedLayer)
+    }
+    
+    func withUpdatedLocallyRequestedLayer(_ locallyRequestedLayer: Int32?) -> SecretChatLayerNegotiationState {
+        return SecretChatLayerNegotiationState(activeLayer: self.activeLayer, locallyRequestedLayer: locallyRequestedLayer, remotelyRequestedLayer: self.remotelyRequestedLayer)
     }
     
     func withUpdatedRemotelyRequestedLayer(_ remotelyRequestedLayer: Int32?) -> SecretChatLayerNegotiationState {

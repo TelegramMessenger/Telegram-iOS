@@ -46,7 +46,7 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                                     case .basicLayer:
                                         layer = .layer8
                                     case let .sequenceBasedLayer(sequenceState):
-                                        layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                                        layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
                                 }
                             }
                             

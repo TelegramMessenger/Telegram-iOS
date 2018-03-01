@@ -9,12 +9,47 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public enum CallSessionError {
+public enum CallSessionError: Equatable {
     case generic
     case privacyRestricted
     case notSupportedByPeer
     case serverProvided(String)
     case disconnected
+    
+    public static func ==(lhs: CallSessionError, rhs: CallSessionError) -> Bool {
+        switch lhs {
+            case .generic:
+                if case .generic = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .privacyRestricted:
+                if case .privacyRestricted = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .notSupportedByPeer:
+                if case .notSupportedByPeer = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .serverProvided(text):
+                if case .serverProvided(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .disconnected:
+                if case .disconnected = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public enum CallSessionEndedType {
@@ -23,14 +58,31 @@ public enum CallSessionEndedType {
     case missed
 }
 
-public enum CallSessionTerminationReason {
+public enum CallSessionTerminationReason: Equatable {
     case ended(CallSessionEndedType)
     case error(CallSessionError)
+    
+    public static func ==(lhs: CallSessionTerminationReason, rhs: CallSessionTerminationReason) -> Bool {
+        switch lhs {
+            case let .ended(type):
+                if case .ended(type) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .error(error):
+                if case .error(error) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public struct ReportCallRating  {
-    public let id:Int64
-    public let accessHash:Int64
+    public let id: Int64
+    public let accessHash: Int64
 }
 
 enum CallSessionInternalState {
@@ -127,6 +179,8 @@ private final class CallSessionContext {
     var state: CallSessionInternalState
     let subscribers = Bag<(CallSession) -> Void>()
     
+    let acknowledgeIncomingCallDisposable = MetaDisposable()
+    
     var isEmpty: Bool {
         if case .terminated = self.state {
             return self.subscribers.isEmpty
@@ -139,6 +193,10 @@ private final class CallSessionContext {
         self.peerId = peerId
         self.isOutgoing = isOutgoing
         self.state = state
+    }
+    
+    deinit {
+        self.acknowledgeIncomingCallDisposable.dispose()
     }
 }
 
@@ -252,7 +310,9 @@ private final class CallSessionManagerContext {
         
         if randomStatus == 0 {
             let internalId = CallSessionInternalId()
-            self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: false, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b))
+            let context = CallSessionContext(peerId: peerId, isOutgoing: false, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b))
+            self.contexts[internalId] = context
+            context.acknowledgeIncomingCallDisposable.set(self.network.request(Api.functions.phone.receivedCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash))).start())
             self.contextIdByStableId[stableId] = internalId
             self.contextUpdated(internalId: internalId)
             self.ringingStatesUpdated()

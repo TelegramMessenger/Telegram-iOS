@@ -509,9 +509,11 @@ public final class PendingMessageManager {
             messages.sort { MessageIndex($0.0) < MessageIndex($1.0) }
             
             if peerId.namespace == Namespaces.Peer.SecretChat {
-                //assertionFailure()
+                for (message, content) in messages {
+                    PendingMessageManager.sendSecretMessageContent(modifier: modifier, message: message, content: content)
+                }
                 
-                return failMessages(postbox: postbox, ids: group.map { $0.0 })
+                return .complete()
             } else if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                 var isForward = false
                 var replyMessageId: Int32?
@@ -637,68 +639,41 @@ public final class PendingMessageManager {
         } |> switchToLatest
     }
     
-    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, messageId: MessageId, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
-        return postbox.modify { [weak self] modifier -> Signal<Void, NoError> in
-            guard let message = modifier.getMessage(messageId) else {
-                return .complete()
+    private static func sendSecretMessageContent(modifier: Modifier, message: Message, content: PendingMessageUploadedContent) {
+        var secretFile: SecretChatOutgoingFile?
+        switch content {
+            case let .secretMedia(file, size, key):
+                if let fileReference = SecretChatOutgoingFileReference(file) {
+                    secretFile = SecretChatOutgoingFile(reference: fileReference, size: size, key: key)
+                }
+            default:
+                break
+        }
+        
+        var layer: SecretChatLayer?
+        let state = modifier.getPeerChatState(message.id.peerId) as? SecretChatState
+        if let state = state {
+            switch state.embeddedState {
+                case .terminated, .handshake:
+                    break
+                case .basicLayer:
+                    layer = .layer8
+                case let .sequenceBasedLayer(sequenceState):
+                    layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
             }
-            
-            if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
-                var secretFile: SecretChatOutgoingFile?
-                switch content {
-                    case let .secretMedia(file, size, key):
-                        if let fileReference = SecretChatOutgoingFileReference(file) {
-                            secretFile = SecretChatOutgoingFile(reference: fileReference, size: size, key: key)
-                        }
-                    default:
-                        break
-                }
-                
-                var layer: SecretChatLayer?
-                let state = modifier.getPeerChatState(messageId.peerId) as? SecretChatState
-                if let state = state {
-                    switch state.embeddedState {
-                        case .terminated, .handshake:
-                            break
-                        case .basicLayer:
-                            layer = .layer8
-                        case let .sequenceBasedLayer(sequenceState):
-                            layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
-                    }
-                }
-                
-                if let state = state, let layer = layer {
-                    var sentAsAction = false
-                    for media in message.media {
-                        if let media = media as? TelegramMediaAction {
-                            if case let .messageAutoremoveTimeoutUpdated(value) = media.action {
-                                sentAsAction = true
-                                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, timeout: value, messageId: message.id), state: state)
-                                if updatedState != state {
-                                    modifier.setPeerChatState(message.id.peerId, state: updatedState)
-                                }
-                                modifier.updateMessage(message.id, update: { currentMessage in
-                                    var flags = StoreMessageFlags(message.flags)
-                                    if !flags.contains(.Failed) {
-                                        flags.insert(.Sending)
-                                    }
-                                    var storeForwardInfo: StoreMessageForwardInfo?
-                                    if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                    }
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
-                                })
-                            }
-                            break
-                        }
-                    }
-                    
-                    if !sentAsAction {
-                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: messageId.peerId, operation: .sendMessage(layer: layer, id: messageId, file: secretFile), state: state)
+        }
+        
+        if let state = state, let layer = layer {
+            var sentAsAction = false
+            for media in message.media {
+                if let media = media as? TelegramMediaAction {
+                    if case let .messageAutoremoveTimeoutUpdated(value) = media.action {
+                        sentAsAction = true
+                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, timeout: value, messageId: message.id), state: state)
                         if updatedState != state {
-                            modifier.setPeerChatState(messageId.peerId, state: updatedState)
+                            modifier.setPeerChatState(message.id.peerId, state: updatedState)
                         }
-                        modifier.updateMessage(messageId, update: { currentMessage in
+                        modifier.updateMessage(message.id, update: { currentMessage in
                             var flags = StoreMessageFlags(message.flags)
                             if !flags.contains(.Failed) {
                                 flags.insert(.Sending)
@@ -710,15 +685,46 @@ public final class PendingMessageManager {
                             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
                         })
                     }
-                } else {
-                    modifier.updateMessage(messageId, update: { currentMessage in
-                        var storeForwardInfo: StoreMessageForwardInfo?
-                        if let forwardInfo = currentMessage.forwardInfo {
-                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                        }
-                        return .update(StoreMessage(id: message.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
-                    })
+                    break
                 }
+            }
+            
+            if !sentAsAction {
+                let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .sendMessage(layer: layer, id: message.id, file: secretFile), state: state)
+                if updatedState != state {
+                    modifier.setPeerChatState(message.id.peerId, state: updatedState)
+                }
+                modifier.updateMessage(message.id, update: { currentMessage in
+                    var flags = StoreMessageFlags(message.flags)
+                    if !flags.contains(.Failed) {
+                        flags.insert(.Sending)
+                    }
+                    var storeForwardInfo: StoreMessageForwardInfo?
+                    if let forwardInfo = currentMessage.forwardInfo {
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                    }
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                })
+            }
+        } else {
+            modifier.updateMessage(message.id, update: { currentMessage in
+                var storeForwardInfo: StoreMessageForwardInfo?
+                if let forwardInfo = currentMessage.forwardInfo {
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                }
+                return .update(StoreMessage(id: message.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+            })
+        }
+    }
+    
+    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, messageId: MessageId, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
+        return postbox.modify { [weak self] modifier -> Signal<Void, NoError> in
+            guard let message = modifier.getMessage(messageId) else {
+                return .complete()
+            }
+            
+            if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
+                PendingMessageManager.sendSecretMessageContent(modifier: modifier, message: message, content: content)
                 return .complete()
             } else if let peer = modifier.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) {
                 var uniqueId: Int64 = 0

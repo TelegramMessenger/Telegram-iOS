@@ -36,7 +36,7 @@ public func deleteMessagesInteractively(postbox: Postbox, messageIds: [MessageId
                         case .basicLayer:
                             layer = .layer8
                         case let .sequenceBasedLayer(sequenceState):
-                            layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                            layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
                     }
                     if let layer = layer {
                         var globallyUniqueIds: [Int64] = []
@@ -84,7 +84,7 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId) -> Signa
                     case .basicLayer:
                         layer = .layer8
                     case let .sequenceBasedLayer(sequenceState):
-                        layer = SecretChatLayer(rawValue: sequenceState.layerNegotiationState.activeLayer)
+                        layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
                 }
                 
                 if let layer = layer {
