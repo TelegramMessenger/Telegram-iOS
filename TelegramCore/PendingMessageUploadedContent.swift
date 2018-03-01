@@ -68,7 +68,7 @@ func messageContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods
             if let reference = image.reference, case let .cloud(id, accessHash) = reference {
                 return .ready(.media(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: id, accessHash: accessHash), ttlSeconds: nil), text))
             } else {
-                return .upload(uploadedMediaImageContent(network: network, postbox: postbox, peerId: peerId, image: image, text: text, autoremoveAttribute: autoremoveAttribute))
+                return .upload(uploadedMediaImageContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, peerId: peerId, image: image, text: text, autoremoveAttribute: autoremoveAttribute))
             }
         } else if let file = media as? TelegramMediaFile {
             if let resource = file.resource as? CloudDocumentMediaResource {
@@ -193,7 +193,7 @@ private func maybeCacheUploadedResource(postbox: Postbox, key: CachedSentMediaRe
     }
 }
 
-private func uploadedMediaImageContent(network: Network, postbox: Postbox, peerId: PeerId, image: TelegramMediaImage, text: String, autoremoveAttribute: AutoremoveTimeoutMessageAttribute?) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
+private func uploadedMediaImageContent(network: Network, postbox: Postbox, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, peerId: PeerId, image: TelegramMediaImage, text: String, autoremoveAttribute: AutoremoveTimeoutMessageAttribute?) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
     if let largestRepresentation = largestImageRepresentation(image.representations) {
         let predownloadedResource: Signal<PredownloadedResource, PendingMessageUploadError> = maybePredownloadedImageResource(postbox: postbox, peerId: peerId, resource: largestRepresentation.resource)
         return predownloadedResource

@@ -711,11 +711,11 @@ private func boxedDecryptedMessage(modifier: Modifier, message: Message, globall
                             }
                         }
                         
-                        if let voiceDuration = voiceDuration {
+                        /*if let voiceDuration = voiceDuration {
                             decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
-                        } else {
+                        } else { */
                             decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes73(file.attributes), caption: "")
-                        }
+                        //}
                     } else {
                         if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
                             let thumb: SecretApi73.PhotoSize
@@ -735,6 +735,9 @@ private func boxedDecryptedMessage(modifier: Modifier, message: Message, globall
                         let decryptedEntites = entities.flatMap(decryptedEntities73)
                         if let _ = decryptedEntites {
                             flags |= (1 << 7)
+                        }
+                        if message.groupingKey != nil {
+                            flags |= (1 << 17)
                         }
                         flags |= (1 << 9)
                         return .layer73(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: decryptedEntites, viaBotName: viaBotName, replyToRandomId: replyGlobalId, groupedId: message.groupingKey))
@@ -1036,12 +1039,14 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                                 }
                                 
                                 var timestamp = message.timestamp
+                                var encryptedFile: SecretChatFileReference?
                                 if let result = result {
                                     switch result {
                                         case let .sentEncryptedMessage(date):
                                             timestamp = date
-                                        case let .sentEncryptedFile(date, _):
+                                        case let .sentEncryptedFile(date, file):
                                             timestamp = date
+                                            encryptedFile = SecretChatFileReference(file)
                                     }
                                 }
                                 
@@ -1060,7 +1065,22 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                                     }
                                     
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                                    var updatedMedia = currentMessage.media
+                                    
+                                    if let fromMedia = currentMessage.media.first, let encryptedFile = encryptedFile, let file = file {
+                                        var toMedia: Media?
+                                        if let fromMedia = fromMedia as? TelegramMediaFile {
+                                            let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
+                                            toMedia = updatedFile
+                                            updatedMedia = [updatedFile]
+                                        }
+                                        
+                                        if let toMedia = toMedia {
+                                            applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                                        }
+                                    }
+                                    
+                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
                                 })
                                 
                                 maybeReadSecretOutgoingMessage(modifier: modifier, index: MessageIndex(id: message.id, timestamp: timestamp))

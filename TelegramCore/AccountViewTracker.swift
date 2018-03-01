@@ -31,19 +31,23 @@ public final class CallListView {
     }
 }
 
-private func pendingWebpages(entries: [MessageHistoryEntry]) -> Set<MessageId> {
+private func pendingWebpages(entries: [MessageHistoryEntry]) -> (Set<MessageId>, [MessageId: (MediaId, String)]) {
     var messageIds = Set<MessageId>()
+    var localWebpages: [MessageId: (MediaId, String)] = [:]
     for case let .MessageEntry(message, _, _, _) in entries {
         for media in message.media {
             if let media = media as? TelegramMediaWebpage {
-                if case .Pending = media.content {
+                if case let .Pending(_, url) = media.content {
                     messageIds.insert(message.id)
+                    if let url = url, media.webpageId.namespace == Namespaces.Media.LocalWebpage {
+                        localWebpages[message.id] = (media.webpageId, url)
+                    }
                 }
                 break
             }
         }
     }
-    return messageIds
+    return (messageIds, localWebpages)
 }
 
 private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void, NoError> {
@@ -235,7 +239,7 @@ public final class AccountViewTracker {
         self.updatedViewCountDisposables.dispose()
     }
     
-    private func updatePendingWebpages(viewId: Int32, messageIds: Set<MessageId>) {
+    private func updatePendingWebpages(viewId: Int32, messageIds: Set<MessageId>, localWebpages: [MessageId: (MediaId, String)]) {
         self.queue.async {
             var addedMessageIds: [MessageId] = []
             var removedMessageIds: [MessageId] = []
@@ -280,13 +284,42 @@ public final class AccountViewTracker {
             if let account = self.account {
                 for messageId in addedMessageIds {
                     if self.webpageDisposables[messageId] == nil {
-                        self.webpageDisposables[messageId] = fetchWebpage(account: account, messageId: messageId).start(completed: { [weak self] in
-                            if let strongSelf = self {
-                                strongSelf.queue.async {
-                                    strongSelf.webpageDisposables.removeValue(forKey: messageId)
+                        if let (_, url) = localWebpages[messageId] {
+                            self.webpageDisposables[messageId] = (webpagePreview(account: account, url: url) |> mapToSignal { webpage -> Signal<Void, NoError> in
+                                return account.postbox.modify { modifier -> Void in
+                                    if let webpage = webpage {
+                                        modifier.updateMessage(messageId, update: { currentMessage in
+                                            var storeForwardInfo: StoreMessageForwardInfo?
+                                            if let forwardInfo = currentMessage.forwardInfo {
+                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                            }
+                                            var media = currentMessage.media
+                                            for i in 0 ..< media.count {
+                                                if let _ = media[i] as? TelegramMediaWebpage {
+                                                    media[i] = webpage
+                                                    break
+                                                }
+                                            }
+                                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: media))
+                                        })
+                                    }
                                 }
-                            }
-                        })
+                            }).start(completed: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.queue.async {
+                                        strongSelf.webpageDisposables.removeValue(forKey: messageId)
+                                    }
+                                }
+                            })
+                        } else if messageId.namespace == Namespaces.Message.Cloud {
+                            self.webpageDisposables[messageId] = fetchWebpage(account: account, messageId: messageId).start(completed: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.queue.async {
+                                        strongSelf.webpageDisposables.removeValue(forKey: messageId)
+                                    }
+                                }
+                            })
+                        }
                     } else {
                         assertionFailure()
                     }
@@ -555,8 +588,8 @@ public final class AccountViewTracker {
         }, next: { [weak self] next, viewId in
             if let strongSelf = self {
                 strongSelf.queue.async {
-                    let messageIds = pendingWebpages(entries: next.0.entries)
-                    strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds)
+                    let (messageIds, localWebpages) = pendingWebpages(entries: next.0.entries)
+                    strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds, localWebpages: localWebpages)
                     if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
                     } else if case .group = chatLocation {
@@ -567,7 +600,7 @@ public final class AccountViewTracker {
         }, disposed: { [weak self] viewId in
             if let strongSelf = self {
                 strongSelf.queue.async {
-                    strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [])
+                    strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [], localWebpages: [:])
                     switch chatLocation {
                         case let .peer(peerId):
                             if peerId.namespace == Namespaces.Peer.CloudChannel {

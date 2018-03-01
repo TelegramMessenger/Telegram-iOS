@@ -243,7 +243,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1970352846] = { return Api.messages.Stickers.parse_stickers($0) }
     dict[1008755359] = { return Api.InlineBotSwitchPM.parse_inlineBotSwitchPM($0) }
     dict[223655517] = { return Api.messages.FoundStickerSets.parse_foundStickerSetsNotModified($0) }
-    dict[-1285828951] = { return Api.messages.FoundStickerSets.parse_foundStickerSets($0) }
+    dict[1359533640] = { return Api.messages.FoundStickerSets.parse_foundStickerSets($0) }
     dict[1158290442] = { return Api.messages.FoundGifs.parse_foundGifs($0) }
     dict[2086234950] = { return Api.FileLocation.parse_fileLocationUnavailable($0) }
     dict[1406570614] = { return Api.FileLocation.parse_fileLocation($0) }
@@ -309,6 +309,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[548253432] = { return Api.InputPeer.parse_inputPeerChannel($0) }
     dict[568808380] = { return Api.upload.WebFile.parse_webFile($0) }
     dict[-116274796] = { return Api.Contact.parse_contact($0) }
+    dict[1648543603] = { return Api.FileHash.parse_fileHash($0) }
     dict[-1679053127] = { return Api.BotInlineResult.parse_botInlineResult($0) }
     dict[400266251] = { return Api.BotInlineResult.parse_botInlineMediaResult($0) }
     dict[911761060] = { return Api.messages.BotCallbackAnswer.parse_botCallbackAnswer($0) }
@@ -378,7 +379,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1218642516] = { return Api.ReplyMarkup.parse_replyInlineMarkup($0) }
     dict[1493171408] = { return Api.HighScore.parse_highScore($0) }
     dict[-305282981] = { return Api.TopPeer.parse_topPeer($0) }
-    dict[2012136335] = { return Api.CdnFileHash.parse_cdnFileHash($0) }
     dict[986597452] = { return Api.contacts.Link.parse_link($0) }
     dict[1444661369] = { return Api.ContactBlocked.parse_contactBlocked($0) }
     dict[-2128698738] = { return Api.auth.CheckedPhone.parse_checkedPhone($0) }
@@ -388,7 +388,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1908433218] = { return Api.Page.parse_pagePart($0) }
     dict[1433323434] = { return Api.Page.parse_pageFull($0) }
     dict[157948117] = { return Api.upload.File.parse_file($0) }
-    dict[-363659686] = { return Api.upload.File.parse_fileCdnRedirect($0) }
+    dict[-242427324] = { return Api.upload.File.parse_fileCdnRedirect($0) }
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
@@ -841,6 +841,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Contact:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.FileHash:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.BotInlineResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.BotCallbackAnswer:
@@ -902,8 +904,6 @@ public struct Api {
             case let _1 as Api.HighScore:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.TopPeer:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.CdnFileHash:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Link:
                 _1.serialize(buffer, boxed)
@@ -1319,7 +1319,7 @@ public struct Api {
     
         public enum FoundStickerSets {
             case foundStickerSetsNotModified
-            case foundStickerSets(hash: Int32, sets: [Api.StickerSet])
+            case foundStickerSets(hash: Int32, sets: [Api.StickerSetCovered])
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
@@ -1331,7 +1331,7 @@ public struct Api {
                         break
                     case .foundStickerSets(let hash, let sets):
                         if boxed {
-                            buffer.appendInt32(-1285828951)
+                            buffer.appendInt32(1359533640)
                         }
                         serializeInt32(hash, buffer: buffer, boxed: false)
                         buffer.appendInt32(481674261)
@@ -1348,9 +1348,9 @@ public struct Api {
             fileprivate static func parse_foundStickerSets(_ reader: BufferReader) -> FoundStickerSets? {
                 var _1: Int32?
                 _1 = reader.readInt32()
-                var _2: [Api.StickerSet]?
+                var _2: [Api.StickerSetCovered]?
                 if let _ = reader.readInt32() {
-                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSet.self)
+                    _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
                 }
                 let _c1 = _1 != nil
                 let _c2 = _2 != nil
@@ -9148,6 +9148,42 @@ public struct Api {
     
     }
 
+    public enum FileHash {
+        case fileHash(offset: Int32, limit: Int32, hash: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .fileHash(let offset, let limit, let hash):
+                    if boxed {
+                        buffer.appendInt32(1648543603)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeBytes(hash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+        fileprivate static func parse_fileHash(_ reader: BufferReader) -> FileHash? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.FileHash.fileHash(offset: _1!, limit: _2!, hash: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    
+    }
+
     public enum BotInlineResult {
         case botInlineResult(flags: Int32, id: String, type: String, title: String?, description: String?, url: String?, thumbUrl: String?, contentUrl: String?, contentType: String?, w: Int32?, h: Int32?, duration: Int32?, sendMessage: Api.BotInlineMessage)
         case botInlineMediaResult(flags: Int32, id: String, type: String, photo: Api.Photo?, document: Api.Document?, title: String?, description: String?, sendMessage: Api.BotInlineMessage)
@@ -10407,42 +10443,6 @@ public struct Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.TopPeer.topPeer(peer: _1!, rating: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    
-    }
-
-    public enum CdnFileHash {
-        case cdnFileHash(offset: Int32, limit: Int32, hash: Buffer)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .cdnFileHash(let offset, let limit, let hash):
-                    if boxed {
-                        buffer.appendInt32(2012136335)
-                    }
-                    serializeInt32(offset, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    serializeBytes(hash, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-        fileprivate static func parse_cdnFileHash(_ reader: BufferReader) -> CdnFileHash? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.CdnFileHash.cdnFileHash(offset: _1!, limit: _2!, hash: _3!)
             }
             else {
                 return nil
@@ -18337,7 +18337,7 @@ public struct Api {
     
         public enum File {
             case file(type: Api.storage.FileType, mtime: Int32, bytes: Buffer)
-            case fileCdnRedirect(dcId: Int32, fileToken: Buffer, encryptionKey: Buffer, encryptionIv: Buffer, cdnFileHashes: [Api.CdnFileHash])
+            case fileCdnRedirect(dcId: Int32, fileToken: Buffer, encryptionKey: Buffer, encryptionIv: Buffer, fileHashes: [Api.FileHash])
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
@@ -18349,17 +18349,17 @@ public struct Api {
                         serializeInt32(mtime, buffer: buffer, boxed: false)
                         serializeBytes(bytes, buffer: buffer, boxed: false)
                         break
-                    case .fileCdnRedirect(let dcId, let fileToken, let encryptionKey, let encryptionIv, let cdnFileHashes):
+                    case .fileCdnRedirect(let dcId, let fileToken, let encryptionKey, let encryptionIv, let fileHashes):
                         if boxed {
-                            buffer.appendInt32(-363659686)
+                            buffer.appendInt32(-242427324)
                         }
                         serializeInt32(dcId, buffer: buffer, boxed: false)
                         serializeBytes(fileToken, buffer: buffer, boxed: false)
                         serializeBytes(encryptionKey, buffer: buffer, boxed: false)
                         serializeBytes(encryptionIv, buffer: buffer, boxed: false)
                         buffer.appendInt32(481674261)
-                        buffer.appendInt32(Int32(cdnFileHashes.count))
-                        for item in cdnFileHashes {
+                        buffer.appendInt32(Int32(fileHashes.count))
+                        for item in fileHashes {
                             item.serialize(buffer, true)
                         }
                         break
@@ -18393,9 +18393,9 @@ public struct Api {
                 _3 = parseBytes(reader)
                 var _4: Buffer?
                 _4 = parseBytes(reader)
-                var _5: [Api.CdnFileHash]?
+                var _5: [Api.FileHash]?
                 if let _ = reader.readInt32() {
-                    _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.CdnFileHash.self)
+                    _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.FileHash.self)
                 }
                 let _c1 = _1 != nil
                 let _c2 = _2 != nil
@@ -18403,7 +18403,7 @@ public struct Api {
                 let _c4 = _4 != nil
                 let _c5 = _5 != nil
                 if _c1 && _c2 && _c3 && _c4 && _c5 {
-                    return Api.upload.File.fileCdnRedirect(dcId: _1!, fileToken: _2!, encryptionKey: _3!, encryptionIv: _4!, cdnFileHashes: _5!)
+                    return Api.upload.File.fileCdnRedirect(dcId: _1!, fileToken: _2!, encryptionKey: _3!, encryptionIv: _4!, fileHashes: _5!)
                 }
                 else {
                     return nil
@@ -22253,31 +22253,46 @@ public struct Api {
                     })
                 }
             
-                public static func reuploadCdnFile(fileToken: Buffer, requestToken: Buffer) -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.CdnFileHash]?) {
+                public static func reuploadCdnFile(fileToken: Buffer, requestToken: Buffer) -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.FileHash]?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(452533257)
+                    buffer.appendInt32(-1691921240)
                     serializeBytes(fileToken, buffer: buffer, boxed: false)
                     serializeBytes(requestToken, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(upload.reuploadCdnFile fileToken: \(fileToken), requestToken: \(requestToken))"}), buffer, { (buffer: Buffer) -> [Api.CdnFileHash]? in
+                    return (FunctionDescription({return "(upload.reuploadCdnFile fileToken: \(fileToken), requestToken: \(requestToken))"}), buffer, { (buffer: Buffer) -> [Api.FileHash]? in
                         let reader = BufferReader(buffer)
-                        var result: [Api.CdnFileHash]?
+                        var result: [Api.FileHash]?
                         if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.CdnFileHash.self)
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.FileHash.self)
                         }
                         return result
                     })
                 }
             
-                public static func getCdnFileHashes(fileToken: Buffer, offset: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.CdnFileHash]?) {
+                public static func getCdnFileHashes(fileToken: Buffer, offset: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.FileHash]?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-149567365)
+                    buffer.appendInt32(1302676017)
                     serializeBytes(fileToken, buffer: buffer, boxed: false)
                     serializeInt32(offset, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(upload.getCdnFileHashes fileToken: \(fileToken), offset: \(offset))"}), buffer, { (buffer: Buffer) -> [Api.CdnFileHash]? in
+                    return (FunctionDescription({return "(upload.getCdnFileHashes fileToken: \(fileToken), offset: \(offset))"}), buffer, { (buffer: Buffer) -> [Api.FileHash]? in
                         let reader = BufferReader(buffer)
-                        var result: [Api.CdnFileHash]?
+                        var result: [Api.FileHash]?
                         if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.CdnFileHash.self)
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.FileHash.self)
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getFileHashes(location: Api.InputFileLocation, offset: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.FileHash]?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-956147407)
+                    location.serialize(buffer, true)
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(upload.getFileHashes location: \(location), offset: \(offset))"}), buffer, { (buffer: Buffer) -> [Api.FileHash]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.FileHash]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.FileHash.self)
                         }
                         return result
                     })
