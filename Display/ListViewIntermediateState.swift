@@ -133,12 +133,14 @@ public struct ListViewUpdateSizeAndInsets {
     public let insets: UIEdgeInsets
     public let duration: Double
     public let curve: ListViewAnimationCurve
+    public let ensureTopInsetForOverlayHighlightedItems: CGFloat?
     
-    public init(size: CGSize, insets: UIEdgeInsets, duration: Double, curve: ListViewAnimationCurve) {
+    public init(size: CGSize, insets: UIEdgeInsets, duration: Double, curve: ListViewAnimationCurve, ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil) {
         self.size = size
         self.insets = insets
         self.duration = duration
         self.curve = curve
+        self.ensureTopInsetForOverlayHighlightedItems = ensureTopInsetForOverlayHighlightedItems
     }
 }
 

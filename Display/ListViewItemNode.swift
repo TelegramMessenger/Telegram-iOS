@@ -72,6 +72,8 @@ open class ListViewItemNode: ASDisplayNode {
     let rotated: Bool
     final var index: Int?
     
+    public var isHighligtedInOverlay: Bool = false
+    
     public private(set) var accessoryItemNode: ListViewAccessoryItemNode?
 
     func setAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode?, leftInset: CGFloat, rightInset: CGFloat) {

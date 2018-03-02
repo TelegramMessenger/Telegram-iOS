@@ -113,6 +113,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private final let scroller: ListViewScroller
     private final var visibleSize: CGSize = CGSize()
     public private(set) final var insets = UIEdgeInsets()
+    private final var ensureTopInsetForOverlayHighlightedItems: CGFloat?
     private final var lastContentOffset: CGPoint = CGPoint()
     private final var lastContentOffsetTimestamp: CFAbsoluteTime = 0.0
     private final var ignoreScrollingEvents: Bool = false
@@ -162,6 +163,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     
     private var topItemOverscrollBackground: ListViewOverscrollBackgroundNode?
     private var bottomItemOverscrollBackground: ASDisplayNode?
+    
+    private var itemHighlightOverlayBackground: ASDisplayNode?
     
     private var touchesPosition = CGPoint()
     public private(set) var isTracking = false
@@ -369,7 +372,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         if let reorderNode = self.reorderNode {
             self.reorderNode = nil
             if let itemNode = reorderNode.itemNode, itemNode.supernode == self {
-                self.view.bringSubview(toFront: itemNode.view)
+                self.reorderItemNodeToFront(itemNode)
                 reorderNode.animateCompletion(completion: { [weak itemNode, weak reorderNode] in
                     //itemNode?.isHidden = false
                     reorderNode?.removeFromSupernode()
@@ -944,8 +947,47 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
+    private func updateOverlayHighlight(transition: ContainedViewLayoutTransition) {
+        var lowestOverlayNode: ListViewItemNode?
+        
+        for itemNode in self.itemNodes {
+            if itemNode.isHighligtedInOverlay {
+                lowestOverlayNode = itemNode
+                itemNode.view.superview?.bringSubview(toFront: itemNode.view)
+            }
+        }
+        
+        if let lowestOverlayNode = lowestOverlayNode {
+            let itemHighlightOverlayBackground: ASDisplayNode
+            if let current = self.itemHighlightOverlayBackground {
+                itemHighlightOverlayBackground = current
+            } else {
+                itemHighlightOverlayBackground = ASDisplayNode()
+                itemHighlightOverlayBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: -self.visibleSize.height), size: CGSize(width: self.visibleSize.width, height: self.visibleSize.height * 3.0))
+                itemHighlightOverlayBackground.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+                self.itemHighlightOverlayBackground = itemHighlightOverlayBackground
+                self.insertSubnode(itemHighlightOverlayBackground, belowSubnode: lowestOverlayNode)
+                itemHighlightOverlayBackground.alpha = 0.0
+                transition.updateAlpha(node: itemHighlightOverlayBackground, alpha: 1.0)
+            }
+        } else if let itemHighlightOverlayBackground = self.itemHighlightOverlayBackground {
+            self.itemHighlightOverlayBackground = nil
+            transition.updateAlpha(node: itemHighlightOverlayBackground, alpha: 0.0, completion: { [weak itemHighlightOverlayBackground] _ in
+                itemHighlightOverlayBackground?.removeFromSupernode()
+            })
+        }
+        
+        /*if let ensureInset = self.ensureTopInsetForOverlayHighlightedItems {
+            transition.updateSublayerTransformOffset(layer: self.layer, offset: CGPoint(x: 0.0, y: -ensureInset))
+        } else {
+            transition.updateSublayerTransformOffset(layer: self.layer, offset: CGPoint())
+        }*/
+    }
+    
     private func updateScroller(transition: ContainedViewLayoutTransition) {
-        if itemNodes.count == 0 {
+        self.updateOverlayHighlight(transition: transition)
+        
+        if self.itemNodes.count == 0 {
             return
         }
         
@@ -1116,6 +1158,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             if let updateSizeAndInsets = updateSizeAndInsets , (self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets)) {
                 self.visibleSize = updateSizeAndInsets.size
                 self.insets = updateSizeAndInsets.insets
+                self.ensureTopInsetForOverlayHighlightedItems = updateSizeAndInsets.ensureTopInsetForOverlayHighlightedItems
                 
                 let wasIgnoringScrollingEvents = self.ignoreScrollingEvents
                 self.ignoreScrollingEvents = true
@@ -1988,19 +2031,23 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             node.addInsetsAnimationToValue(updatedInsets, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
                         }
                         
-                        if abs(updatedApparentHeight - previousApparentHeight) > CGFloat.ulpOfOne {
-                            node.apparentHeight = previousApparentHeight
-                            node.animateFrameTransition(0.0, previousApparentHeight)
-                            node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
-                                if let node = node {
-                                    node.animateFrameTransition(progress, currentValue)
+                        if !abs(updatedApparentHeight - previousApparentHeight).isZero {
+                            let currentAnimation = node.animationForKey("apparentHeight")
+                            if let currentAnimation = currentAnimation, let toFloat = currentAnimation.to as? CGFloat, toFloat.isEqual(to: updatedApparentHeight) {
+                            } else {
+                                node.apparentHeight = previousApparentHeight
+                                node.animateFrameTransition(0.0, previousApparentHeight)
+                                node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
+                                    if let node = node {
+                                        node.animateFrameTransition(progress, currentValue)
+                                    }
+                                })
+                                
+                                if node.rotated && currentAnimation == nil {
+                                    let insetPart: CGFloat = previousInsets.bottom - layout.insets.bottom
+                                    node.transitionOffset += previousApparentHeight - layout.size.height - insetPart
+                                    node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
                                 }
-                            })
-                            
-                            if node.rotated {
-                                let insetPart: CGFloat = previousInsets.bottom - layout.insets.bottom
-                                node.transitionOffset += previousApparentHeight - layout.size.height - insetPart
-                                node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
                             }
                         } else {
                             if node.shouldAnimateHorizontalFrameTransition() {
@@ -2141,6 +2188,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     offsetFix += additionalScrollDistance
                     
                     self.insets = updateSizeAndInsets.insets
+                    self.ensureTopInsetForOverlayHighlightedItems = updateSizeAndInsets.ensureTopInsetForOverlayHighlightedItems
                     self.visibleSize = updateSizeAndInsets.size
                     
                     for itemNode in self.itemNodes {
@@ -2865,7 +2913,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     if let index = self.itemNodes[i].index {
                         let frame = self.itemNodes[i].apparentFrame
                         if frame.maxY >= self.insets.top && frame.minY < self.visibleSize.height + self.insets.bottom {
-                            firstVisibleIndex = (index, frame.minY >= self.insets.top)
+                            firstVisibleIndex = (index, frame.minY >= self.insets.top - 10.0)
                             break
                         }
                     }
@@ -3060,9 +3108,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             if itemNode.index == index && itemNode.canBeSelected {
                                 if true {
                                     if !itemNode.isLayerBacked {
-                                        strongSelf.view.bringSubview(toFront: itemNode.view)
+                                        strongSelf.reorderItemNodeToFront(itemNode)
                                         for (_, headerNode) in strongSelf.itemHeaderNodes {
-                                            strongSelf.view.bringSubview(toFront: headerNode.view)
+                                            strongSelf.reorderHeaderNodeToFront(headerNode)
                                         }
                                     }
                                     let itemNodeFrame = itemNode.frame
@@ -3113,6 +3161,11 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         self.highlightedItemIndex = nil
+    }
+    
+    public func updateNodeHighlightsAnimated(_ animated: Bool) {
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.35, curve: .spring) : .immediate
+        self.updateOverlayHighlight(transition: transition)
     }
     
     private func itemIndexAtPoint(_ point: CGPoint) -> Int? {
@@ -3187,9 +3240,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         if itemNode.index == index {
                             if itemNode.canBeSelected {
                                 if !itemNode.isLayerBacked {
-                                    self.view.bringSubview(toFront: itemNode.view)
+                                    self.reorderItemNodeToFront(itemNode)
                                     for (_, headerNode) in self.itemHeaderNodes {
-                                        self.view.bringSubview(toFront: headerNode.view)
+                                        self.reorderHeaderNodeToFront(headerNode)
                                     }
                                 }
                                 let itemNodeFrame = itemNode.frame
@@ -3262,5 +3315,19 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         return true
+    }
+    
+    private func reorderItemNodeToFront(_ itemNode: ListViewItemNode) {
+        itemNode.view.superview?.bringSubview(toFront: itemNode.view)
+        if let itemHighlightOverlayBackground = self.itemHighlightOverlayBackground {
+            itemHighlightOverlayBackground.view.superview?.bringSubview(toFront: itemHighlightOverlayBackground.view)
+        }
+    }
+    
+    private func reorderHeaderNodeToFront(_ headerNode: ListViewItemHeaderNode) {
+        headerNode.view.superview?.bringSubview(toFront: headerNode.view)
+        if let itemHighlightOverlayBackground = self.itemHighlightOverlayBackground {
+            itemHighlightOverlayBackground.view.superview?.bringSubview(toFront: itemHighlightOverlayBackground.view)
+        }
     }
 }

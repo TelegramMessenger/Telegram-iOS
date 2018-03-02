@@ -26,7 +26,7 @@ public final class PeekController: ViewController {
     
     private let theme: PeekControllerTheme
     private let content: PeekControllerContent
-    private let sourceNode: () -> ASDisplayNode?
+    var sourceNode: () -> ASDisplayNode?
     
     private var animatedIn = false
     

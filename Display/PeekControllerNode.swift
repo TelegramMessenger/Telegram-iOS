@@ -13,12 +13,16 @@ final class PeekControllerNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     private var containerOffset: CGFloat = 0.0
+    private var panInitialContainerOffset: CGFloat?
     
-    private let content: PeekControllerContent
-    private let contentNode: PeekControllerContentNode & ASDisplayNode
+    private var content: PeekControllerContent
+    private var contentNode: PeekControllerContentNode & ASDisplayNode
+    private var contentNodeHasValidLayout = false
     
-    private let menuNode: PeekControllerMenuNode?
+    private var menuNode: PeekControllerMenuNode?
     private var displayingMenu = false
+    
+    private var hapticFeedback: HapticFeedback?
     
     init(theme: PeekControllerTheme, content: PeekControllerContent, requestDismiss: @escaping () -> Void) {
         self.theme = theme
@@ -43,8 +47,6 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.containerBackgroundNode.displaysAsynchronously = false
         
         self.containerNode = ASDisplayNode()
-        self.containerNode.clipsToBounds = true
-        self.containerNode.cornerRadius = 16.0
         
         self.content = content
         self.contentNode = content.node()
@@ -61,6 +63,13 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         super.init()
         
+        if content.presentation() == .freeform {
+            self.containerNode.isUserInteractionEnabled = false
+        } else {
+            self.containerNode.clipsToBounds = true
+            self.containerNode.cornerRadius = 16.0
+        }
+        
         self.addSubnode(self.dimNode)
         self.view.addSubview(self.blurView)
         self.containerNode.addSubnode(self.contentNode)
@@ -73,6 +82,9 @@ final class PeekControllerNode: ViewControllerTracingNode {
         activatedActionImpl = { [weak self] in
             self?.requestDismiss()
         }
+        
+        self.hapticFeedback = HapticFeedback()
+        self.hapticFeedback?.prepareTap()
     }
     
     deinit {
@@ -96,8 +108,12 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         var menuSize: CGSize?
         
-        let contentSize = self.contentNode.updateLayout(size: maxContainerSize, transition: transition)
-        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: contentSize))
+        let contentSize = self.contentNode.updateLayout(size: maxContainerSize, transition: self.contentNodeHasValidLayout ? transition : .immediate)
+        if self.contentNodeHasValidLayout {
+            transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: contentSize))
+        } else {
+            self.contentNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+        }
         
         var containerFrame: CGRect
         switch self.content.presentation() {
@@ -113,7 +129,14 @@ final class PeekControllerNode: ViewControllerTracingNode {
             menuSize = CGSize(width: menuWidth, height: menuHeight)
             
             if self.displayingMenu {
-                containerFrame.origin.y = min(containerFrame.origin.y, layout.size.height - layoutInsets.bottom - menuHeight - 14.0 * 2.0 - containerFrame.height)
+                let upperBound = layout.size.height - layoutInsets.bottom - menuHeight - 14.0 * 2.0 - containerFrame.height
+                if containerFrame.origin.y > upperBound {
+                    var offset = upperBound - containerFrame.origin.y
+                    let delta = abs(offset)
+                    let factor: CGFloat = 60.0
+                    offset = (-((1.0 - (1.0 / (((delta) * 0.55 / (factor)) + 1.0))) * factor)) * (offset < 0.0 ? 1.0 : -1.0)
+                    containerFrame.origin.y = upperBound - offset
+                }
                 
                 transition.updateAlpha(layer: self.blurView.layer, alpha: 1.0)
             }
@@ -129,8 +152,16 @@ final class PeekControllerNode: ViewControllerTracingNode {
                 menuY = layout.size.height + 14.0
             }
             
-            transition.updateFrame(node: menuNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - menuSize.width) / 2.0), y: menuY), size: menuSize))
+            let menuFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - menuSize.width) / 2.0), y: menuY), size: menuSize)
+            
+            if self.contentNodeHasValidLayout {
+                transition.updateFrame(node: menuNode, frame: menuFrame)
+            } else {
+                menuNode.frame = menuFrame
+            }
         }
+        
+        self.contentNodeHasValidLayout = true
     }
     
     func animateIn(from rect: CGRect) {
@@ -140,6 +171,12 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: rect.midX - self.containerNode.position.x, y: rect.midY - self.containerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, initialVelocity: 0.0, damping: 110.0, additive: true)
         self.containerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
         self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        
+        if case .press = self.content.menuActivation() {
+            self.hapticFeedback?.tap()
+        } else {
+            self.hapticFeedback?.impact()
+        }
     }
     
     func animateOut(to rect: CGRect, completion: @escaping () -> Void) {
@@ -162,18 +199,40 @@ final class PeekControllerNode: ViewControllerTracingNode {
     }
     
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        guard case .drag = self.content.menuActivation() else {
+            return
+        }
+        
         switch recognizer.state {
+            case .began:
+                self.panInitialContainerOffset = self.containerOffset
             case .changed:
-                break
+                if let panInitialContainerOffset = self.panInitialContainerOffset {
+                    let translation = recognizer.translation(in: self.view)
+                    var offset = panInitialContainerOffset + translation.y
+                    if offset < 0.0 {
+                        let delta = abs(offset)
+                        let factor: CGFloat = 60.0
+                        offset = (-((1.0 - (1.0 / (((delta) * 0.55 / (factor)) + 1.0))) * factor)) * (offset < 0.0 ? 1.0 : -1.0)
+                    }
+                    self.applyDraggingOffset(offset)
+                }
             case .cancelled, .ended:
-                break
+                if let _ = self.panInitialContainerOffset {
+                    self.panInitialContainerOffset = nil
+                    if self.containerOffset < 0.0 {
+                        self.activateMenu()
+                    } else {
+                        self.requestDismiss()
+                    }
+                }
             default:
                 break
         }
     }
     
     func applyDraggingOffset(_ offset: CGFloat) {
-        self.containerOffset = min(0.0, offset)
+        self.containerOffset = offset
         if self.containerOffset < -25.0 {
             //self.displayingMenu = true
         } else {
@@ -185,6 +244,9 @@ final class PeekControllerNode: ViewControllerTracingNode {
     }
     
     func activateMenu() {
+        if case .press = self.content.menuActivation() {
+            self.hapticFeedback?.impact()
+        }
         if let layout = self.validLayout {
             self.displayingMenu = true
             self.containerOffset = 0.0
@@ -202,5 +264,48 @@ final class PeekControllerNode: ViewControllerTracingNode {
         } else {
             self.requestDismiss()
         }
+    }
+    
+    func updateContent(content: PeekControllerContent) {
+        let contentNode = self.contentNode
+        contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak contentNode] _ in
+            contentNode?.removeFromSupernode()
+        })
+        contentNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.15, removeOnCompletion: false)
+        
+        self.menuNode?.removeFromSupernode()
+        self.menuNode = nil
+        
+        self.content = content
+        self.contentNode = content.node()
+        self.containerNode.addSubnode(self.contentNode)
+        self.contentNodeHasValidLayout = false
+        
+        var activatedActionImpl: (() -> Void)?
+        let menuItems = content.menuItems()
+        if menuItems.isEmpty {
+            self.menuNode = nil
+        } else {
+            self.menuNode = PeekControllerMenuNode(theme: self.theme, items: menuItems, activatedAction: {
+                activatedActionImpl?()
+            })
+        }
+        
+        if let menuNode = self.menuNode {
+            self.addSubnode(menuNode)
+        }
+        
+        activatedActionImpl = { [weak self] in
+            self?.requestDismiss()
+        }
+        
+        self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        self.contentNode.layer.animateSpring(from: 0.35 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+        
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .animated(duration: 0.15, curve: .easeInOut))
+        }
+        
+        self.hapticFeedback?.tap()
     }
 }

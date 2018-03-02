@@ -8,7 +8,7 @@ final class TooltipControllerNode: ASDisplayNode {
     private var validLayout: ContainerViewLayout?
     
     private let containerNode: ContextMenuContainerNode
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
     
     var sourceRect: CGRect?
     var arrowOnBottom: Bool = true
@@ -19,7 +19,7 @@ final class TooltipControllerNode: ASDisplayNode {
         self.containerNode = ContextMenuContainerNode()
         self.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         
-        self.textNode = ASTextNode()
+        self.textNode = ImmediateTextNode()
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
         self.textNode.isLayerBacked = true
         self.textNode.displaysAsynchronously = false
@@ -53,7 +53,7 @@ final class TooltipControllerNode: ASDisplayNode {
         
         let maxActionsWidth = layout.size.width - 20.0
         
-        var textSize = self.textNode.measure(CGSize(width: maxActionsWidth, height: CGFloat.greatestFiniteMagnitude))
+        var textSize = self.textNode.updateLayout(CGSize(width: maxActionsWidth, height: CGFloat.greatestFiniteMagnitude))
         textSize.width = ceil(textSize.width / 2.0) * 2.0
         textSize.height = ceil(textSize.height / 2.0) * 2.0
         let contentSize = CGSize(width: textSize.width + 12.0, height: textSize.height + 34.0)

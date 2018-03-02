@@ -138,13 +138,16 @@ final class ContextMenuNode: ASDisplayNode {
     private let actionNodes: [ContextMenuActionNode]
     
     var sourceRect: CGRect?
+    var containerRect: CGRect?
     var arrowOnBottom: Bool = true
     
     private var dismissedByTouchOutside = false
+    private let catchTapsOutside: Bool
     
-    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void) {
+    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, catchTapsOutside: Bool) {
         self.actions = actions
         self.dismiss = dismiss
+        self.catchTapsOutside = catchTapsOutside
         
         self.containerNode = ContextMenuContainerNode()
         self.scrollNode = ContextMenuContentScrollNode()
@@ -183,15 +186,16 @@ final class ContextMenuNode: ASDisplayNode {
         let actionsWidth = min(unboundActionsWidth, maxActionsWidth)
         
         let sourceRect: CGRect = self.sourceRect ?? CGRect(origin: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0), size: CGSize())
+        let containerRect: CGRect = self.containerRect ?? self.bounds
         
         let insets = layout.insets(options: [.statusBar, .input])
         
         let verticalOrigin: CGFloat
         var arrowOnBottom = true
-        if sourceRect.minY - 54.0 > insets.top {
+        if sourceRect.minY - 54.0 > containerRect.minY + insets.top {
             verticalOrigin = sourceRect.minY - 54.0
         } else {
-            verticalOrigin = min(layout.size.height - insets.bottom - 54.0, sourceRect.maxY)
+            verticalOrigin = min(containerRect.maxY - insets.bottom - 54.0, sourceRect.maxY)
             arrowOnBottom = false
         }
         self.arrowOnBottom = arrowOnBottom
@@ -234,6 +238,9 @@ final class ContextMenuNode: ASDisplayNode {
                     if !self.dismissedByTouchOutside {
                         self.dismissedByTouchOutside = true
                         self.dismiss()
+                    }
+                    if self.catchTapsOutside {
+                        return self.view
                     }
                     return nil
                 }

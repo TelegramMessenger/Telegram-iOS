@@ -165,14 +165,20 @@ private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> Container
     var standardInputHeight: CGFloat = 216.0
     var predictiveHeight: CGFloat = 42.0
     
-    if layout.size.width.isEqual(to: 320.0) || layout.size.width.isEqual(to: 375.0) {
+    if layout.size.width.isEqual(to: 320.0) {
         standardInputHeight = 216.0
+        predictiveHeight = 42.0
+    } else if layout.size.width.isEqual(to: 375.0) {
+        standardInputHeight = 291.0
         predictiveHeight = 42.0
     } else if layout.size.width.isEqual(to: 414.0) {
         standardInputHeight = 226.0
         predictiveHeight = 42.0
     } else if layout.size.width.isEqual(to: 480.0) || layout.size.width.isEqual(to: 568.0) || layout.size.width.isEqual(to: 667.0) || layout.size.width.isEqual(to: 736.0) {
         standardInputHeight = 162.0
+        predictiveHeight = 38.0
+    } else if layout.size.width.isEqual(to: 812.0) {
+        standardInputHeight = 171.0
         predictiveHeight = 38.0
     } else if layout.size.width.isEqual(to: 768.0) || layout.size.width.isEqual(to: 1024.0) {
         standardInputHeight = 264.0

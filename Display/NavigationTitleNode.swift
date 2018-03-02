@@ -43,7 +43,7 @@ public class NavigationTitleNode: ASDisplayNode {
         titleAttributes[NSAttributedStringKey.font] = UIFont.boldSystemFont(ofSize: 17.0)
         titleAttributes[NSAttributedStringKey.foregroundColor] = self.color
         let titleString = NSAttributedString(string: text as String, attributes: titleAttributes)
-        self.label.attributedString = titleString
+        self.label.attributedText = titleString
         self.invalidateCalculatedLayout()
     }
     

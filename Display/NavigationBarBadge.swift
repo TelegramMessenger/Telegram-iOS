@@ -6,7 +6,7 @@ final class NavigationBarBadgeNode: ASDisplayNode {
     private var strokeColor: UIColor
     private var textColor: UIColor
     
-    private let textNode: ASTextNode2
+    private let textNode: ASTextNode
     private let backgroundNode: ASImageNode
     
     private let font: UIFont = Font.regular(13.0)
@@ -23,7 +23,7 @@ final class NavigationBarBadgeNode: ASDisplayNode {
         self.strokeColor = strokeColor
         self.textColor = textColor
         
-        self.textNode = ASTextNode2()
+        self.textNode = ASTextNode()
         self.textNode.isLayerBacked = true
         self.textNode.displaysAsynchronously = false
         

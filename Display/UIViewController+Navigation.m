@@ -38,6 +38,7 @@ static const void *disablesInteractiveTransitionGestureRecognizerKey = &disables
 static const void *disableAutomaticKeyboardHandlingKey = &disableAutomaticKeyboardHandlingKey;
 static const void *setNeedsStatusBarAppearanceUpdateKey = &setNeedsStatusBarAppearanceUpdateKey;
 static const void *inputAccessoryHeightProviderKey = &inputAccessoryHeightProviderKey;
+static const void *UIViewControllerHintWillBePresentedInPreviewingContextKey = &UIViewControllerHintWillBePresentedInPreviewingContextKey;
 
 static bool notyfyingShiftState = false;
 
@@ -106,8 +107,16 @@ static bool notyfyingShiftState = false;
     });
 }
 
+- (void)setHintWillBePresentedInPreviewingContext:(BOOL)value {
+    [self setAssociatedObject:@(value) forKey:UIViewControllerHintWillBePresentedInPreviewingContextKey];
+}
+
 - (BOOL)isPresentedInPreviewingContext {
-    return ![self.presentingViewController isKindOfClass:[UIViewControllerPresentingProxy class]];
+    if ([[self associatedObjectForKey:UIViewControllerHintWillBePresentedInPreviewingContextKey] boolValue]) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 - (void)setIgnoreAppearanceMethodInvocations:(BOOL)ignoreAppearanceMethodInvocations

@@ -16,6 +16,8 @@ public protocol PeekControllerContent {
     func menuActivation() -> PeerkControllerMenuActivation
     func menuItems() -> [PeekControllerMenuItem]
     func node() -> PeekControllerContentNode & ASDisplayNode
+    
+    func isEqual(to: PeekControllerContent) -> Bool
 }
 
 public protocol PeekControllerContentNode {

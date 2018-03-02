@@ -169,6 +169,9 @@
 		D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */; };
 		D0F7AB371DCFF6F8009AD9A1 /* ListViewItemHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */; };
 		D0F8C3932014FB7C00236FC5 /* ListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBE1CC4431D0044FF83 /* ListView.swift */; };
+		D0FA08C220487A8600DD23FC /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C120487A8600DD23FC /* HapticFeedback.swift */; };
+		D0FA08C42048803C00DD23FC /* TextNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C32048803C00DD23FC /* TextNode.swift */; };
+		D0FA08C6204880C900DD23FC /* ImmediateTextNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C5204880C900DD23FC /* ImmediateTextNode.swift */; };
 		D0FF9B301E7196F6000C66DB /* KeyboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FF9B2F1E7196F6000C66DB /* KeyboardManager.swift */; };
 /* End PBXBuildFile section */
 
@@ -337,6 +340,9 @@
 		D0E8175C2014ED7D00B82BBB /* CADisplayLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CADisplayLink.swift; sourceTree = "<group>"; };
 		D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuActionNode.swift; sourceTree = "<group>"; };
 		D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewItemHeader.swift; sourceTree = "<group>"; };
+		D0FA08C120487A8600DD23FC /* HapticFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
+		D0FA08C32048803C00DD23FC /* TextNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextNode.swift; sourceTree = "<group>"; };
+		D0FA08C5204880C900DD23FC /* ImmediateTextNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImmediateTextNode.swift; sourceTree = "<group>"; };
 		D0FF9B2F1E7196F6000C66DB /* KeyboardManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KeyboardManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -468,6 +474,8 @@
 				D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */,
 				D0A749941E3A9E7B00AD786E /* SwitchNode.swift */,
 				D04C468D1F4C97BE00D30FE1 /* PageControlNode.swift */,
+				D0FA08C32048803C00DD23FC /* TextNode.swift */,
+				D0FA08C5204880C900DD23FC /* ImmediateTextNode.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -513,6 +521,7 @@
 				D05174B11EAA833200A1BF36 /* CASeeThroughTracingLayer.h */,
 				D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */,
 				D01847651FFA72E000075256 /* ContainedViewLayoutTransition.swift */,
+				D0FA08C120487A8600DD23FC /* HapticFeedback.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -950,8 +959,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */,
+				D0FA08C220487A8600DD23FC /* HapticFeedback.swift in Sources */,
 				D03AA5162030C5F80056C405 /* ListViewTempItemNode.swift in Sources */,
 				D087BFB51F75181D003FD209 /* ChildWindowHostView.swift in Sources */,
+				D0FA08C6204880C900DD23FC /* ImmediateTextNode.swift in Sources */,
 				D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */,
 				D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */,
 				D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */,
@@ -1032,6 +1043,7 @@
 				D03AA4E9202E02070056C405 /* ListViewReorderingItemNode.swift in Sources */,
 				D05CC2EC1B69558A00E235A3 /* RuntimeUtils.m in Sources */,
 				D0E35A031DE473B900BC6096 /* HighlightableButton.swift in Sources */,
+				D0FA08C42048803C00DD23FC /* TextNode.swift in Sources */,
 				D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */,
 				D0AA840E1FEBFB72005C6E91 /* ListViewFloatingHeaderNode.swift in Sources */,
 				D03AA4EB202E02B10056C405 /* ListViewReorderingGestureRecognizer.swift in Sources */,

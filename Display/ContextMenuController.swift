@@ -2,9 +2,9 @@ import Foundation
 import AsyncDisplayKit
 
 public final class ContextMenuControllerPresentationArguments {
-    fileprivate let sourceNodeAndRect: () -> (ASDisplayNode, CGRect)?
+    fileprivate let sourceNodeAndRect: () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?
     
-    public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect)?) {
+    public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?) {
         self.sourceNodeAndRect = sourceNodeAndRect
     }
 }
@@ -15,13 +15,15 @@ public final class ContextMenuController: ViewController {
     }
     
     private let actions: [ContextMenuAction]
+    private let catchTapsOutside: Bool
     
     private var layout: ContainerViewLayout?
     
     public var dismissed: (() -> Void)?
     
-    public init(actions: [ContextMenuAction]) {
+    public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false) {
         self.actions = actions
+        self.catchTapsOutside = catchTapsOutside
         
         super.init(navigationBarTheme: nil)
     }
@@ -33,10 +35,10 @@ public final class ContextMenuController: ViewController {
     open override func loadDisplayNode() {
         self.displayNode = ContextMenuNode(actions: self.actions, dismiss: { [weak self] in
             self?.dismissed?()
-            self?.contextMenuNode.animateOut { [weak self] in
+            self?.contextMenuNode.animateOut {
                 self?.presentingViewController?.dismiss(animated: false)
             }
-        })
+        }, catchTapsOutside: self.catchTapsOutside)
         self.displayNodeDidLoad()
     }
     
@@ -44,6 +46,13 @@ public final class ContextMenuController: ViewController {
         super.viewDidAppear(animated)
         
         self.contextMenuNode.animateIn()
+    }
+    
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        self.dismissed?()
+        self.contextMenuNode.animateOut { [weak self] in
+            self?.presentingViewController?.dismiss(animated: false)
+        }
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -57,10 +66,12 @@ public final class ContextMenuController: ViewController {
         } else {
             self.layout = layout
             
-            if let presentationArguments = self.presentationArguments as? ContextMenuControllerPresentationArguments, let (sourceNode, sourceRect) = presentationArguments.sourceNodeAndRect() {
+            if let presentationArguments = self.presentationArguments as? ContextMenuControllerPresentationArguments, let (sourceNode, sourceRect, containerNode, containerRect) = presentationArguments.sourceNodeAndRect() {
                 self.contextMenuNode.sourceRect = sourceNode.view.convert(sourceRect, to: nil)
+                self.contextMenuNode.containerRect = containerNode.view.convert(containerRect, to: nil)
             } else {
                 self.contextMenuNode.sourceRect = nil
+                self.contextMenuNode.containerRect = nil
             }
             
             self.contextMenuNode.containerLayoutUpdated(layout, transition: transition)
