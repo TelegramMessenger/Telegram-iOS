@@ -432,10 +432,10 @@
 		B2B2DB0C1FD9E48000FB7FF2 /* BITHockeyHelper+Application.h in Headers */ = {isa = PBXBuildFile; fileRef = B2B2DB081FD9E47B00FB7FF2 /* BITHockeyHelper+Application.h */; };
 		B2B2DB0D1FDA0FD100FB7FF2 /* BITHockeyHelper+Application.m in Sources */ = {isa = PBXBuildFile; fileRef = B2B2DB091FD9E47B00FB7FF2 /* BITHockeyHelper+Application.m */; };
 		B2D1CE5E1D9DE55900CA74A8 /* FeedbackPlaceholder.png in Resources */ = {isa = PBXBuildFile; fileRef = B2D1CE5D1D9DE4F700CA74A8 /* FeedbackPlaceholder.png */; };
+		D03AA514202E1A560056C405 /* BITAlertAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A7A61F4DCB9C00ED0C31 /* BITAlertAction.m */; };
 		D063A7A71F4DCB9C00ED0C31 /* BITAlertAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A7A51F4DCB9C00ED0C31 /* BITAlertAction.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D063A7A81F4DCB9C00ED0C31 /* BITAlertAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A7A51F4DCB9C00ED0C31 /* BITAlertAction.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D063A7A91F4DCB9C00ED0C31 /* BITAlertAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A7A61F4DCB9C00ED0C31 /* BITAlertAction.m */; };
-		D063A7AA1F4DCB9C00ED0C31 /* BITAlertAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A7A61F4DCB9C00ED0C31 /* BITAlertAction.m */; };
 		E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E40E0B0917DA19DC005E38C1 /* BITHockeyAppClientTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E40E0B0817DA19DC005E38C1 /* BITHockeyAppClientTests.m */; };
 		E40E0B0C17DA1AFF005E38C1 /* BITHockeyAppClient.h in Headers */ = {isa = PBXBuildFile; fileRef = E40E0B0A17DA1AFF005E38C1 /* BITHockeyAppClient.h */; };
@@ -1881,6 +1881,7 @@
 				8034E68C1BA31D7C00D83A30 /* BITUser.m in Sources */,
 				1EB617861B0A31510035A986 /* BITArrowImageAnnotation.m in Sources */,
 				80668C771C8CD93B00A133D3 /* BITEventData.m in Sources */,
+				D03AA514202E1A560056C405 /* BITAlertAction.m in Sources */,
 				8034E69D1BA3216000D83A30 /* BITInternal.m in Sources */,
 				8034E6881BA31D7C00D83A30 /* BITSession.m in Sources */,
 				8034E64B1BA31AFF00D83A30 /* BITPersistence.m in Sources */,
@@ -1889,7 +1890,6 @@
 				1EB6178C1B0A31510035A986 /* BITFeedbackListViewCell.m in Sources */,
 				1EB6175F1B0A309F0035A986 /* BITHockeyBaseManager.m in Sources */,
 				8034E6531BA31BE400D83A30 /* BITChannel.m in Sources */,
-				D063A7AA1F4DCB9C00ED0C31 /* BITAlertAction.m in Sources */,
 				8034E69F1BA3216500D83A30 /* BITCategoryContainer.m in Sources */,
 				808057701C5818AE00BB319D /* BITHockeyLogger.m in Sources */,
 				1EB617811B0A312E0035A986 /* BITImageAnnotationViewController.m in Sources */,
@@ -2237,7 +2237,6 @@
 				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
 			};
 			name = ReleaseCrashOnlyExtensions;
 		};
@@ -2768,7 +2767,6 @@
 				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
 			};
 			name = Debug;
 		};
@@ -2820,7 +2818,6 @@
 				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
 			};
 			name = ReleaseDefault;
 		};
@@ -2872,7 +2869,6 @@
 				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
 			};
 			name = ReleaseCrashOnly;
 		};
@@ -3550,7 +3546,6 @@
 				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
 			};
 			name = Release;
 		};
@@ -3636,19 +3631,23 @@
 			};
 			name = Release;
 		};
-		D01A47661F4DC00400383CC1 /* Debug Hockeyapp */ = {
+		D03AA4EC202E19BF0056C405 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D01A476E1F4DC01000383CC1 /* telegram.xcconfig */;
+			baseConfigurationReference = 1E754DC61621BC170070AB92 /* HockeySDKBase.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -3687,7 +3686,7 @@
 			};
 			name = "Debug Hockeyapp";
 		};
-		D01A47671F4DC00400383CC1 /* Debug Hockeyapp */ = {
+		D03AA4ED202E19BF0056C405 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3713,7 +3712,7 @@
 			};
 			name = "Debug Hockeyapp";
 		};
-		D01A47681F4DC00400383CC1 /* Debug Hockeyapp */ = {
+		D03AA4EE202E19BF0056C405 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 8007E2A41F29FCAB001649AE /* HockeySDKTest.xcconfig */;
 			buildSettings = {
@@ -3742,6 +3741,7 @@
 				);
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/HockeySDKTests/Vendor";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
@@ -3775,7 +3775,7 @@
 			};
 			name = "Debug Hockeyapp";
 		};
-		D01A47691F4DC00400383CC1 /* Debug Hockeyapp */ = {
+		D03AA4EF202E19BF0056C405 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_THUMB_SUPPORT = NO;
@@ -3788,7 +3788,7 @@
 			};
 			name = "Debug Hockeyapp";
 		};
-		D01A476A1F4DC00400383CC1 /* Debug Hockeyapp */ = {
+		D03AA4F0202E19BF0056C405 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
@@ -3804,6 +3804,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -3833,11 +3834,10 @@
 				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
 			};
 			name = "Debug Hockeyapp";
 		};
-		D01A476B1F4DC00400383CC1 /* Debug Hockeyapp */ = {
+		D03AA4F1202E19BF0056C405 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 8007E2A41F29FCAB001649AE /* HockeySDKTest.xcconfig */;
 			buildSettings = {
@@ -3871,7 +3871,7 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
 				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(PROJECT_DIR)/HockeySDKTests/Vendor";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
@@ -3906,7 +3906,7 @@
 			};
 			name = "Debug Hockeyapp";
 		};
-		D01A476C1F4DC00400383CC1 /* Debug Hockeyapp */ = {
+		D03AA4F2202E19BF0056C405 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_THUMB_SUPPORT = NO;
@@ -3915,7 +3915,7 @@
 			};
 			name = "Debug Hockeyapp";
 		};
-		D01A476D1F4DC00400383CC1 /* Debug Hockeyapp */ = {
+		D03AA4F3202E19BF0056C405 /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
@@ -3923,1127 +3923,23 @@
 			};
 			name = "Debug Hockeyapp";
 		};
-		D01A476F1F4DC03C00383CC1 /* Release Hockeyapp */ = {
+		D03AA4F4202E19CA0056C405 /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D01A476E1F4DC01000383CC1 /* telegram.xcconfig */;
+			baseConfigurationReference = 1E754DC61621BC170070AB92 /* HockeySDKBase.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMPRESS_PNG_FILES = NO;
-				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
-				GCC_THUMB_SUPPORT = NO;
-				GCC_VERSION = "";
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
-				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 8.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				RUN_CLANG_STATIC_ANALYZER = YES;
-				SDKROOT = iphoneos;
-				VALIDATE_PRODUCT = NO;
-			};
-			name = "Release Hockeyapp";
-		};
-		D01A47701F4DC03C00383CC1 /* Release Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				DSTROOT = /tmp/HockeySDK.dst;
-				ENABLE_BITCODE = NO;
-				ENABLE_NS_ASSERTIONS = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../Vendor\"",
-				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"BITHOCKEY_STATIC_LIBRARY=1",
-					"$(inherited)",
-				);
-				GCC_THUMB_SUPPORT = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK;
-				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
-				SKIP_INSTALL = YES;
-				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				WATCHOS_DEPLOYMENT_TARGET = 2.0;
-			};
-			name = "Release Hockeyapp";
-		};
-		D01A47711F4DC03C00383CC1 /* Release Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
-				);
-				GCC_PREFIX_HEADER = "";
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/HockeySDKTests/Vendor/**",
-				);
-				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
-				);
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreText,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Foundation,
-					"-framework",
-					QuartzCore,
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					UIKit,
-					"-framework",
-					Security,
-					"-framework",
-					MobileCoreServices,
-					"-framework",
-					QuickLook,
-					"-lc++",
-					"-ObjC",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = "Release Hockeyapp";
-		};
-		D01A47721F4DC03C00383CC1 /* Release Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_THUMB_SUPPORT = NO;
-				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.resources.ios;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				WRAPPER_EXTENSION = bundle;
-			};
-			name = "Release Hockeyapp";
-		};
-		D01A47731F4DC03C00383CC1 /* Release Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				INFOPLIST_FILE = "HockeySDK Framework/Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
-			};
-			name = "Release Hockeyapp";
-		};
-		D01A47741F4DC03C00383CC1 /* Release Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
-				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
-				);
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreText,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Foundation,
-					"-framework",
-					QuartzCore,
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					UIKit,
-					"-framework",
-					Security,
-					"-framework",
-					MobileCoreServices,
-					"-framework",
-					QuickLook,
-					"-lc++",
-					"-ObjC",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "armv7 arm64";
-			};
-			name = "Release Hockeyapp";
-		};
-		D01A47751F4DC03C00383CC1 /* Release Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_THUMB_SUPPORT = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = "Release Hockeyapp";
-		};
-		D01A47761F4DC03C00383CC1 /* Release Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK.framework;
-			};
-			name = "Release Hockeyapp";
-		};
-		D04281E420097EF3009DDE36 /* Release Hockeyapp Internal */ = {
-		D0924FF11FE52C32003F693F /* Release Hockeyapp Internal */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D01A476E1F4DC01000383CC1 /* telegram.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMPRESS_PNG_FILES = NO;
-				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
-				GCC_THUMB_SUPPORT = NO;
-				GCC_VERSION = "";
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
-				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 8.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				RUN_CLANG_STATIC_ANALYZER = YES;
-				SDKROOT = iphoneos;
-				VALIDATE_PRODUCT = NO;
-			};
-			name = "Release Hockeyapp Internal";
-		};
-		D04281E520097EF3009DDE36 /* Release Hockeyapp Internal */ = {
-		D0924FF21FE52C32003F693F /* Release Hockeyapp Internal */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				DSTROOT = /tmp/HockeySDK.dst;
-				ENABLE_BITCODE = NO;
-				ENABLE_NS_ASSERTIONS = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../Vendor\"",
-				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"BITHOCKEY_STATIC_LIBRARY=1",
-					"$(inherited)",
-				);
-				GCC_THUMB_SUPPORT = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK;
-				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
-				SKIP_INSTALL = YES;
-				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				WATCHOS_DEPLOYMENT_TARGET = 2.0;
-			};
-			name = "Release Hockeyapp Internal";
-		};
-		D04281E620097EF3009DDE36 /* Release Hockeyapp Internal */ = {
-		D0924FF31FE52C32003F693F /* Release Hockeyapp Internal */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
-				);
-				GCC_PREFIX_HEADER = "";
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/HockeySDKTests/Vendor/**",
-				);
-				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
-				);
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreText,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Foundation,
-					"-framework",
-					QuartzCore,
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					UIKit,
-					"-framework",
-					Security,
-					"-framework",
-					MobileCoreServices,
-					"-framework",
-					QuickLook,
-					"-lc++",
-					"-ObjC",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = "Release Hockeyapp Internal";
-		};
-		D04281E720097EF3009DDE36 /* Release Hockeyapp Internal */ = {
-		D0924FF41FE52C32003F693F /* Release Hockeyapp Internal */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_THUMB_SUPPORT = NO;
-				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.resources.ios;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				WRAPPER_EXTENSION = bundle;
-			};
-			name = "Release Hockeyapp Internal";
-		};
-		D04281E820097EF3009DDE36 /* Release Hockeyapp Internal */ = {
-		D0924FF51FE52C32003F693F /* Release Hockeyapp Internal */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				INFOPLIST_FILE = "HockeySDK Framework/Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
-			};
-			name = "Release Hockeyapp Internal";
-		};
-		D04281E920097EF3009DDE36 /* Release Hockeyapp Internal */ = {
-		D0924FF61FE52C32003F693F /* Release Hockeyapp Internal */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
-				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
-				);
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreText,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Foundation,
-					"-framework",
-					QuartzCore,
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					UIKit,
-					"-framework",
-					Security,
-					"-framework",
-					MobileCoreServices,
-					"-framework",
-					QuickLook,
-					"-lc++",
-					"-ObjC",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "armv7 arm64";
-			};
-			name = "Release Hockeyapp Internal";
-		};
-		D04281EA20097EF3009DDE36 /* Release Hockeyapp Internal */ = {
-		D0924FF71FE52C32003F693F /* Release Hockeyapp Internal */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_THUMB_SUPPORT = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = "Release Hockeyapp Internal";
-		};
-		D04281EB20097EF3009DDE36 /* Release Hockeyapp Internal */ = {
-		D0924FF81FE52C32003F693F /* Release Hockeyapp Internal */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK.framework;
-			};
-			name = "Release Hockeyapp Internal";
-		};
-		D0C2DFE91CC4D0FC0044FF83 /* Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1E45A90E1B78DB0C002CA772 /* default.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				COMPRESS_PNG_FILES = NO;
-				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"BITHOCKEY_STATIC_LIBRARY=1",
-					"$(inherited)",
-				);
-				GCC_THUMB_SUPPORT = NO;
-				GCC_VERSION = "";
-				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
-				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
-				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				RUN_CLANG_STATIC_ANALYZER = YES;
-				SDKROOT = iphoneos;
-				VALIDATE_PRODUCT = NO;
-			};
-			name = Hockeyapp;
-		};
-		D0C2DFEA1CC4D0FC0044FF83 /* Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				DSTROOT = /tmp/HockeySDK.dst;
-				ENABLE_BITCODE = NO;
-				ENABLE_NS_ASSERTIONS = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../Vendor\"",
-				);
-				GCC_THUMB_SUPPORT = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK;
-				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
-				SKIP_INSTALL = YES;
-				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				WATCHOS_DEPLOYMENT_TARGET = 2.0;
-			};
-			name = Hockeyapp;
-		};
-		D0C2DFEB1CC4D0FC0044FF83 /* Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
-				);
-				GCC_PREFIX_HEADER = "";
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/HockeySDKTests/Vendor/**",
-				);
-				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
-				);
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreText,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Foundation,
-					"-framework",
-					QuartzCore,
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					UIKit,
-					"-framework",
-					Security,
-					"-framework",
-					AssetsLibrary,
-					"-framework",
-					MobileCoreServices,
-					"-framework",
-					QuickLook,
-					"-lc++",
-					"-ObjC",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = Hockeyapp;
-		};
-		D0C2DFEC1CC4D0FC0044FF83 /* Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_THUMB_SUPPORT = NO;
-				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.resources.ios;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				WRAPPER_EXTENSION = bundle;
-			};
-			name = Hockeyapp;
-		};
-		D0C2DFED1CC4D0FC0044FF83 /* Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				INFOPLIST_FILE = "HockeySDK Framework/Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
-			};
-			name = Hockeyapp;
-		};
-		D0C2DFEE1CC4D0FC0044FF83 /* Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
-				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
-				);
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreText,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Foundation,
-					"-framework",
-					QuartzCore,
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					UIKit,
-					"-framework",
-					Security,
-					"-framework",
-					AssetsLibrary,
-					"-framework",
-					MobileCoreServices,
-					"-framework",
-					QuickLook,
-					"-lc++",
-					"-ObjC",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "armv7 arm64";
-			};
-			name = Hockeyapp;
-		};
-		D0C2DFEF1CC4D0FC0044FF83 /* Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_THUMB_SUPPORT = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Hockeyapp;
-		};
-		D0C2DFF01CC4D0FC0044FF83 /* Hockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK.framework;
-			};
-			name = Hockeyapp;
-		};
-		D0FC193F201D292400FEDBB2 /* Release AppStore */ = {
-		D0EA97841FE84D0600792DD6 /* Release AppStore */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D01A476E1F4DC01000383CC1 /* telegram.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMPRESS_PNG_FILES = NO;
-				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
-				GCC_THUMB_SUPPORT = NO;
-				GCC_VERSION = "";
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
-				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 8.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				RUN_CLANG_STATIC_ANALYZER = YES;
-				SDKROOT = iphoneos;
-				VALIDATE_PRODUCT = NO;
-			};
-			name = "Release AppStore";
-		};
-		D0FC1940201D292400FEDBB2 /* Release AppStore */ = {
-		D0EA97851FE84D0600792DD6 /* Release AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				DSTROOT = /tmp/HockeySDK.dst;
-				ENABLE_BITCODE = NO;
-				ENABLE_NS_ASSERTIONS = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../Vendor\"",
-				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"BITHOCKEY_STATIC_LIBRARY=1",
-					"$(inherited)",
-				);
-				GCC_THUMB_SUPPORT = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK;
-				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
-				SKIP_INSTALL = YES;
-				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				WATCHOS_DEPLOYMENT_TARGET = 2.0;
-			};
-			name = "Release AppStore";
-		};
-		D0FC1941201D292400FEDBB2 /* Release AppStore */ = {
-		D0EA97861FE84D0600792DD6 /* Release AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
-				);
-				GCC_PREFIX_HEADER = "";
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/HockeySDKTests/Vendor/**",
-				);
-				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
-				);
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreText,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Foundation,
-					"-framework",
-					QuartzCore,
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					UIKit,
-					"-framework",
-					Security,
-					"-framework",
-					MobileCoreServices,
-					"-framework",
-					QuickLook,
-					"-lc++",
-					"-ObjC",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = "Release AppStore";
-		};
-		D0FC1942201D292400FEDBB2 /* Release AppStore */ = {
-		D0EA97871FE84D0600792DD6 /* Release AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_THUMB_SUPPORT = NO;
-				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.resources.ios;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				WRAPPER_EXTENSION = bundle;
-			};
-			name = "Release AppStore";
-		};
-		D0FC1943201D292400FEDBB2 /* Release AppStore */ = {
-		D0EA97881FE84D0600792DD6 /* Release AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				INFOPLIST_FILE = "HockeySDK Framework/Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = "Release AppStore";
-		};
-		D0FC1944201D292400FEDBB2 /* Release AppStore */ = {
-				VERSION_STRING = 5.0;
-			};
-			name = "Release AppStore";
-		};
-		D0EA97891FE84D0600792DD6 /* Release AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/../Vendor",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
-				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
-				);
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreText,
-					"-framework",
-					CoreGraphics,
-					"-framework",
-					Foundation,
-					"-framework",
-					QuartzCore,
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					UIKit,
-					"-framework",
-					Security,
-					"-framework",
-					MobileCoreServices,
-					"-framework",
-					QuickLook,
-					"-lc++",
-					"-ObjC",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "armv7 arm64";
-			};
-			name = "Release AppStore";
-		};
-		D0FC1945201D292400FEDBB2 /* Release AppStore */ = {
-		D0EA978A1FE84D0600792DD6 /* Release AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_THUMB_SUPPORT = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = "Release AppStore";
-		};
-		D0FC1946201D292400FEDBB2 /* Release AppStore */ = {
-		D0EA978B1FE84D0600792DD6 /* Release AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
-				PRODUCT_NAME = HockeySDK.framework;
-			};
-			name = "Release AppStore";
-		};
-		D0EA978C1FE84D2100792DD6 /* Debug AppStore */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D01A476E1F4DC01000383CC1 /* telegram.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -5082,7 +3978,7 @@
 			};
 			name = "Debug AppStore";
 		};
-		D0EA978D1FE84D2100792DD6 /* Debug AppStore */ = {
+		D03AA4F5202E19CA0056C405 /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ANALYZER_NONNULL = YES;
@@ -5108,7 +4004,7 @@
 			};
 			name = "Debug AppStore";
 		};
-		D0EA978E1FE84D2100792DD6 /* Debug AppStore */ = {
+		D03AA4F6202E19CA0056C405 /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 8007E2A41F29FCAB001649AE /* HockeySDKTest.xcconfig */;
 			buildSettings = {
@@ -5137,6 +4033,7 @@
 				);
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/HockeySDKTests/Vendor";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
@@ -5170,7 +4067,7 @@
 			};
 			name = "Debug AppStore";
 		};
-		D0EA978F1FE84D2100792DD6 /* Debug AppStore */ = {
+		D03AA4F7202E19CA0056C405 /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_THUMB_SUPPORT = NO;
@@ -5183,7 +4080,7 @@
 			};
 			name = "Debug AppStore";
 		};
-		D0EA97901FE84D2100792DD6 /* Debug AppStore */ = {
+		D03AA4F8202E19CA0056C405 /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
@@ -5199,6 +4096,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -5228,11 +4126,10 @@
 				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
-				VERSION_STRING = 5.0;
 			};
 			name = "Debug AppStore";
 		};
-		D0EA97911FE84D2100792DD6 /* Debug AppStore */ = {
+		D03AA4F9202E19CA0056C405 /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 8007E2A41F29FCAB001649AE /* HockeySDKTest.xcconfig */;
 			buildSettings = {
@@ -5266,7 +4163,7 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
 				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(PROJECT_DIR)/HockeySDKTests/Vendor";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
@@ -5301,7 +4198,7 @@
 			};
 			name = "Debug AppStore";
 		};
-		D0EA97921FE84D2100792DD6 /* Debug AppStore */ = {
+		D03AA4FA202E19CA0056C405 /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_THUMB_SUPPORT = NO;
@@ -5310,13 +4207,853 @@
 			};
 			name = "Debug AppStore";
 		};
-		D0EA97931FE84D2100792DD6 /* Debug AppStore */ = {
+		D03AA4FB202E19CA0056C405 /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
 				PRODUCT_NAME = HockeySDK.framework;
 			};
 			name = "Debug AppStore";
+		};
+		D03AA4FC202E19E10056C405 /* Release Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B29855421D85EB5D007FF452 /* allfeatures.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMPRESS_PNG_FILES = NO;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 8.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = NO;
+			};
+			name = "Release Hockeyapp";
+		};
+		D03AA4FD202E19E10056C405 /* Release Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				DSTROOT = /tmp/HockeySDK.dst;
+				ENABLE_BITCODE = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../Vendor\"",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"BITHOCKEY_STATIC_LIBRARY=1",
+					"$(inherited)",
+				);
+				GCC_THUMB_SUPPORT = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK;
+				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
+				SKIP_INSTALL = YES;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				WATCHOS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = "Release Hockeyapp";
+		};
+		D03AA4FE202E19E10056C405 /* Release Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
+				);
+				GCC_PREFIX_HEADER = "";
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/HockeySDKTests/Vendor/**",
+				);
+				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/HockeySDKTests/Vendor";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreText,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SystemConfiguration,
+					"-framework",
+					UIKit,
+					"-framework",
+					Security,
+					"-framework",
+					MobileCoreServices,
+					"-framework",
+					QuickLook,
+					"-lc++",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release Hockeyapp";
+		};
+		D03AA4FF202E19E10056C405 /* Release Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.resources.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = "Release Hockeyapp";
+		};
+		D03AA500202E19E10056C405 /* Release Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				INFOPLIST_FILE = "HockeySDK Framework/Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = "Release Hockeyapp";
+		};
+		D03AA501202E19E10056C405 /* Release Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
+				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(PROJECT_DIR)/HockeySDKTests/Vendor";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
+				);
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreText,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SystemConfiguration,
+					"-framework",
+					UIKit,
+					"-framework",
+					Security,
+					"-framework",
+					MobileCoreServices,
+					"-framework",
+					QuickLook,
+					"-lc++",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "armv7 arm64";
+			};
+			name = "Release Hockeyapp";
+		};
+		D03AA502202E19E10056C405 /* Release Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "Release Hockeyapp";
+		};
+		D03AA503202E19E10056C405 /* Release Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK.framework;
+			};
+			name = "Release Hockeyapp";
+		};
+		D03AA504202E19E90056C405 /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B29855421D85EB5D007FF452 /* allfeatures.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMPRESS_PNG_FILES = NO;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 8.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = NO;
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D03AA505202E19E90056C405 /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				DSTROOT = /tmp/HockeySDK.dst;
+				ENABLE_BITCODE = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../Vendor\"",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"BITHOCKEY_STATIC_LIBRARY=1",
+					"$(inherited)",
+				);
+				GCC_THUMB_SUPPORT = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK;
+				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
+				SKIP_INSTALL = YES;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				WATCHOS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D03AA506202E19E90056C405 /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
+				);
+				GCC_PREFIX_HEADER = "";
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/HockeySDKTests/Vendor/**",
+				);
+				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/HockeySDKTests/Vendor";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreText,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SystemConfiguration,
+					"-framework",
+					UIKit,
+					"-framework",
+					Security,
+					"-framework",
+					MobileCoreServices,
+					"-framework",
+					QuickLook,
+					"-lc++",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D03AA507202E19E90056C405 /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.resources.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D03AA508202E19E90056C405 /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				INFOPLIST_FILE = "HockeySDK Framework/Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D03AA509202E19E90056C405 /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
+				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(PROJECT_DIR)/HockeySDKTests/Vendor";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
+				);
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreText,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SystemConfiguration,
+					"-framework",
+					UIKit,
+					"-framework",
+					Security,
+					"-framework",
+					MobileCoreServices,
+					"-framework",
+					QuickLook,
+					"-lc++",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "armv7 arm64";
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D03AA50A202E19E90056C405 /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D03AA50B202E19E90056C405 /* Release Hockeyapp Internal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK.framework;
+			};
+			name = "Release Hockeyapp Internal";
+		};
+		D03AA50C202E19F00056C405 /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B29855421D85EB5D007FF452 /* allfeatures.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMPRESS_PNG_FILES = NO;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 8.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = NO;
+			};
+			name = "Release AppStore";
+		};
+		D03AA50D202E19F00056C405 /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				DSTROOT = /tmp/HockeySDK.dst;
+				ENABLE_BITCODE = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../Vendor\"",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"BITHOCKEY_STATIC_LIBRARY=1",
+					"$(inherited)",
+				);
+				GCC_THUMB_SUPPORT = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK;
+				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
+				SKIP_INSTALL = YES;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				WATCHOS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = "Release AppStore";
+		};
+		D03AA50E202E19F00056C405 /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
+				);
+				GCC_PREFIX_HEADER = "";
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/HockeySDKTests/Vendor/**",
+				);
+				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(PROJECT_DIR)/HockeySDKTests/Vendor";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreText,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SystemConfiguration,
+					"-framework",
+					UIKit,
+					"-framework",
+					Security,
+					"-framework",
+					MobileCoreServices,
+					"-framework",
+					QuickLook,
+					"-lc++",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release AppStore";
+		};
+		D03AA50F202E19F00056C405 /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.resources.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = "Release AppStore";
+		};
+		D03AA510202E19F00056C405 /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				INFOPLIST_FILE = "HockeySDK Framework/Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = "Release AppStore";
+		};
+		D03AA511202E19F00056C405 /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
+				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(PROJECT_DIR)/HockeySDKTests/Vendor";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
+				);
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreText,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SystemConfiguration,
+					"-framework",
+					UIKit,
+					"-framework",
+					Security,
+					"-framework",
+					MobileCoreServices,
+					"-framework",
+					QuickLook,
+					"-lc++",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "armv7 arm64";
+			};
+			name = "Release AppStore";
+		};
+		D03AA512202E19F00056C405 /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = "Release AppStore";
+		};
+		D03AA513202E19F00056C405 /* Release AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK.framework;
+			};
+			name = "Release AppStore";
 		};
 		E400563C148D79B500EB22B9 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -5428,18 +5165,14 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E4F61EB1621AD970033EFC5 /* Debug */,
-				D01A476D1F4DC00400383CC1 /* Debug Hockeyapp */,
-				D0EA97931FE84D2100792DD6 /* Debug AppStore */,
-				1E4F61EC1621AD970033EFC5 /* ReleaseDefault */,
-				D0C2DFF01CC4D0FC0044FF83 /* Hockeyapp */,
+				D03AA4FB202E19CA0056C405 /* Debug AppStore */,
+				D03AA4F3202E19BF0056C405 /* Debug Hockeyapp */,
 				1E4F61EC1621AD970033EFC5 /* ReleaseDefault */,
 				B298554B1D85EBC9007FF452 /* Release */,
+				D03AA513202E19F00056C405 /* Release AppStore */,
+				D03AA503202E19E10056C405 /* Release Hockeyapp */,
+				D03AA50B202E19E90056C405 /* Release Hockeyapp Internal */,
 				1E7DE39419D44D88009AB8E5 /* ReleaseCrashOnly */,
-				D01A47761F4DC03C00383CC1 /* Release Hockeyapp */,
-				D0FC1946201D292400FEDBB2 /* Release AppStore */,
-				D04281EB20097EF3009DDE36 /* Release Hockeyapp Internal */,
-				D0EA978B1FE84D0600792DD6 /* Release AppStore */,
-				D0924FF81FE52C32003F693F /* Release Hockeyapp Internal */,
 				1E27E6131B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 				B22DFC081FC750FF0052AF19 /* ReleaseFeedbackOnly */,
 			);
@@ -5450,18 +5183,14 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E5954F015B6F24A00A03429 /* Debug */,
-				D01A47671F4DC00400383CC1 /* Debug Hockeyapp */,
-				D0EA978D1FE84D2100792DD6 /* Debug AppStore */,
-				1E5954F115B6F24A00A03429 /* ReleaseDefault */,
-				D0C2DFEA1CC4D0FC0044FF83 /* Hockeyapp */,
+				D03AA4F5202E19CA0056C405 /* Debug AppStore */,
+				D03AA4ED202E19BF0056C405 /* Debug Hockeyapp */,
 				1E5954F115B6F24A00A03429 /* ReleaseDefault */,
 				B29855451D85EBC9007FF452 /* Release */,
+				D03AA50D202E19F00056C405 /* Release AppStore */,
+				D03AA4FD202E19E10056C405 /* Release Hockeyapp */,
+				D03AA505202E19E90056C405 /* Release Hockeyapp Internal */,
 				1E7DE39119D44D88009AB8E5 /* ReleaseCrashOnly */,
-				D01A47701F4DC03C00383CC1 /* Release Hockeyapp */,
-				D0FC1940201D292400FEDBB2 /* Release AppStore */,
-				D04281E520097EF3009DDE36 /* Release Hockeyapp Internal */,
-				D0EA97851FE84D0600792DD6 /* Release AppStore */,
-				D0924FF21FE52C32003F693F /* Release Hockeyapp Internal */,
 				1E27E60D1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 				B22DFC021FC750FF0052AF19 /* ReleaseFeedbackOnly */,
 			);
@@ -5472,18 +5201,14 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E59551515B6F45800A03429 /* Debug */,
-				D01A47691F4DC00400383CC1 /* Debug Hockeyapp */,
-				D0EA978F1FE84D2100792DD6 /* Debug AppStore */,
-				1E59551615B6F45800A03429 /* ReleaseDefault */,
-				D0C2DFEC1CC4D0FC0044FF83 /* Hockeyapp */,
+				D03AA4F7202E19CA0056C405 /* Debug AppStore */,
+				D03AA4EF202E19BF0056C405 /* Debug Hockeyapp */,
 				1E59551615B6F45800A03429 /* ReleaseDefault */,
 				B29855471D85EBC9007FF452 /* Release */,
+				D03AA50F202E19F00056C405 /* Release AppStore */,
+				D03AA4FF202E19E10056C405 /* Release Hockeyapp */,
+				D03AA507202E19E90056C405 /* Release Hockeyapp Internal */,
 				1E7DE39219D44D88009AB8E5 /* ReleaseCrashOnly */,
-				D01A47721F4DC03C00383CC1 /* Release Hockeyapp */,
-				D0FC1942201D292400FEDBB2 /* Release AppStore */,
-				D04281E720097EF3009DDE36 /* Release Hockeyapp Internal */,
-				D0EA97871FE84D0600792DD6 /* Release AppStore */,
-				D0924FF41FE52C32003F693F /* Release Hockeyapp Internal */,
 				1E27E60F1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 				B22DFC041FC750FF0052AF19 /* ReleaseFeedbackOnly */,
 			);
@@ -5494,18 +5219,14 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E5A45A016F0DFC200B55C04 /* Debug */,
-				D01A47681F4DC00400383CC1 /* Debug Hockeyapp */,
-				D0EA978E1FE84D2100792DD6 /* Debug AppStore */,
-				1E5A45A116F0DFC200B55C04 /* ReleaseDefault */,
-				D0C2DFEB1CC4D0FC0044FF83 /* Hockeyapp */,
+				D03AA4F6202E19CA0056C405 /* Debug AppStore */,
+				D03AA4EE202E19BF0056C405 /* Debug Hockeyapp */,
 				1E5A45A116F0DFC200B55C04 /* ReleaseDefault */,
 				B29855461D85EBC9007FF452 /* Release */,
+				D03AA50E202E19F00056C405 /* Release AppStore */,
+				D03AA4FE202E19E10056C405 /* Release Hockeyapp */,
+				D03AA506202E19E90056C405 /* Release Hockeyapp Internal */,
 				1E7DE39519D44D88009AB8E5 /* ReleaseCrashOnly */,
-				D01A47711F4DC03C00383CC1 /* Release Hockeyapp */,
-				D0FC1941201D292400FEDBB2 /* Release AppStore */,
-				D04281E620097EF3009DDE36 /* Release Hockeyapp Internal */,
-				D0EA97861FE84D0600792DD6 /* Release AppStore */,
-				D0924FF31FE52C32003F693F /* Release Hockeyapp Internal */,
 				1E27E60E1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 				B22DFC031FC750FF0052AF19 /* ReleaseFeedbackOnly */,
 			);
@@ -5516,18 +5237,14 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E8E66AE15BC3D7700632A2E /* Debug */,
-				D01A476C1F4DC00400383CC1 /* Debug Hockeyapp */,
-				D0EA97921FE84D2100792DD6 /* Debug AppStore */,
-				1E8E66AF15BC3D7700632A2E /* ReleaseDefault */,
-				D0C2DFEF1CC4D0FC0044FF83 /* Hockeyapp */,
+				D03AA4FA202E19CA0056C405 /* Debug AppStore */,
+				D03AA4F2202E19BF0056C405 /* Debug Hockeyapp */,
 				1E8E66AF15BC3D7700632A2E /* ReleaseDefault */,
 				B298554A1D85EBC9007FF452 /* Release */,
+				D03AA512202E19F00056C405 /* Release AppStore */,
+				D03AA502202E19E10056C405 /* Release Hockeyapp */,
+				D03AA50A202E19E90056C405 /* Release Hockeyapp Internal */,
 				1E7DE39319D44D88009AB8E5 /* ReleaseCrashOnly */,
-				D01A47751F4DC03C00383CC1 /* Release Hockeyapp */,
-				D0FC1945201D292400FEDBB2 /* Release AppStore */,
-				D04281EA20097EF3009DDE36 /* Release Hockeyapp Internal */,
-				D0EA978A1FE84D0600792DD6 /* Release AppStore */,
-				D0924FF71FE52C32003F693F /* Release Hockeyapp Internal */,
 				1E27E6121B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 				B22DFC071FC750FF0052AF19 /* ReleaseFeedbackOnly */,
 			);
@@ -5538,18 +5255,14 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1EB617531B0A30480035A986 /* Debug */,
-				D01A476A1F4DC00400383CC1 /* Debug Hockeyapp */,
-				D0EA97901FE84D2100792DD6 /* Debug AppStore */,
-				1EB617551B0A30480035A986 /* ReleaseDefault */,
-				D0C2DFED1CC4D0FC0044FF83 /* Hockeyapp */,
+				D03AA4F8202E19CA0056C405 /* Debug AppStore */,
+				D03AA4F0202E19BF0056C405 /* Debug Hockeyapp */,
 				1EB617551B0A30480035A986 /* ReleaseDefault */,
 				B29855481D85EBC9007FF452 /* Release */,
+				D03AA510202E19F00056C405 /* Release AppStore */,
+				D03AA500202E19E10056C405 /* Release Hockeyapp */,
+				D03AA508202E19E90056C405 /* Release Hockeyapp Internal */,
 				1EB617561B0A30480035A986 /* ReleaseCrashOnly */,
-				D01A47731F4DC03C00383CC1 /* Release Hockeyapp */,
-				D0FC1943201D292400FEDBB2 /* Release AppStore */,
-				D04281E820097EF3009DDE36 /* Release Hockeyapp Internal */,
-				D0EA97881FE84D0600792DD6 /* Release AppStore */,
-				D0924FF51FE52C32003F693F /* Release Hockeyapp Internal */,
 				1E27E6101B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 				B22DFC051FC750FF0052AF19 /* ReleaseFeedbackOnly */,
 			);
@@ -5560,18 +5273,14 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1EB617581B0A30480035A986 /* Debug */,
-				D01A476B1F4DC00400383CC1 /* Debug Hockeyapp */,
-				D0EA97911FE84D2100792DD6 /* Debug AppStore */,
-				1EB6175A1B0A30480035A986 /* ReleaseDefault */,
-				D0C2DFEE1CC4D0FC0044FF83 /* Hockeyapp */,
+				D03AA4F9202E19CA0056C405 /* Debug AppStore */,
+				D03AA4F1202E19BF0056C405 /* Debug Hockeyapp */,
 				1EB6175A1B0A30480035A986 /* ReleaseDefault */,
 				B29855491D85EBC9007FF452 /* Release */,
+				D03AA511202E19F00056C405 /* Release AppStore */,
+				D03AA501202E19E10056C405 /* Release Hockeyapp */,
+				D03AA509202E19E90056C405 /* Release Hockeyapp Internal */,
 				1EB6175B1B0A30480035A986 /* ReleaseCrashOnly */,
-				D01A47741F4DC03C00383CC1 /* Release Hockeyapp */,
-				D0FC1944201D292400FEDBB2 /* Release AppStore */,
-				D04281E920097EF3009DDE36 /* Release Hockeyapp Internal */,
-				D0EA97891FE84D0600792DD6 /* Release AppStore */,
-				D0924FF61FE52C32003F693F /* Release Hockeyapp Internal */,
 				1E27E6111B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 				B22DFC061FC750FF0052AF19 /* ReleaseFeedbackOnly */,
 			);
@@ -5582,18 +5291,14 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E400563C148D79B500EB22B9 /* Debug */,
-				D01A47661F4DC00400383CC1 /* Debug Hockeyapp */,
-				D0EA978C1FE84D2100792DD6 /* Debug AppStore */,
-				E400563D148D79B500EB22B9 /* ReleaseDefault */,
-				D0C2DFE91CC4D0FC0044FF83 /* Hockeyapp */,
+				D03AA4F4202E19CA0056C405 /* Debug AppStore */,
+				D03AA4EC202E19BF0056C405 /* Debug Hockeyapp */,
 				E400563D148D79B500EB22B9 /* ReleaseDefault */,
 				B29855441D85EBC9007FF452 /* Release */,
+				D03AA50C202E19F00056C405 /* Release AppStore */,
+				D03AA4FC202E19E10056C405 /* Release Hockeyapp */,
+				D03AA504202E19E90056C405 /* Release Hockeyapp Internal */,
 				1E7DE39019D44D88009AB8E5 /* ReleaseCrashOnly */,
-				D01A476F1F4DC03C00383CC1 /* Release Hockeyapp */,
-				D0FC193F201D292400FEDBB2 /* Release AppStore */,
-				D04281E420097EF3009DDE36 /* Release Hockeyapp Internal */,
-				D0EA97841FE84D0600792DD6 /* Release AppStore */,
-				D0924FF11FE52C32003F693F /* Release Hockeyapp Internal */,
 				1E27E60C1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 				B22DFC011FC750FF0052AF19 /* ReleaseFeedbackOnly */,
 			);
