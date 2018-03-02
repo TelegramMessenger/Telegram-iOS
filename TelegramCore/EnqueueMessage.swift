@@ -316,39 +316,45 @@ func enqueueMessages(modifier: Modifier, account: Account, peerId: PeerId, messa
                             }
                         }
                         
-                        attributes.append(ForwardSourceInfoAttribute(messageId: sourceMessage.id))
-                        if peerId == account.peerId {
-                            attributes.append(SourceReferenceMessageAttribute(messageId: sourceMessage.id))
-                        }
-                        attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
-                        let forwardInfo: StoreMessageForwardInfo?
-                        if let sourceForwardInfo = sourceMessage.forwardInfo {
-                            forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature)
-                        } else {
-                            if sourceMessage.id.peerId != account.peerId {
-                                var sourceId:PeerId? = nil
-                                var sourceMessageId:MessageId? = nil
-                                if let peer = messageMainPeer(sourceMessage) as? TelegramChannel, case .broadcast = peer.info {
-                                    sourceId = peer.id
-                                    sourceMessageId = sourceMessage.id
-                                }
-                                
-                                var authorSignature: String?
-                                for attribute in sourceMessage.attributes {
-                                    if let attribute = attribute as? AuthorSignatureMessageAttribute {
-                                        authorSignature = attribute.signature
-                                        break
-                                    }
-                                }
-                                
-                                forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: authorSignature)
-                            } else {
-                                forwardInfo = nil
+                        var forwardInfo: StoreMessageForwardInfo?
+                        
+                        if peerId.namespace != Namespaces.Peer.SecretChat {
+                            attributes.append(ForwardSourceInfoAttribute(messageId: sourceMessage.id))
+                        
+                            if peerId == account.peerId {
+                                attributes.append(SourceReferenceMessageAttribute(messageId: sourceMessage.id))
                             }
-
+                            
+                            attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
+                            if let sourceForwardInfo = sourceMessage.forwardInfo {
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature)
+                            } else {
+                                if sourceMessage.id.peerId != account.peerId {
+                                    var sourceId: PeerId? = nil
+                                    var sourceMessageId: MessageId? = nil
+                                    if let peer = messageMainPeer(sourceMessage) as? TelegramChannel, case .broadcast = peer.info {
+                                        sourceId = peer.id
+                                        sourceMessageId = sourceMessage.id
+                                    }
+                                    
+                                    var authorSignature: String?
+                                    for attribute in sourceMessage.attributes {
+                                        if let attribute = attribute as? AuthorSignatureMessageAttribute {
+                                            authorSignature = attribute.signature
+                                            break
+                                        }
+                                    }
+                                    
+                                    forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: authorSignature)
+                                } else {
+                                    forwardInfo = nil
+                                }
+                            }
+                        } else {
+                            attributes.append(contentsOf: filterMessageAttributesForOutgoingMessage(sourceMessage.attributes))
                         }
                         
-                        let authorId:PeerId?
+                        let authorId: PeerId?
                         if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info, !info.flags.contains(.messagesShouldHaveSignatures) {
                             authorId = peer.id
                         }  else {

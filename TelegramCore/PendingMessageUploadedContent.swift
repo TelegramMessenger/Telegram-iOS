@@ -51,7 +51,9 @@ func messageContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods
     var forwardInfo: ForwardSourceInfoAttribute?
     for attribute in attributes {
         if let attribute = attribute as? ForwardSourceInfoAttribute {
-            forwardInfo = attribute
+            if peerId.namespace != Namespaces.Peer.SecretChat {
+                forwardInfo = attribute
+            }
         }
     }
     
