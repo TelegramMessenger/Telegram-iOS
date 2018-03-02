@@ -878,6 +878,9 @@
 {
     if (_intent == TGMediaAssetsControllerSendFileIntent)
         return nil;
+    if (self.requestSearchController == nil) {
+        return nil;
+    }
     
     if (iosMajorVersion() < 7)
     {
