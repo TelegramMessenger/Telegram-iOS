@@ -11,7 +11,7 @@ public final class FoundStickerItem: Equatable {
     public let file: TelegramMediaFile
     public let stringRepresentations: [String]
     
-    init(file: TelegramMediaFile, stringRepresentations: [String]) {
+    public init(file: TelegramMediaFile, stringRepresentations: [String]) {
         self.file = file
         self.stringRepresentations = stringRepresentations
     }
