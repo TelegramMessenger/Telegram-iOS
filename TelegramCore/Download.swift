@@ -73,7 +73,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     deinit {
         self.mtProto.remove(self.requestService)
         self.mtProto.stop()
-        self.mtProto.finalize()
+        self.mtProto.finalizeSession()
         self.shouldKeepConnectionDisposable?.dispose()
     }
     
