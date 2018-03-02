@@ -142,12 +142,12 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
 }
 
 public enum ChatContextResult: Equatable {
-    case externalReference(id: String, type: String, title: String?, description: String?, url: String?, thumbnailUrl: String?, contentUrl: String?, contentType: String?, dimensions: CGSize?, duration: Int32?, message: ChatContextResultMessage)
+    case externalReference(id: String, type: String, title: String?, description: String?, url: String?, content: TelegramMediaWebFile?, thumbnail: TelegramMediaWebFile?, message: ChatContextResultMessage)
     case internalReference(id: String, type: String, title: String?, description: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, message: ChatContextResultMessage)
     
     public var id: String {
         switch self {
-            case let .externalReference(id, _, _, _, _, _, _, _, _, _, _):
+            case let .externalReference(id, _, _, _, _, _, _, _):
                 return id
             case let .internalReference(id, _, _, _, _, _, _):
                 return id
@@ -156,7 +156,7 @@ public enum ChatContextResult: Equatable {
     
     public var type: String {
         switch self {
-            case let .externalReference(_, type, _, _, _, _, _, _, _, _, _):
+            case let .externalReference(_, type, _, _, _, _, _, _):
                 return type
             case let .internalReference(_, type, _, _, _, _, _):
                 return type
@@ -165,7 +165,7 @@ public enum ChatContextResult: Equatable {
     
     public var title: String? {
         switch self {
-            case let .externalReference(_, _, title, _, _, _, _, _, _, _, _):
+            case let .externalReference(_, _, title, _, _, _, _, _):
                 return title
             case let .internalReference(_, _, title, _, _, _, _):
                 return title
@@ -174,7 +174,7 @@ public enum ChatContextResult: Equatable {
     
     public var description: String? {
         switch self {
-            case let .externalReference(_, _, _, description, _, _, _, _, _, _, _):
+            case let .externalReference(_, _, _, description, _, _, _, _):
                 return description
             case let .internalReference(_, _, _, description, _, _, _):
                 return description
@@ -183,7 +183,7 @@ public enum ChatContextResult: Equatable {
     
     public var message: ChatContextResultMessage {
         switch self {
-            case let .externalReference(_, _, _, _, _, _, _, _, _, _, message):
+            case let .externalReference(_, _, _, _, _, _, _, message):
                 return message
             case let .internalReference(_, _, _, _, _, _, message):
                 return message
@@ -192,8 +192,9 @@ public enum ChatContextResult: Equatable {
     
     public static func ==(lhs: ChatContextResult, rhs: ChatContextResult) -> Bool {
         switch lhs {
-            case let .externalReference(lhsId, lhsType, lhsTitle, lhsDescription, lhsUrl, lhsThumbnailUrl, lhsContentUrl, lhsContentType, lhsDimensions, lhsDuration, lhsMessage):
-                if case let .externalReference(rhsId, rhsType, rhsTitle, rhsDescription, rhsUrl, rhsThumbnailUrl, rhsContentUrl, rhsContentType, rhsDimensions, rhsDuration, rhsMessage) = rhs {
+            //id: String, type: String, title: String?, description: String?, url: String?, content: TelegramMediaWebFile?, thumbnail: TelegramMediaWebFile?, message: ChatContextResultMessage
+            case let .externalReference(lhsId, lhsType, lhsTitle, lhsDescription, lhsUrl, lhsContent, lhsThumbnail, lhsMessage):
+                if case let .externalReference(rhsId, rhsType, rhsTitle, rhsDescription, rhsUrl, rhsContent, rhsThumbnail, rhsMessage) = rhs {
                     if lhsId != rhsId {
                         return false
                     }
@@ -209,19 +210,18 @@ public enum ChatContextResult: Equatable {
                     if lhsUrl != rhsUrl {
                         return false
                     }
-                    if lhsThumbnailUrl != rhsThumbnailUrl {
+                    if let lhsContent = lhsContent, let rhsContent = rhsContent {
+                        if !lhsContent.isEqual(rhsContent) {
+                            return false
+                        }
+                    } else if (lhsContent != nil) != (rhsContent != nil) {
                         return false
                     }
-                    if lhsContentUrl != rhsContentUrl {
-                        return false
-                    }
-                    if lhsContentType != rhsContentType {
-                        return false
-                    }
-                    if lhsDimensions != rhsDimensions {
-                        return false
-                    }
-                    if lhsDuration != rhsDuration {
+                    if let lhsThumbnail = lhsThumbnail, let rhsThumbnail = rhsThumbnail {
+                        if !lhsThumbnail.isEqual(rhsThumbnail) {
+                            return false
+                        }
+                    } else if (lhsThumbnail != nil) != (rhsThumbnail != nil) {
                         return false
                     }
                     if lhsMessage != rhsMessage {
@@ -377,15 +377,12 @@ extension ChatContextResultMessage {
     }
 }
 
+//botInlineResult flags:# id:string type:string title:flags.1?string description:flags.2?string url:flags.3?string thumb:flags.4?WebDocument content:flags.5?WebDocument send_message:BotInlineMessage = BotInlineResult;
 extension ChatContextResult {
     init(apiResult: Api.BotInlineResult) {
         switch apiResult {
-            case let .botInlineResult(_, id, type, title, description, url, thumbUrl, contentUrl, contentType, w, h, duration, sendMessage):
-                var dimensions: CGSize?
-                if let w = w, let h = h {
-                    dimensions = CGSize(width: CGFloat(w), height: CGFloat(h))
-                }
-                self = .externalReference(id: id, type: type, title: title, description: description, url: url, thumbnailUrl: thumbUrl, contentUrl: contentUrl, contentType: contentType, dimensions: dimensions, duration: duration, message: ChatContextResultMessage(apiMessage: sendMessage))
+            case let .botInlineResult(_, id, type, title, description, url, thumb, content, sendMessage):
+                self = .externalReference(id: id, type: type, title: title, description: description, url: url, content: content.flatMap(TelegramMediaWebFile.init), thumbnail: thumb.flatMap(TelegramMediaWebFile.init), message: ChatContextResultMessage(apiMessage: sendMessage))
             case let .botInlineMediaResult(_, id, type, photo, document, title, description, sendMessage):
                 var image: TelegramMediaImage?
                 var file: TelegramMediaFile?

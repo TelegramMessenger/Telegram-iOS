@@ -38,13 +38,13 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                     } else {
                         return nil
                     }
-                case let .externalReference(id, type, title, description, url, thumbnailUrl, contentUrl, contentType, dimensions, duration, message):
+                case let .externalReference(id, type, title, description, url, content, thumbnail, message):
                     if type == "photo" {
-                        if let thumbnailUrl = thumbnailUrl {
+                        if let thumbnail = thumbnail {
                             var randomId: Int64 = 0
                             arc4random_buf(&randomId, 8)
-                            let thumbnailResource = HttpReferenceMediaResource(url: thumbnailUrl, size: nil)
-                            let imageDimensions = dimensions ?? CGSize(width: 128.0, height: 128.0)
+                            let thumbnailResource = thumbnail.resource
+                            let imageDimensions = thumbnail.dimensions ?? CGSize(width: 128.0, height: 128.0)
                             let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: thumbnailResource)], reference: nil)
                             return .message(text: caption, attributes: attributes, media: tmpImage, replyToMessageId: nil, localGroupingKey: nil)
                         } else {
@@ -52,16 +52,24 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                         }
                     } else if type == "document" || type == "gif" || type == "audio" || type == "voice" {
                         var previewRepresentations: [TelegramMediaImageRepresentation] = []
-                        if let thumbnailUrl = thumbnailUrl {
+                        if let thumbnail = thumbnail {
                             var randomId: Int64 = 0
                             arc4random_buf(&randomId, 8)
-                            let thumbnailResource = HttpReferenceMediaResource(url: thumbnailUrl, size: nil)
-                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: dimensions ?? CGSize(width: 128.0, height: 128.0), resource: thumbnailResource))
+                            let thumbnailResource = thumbnail.resource
+                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnail.dimensions ?? CGSize(width: 128.0, height: 128.0), resource: thumbnailResource))
                         }
                         var fileName = "file"
-                        if let contentUrl = contentUrl, let url = URL(string: contentUrl) {
-                            if !url.lastPathComponent.isEmpty {
-                                fileName = url.lastPathComponent
+                        if let content = content {
+                            var contentUrl: String?
+                            if let resource = content.resource as? HttpReferenceMediaResource {
+                                contentUrl = resource.url
+                            } else if let resource = content.resource as? WebFileReferenceMediaResource {
+                                contentUrl = resource.url
+                            }
+                            if let contentUrl = contentUrl, let url = URL(string: contentUrl) {
+                                if !url.lastPathComponent.isEmpty {
+                                    fileName = url.lastPathComponent
+                                }
                             }
                         }
                         
@@ -72,17 +80,17 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
                             fileAttributes.append(.Animated)
                         }
                         
-                        if let dimensions = dimensions {
+                        if let dimensions = content?.dimensions {
                             fileAttributes.append(.ImageSize(size: dimensions))
                         }
                         
                         if type == "audio" || type == "voice" {
-                            fileAttributes.append(.Audio(isVoice: type == "voice", duration: Int(Int32(duration ?? 0)), title: title, performer: description, waveform: nil))
+                            fileAttributes.append(.Audio(isVoice: type == "voice", duration: Int(Int32(content?.duration ?? 0)), title: title, performer: description, waveform: nil))
                         }
                         
                         var randomId: Int64 = 0
                         arc4random_buf(&randomId, 8)
-                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: EmptyMediaResource(), previewRepresentations: previewRepresentations, mimeType: contentType ?? "application/binary", size: nil, attributes: fileAttributes)
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: EmptyMediaResource(), previewRepresentations: previewRepresentations, mimeType: content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
                         return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil, localGroupingKey: nil)
                     } else {
                         return .message(text: caption, attributes: attributes, media: nil, replyToMessageId: nil, localGroupingKey: nil)
