@@ -219,6 +219,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (BOOL)editableTextNodeShouldPaste:(ASEditableTextNode *)editableTextNode;
 - (ASEditableTextNodeTargetForAction * _Nullable)editableTextNodeTargetForAction:(SEL)action;
+- (BOOL)editableTextNodeShouldReturn:(ASEditableTextNode *)editableTextNode;
 
 @end
 

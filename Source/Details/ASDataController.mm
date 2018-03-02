@@ -528,7 +528,7 @@ typedef dispatch_block_t ASDataControllerCompletionBlock;
 
   BOOL canDelegate = (self.layoutDelegate != nil);
   ASElementMap *newMap;
-  id layoutContext;
+  ASCollectionLayoutContext *layoutContext;
   {
     as_activity_scope(as_activity_create("Latch new data for collection update", changeSet.rootActivity, OS_ACTIVITY_FLAG_DEFAULT));
 

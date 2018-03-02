@@ -35,7 +35,8 @@ NSArray *badges;
   return [[ItemViewModel alloc] init];
 }
 
-- (instancetype)init {
+- (instancetype)init
+{
     self = [super init];
     if (self) {
       static _Atomic(NSInteger) nextID = ATOMIC_VAR_INIT(1);
@@ -45,11 +46,9 @@ NSArray *badges;
       _secondInfoText = [NSString stringWithFormat:@"%zd+ bought", [self randomNumberInRange:5 to:6000]];
       _originalPriceText = [NSString stringWithFormat:@"$%zd", [self randomNumberInRange:40 to:90]];
       _finalPriceText = [NSString stringWithFormat:@"$%zd", [self randomNumberInRange:5 to:30]];
-      BOOL isSoldOut = arc4random() % 5 == 0;
-      _soldOutText = isSoldOut ? @"SOLD OUT" : nil;
+      _soldOutText = (arc4random() % 5 == 0) ? @"SOLD OUT" : nil;
       _distanceLabelText = [NSString stringWithFormat:@"%zd mi", [self randomNumberInRange:1 to:20]];
-      BOOL isBadged = arc4random() % 2 == 0;
-      if (isBadged) {
+      if (arc4random() % 2 == 0) {
         _badgeText = [self randomObjectFromArray:badges];
       }
       _catNumber = [self randomNumberInRange:1 to:10];
@@ -58,18 +57,20 @@ NSArray *badges;
     return self;
 }
 
-- (NSURL *)imageURLWithSize:(CGSize)size {
+- (NSURL *)imageURLWithSize:(CGSize)size
+{
   NSString *imageText = [NSString stringWithFormat:@"Fun cat pic %zd", self.labelNumber];
   NSString *urlString = [NSString stringWithFormat:@"http://lorempixel.com/%zd/%zd/cats/%zd/%@",
                          (NSInteger)roundl(size.width),
                          (NSInteger)roundl(size.height), self.catNumber, imageText];
-  urlString = [urlString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-  
+
+  urlString = [urlString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLFragmentAllowedCharacterSet]];
   return [NSURL URLWithString:urlString];
 }
 
 // titles courtesy of http://www.catipsum.com/
-+ (void)initialize {
++ (void)initialize
+{
   titles = @[@"Leave fur on owners clothes intrigued by the shower",
              @"Meowwww",
              @"Immediately regret falling into bathtub stare out the window",

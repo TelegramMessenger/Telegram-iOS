@@ -633,6 +633,32 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSArray<NSString *> *)collectionNode:(ASCollectionNode *)collectionNode supplementaryElementKindsInSection:(NSInteger)section;
 
 /**
+ * Asks the data source if it's possible to move the specified item interactively.
+ *
+ * See @p -[UICollectionViewDataSource collectionView:canMoveItemAtIndexPath:] @c.
+ *
+ * @param collectionNode  The sender.
+ * @param node            The display node for the item that may be moved.
+ *
+ * @return Whether the item represented by @p node may be moved.
+ */
+- (BOOL)collectionNode:(ASCollectionNode *)collectionNode canMoveItemWithNode:(ASCellNode *)node;
+
+/**
+ * Called when the user has interactively moved an item. The data source
+ * should update its internal data store to reflect the move. Note that you
+ * should not call [collectionNode moveItemAtIndexPath:toIndexPath:] – the
+ * collection node's internal state will be updated automatically.
+ *
+ * * See @p -[UICollectionViewDataSource collectionView:moveItemAtIndexPath:toIndexPath:] @c.
+ *
+ * @param collectionNode        The sender.
+ * @param sourceIndexPath       The original item index path.
+ * @param destinationIndexPath  The new item index path.
+ */
+- (void)collectionNode:(ASCollectionNode *)collectionNode moveItemAtIndexPath:(NSIndexPath *)sourceIndexPath toIndexPath:(NSIndexPath *)destinationIndexPath;
+
+/**
  * Similar to -collectionView:cellForItemAtIndexPath:.
  *
  * @param collectionView The sender.

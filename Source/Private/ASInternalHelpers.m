@@ -143,8 +143,9 @@ CGFloat ASScreenScale()
   static CGFloat __scale = 0.0;
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    ASDisplayNodeCAssertMainThread();
-    __scale = [[UIScreen mainScreen] scale];
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(1, 1), YES, 0);
+    __scale = CGContextGetCTM(UIGraphicsGetCurrentContext()).a;
+    UIGraphicsEndImageContext();
   });
   return __scale;
 }

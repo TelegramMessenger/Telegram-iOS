@@ -38,14 +38,14 @@
   [downloader downloadImageWithURL:URL
                      callbackQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
                   downloadProgress:nil
-                        completion:^(id<ASImageContainerProtocol>  _Nullable image, NSError * _Nullable error, id  _Nullable downloadIdentifier) {
+                        completion:^(id<ASImageContainerProtocol>  _Nullable image, NSError * _Nullable error, id  _Nullable downloadIdentifier, id _Nullable userInfo) {
                           [firstExpectation fulfill];
                         }];
   
   [downloader downloadImageWithURL:URL
                      callbackQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
                   downloadProgress:nil
-                        completion:^(id<ASImageContainerProtocol>  _Nullable image, NSError * _Nullable error, id  _Nullable downloadIdentifier) {
+                        completion:^(id<ASImageContainerProtocol>  _Nullable image, NSError * _Nullable error, id  _Nullable downloadIdentifier, id _Nullable userInfo) {
                           [secondExpectation fulfill];
                         }];
 

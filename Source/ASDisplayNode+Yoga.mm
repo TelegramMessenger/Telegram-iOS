@@ -94,12 +94,10 @@
 
 - (void)semanticContentAttributeDidChange:(UISemanticContentAttribute)attribute
 {
-  if (AS_AT_LEAST_IOS9) {
-    UIUserInterfaceLayoutDirection layoutDirection =
-    [UIView userInterfaceLayoutDirectionForSemanticContentAttribute:attribute];
-    self.style.direction = (layoutDirection == UIUserInterfaceLayoutDirectionLeftToRight
-                            ? YGDirectionLTR : YGDirectionRTL);
-  }
+  UIUserInterfaceLayoutDirection layoutDirection =
+  [UIView userInterfaceLayoutDirectionForSemanticContentAttribute:attribute];
+  self.style.direction = (layoutDirection == UIUserInterfaceLayoutDirectionLeftToRight
+                          ? YGDirectionLTR : YGDirectionRTL);
 }
 
 - (void)setYogaParent:(ASDisplayNode *)yogaParent

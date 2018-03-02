@@ -130,7 +130,7 @@ static ASDN::StaticMutex& currentRequestsLock = *new ASDN::StaticMutex;
 
     if (completionBlock) {
       dispatch_async(callbackQueue, ^{
-        completionBlock(image, error, nil);
+        completionBlock(image, error, nil, nil);
       });
     }
   }
@@ -206,7 +206,7 @@ static const char *kContextKey = NSStringFromClass(ASBasicImageDownloaderContext
 
 @implementation ASBasicImageDownloader
 
-+ (instancetype)sharedImageDownloader
++ (ASBasicImageDownloader *)sharedImageDownloader
 {
   static ASBasicImageDownloader *sharedImageDownloader = nil;
   static dispatch_once_t once = 0;
@@ -235,9 +235,9 @@ static const char *kContextKey = NSStringFromClass(ASBasicImageDownloaderContext
 #pragma mark ASImageDownloaderProtocol.
 
 - (id)downloadImageWithURL:(NSURL *)URL
-                      callbackQueue:(dispatch_queue_t)callbackQueue
-                   downloadProgress:(nullable ASImageDownloaderProgress)downloadProgress
-                         completion:(ASImageDownloaderCompletion)completion
+             callbackQueue:(dispatch_queue_t)callbackQueue
+          downloadProgress:(nullable ASImageDownloaderProgress)downloadProgress
+                completion:(ASImageDownloaderCompletion)completion
 {
   ASBasicImageDownloaderContext *context = [ASBasicImageDownloaderContext contextForURL:URL];
 

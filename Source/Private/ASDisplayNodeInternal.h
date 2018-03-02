@@ -77,7 +77,7 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
 {
 @package
   _ASPendingState *_pendingViewState;
-
+  ASInterfaceState _pendingInterfaceState;
   UIView *_view;
   CALayer *_layer;
 

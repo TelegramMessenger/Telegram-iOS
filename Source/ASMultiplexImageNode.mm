@@ -625,7 +625,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
       finishedLoadingBlock(downloadedImage, nextImageIdentifier, error);
     }];
   }
-  // Likewise, if it's a iOS 8 Photo asset, we need to fetch it accordingly.
+  // Likewise, if it's a Photos asset, we need to fetch it accordingly.
   else if (ASPhotosFrameworkImageRequest *request = [ASPhotosFrameworkImageRequest requestWithURL:nextImageURL]) {
     [self _loadPHAssetWithRequest:request identifier:nextImageIdentifier completion:^(UIImage *image, NSError *error) {
       as_log_verbose(ASImageLoadingLog(), "Acquired image from Photos for %@ %@", weakSelf, nextImageIdentifier);
@@ -673,7 +673,11 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
   ASDisplayNodeAssertNotNil(imageIdentifier, @"imageIdentifier is required");
   ASDisplayNodeAssertNotNil(assetURL, @"assetURL is required");
   ASDisplayNodeAssertNotNil(completionBlock, @"completionBlock is required");
-
+  
+  // ALAssetsLibrary was replaced in iOS 8 and deprecated in iOS 9.
+  // We'll drop support very soon.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   ALAssetsLibrary *assetLibrary = [[ALAssetsLibrary alloc] init];
 
   [assetLibrary assetForURL:assetURL resultBlock:^(ALAsset *asset) {
@@ -685,6 +689,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
   } failureBlock:^(NSError *error) {
     completionBlock(nil, error);
   }];
+#pragma clang diagnostic pop
 }
 
 - (void)_loadPHAssetWithRequest:(ASPhotosFrameworkImageRequest *)request identifier:(id)imageIdentifier completion:(void (^)(UIImage *image, NSError *error))completionBlock
@@ -818,7 +823,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
     [self _setDownloadIdentifier:[_downloader downloadImageWithURL:imageURL
                                                      callbackQueue:dispatch_get_main_queue()
                                                   downloadProgress:downloadProgressBlock
-                                                        completion:^(id <ASImageContainerProtocol> imageContainer, NSError *error, id downloadIdentifier) {
+                                                        completion:^(id <ASImageContainerProtocol> imageContainer, NSError *error, id downloadIdentifier, id userInfo) {
                                                           // We dereference iVars directly, so we can't have weakSelf going nil on us.
                                                           __typeof__(self) strongSelf = weakSelf;
                                                           if (!strongSelf)

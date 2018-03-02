@@ -238,7 +238,7 @@
 
     // Simulate completion.
     ASImageDownloaderCompletion completionBlock = [inv as_argumentAtIndexAsObject:5];
-    completionBlock([self _testImage], nil, nil);
+    completionBlock([self _testImage], nil, nil, nil);
   });
 
   NSNumber *imageIdentifier = @1;

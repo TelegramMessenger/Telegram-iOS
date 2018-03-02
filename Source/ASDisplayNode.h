@@ -666,6 +666,12 @@ extern NSInteger const ASDefaultDrawingPriority;
  * @default ASCornerRoundingTypeDefaultSlowCALayer
  */
 @property (nonatomic, assign)           ASCornerRoundingType cornerRoundingType;  // default=Slow CALayer .cornerRadius (offscreen rendering)
+
+/** @abstract The radius to use when rounding corners of the ASDisplayNode.
+ *
+ * @discussion This property is thread-safe and should always be preferred over CALayer's cornerRadius property,
+ * even if corner rounding type is ASCornerRoundingTypeDefaultSlowCALayer.
+ */
 @property (nonatomic, assign)           CGFloat cornerRadius;                     // default=0.0
 
 @property (nonatomic, assign)           BOOL clipsToBounds;                    // default==NO

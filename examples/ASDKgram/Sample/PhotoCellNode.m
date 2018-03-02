@@ -44,6 +44,9 @@
 #define InsetForHeader UIEdgeInsetsMake(0, HORIZONTAL_BUFFER, 0, HORIZONTAL_BUFFER)
 #define InsetForFooter UIEdgeInsetsMake(VERTICAL_BUFFER, HORIZONTAL_BUFFER, VERTICAL_BUFFER, HORIZONTAL_BUFFER)
 
+@interface PhotoCellNode () <ASNetworkImageNodeDelegate>
+@end
+
 @implementation PhotoCellNode
 {
   PhotoModel          *_photoModel;
@@ -77,6 +80,7 @@
     }];
 
     _photoImageNode          = [[ASNetworkImageNode alloc] init];
+    _photoImageNode.delegate = self;
     _photoImageNode.URL      = photo.URL;
     _photoImageNode.layerBacked = YES;
     
@@ -282,6 +286,19 @@
   [_photoModel.commentFeed refreshFeedWithCompletionBlock:^(NSArray *newComments) {
     [self loadCommentsForPhoto:_photoModel];
   }];
+}
+
+#pragma mark - Network Image Delegate
+
+- (void)imageNode:(ASNetworkImageNode *)imageNode didLoadImage:(UIImage *)image info:(ASNetworkImageLoadInfo *)info
+{
+  // Docs say method is called from bg but right now it's called from main.
+  // Save main thread time by shunting this.
+  if (info.sourceType == ASNetworkImageSourceDownload) {
+    ASPerformBlockOnBackgroundThread(^{
+      NSLog(@"Received image %@ from %@ with userInfo %@", image, info.url.path, ASObjectDescriptionMakeTiny(info.userInfo));
+    });
+  }
 }
 
 #pragma mark - Helper Methods

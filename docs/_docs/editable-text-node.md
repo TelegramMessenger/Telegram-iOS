@@ -137,7 +137,7 @@ optional public func editableTextNodeDidUpdateText(_ editableTextNode: ASEditabl
 </div>
 </div>
 
---  Indicates to the delegate that teh text node has finished editing.
+--  Indicates to the delegate that the text node has finished editing.
 
 <div class = "highlight-group">
 <span class="language-toggle"><a data-lang="swift" class="swiftButton">Swift</a><a data-lang="objective-c" class = "active objcButton">Objective-C</a></span>

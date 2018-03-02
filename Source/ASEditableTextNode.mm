@@ -95,6 +95,7 @@
 
 @property (nonatomic, copy) bool (^shouldPaste)();
 @property (nonatomic, copy) ASEditableTextNodeTargetForAction *(^targetForActionImpl)(SEL);
+@property (nonatomic, copy) bool (^shouldReturn)();
 
 @end
 
@@ -158,6 +159,19 @@
 {
   if (_shouldPaste == nil || _shouldPaste()) {
     [super paste:sender];
+  }
+}
+
+- (NSArray *)keyCommands {
+  UIKeyCommand *plainReturn = [UIKeyCommand keyCommandWithInput:@"\r" modifierFlags:kNilOptions action:@selector(handlePlainReturn:)];
+  return @[
+    plainReturn
+  ];
+}
+
+- (void)handlePlainReturn:(id)__unused sender {
+  if (_shouldReturn) {
+    _shouldReturn();
   }
 }
 
@@ -304,6 +318,15 @@
       }
     }
     return nil;
+  };
+  textView.shouldReturn = ^bool {
+    __strong ASEditableTextNode *strongSelf = weakSelf;
+    if (strongSelf != nil) {
+      if ([strongSelf->_delegate respondsToSelector:@selector(editableTextNodeShouldReturn:)]) {
+        return [strongSelf->_delegate editableTextNodeShouldReturn:strongSelf];
+      }
+    }
+    return true;
   };
   _textKitComponents.textView = textView;
   _textKitComponents.textView.scrollEnabled = _scrollEnabled;

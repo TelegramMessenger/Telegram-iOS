@@ -114,6 +114,7 @@
   }
 
   ASSpecTestDisplayNode *node = [[ASSpecTestDisplayNode alloc] init];
+  [node setHierarchyState:ASHierarchyStateRangeManaged];
   node.automaticallyManagesSubnodes = YES;
   node.layoutSpecBlock = ^(ASDisplayNode *weakNode, ASSizeRange constrainedSize) {
     ASAbsoluteLayoutSpec *absoluteLayout = [ASAbsoluteLayoutSpec absoluteLayoutSpecWithChildren:@[subnodes[3]]];
@@ -130,6 +131,7 @@
   ASDisplayNodeSizeToFitSizeRange(node, ASSizeRangeMake(CGSizeZero, CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)));
   [node recursivelySetInterfaceState:ASInterfaceStatePreload];
 
+  ASCATransactionQueueWait();
   // No premature view allocation
   XCTAssertFalse(node.isNodeLoaded);
   // Subnodes should be inserted, laid out and entered preload state

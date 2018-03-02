@@ -232,7 +232,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   [self _ensureTruncationText];
   
   NSMutableAttributedString *mutableText = [attributedText mutableCopy];
-  [self prepareAttributedStringForDrawing:mutableText];
+  [self prepareAttributedString:mutableText];
   ASTextLayout *layout = [ASTextNode2 compatibleLayoutWithContainer:container text:mutableText];
   
   [self setNeedsDisplay];
@@ -319,7 +319,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   return _textContainer.exclusionPaths;
 }
 
-- (void)prepareAttributedStringForDrawing:(NSMutableAttributedString *)attributedString
+- (void)prepareAttributedString:(NSMutableAttributedString *)attributedString
 {
   ASDN::MutexLocker lock(__instanceLock__);
  
@@ -333,12 +333,6 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
     paragraphStyle.lineBreakMode = _truncationMode;
     [attributedString addAttribute:NSParagraphStyleAttributeName value:paragraphStyle range:range];
   }];
-  
-  // Apply background color if needed
-  UIColor *backgroundColor = self.backgroundColor;
-  if (CGColorGetAlpha(backgroundColor.CGColor) > 0) {
-    [attributedString addAttribute:NSBackgroundColorAttributeName value:backgroundColor range:NSMakeRange(0, attributedString.length)];
-  }
   
   // Apply shadow if needed
   if (_shadowOpacity > 0 && (_shadowRadius != 0 || !CGSizeEqualToSize(_shadowOffset, CGSizeZero)) && CGColorGetAlpha(_shadowColor) > 0) {
@@ -362,11 +356,19 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   ASTextContainer *copiedContainer = [_textContainer copy];
   copiedContainer.size = self.bounds.size;
   NSMutableAttributedString *mutableText = [self.attributedText mutableCopy] ?: [[NSMutableAttributedString alloc] init];
-  [self prepareAttributedStringForDrawing:mutableText];
+  
+  [self prepareAttributedString:mutableText];
+  
+  // Apply background color if needed before drawing. To access the backgroundColor we need to be on the main thread
+  UIColor *backgroundColor = self.backgroundColor;
+  if (CGColorGetAlpha(backgroundColor.CGColor) > 0) {
+    [mutableText addAttribute:NSBackgroundColorAttributeName value:backgroundColor range:NSMakeRange(0, mutableText.length)];
+  }
+  
   return @{
-           @"container": copiedContainer,
-           @"text": mutableText
-           };
+    @"container": copiedContainer,
+    @"text": mutableText
+  };
 }
 
 /**

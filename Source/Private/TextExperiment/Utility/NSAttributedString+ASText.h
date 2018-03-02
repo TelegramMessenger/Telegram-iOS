@@ -1358,21 +1358,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)as_appendString:(NSString *)string;
 
 /**
- Set foreground color with [UIColor clearColor] in joined-emoji range.
- Emoji drawing will not be affected by the foreground color.
- 
- @discussion In iOS 8.3, Apple releases some new diversified emojis.
- There's some single emoji which can be assembled to a new 'joined-emoji'.
- The joiner is unicode character 'ZERO WIDTH JOINER' (U+200D).
- For example: 👨👩👧👧 -> 👨‍👩‍👧‍👧.
- 
- When there are more than 5 'joined-emoji' in a same CTLine, CoreText may render some
- extra glyphs above the emoji. It's a bug in CoreText, try this method to avoid.
- This bug is fixed in iOS 9.
- */
-- (void)as_setClearColorToJoinedEmoji;
-
-/**
  Removes all discontinuous attributes in a specified range.
  See `allDiscontinuousAttributeKeys`.
  

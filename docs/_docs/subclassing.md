@@ -51,7 +51,7 @@ An `ASViewController` is a regular `UIViewController` subclass that has special 
 
 ### `-init` 
 
-This method is called once, at the very begining of an ASViewController's lifecycle. As with UIViewController initialization, it is best practice to **never access** `self.view` or `self.node.view` in this method as it will force the view to be created early. Instead, do any view access in -viewDidLoad. 
+This method is called once, at the very beginning of an ASViewController's lifecycle. As with UIViewController initialization, it is best practice to **never access** `self.view` or `self.node.view` in this method as it will force the view to be created early. Instead, do any view access in -viewDidLoad. 
 
 ASViewController's designated initializer is `initWithNode:`. A typical initializer will look something like the code below. Note how the ASViewController's node is created _before_ calling super. An ASViewController manages a node similarly to how a UIViewController manages a view, but the initialization is slightly different. 
 

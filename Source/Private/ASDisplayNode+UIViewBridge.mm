@@ -186,17 +186,12 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 - (CGFloat)cornerRadius
 {
   ASDN::MutexLocker l(__instanceLock__);
-  if (_cornerRoundingType == ASCornerRoundingTypeDefaultSlowCALayer) {
-    return self.layerCornerRadius;
-  } else {
-    return _cornerRadius;
-  }
+  return _cornerRadius;
 }
 
 - (void)setCornerRadius:(CGFloat)newCornerRadius
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  [self updateCornerRoundingWithType:_cornerRoundingType cornerRadius:newCornerRadius];
+  [self updateCornerRoundingWithType:self.cornerRoundingType cornerRadius:newCornerRadius];
 }
 
 - (ASCornerRoundingType)cornerRoundingType
@@ -207,8 +202,7 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 
 - (void)setCornerRoundingType:(ASCornerRoundingType)newRoundingType
 {
-  ASDN::MutexLocker l(__instanceLock__);
-  [self updateCornerRoundingWithType:newRoundingType cornerRadius:_cornerRadius];
+  [self updateCornerRoundingWithType:newRoundingType cornerRadius:self.cornerRadius];
 }
 
 - (NSString *)contentsGravity
@@ -857,21 +851,16 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 - (UISemanticContentAttribute)semanticContentAttribute
 {
   _bridge_prologue_read;
-  if (AS_AT_LEAST_IOS9) {
-    return _getFromViewOnly(semanticContentAttribute);
-  }
-  return UISemanticContentAttributeUnspecified;
+  return _getFromViewOnly(semanticContentAttribute);
 }
 
 - (void)setSemanticContentAttribute:(UISemanticContentAttribute)semanticContentAttribute
 {
   _bridge_prologue_write;
-  if (AS_AT_LEAST_IOS9) {
-    _setToViewOnly(semanticContentAttribute, semanticContentAttribute);
+  _setToViewOnly(semanticContentAttribute, semanticContentAttribute);
 #if YOGA
-    [self semanticContentAttributeDidChange:semanticContentAttribute];
+  [self semanticContentAttributeDidChange:semanticContentAttribute];
 #endif
-  }
 }
 
 @end

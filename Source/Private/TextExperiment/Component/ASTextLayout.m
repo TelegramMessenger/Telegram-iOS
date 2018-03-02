@@ -405,25 +405,9 @@ dispatch_semaphore_signal(_lock);
   container->_readonly = YES;
   maximumNumberOfRows = container.maximumNumberOfRows;
   
-  // CoreText bug when draw joined emoji since iOS 8.3.
-  // See -[NSMutableAttributedString setClearColorToJoinedEmoji] for more information.
-  static BOOL needFixJoinedEmojiBug = NO;
   // It may use larger constraint size when create CTFrame with
   // CTFramesetterCreateFrame in iOS 10.
-  static BOOL needFixLayoutSizeBug = NO;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    double systemVersionDouble = [UIDevice currentDevice].systemVersion.doubleValue;
-    if (8.3 <= systemVersionDouble && systemVersionDouble < 9) {
-      needFixJoinedEmojiBug = YES;
-    }
-    if (systemVersionDouble >= 10) {
-      needFixLayoutSizeBug = YES;
-    }
-  });
-  if (needFixJoinedEmojiBug) {
-    [((NSMutableAttributedString *)text) as_setClearColorToJoinedEmoji];
-  }
+  BOOL needFixLayoutSizeBug = AS_AT_LEAST_IOS10;
   
   layout = [[ASTextLayout alloc] _init];
   layout.text = text;

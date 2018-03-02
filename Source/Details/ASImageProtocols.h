@@ -72,8 +72,9 @@ typedef void(^ASImageCacherCompletion)(id <ASImageContainerProtocol> _Nullable i
  @param image The image that was downloaded, if the image could be successfully downloaded; nil otherwise.
  @param error An error describing why the download of `URL` failed, if the download failed; nil otherwise.
  @param downloadIdentifier The identifier for the download task that completed.
+ @param userInfo Any additional info that your downloader would like to communicate through Texture.
  */
-typedef void(^ASImageDownloaderCompletion)(id <ASImageContainerProtocol> _Nullable image, NSError * _Nullable error, id _Nullable downloadIdentifier);
+typedef void(^ASImageDownloaderCompletion)(id <ASImageContainerProtocol> _Nullable image, NSError * _Nullable error, id _Nullable downloadIdentifier, id _Nullable userInfo);
 
 /**
  @param progress The progress of the download, in the range of (0.0, 1.0), inclusive.

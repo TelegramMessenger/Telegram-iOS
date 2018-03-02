@@ -295,9 +295,7 @@ static BOOL defaultAllowsEdgeAntialiasing = NO;
   accessibilityActivationPoint = CGPointZero;
   accessibilityPath = nil;
   edgeAntialiasingMask = (kCALayerLeftEdge | kCALayerRightEdge | kCALayerTopEdge | kCALayerBottomEdge);
-  if (AS_AVAILABLE_IOS(9)) {
-    semanticContentAttribute = UISemanticContentAttributeUnspecified;
-  }
+  semanticContentAttribute = UISemanticContentAttributeUnspecified;
 
   return self;
 }
@@ -1051,10 +1049,8 @@ static BOOL defaultAllowsEdgeAntialiasing = NO;
   if (flags.setOpaque)
     ASDisplayNodeAssert(layer.opaque == opaque, @"Didn't set opaque as desired");
 
-  if (AS_AVAILABLE_IOS(9)) {
-    if (flags.setSemanticContentAttribute) {
-      view.semanticContentAttribute = semanticContentAttribute;
-    }
+  if (flags.setSemanticContentAttribute) {
+    view.semanticContentAttribute = semanticContentAttribute;
   }
 
   if (flags.setIsAccessibilityElement)
@@ -1215,9 +1211,7 @@ static BOOL defaultAllowsEdgeAntialiasing = NO;
   pendingState.allowsGroupOpacity = layer.allowsGroupOpacity;
   pendingState.allowsEdgeAntialiasing = layer.allowsEdgeAntialiasing;
   pendingState.edgeAntialiasingMask = layer.edgeAntialiasingMask;
-  if (AS_AVAILABLE_IOS(9)) {
-    pendingState.semanticContentAttribute = view.semanticContentAttribute;
-  }
+  pendingState.semanticContentAttribute = view.semanticContentAttribute;
   pendingState.isAccessibilityElement = view.isAccessibilityElement;
   pendingState.accessibilityLabel = view.accessibilityLabel;
   pendingState.accessibilityHint = view.accessibilityHint;

@@ -64,7 +64,7 @@
   tuningParameters.leadingBufferScreenfuls = 0.5;
   tuningParameters.trailingBufferScreenfuls = 1.0;
   [_tableView setTuningParameters:tuningParameters forRangeType:ASLayoutRangeTypePreload];
-  [_tableView setTuningParameters:tuningParameters forRangeType:ASLayoutRangeTypeRender];
+  [_tableView setTuningParameters:tuningParameters forRangeType:ASLayoutRangeTypeDisplay];
   
   [self.view addSubview:_tableView];
 }
@@ -75,7 +75,7 @@
 {
   return ^{
     RandomCoreGraphicsNode *elementNode = [[RandomCoreGraphicsNode alloc] init];
-    elementNode.size = ASRelativeSizeRangeMakeWithExactCGSize(CGSizeMake(320, 100));
+    elementNode.style.preferredSize = CGSizeMake(320, 100);
     return elementNode;
   };
 }

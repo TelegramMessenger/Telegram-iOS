@@ -102,6 +102,11 @@ AS_SUBCLASSING_RESTRICTED
  */
 @property (nonatomic, weak) id<ASRangeControllerDelegate> delegate;
 
+/**
+ * Property that indicates whether the scroll view for this range controller has ever changed its contentOffset.
+ */
+@property (nonatomic, assign) BOOL contentHasBeenScrolled;
+
 @end
 
 

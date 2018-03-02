@@ -17,7 +17,7 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#import "ASViewController.h"
+#import <AsyncDisplayKit/ASViewController.h>
 
 @interface AsyncViewController : ASViewController <UITabBarControllerDelegate>
 

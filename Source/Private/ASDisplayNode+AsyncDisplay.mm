@@ -21,167 +21,11 @@
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkSubclasses.h>
+#import <AsyncDisplayKit/ASGraphicsContext.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASSignpost.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 
-
-@interface ASDrawingContext : NSObject
-
-@property (nonatomic, readonly) CGFloat scale;
-@property (nonatomic, readonly) int32_t bytesPerRow;
-@property (nonatomic, readonly) void *bytes;
-
-- (instancetype)initWithSize:(CGSize)size scale:(CGFloat)scale opaque:(bool)opaque;
-- (UIImage *)generateImage;
-- (void)withContext:(void (^)(CGContextRef))f;
-- (void)withFlippedContext:(void (^)(CGContextRef))f;
-- (void)pushCurrent;
-- (void)popCurrent;
-
-@end
-
-static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused const void *data, __unused size_t size) {
-  free(info);
-}
-
-@interface ASDrawingContext () {
-  CGSize _size;
-  CGSize _scaledSize;
-  CGBitmapInfo _bitmapInfo;
-  int32_t _length;
-  CGDataProviderRef _provider;
-  
-  CGContextRef _context;
-  bool _didPush;
-}
-
-@end
-
-@implementation ASDrawingContext
-
-- (instancetype)initWithSize:(CGSize)size scale:(CGFloat)scale opaque:(bool)opaque {
-  self = [super init];
-  if (self != nil) {
-    ASDisplayNodeAssert(scale > 0.0f, @"scale > 0.0f");
-    _size = size;
-    _scale = scale;
-    _scaledSize = CGSizeMake(size.width * _scale, size.height * _scale);
-    
-    _bytesPerRow = (4 * ((int32_t)(_scaledSize.width)) + 15) & (~15);
-    _length = _bytesPerRow * ((int32_t)(_scaledSize.height));
-    
-    _bitmapInfo = kCGBitmapByteOrder32Little | (opaque ? kCGImageAlphaNoneSkipFirst : kCGImageAlphaPremultipliedFirst);
-    
-    _bytes = malloc(_length);
-    memset(_bytes, 0, _length);
-    _provider = CGDataProviderCreateWithData(_bytes, _bytes, _length, &DrawingContextDataProviderReleaseDataCallback);
-  }
-  return self;
-}
-
-- (void)dealloc {
-  if (_context != nil) {
-    CGContextRelease(_context);
-  }
-  if (_provider != nil) {
-    CGDataProviderRelease(_provider);
-  }
-}
-
-- (void)withContext:(void (^)(CGContextRef))f {
-  if (_context == nil) {
-    static CGColorSpaceRef deviceColorSpace = NULL;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-      deviceColorSpace = CGColorSpaceCreateDeviceRGB();
-    });
-    _context = CGBitmapContextCreate(_bytes, (int32_t)_scaledSize.width, (int32_t)_scaledSize.height, 8, _bytesPerRow, deviceColorSpace, _bitmapInfo);
-    if (_context != nil) {
-      CGContextScaleCTM(_context, _scale, _scale);
-    }
-  }
-  if (_context != nil) {
-    CGContextTranslateCTM(_context, _size.width / 2.0f, _size.height / 2.0f);
-    CGContextScaleCTM(_context, 1.0f, -1.0f);
-    CGContextTranslateCTM(_context, -_size.width / 2.0f, -_size.height / 2.0f);
-    
-    if (f) {
-      f(_context);
-    }
-    
-    CGContextTranslateCTM(_context, _size.width / 2.0f, _size.height / 2.0f);
-    CGContextScaleCTM(_context, 1.0f, -1.0f);
-    CGContextTranslateCTM(_context, -_size.width / 2.0f, -_size.height / 2.0f);
-  }
-}
-
-- (void)withFlippedContext:(void (^)(CGContextRef))f {
-  if (_context == nil) {
-    static CGColorSpaceRef deviceColorSpace = NULL;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-      deviceColorSpace = CGColorSpaceCreateDeviceRGB();
-    });
-    _context = CGBitmapContextCreate(_bytes, (int32_t)_scaledSize.width, (int32_t)_scaledSize.height, 8, _bytesPerRow, deviceColorSpace, _bitmapInfo);
-    if (_context != nil) {
-      CGContextScaleCTM(_context, _scale, _scale);
-    }
-  }
-  if (_context != nil) {
-    if (f) {
-      f(_context);
-    }
-  }
-}
-
-- (void)pushCurrent {
-  if (_context == nil) {
-    static CGColorSpaceRef deviceColorSpace = NULL;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-      deviceColorSpace = CGColorSpaceCreateDeviceRGB();
-    });
-    _context = CGBitmapContextCreate(_bytes, (int32_t)_scaledSize.width, (int32_t)_scaledSize.height, 8, _bytesPerRow, deviceColorSpace, _bitmapInfo);
-    if (_context != nil) {
-      CGContextScaleCTM(_context, _scale, _scale);
-    }
-  }
-  
-  if (_context != nil) {
-    CGContextTranslateCTM(_context, _size.width / 2.0f, _size.height / 2.0f);
-    CGContextScaleCTM(_context, 1.0f, -1.0f);
-    CGContextTranslateCTM(_context, -_size.width / 2.0f, -_size.height / 2.0f);
-    
-    UIGraphicsPushContext(_context);
-    _didPush = true;
-  }
-}
-
-- (void)popCurrent {
-  if (_context != nil && _didPush) {
-    _didPush = false;
-    UIGraphicsPopContext();
-  }
-}
-
-- (UIImage *)generateImage {
-  static CGColorSpaceRef deviceColorSpace = NULL;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    deviceColorSpace = CGColorSpaceCreateDeviceRGB();
-  });
-  CGImageRef image = CGImageCreate((int32_t)_scaledSize.width, (int32_t)_scaledSize.height, 8, 32, _bytesPerRow, deviceColorSpace, _bitmapInfo, _provider, nil, false, kCGRenderingIntentDefault);
-  if (image != nil) {
-    UIImage *uiImage = [[UIImage alloc] initWithCGImage:image scale:_scale orientation:UIImageOrientationUp];
-    CGImageRelease(image);
-    return uiImage;
-  } else {
-    return nil;
-  }
-}
-
-@end
 
 @interface ASDisplayNode () <_ASDisplayLayerDelegate>
 @end
@@ -375,25 +219,14 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
     displayBlock = ^id{
       CHECK_CANCELLED_AND_RETURN_NIL();
       
-      ASDrawingContext *context = [[ASDrawingContext alloc] initWithSize:bounds.size scale:contentsScaleForDisplay opaque:opaque];
-      [context pushCurrent];
-      
-      for (dispatch_block_t block in displayBlocks) {
-        CHECK_CANCELLED_AND_RETURN_NIL([context popCurrent]);
-        block();
-      }
-      [context popCurrent];
-      UIImage *image = [context generateImage];
-      
-      /*UIGraphicsBeginImageContextWithOptions(bounds.size, opaque, contentsScaleForDisplay);
+      ASGraphicsBeginImageContextWithOptions(bounds.size, opaque, contentsScaleForDisplay);
 
       for (dispatch_block_t block in displayBlocks) {
-        CHECK_CANCELLED_AND_RETURN_NIL(UIGraphicsEndImageContext());
+        CHECK_CANCELLED_AND_RETURN_NIL(ASGraphicsEndImageContext());
         block();
       }
       
-      UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
-      UIGraphicsEndImageContext();*/
+      UIImage *image = ASGraphicsGetImageAndEndCurrentContext();
 
       ASDN_DELAY_FOR_DISPLAY();
       return image;
@@ -402,13 +235,9 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
     displayBlock = ^id{
       CHECK_CANCELLED_AND_RETURN_NIL();
 
-      ASDrawingContext *context = nil;
       if (shouldCreateGraphicsContext) {
-        //UIGraphicsBeginImageContextWithOptions(bounds.size, opaque, contentsScaleForDisplay);
-        //CHECK_CANCELLED_AND_RETURN_NIL( UIGraphicsEndImageContext(); );
-        context = [[ASDrawingContext alloc] initWithSize:bounds.size scale:contentsScaleForDisplay opaque:opaque];
-        [context pushCurrent];
-        CHECK_CANCELLED_AND_RETURN_NIL( [context popCurrent]; );
+        ASGraphicsBeginImageContextWithOptions(bounds.size, opaque, contentsScaleForDisplay);
+        CHECK_CANCELLED_AND_RETURN_NIL( ASGraphicsEndImageContext(); );
       }
 
       CGContextRef currentContext = UIGraphicsGetCurrentContext();
@@ -427,13 +256,8 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
       [self __didDisplayNodeContentWithRenderingContext:currentContext image:&image drawParameters:drawParameters backgroundColor:backgroundColor borderWidth:borderWidth borderColor:borderColor];
       
       if (shouldCreateGraphicsContext) {
-        CHECK_CANCELLED_AND_RETURN_NIL( [context popCurrent]; );
-        [context popCurrent];
-        image = [context generateImage];
-        context = nil;
-        //CHECK_CANCELLED_AND_RETURN_NIL( UIGraphicsEndImageContext(); );
-        //image = UIGraphicsGetImageFromCurrentImageContext();
-        //UIGraphicsEndImageContext();
+        CHECK_CANCELLED_AND_RETURN_NIL( ASGraphicsEndImageContext(); );
+        image = ASGraphicsGetImageAndEndCurrentContext();
       }
 
       ASDN_DELAY_FOR_DISPLAY();
@@ -507,7 +331,7 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
       bounds.size.height *= contentsScale;
       CGFloat white = 0.0f, alpha = 0.0f;
       [backgroundColor getWhite:&white alpha:&alpha];
-      UIGraphicsBeginImageContextWithOptions(bounds.size, (alpha == 1.0f), contentsScale);
+      ASGraphicsBeginImageContextWithOptions(bounds.size, (alpha == 1.0f), contentsScale);
       [*image drawInRect:bounds];
     } else {
       bounds = CGContextGetClipBoundingBox(context);
@@ -537,8 +361,7 @@ static void DrawingContextDataProviderReleaseDataCallback(void *info, __unused c
     [roundedPath stroke];  // Won't do anything if borderWidth is 0 and roundedPath is nil.
     
     if (*image) {
-      *image = UIGraphicsGetImageFromCurrentImageContext();
-      UIGraphicsEndImageContext();
+      *image = ASGraphicsGetImageAndEndCurrentContext();
     }
   }
 }

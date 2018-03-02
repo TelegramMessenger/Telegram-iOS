@@ -2,8 +2,13 @@
 //  ASDisplayNode+Layout.mm
 //  Texture
 //
-//  Copyright (c) 2017-present, Pinterest, Inc.  All rights reserved.
-//  Licensed under the Apache License, Version 2.0 (the "License");
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
+//  grant of patent rights can be found in the PATENTS file in the same directory.
+//
+//  Modifications to this file made after 4/13/2017 are: Copyright (c) through the present,
+//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
 //  you may not use this file except in compliance with the License.
 //  You may obtain a copy of the License at
 //
@@ -304,13 +309,24 @@ ASLayoutElementStyleExtensibilityForwarding
   }
   
   CGSize boundsSizeForLayout = ASCeilSizeValues(bounds.size);
+  NSUInteger calculatedVersion = _calculatedDisplayNodeLayout->version;
 
   // Prefer a newer and not yet applied _pendingDisplayNodeLayout over _calculatedDisplayNodeLayout
   // If there is no such _pending, check if _calculated is valid to reuse (avoiding recalculation below).
-  BOOL pendingLayoutIsPreferred = (_pendingDisplayNodeLayout != nullptr
-                                   && _pendingDisplayNodeLayout->version >= _layoutVersion
-                                   && _pendingDisplayNodeLayout->version > _calculatedDisplayNodeLayout->version); // _pending is not yet applied
-  BOOL calculatedLayoutIsReusable = (_calculatedDisplayNodeLayout->version >= _layoutVersion
+  BOOL pendingLayoutIsPreferred = NO;
+  if (_pendingDisplayNodeLayout != nullptr) {
+    NSUInteger pendingVersion = _pendingDisplayNodeLayout->version;
+    if (pendingVersion >= _layoutVersion) {
+      if (pendingVersion > calculatedVersion) {
+        pendingLayoutIsPreferred = YES; // Newer _pending
+      } else if (pendingVersion == calculatedVersion
+                 && !ASSizeRangeEqualToSizeRange(_pendingDisplayNodeLayout->constrainedSize,
+                                                 _calculatedDisplayNodeLayout->constrainedSize)) {
+                   pendingLayoutIsPreferred = YES; // _pending with a different constrained size
+                 }
+    }
+  }
+  BOOL calculatedLayoutIsReusable = (calculatedVersion >= _layoutVersion
                                      && (_calculatedDisplayNodeLayout->requestedLayoutFromAbove
                                          || CGSizeEqualToSize(_calculatedDisplayNodeLayout->layout.size, boundsSizeForLayout)));
   if (!pendingLayoutIsPreferred && calculatedLayoutIsReusable) {

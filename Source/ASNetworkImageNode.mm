@@ -28,6 +28,7 @@
 #import <AsyncDisplayKit/ASImageNode+AnimatedImagePrivate.h>
 #import <AsyncDisplayKit/ASImageContainerProtocolCategories.h>
 #import <AsyncDisplayKit/ASLog.h>
+#import <AsyncDisplayKit/ASNetworkImageLoadInfo+Private.h>
 
 #if AS_PIN_REMOTE_IMAGE
 #import <AsyncDisplayKit/ASPINRemoteImageDownloader.h>
@@ -335,8 +336,9 @@
   if (asynchronously == NO && _cacheFlags.cacheSupportsSynchronousFetch) {
     ASDN::MutexLocker l(__instanceLock__);
 
-    if (_imageLoaded == NO && _URL && _downloadIdentifier == nil) {
-      UIImage *result = [[_cache synchronouslyFetchedCachedImageWithURL:_URL] asdk_image];
+    NSURL *url = _URL;
+    if (_imageLoaded == NO && url && _downloadIdentifier == nil) {
+      UIImage *result = [[_cache synchronouslyFetchedCachedImageWithURL:url] asdk_image];
       if (result) {
         [self _locked_setCurrentImageQuality:1.0];
         [self _locked__setImage:result];
@@ -345,8 +347,7 @@
         // Call out to the delegate.
         if (_delegateFlags.delegateDidLoadImageWithInfo) {
           ASDN::MutexUnlocker l(__instanceLock__);
-          ASNetworkImageNodeDidLoadInfo info = {};
-          info.imageSource = ASNetworkImageSourceSynchronousCache;
+          auto info = [[ASNetworkImageLoadInfo alloc] initWithURL:url sourceType:ASNetworkImageSourceSynchronousCache downloadIdentifier:nil userInfo:nil];
           [_delegate imageNode:self didLoadImage:result info:info];
         } else if (_delegateFlags.delegateDidLoadImage) {
           ASDN::MutexUnlocker l(__instanceLock__);
@@ -554,7 +555,7 @@
   _cacheUUID = nil;
 }
 
-- (void)_downloadImageWithCompletion:(void (^)(id <ASImageContainerProtocol> imageContainer, NSError*, id downloadIdentifier))finished
+- (void)_downloadImageWithCompletion:(void (^)(id <ASImageContainerProtocol> imageContainer, NSError*, id downloadIdentifier, id userInfo))finished
 {
   ASPerformBlockOnBackgroundThread(^{
     NSURL *url;
@@ -573,9 +574,9 @@
     downloadIdentifier = [_downloader downloadImageWithURL:url
                                              callbackQueue:dispatch_get_main_queue()
                                           downloadProgress:NULL
-                                                completion:^(id <ASImageContainerProtocol> _Nullable imageContainer, NSError * _Nullable error, id  _Nullable downloadIdentifier) {
+                                                completion:^(id <ASImageContainerProtocol> _Nullable imageContainer, NSError * _Nullable error, id  _Nullable downloadIdentifier, id _Nullable userInfo) {
                                                   if (finished != NULL) {
-                                                    finished(imageContainer, error, downloadIdentifier);
+                                                    finished(imageContainer, error, downloadIdentifier, userInfo);
                                                   }
                                                 }];
     as_log_verbose(ASImageLoadingLog(), "Downloading image for %@ url: %@", self, url);
@@ -630,15 +631,15 @@
         }
         
         if (_shouldCacheImage) {
-          [self _locked__setImage:[UIImage imageNamed:_URL.path.lastPathComponent]];
+          [self _locked__setImage:[UIImage imageNamed:URL.path.lastPathComponent]];
         } else {
           // First try to load the path directly, for efficiency assuming a developer who
           // doesn't want caching is trying to be as minimal as possible.
-          UIImage *nonAnimatedImage = [UIImage imageWithContentsOfFile:_URL.path];
+          UIImage *nonAnimatedImage = [UIImage imageWithContentsOfFile:URL.path];
           if (nonAnimatedImage == nil) {
             // If we couldn't find it, execute an -imageNamed:-like search so we can find resources even if the
             // extension is not provided in the path.  This allows the same path to work regardless of shouldCacheImage.
-            NSString *filename = [[NSBundle mainBundle] pathForResource:_URL.path.lastPathComponent ofType:nil];
+            NSString *filename = [[NSBundle mainBundle] pathForResource:URL.path.lastPathComponent ofType:nil];
             if (filename != nil) {
               nonAnimatedImage = [UIImage imageWithContentsOfFile:filename];
             }
@@ -647,7 +648,7 @@
           // If the file may be an animated gif and then created an animated image.
           id<ASAnimatedImageProtocol> animatedImage = nil;
           if (_downloaderFlags.downloaderImplementsAnimatedImage) {
-            NSData *data = [NSData dataWithContentsOfURL:_URL];
+            NSData *data = [NSData dataWithContentsOfURL:URL];
             if (data != nil) {
               animatedImage = [_downloader animatedImageWithData:data];
 
@@ -670,8 +671,7 @@
 
         if (_delegateFlags.delegateDidLoadImageWithInfo) {
           ASDN::MutexUnlocker u(__instanceLock__);
-          ASNetworkImageNodeDidLoadInfo info = {};
-          info.imageSource = ASNetworkImageSourceFileURL;
+          auto info = [[ASNetworkImageLoadInfo alloc] initWithURL:URL sourceType:ASNetworkImageSourceFileURL downloadIdentifier:nil userInfo:nil];
           [delegate imageNode:self didLoadImage:self.image info:info];
         } else if (_delegateFlags.delegateDidLoadImage) {
           ASDN::MutexUnlocker u(__instanceLock__);
@@ -680,7 +680,7 @@
       });
     } else {
       __weak __typeof__(self) weakSelf = self;
-      auto finished = ^(id <ASImageContainerProtocol>imageContainer, NSError *error, id downloadIdentifier, ASNetworkImageSource imageSource) {
+      auto finished = ^(id <ASImageContainerProtocol>imageContainer, NSError *error, id downloadIdentifier, ASNetworkImageSourceType imageSource, id userInfo) {
         ASPerformBlockOnBackgroundThread(^{
           __typeof__(self) strongSelf = weakSelf;
           if (strongSelf == nil) {
@@ -698,12 +698,13 @@
           }
           
           //No longer in preload range, no point in setting the results (they won't be cleared in exit preload range)
-          if (ASInterfaceStateIncludesPreload(self->_interfaceState) == NO) {
-            self->_downloadIdentifier = nil;
-            self->_cacheUUID = nil;
+          if (ASInterfaceStateIncludesPreload(strongSelf->_interfaceState) == NO) {
+            strongSelf->_downloadIdentifier = nil;
+            strongSelf->_cacheUUID = nil;
             return;
           }
           
+          UIImage *newImage;
           if (imageContainer != nil) {
             [strongSelf _locked_setCurrentImageQuality:1.0];
             NSData *animatedImageData = [imageContainer asdk_animatedImageData];
@@ -711,7 +712,8 @@
               id animatedImage = [strongSelf->_downloader animatedImageWithData:animatedImageData];
               [strongSelf _locked_setAnimatedImage:animatedImage];
             } else {
-              [strongSelf _locked__setImage:[imageContainer asdk_image]];
+              newImage = [imageContainer asdk_image];
+              [strongSelf _locked__setImage:newImage];
             }
             strongSelf->_imageLoaded = YES;
           }
@@ -719,30 +721,32 @@
           strongSelf->_downloadIdentifier = nil;
           strongSelf->_cacheUUID = nil;
           
-          ASPerformBlockOnMainThread(^{
-            __typeof__(self) strongSelf = weakSelf;
-            if (strongSelf == nil) {
-              return;
+          void (^calloutBlock)(ASNetworkImageNode *inst);
+          
+          if (newImage) {
+            if (_delegateFlags.delegateDidLoadImageWithInfo) {
+              calloutBlock = ^(ASNetworkImageNode *strongSelf) {
+                auto info = [[ASNetworkImageLoadInfo alloc] initWithURL:URL sourceType:imageSource downloadIdentifier:downloadIdentifier userInfo:userInfo];
+                [delegate imageNode:strongSelf didLoadImage:newImage info:info];
+              };
+            } else if (_delegateFlags.delegateDidLoadImage) {
+              calloutBlock = ^(ASNetworkImageNode *strongSelf) {
+                [delegate imageNode:strongSelf didLoadImage:newImage];
+              };
             }
-            
-            // Grab the lock for the rest of the block
-            ASDN::MutexLocker l(strongSelf->__instanceLock__);
-            
-            if (imageContainer != nil) {
-              if (strongSelf->_delegateFlags.delegateDidLoadImageWithInfo) {
-                ASDN::MutexUnlocker u(strongSelf->__instanceLock__);
-                ASNetworkImageNodeDidLoadInfo info = {};
-                info.imageSource = imageSource;
-                [delegate imageNode:strongSelf didLoadImage:strongSelf.image info:info];
-              } else if (strongSelf->_delegateFlags.delegateDidLoadImage) {
-                ASDN::MutexUnlocker u(strongSelf->__instanceLock__);
-                [delegate imageNode:strongSelf didLoadImage:strongSelf.image];
-              }
-            } else if (error && strongSelf->_delegateFlags.delegateDidFailWithError) {
-              ASDN::MutexUnlocker u(strongSelf->__instanceLock__);
+          } else if (error && _delegateFlags.delegateDidFailWithError) {
+            calloutBlock = ^(ASNetworkImageNode *strongSelf) {
               [delegate imageNode:strongSelf didFailWithError:error];
-            }
-          });
+            };
+          }
+          
+          if (calloutBlock) {
+            ASPerformBlockOnMainThread(^{
+              if (auto strongSelf = weakSelf) {
+                calloutBlock(strongSelf);
+              }
+            });
+          }
         });
       };
 
@@ -767,20 +771,20 @@
           }
           
           if ([imageContainer asdk_image] == nil && _downloader != nil) {
-            [self _downloadImageWithCompletion:^(id<ASImageContainerProtocol> imageContainer, NSError *error, id downloadIdentifier) {
-              finished(imageContainer, error, downloadIdentifier, ASNetworkImageSourceDownload);
+            [self _downloadImageWithCompletion:^(id<ASImageContainerProtocol> imageContainer, NSError *error, id downloadIdentifier, id userInfo) {
+              finished(imageContainer, error, downloadIdentifier, ASNetworkImageSourceDownload, userInfo);
             }];
           } else {
             as_log_verbose(ASImageLoadingLog(), "Decached image for %@ img: %@ url: %@", self, [imageContainer asdk_image], URL);
-            finished(imageContainer, nil, nil, ASNetworkImageSourceAsynchronousCache);
+            finished(imageContainer, nil, nil, ASNetworkImageSourceAsynchronousCache, nil);
           }
         };
         [_cache cachedImageWithURL:URL
                      callbackQueue:dispatch_get_main_queue()
                         completion:completion];
       } else {
-        [self _downloadImageWithCompletion:^(id<ASImageContainerProtocol> imageContainer, NSError *error, id downloadIdentifier) {
-          finished(imageContainer, error, downloadIdentifier, ASNetworkImageSourceDownload);
+        [self _downloadImageWithCompletion:^(id<ASImageContainerProtocol> imageContainer, NSError *error, id downloadIdentifier, id userInfo) {
+          finished(imageContainer, error, downloadIdentifier, ASNetworkImageSourceDownload, userInfo);
         }];
       }
     }

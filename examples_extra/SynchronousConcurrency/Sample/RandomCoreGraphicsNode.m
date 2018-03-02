@@ -86,7 +86,7 @@
 
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize
 {
-  [_textNode measure:constrainedSize];
+  [_textNode layoutThatFits:ASSizeRangeMake(CGSizeZero, constrainedSize)];
   return CGSizeMake(constrainedSize.width, 100);
 }
 

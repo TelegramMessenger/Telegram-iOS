@@ -22,6 +22,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @protocol ASNetworkImageNodeDelegate, ASImageCacheProtocol, ASImageDownloaderProtocol;
+@class ASNetworkImageLoadInfo;
 
 
 /**
@@ -136,20 +137,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark -
 
-typedef NS_ENUM(NSInteger, ASNetworkImageSource) {
-  ASNetworkImageSourceUnspecified = 0,
-  ASNetworkImageSourceSynchronousCache,
-  ASNetworkImageSourceAsynchronousCache,
-  ASNetworkImageSourceFileURL,
-  ASNetworkImageSourceDownload,
-};
-
-/// A struct that carries details about ASNetworkImageNode's image loads.
-typedef struct {
-  /// The source from which the image was loaded.
-  ASNetworkImageSource imageSource;
-} ASNetworkImageNodeDidLoadInfo;
-
 /**
  * The methods declared by the ASNetworkImageNodeDelegate protocol allow the adopting delegate to respond to
  * notifications such as finished decoding and downloading an image.
@@ -163,11 +150,11 @@ typedef struct {
  *
  * @param imageNode The sender.
  * @param image The newly-loaded image.
- * @param info Misc information about the image load.
+ * @param info Additional information about the image load.
  *
  * @discussion Called on a background queue.
  */
-- (void)imageNode:(ASNetworkImageNode *)imageNode didLoadImage:(UIImage *)image info:(ASNetworkImageNodeDidLoadInfo)info;
+- (void)imageNode:(ASNetworkImageNode *)imageNode didLoadImage:(UIImage *)image info:(ASNetworkImageLoadInfo *)info;
 
 /**
  * Notification that the image node finished downloading an image.

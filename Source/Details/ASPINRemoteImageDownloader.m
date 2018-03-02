@@ -116,7 +116,7 @@ static ASPINRemoteImageDownloader *sharedDownloader = nil;
 
 @implementation ASPINRemoteImageDownloader
 
-+ (instancetype)sharedDownloader
++ (ASPINRemoteImageDownloader *)sharedDownloader
 {
 
   static dispatch_once_t onceToken = 0;
@@ -237,12 +237,12 @@ static ASPINRemoteImageDownloader *sharedDownloader = nil;
     [ASPINRemoteImageDownloader _performWithCallbackQueue:callbackQueue work:^{
 #if PIN_ANIMATED_AVAILABLE
       if (result.alternativeRepresentation) {
-        completion(result.alternativeRepresentation, result.error, result.UUID);
+        completion(result.alternativeRepresentation, result.error, result.UUID, result);
       } else {
-        completion(result.image, result.error, result.UUID);
+        completion(result.image, result.error, result.UUID, result);
       }
 #else
-      completion(result.image, result.error, result.UUID);
+      completion(result.image, result.error, result.UUID, result);
 #endif
     }];
   };

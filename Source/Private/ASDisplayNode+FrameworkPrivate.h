@@ -141,6 +141,10 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyStateChange(ASHierarc
 // delegate to inform of ASInterfaceState changes (used by ASNodeController)
 @property (nonatomic, weak) id<ASInterfaceStateDelegate> interfaceStateDelegate;
 
+// The -pendingInterfaceState holds the value that will be applied to -interfaceState by the
+// ASCATransactionQueue. If already applied, it matches -interfaceState. Thread-safe access.
+@property (nonatomic, readonly) ASInterfaceState pendingInterfaceState;
+
 // These methods are recursive, and either union or remove the provided interfaceState to all sub-elements.
 - (void)enterInterfaceState:(ASInterfaceState)interfaceState;
 - (void)exitInterfaceState:(ASInterfaceState)interfaceState;

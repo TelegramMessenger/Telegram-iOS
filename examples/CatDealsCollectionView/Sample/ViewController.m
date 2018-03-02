@@ -50,7 +50,6 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
   self = [super initWithNode:_collectionNode];
   
   if (self) {
-    
     self.title = @"Cat Deals";
   
     _collectionNode.dataSource = self;
@@ -89,7 +88,8 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
   [self fetchMoreCatsWithCompletion:nil];
 }
 
-- (void)fetchMoreCatsWithCompletion:(void (^)(BOOL))completion {
+- (void)fetchMoreCatsWithCompletion:(void (^)(BOOL))completion
+{
   if (kSimulateWebResponse) {
     __weak typeof(self) weakSelf = self;
     void(^mockWebService)() = ^{
@@ -110,7 +110,8 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
   }
 }
 
-- (void)appendMoreItems:(NSInteger)numberOfNewItems completion:(void (^)(BOOL))completion {
+- (void)appendMoreItems:(NSInteger)numberOfNewItems completion:(void (^)(BOOL))completion
+{
   NSArray *newData = [self getMoreData:numberOfNewItems];
   [_collectionNode performBatchAnimated:YES updates:^{
     [_data addObjectsFromArray:newData];
@@ -119,7 +120,8 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
   } completion:completion];
 }
 
-- (NSArray *)getMoreData:(NSInteger)count {
+- (NSArray *)getMoreData:(NSInteger)count
+{
   NSMutableArray *data = [NSMutableArray array];
   for (int i = 0; i < count; i++) {
     [data addObject:[ItemViewModel randomItem]];
@@ -127,7 +129,8 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
   return data;
 }
 
-- (NSArray *)indexPathsForObjects:(NSArray *)data {
+- (NSArray *)indexPathsForObjects:(NSArray *)data
+{
   NSMutableArray *indexPaths = [NSMutableArray array];
   NSInteger section = 0;
   for (ItemViewModel *viewModel in data) {
@@ -138,7 +141,8 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
   return indexPaths;
 }
 
-- (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
+- (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator
+{
   [_collectionNode.view.collectionViewLayout invalidateLayout];
 }
 
@@ -151,10 +155,14 @@ static const CGFloat kHorizontalSectionPadding = 10.0f;
 
 - (ASCellNodeBlock)collectionNode:(ASCollectionNode *)collectionNode nodeBlockForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-  ItemViewModel *viewModel = _data[indexPath.item];
   return ^{
-    return [[ItemNode alloc] initWithViewModel:viewModel];
+    return [[ItemNode alloc] init];
   };
+}
+
+- (id)collectionNode:(ASCollectionNode *)collectionNode nodeModelForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+  return _data[indexPath.item];
 }
 
 - (ASCellNode *)collectionNode:(ASCollectionNode *)collectionNode nodeForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath

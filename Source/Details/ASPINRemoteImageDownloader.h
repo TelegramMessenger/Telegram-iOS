@@ -30,12 +30,13 @@ NS_ASSUME_NONNULL_BEGIN
 @interface ASPINRemoteImageDownloader : NSObject <ASImageCacheProtocol, ASImageDownloaderProtocol>
 
 /**
- * A shared image downloader which can be used by @c ASNetworkImageNodes and @c ASMultiplexImageNodes
+ * A shared image downloader which can be used by @c ASNetworkImageNodes and @c ASMultiplexImageNodes.
+ * The userInfo provided by this downloader is an instance of `PINRemoteImageManagerResult`.
  *
  * This is the default downloader used by network backed image nodes if PINRemoteImage and PINCache are
  * available. It uses PINRemoteImage's features to provide caching and progressive image downloads.
  */
-+ (ASPINRemoteImageDownloader *)sharedDownloader;
+@property (class, readonly) ASPINRemoteImageDownloader *sharedDownloader;
 
 
 /**

@@ -102,6 +102,14 @@ typedef struct {
   [self.delegate scrollViewWillBeginDragging:scrollView];
 }
 
+- (void)scrollViewWillEndDragging:(UIScrollView *)scrollView withVelocity:(CGPoint)velocity targetContentOffset:(inout CGPoint *)targetContentOffset
+{
+  // IGListAdapter doesn't implement scrollViewWillEndDragging yet (pending pull request), so we need this check for now. Doesn't hurt to have it anyways :)
+  if ([self.delegate respondsToSelector:@selector(scrollViewWillEndDragging:withVelocity:targetContentOffset:)]) {
+    [self.delegate scrollViewWillEndDragging:scrollView withVelocity:velocity targetContentOffset:targetContentOffset];
+  }
+}
+
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
 {
   [self.delegate scrollViewDidEndDragging:scrollView willDecelerate:decelerate];

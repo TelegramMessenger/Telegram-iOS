@@ -35,6 +35,7 @@
 #import <AsyncDisplayKit/ASBasicImageDownloader.h>
 #import <AsyncDisplayKit/ASPINRemoteImageDownloader.h>
 #import <AsyncDisplayKit/ASMultiplexImageNode.h>
+#import <AsyncDisplayKit/ASNetworkImageLoadInfo.h>
 #import <AsyncDisplayKit/ASNetworkImageNode.h>
 #import <AsyncDisplayKit/ASPhotosFrameworkImageRequest.h>
 
@@ -119,6 +120,7 @@
 #import <AsyncDisplayKit/UICollectionViewLayout+ASConvenience.h>
 #import <AsyncDisplayKit/UIView+ASConvenience.h>
 #import <AsyncDisplayKit/UIImage+ASConvenience.h>
+#import <AsyncDisplayKit/ASGraphicsContext.h>
 #import <AsyncDisplayKit/NSArray+Diffing.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 #import <AsyncDisplayKit/UIResponder+AsyncDisplayKit.h>

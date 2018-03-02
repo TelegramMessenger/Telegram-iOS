@@ -21,6 +21,7 @@
 #import <XCTest/XCTest.h>
 #import <AVFoundation/AVFoundation.h>
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
+#import "ASDisplayNodeTestsHelper.h"
 
 @interface ASVideoNodeTests : XCTestCase <ASVideoNodeDelegate>
 {
@@ -351,9 +352,9 @@
 
   [_videoNode setInterfaceState:ASInterfaceStateVisible | ASInterfaceStateDisplay | ASInterfaceStatePreload];
   [_videoNode prepareToPlayAsset:assetMock withKeys:_requestedKeys];
+  ASCATransactionQueueWait();
   [_videoNode pause];
   _videoNode.shouldBePlaying = YES;
-
   XCTAssertFalse(_videoNode.isPlaying);
 
   [_videoNode observeValueForKeyPath:@"playbackLikelyToKeepUp" ofObject:[_videoNode currentItem] change:@{NSKeyValueChangeNewKey : @YES} context:NULL];

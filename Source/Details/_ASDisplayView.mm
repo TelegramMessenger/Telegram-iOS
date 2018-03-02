@@ -27,7 +27,6 @@
 #import <AsyncDisplayKit/ASLayout.h>
 
 @interface _ASDisplayView ()
-@property (nullable, atomic, weak, readwrite) ASDisplayNode *asyncdisplaykit_node;
 
 // Keep the node alive while its view is active.  If you create a view, add its layer to a layer hierarchy, then release
 // the view, the layer retains the view to prevent a crash.  This replicates this behaviour for the node abstraction.
