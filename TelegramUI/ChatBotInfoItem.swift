@@ -175,15 +175,15 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedStringKey(rawValue: TextNode.UrlAttribute)] as? String {
+            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
                 return .url(url)
-            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramPeerMentionAttribute)] as? TelegramPeerMention {
+            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerMention.peerId, peerMention.mention)
-            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramPeerTextMentionAttribute)] as? String {
+            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .textMention(peerName)
-            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramBotCommandAttribute)] as? String {
+            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 return .botCommand(botCommand)
-            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramHashtagAttribute)] as? TelegramHashtag {
+            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             } else {
                 return .none

@@ -78,6 +78,11 @@ enum ChatMessageItemBottomNeighbor {
 
 let defaultChatMessageItemLayoutConstants = ChatMessageItemLayoutConstants()
 
+enum ChatMessagePeekPreviewContent {
+    case media(Media)
+    case url(ASDisplayNode, CGRect, String)
+}
+
 public class ChatMessageItemView: ListViewItemNode {
     let layoutConstants = defaultChatMessageItemLayoutConstants
     
@@ -145,7 +150,7 @@ public class ChatMessageItemView: ListViewItemNode {
         return nil
     }
     
-    func peekPreviewContent(at point: CGPoint) -> (Message, Media)? {
+    func peekPreviewContent(at point: CGPoint) -> (Message, ChatMessagePeekPreviewContent)? {
         return nil
     }
     

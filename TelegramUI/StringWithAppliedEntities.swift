@@ -65,25 +65,25 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TextNode.UrlAttribute), value: nsString!.substring(with: range), range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: nsString!.substring(with: range), range: range)
             case .Email:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TextNode.UrlAttribute), value: "mailto:\(nsString!.substring(with: range))", range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: "mailto:\(nsString!.substring(with: range))", range: range)
             case .PhoneNumber:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TextNode.UrlAttribute), value: "tel:\(nsString!.substring(with: range))", range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: "tel:\(nsString!.substring(with: range))", range: range)
             case let .TextUrl(url):
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TextNode.UrlAttribute), value: url, range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: url, range: range)
             case .Bold:
                 string.addAttribute(NSAttributedStringKey.font, value: boldFont, range: range)
             case .Italic:
@@ -99,7 +99,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TextNode.TelegramPeerTextMentionAttribute), value: nsString!.substring(with: range), range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention), value: nsString!.substring(with: range), range: range)
             case let .TextMention(peerId):
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if linkColor.isEqual(baseColor) {
@@ -109,7 +109,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                     string.addAttribute(NSAttributedStringKey.font, value: linkFont, range: range)
                 }
                 let mention = nsString!.substring(with: range)
-                string.addAttribute(NSAttributedStringKey(rawValue: TextNode.TelegramPeerMentionAttribute), value: TelegramPeerMention(peerId: peerId, mention: mention), range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention), value: TelegramPeerMention(peerId: peerId, mention: mention), range: range)
             case .Hashtag:
                 if nsString == nil {
                     nsString = text as NSString
@@ -127,7 +127,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                             if linkColor.isEqual(baseColor) {
                                 string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: combinedRange)
                             }
-                            string.addAttribute(NSAttributedStringKey(rawValue: TextNode.TelegramHashtagAttribute), value: TelegramHashtag(peerName: peerName, hashtag: hashtag), range: combinedRange)
+                            string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag), value: TelegramHashtag(peerName: peerName, hashtag: hashtag), range: combinedRange)
                         }
                     }
                 }
@@ -136,7 +136,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                     if linkColor.isEqual(baseColor) {
                         string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                     }
-                    string.addAttribute(NSAttributedStringKey(rawValue: TextNode.TelegramHashtagAttribute), value: TelegramHashtag(peerName: nil, hashtag: hashtag), range: range)
+                    string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag), value: TelegramHashtag(peerName: nil, hashtag: hashtag), range: range)
                 }
             case .BotCommand:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
@@ -146,7 +146,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TextNode.TelegramBotCommandAttribute), value: nsString!.substring(with: range), range: range)
+                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand), value: nsString!.substring(with: range), range: range)
             case .Code, .Pre:
                 string.addAttribute(NSAttributedStringKey.font, value: fixedFont, range: range)
             default:

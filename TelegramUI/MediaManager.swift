@@ -308,7 +308,7 @@ public final class MediaManager: NSObject {
         var baseNowPlayingInfo: [String: Any]?
         
         self.globalControlsDisposable.set((self.globalMediaPlayerState |> deliverOnMainQueue).start(next: { stateAndType in
-            if let (state, _) = stateAndType, let displayData = state.item.displayData {
+            if let (state, type) = stateAndType, type == .music, let displayData = state.item.displayData {
                 if previousDisplayData != displayData {
                     previousDisplayData = displayData
                 

@@ -164,8 +164,24 @@ final class CallControllerNode: ASDisplayNode {
                 } else {
                     statusValue = .text(self.presentationData.strings.Call_StatusRequesting)
                 }
-            case .terminating, .terminated:
+            case .terminating:
                 statusValue = .text(self.presentationData.strings.Call_StatusEnded)
+            case let .terminated(reason):
+                if let reason = reason {
+                    switch reason {
+                        case let .ended(type):
+                            switch type {
+                                case .busy:
+                                    statusValue = .text(self.presentationData.strings.Call_StatusBusy)
+                                case .hungUp, .missed:
+                                    statusValue = .text(self.presentationData.strings.Call_StatusEnded)
+                            }
+                        case .error:
+                            statusValue = .text(self.presentationData.strings.Call_StatusFailed)
+                    }
+                } else {
+                    statusValue = .text(self.presentationData.strings.Call_StatusEnded)
+                }
             case .ringing:
                 statusValue = .text(self.presentationData.strings.Call_StatusIncoming)
             case let .active(timestamp, keyVisualHash):

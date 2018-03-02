@@ -11,6 +11,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var settings: InstantPagePresentationSettings?
     private var presentationTheme: PresentationTheme
     private var strings: PresentationStrings
+    private var timeFormat: PresentationTimeFormat
     private var theme: InstantPageTheme?
     private let getNavigationController: () -> NavigationController?
     private let present: (ViewController, Any?) -> Void
@@ -47,9 +48,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let resolveUrlDisposable = MetaDisposable()
     private let loadWebpageDisposable = MetaDisposable()
     
-    init(account: Account, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(account: Account, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, timeFormat: PresentationTimeFormat, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.account = account
         self.presentationTheme = presentationTheme
+        self.timeFormat = timeFormat
         self.strings = strings
         self.settings = settings
         self.theme = settings.flatMap { return instantPageThemeForSettingsAndTime(settings: $0, time: Date()) }
@@ -276,7 +278,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        let currentLayout = instantPageLayoutForWebPage(webPage, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme)
+        let currentLayout = instantPageLayoutForWebPage(webPage, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme, timeFormat: self.timeFormat)
         
         for (_, tileNode) in self.visibleTiles {
             tileNode.removeFromSupernode()
@@ -660,7 +662,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
                 if let strongSelf = self {
-                    return (strongSelf.scrollNode, coveringRect.insetBy(dx: -3.0, dy: -3.0))
+                    return (strongSelf.scrollNode, coveringRect.insetBy(dx: -3.0, dy: -3.0), strongSelf, strongSelf.bounds)
                 } else {
                     return nil
                 }

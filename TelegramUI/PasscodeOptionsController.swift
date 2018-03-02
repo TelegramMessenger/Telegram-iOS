@@ -60,7 +60,7 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
             case .touchId:
                 return 4
             case .simplePasscode:
-                return 4
+                return 5
         }
     }
     

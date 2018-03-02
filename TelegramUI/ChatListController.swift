@@ -404,14 +404,14 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         if let searchController = self.chatListDisplayNode.searchDisplayController {
             if let (view, action) = searchController.previewViewAndActionAtLocation(location) {
-                if let peerId = action as? PeerId {
+                if let peerId = action as? PeerId, peerId.namespace != Namespaces.Peer.SecretChat {
                     if #available(iOSApplicationExtension 9.0, *) {
                         var sourceRect = view.superview!.convert(view.frame, to: self.view)
                         sourceRect.size.height -= UIScreenPixel
                         previewingContext.sourceRect = sourceRect
                     }
                     
-                    let chatController = ChatController(account: self.account, chatLocation: .peer(peerId))
+                    let chatController = ChatController(account: self.account, chatLocation: .peer(peerId), mode: .standard(previewing: true))
                     chatController.peekActions = .remove({ [weak self] in
                         if let strongSelf = self {
                             let _ = removeRecentPeer(account: strongSelf.account, peerId: peerId).start()
@@ -420,18 +420,18 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                         }
                     })
                     chatController.canReadHistory.set(false)
-                    chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return chatController
-                } else if let messageId = action as? MessageId {
+                } else if let messageId = action as? MessageId, messageId.peerId.namespace != Namespaces.Peer.SecretChat {
                     if #available(iOSApplicationExtension 9.0, *) {
                         var sourceRect = view.superview!.convert(view.frame, to: self.view)
                         sourceRect.size.height -= UIScreenPixel
                         previewingContext.sourceRect = sourceRect
                     }
                     
-                    let chatController = ChatController(account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId)
+                    let chatController = ChatController(account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
-                    chatController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height - (self.view.bounds.size.height > self.view.bounds.size.width ? 50.0 : 10.0)), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return chatController
                 }
             }
@@ -464,10 +464,14 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             }
             switch item.content {
                 case let .peer(_, peer, _, _, _, _, _):
-                    let chatController = ChatController(account: self.account, chatLocation: .peer(peer.peerId))
-                    chatController.canReadHistory.set(false)
-                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
-                    return chatController
+                    if peer.peerId.namespace != Namespaces.Peer.SecretChat {
+                        let chatController = ChatController(account: self.account, chatLocation: .peer(peer.peerId), mode: .standard(previewing: true))
+                        chatController.canReadHistory.set(false)
+                        chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                        return chatController
+                    } else {
+                        return nil
+                    }
                 case let .groupReference(groupId, _, _, _):
                     let chatListController = ChatListController(account: self.account, groupId: groupId, controlsHistoryPreload: false)
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
@@ -482,6 +486,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         if let viewControllerToCommit = viewControllerToCommit as? ViewController {
             if let chatController = viewControllerToCommit as? ChatController {
                 chatController.canReadHistory.set(true)
+                chatController.updatePresentationMode(.standard(previewing: false))
             }
             (self.navigationController as? NavigationController)?.pushViewController(viewControllerToCommit, animated: false)
         }

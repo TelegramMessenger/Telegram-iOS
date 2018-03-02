@@ -493,7 +493,7 @@ final class EmbedVideoNode: OverlayMediaItemNode {
                                 } else {
                                     status = .paused
                                 }
-                                subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: next.duration, timestamp: next.position, seekId: 0, status: status))
+                                subscriber.putNext(MediaPlayerStatus(generationTimestamp: 0.0, duration: next.duration, dimensions: CGSize(), timestamp: next.position, seekId: 0, status: status))
                             }
                         })
                         return ActionDisposable {

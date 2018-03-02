@@ -661,8 +661,15 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
         }
         
         if !liabilityNoticeAccepted {
-            let _ = (combineLatest(ApplicationSpecificNotice.getBotPaymentLiability(postbox: self.account.postbox, peerId: self.messageId.peerId), self.account.postbox.loadedPeerWithId(self.messageId.peerId), self.account.postbox.loadedPeerWithId(PeerId(namespace: Namespaces.Peer.CloudUser, id: paymentForm.providerId))) |> deliverOnMainQueue).start(next: { [weak self] value, botPeer, providerPeer in
-                if let strongSelf = self {
+            let messageId = self.messageId
+            let botPeer: Signal<Peer?, NoError> = self.account.postbox.modify { modifier -> Peer? in
+                if let message = modifier.getMessage(messageId) {
+                    return message.author
+                }
+                return nil
+            }
+            let _ = (combineLatest(ApplicationSpecificNotice.getBotPaymentLiability(postbox: self.account.postbox, peerId: self.messageId.peerId), botPeer, self.account.postbox.loadedPeerWithId(paymentForm.providerId)) |> deliverOnMainQueue).start(next: { [weak self] value, botPeer, providerPeer in
+                if let strongSelf = self, let botPeer = botPeer {
                     if value {
                         strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
                     } else {

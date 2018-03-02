@@ -31,6 +31,14 @@ final class ChatContextResultPeekContent: PeekControllerContent {
     func node() -> PeekControllerContentNode & ASDisplayNode {
         return ChatContextResultPeekNode(account: self.account, contextResult: self.contextResult)
     }
+    
+    func isEqual(to: PeekControllerContent) -> Bool {
+        if let to = to as? ChatContextResultPeekContent {
+            return self.contextResult == to.contextResult
+        } else {
+            return false
+        }
+    }
 }
 
 private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerContentNode {

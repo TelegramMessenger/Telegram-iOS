@@ -2,6 +2,9 @@ import Foundation
 import Display
 import AsyncDisplayKit
 import WebKit
+import TelegramCore
+import Postbox
+import SwiftSignalKit
 
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
@@ -20,10 +23,16 @@ private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
 final class GameControllerNode: ViewControllerTracingNode {
     private var webView: WKWebView?
     
+    private let account: Account
     var presentationData: PresentationData
+    private let present: (ViewController, Any?) -> Void
+    private let message: Message
     
-    init(presentationData: PresentationData, url: String) {
+    init(account: Account, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: Message) {
+        self.account = account
         self.presentationData = presentationData
+        self.present = present
+        self.message = message
         
         super.init()
         
@@ -77,6 +86,31 @@ final class GameControllerNode: ViewControllerTracingNode {
         })
     }
     
+    private func shareData() -> (Peer, String)? {
+        var botPeer: Peer?
+        var gameName: String?
+        for media in self.message.media {
+            if let game = media as? TelegramMediaGame {
+                inner: for attribute in self.message.attributes {
+                    if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId {
+                        botPeer = self.message.peers[peerId]
+                        break inner
+                    }
+                }
+                if botPeer == nil {
+                    botPeer = self.message.author
+                }
+                
+                gameName = game.name
+            }
+        }
+        if let botPeer = botPeer, let gameName = gameName {
+            return (botPeer, gameName)
+        }
+        
+        return nil
+    }
+    
     private func handleScriptMessage(_ message: WKScriptMessage) {
         guard let body = message.body as? [String: Any] else {
             return
@@ -87,7 +121,28 @@ final class GameControllerNode: ViewControllerTracingNode {
         }
         
         if eventName == "share_game" || eventName == "share_score" {
-            
+            if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
+                if eventName == "share_score" {
+                    self.present(ShareController(account: self.account, subject: .fromExternal({ [weak self] peerIds, text in
+                        if let strongSelf = self {
+                            let signals = peerIds.map { forwardGameWithScore(account: strongSelf.account, messageId: strongSelf.message.id, to: $0) }
+                            return .single(.preparing) |> then(combineLatest(signals)
+                                |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in return .complete() }) |> then(.single(.done))
+                        } else {
+                            return .single(.done)
+                        }
+                    }), saveToCameraRoll: false, showInChat: nil, externalShare: false, immediateExternalShare: false), nil)
+                } else {
+                    self.shareWithoutScore()
+                }
+            }
+        }
+    }
+    
+    func shareWithoutScore() {
+        if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
+            let url = "https://t.me/\(addressName)?game=\(gameName)"
+            self.present(ShareController(account: self.account, subject: .url(url), saveToCameraRoll: false, showInChat: nil, externalShare: true), nil)
         }
     }
 }

@@ -265,7 +265,7 @@ private enum SharedMediaPlaybackItem: Equatable {
                     if let status = status {
                         return status
                     } else {
-                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, timestamp: 0.0, seekId: 0, status: .paused)
+                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
                     }
                 }
         }

@@ -247,7 +247,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 if strongSelf.selectionNode != nil {
                     return false
                 }
-                return item.controllerInteraction.canSetupReply()
+                return item.controllerInteraction.canSetupReply(item.message)
             }
             return false
         }
@@ -416,8 +416,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var authorNameColor: UIColor?
             
             for attribute in firstMessage.attributes {
-                if let attribute = attribute as? InlineBotMessageAttribute, let bot = firstMessage.peers[attribute.peerId] as? TelegramUser {
-                    inlineBotNameString = bot.username
+                if let attribute = attribute as? InlineBotMessageAttribute {
+                    if let peerId = attribute.peerId, let bot = firstMessage.peers[peerId] as? TelegramUser {
+                        inlineBotNameString = bot.username
+                    } else {
+                        inlineBotNameString = attribute.title
+                    }
                 } else if let attribute = attribute as? ReplyMessageAttribute {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
@@ -982,14 +986,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme)
             
-            var udpdatedMergedTop = mergedBottom
-            var udpdatedMergedBottom = mergedTop
+            var updatedMergedTop = mergedBottom
+            var updatedMergedBottom = mergedTop
             if mosaicRange == nil {
                 if contentNodePropertiesAndFinalize.first?.0.forceFullCorners ?? false {
-                    udpdatedMergedTop = .semanticallyMerged
+                    updatedMergedTop = .semanticallyMerged
                 }
                 if headerSize.height.isZero && contentNodePropertiesAndFinalize.first?.0.forceFullCorners ?? false {
-                    udpdatedMergedBottom = .none
+                    updatedMergedBottom = .none
                 }
             }
             
@@ -1005,10 +1009,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     var forceBackgroundSide = false
                     if actionButtonsSizeAndApply != nil {
                         forceBackgroundSide = true
-                    } else if case .semanticallyMerged = udpdatedMergedTop {
+                    } else if case .semanticallyMerged = updatedMergedTop {
                         forceBackgroundSide = true
                     }
-                    let mergeType = ChatMessageBackgroundMergeType(top: udpdatedMergedTop == .fullyMerged, bottom: udpdatedMergedBottom == .fullyMerged, side: forceBackgroundSide)
+                    let mergeType = ChatMessageBackgroundMergeType(top: updatedMergedTop == .fullyMerged, bottom: updatedMergedBottom == .fullyMerged, side: forceBackgroundSide)
                     let backgroundType: ChatMessageBackgroundType
                     if hideBackground {
                         backgroundType = .none
@@ -1329,9 +1333,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             if let nameNode = self.nameNode, nameNode.frame.contains(location) {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {
-                                        if let attribute = attribute as? InlineBotMessageAttribute, let botPeer = item.message.peers[attribute.peerId], let addressName = botPeer.addressName {
-                                            item.controllerInteraction.updateInputState { textInputState in
-                                                return ChatTextInputState(inputText: NSAttributedString(string: "@" + addressName + " "))
+                                        if let attribute = attribute as? InlineBotMessageAttribute {
+                                            var botAddressName: String?
+                                            if let peerId = attribute.peerId, let botPeer = item.message.peers[peerId], let addressName = botPeer.addressName {
+                                                botAddressName = addressName
+                                            } else {
+                                                botAddressName = attribute.title
+                                            }
+                                            
+                                            if let botAddressName = botAddressName {
+                                                item.controllerInteraction.updateInputState { textInputState in
+                                                    return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                                }
                                             }
                                             return
                                         }
@@ -1522,7 +1535,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         return nil
     }
     
-    override func peekPreviewContent(at point: CGPoint) -> (Message, Media)? {
+    override func peekPreviewContent(at point: CGPoint) -> (Message, ChatMessagePeekPreviewContent)? {
         for contentNode in self.contentNodes {
             let frame = contentNode.frame
             if let result = contentNode.peekPreviewContent(at: point.offsetBy(dx: -frame.minX, dy: -frame.minY)) {
@@ -1704,8 +1717,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     var found = false
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? InlineBotMessageAttribute {
-                            botPeer = item.message.peers[attribute.peerId]
-                            found = true
+                            if let peerId = attribute.peerId {
+                                botPeer = item.message.peers[peerId]
+                                found = true
+                            }
                         }
                     }
                     if !found {

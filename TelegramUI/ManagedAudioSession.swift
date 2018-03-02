@@ -340,7 +340,9 @@ public final class ManagedAudioSession {
                     var deactivate = false
                     
                     if interruption {
-                        deactivate = true
+                        if self.holders[activeIndex].audioSessionType != .voiceCall {
+                            deactivate = true
+                        }
                     } else {
                         if activeIndex != self.holders.count - 1 {
                             if self.holders[activeIndex].audioSessionType == .voiceCall {

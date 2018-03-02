@@ -28,8 +28,12 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
     override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
-        self.multiplexedNode?.bottomInset = bottomInset
-        self.multiplexedNode?.frame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: size.height - topInset))
+        if let multiplexedNode = self.multiplexedNode {
+            multiplexedNode.bottomInset = bottomInset
+            let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: size.height - topInset))
+            transition.updateFrame(layer: multiplexedNode.layer, frame: nodeFrame)
+            multiplexedNode.updateLayout(size: nodeFrame.size, transition: transition)
+        }
     }
     
     func fileAt(point: CGPoint) -> TelegramMediaFile? {

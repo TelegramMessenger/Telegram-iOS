@@ -317,10 +317,11 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             }
             
             var imageApply: (() -> Void)?
+            var imageSize: CGSize = CGSize(width: 34.0, height: 34.0)
             if let file = file, let dimensions = file.dimensions {
                 let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
-                let fileImageSize = dimensions.aspectFitted(imageBoundingSize)
-                imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: fileImageSize, boundingSize: imageBoundingSize, intrinsicInsets: UIEdgeInsets()))
+                imageSize = dimensions.aspectFitted(imageBoundingSize)
+                imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
             }
             
             var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
@@ -480,7 +481,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: (strongSelf.unreadNode.isHidden ? 0.0 : 10.0) + leftInset + revealOffset + editingOffset, y: 11.0), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 32.0), size: statusLayout.size))
                     
-                    transition.updateFrame(node: strongSelf.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: 11.0), size: CGSize(width: 34.0, height: 34.0)))
+                    let boundingSize = CGSize(width: 34.0, height: 34.0)
+                    transition.updateFrame(node: strongSelf.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: 11.0 + floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize))
                     
                     if let updatedImageSignal = updatedImageSignal {
                         strongSelf.imageNode.setSignal(updatedImageSignal)
@@ -569,7 +571,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
         
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: self.imageNode.frame.minY), size: CGSize(width: 34.0, height: 34.0)))
+        let boundingSize = CGSize(width: 34.0, height: 34.0)
+        
+        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - self.imageNode.frame.size.width) / 2.0), y: self.imageNode.frame.minY), size: self.imageNode.frame.size))
     }
     
     override func revealOptionsInteractivelyOpened() {
@@ -600,7 +604,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     }
     
     override func isReorderable(at point: CGPoint) -> Bool {
-        if let reorderControlNode = self.reorderControlNode, reorderControlNode.frame.contains(point) {
+        if let reorderControlNode = self.reorderControlNode, reorderControlNode.frame.contains(point), !self.isDisplayingRevealedOptions {
             return true
         }
         return false

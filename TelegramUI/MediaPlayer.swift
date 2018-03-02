@@ -228,10 +228,10 @@ private final class MediaPlayerContext {
                 audioStatus = audioTrackFrameBuffer.status(at: currentTimestamp)
                 duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
             }
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, timestamp: min(max(timestamp, 0.0), duration), seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
             self.playerStatus.set(status)
         } else {
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, timestamp: 0.0, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
             self.playerStatus.set(status)
         }
         
@@ -705,7 +705,7 @@ private final class MediaPlayerContext {
             if case .seeking(_, timestamp, _, _, _) = self.state {
                 reportTimestamp = timestamp
             }
-            let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, timestamp: min(max(reportTimestamp, 0.0), duration), seekId: self.seekId, status: playbackStatus)
+            let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, dimensions: CGSize(), timestamp: min(max(reportTimestamp, 0.0), duration), seekId: self.seekId, status: playbackStatus)
             self.playerStatus.set(status)
         }
         
@@ -766,6 +766,7 @@ enum MediaPlayerPlaybackStatus: Equatable {
 struct MediaPlayerStatus: Equatable {
     let generationTimestamp: Double
     let duration: Double
+    let dimensions: CGSize
     let timestamp: Double
     let seekId: Int
     let status: MediaPlayerPlaybackStatus
@@ -775,6 +776,9 @@ struct MediaPlayerStatus: Equatable {
             return false
         }
         if !lhs.duration.isEqual(to: rhs.duration) {
+            return false
+        }
+        if !lhs.dimensions.equalTo(rhs.dimensions) {
             return false
         }
         if !lhs.timestamp.isEqual(to: rhs.timestamp) {
@@ -794,7 +798,7 @@ final class MediaPlayer {
     private let queue = Queue()
     private var contextRef: Unmanaged<MediaPlayerContext>?
     
-    private let statusValue = ValuePromise<MediaPlayerStatus>(MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, timestamp: 0.0, seekId: 0, status: .paused), ignoreRepeated: true)
+    private let statusValue = ValuePromise<MediaPlayerStatus>(MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused), ignoreRepeated: true)
     
     var status: Signal<MediaPlayerStatus, NoError> {
         return self.statusValue.get()

@@ -24,8 +24,9 @@ private final class UserInfoControllerArguments {
     let call: () -> Void
     let openCallMenu: (String) -> Void
     let displayAboutContextMenu: (String) -> Void
+    let openEncryptionKey: (SecretChatKeyFingerprint) -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.updateEditingName = updateEditingName
@@ -45,6 +46,7 @@ private final class UserInfoControllerArguments {
         self.call = call
         self.openCallMenu = openCallMenu
         self.displayAboutContextMenu = displayAboutContextMenu
+        self.openEncryptionKey = openEncryptionKey
     }
 }
 
@@ -313,7 +315,8 @@ private enum UserInfoEntry: ItemListNodeEntry {
                     arguments.openGroupsInCommon()
                 })
             case let .secretEncryptionKey(theme, text, fingerprint):
-                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .plain, action: {
+                return ItemListSecretChatKeyItem(theme: theme, title: text, fingerprint: fingerprint, sectionId: self.section, style: .plain, action: {
+                    arguments.openEncryptionKey(fingerprint)
                 })
             case let .block(theme, text, action):
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
@@ -475,6 +478,19 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
     return entries
 }
 
+private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<Peer?, NoError> {
+    return postbox.modify { modifier -> Peer? in
+        guard let peer = modifier.getPeer(peerId) else {
+            return nil
+        }
+        if let peer = peer as? TelegramSecretChat {
+            return modifier.getPeer(peer.regularPeerId)
+        } else {
+            return peer
+        }
+    }
+}
+
 public func userInfoController(account: Account, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(UserInfoState(), ignoreRepeated: true)
     let stateValue = Atomic(value: UserInfoState())
@@ -515,23 +531,30 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     let cachedAvatarEntries = Atomic<Promise<[AvatarGalleryEntry]>?>(value: nil)
     
     let requestCallImpl: () -> Void = {
-        let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: false)
-        if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-            if currentPeerId == peerId {
-                account.telegramApplicationContext.navigateToCurrentCall?()
-            } else {
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                let _ = (account.postbox.modify { modifier -> (Peer?, Peer?) in
-                    return (modifier.getPeer(peerId), modifier.getPeer(currentPeerId))
-                    } |> deliverOnMainQueue).start(next: { peer, current in
-                        if let peer = peer, let current = current {
-                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
-                            })]), nil)
-                        }
-                    })
+        let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
             }
-        }
+        
+            let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: false)
+            if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
+                if currentPeerId == peer.id {
+                    account.telegramApplicationContext.navigateToCurrentCall?()
+                } else {
+                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let _ = (account.postbox.modify { modifier -> (Peer?, Peer?) in
+                        return (modifier.getPeer(peer.id), modifier.getPeer(currentPeerId))
+                        } |> deliverOnMainQueue).start(next: { peer, current in
+                            if let peer = peer, let current = current {
+                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                    let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: true)
+                                })]), nil)
+                            }
+                        })
+                }
+            }
+        })
     }
     
     let arguments = UserInfoControllerArguments(account: account, avatarAndNameInfoContext: avatarAndNameInfoContext, updateEditingName: { editingName in
@@ -561,10 +584,9 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     }, openChat: {
         openChatImpl?()
     }, addContact: {
-        let _ = (account.postbox.modify { modifier -> TelegramUser? in
-            return modifier.getPeer(peerId) as? TelegramUser
-        }).start(next: { user in
-            if let user = user, let phone = user.phone, !phone.isEmpty {
+        let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
+        |> deliverOnMainQueue).start(next: { peer in
+            if let user = peer as? TelegramUser, let phone = user.phone, !phone.isEmpty {
                 let _ = addContactPeerInteractively(account: account, peerId: user.id, phone: phone).start()
             }
         })
@@ -672,9 +694,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
     }, call: {
         requestCallImpl()
     }, openCallMenu: { number in
-        let _ = (account.postbox.modify { modifier -> Peer? in
-            return modifier.getPeer(peerId)
-        } |> deliverOnMainQueue).start(next: { peer in
+        let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
+        |> deliverOnMainQueue).start(next: { peer in
             if let peer = peer as? TelegramUser, let peerPhoneNumber = peer.phone, formatPhoneNumber(number) == formatPhoneNumber(peerPhoneNumber) {
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 let controller = ActionSheetController(presentationTheme: presentationData.theme)
@@ -701,6 +722,19 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         })
     }, displayAboutContextMenu: { text in
         displayAboutContextMenuImpl?(text)
+    }, openEncryptionKey: { fingerprint in
+        let _ = (account.postbox.modify { modifier -> Peer? in
+            if let peer = modifier.getPeer(peerId) as? TelegramSecretChat {
+                if let userPeer = modifier.getPeer(peer.regularPeerId) {
+                    return userPeer
+                }
+            }
+            return nil
+        } |> deliverOnMainQueue).start(next: { peer in
+            if let peer = peer {
+                pushControllerImpl?(SecretChatKeyController(account: account, fingerprint: fingerprint, peer: peer))
+            }
+        })
     })
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
@@ -805,9 +839,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         }
     }
     shareContactImpl = { [weak controller] in
-        let _ = (account.postbox.modify { modifier -> Peer? in
-            return modifier.getPeer(peerId)
-        } |> deliverOnMainQueue).start(next: { peer in
+        let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
+        |> deliverOnMainQueue).start(next: { peer in
             if let peer = peer as? TelegramUser, let phone = peer.phone {
                 let selectionController = PeerSelectionController(account: account)
                 selectionController.peerSelected = { [weak selectionController] peerId in
@@ -910,8 +943,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                     UIPasteboard.general.string = text
                 })])
                 strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
-                    if let resultItemNode = resultItemNode {
-                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0))
+                    if let strongController = controller, let resultItemNode = resultItemNode {
+                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0), strongController.displayNode, strongController.view.bounds)
                     } else {
                         return nil
                     }
@@ -941,8 +974,8 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
                     UIPasteboard.general.string = value
                 })])
                 strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
-                    if let resultItemNode = resultItemNode {
-                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0))
+                    if let strongController = controller, let resultItemNode = resultItemNode {
+                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0), strongController.displayNode, strongController.view.bounds)
                     } else {
                         return nil
                     }

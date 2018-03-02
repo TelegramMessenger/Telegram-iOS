@@ -1,17 +1,30 @@
 import Foundation
 import AVFoundation
 
-private func loadAudioRecordingToneData() -> Data? {
+private func loadToneData(name: String) -> Data? {
     let outputSettings: [String: Any] = [
         AVFormatIDKey: kAudioFormatLinearPCM as NSNumber,
         AVSampleRateKey: 44100.0 as NSNumber,
         AVLinearPCMBitDepthKey: 16 as NSNumber,
         AVLinearPCMIsNonInterleaved: false as NSNumber,
         AVLinearPCMIsFloatKey: false as NSNumber,
-        AVLinearPCMIsBigEndianKey: false as NSNumber
+        AVLinearPCMIsBigEndianKey: false as NSNumber,
+        AVNumberOfChannelsKey: 2 as NSNumber
     ]
     
-    guard let url = Bundle.main.url(forResource: "begin_record", withExtension: "caf") else {
+    let nsName: NSString = name as NSString
+    let baseName: String
+    let nameExtension: String
+    let pathExtension = nsName.pathExtension
+    if pathExtension.isEmpty {
+        baseName = name
+        nameExtension = "caf"
+    } else {
+        baseName = nsName.substring(with: NSRange(location: 0, length: (name.count - pathExtension.count - 1)))
+        nameExtension = pathExtension
+    }
+    
+    guard let url = Bundle.main.url(forResource: baseName, withExtension: nameExtension) else {
         return nil
     }
     
@@ -52,4 +65,25 @@ private func loadAudioRecordingToneData() -> Data? {
     return data
 }
 
-let audioRecordingToneData: Data? = loadAudioRecordingToneData()
+enum PresentationCallTone {
+    case ringing
+    case connecting
+    case busy
+    case failed
+    case ended
+}
+
+func presentationCallToneData(_ tone: PresentationCallTone) -> Data? {
+    switch tone {
+        case .ringing:
+            return loadToneData(name: "voip_ringback.caf")
+        case .connecting:
+            return loadToneData(name: "voip_connecting.mp3")
+        case .busy:
+            return loadToneData(name: "voip_busy.caf")
+        case .failed:
+            return loadToneData(name: "voip_fail.caf")
+        case .ended:
+            return loadToneData(name: "voip_end.caf")
+    }
+}

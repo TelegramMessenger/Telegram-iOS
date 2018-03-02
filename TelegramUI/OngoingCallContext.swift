@@ -18,6 +18,32 @@ private let setupLogs: Bool = {
     return true
 }()
 
+enum OngoingCallContextState {
+    case initializing
+    case connected
+    case failed
+}
+
+private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue {
+    private let queue: Queue
+    
+    init(queue: Queue) {
+        self.queue = queue
+        
+        super.init()
+    }
+    
+    func dispatch(_ f: @escaping () -> Void) {
+        self.queue.async {
+            f()
+        }
+    }
+    
+    func isCurrent() -> Bool {
+        return self.queue.isCurrent()
+    }
+}
+
 final class OngoingCallContext {
     let internalId: CallSessionInternalId
     
@@ -27,6 +53,20 @@ final class OngoingCallContext {
     private var contextRef: Unmanaged<OngoingCallThreadLocalContext>?
     
     private let contextState = Promise<OngoingCallState?>(nil)
+    var state: Signal<OngoingCallContextState?, NoError> {
+        return self.contextState.get() |> map {
+            $0.flatMap {
+                switch $0 {
+                    case .initializing:
+                        return .initializing
+                    case .connected:
+                        return .connected
+                    case .failed:
+                        return .failed
+                }
+            }
+        }
+    }
     
     private let audioSessionDisposable = MetaDisposable()
     
@@ -36,8 +76,9 @@ final class OngoingCallContext {
         self.internalId = internalId
         self.callSessionManager = callSessionManager
         
+        let queue = self.queue
         self.queue.async {
-            let context = OngoingCallThreadLocalContext()
+            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue))
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))

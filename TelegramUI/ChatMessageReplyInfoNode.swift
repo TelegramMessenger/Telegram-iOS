@@ -78,6 +78,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             var updatedMedia: Media?
             var imageDimensions: CGSize?
+            var hasRoundImage = false
             if !message.containsSecretMedia {
                 for media in message.media {
                     if let image = media as? TelegramMediaImage {
@@ -88,13 +89,17 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         break
                     } else if let file = media as? TelegramMediaFile, file.isVideo {
                         updatedMedia = file
-                        if !file.isInstantVideo {
-                            if let dimensions = file.dimensions {
-                                imageDimensions = dimensions
-                            } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
-                                imageDimensions = representation.dimensions
-                            }
+                        
+                        if let dimensions = file.dimensions {
+                            imageDimensions = dimensions
+                        } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                            imageDimensions = representation.dimensions
+                        }
+                        if !file.isInstantVideo && !file.isAnimated {
                             overlayIcon = PresentationResourcesChat.chatBubbleReplyThumbnailPlayImage(theme)
+                        }
+                        if file.isInstantVideo {
+                            hasRoundImage = true
                         }
                         break
                     }
@@ -105,7 +110,11 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             if let imageDimensions = imageDimensions {
                 leftInset += 36.0
                 let boundingSize = CGSize(width: 30.0, height: 30.0)
-                applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: 2.0), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+                var radius: CGFloat = 2.0
+                if hasRoundImage {
+                    radius = boundingSize.width / 2.0
+                }
+                applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
             }
             
             var mediaUpdated = false

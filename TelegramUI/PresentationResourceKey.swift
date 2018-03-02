@@ -57,6 +57,9 @@ enum PresentationResourceKey: Int32 {
     case chatListVerifiedIcon
     case chatListSecretIcon
 
+    case chatTitleLockIcon
+    case chatTitleMuteIcon
+    
     case chatPrincipalThemeEssentialGraphics
     case chatBubbleVerticalLineIncomingImage
     case chatBubbleVerticalLineOutgoingImage
@@ -125,10 +128,10 @@ enum PresentationResourceKey: Int32 {
     case chatInputPanelApplyButtonImage
     case chatInputPanelVoiceButtonImage
     case chatInputPanelVideoButtonImage
+    case chatInputPanelExpandButtonImage
     case chatInputPanelVoiceActiveButtonImage
     case chatInputPanelVideoActiveButtonImage
     case chatInputPanelAttachmentButtonImage
-    case chatInputPanelExpandButtonImage
     case chatInputPanelMediaRecordingDotImage
     case chatInputPanelMediaRecordingCancelArrowImage
     case chatInputTextFieldStickersImage

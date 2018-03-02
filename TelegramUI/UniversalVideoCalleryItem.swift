@@ -194,7 +194,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let value = value, !value.duration.isZero {
                     return value
                 } else {
-                    return MediaPlayerStatus(generationTimestamp: 0.0, duration: max(Double(item.content.duration), 0.01), timestamp: 0.0, seekId: 0, status: .paused)
+                    return MediaPlayerStatus(generationTimestamp: 0.0, duration: max(Double(item.content.duration), 0.01), dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
                 }
             })
             
@@ -205,6 +205,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     var initialBuffering = false
                     var isPaused = true
                     if let value = value {
+                        if let zoomableContent = strongSelf.zoomableContent, !value.dimensions.width.isZero && !value.dimensions.height.isZero {
+                            let videoSize = CGSize(width: value.dimensions.width * 2.0, height: value.dimensions.height * 2.0)
+                            if !zoomableContent.0.equalTo(videoSize) {
+                                strongSelf.zoomableContent = (videoSize, zoomableContent.1)
+                                strongSelf.videoNode?.updateLayout(size: videoSize, transition: .immediate)
+                            }
+                        }
                         switch value.status {
                             case .playing:
                                 isPaused = false

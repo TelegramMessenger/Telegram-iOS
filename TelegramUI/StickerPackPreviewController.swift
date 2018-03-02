@@ -21,7 +21,20 @@ final class StickerPackPreviewController: ViewController {
     private let stickerPackInstalledDisposable = MetaDisposable()
     private let stickerPackInstalled = Promise<Bool>()
     
-    var sendSticker: ((TelegramMediaFile) -> Void)?
+    var sendSticker: ((TelegramMediaFile) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                if let sendSticker = self.sendSticker {
+                    self.controllerNode.sendSticker = { [weak self] file in
+                        sendSticker(file)
+                        self?.dismiss()
+                    }
+                } else {
+                    self.controllerNode.sendSticker = nil
+                }
+            }
+        }
+    }
     
     init(account: Account, stickerPack: StickerPackReference) {
         self.account = account
@@ -51,15 +64,13 @@ final class StickerPackPreviewController: ViewController {
         self.controllerNode.cancel = { [weak self] in
             self?.dismiss()
         }
-        self.controllerNode.presentPreview = { [weak self] controller, arguments in
-            self?.present(controller, in: .window(.root), with: arguments)
+        self.controllerNode.presentInGlobalOverlay = { [weak self] controller, arguments in
+            self?.presentInGlobalOverlay(controller, with: arguments)
         }
-        self.controllerNode.sendSticker = { [weak self] file in
-            if let sendSticker = self?.sendSticker {
+        if let sendSticker = self.sendSticker {
+            self.controllerNode.sendSticker = { [weak self] file in
                 sendSticker(file)
-                return true
-            } else {
-                return false
+                self?.dismiss()
             }
         }
         self.displayNodeDidLoad()

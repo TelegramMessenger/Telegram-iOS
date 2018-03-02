@@ -830,7 +830,28 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.mentionBadgeNode.isHidden = true
                     }
                     
-                    var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleLayout.size.width + 3.0
+                    var titleOffset: CGFloat = 0.0
+                    if let currentSecretIconImage = currentSecretIconImage {
+                        let iconNode: ASImageNode
+                        if let current = strongSelf.secretIconNode {
+                            iconNode = current
+                        } else {
+                            iconNode = ASImageNode()
+                            iconNode.isLayerBacked = true
+                            iconNode.displaysAsynchronously = false
+                            iconNode.displayWithoutProcessing = true
+                            strongSelf.addSubnode(iconNode)
+                            strongSelf.secretIconNode = iconNode
+                        }
+                        iconNode.image = currentSecretIconImage
+                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y + 4.0), size: currentSecretIconImage.size))
+                        titleOffset += currentSecretIconImage.size.width + 3.0
+                    } else if let secretIconNode = strongSelf.secretIconNode {
+                        strongSelf.secretIconNode = nil
+                        secretIconNode.removeFromSupernode()
+                    }
+                    
+                    var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleLayout.size.width + 3.0 + titleOffset
                     
                     if let currentVerificationIconImage = currentVerificationIconImage {
                         let iconNode: ASImageNode
@@ -860,27 +881,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         strongSelf.mutedIconNode.image = nil
                         strongSelf.mutedIconNode.isHidden = true
-                    }
-                    
-                    var titleOffset: CGFloat = 0.0
-                    if let currentSecretIconImage = currentSecretIconImage {
-                        let iconNode: ASImageNode
-                        if let current = strongSelf.secretIconNode {
-                            iconNode = current
-                        } else {
-                            iconNode = ASImageNode()
-                            iconNode.isLayerBacked = true
-                            iconNode.displaysAsynchronously = false
-                            iconNode.displayWithoutProcessing = true
-                            strongSelf.addSubnode(iconNode)
-                            strongSelf.secretIconNode = iconNode
-                        }
-                        iconNode.image = currentSecretIconImage
-                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y + 4.0), size: currentSecretIconImage.size))
-                        titleOffset += currentSecretIconImage.size.width + 3.0
-                    } else if let secretIconNode = strongSelf.secretIconNode {
-                        strongSelf.secretIconNode = nil
-                        secretIconNode.removeFromSupernode()
                     }
                     
                     let contentDeltaX = contentRect.origin.x - (strongSelf.titleNode.frame.minX - titleOffset)
@@ -1048,7 +1048,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let statusFrame = self.statusNode.frame
             transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width - 2.0 - statusFrame.size.width, y: statusFrame.minY), size: statusFrame.size))
             
-            var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleFrame.size.width + 3.0
+            var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleFrame.size.width + 3.0 + titleOffset
             
             if let verificationIconNode = self.verificationIconNode {
                 transition.updateFrame(node: verificationIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: verificationIconNode.frame.origin.y), size: verificationIconNode.bounds.size))

@@ -64,7 +64,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, maximumHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> (CGFloat, CGFloat) {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: UIScreenPixel)))
         
         if self.theme !== interfaceState.theme {
@@ -142,9 +142,9 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
             transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
             self.scrollNode.view.contentSize = CGSize(width: width, height: rowsHeight)
             
-            return panelHeight
+            return (panelHeight, 0.0)
         } else {
-            return 0.0
+            return (0.0, 0.0)
         }
     }
     
@@ -173,8 +173,8 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                         
                         var found = false
                         for attribute in message.attributes {
-                            if let attribute = attribute as? InlineBotMessageAttribute {
-                                botPeer = message.peers[attribute.peerId]
+                            if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId {
+                                botPeer = message.peers[peerId]
                                 found = true
                             }
                         }

@@ -31,6 +31,14 @@ final class StickerPreviewPeekContent: PeekControllerContent {
     func node() -> PeekControllerContentNode & ASDisplayNode {
         return StickerPreviewPeekContentNode(account: self.account, item: self.item)
     }
+    
+    func isEqual(to: PeekControllerContent) -> Bool {
+        if let to = to as? StickerPreviewPeekContent {
+            return self.item == to.item
+        } else {
+            return false
+        }
+    }
 }
 
 private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerContentNode {

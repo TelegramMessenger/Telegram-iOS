@@ -54,7 +54,73 @@ static void TGCallRandomBytes(uint8_t *buffer, size_t length) {
 
 @end
 
+static MTAtomic *callContexts() {
+    static MTAtomic *instance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        instance = [[MTAtomic alloc] initWithValue:[[NSMutableDictionary alloc] init]];
+    });
+    return instance;
+}
+
+@interface OngoingCallThreadLocalContextReference : NSObject
+
+@property (nonatomic, weak) OngoingCallThreadLocalContext *context;
+@property (nonatomic, strong, readonly) id<OngoingCallThreadLocalContextQueue> queue;
+
+@end
+
+@implementation OngoingCallThreadLocalContextReference
+
+- (instancetype)initWithContext:(OngoingCallThreadLocalContext *)context queue:(id<OngoingCallThreadLocalContextQueue>)queue {
+    self = [super init];
+    if (self != nil) {
+        self.context = context;
+        _queue = queue;
+    }
+    return self;
+}
+
+@end
+
+static int32_t nextId = 1;
+
+static int32_t addContext(OngoingCallThreadLocalContext *context, id<OngoingCallThreadLocalContextQueue> queue) {
+    int32_t contextId = OSAtomicIncrement32(&nextId);
+    [callContexts() with:^id(NSMutableDictionary *dict) {
+        dict[@(contextId)] = [[OngoingCallThreadLocalContextReference alloc] initWithContext:context queue:queue];
+        return nil;
+    }];
+    return contextId;
+}
+
+static void removeContext(int32_t contextId) {
+    [callContexts() with:^id(NSMutableDictionary *dict) {
+        [dict removeObjectForKey:@(contextId)];
+        return nil;
+    }];
+}
+
+static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalContext *)) {
+    __block OngoingCallThreadLocalContextReference *reference = nil;
+    [callContexts() with:^id(NSMutableDictionary *dict) {
+        reference = dict[@(contextId)];
+        return nil;
+    }];
+    if (reference != nil) {
+        [reference.queue dispatch:^{
+            __strong OngoingCallThreadLocalContext *context = reference.context;
+            if (context != nil) {
+                f(context);
+            }
+        }];
+    }
+}
+
 @interface OngoingCallThreadLocalContext () {
+    id<OngoingCallThreadLocalContextQueue> _queue;
+    int32_t _contextId;
+
     NSTimeInterval _callReceiveTimeout;
     NSTimeInterval _callRingTimeout;
     NSTimeInterval _callConnectTimeout;
@@ -72,8 +138,10 @@ static void TGCallRandomBytes(uint8_t *buffer, size_t length) {
 @end
 
 static void controllerStateCallback(tgvoip::VoIPController *controller, int state) {
-    OngoingCallThreadLocalContext *context = (__bridge OngoingCallThreadLocalContext *)controller->implData;
-    [context controllerStateChanged:state];
+    int32_t contextId = (int32_t)((intptr_t)controller->implData);
+    withContext(contextId, ^(OngoingCallThreadLocalContext *context) {
+        [context controllerStateChanged:state];
+    });
 }
 
 @implementation OngoingCallThreadLocalContext
@@ -82,9 +150,13 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
     TGVoipLoggingFunction = loggingFunction;
 }
 
-- (instancetype)init {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue {
     self = [super init];
     if (self != nil) {
+        _queue = queue;
+        assert([queue isCurrent]);
+        _contextId = addContext(self, queue);
+        
         _callReceiveTimeout = 20.0;
         _callRingTimeout = 90.0;
         _callConnectTimeout = 30.0;
@@ -93,7 +165,7 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         _allowP2P = true;
         
         _controller = new tgvoip::VoIPController();
-        _controller->implData = (__bridge void *)self;
+        _controller->implData = (void *)((intptr_t)_contextId);
         
         /*releasable*/
         //_controller->SetStateCallback(&controllerStateCallback);
@@ -116,6 +188,14 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         _state = OngoingCallStateInitializing;
     }
     return self;
+}
+
+- (void)dealloc {
+    assert([_queue isCurrent]);
+    removeContext(_contextId);
+    if (_controller != NULL) {
+        [self stop];
+    }
 }
 
 - (void)startWithKey:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer {

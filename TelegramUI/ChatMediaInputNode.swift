@@ -273,9 +273,7 @@ final class ChatMediaInputNode: ChatInputNode {
     private var currentStickerPacksCollectionPosition: StickerPacksCollectionPosition?
     private var currentView: ItemCollectionsView?
     
-    private var stickerPreviewController: StickerPreviewController?
-    
-    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState)?
     private var paneArrangement: ChatMediaInputPaneArrangement
     
     private var theme: PresentationTheme
@@ -576,6 +574,14 @@ final class ChatMediaInputNode: ChatInputNode {
                 return controller
             }
             return nil
+        }, updateContent: { [weak self] content in
+            if let strongSelf = self {
+                var item: StickerPackItem?
+                if let content = content as? StickerPreviewPeekContent {
+                    item = content.item
+                }
+                strongSelf.updatePreviewingItem(item: item, animated: true)
+            }
         }))
         self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
     }
@@ -584,8 +590,8 @@ final class ChatMediaInputNode: ChatInputNode {
         if let index = self.paneArrangement.panes.index(of: pane), index != self.paneArrangement.currentIndex {
             let previousGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
             self.paneArrangement = self.paneArrangement.withIndexTransition(0.0).withCurrentIndex(index)
-            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, interfaceState) = self.validLayout {
-                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
+            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, maximumHeight, interfaceState) = self.validLayout {
+                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, maximumHeight: maximumHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
             }
             let updatedGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
             if updatedGifPanelWasActive != previousGifPanelWasActive {
@@ -602,8 +608,8 @@ final class ChatMediaInputNode: ChatInputNode {
                     self.setHighlightedItemCollectionId(ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0))
             }
         } else {
-            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, interfaceState) = self.validLayout {
-                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
+            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, maximumHeight, interfaceState) = self.validLayout {
+                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, maximumHeight: maximumHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
             }
         }
     }
@@ -684,15 +690,20 @@ final class ChatMediaInputNode: ChatInputNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, bottomInset, standardInputHeight, interfaceState)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, maximumHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> (CGFloat, CGFloat) {
+        self.validLayout = (width, leftInset, rightInset, bottomInset, standardInputHeight, maximumHeight, interfaceState)
         
         if self.theme !== interfaceState.theme || self.strings !== interfaceState.strings {
             self.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
         }
         
         let separatorHeight = UIScreenPixel
-        let panelHeight = standardInputHeight
+        let panelHeight: CGFloat
+        if case .media(_, true) = interfaceState.inputMode {
+            panelHeight = maximumHeight
+        } else {
+            panelHeight = standardInputHeight
+        }
         
         transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: self.collectionListPanelOffset), size: CGSize(width: width, height: 41.0)))
         transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0 + self.collectionListPanelOffset), size: CGSize(width: width, height: separatorHeight)))
@@ -849,7 +860,7 @@ final class ChatMediaInputNode: ChatInputNode {
             self.animatingTrendingPaneOut = false
         }
         
-        return panelHeight
+        return (standardInputHeight, max(0.0, panelHeight - standardInputHeight))
     }
     
     private func enqueuePanelTransition(_ transition: ChatMediaInputPanelTransition, firstTime: Bool, thenGridTransition gridTransition: ChatMediaInputGridTransition, gridFirstTime: Bool) {
@@ -875,25 +886,6 @@ final class ChatMediaInputNode: ChatInputNode {
         self.stickerPane.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: itemTransition, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
     }
     
-    @objc func previewGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-        switch recognizer.state {
-            case .began:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture {
-                    if let itemNode = self.stickerPane.gridNode.itemNodeAtPoint(location) as? ChatMediaInputStickerGridItemNode {
-                        self.updatePreviewingItem(item: itemNode.stickerPackItem, animated: true)
-                    }
-                }
-            case .ended, .cancelled:
-                self.updatePreviewingItem(item: nil, animated: true)
-            case .changed:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture, let itemNode = self.stickerPane.gridNode.itemNodeAtPoint(location) as? ChatMediaInputStickerGridItemNode {
-                    self.updatePreviewingItem(item: itemNode.stickerPackItem, animated: true)
-                }
-            default:
-                break
-        }
-    }
-    
     private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
         if self.inputNodeInteraction.previewedStickerPackItem != item {
             self.inputNodeInteraction.previewedStickerPackItem = item
@@ -903,30 +895,6 @@ final class ChatMediaInputNode: ChatInputNode {
                     itemNode.updatePreviewing(animated: animated)
                 }
             }
-            
-            if let item = item {
-                if let stickerPreviewController = self.stickerPreviewController {
-                    stickerPreviewController.updateItem(item)
-                } else {
-                    let stickerPreviewController = StickerPreviewController(account: self.account, item: item)
-                    self.stickerPreviewController = stickerPreviewController
-                    self.controllerInteraction.presentController(stickerPreviewController, StickerPreviewControllerPresentationArguments(transitionNode: { [weak self] item in
-                        if let strongSelf = self {
-                            var result: ASDisplayNode?
-                            strongSelf.stickerPane.gridNode.forEachItemNode { itemNode in
-                                if let itemNode = itemNode as? ChatMediaInputStickerGridItemNode, itemNode.stickerPackItem == item {
-                                    result = itemNode.transitionNode()
-                                }
-                            }
-                            return result
-                        }
-                        return nil
-                    }))
-                }
-            } else if let stickerPreviewController = self.stickerPreviewController {
-                stickerPreviewController.dismiss()
-                self.stickerPreviewController = nil
-            }
         }
     }
     
@@ -935,7 +903,7 @@ final class ChatMediaInputNode: ChatInputNode {
             case .began:
                 break
             case .changed:
-                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, interfaceState) = self.validLayout {
+                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, maximumHeight, interfaceState) = self.validLayout {
                     let translationX = -recognizer.translation(in: self.view).x
                     var indexTransition = translationX / width
                     if self.paneArrangement.currentIndex == 0 {
@@ -944,10 +912,10 @@ final class ChatMediaInputNode: ChatInputNode {
                         indexTransition = min(0.0, indexTransition)
                     }
                     self.paneArrangement = self.paneArrangement.withIndexTransition(indexTransition)
-                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, transition: .immediate, interfaceState: interfaceState)
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, maximumHeight: maximumHeight, transition: .immediate, interfaceState: interfaceState)
                 }
             case .ended:
-                if let (width, _, _, _, _, _) = self.validLayout {
+                if let (width, _, _, _, _, _, _) = self.validLayout {
                     var updatedIndex = self.paneArrangement.currentIndex
                     if abs(self.paneArrangement.indexTransition * width) > 30.0 {
                         if self.paneArrangement.indexTransition < 0.0 {
@@ -960,9 +928,9 @@ final class ChatMediaInputNode: ChatInputNode {
                     self.setCurrentPane(self.paneArrangement.panes[updatedIndex], transition: .animated(duration: 0.25, curve: .spring))
                 }
             case .cancelled:
-                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, interfaceState) = self.validLayout {
+                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, maximumHeight, interfaceState) = self.validLayout {
                     self.paneArrangement = self.paneArrangement.withIndexTransition(0.0)
-                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, maximumHeight: maximumHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState)
                 }
             default:
                 break

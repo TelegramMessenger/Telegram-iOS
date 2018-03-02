@@ -1,6 +1,8 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import Postbox
+import TelegramCore
 
 private let titleFont = Font.regular(14.0)
 
@@ -11,6 +13,26 @@ final class ChatOverlayNavigationBar: ASDisplayNode {
     private let separatorNode: ASDisplayNode
     private let titleNode: TextNode
     private let closeButton: HighlightableButtonNode
+    
+    private var validLayout: CGSize?
+    
+    private var peerTitle = ""
+    var peerView: PeerView? {
+        didSet {
+            var title = ""
+            if let peerView = self.peerView {
+                if let peer = peerViewMainPeer(peerView) {
+                    title = peer.displayTitle
+                }
+            }
+            if self.peerTitle != title {
+                self.peerTitle = title
+                if let size = self.validLayout {
+                    self.updateLayout(size: size, transition: .immediate)
+                }
+            }
+        }
+    }
     
     init(theme: PresentationTheme, close: @escaping () -> Void) {
         self.theme = theme
@@ -53,13 +75,13 @@ final class ChatOverlayNavigationBar: ASDisplayNode {
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
     }
     
-    func updateLayout(size: CGSize, presentationInterfaceState: ChatPresentationInterfaceState, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
         
         let sideInset: CGFloat = 10.0
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: presentationInterfaceState.peer?.displayTitle ?? "", font: titleFont, textColor: self.theme.inAppNotification.expandedNotification.navigationBar.primaryTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: size.width - sideInset * 2.0 - 40.0, height: size.height)))
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.peerTitle, font: titleFont, textColor: self.theme.inAppNotification.expandedNotification.navigationBar.primaryTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: size.width - sideInset * 2.0 - 40.0, height: size.height)))
         let _ = titleApply()
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - titleLayout.size.height) / 2.0)), size: titleLayout.size))
         

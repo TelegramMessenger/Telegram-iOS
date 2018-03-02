@@ -38,8 +38,8 @@ final class GameController: ViewController {
                 
                 var botPeer: Peer?
                 inner: for attribute in message.attributes {
-                    if let attribute = attribute as? InlineBotMessageAttribute {
-                        botPeer = message.peers[attribute.peerId]
+                    if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId {
+                        botPeer = message.peers[peerId]
                         break inner
                     }
                 }
@@ -66,11 +66,13 @@ final class GameController: ViewController {
     }
     
     @objc func sharePressed() {
-        
+        self.controllerNode.shareWithoutScore()
     }
     
     override func loadDisplayNode() {
-        self.displayNode = GameControllerNode(presentationData: self.presentationData, url: self.url)
+        self.displayNode = GameControllerNode(account: self.account, presentationData: self.presentationData, url: self.url, present: { [weak self] c, a in
+            self?.present(c, in: .window(.root), with: a)
+        }, message: self.message)
     }
     
     override func viewDidAppear(_ animated: Bool) {

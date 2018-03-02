@@ -84,6 +84,11 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private let fetchDisposable = MetaDisposable()
     
+    private var dimensions: CGSize?
+    private let dimensionsPromise = ValuePromise<CGSize>(CGSize())
+    
+    private var validLayout: CGSize?
+    
     init(postbox: Postbox, audioSessionManager: ManagedAudioSession, file: TelegramMediaFile, streamVideo: Bool, enableSound: Bool) {
         self.postbox = postbox
         self.file = file
@@ -104,17 +109,34 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.playerNode = MediaPlayerNode(backgroundThread: false)
         self.player.attachPlayerNode(self.playerNode)
         
+        self.dimensions = file.dimensions
+        
         super.init()
         
         actionAtEndImpl = { [weak self] in
             self?.performActionAtEnd()
         }
         
-        self.imageNode.setSignal(mediaGridMessageVideo(postbox: postbox, video: file))
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, video: file) |> map { [weak self] getSize, getData in
+            Queue.mainQueue().async {
+                if let strongSelf = self, strongSelf.dimensions == nil {
+                    if let dimensions = getSize() {
+                        strongSelf.dimensions = dimensions
+                        strongSelf.dimensionsPromise.set(dimensions)
+                        if let size = strongSelf.validLayout {
+                            strongSelf.updateLayout(size: size, transition: .immediate)
+                        }
+                    }
+                }
+            }
+            return getData
+        })
         
         self.addSubnode(self.imageNode)
         self.addSubnode(self.playerNode)
-        self._status.set(self.player.status)
+        self._status.set(combineLatest(self.dimensionsPromise.get(), self.player.status) |> map { dimensions, status in
+            return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: dimensions, timestamp: status.timestamp, seekId: status.seekId, status: status.status)
+        })
         
         if let size = file.size {
             self._bufferingStatus.set(postbox.mediaBox.resourceRangesStatus(file.resource) |> map { ranges in
@@ -141,7 +163,9 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        if let dimensions = self.file.dimensions {
+        self.validLayout = size
+        
+        if let dimensions = self.dimensions {
             let imageSize = CGSize(width: floor(dimensions.width / 2.0), height: floor(dimensions.height / 2.0))
             let makeLayout = self.imageNode.asyncLayout()
             let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))

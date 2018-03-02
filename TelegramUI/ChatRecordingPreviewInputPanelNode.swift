@@ -156,5 +156,9 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     @objc func waveformPressed() {
         self.mediaPlayer?.togglePlayPause()
     }
+    
+    override func minimalHeight(interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        return 47.0
+    }
 }
 

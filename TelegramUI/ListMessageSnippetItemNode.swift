@@ -185,7 +185,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         let plainUrlString = NSAttributedString(string: content.displayUrl, font: descriptionFont, textColor: item.theme.list.itemAccentColor)
                         let urlString = NSMutableAttributedString()
                         urlString.append(plainUrlString)
-                        urlString.addAttribute(NSAttributedStringKey(rawValue: TextNode.UrlAttribute), value: content.displayUrl, range: NSMakeRange(0, urlString.length))
+                        urlString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: content.displayUrl, range: NSMakeRange(0, urlString.length))
                         mutableDescriptionText.append(urlString)
                         
                         descriptionText = mutableDescriptionText
@@ -227,7 +227,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                 if item.theme.list.itemAccentColor.isEqual(item.theme.list.itemPrimaryTextColor) {
                                     urlAttributedString.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
                                 }
-                                urlAttributedString.addAttribute(NSAttributedStringKey(rawValue: TextNode.UrlAttribute), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
+                                urlAttributedString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
                                 mutableDescriptionText.append(urlAttributedString)
 
                                 descriptionText = mutableDescriptionText
@@ -450,7 +450,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         let textNodeFrame = self.descriptionNode.frame
         if let (_, attributes) = self.descriptionNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             let possibleNames: [String] = [
-                TextNode.UrlAttribute,
+                TelegramTextAttributes.Url,
             ]
             for name in possibleNames {
                 if let value = attributes[NSAttributedStringKey(rawValue: name)] as? String {
@@ -496,7 +496,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                 let textNodeFrame = self.descriptionNode.frame
                 if let (index, attributes) = self.descriptionNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
                     let possibleNames: [String] = [
-                        TextNode.UrlAttribute
+                        TelegramTextAttributes.Url
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedStringKey(rawValue: name)] {

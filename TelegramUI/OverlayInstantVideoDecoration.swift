@@ -14,6 +14,7 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
     
     private let shadowNode: ASImageNode
     private let foregroundContainerNode: ASDisplayNode
+    private let progressNode: InstantVideoRadialStatusNode
     
     private var contentNode: (ASDisplayNode & UniversalVideoContentNode)?
     private var contentNodeSnapshot: UIView?
@@ -33,10 +34,9 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
         self.contentContainerNode.clipsToBounds = true
         
         self.foregroundContainerNode = ASDisplayNode()
-        //self.foregroundContainerNode.addSubnode(self.controlsNode)
+        self.progressNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.8))
+        self.foregroundContainerNode.addSubnode(self.progressNode)
         self.foregroundNode = self.foregroundContainerNode
-        
-        //self.controlsNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(controlsNodeTapGesture(_:))))
     }
     
     func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?) {
@@ -51,6 +51,7 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
             }
             
             if let contentNode = contentNode {
+                self.progressNode.status = contentNode.status
                 if contentNode.supernode !== self.contentContainerNode {
                     self.contentContainerNode.addSubnode(contentNode)
                     if let validLayoutSize = self.validLayoutSize {
@@ -82,11 +83,13 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
         let shadowInsets = UIEdgeInsets(top: 2.0, left: 3.0, bottom: 4.0, right: 3.0)
         transition.updateFrame(node: self.shadowNode, frame: CGRect(origin: CGPoint(x: -shadowInsets.left, y: -shadowInsets.top), size: CGSize(width: size.width + shadowInsets.left + shadowInsets.right, height: size.height + shadowInsets.top + shadowInsets.bottom)))
         
-        transition.updateFrame(node: self.foregroundContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+        let foregroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height))
+        transition.updateFrame(node: self.foregroundContainerNode, frame: foregroundFrame)
+        transition.updateFrame(node: self.progressNode, frame: foregroundFrame.insetBy(dx: 0.0, dy: 0.0))
         
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: CGPoint(), size: size))
         if let contentNode = self.contentNode {
-            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(), size: size))
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -0.5, dy: -0.5))
             contentNode.updateLayout(size: size, transition: transition)
         }
         

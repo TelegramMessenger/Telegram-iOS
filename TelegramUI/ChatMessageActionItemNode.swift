@@ -9,7 +9,7 @@ private let titleFont = Font.regular(13.0)
 private let titleBoldFont = Font.bold(13.0)
 
 private func peerMentionAttributes(primaryTextColor: UIColor, peerId: PeerId) -> MarkdownAttributeSet {
-    return MarkdownAttributeSet(font: titleBoldFont, textColor: primaryTextColor, additionalAttributes: [TextNode.TelegramPeerMentionAttribute: TelegramPeerMention(peerId: peerId, mention: "")])
+    return MarkdownAttributeSet(font: titleBoldFont, textColor: primaryTextColor, additionalAttributes: [TelegramTextAttributes.PeerMention: TelegramPeerMention(peerId: peerId, mention: "")])
 }
 
 private func peerMentionsAttributes(primaryTextColor: UIColor, peerIds: [(Int, PeerId?)]) -> [Int: MarkdownAttributeSet] {
@@ -611,11 +611,11 @@ class ChatMessageActionItemNode: ChatMessageItemView {
             if let point = point {
                 if let (index, attributes) = self.labelNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)) {
                     let possibleNames: [String] = [
-                        TextNode.UrlAttribute,
-                        TextNode.TelegramPeerMentionAttribute,
-                        TextNode.TelegramPeerTextMentionAttribute,
-                        TextNode.TelegramBotCommandAttribute,
-                        TextNode.TelegramHashtagAttribute
+                        TelegramTextAttributes.Url,
+                        TelegramTextAttributes.PeerMention,
+                        TelegramTextAttributes.PeerTextMention,
+                        TelegramTextAttributes.BotCommand,
+                        TelegramTextAttributes.Hashtag
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
@@ -658,15 +658,15 @@ class ChatMessageActionItemNode: ChatMessageItemView {
     private func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.labelNode.frame
         if let (_, attributes) = self.labelNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)) {
-            if let url = attributes[NSAttributedStringKey(rawValue: TextNode.UrlAttribute)] as? String {
+            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
                 return .url(url)
-            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramPeerMentionAttribute)] as? TelegramPeerMention {
+            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerMention.peerId, peerMention.mention)
-            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramPeerTextMentionAttribute)] as? String {
+            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .textMention(peerName)
-            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramBotCommandAttribute)] as? String {
+            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 return .botCommand(botCommand)
-            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TextNode.TelegramHashtagAttribute)] as? TelegramHashtag {
+            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             } else {
                 return .none

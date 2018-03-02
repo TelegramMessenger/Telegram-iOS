@@ -11,7 +11,11 @@ enum ChatMessageBackgroundMergeType {
         } else if top {
             self = .Top
         } else if bottom {
-            self = .Bottom
+            if side {
+                self = .Side
+            } else {
+                self = .Bottom
+            }
         } else {
             if side {
                 self = .Side

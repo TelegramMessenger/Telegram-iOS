@@ -123,7 +123,22 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
-                strongSelf.controllerInteraction.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash)), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                let _ = (loadedStickerPack(postbox: strongSelf.account.postbox, network: strongSelf.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash))
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    switch result {
+                        case let .result(info, items, installed):
+                            if installed {
+                                return .complete()
+                            } else {
+                                return addStickerPackInteractively(postbox: strongSelf.account.postbox, info: info, items: items)
+                            }
+                        case .fetching:
+                            break
+                        case .none:
+                            break
+                    }
+                    return .complete()
+                }).start()
             }
         }, openPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
@@ -156,8 +171,25 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, bottomInset)
-        self.listNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomInset, right: 0.0), duration: 0.0, curve: .Default), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        
+        transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        var duration: Double = 0.0
+        var listViewCurve: ListViewAnimationCurve = .Default
+        switch transition {
+            case .immediate:
+                break
+            case let .animated(animationDuration, animationCurve):
+                duration = animationDuration
+                switch animationCurve {
+                    case .easeInOut:
+                        listViewCurve = .Default
+                    case .spring:
+                        listViewCurve = .Spring(duration: duration)
+                }
+        }
+        
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomInset, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {

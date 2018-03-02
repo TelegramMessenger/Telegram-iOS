@@ -2,6 +2,17 @@ import Foundation
 import Display
 import AsyncDisplayKit
 
+private let shadowInset: CGFloat = 8.0
+
+private func generateShadowImage(theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 32.0 + shadowInset * 2.0, height: 32.0 + shadowInset * 2.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 20.0, color: UIColor(white: 0.0, alpha: 0.2).cgColor)
+        context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowInset, y: shadowInset), size: CGSize(width: size.width - shadowInset * 2.0, height: size.height - shadowInset * 2.0)))
+    })?.stretchableImage(withLeftCapWidth: 16 + Int(shadowInset) / 2, topCapHeight: 16 + Int(shadowInset) / 2)
+}
+
 private final class MessageActionButtonNode: HighlightableButtonNode {
     let theme: PresentationTheme
     let separatorNode: ASDisplayNode
@@ -15,8 +26,8 @@ private final class MessageActionButtonNode: HighlightableButtonNode {
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = theme.actionSheet.opaqueItemHighlightedBackgroundColor
         self.backgroundNode.alpha = 0.0
+        self.backgroundNode.backgroundColor = theme.actionSheet.opaqueItemHighlightedBackgroundColor
         
         super.init()
         
@@ -53,6 +64,7 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
     private let theme: PresentationTheme
     
     private let inputDimNode: ASDisplayNode
+    private let itemsShadowNode: ASImageNode
     private let itemsContainerNode: ASDisplayNode
     
     private let actions: [ChatMessageContextMenuSheetAction]
@@ -70,6 +82,12 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
         self.inputDimNode = ASDisplayNode()
         self.inputDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
+        self.itemsShadowNode = ASImageNode()
+        self.itemsShadowNode.isLayerBacked = true
+        self.itemsShadowNode.displayWithoutProcessing = true
+        self.itemsShadowNode.displaysAsynchronously = false
+        self.itemsShadowNode.image = generateShadowImage(theme: theme)
+        
         self.itemsContainerNode = ASDisplayNode()
         self.itemsContainerNode.backgroundColor = theme.actionSheet.opaqueItemBackgroundColor
         self.itemsContainerNode.cornerRadius = 16.0
@@ -84,6 +102,7 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
         super.init()
         
         self.addSubnode(self.inputDimNode)
+        self.addSubnode(self.itemsShadowNode)
         self.addSubnode(self.itemsContainerNode)
         
         for actionNode in actionNodes {
@@ -104,15 +123,18 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
         self.inputDimNode.alpha = 0.0
         transition.updateAlpha(node: self.inputDimNode, alpha: 1.0)
         transition.animatePositionAdditive(node: self.itemsContainerNode, offset: self.bounds.size.height)
+        transition.animatePositionAdditive(node: self.itemsShadowNode, offset: self.bounds.size.height)
         
         self.feedback.impact()
     }
     
     func animateOut(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         transition.updateAlpha(node: self.inputDimNode, alpha: 0.0)
-        transition.updatePosition(node: self.itemsContainerNode, position: CGPoint(x: self.itemsContainerNode.position.x, y: self.bounds.size.height + self.itemsContainerNode.bounds.height), completion: { _ in
+        let position = CGPoint(x: self.itemsContainerNode.position.x, y: self.bounds.size.height + self.itemsContainerNode.bounds.height)
+        transition.updatePosition(node: self.itemsContainerNode, position: position, completion: { _ in
             completion()
         })
+        transition.updatePosition(node: self.itemsShadowNode, position: position)
     }
     
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -132,7 +154,9 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
             itemsHeight += actionNode.bounds.height
         }
         
-        transition.updateFrame(node: self.itemsContainerNode, frame: CGRect(origin: CGPoint(x: 14.0, y: layout.size.height - height - itemsHeight), size: CGSize(width: layout.size.width - 14.0 * 2.0, height: itemsHeight)))
+        let containerFrame = CGRect(origin: CGPoint(x: 14.0, y: layout.size.height - height - itemsHeight), size: CGSize(width: layout.size.width - 14.0 * 2.0, height: itemsHeight))
+        transition.updateFrame(node: self.itemsContainerNode, frame: containerFrame)
+        transition.updateFrame(node: self.itemsShadowNode, frame: containerFrame.insetBy(dx: -shadowInset, dy: -shadowInset))
         
         height += itemsHeight
         

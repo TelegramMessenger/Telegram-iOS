@@ -212,7 +212,7 @@ public class PeerMediaCollectionController: TelegramController {
             }, openSearch: { [weak self] in
                 self?.activateSearch()
             }, setupReply: { _ in
-            }, canSetupReply: {
+            }, canSetupReply: { _ in
                 return false
         }, requestMessageUpdate: { _ in
         }, automaticMediaDownloadSettings: .none)

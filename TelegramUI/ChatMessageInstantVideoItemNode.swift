@@ -107,7 +107,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 if strongSelf.selectionNode != nil {
                     return false
                 }
-                return item.controllerInteraction.canSetupReply()
+                return item.controllerInteraction.canSetupReply(item.message)
             }
             return false
         }

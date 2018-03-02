@@ -741,8 +741,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             return (selectedItemNode.view, peer.id)
         } else if let selectedItemNode = selectedItemNode as? ChatListItemNode, let item = selectedItemNode.item {
             switch item.content {
-                case let .peer(_, peer, _, _, _, _, _):
-                    return (selectedItemNode.view, peer.peerId)
+                case let .peer(message, peer, _, _, _, _, _):
+                    return (selectedItemNode.view, message?.id ?? peer.peerId)
                 case let .groupReference(groupId, _, _, _):
                     return (selectedItemNode.view, groupId)
             }

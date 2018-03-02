@@ -313,7 +313,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }
             }
         }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
-        }, canSetupReply: {
+        }, canSetupReply: { _ in
             return false
         }, requestMessageUpdate: { _ in
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings)
@@ -581,9 +581,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }
             }
             
-            self.presentController(contextMenuController, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak node] in
-                if let node = node {
-                    return (node, frame)
+            self.presentController(contextMenuController, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak node] in
+                if let strongSelf = self, let node = node {
+                    return (node, frame, strongSelf, strongSelf.bounds)
                 } else {
                     return nil
                 }

@@ -88,7 +88,12 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                             if isVoice {
                                 return SharedMediaPlaybackDisplayData.voice(author: self.message.author, peer: self.message.peers[self.message.id.peerId])
                             } else {
-                                return SharedMediaPlaybackDisplayData.music(title: title, performer: performer, albumArt: SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
+                                var updatedTitle = title
+                                let updatedPerformer = performer
+                                if (title ?? "").isEmpty && (performer ?? "").isEmpty {
+                                    updatedTitle = file.fileName ?? ""
+                                }
+                                return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false)))
                             }
                         case let .Video(_, _, flags):
                             if flags.contains(.instantRoundVideo) {

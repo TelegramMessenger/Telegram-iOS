@@ -237,10 +237,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         return nil
     }
     
-    override func peekPreviewContent(at point: CGPoint) -> (Message, Media)? {
+    override func peekPreviewContent(at point: CGPoint) -> (Message, ChatMessagePeekPreviewContent)? {
         if let message = self.item?.message, let currentMedia = self.media {
             if self.interactiveImageNode.frame.contains(point) {
-                return (message, currentMedia)
+                return (message, .media(currentMedia))
             }
         }
         return nil

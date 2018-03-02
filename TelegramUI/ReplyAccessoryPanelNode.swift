@@ -72,6 +72,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
                 var updatedMedia: Media?
                 var imageDimensions: CGSize?
+                var isRoundImage = false
                 if let message = message, !message.containsSecretMedia {
                     for media in message.media {
                         if let image = media as? TelegramMediaImage {
@@ -82,7 +83,8 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                             break
                         } else if let file = media as? TelegramMediaFile {
                             updatedMedia = file
-                            if !file.isInstantVideo, let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                            isRoundImage = file.isInstantVideo
+                            if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
                                 imageDimensions = representation.dimensions
                             }
                             break
@@ -94,7 +96,11 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 var applyImage: (() -> Void)?
                 if let imageDimensions = imageDimensions {
                     let boundingSize = CGSize(width: 35.0, height: 35.0)
-                    applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: 2.0), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+                    var radius: CGFloat = 2.0
+                    if isRoundImage {
+                        radius = floor(boundingSize.width / 2.0)
+                    }
+                    applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
                 }
                 
                 var mediaUpdated = false

@@ -63,7 +63,19 @@ public enum ChatMessageItemContent: Sequence {
 }
 
 private func mediaIsNotMergeable(_ media: Media) -> Bool {
-    if let file = media as? TelegramMediaFile, file.isSticker {
+    if let file = media as? TelegramMediaFile {
+        for attribute in file.attributes {
+            switch attribute {
+                case .Sticker:
+                    return false
+                case let .Video(_, _, flags):
+                    if flags.contains(.instantRoundVideo) {
+                        return false
+                    }
+                default:
+                    break
+            }
+        }
         return true
     }
     if let _ = media as? TelegramMediaAction {

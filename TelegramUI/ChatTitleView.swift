@@ -60,6 +60,12 @@ private final class ChatTitleNetworkStatusNode: ASDisplayNode {
     }
 }
 
+private enum ChatTitleIcon {
+    case none
+    case lock
+    case mute
+}
+
 final class ChatTitleView: UIView, NavigationBarTitleView {
     private let account: Account
     
@@ -69,10 +75,15 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private let contentContainer: ASDisplayNode
     private let titleNode: ASTextNode
+    private let titleLeftIconNode: ASImageNode
+    private let titleRightIconNode: ASImageNode
     private let infoNode: ASTextNode
     private let typingNode: ASTextNode
     private var typingIndicator: TGModernConversationTitleActivityIndicator?
     private let button: HighlightTrackingButtonNode
+    
+    private var titleLeftIcon: ChatTitleIcon = .none
+    private var titleRightIcon: ChatTitleIcon = .none
     
     private var networkStatusNode: ChatTitleNetworkStatusNode?
     
@@ -208,6 +219,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         didSet {
             if let titleContent = self.titleContent {
                 var string: NSAttributedString?
+                var titleLeftIcon: ChatTitleIcon = .none
+                var titleRightIcon: ChatTitleIcon = .none
                 switch titleContent {
                     case let .peer(peerView):
                         if let peer = peerViewMainPeer(peerView) {
@@ -217,12 +230,42 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 string = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             }
                         }
+                        if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
+                            titleLeftIcon = .lock
+                        }
+                        if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                            if case .muted = notificationSettings.muteState {
+                                titleRightIcon = .mute
+                            }
+                        }
                     case .group:
                         string = NSAttributedString(string: "Feed", font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 }
                 
                 if let string = string, self.titleNode.attributedText == nil || !self.titleNode.attributedText!.isEqual(to: string) {
                     self.titleNode.attributedText = string
+                    self.setNeedsLayout()
+                }
+                
+                if titleLeftIcon != self.titleLeftIcon {
+                    self.titleLeftIcon = titleLeftIcon
+                    switch titleLeftIcon {
+                        case .lock:
+                            self.titleLeftIconNode.image = PresentationResourcesChat.chatTitleLockIcon(self.theme)
+                        default:
+                            self.titleLeftIconNode.image = nil
+                    }
+                    self.setNeedsLayout()
+                }
+                
+                if titleRightIcon != self.titleRightIcon {
+                    self.titleRightIcon = titleRightIcon
+                    switch titleRightIcon {
+                        case .mute:
+                            self.titleRightIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(self.theme)
+                        default:
+                            self.titleRightIconNode.image = nil
+                    }
                     self.setNeedsLayout()
                 }
                 
@@ -348,6 +391,16 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.titleNode.truncationMode = .byTruncatingTail
         self.titleNode.isOpaque = false
         
+        self.titleLeftIconNode = ASImageNode()
+        self.titleLeftIconNode.isLayerBacked = true
+        self.titleLeftIconNode.displayWithoutProcessing = true
+        self.titleLeftIconNode.displaysAsynchronously = false
+        
+        self.titleRightIconNode = ASImageNode()
+        self.titleRightIconNode.isLayerBacked = true
+        self.titleRightIconNode.displayWithoutProcessing = true
+        self.titleRightIconNode.displaysAsynchronously = false
+        
         self.infoNode = ASTextNode()
         self.infoNode.displaysAsynchronously = false
         self.infoNode.maximumNumberOfLines = 1
@@ -409,18 +462,44 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         self.contentContainer.frame = CGRect(origin: CGPoint(), size: size)
         
+        var leftIconWidth: CGFloat = 0.0
+        var rightIconWidth: CGFloat = 0.0
+        
+        if let image = self.titleLeftIconNode.image {
+            if self.titleLeftIconNode.supernode == nil {
+                self.contentContainer.addSubnode(titleLeftIconNode)
+            }
+            leftIconWidth = image.size.width + 3.0
+        } else if self.titleLeftIconNode.supernode != nil {
+            self.titleLeftIconNode.removeFromSupernode()
+        }
+        
+        if let image = self.titleRightIconNode.image {
+            if self.titleRightIconNode.supernode == nil {
+                self.contentContainer.addSubnode(titleRightIconNode)
+            }
+            rightIconWidth = image.size.width + 3.0
+        } else if self.titleRightIconNode.supernode != nil {
+            self.titleRightIconNode.removeFromSupernode()
+        }
+        
         if size.height > 40.0 {
-            let titleSize = self.titleNode.measure(size)
+            let titleSize = self.titleNode.measure(CGSize(width: size.width - leftIconWidth - rightIconWidth, height: size.height))
             let infoSize = self.infoNode.measure(size)
             let typingSize = self.typingNode.measure(size)
             let titleInfoSpacing: CGFloat = 0.0
             
+            let titleFrame: CGRect
+            
             if infoSize.width.isZero && typingSize.width.isZero {
-                self.titleNode.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+                titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+                self.titleNode.frame = titleFrame
             } else {
                 let combinedHeight = titleSize.height + infoSize.height + titleInfoSpacing
                 
-                self.titleNode.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+                titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+                self.titleNode.frame = titleFrame
+                
                 self.infoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - infoSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: infoSize)
                 self.typingNode.frame = CGRect(origin: CGPoint(x: floor((size.width - typingSize.width + 14.0) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: typingSize)
                 
@@ -428,17 +507,32 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     typingIndicator.frame = CGRect(x: self.typingNode.frame.origin.x - 24.0, y: self.typingNode.frame.origin.y, width: 24.0, height: 16.0)
                 }
             }
+            
+            if let image = self.titleLeftIconNode.image {
+                self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX - image.size.width - 3.0 - UIScreenPixel, y: titleFrame.minY + 4.0), size: image.size)
+            }
+            if let image = self.titleRightIconNode.image {
+                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.minY + 7.0), size: image.size)
+            }
         } else {
-            let titleSize = self.titleNode.measure(CGSize(width: floor(size.width / 2.0), height: size.height))
+            let titleSize = self.titleNode.measure(CGSize(width: floor(size.width / 2.0 - leftIconWidth - rightIconWidth), height: size.height))
             let infoSize = self.infoNode.measure(CGSize(width: floor(size.width / 2.0), height: size.height))
             let typingSize = self.typingNode.measure(CGSize(width: floor(size.width / 2.0), height: size.height))
             
             let titleInfoSpacing: CGFloat = 8.0
-            let combinedWidth = titleSize.width + infoSize.width + titleInfoSpacing
+            let combinedWidth = titleSize.width + leftIconWidth + rightIconWidth + infoSize.width + titleInfoSpacing
             
-            self.titleNode.frame = CGRect(origin: CGPoint(x: floor((size.width - combinedWidth) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
-            self.infoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - combinedWidth) / 2.0 + titleSize.width + titleInfoSpacing), y: floor((size.height - infoSize.height) / 2.0)), size: infoSize)
-            self.typingNode.frame = CGRect(origin: CGPoint(x: floor((size.width - combinedWidth) / 2.0 + titleSize.width + titleInfoSpacing), y: floor((size.height - typingSize.height) / 2.0)), size: typingSize)
+            let titleFrame = CGRect(origin: CGPoint(x: leftIconWidth + floor((size.width - combinedWidth) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+            self.titleNode.frame = titleFrame
+            self.infoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - infoSize.height) / 2.0)), size: infoSize)
+            self.typingNode.frame = CGRect(origin: CGPoint(x: floor((size.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - typingSize.height) / 2.0)), size: typingSize)
+            
+            if let image = self.titleLeftIconNode.image {
+                self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.minY + 4.0), size: image.size)
+            }
+            if let image = self.titleRightIconNode.image {
+                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 6.0), size: image.size)
+            }
         }
         
         if let networkStatusNode = self.networkStatusNode {

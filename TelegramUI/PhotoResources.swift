@@ -246,7 +246,9 @@ private func chatMessageVideoDatas(postbox: Postbox, file: TelegramMediaFile, th
                     }
                 }
             }
-        } |> filter({ $0.0 != nil || $0.1 != nil })
+        } |> filter({
+            return $0.0 != nil || $0.1 != nil
+        })
         
         return signal
     } else {
@@ -1129,10 +1131,30 @@ func gifPaneVideoThumbnail(account: Account, video: TelegramMediaFile) -> Signal
 }
 
 func mediaGridMessageVideo(postbox: Postbox, video: TelegramMediaFile) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return internalMediaGridMessageVideo(postbox: postbox, video: video) |> map {
+        return $0.1
+    }
+}
+
+func internalMediaGridMessageVideo(postbox: Postbox, video: TelegramMediaFile) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
     let signal = chatMessageVideoDatas(postbox: postbox, file: video)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
-        return { arguments in
+        return ({
+            var fullSizeImage: CGImage?
+            if let fullSizeData = fullSizeData {
+                if fullSizeComplete {
+                    let options = NSMutableDictionary()
+                    if let imageSource = CGImageSourceCreateWithData(fullSizeData.0 as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        fullSizeImage = image
+                    }
+                }
+            }
+            if let fullSizeImage = fullSizeImage {
+                return CGSize(width: CGFloat(fullSizeImage.width), height: CGFloat(fullSizeImage.height))
+            }
+            return nil
+        }, { arguments in
             assertNotOnMainThread()
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
@@ -1238,7 +1260,7 @@ func mediaGridMessageVideo(postbox: Postbox, video: TelegramMediaFile) -> Signal
             addCorners(context, arguments: arguments)
             
             return context
-        }
+        })
     }
 }
 

@@ -61,4 +61,8 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
         
         return panelHeight
     }
+    
+    override func minimalHeight(interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        return 47.0
+    }
 }

@@ -298,7 +298,7 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: transition)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                 mediaAccessoryPanel.containerNode.headerNode.playbackStatus = self.account.telegramApplicationContext.mediaManager.globalMediaPlayerState |> map { state in
-                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, timestamp: 0.0, seekId: 0, status: .paused)
+                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
                 }
             } else {
                 if let (mediaAccessoryPanel, _) = self.mediaAccessoryPanel {
@@ -349,7 +349,7 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: .immediate)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                 mediaAccessoryPanel.containerNode.headerNode.playbackStatus = self.account.telegramApplicationContext.mediaManager.globalMediaPlayerState |> map { state in
-                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, timestamp: 0.0, seekId: 0, status: .paused)
+                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, seekId: 0, status: .paused)
                 }
                 mediaAccessoryPanel.animateIn(transition: transition)
             }

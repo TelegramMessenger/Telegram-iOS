@@ -142,12 +142,10 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     }
     
     private var validSize: CGSize?
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        if self.validSize == nil || !self.validSize!.equalTo(self.bounds.size) {
-            self.validSize = self.bounds.size
-            self.updateVisibleItems()
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        if self.validSize == nil || !self.validSize!.equalTo(size) {
+            self.validSize = size
+            self.updateVisibleItems(transition: transition)
         }
     }
     
@@ -249,7 +247,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
         }
     }
     
-    private func updateVisibleItems() {
+    private func updateVisibleItems(transition: ContainedViewLayoutTransition = .immediate) {
         let drawableSize = self.bounds.size
         if !drawableSize.width.isZero {
             var displayItems: [VisibleVideoItem] = []

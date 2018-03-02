@@ -28,10 +28,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private var interaction: StickerPackPreviewInteraction!
     
-    var presentPreview: ((ViewController, Any?) -> Void)?
+    var presentInGlobalOverlay: ((ViewController, Any?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
-    var sendSticker: ((TelegramMediaFile) -> Bool)?
+    var sendSticker: ((TelegramMediaFile) -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -40,8 +40,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     private var stickerPackUpdated = false
     
     private var didSetItems = false
-    
-    private var previewController: StickerPreviewController?
     
     private var hapticFeedback: HapticFeedback?
     
@@ -112,9 +110,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         self.interaction = StickerPackPreviewInteraction(sendSticker: { [weak self] item in
             if let strongSelf = self, let sendSticker = strongSelf.sendSticker {
-                if sendSticker(item.file) {
+                /*if sendSticker(item.file) {
                     strongSelf.cancel?()
-                }
+                }*/
             }
         })
         
@@ -146,15 +144,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
         }
-        
-        let longTapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.previewGesture(_:)))
-        longTapRecognizer.tapActionAtPoint = { [weak self] location in
-            if let strongSelf = self, let _ = strongSelf.contentGridNode.itemNodeAtPoint(location) as? StickerPackPreviewGridItemNode {
-                return .waitForHold(timeout: 0.2, acceptTap: true)
-            }
-            return .fail
-        }
-        self.contentGridNode.view.addGestureRecognizer(longTapRecognizer)
     }
     
     override func didLoad() {
@@ -163,6 +152,71 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         if #available(iOSApplicationExtension 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }
+        
+        /*
+         let longTapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.previewGesture(_:)))
+         longTapRecognizer.tapActionAtPoint = { [weak self] location in
+         if let strongSelf = self, let _ = strongSelf.contentGridNode.itemNodeAtPoint(location) as? StickerPackPreviewGridItemNode {
+         return .waitForHold(timeout: 0.2, acceptTap: true)
+         }
+         return .fail
+         }
+         self.contentGridNode.view.addGestureRecognizer(longTapRecognizer)
+         */
+        
+        self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>? in
+            if let strongSelf = self {
+                if let itemNode = strongSelf.contentGridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
+                    return strongSelf.account.postbox.modify { modifier -> Bool in
+                        return getIsStickerSaved(modifier: modifier, fileId: item.file.fileId)
+                        }
+                        |> deliverOnMainQueue
+                        |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                            if let strongSelf = self {
+                                var menuItems: [PeekControllerMenuItem] = []
+                                if strongSelf.sendSticker != nil {
+                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, action: {
+                                        if let strongSelf = self {
+                                            strongSelf.sendSticker?(item.file)
+                                        }
+                                    }))
+                                }
+                                menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                        if let strongSelf = self {
+                                            if isStarred {
+                                                let _ = removeSavedSticker(postbox: strongSelf.account.postbox, mediaId: item.file.fileId).start()
+                                            } else {
+                                                let _ = addSavedSticker(postbox: strongSelf.account.postbox, network: strongSelf.account.network, file: item.file).start()
+                                            }
+                                        }
+                                    }))
+                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: {}))
+                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: item, menu: menuItems))
+                            } else {
+                                return nil
+                            }
+                    }
+                }
+            }
+            return nil
+        }, present: { [weak self] content, sourceNode in
+            if let strongSelf = self {
+                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.presentationData.theme), content: content, sourceNode: {
+                    return sourceNode
+                })
+                strongSelf.presentInGlobalOverlay?(controller, nil)
+                return controller
+            }
+            return nil
+        }, updateContent: { [weak self] content in
+            if let strongSelf = self {
+                var item: StickerPackItem?
+                if let content = content as? StickerPreviewPeekContent {
+                    item = content.item
+                }
+                strongSelf.updatePreviewingItem(item: item, animated: true)
+            }
+        }, activateBySingleTap: true))
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -467,25 +521,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         }
     }
     
-    @objc func previewGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-        switch recognizer.state {
-            case .began:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture {
-                    if let itemNode = self.contentGridNode.itemNodeAtPoint(location) as? StickerPackPreviewGridItemNode {
-                        self.updatePreviewingItem(item: itemNode.stickerPackItem, animated: true)
-                    }
-                }
-            case .ended, .cancelled:
-                self.updatePreviewingItem(item: nil, animated: true)
-            case .changed:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture, let itemNode = self.contentGridNode.itemNodeAtPoint(location) as? StickerPackPreviewGridItemNode {
-                    self.updatePreviewingItem(item: itemNode.stickerPackItem, animated: true)
-                }
-            default:
-                break
-        }
-    }
-    
     private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
         if self.interaction.previewedItem != item {
             self.interaction.previewedItem = item
@@ -494,35 +529,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 if let itemNode = itemNode as? StickerPackPreviewGridItemNode {
                     itemNode.updatePreviewing(animated: animated)
                 }
-            }
-            
-            if let item = item {
-                if let previewController = self.previewController {
-                    self.hapticFeedback?.tap()
-                    self.hapticFeedback?.prepareTap()
-                    previewController.updateItem(item)
-                } else {
-                    self.hapticFeedback = HapticFeedback()
-                    self.hapticFeedback?.prepareTap()
-                    let previewController = StickerPreviewController(account: self.account, item: item)
-                    self.previewController = previewController
-                    self.presentPreview?(previewController, StickerPreviewControllerPresentationArguments(transitionNode: { [weak self] item in
-                        if let strongSelf = self {
-                            var result: ASDisplayNode?
-                            strongSelf.contentGridNode.forEachItemNode { itemNode in
-                                if let itemNode = itemNode as? StickerPackPreviewGridItemNode, itemNode.stickerPackItem == item {
-                                    result = itemNode.transitionNode()
-                                }
-                            }
-                            return result
-                        }
-                        return nil
-                    }))
-                }
-            } else if let previewController = self.previewController {
-                self.hapticFeedback = nil
-                previewController.dismiss()
-                self.previewController = nil
             }
         }
     }

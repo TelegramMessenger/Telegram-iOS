@@ -356,7 +356,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                             banPeer = nil
                         }
                     }
-                    optionsMap[id]!.insert(.forward)
+                    if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                        optionsMap[id]!.insert(.forward)
+                    }
                     if !message.flags.contains(.Incoming) {
                         optionsMap[id]!.insert(.deleteGlobally)
                     } else {
@@ -365,7 +367,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         }
                     }
                 } else if let group = peer as? TelegramGroup {
-                    optionsMap[id]!.insert(.forward)
+                    if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                        optionsMap[id]!.insert(.forward)
+                    }
                     optionsMap[id]!.insert(.deleteLocally)
                     if !message.flags.contains(.Incoming) {
                         optionsMap[id]!.insert(.deleteGlobally)
@@ -378,7 +382,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         }
                     }
                 } else if let _ = peer as? TelegramUser {
-                    optionsMap[id]!.insert(.forward)
+                    if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                        optionsMap[id]!.insert(.forward)
+                    }
                     optionsMap[id]!.insert(.deleteLocally)
                     if !message.flags.contains(.Incoming) {
                         optionsMap[id]!.insert(.deleteGlobally)

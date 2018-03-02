@@ -169,7 +169,7 @@ enum ChatMediaInputMode {
 enum ChatInputMode: Equatable {
     case none
     case text
-    case media(ChatMediaInputMode)
+    case media(mode: ChatMediaInputMode, expanded: Bool)
     case inputButtons
     
     static func ==(lhs: ChatInputMode, rhs: ChatInputMode) -> Bool {
@@ -186,8 +186,8 @@ enum ChatInputMode: Equatable {
                 } else {
                     return false
                 }
-            case let .media(mode):
-                if case .media(mode) = rhs {
+            case let .media(mode, expanded):
+                if case .media(mode, expanded) = rhs {
                     return true
                 } else {
                     return false
