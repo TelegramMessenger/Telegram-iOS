@@ -58,6 +58,7 @@
 - (void)pause;
 - (void)resume;
 - (void)stop;
+- (void)finalizeSession;
 
 - (void)addMessageService:(id<MTMessageService>)messageService;
 - (void)removeMessageService:(id<MTMessageService>)messageService;

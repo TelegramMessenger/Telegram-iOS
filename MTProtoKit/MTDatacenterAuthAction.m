@@ -108,7 +108,7 @@
             }];
         }
     } else {
-        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:((int64_t)timestamp) * 4294967296 lastValidMessageId:((int64_t)(timestamp + 29.0 * 60.0)) * 4294967296]] authKeyAttributes:nil tempAuthKey:nil];
+        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil tempAuthKey:nil];
         
         MTContext *context = _context;
         [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo];

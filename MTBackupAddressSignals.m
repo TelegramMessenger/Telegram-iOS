@@ -44,9 +44,9 @@
 @implementation MTBackupAddressSignals
 
 + (MTSignal *)fetchBackupIpsGoogle:(bool)isTesting {
-    NSDictionary *headers = @{@"Host": @"dns-telegram.appspot.com"};
+    NSDictionary *headers = @{@"Host": @"tcdnb.azureedge.net"};
     
-    return [[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:isTesting ? @"https://google.com/test/" : @"https://google.com/"] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
+    return [[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:isTesting ? @"https://software-download.microsoft.com/test/config.txt" : @"https://software-download.microsoft.com/prod/config.txt"] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
         NSString *text = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         text = [text stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"="]];
         NSData *result = [[NSData alloc] initWithBase64EncodedString:text options:NSDataBase64DecodingIgnoreUnknownCharacters];

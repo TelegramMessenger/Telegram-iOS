@@ -106,6 +106,8 @@
     id<MTDisposable> _backupAddressListDisposable;
     
     NSMutableDictionary<NSNumber *, id<MTDisposable> > *_fetchPublicKeysActions;
+    
+    MTDisposableSet *_cleanupSessionInfoDisposables;
 }
 
 @end
@@ -164,6 +166,8 @@
         _passwordRequiredByDatacenterId = [[NSMutableDictionary alloc] init];
         
         _fetchPublicKeysActions = [[NSMutableDictionary alloc] init];
+        
+        _cleanupSessionInfoDisposables = [[MTDisposableSet alloc] init];
         
         [self updatePeriodicTasks];
     }
@@ -231,6 +235,8 @@
             id<MTDisposable> disposable = fetchPublicKeysActions[nDatacenterId];
             [disposable dispose];
         }
+        
+        [_cleanupSessionInfoDisposables dispose];
     }];
 }
 
@@ -575,6 +581,7 @@
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {
+        
 #warning implement and reenable
         return;
         

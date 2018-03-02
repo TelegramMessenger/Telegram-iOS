@@ -350,6 +350,10 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             MTLog(@"[MTProto#%p resetting session]", self);
         }
         
+        if (_authInfo.authKeyId != 0 && !self.cdn) {
+            [_context scheduleSessionCleanupForAuthKeyId:_authInfo.authKeyId sessionInfo:_sessionInfo];
+        }
+        
         _sessionInfo = [[MTSessionInfo alloc] initWithRandomSessionIdAndContext:_context];
         _timeFixContext = nil;
         _bindingTempAuthKeyContext = nil;
@@ -363,6 +367,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         
         [self resetTransport];
         [self requestTransportTransaction];
+    }];
+}
+
+- (void)finalizeSession {
+    [[MTProto managerQueue] dispatchOnQueue:^{
+        if (_authInfo.authKeyId != 0 && !self.cdn) {
+            [_context scheduleSessionCleanupForAuthKeyId:_authInfo.authKeyId sessionInfo:_sessionInfo];
+        }
     }];
 }
 
