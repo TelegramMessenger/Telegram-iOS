@@ -21,7 +21,7 @@ final class PeerChatTopTaggedMessageIdsTable: Table {
     private var cachedTopIds: [PeerId: [MessageId.Namespace: MessageId?]] = [:]
     private var updatedPeerIds = Set<PeerChatTopTaggedUpdateRecord>()
     
-    private let sharedKey = ValueBoxKey(length: 8 + 4 + 4)
+    private let sharedKey = ValueBoxKey(length: 8 + 4)
     
     private func key(peerId: PeerId, namespace: MessageId.Namespace) -> ValueBoxKey {
         self.sharedKey.setInt64(0, value: peerId.toInt64())

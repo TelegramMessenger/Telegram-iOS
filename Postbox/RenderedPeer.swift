@@ -9,6 +9,11 @@ public final class RenderedPeer: Equatable {
         self.peers = peers
     }
     
+    public init(peer: Peer) {
+        self.peerId = peer.id
+        self.peers = SimpleDictionary([peer.id: peer])
+    }
+    
     public static func ==(lhs: RenderedPeer, rhs: RenderedPeer) -> Bool {
         if lhs.peerId != rhs.peerId {
             return false
@@ -22,5 +27,9 @@ public final class RenderedPeer: Equatable {
             return false
         }
         return true
+    }
+    
+    public var peer: Peer? {
+        return self.peers[self.peerId]
     }
 }

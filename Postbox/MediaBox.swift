@@ -224,22 +224,22 @@ public final class MediaBox {
                             let statusQueue = self.statusQueue
                             self.dataQueue.async {
                                 if let fileContext = self.fileContext(for: resource) {
-                                    statusUpdateDisposable.set(fileContext.status(next: { value in
+                                    statusUpdateDisposable.set(fileContext.status(next: { [weak statusContext] value in
                                         statusQueue.async {
-                                            if let context = self.statusContexts[resourceId], context.status != value {
-                                                context.status = value
-                                                for subscriber in statusContext.subscribers.copyItems() {
+                                            if let current = self.statusContexts[resourceId], current === statusContext, current.status != value {
+                                                current.status = value
+                                                for subscriber in current.subscribers.copyItems() {
                                                     subscriber(value)
                                                 }
                                             }
                                         }
-                                    }, completed: {
+                                    }, completed: { [weak statusContext] in
                                         statusQueue.async {
-                                            if let context = self.statusContexts[resourceId] {
-                                                context.subscribers.remove(index)
-                                                if context.subscribers.isEmpty {
+                                            if let current = self.statusContexts[resourceId], current ===  statusContext {
+                                                current.subscribers.remove(index)
+                                                if current.subscribers.isEmpty {
                                                     self.statusContexts.removeValue(forKey: resourceId)
-                                                    context.disposable.dispose()
+                                                    current.disposable.dispose()
                                                 }
                                             }
                                         }

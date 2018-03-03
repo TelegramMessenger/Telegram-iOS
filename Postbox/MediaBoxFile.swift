@@ -550,7 +550,11 @@ final class MediaBoxPartialFile {
     private func immediateStatus(size: Int32?) -> MediaResourceStatus {
         let status: MediaResourceStatus
         if self.fullRangeRequests.isEmpty {
-            status = .Remote
+            if let truncationSize = self.fileMap.truncationSize, self.fileMap.sum == truncationSize {
+                status = .Local
+            } else {
+                status = .Remote
+            }
         } else {
             let progress: Float
             if let truncationSize = self.fileMap.truncationSize, truncationSize != 0 {
