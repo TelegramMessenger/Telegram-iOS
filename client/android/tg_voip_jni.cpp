@@ -177,14 +177,12 @@ extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_native
 }
 
 extern "C" JNIEXPORT void Java_org_telegram_messenger_voip_VoIPController_nativeRelease(JNIEnv* env, jobject thiz, jlong inst){
-	//env->DeleteGlobalRef(AudioInputAndroid::jniClass);
-
 	VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
 	impl_data_android_t* impl=(impl_data_android_t*)ctlr->implData;
+	jobject jobj=impl->javaObject;
 	delete ctlr;
-	env->DeleteGlobalRef(impl->javaObject);
-	((impl_data_android_t*)ctlr->implData)->javaObject=NULL;
 	free(impl);
+	env->DeleteGlobalRef(jobj);
 }
 
 

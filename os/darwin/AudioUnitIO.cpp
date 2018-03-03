@@ -115,10 +115,6 @@ AudioUnitIO::AudioUnitIO(){
 }
 
 AudioUnitIO::~AudioUnitIO(){
-	AudioOutputUnitStop(unit);
-	AudioUnitUninitialize(unit);
-	AudioComponentInstanceDispose(unit);
-	free(inBufferList.mBuffers[0].mData);
 #if TARGET_OS_OSX
 	AudioObjectPropertyAddress propertyAddress;
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
@@ -128,6 +124,10 @@ AudioUnitIO::~AudioUnitIO(){
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
 	AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioUnitIO::DefaultDeviceChangedCallback, this);
 #endif
+	AudioOutputUnitStop(unit);
+	AudioUnitUninitialize(unit);
+	AudioComponentInstanceDispose(unit);
+	free(inBufferList.mBuffers[0].mData);
 }
 
 AudioUnitIO* AudioUnitIO::Get(){
