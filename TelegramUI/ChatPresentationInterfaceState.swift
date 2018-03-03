@@ -400,7 +400,7 @@ final class ChatRecordedMediaPreview: Equatable {
 struct ChatPresentationInterfaceState: Equatable {
     let interfaceState: ChatInterfaceState
     let chatLocation: ChatLocation
-    let peer: Peer?
+    let peer: RenderedPeer?
     let inputTextPanelState: ChatTextInputPanelState
     let recordedMediaPreview: ChatRecordedMediaPreview?
     let inputQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult]
@@ -454,7 +454,7 @@ struct ChatPresentationInterfaceState: Equatable {
         self.mode = mode
     }
     
-    init(interfaceState: ChatInterfaceState, chatLocation: ChatLocation, peer: Peer?, inputTextPanelState: ChatTextInputPanelState, recordedMediaPreview: ChatRecordedMediaPreview?, inputQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult], inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, pinnedMessageId: MessageId?, pinnedMessage: Message?, peerIsBlocked: Bool, peerIsMuted: Bool, canReportPeer: Bool, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?, urlPreview: (String, TelegramMediaWebpage)?, editingUrlPreview: (String, TelegramMediaWebpage)?, search: ChatSearchData?, searchQuerySuggestionResult: ChatPresentationInputQueryResult?, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, accountPeerId: PeerId, mode: ChatControllerPresentationMode) {
+    init(interfaceState: ChatInterfaceState, chatLocation: ChatLocation, peer: RenderedPeer?, inputTextPanelState: ChatTextInputPanelState, recordedMediaPreview: ChatRecordedMediaPreview?, inputQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult], inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, pinnedMessageId: MessageId?, pinnedMessage: Message?, peerIsBlocked: Bool, peerIsMuted: Bool, canReportPeer: Bool, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?, urlPreview: (String, TelegramMediaWebpage)?, editingUrlPreview: (String, TelegramMediaWebpage)?, search: ChatSearchData?, searchQuerySuggestionResult: ChatPresentationInputQueryResult?, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, accountPeerId: PeerId, mode: ChatControllerPresentationMode) {
         self.interfaceState = interfaceState
         self.chatLocation = chatLocation
         self.peer = peer
@@ -488,7 +488,7 @@ struct ChatPresentationInterfaceState: Equatable {
             return false
         }
         if let lhsPeer = lhs.peer, let rhsPeer = rhs.peer {
-            if !lhsPeer.isEqual(rhsPeer) {
+            if lhsPeer != rhsPeer {
                 return false
             }
         } else if (lhs.peer == nil) != (rhs.peer == nil) {
@@ -622,7 +622,7 @@ struct ChatPresentationInterfaceState: Equatable {
         return ChatPresentationInterfaceState(interfaceState: f(self.interfaceState), chatLocation: self.chatLocation, peer: self.peer, inputTextPanelState: self.inputTextPanelState, recordedMediaPreview: self.recordedMediaPreview, inputQueryResults: self.inputQueryResults, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, pinnedMessage: self.pinnedMessage, peerIsBlocked: self.peerIsBlocked, peerIsMuted: self.peerIsMuted, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview, editingUrlPreview: self.editingUrlPreview, search: self.search, searchQuerySuggestionResult: self.searchQuerySuggestionResult, chatWallpaper: self.chatWallpaper, theme: self.theme, strings: self.strings, fontSize: self.fontSize, accountPeerId: self.accountPeerId, mode: self.mode)
     }
     
-    func updatedPeer(_ f: (Peer?) -> Peer?) -> ChatPresentationInterfaceState {
+    func updatedPeer(_ f: (RenderedPeer?) -> RenderedPeer?) -> ChatPresentationInterfaceState {
         return ChatPresentationInterfaceState(interfaceState: self.interfaceState, chatLocation: self.chatLocation, peer: f(self.peer), inputTextPanelState: self.inputTextPanelState, recordedMediaPreview: self.recordedMediaPreview, inputQueryResults: self.inputQueryResults, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, pinnedMessage: self.pinnedMessage, peerIsBlocked: self.peerIsBlocked, peerIsMuted: self.peerIsMuted, canReportPeer: self.canReportPeer, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview, editingUrlPreview: self.editingUrlPreview, search: self.search, searchQuerySuggestionResult: self.searchQuerySuggestionResult, chatWallpaper: self.chatWallpaper, theme: self.theme, strings: self.strings, fontSize: self.fontSize, accountPeerId: self.accountPeerId, mode: self.mode)
     }
     
@@ -707,7 +707,7 @@ struct ChatPresentationInterfaceState: Equatable {
 }
 
 func canSendMessagesToChat(_ state: ChatPresentationInterfaceState) -> Bool {
-    if let peer = state.peer {
+    if let peer = state.peer?.peer {
         if canSendMessagesToPeer(peer) {
             return true
         } else {

@@ -9,7 +9,7 @@ enum ChatContextQueryUpdate {
 }
 
 func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
-    guard let peer = chatPresentationInterfaceState.peer else {
+    guard let peer = chatPresentationInterfaceState.peer?.peer else {
         return [:]
     }
     let inputQueries = inputContextQueriesForChatPresentationIntefaceState(chatPresentationInterfaceState)
@@ -250,7 +250,7 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
         } else {
             switch inputQuery {
                 case let .mention(query, _):
-                    if let peer = chatPresentationInterfaceState.peer {
+                    if let peer = chatPresentationInterfaceState.peer?.peer {
                         var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
                         if let currentQuery = currentQuery {
                             switch currentQuery {

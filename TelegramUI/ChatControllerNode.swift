@@ -44,6 +44,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let historyNode: ChatHistoryListNode
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
+    private var emptyNode: ChatEmptyNode?
+    private var validEmptyNodeLayout: (CGSize, UIEdgeInsets)?
     var restrictedNode: ChatRecentActionsEmptyNode?
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
@@ -179,13 +181,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         assert(Queue.mainQueue().isCurrent())
         
-        self.historyNode.setLoadStateUpdated { [weak self] loadState in
+        self.historyNode.setLoadStateUpdated { [weak self] loadState, animated in
             if let strongSelf = self {
                 if case .loading = loadState {
                     strongSelf.isLoading = true
                 } else {
                     strongSelf.isLoading = false
                 }
+                
+                var isEmpty = false
+                if case .empty = loadState {
+                    isEmpty = true
+                }
+                strongSelf.updateIsEmpty(isEmpty, animated: animated)
             }
         }
         
@@ -278,6 +286,29 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.textInputPanelNode?.updateActivity = { [weak self] in
             self?.updateTypingActivity()
+        }
+    }
+    
+    private func updateIsEmpty(_ isEmpty: Bool, animated: Bool) {
+        if isEmpty && self.emptyNode == nil {
+            let emptyNode = ChatEmptyNode()
+            if let (size, insets) = self.validEmptyNodeLayout {
+                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: size, insets: insets, transition: .immediate)
+            }
+            self.emptyNode = emptyNode
+            self.historyNodeContainer.supernode?.insertSubnode(emptyNode, aboveSubnode: self.historyNodeContainer)
+            if animated {
+                emptyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+        } else if let emptyNode = self.emptyNode {
+            self.emptyNode = nil
+            if animated {
+                emptyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak emptyNode] _ in
+                    emptyNode?.removeFromSupernode()
+                })
+            } else {
+                emptyNode.removeFromSupernode()
+            }
         }
     }
     
@@ -688,6 +719,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     scrollToTop = true
                 }
             }
+        }
+        
+        var emptyNodeInsets = insets
+        emptyNodeInsets.bottom += inputPanelsHeight
+        self.validEmptyNodeLayout = (contentBounds.size, emptyNodeInsets)
+        if let emptyNode = self.emptyNode {
+            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
+            transition.updateFrame(node: emptyNode, frame: contentBounds)
         }
         
         var contentBottomInset: CGFloat = inputPanelsHeight + 4.0
@@ -1118,7 +1157,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: animated)
             }
             
-            if let peer = chatPresentationInterfaceState.peer, let restrictionText = peer.restrictionText {
+            if let peer = chatPresentationInterfaceState.peer?.peer, let restrictionText = peer.restrictionText {
                 if self.restrictedNode == nil {
                     let restrictedNode = ChatRecentActionsEmptyNode(theme: chatPresentationInterfaceState.theme)
                     self.historyNodeContainer.supernode?.insertSubnode(restrictedNode, aboveSubnode: self.historyNodeContainer)

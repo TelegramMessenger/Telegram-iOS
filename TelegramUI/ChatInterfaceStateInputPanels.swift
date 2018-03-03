@@ -3,7 +3,7 @@ import AsyncDisplayKit
 import TelegramCore
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputPanelNode? {
-    if let peer = chatPresentationInterfaceState.peer, peer.restrictionText != nil {
+    if let peer = chatPresentationInterfaceState.peer, peer.peer?.restrictionText != nil {
         return nil
     }
     

@@ -313,7 +313,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     public var contentPositionChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     
     public private(set) var loadState: ChatHistoryNodeLoadState?
-    private var loadStateUpdated: ((ChatHistoryNodeLoadState) -> Void)?
+    private var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
     
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
@@ -395,7 +395,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             let loadState: ChatHistoryNodeLoadState = .loading
                             if strongSelf.loadState != loadState {
                                 strongSelf.loadState = loadState
-                                strongSelf.loadStateUpdated?(loadState)
+                                strongSelf.loadStateUpdated?(loadState, false)
                             }
                             
                             let historyState: ChatHistoryNodeHistoryState = .loading
@@ -680,7 +680,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.loadedMessagesFromCachedDataDisposable?.dispose()
     }
     
-    public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState) -> Void) {
+    public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
         self.loadStateUpdated = f
     }
     
@@ -841,7 +841,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                     if strongSelf.loadState != loadState {
                         strongSelf.loadState = loadState
-                        strongSelf.loadStateUpdated?(loadState)
+                        strongSelf.loadStateUpdated?(loadState, transition.options.contains(.AnimateInsertion))
                     }
                     
                     let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
@@ -862,6 +862,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         if let (transition, completion) = self.enqueuedHistoryViewTransition {
             self.enqueuedHistoryViewTransition = nil
             
+            let animated = transition.options.contains(.AnimateInsertion)
+            
             let completion: (ListViewDisplayedItemRange) -> Void = { [weak self] visibleRange in
                 if let strongSelf = self {
                     strongSelf.historyView = transition.historyView
@@ -879,7 +881,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     
                     if strongSelf.loadState != loadState {
                         strongSelf.loadState = loadState
-                        strongSelf.loadStateUpdated?(loadState)
+                        strongSelf.loadStateUpdated?(loadState, animated)
                     }
                     
                     if let range = visibleRange.loadedRange {

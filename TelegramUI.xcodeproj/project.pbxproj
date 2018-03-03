@@ -861,6 +861,7 @@
 		D0FA08BE20481EA300DD23FC /* Locale.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08BD20481EA300DD23FC /* Locale.swift */; };
 		D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08BF20483F9600DD23FC /* ExtractVideoData.swift */; };
 		D0FA08C8204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C7204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift */; };
+		D0FA08CA2049BEAC00DD23FC /* ChatEmptyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C92049BEAC00DD23FC /* ChatEmptyNode.swift */; };
 		D0FB87B21F7C4C19004DE005 /* FetchMediaUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FB87B11F7C4C19004DE005 /* FetchMediaUtils.swift */; };
 		D0FC194D201F82A000FEDBB2 /* OpenResolvedUrl.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FC194C201F82A000FEDBB2 /* OpenResolvedUrl.swift */; };
 		D0FC408E1D5B8E7500261D9D /* TelegramUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FC408D1D5B8E7500261D9D /* TelegramUITests.swift */; };
@@ -1802,6 +1803,7 @@
 		D0FA08BD20481EA300DD23FC /* Locale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Locale.swift; sourceTree = "<group>"; };
 		D0FA08BF20483F9600DD23FC /* ExtractVideoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtractVideoData.swift; sourceTree = "<group>"; };
 		D0FA08C7204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTextInputActionButtonsNode.swift; sourceTree = "<group>"; };
+		D0FA08C92049BEAC00DD23FC /* ChatEmptyNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatEmptyNode.swift; sourceTree = "<group>"; };
 		D0FA0ABE1E76E17F005BB9B7 /* TwoStepVerificationPasswordEntryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerificationPasswordEntryController.swift; sourceTree = "<group>"; };
 		D0FA0AC01E7725AA005BB9B7 /* TwoStepVerificationResetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerificationResetController.swift; sourceTree = "<group>"; };
 		D0FA0AC41E77431A005BB9B7 /* InstalledStickerPacksController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstalledStickerPacksController.swift; sourceTree = "<group>"; };
@@ -3466,6 +3468,7 @@
 				D01C2AA01E758F90001F6F9A /* NavigateToChatController.swift */,
 				D06E0F8D1F79ABFB003CF3DD /* ChatLoadingNode.swift */,
 				D00ACA57202285090045D427 /* ChatRestrictedNode.swift */,
+				D0FA08C92049BEAC00DD23FC /* ChatEmptyNode.swift */,
 				D0AF32391FB1D8D60097362B /* ChatOverlayNavigationBar.swift */,
 				D0BCC3D320404CC7008126C2 /* ChatMessageActionSheetController.swift */,
 				D0BCC3D520404CD8008126C2 /* ChatMessageActionSheetControllerNode.swift */,
@@ -4221,6 +4224,7 @@
 				D0EC6D181EB9F58800EBF1C3 /* FFMpegMediaFrameSource.swift in Sources */,
 				D0EC6D191EB9F58800EBF1C3 /* FFMpegMediaFrameSourceContext.swift in Sources */,
 				D079FCE11F05C9380038FADE /* BotReceiptControllerNode.swift in Sources */,
+				D0FA08CA2049BEAC00DD23FC /* ChatEmptyNode.swift in Sources */,
 				D053DADC201AAAB100993D32 /* ChatTextInputMenu.swift in Sources */,
 				D0EC6D1A1EB9F58800EBF1C3 /* FFMpegMediaFrameSourceContextHelpers.swift in Sources */,
 				D0EC6D1B1EB9F58800EBF1C3 /* FFMpegMediaVideoFrameDecoder.swift in Sources */,

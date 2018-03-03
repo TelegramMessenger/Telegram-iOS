@@ -139,15 +139,16 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         var videoFile: TelegramMediaFile?
         var imageDimensions: CGSize?
         switch self.contextResult {
-            case let .externalReference(_, type, title, _, url, thumbnailUrl, contentUrl, _, dimensions, _, _):
-                if let contentUrl = contentUrl {
-                    imageResource = HttpReferenceMediaResource(url: contentUrl, size: nil)
-                } else if let thumbnailUrl = thumbnailUrl {
-                    imageResource = HttpReferenceMediaResource(url: thumbnailUrl, size: nil)
+            case let .externalReference(_, type, title, _, url, content, thumbnail, _):
+                if let content = content {
+                    imageResource = content.resource
+                } else if let thumbnail = thumbnail {
+                    imageResource = thumbnail.resource
                 }
-                imageDimensions = dimensions
-                if type == "gif", let contentUrl = contentUrl, let thumbnailResource = imageResource, let dimensions = dimensions {
-                    videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), resource: HttpReferenceMediaResource(url: contentUrl, size: nil), previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                imageDimensions = content?.dimensions
+                if let content = content, type == "gif", let thumbnailResource = imageResource
+                    , let dimensions = content.dimensions {
+                    videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
                     imageResource = nil
                 }
             case let .internalReference(_, _, title, _, image, file, _):

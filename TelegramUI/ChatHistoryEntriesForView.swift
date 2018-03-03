@@ -83,7 +83,7 @@ func chatHistoryEntriesForView(_ view: MessageHistoryView, includeUnreadEntry: B
             if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
                 entries.insert(.ChatInfoEntry(botInfo.description, presentationData.theme, presentationData.strings), at: 0)
             } else if view.entries.isEmpty && includeEmptyEntry {
-                entries.insert(.EmptyChatInfoEntry(presentationData.theme, presentationData.strings, view.tagMask), at: 0)
+                //entries.insert(.EmptyChatInfoEntry(presentationData.theme, presentationData.strings, view.tagMask), at: 0)
             }
         }
     } else if includeSearchEntry {

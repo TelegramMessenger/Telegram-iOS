@@ -166,15 +166,19 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             
             var imageResource: TelegramMediaResource?
             switch item.result {
-                case let .externalReference(_, _, title, _, url, thumbnailUrl, contentUrl, _, dimensions, _, _):
-                    if let thumbnailUrl = thumbnailUrl {
-                        imageResource = HttpReferenceMediaResource(url: thumbnailUrl, size: nil)
+                case let .externalReference(_, _, title, _, url, content, thumbnail, _):
+                    if let thumbnail = thumbnail {
+                        imageResource = thumbnail.resource
                     }
                     var selectedUrl: String?
                     if let url = url {
                         selectedUrl = url
-                    } else if let contentUrl = contentUrl {
-                        selectedUrl = contentUrl
+                    } else if let content = content {
+                        if let resource = content.resource as? HttpReferenceMediaResource {
+                            selectedUrl = resource.url
+                        } else if let resource = content.resource as? WebFileReferenceMediaResource {
+                            selectedUrl = resource.url
+                        }
                     }
                     if let selectedUrl = selectedUrl, let parsedUrl = URL(string: selectedUrl) {
                         if let host = parsedUrl.host, !host.isEmpty {

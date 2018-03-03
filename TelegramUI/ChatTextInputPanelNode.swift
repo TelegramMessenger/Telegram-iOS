@@ -544,7 +544,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
             
-            if let peer = interfaceState.peer, previousState?.peer == nil || !peer.isEqual(previousState!.peer!) {
+            if let peer = interfaceState.peer?.peer, previousState?.peer?.peer == nil || !peer.isEqual(previousState!.peer!.peer!) {
                 let placeholder: String
                 if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                     placeholder = interfaceState.strings.Conversation_InputTextBroadcastPlaceholder
@@ -940,6 +940,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         self.textPlaceholderNode.isHidden = hasText
         self.updateActionButtons(hasText: hasText, hideMicButton: hideMicButton, animated: animated)
+        self.updateTextHeight()
     }
     
     private func updateActionButtons(hasText: Bool, hideMicButton: Bool, animated: Bool) {
@@ -1066,7 +1067,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
         }
-        
+    }
+    
+    private func updateTextHeight() {
         if let (width, leftInset, rightInset, maxHeight) = self.validLayout {
             let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset, maxHeight: maxHeight)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)

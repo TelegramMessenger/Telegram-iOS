@@ -36,7 +36,7 @@ public protocol ChatHistoryNode: class {
     var preloadPages: Bool { get set }
     
     var loadState: ChatHistoryNodeLoadState? { get }
-    func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState) -> Void)
+    func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void)
     
     func messageInCurrentHistoryView(_ id: MessageId) -> Message?
     func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets)

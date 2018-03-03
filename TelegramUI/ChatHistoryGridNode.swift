@@ -179,7 +179,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     private let chatPresentationDataPromise = Promise<ChatPresentationData>()
     
     public private(set) var loadState: ChatHistoryNodeLoadState?
-    private var loadStateUpdated: ((ChatHistoryNodeLoadState) -> Void)?
+    private var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
     
     public init(account: Account, peerId: PeerId, messageId: MessageId?, tagMask: MessageTags?, controllerInteraction: ChatControllerInteraction) {
         self.account = account
@@ -215,7 +215,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                             let loadState: ChatHistoryNodeLoadState = .loading
                             if strongSelf.loadState != loadState {
                                 strongSelf.loadState = loadState
-                                strongSelf.loadStateUpdated?(loadState)
+                                strongSelf.loadStateUpdated?(loadState, false)
                             }
                             
                             let historyState: ChatHistoryNodeHistoryState = .loading
@@ -289,7 +289,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         self.historyDisposable.dispose()
     }
     
-    public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState) -> Void) {
+    public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
         self.loadStateUpdated = f
     }
     
@@ -336,7 +336,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     }
                     if strongSelf.loadState != loadState {
                         strongSelf.loadState = loadState
-                        strongSelf.loadStateUpdated?(loadState)
+                        strongSelf.loadStateUpdated?(loadState, false)
                     }
                     
                     let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
@@ -378,7 +378,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     
                     if strongSelf.loadState != loadState {
                         strongSelf.loadState = loadState
-                        strongSelf.loadStateUpdated?(loadState)
+                        strongSelf.loadStateUpdated?(loadState, false)
                     }
                     
                     let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)

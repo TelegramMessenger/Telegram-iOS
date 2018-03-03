@@ -162,7 +162,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         }
         
         updateLoadNodeState(self.historyEmptyNode, self.historyNode.loadState)
-        self.historyNode.setLoadStateUpdated { [weak self] loadState in
+        self.historyNode.setLoadStateUpdated { [weak self] loadState, _ in
             if let strongSelf = self {
                 updateLoadNodeState(strongSelf.historyEmptyNode, loadState)
             }
@@ -210,7 +210,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         }
         
         if let selectionState = self.mediaCollectionInterfaceState.selectionState {
-            let interfaceState = self.chatPresentationInterfaceState.updatedPeer({ _ in self.mediaCollectionInterfaceState.peer })
+            let interfaceState = self.chatPresentationInterfaceState.updatedPeer({ _ in self.mediaCollectionInterfaceState.peer.flatMap(RenderedPeer.init) })
             
             if let selectionPanel = self.selectionPanel {
                 selectionPanel.selectedMessages = selectionState.selectedIds
@@ -417,7 +417,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                                 strongSelf.historyNode = strongNode
                                 strongSelf.historyEmptyNode = historyEmptyNode
                                 updateLoadNodeState(strongSelf.historyEmptyNode, strongSelf.historyNode.loadState)
-                                strongSelf.historyNode.setLoadStateUpdated { loadState in
+                                strongSelf.historyNode.setLoadStateUpdated { loadState, _ in
                                     if let strongSelf = self {
                                         updateLoadNodeState(strongSelf.historyEmptyNode, loadState)
                                     }
