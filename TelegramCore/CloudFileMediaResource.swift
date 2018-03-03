@@ -392,9 +392,10 @@ public final class WebFileReferenceMediaResource: TelegramMediaResource, Telegra
 
     public let url: String
     public let size: Int32
-    private let _datacenterId:Int32
-    public let accessHash:Int64
-    public init(url: String, size: Int32, datacenterId:Int32, accessHash:Int64) {
+    private let _datacenterId: Int32
+    public let accessHash: Int64
+    
+    public init(url: String, size: Int32, datacenterId: Int32, accessHash: Int64) {
         self.url = url
         self.size = size
         self._datacenterId = datacenterId

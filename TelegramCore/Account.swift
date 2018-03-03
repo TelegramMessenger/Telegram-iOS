@@ -573,7 +573,7 @@ public class Account {
                 #if DEBUG
                     appSandbox = .boolTrue
                 #endif
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, otherUids: []))
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(), otherUids: []))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
@@ -597,7 +597,7 @@ public class Account {
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, otherUids: []))
+                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(), otherUids: []))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
