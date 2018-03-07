@@ -67,14 +67,14 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
     } |> switchToLatest
 }
 
-public enum ReportPeerReason : Equatable {
+public enum ReportReason : Equatable {
     case spam
     case violence
     case porno
     case custom(String)
 }
 
-public func ==(lhs:ReportPeerReason, rhs: ReportPeerReason) -> Bool {
+public func ==(lhs:ReportReason, rhs: ReportReason) -> Bool {
     switch lhs {
     case .spam:
         if case .spam = rhs {
@@ -103,7 +103,7 @@ public func ==(lhs:ReportPeerReason, rhs: ReportPeerReason) -> Bool {
     }
 }
 
-private extension ReportPeerReason {
+private extension ReportReason {
     var apiReason:Api.ReportReason {
         switch self {
         case .spam:
@@ -118,7 +118,7 @@ private extension ReportPeerReason {
     }
 }
 
-public func reportPeer(account: Account, peerId:PeerId, reason:ReportPeerReason) -> Signal<Void, NoError> {
+public func reportPeer(account: Account, peerId:PeerId, reason:ReportReason) -> Signal<Void, NoError> {
     return account.postbox.modify { modifier -> Signal<Void, NoError> in
         if let peer = modifier.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.account.reportPeer(peer: inputPeer, reason: reason.apiReason)) |> mapError {_ in} |> map {_ in}

@@ -90,10 +90,10 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
         case let .group(groupId):
             remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
-                |> mapError { _ in } |> map(Optional.init)
+                |> mapError { _ in } |> map(Optional.init) |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
         case .general:
             remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
-                |> mapError { _ in } |> map(Optional.init)
+                |> mapError { _ in } |> map(Optional.init) |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
     }
         
     let processedSearchResult = remoteSearchResult
@@ -157,6 +157,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 return renderedMessages
             }
             
+        } |> `catch` { error -> Signal<[Message], Void> in
+            return .single([])
         }
         
     return processedSearchResult
