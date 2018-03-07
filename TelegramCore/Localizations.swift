@@ -7,12 +7,14 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+//config flags:# date:int expires:int test_mode:Bool this_dc:int dc_options:Vector<DcOption> chat_size_max:int megagroup_size_max:int forwarded_count_max:int online_update_period_ms:int offline_blur_timeout_ms:int offline_idle_timeout_ms:int online_cloud_timeout_ms:int notify_cloud_delay_ms:int notify_default_delay_ms:int push_chat_period_ms:int push_chat_limit:int saved_gifs_limit:int edit_time_limit:int revoke_time_limit:int revoke_pm_time_limit:int revoke_pm_inbox:flags.6?true rating_e_decay:int stickers_recent_limit:int stickers_faved_limit:int channels_read_media_period:int tmp_sessions:flags.0?int pinned_dialogs_count_max:int phonecalls_enabled:flags.1?true call_receive_timeout_ms:int preload_featured_stickers:flags.4?true ignore_phone_entities:flags.5?true call_ring_timeout_ms:int call_connect_timeout_ms:int call_packet_timeout_ms:int default_p2p_contacts:flags.3?true me_url_prefix:string suggested_lang_code:flags.2?string lang_pack_version:flags.2?int = Config;
+
 public func currentlySuggestedLocalization(network: Network, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo?, NoError> {
     return network.request(Api.functions.help.getConfig())
         |> retryRequest
         |> mapToSignal { result -> Signal<SuggestedLocalizationInfo?, NoError> in
             switch result {
-                case let .config(flags, _, _, _, _, _, chatSizeMax, megagroupSizeMax, forwardedCountMax, onlineUpdatePeriodMs, offlineBlurTimeoutMs, offlineIdleTimeoutMs, onlineCloudTimeoutMs, notifyCloudDelayMs, notifyDefaultDelayMs, chatBigSize, pushChatPeriodMs, pushChatLimit, savedGifsLimit, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, ratingEDecay, stickersRecentLimit, stickersFavedLimit, channelsReadMediaPeriod, _, pinnedDialogsCountMax, callReceiveTimeoutMs, callRingTimeoutMs, callConnectTimeoutMs, callPacketTimeoutMs, meUrlPrefix, suggestedLangCode, _):
+                case let .config(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, suggestedLangCode, _):
                     if let suggestedLangCode = suggestedLangCode {
                         return suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map { Optional($0) }
                     } else {

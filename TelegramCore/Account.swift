@@ -470,6 +470,7 @@ public class Account {
     public private(set) var callSessionManager: CallSessionManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
+    public private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
     private var peerInputActivityManager: PeerInputActivityManager!
     private var localInputActivityManager: PeerInputActivityManager!
     fileprivate let managedContactsDisposable = MetaDisposable()
@@ -529,7 +530,8 @@ public class Account {
         })
         self.localInputActivityManager = PeerInputActivityManager()
         self.viewTracker = AccountViewTracker(account: self)
-        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager)
+        self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
+        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager)
         
         self.network.loggedOut = { [weak self] in
             if let strongSelf = self {

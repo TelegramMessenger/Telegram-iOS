@@ -88,7 +88,7 @@ private func unorderedListEntriesForDeviceContact(_ deviceContact: DeviceContact
     var entries: [UnorderedItemListEntry] = []
     for phoneNumber in deviceContact.phoneNumbers {
         let stringToHash = "\(deviceContact.firstName):\(deviceContact.lastName):\(phoneNumber.number)"
-        entries.append(UnorderedItemListEntry(id: ValueBoxKey(phoneNumber.number), info: UnorderedItemListEntryInfo(hashValue: Int64(stringToHash.hashValue)), contents: ManagedDeviceContactEntryContents(firstName: deviceContact.firstName, lastName: deviceContact.lastName, phoneNumber: phoneNumber.number, peerId: nil, importDelayedUntil: nil)))
+        entries.append(UnorderedItemListEntry(id: ValueBoxKey(phoneNumber.number.normalized.rawValue), info: UnorderedItemListEntryInfo(hashValue: Int64(stringToHash.hashValue)), contents: ManagedDeviceContactEntryContents(firstName: deviceContact.firstName, lastName: deviceContact.lastName, phoneNumber: phoneNumber.number.normalized.rawValue, peerId: nil, importDelayedUntil: nil)))
     }
     return entries
 }
