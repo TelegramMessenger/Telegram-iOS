@@ -733,7 +733,7 @@ final class MutableMessageHistoryView {
             case .group:
                 break
             case let .single(peerId):
-                if let updatedData = transaction.currentUpdatedCachedPeerData[peerId] {
+                if self.tagMask == nil, let updatedData = transaction.currentUpdatedCachedPeerData[peerId] {
                     if updatedData.associatedHistoryMessageId != nil {
                         self.peerIds = .associated(peerId, updatedData.associatedHistoryMessageId)
                     }
