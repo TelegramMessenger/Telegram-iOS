@@ -12,7 +12,7 @@
 		<key>PostboxMac.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>6</integer>
+			<integer>4</integer>
 		</dict>
 		<key>PostboxTests.xcscheme</key>
 		<dict>
