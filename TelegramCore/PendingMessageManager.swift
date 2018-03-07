@@ -90,6 +90,7 @@ public final class PendingMessageManager {
     private let postbox: Postbox
     private let auxiliaryMethods: AccountAuxiliaryMethods
     private let stateManager: AccountStateManager
+    private let messageMediaPreuploadManager: MessageMediaPreuploadManager
     
     private let queue = Queue()
     
@@ -106,11 +107,12 @@ public final class PendingMessageManager {
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
-    init(network: Network, postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, stateManager: AccountStateManager) {
+    init(network: Network, postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, stateManager: AccountStateManager, messageMediaPreuploadManager: MessageMediaPreuploadManager) {
         self.network = network
         self.postbox = postbox
         self.auxiliaryMethods = auxiliaryMethods
         self.stateManager = stateManager
+        self.messageMediaPreuploadManager = messageMediaPreuploadManager
     }
     
     deinit {
@@ -250,7 +252,7 @@ public final class PendingMessageManager {
                         continue
                     }
                     
-                    let contentToUpload = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, message: message)
+                    let contentToUpload = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, message: message)
                     
                     switch contentToUpload {
                         case let .ready(content):

@@ -1,10 +1,46 @@
 import Foundation
 
+public struct DeviceContactNormalizedPhoneNumber: Hashable, RawRepresentable {
+    public let rawValue: String
+    
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+    
+    public static func ==(lhs: DeviceContactNormalizedPhoneNumber, rhs: DeviceContactNormalizedPhoneNumber) -> Bool {
+        return lhs.rawValue == rhs.rawValue
+    }
+    
+    public var hashValue: Int {
+        return self.rawValue.hashValue
+    }
+}
+
+public final class DeviceContactPhoneNumberValue: Equatable {
+    public let plain: String
+    public let normalized: DeviceContactNormalizedPhoneNumber
+    
+    public init(plain: String, normalized: DeviceContactNormalizedPhoneNumber) {
+        self.plain = plain
+        self.normalized = normalized
+    }
+    
+    public static func ==(lhs: DeviceContactPhoneNumberValue, rhs: DeviceContactPhoneNumberValue) -> Bool {
+        if lhs.plain != rhs.plain {
+            return false
+        }
+        if lhs.normalized != rhs.normalized {
+            return false
+        }
+        return true
+    }
+}
+
 public final class DeviceContactPhoneNumber: Equatable {
     public let label: String
-    public let number: String
+    public let number: DeviceContactPhoneNumberValue
     
-    public init(label: String, number: String) {
+    public init(label: String, number: DeviceContactPhoneNumberValue) {
         self.label = label
         self.number = number
     }

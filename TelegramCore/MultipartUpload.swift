@@ -247,7 +247,7 @@ private final class MultipartUploadManager {
             switch self.headerPartState {
                 case .ready:
                     let effectiveSize = self.state.finalize()
-                    var effectivePartCount = Int32(effectiveSize / self.defaultPartSize + (effectiveSize % self.defaultPartSize == 0 ? 0 : 1))
+                    let effectivePartCount = Int32(effectiveSize / self.defaultPartSize + (effectiveSize % self.defaultPartSize == 0 ? 0 : 1))
                     var currentBigTotalParts = self.bigTotalParts
                     if self.bigParts {
                         currentBigTotalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
@@ -285,7 +285,7 @@ private final class MultipartUploadManager {
                 case .uploading:
                     break
             }
-        } else if let resourceData = self.resourceData, self.state.aesKey.isEmpty == nil || resourceData.complete {
+        } else if let resourceData = self.resourceData, self.state.aesKey.isEmpty || resourceData.complete {
             while uploadingParts.count < self.parallelParts {
                 switch self.headerPartState {
                     case .notStarted:
@@ -364,6 +364,7 @@ enum MultipartUploadResult {
 public enum MultipartUploadSource {
     case resource(MediaResource)
     case data(Data)
+    case custom(Signal<MediaResourceData, NoError>)
 }
 
 enum MultipartUploadError {
@@ -400,6 +401,10 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                     case let .data(data):
                         dataSignal = .single(.data(data))
                         headerSize = 0
+                        fetchedResource = .complete()
+                    case let .custom(signal):
+                        headerSize = 1024
+                        dataSignal = signal |> map { MultipartUploadData.resourceData($0) }
                         fetchedResource = .complete()
                 }
                 
