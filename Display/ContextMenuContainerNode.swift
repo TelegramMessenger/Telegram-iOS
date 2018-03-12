@@ -62,7 +62,7 @@ final class ContextMenuContainerNode: ASDisplayNode {
             let arrowOnBottom = maskParams.arrowOnBottom
             
             path.move(to: CGPoint(x: 0.0, y: verticalInset + cornerRadius))
-            path.addArc(withCenter: CGPoint(x: cornerRadius, y: verticalInset + cornerRadius), radius: cornerRadius, startAngle: CGFloat(M_PI), endAngle: CGFloat(3 * M_PI / 2), clockwise: true)
+            path.addArc(withCenter: CGPoint(x: cornerRadius, y: verticalInset + cornerRadius), radius: cornerRadius, startAngle: CGFloat.pi, endAngle: CGFloat(3 * M_PI / 2), clockwise: true)
             if !arrowOnBottom {
                 path.addLine(to: CGPoint(x: arrowPosition - arrowWidth / 2.0, y: verticalInset))
                 path.addLine(to: CGPoint(x: arrowPosition, y: 0.0))

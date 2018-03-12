@@ -164,7 +164,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
         
-        if self.activateBySingleTap, candidateContent != nil {
+        if self.activateBySingleTap, self.candidateContent != nil, self.presentedController == nil {
             self.longTapTimerFired()
             self.pressTimerFired()
         } else {

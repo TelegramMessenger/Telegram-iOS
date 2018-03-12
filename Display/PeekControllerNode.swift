@@ -118,9 +118,9 @@ final class PeekControllerNode: ViewControllerTracingNode {
         var containerFrame: CGRect
         switch self.content.presentation() {
             case .contained:
-                containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: self.containerOffset + floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
+                containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
             case .freeform:
-                containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: self.containerOffset + floor((layout.size.height - contentSize.height) / 4.0)), size: contentSize)
+                containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 4.0)), size: contentSize)
         }
         
         if let menuNode = self.menuNode {
@@ -131,15 +131,21 @@ final class PeekControllerNode: ViewControllerTracingNode {
             if self.displayingMenu {
                 let upperBound = layout.size.height - layoutInsets.bottom - menuHeight - 14.0 * 2.0 - containerFrame.height
                 if containerFrame.origin.y > upperBound {
-                    var offset = upperBound - containerFrame.origin.y
-                    let delta = abs(offset)
-                    let factor: CGFloat = 60.0
-                    offset = (-((1.0 - (1.0 / (((delta) * 0.55 / (factor)) + 1.0))) * factor)) * (offset < 0.0 ? 1.0 : -1.0)
-                    containerFrame.origin.y = upperBound - offset
+                    containerFrame.origin.y = upperBound
                 }
                 
                 transition.updateAlpha(layer: self.blurView.layer, alpha: 1.0)
             }
+        }
+        
+        if self.displayingMenu {
+            var offset = self.containerOffset
+            let delta = abs(offset)
+            let factor: CGFloat = 60.0
+            offset = (-((1.0 - (1.0 / (((delta) * 0.55 / (factor)) + 1.0))) * factor)) * (offset < 0.0 ? 1.0 : -1.0)
+            containerFrame = containerFrame.offsetBy(dx: 0.0, dy: offset)
+        } else {
+            containerFrame = containerFrame.offsetBy(dx: 0.0, dy: self.containerOffset)
         }
         
         transition.updateFrame(node: self.containerNode, frame: containerFrame)

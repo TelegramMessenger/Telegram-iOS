@@ -1,6 +1,6 @@
 import Foundation
 
-public final class ImmediateTextNode: TextNode {
+public class ImmediateTextNode: TextNode {
     public var attributedText: NSAttributedString?
     public var textAlignment: NSTextAlignment = .natural
     public var maximumNumberOfLines: Int = 1
