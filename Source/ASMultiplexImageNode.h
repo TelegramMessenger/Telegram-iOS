@@ -276,5 +276,5 @@ didFinishDownloadingImageWithIdentifier:(ASImageIdentifier)imageIdentifier
 @end
 
 NS_ASSUME_NONNULL_END
-#endif
+
 #endif
