@@ -226,6 +226,13 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   class_replaceMethod(self, @selector(_staticInitialize), staticInitialize, "v:@");
 }
 
+#if !AS_INITIALIZE_FRAMEWORK_MANUALLY
++ (void)load
+{
+  ASInitializeFrameworkMainThread();
+}
+#endif
+
 + (Class)viewClass
 {
   return [_ASDisplayView class];
@@ -546,6 +553,8 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   
   // Special handling of wrapping UIKit components
   if (checkFlag(Synchronous)) {
+    [self checkResponderCompatibility];
+    
     // UIImageView layers. More details on the flags
     if ([_viewClass isSubclassOfClass:[UIImageView class]]) {
       _flags.canClearContentsOfLayer = NO;
@@ -630,6 +639,8 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   for (ASDisplayNodeDidLoadBlock block in onDidLoadBlocks) {
     block(self);
   }
+
+  [_interfaceStateDelegate nodeDidLoad];
 }
 
 - (void)didLoad
@@ -829,6 +840,97 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   _flags.viewEverHadAGestureRecognizerAttached = YES;
 }
 
+#pragma mark UIResponder
+
+#define HANDLE_NODE_RESPONDER_METHOD(__sel) \
+  /* All responder methods should be called on the main thread */ \
+  ASDisplayNodeAssertMainThread(); \
+  if (checkFlag(Synchronous)) { \
+    /* If the view is not a _ASDisplayView subclass (Synchronous) just call through to the view as we
+     expect it's a non _ASDisplayView subclass that will respond */ \
+    return [_view __sel]; \
+  } else { \
+    if (ASSubclassOverridesSelector([_ASDisplayView class], _viewClass, @selector(__sel))) { \
+    /* If the subclass overwrites canBecomeFirstResponder just call through
+       to it as we expect it will handle it */ \
+      return [_view __sel]; \
+    } else { \
+      /* Call through to _ASDisplayView's superclass to get it handled */ \
+      return [(_ASDisplayView *)_view __##__sel]; \
+    } \
+  } \
+
+- (void)checkResponderCompatibility
+{
+#if ASDISPLAYNODE_ASSERTIONS_ENABLED
+  // There are certain cases we cannot handle and are not supported:
+  // 1. If the _view class is not a subclass of _ASDisplayView
+  if (checkFlag(Synchronous)) {
+    // 2. At least one UIResponder methods are overwritten in the node subclass
+    NSString *message =  @"Overwritting %@ and having a backing view that is not an _ASDisplayView is not supported.";
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(canBecomeFirstResponder)), ([NSString stringWithFormat:message, @"canBecomeFirstResponder"]));
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(becomeFirstResponder)), ([NSString stringWithFormat:message, @"becomeFirstResponder"]));
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(canResignFirstResponder)), ([NSString stringWithFormat:message, @"canResignFirstResponder"]));
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(resignFirstResponder)), ([NSString stringWithFormat:message, @"resignFirstResponder"]));
+    ASDisplayNodeAssert(!ASDisplayNodeSubclassOverridesSelector(self.class, @selector(isFirstResponder)), ([NSString stringWithFormat:message, @"isFirstResponder"]));
+  }
+#endif
+}
+
+- (BOOL)__canBecomeFirstResponder
+{
+  if (_view == nil) {
+    // By default we return NO if not view is created yet
+    return NO;
+  }
+  
+  HANDLE_NODE_RESPONDER_METHOD(canBecomeFirstResponder);
+}
+
+- (BOOL)__becomeFirstResponder
+{
+  if (![self canBecomeFirstResponder]) {
+    return NO;
+  }
+  
+  // Note: This implicitly loads the view if it hasn't been loaded yet.
+  [self view];
+
+  HANDLE_NODE_RESPONDER_METHOD(becomeFirstResponder);
+}
+
+- (BOOL)__canResignFirstResponder
+{
+  if (_view == nil) {
+    // By default we return YES if no view is created yet
+    return YES;
+  }
+  
+  HANDLE_NODE_RESPONDER_METHOD(canResignFirstResponder);
+}
+
+- (BOOL)__resignFirstResponder
+{
+  if (![self canResignFirstResponder]) {
+    return NO;
+  }
+  
+  // Note: This implicitly loads the view if it hasn't been loaded yet.
+  [self view];
+  
+  HANDLE_NODE_RESPONDER_METHOD(resignFirstResponder);
+}
+
+- (BOOL)__isFirstResponder
+{
+  if (_view == nil) {
+    // If no view is created yet we can just return NO as it's unlikely it's the first responder
+    return NO;
+  }
+  
+  HANDLE_NODE_RESPONDER_METHOD(isFirstResponder);
+}
+
 #pragma mark <ASDebugNameProvider>
 
 - (NSString *)debugName
@@ -945,15 +1047,11 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
                      restrictedToSize:(ASLayoutElementSize)size
                  relativeToParentSize:(CGSize)parentSize
 {
-  // Use a pthread specific to mark when this method is called re-entrant on same thread.
   // We only want one calculateLayout signpost interval per thread.
-  // This is fast enough to do it unconditionally.
-  auto key = ASPthreadStaticKey(NULL);
-  BOOL isRootCall = (pthread_getspecific(key) == NULL);
+  static _Thread_local NSInteger tls_callDepth;
   as_activity_scope_verbose(as_activity_create("Calculate node layout", AS_ACTIVITY_CURRENT, OS_ACTIVITY_FLAG_DEFAULT));
   as_log_verbose(ASLayoutLog(), "Calculating layout for %@ sizeRange %@", self, NSStringFromASSizeRange(constrainedSize));
-  if (isRootCall) {
-    pthread_setspecific(key, kCFBooleanTrue);
+  if (tls_callDepth++ == 0) {
     ASSignpostStart(ASSignpostCalculateLayout);
   }
 
@@ -962,8 +1060,7 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   ASLayout *result = [self calculateLayoutThatFits:resolvedRange];
   as_log_verbose(ASLayoutLog(), "Calculated layout %@", result);
 
-  if (isRootCall) {
-    pthread_setspecific(key, NULL);
+  if (--tls_callDepth == 0) {
     ASSignpostEnd(ASSignpostCalculateLayout);
   }
   return result;
@@ -3506,40 +3603,6 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
 {
   // Subclass override
 }
-
-#if TARGET_OS_TV
-#pragma mark - UIFocusEnvironment Protocol (tvOS)
-
-- (void)setNeedsFocusUpdate
-{
-  
-}
-
-- (void)updateFocusIfNeeded
-{
-  
-}
-
-- (BOOL)shouldUpdateFocusInContext:(UIFocusUpdateContext *)context
-{
-  return NO;
-}
-
-- (void)didUpdateFocusInContext:(UIFocusUpdateContext *)context withAnimationCoordinator:(UIFocusAnimationCoordinator *)coordinator
-{
-  
-}
-
-- (UIView *)preferredFocusedView
-{
-  if (self.nodeLoaded) {
-    return self.view;
-  } else {
-    return nil;
-  }
-}
-#endif
-
 @end
 
 #pragma mark - ASDisplayNode (Debugging)

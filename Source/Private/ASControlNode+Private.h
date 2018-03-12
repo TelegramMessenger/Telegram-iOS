@@ -1,5 +1,5 @@
 //
-//  ASControlNode+tvOS.h
+//  ASControlNode+Private.h
 //  Texture
 //
 //  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
@@ -15,10 +15,12 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#if TARGET_OS_TV
 #import <AsyncDisplayKit/ASControlNode.h>
 
-@interface ASControlNode (tvOS)
+@interface ASControlNode (Private)
+
+#if TARGET_OS_TV
+- (void)_pressDown;
+#endif
 
 @end
-#endif

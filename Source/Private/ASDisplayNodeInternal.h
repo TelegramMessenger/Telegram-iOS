@@ -275,6 +275,13 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
 - (void)__incrementVisibilityNotificationsDisabled;
 - (void)__decrementVisibilityNotificationsDisabled;
 
+// Helper methods for UIResponder forwarding
+- (BOOL)__canBecomeFirstResponder;
+- (BOOL)__becomeFirstResponder;
+- (BOOL)__canResignFirstResponder;
+- (BOOL)__resignFirstResponder;
+- (BOOL)__isFirstResponder;
+
 /// Helper method to summarize whether or not the node run through the display process
 - (BOOL)_implementsDisplay;
 

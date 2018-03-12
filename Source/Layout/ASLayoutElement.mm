@@ -50,38 +50,27 @@ CGSize const ASLayoutElementParentSizeUndefined = {ASLayoutElementParentDimensio
 int32_t const ASLayoutElementContextInvalidTransitionID = 0;
 int32_t const ASLayoutElementContextDefaultTransitionID = ASLayoutElementContextInvalidTransitionID + 1;
 
-static void ASLayoutElementDestructor(void *p) {
-  if (p != NULL) {
-    ASDisplayNodeCFailAssert(@"Thread exited without clearing layout element context!");
-    CFBridgingRelease(p);
-  }
-};
-
-pthread_key_t ASLayoutElementContextKey()
-{
-  return ASPthreadStaticKey(ASLayoutElementDestructor);
-}
+static _Thread_local __unsafe_unretained ASLayoutElementContext *tls_context;
 
 void ASLayoutElementPushContext(ASLayoutElementContext *context)
 {
   // NOTE: It would be easy to support nested contexts – just use an NSMutableArray here.
-  ASDisplayNodeCAssertNil(ASLayoutElementGetCurrentContext(), @"Nested ASLayoutElementContexts aren't supported.");
-  pthread_setspecific(ASLayoutElementContextKey(), CFBridgingRetain(context));
+  ASDisplayNodeCAssertNil(tls_context, @"Nested ASLayoutElementContexts aren't supported.");
+  
+  tls_context = (__bridge ASLayoutElementContext *)(__bridge_retained CFTypeRef)context;
 }
 
 ASLayoutElementContext *ASLayoutElementGetCurrentContext()
 {
   // Don't retain here. Caller will retain if it wants to!
-  return (__bridge __unsafe_unretained ASLayoutElementContext *)pthread_getspecific(ASLayoutElementContextKey());
+  return tls_context;
 }
 
 void ASLayoutElementPopContext()
 {
-  ASLayoutElementContextKey();
-  ASDisplayNodeCAssertNotNil(ASLayoutElementGetCurrentContext(), @"Attempt to pop context when there wasn't a context!");
-  auto key = ASLayoutElementContextKey();
-  CFBridgingRelease(pthread_getspecific(key));
-  pthread_setspecific(key, NULL);
+  ASDisplayNodeCAssertNotNil(tls_context, @"Attempt to pop context when there wasn't a context!");
+  CFRelease((__bridge CFTypeRef)tls_context);
+  tls_context = nil;
 }
 
 #pragma mark - ASLayoutElementStyle

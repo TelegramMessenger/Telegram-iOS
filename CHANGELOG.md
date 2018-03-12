@@ -1,5 +1,8 @@
 ## master
 * Add your own contributions to the next release on the line below this with your name.
+- [tvOS] Fixes errors when building against tvOS SDK [Alex Hill](https://github.com/alexhillc) [#728](https://github.com/TextureGroup/Texture/pull/728)
+- [ASDisplayNode] Add unit tests for layout z-order changes (with an open issue to fix).
+- [ASDisplayNode] Consolidate main thread initialization and allow apps to invoke it manually instead of +load.
 - [ASRunloopQueue] Introduce new runloop queue(ASCATransactionQueue) to coalesce Interface state update calls for view controller transitions.
 - [ASRangeController] Fix stability of "minimum" rangeMode if the app has more than one layout before scrolling.
 - **Important** ASDisplayNode's cornerRadius is a new thread-safe bridged property that should be preferred over CALayer's. Use the latter at your own risk! [Huy Nguyen](https://github.com/nguyenhuy) [#749](https://github.com/TextureGroup/Texture/pull/749).
@@ -28,6 +31,9 @@
 - Make `ASCellNode` tint color apply to table view cell accessories. [Vladyslav Chapaev](https://github.com/ShogunPhyched) [#764](https://github.com/TextureGroup/Texture/pull/764)
 - Fix ASTextNode2 is accessing backgroundColor off main while sizing / layout is happening. [Michael Schneider](https://github.com/maicki) [#794](https://github.com/TextureGroup/Texture/pull/778/)
 - Pass scrollViewWillEndDragging delegation through in ASIGListAdapterDataSource for IGListKit integration. [#796](https://github.com/TextureGroup/Texture/pull/796)
+- Fix UIResponder handling with view backing ASDisplayNode. [Michael Schneider](https://github.com/maicki) [#789] (https://github.com/TextureGroup/Texture/pull/789/)
+- Optimized thread-local storage by replacing pthread_specific with C11 thread-local variables. [Adlai Holler](https://github.com/Adlai-Holler) [#811] (https://github.com/TextureGroup/Texture/pull/811/)
+- Fixed a thread-sanitizer warning in ASTextNode. [Adlai Holler](https://github.com/Adlai-Holler) [#830] (https://github.com/TextureGroup/Texture/pull/830/)
 
 ## 2.6
 - [Xcode 9] Updated to require Xcode 9 (to fix warnings) [Garrett Moon](https://github.com/garrettmoon)

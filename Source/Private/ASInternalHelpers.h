@@ -25,6 +25,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 ASDISPLAYNODE_EXTERN_C_BEGIN
 
+void ASInitializeFrameworkMainThread(void);
+
+BOOL ASDefaultAllowsGroupOpacity(void);
+BOOL ASDefaultAllowsEdgeAntialiasing(void);
+
 BOOL ASSubclassOverridesSelector(Class superclass, Class subclass, SEL selector);
 BOOL ASSubclassOverridesClassSelector(Class superclass, Class subclass, SEL selector);
 
@@ -100,3 +105,7 @@ ASDISPLAYNODE_INLINE void ASBoundsAndPositionForFrame(CGRect rect, CGPoint origi
 @end
 
 NS_ASSUME_NONNULL_END
+
+#ifndef AS_INITIALIZE_FRAMEWORK_MANUALLY
+#define AS_INITIALIZE_FRAMEWORK_MANUALLY 0
+#endif

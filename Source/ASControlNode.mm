@@ -16,6 +16,7 @@
 //
 
 #import <AsyncDisplayKit/ASControlNode.h>
+#import <AsyncDisplayKit/ASControlNode+Private.h>
 #import <AsyncDisplayKit/ASControlNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASImageNode.h>
@@ -103,10 +104,12 @@ CGRect _ASControlNodeGetExpandedBounds(ASControlNode *controlNode);
 #if TARGET_OS_TV
 - (void)didLoad
 {
+  [super didLoad];
+  
   // On tvOS all controls, such as buttons, interact with the focus system even if they don't have a target set on them.
   // Here we add our own internal tap gesture to handle this behaviour.
   self.userInteractionEnabled = YES;
-  UITapGestureRecognizer *tapGestureRec = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(pressDown)];
+  UITapGestureRecognizer *tapGestureRec = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(_pressDown)];
   tapGestureRec.allowedPressTypes = @[@(UIPressTypeSelect)];
   [self.view addGestureRecognizer:tapGestureRec];
 }

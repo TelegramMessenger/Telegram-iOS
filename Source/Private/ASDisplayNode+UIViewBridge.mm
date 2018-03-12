@@ -96,16 +96,6 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
  */
 @implementation ASDisplayNode (UIViewBridge)
 
-- (BOOL)canBecomeFirstResponder
-{
-  return NO;
-}
-
-- (BOOL)canResignFirstResponder
-{
-  return YES;
-}
-
 #if TARGET_OS_TV
 // Focus Engine
 - (BOOL)canBecomeFocused
@@ -146,23 +136,34 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
 }
 #endif
 
+- (BOOL)canBecomeFirstResponder
+{
+  ASDisplayNodeAssertMainThread();
+  return [self __canBecomeFirstResponder];
+}
+
+- (BOOL)canResignFirstResponder
+{
+  ASDisplayNodeAssertMainThread();
+  return [self __canResignFirstResponder];
+}
+
 - (BOOL)isFirstResponder
 {
   ASDisplayNodeAssertMainThread();
-  return _view != nil && [_view isFirstResponder];
+  return [self __isFirstResponder];
 }
 
-// Note: this implicitly loads the view if it hasn't been loaded yet.
 - (BOOL)becomeFirstResponder
 {
   ASDisplayNodeAssertMainThread();
-  return !self.layerBacked && [self canBecomeFirstResponder] && [self.view becomeFirstResponder];
+  return [self __becomeFirstResponder];
 }
 
 - (BOOL)resignFirstResponder
 {
   ASDisplayNodeAssertMainThread();
-  return !self.layerBacked && [self canResignFirstResponder] && [_view resignFirstResponder];
+  return [self __resignFirstResponder];
 }
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender
@@ -932,7 +933,7 @@ nodeProperty = nodeValueExpr; _setToViewOnly(viewAndPendingViewStateProperty, vi
   _bridge_prologue_write;
   _setAccessibilityToViewAndProperty(_accessibilityLabel, accessibilityLabel, accessibilityLabel, accessibilityLabel);
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_11_0
-  if (AS_AVAILABLE_IOS(11)) {
+  if (AS_AVAILABLE_IOS_TVOS(11, 11)) {
     NSAttributedString *accessibilityAttributedLabel = accessibilityLabel ? [[NSAttributedString alloc] initWithString:accessibilityLabel] : nil;
     _setAccessibilityToViewAndProperty(_accessibilityAttributedLabel, accessibilityAttributedLabel, accessibilityAttributedLabel, accessibilityAttributedLabel);
   }
@@ -965,7 +966,7 @@ nodeProperty = nodeValueExpr; _setToViewOnly(viewAndPendingViewStateProperty, vi
   _bridge_prologue_write;
   _setAccessibilityToViewAndProperty(_accessibilityHint, accessibilityHint, accessibilityHint, accessibilityHint);
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_11_0
-  if (AS_AVAILABLE_IOS(11)) {
+  if (AS_AVAILABLE_IOS_TVOS(11, 11)) {
     NSAttributedString *accessibilityAttributedHint = accessibilityHint ? [[NSAttributedString alloc] initWithString:accessibilityHint] : nil;
     _setAccessibilityToViewAndProperty(_accessibilityAttributedHint, accessibilityAttributedHint, accessibilityAttributedHint, accessibilityAttributedHint);
   }
@@ -999,7 +1000,7 @@ nodeProperty = nodeValueExpr; _setToViewOnly(viewAndPendingViewStateProperty, vi
   _bridge_prologue_write;
   _setAccessibilityToViewAndProperty(_accessibilityValue, accessibilityValue, accessibilityValue, accessibilityValue);
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_11_0
-  if (AS_AVAILABLE_IOS(11)) {
+  if (AS_AVAILABLE_IOS_TVOS(11, 11)) {
     NSAttributedString *accessibilityAttributedValue = accessibilityValue ? [[NSAttributedString alloc] initWithString:accessibilityValue] : nil;
     _setAccessibilityToViewAndProperty(_accessibilityAttributedValue, accessibilityAttributedValue, accessibilityAttributedValue, accessibilityAttributedValue);
   }

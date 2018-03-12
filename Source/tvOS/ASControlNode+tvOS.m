@@ -16,20 +16,20 @@
 //
 
 #import <Foundation/Foundation.h>
-
 #if TARGET_OS_TV
-#import <AsyncDisplayKit/ASControlNode+tvOS.h>
+#import <AsyncDisplayKit/ASControlNode.h>
+#import <AsyncDisplayKit/ASControlNode+Private.h>
 
 @implementation ASControlNode (tvOS)
 
 #pragma mark - tvOS
-- (void)pressDown
+- (void)_pressDown
 {
-  [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationCurveLinear animations:^{
+  [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationOptionCurveLinear animations:^{
     [self setPressedState];
   } completion:^(BOOL finished) {
     if (finished) {
-      [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationCurveLinear animations:^{
+      [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationOptionCurveLinear animations:^{
         [self setFocusedState];
       } completion:nil];
     }

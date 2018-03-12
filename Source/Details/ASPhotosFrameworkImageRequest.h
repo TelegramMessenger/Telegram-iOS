@@ -27,6 +27,7 @@ extern NSString *const ASPhotosURLScheme;
  @abstract Use ASPhotosFrameworkImageRequest to encapsulate all the information needed to request an image from
  the Photos framework and store it in a URL.
  */
+API_AVAILABLE(ios(8.0), tvos(10.0))
 @interface ASPhotosFrameworkImageRequest : NSObject <NSCopying>
 
 - (instancetype)initWithAssetIdentifier:(NSString *)assetIdentifier NS_DESIGNATED_INITIALIZER;

@@ -1270,7 +1270,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)as_setSuperscript:(nullable NSNumber *)superscript range:(NSRange)range;
 - (void)as_setGlyphInfo:(nullable CTGlyphInfoRef)glyphInfo range:(NSRange)range;
-- (void)as_setCharacterShape:(nullable NSNumber *)characterShape range:(NSRange)range;
+- (void)as_setCharacterShape:(nullable NSNumber *)characterShape range:(NSRange)range __TVOS_PROHIBITED;
 - (void)as_setRunDelegate:(nullable CTRunDelegateRef)runDelegate range:(NSRange)range;
 - (void)as_setBaselineClass:(nullable CFStringRef)baselineClass range:(NSRange)range;
 - (void)as_setBaselineInfo:(nullable CFDictionaryRef)baselineInfo range:(NSRange)range;

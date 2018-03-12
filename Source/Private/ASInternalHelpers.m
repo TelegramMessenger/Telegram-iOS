@@ -25,6 +25,28 @@
 #import <AsyncDisplayKit/ASRunLoopQueue.h>
 #import <AsyncDisplayKit/ASThread.h>
 
+static BOOL defaultAllowsGroupOpacity = YES;
+static BOOL defaultAllowsEdgeAntialiasing = NO;
+
+void ASInitializeFrameworkMainThread(void)
+{
+  ASDisplayNodeThreadIsMain();
+  // Ensure these values are cached on the main thread before needed in the background.
+  CALayer *layer = [[[UIView alloc] init] layer];
+  defaultAllowsGroupOpacity = layer.allowsGroupOpacity;
+  defaultAllowsEdgeAntialiasing = layer.allowsEdgeAntialiasing;
+}
+
+BOOL ASDefaultAllowsGroupOpacity(void)
+{
+  return defaultAllowsGroupOpacity;
+}
+
+BOOL ASDefaultAllowsEdgeAntialiasing(void)
+{
+  return defaultAllowsEdgeAntialiasing;
+}
+
 BOOL ASSubclassOverridesSelector(Class superclass, Class subclass, SEL selector)
 {
   if (superclass == subclass) return NO; // Even if the class implements the selector, it doesn't override itself.

@@ -195,7 +195,7 @@ fi
 if [ "$MODE" = "cocoapods-lint" -o "$MODE" = "all" ]; then
     echo "Verifying that podspec lints."
 
-    set -o pipefail && pod env && pod lib lint
+    set -o pipefail && pod env && pod lib lint --allow-warnings
     success="1"
 fi
 

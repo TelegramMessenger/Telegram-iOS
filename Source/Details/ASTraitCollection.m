@@ -286,7 +286,7 @@ NSString *NSStringFromASPrimitiveTraitCollection(ASPrimitiveTraitCollection trai
                                 userInterfaceIdiom:userInterfaceIdiom
                               forceTouchCapability:forceTouchCapability
                                    layoutDirection:layoutDirection
-                                userInterfaceStyle:userIntefaceStyle
+                                userInterfaceStyle:userInterfaceStyle
                       preferredContentSizeCategory:preferredContentSizeCategory
                                      containerSize:windowSize];
 }

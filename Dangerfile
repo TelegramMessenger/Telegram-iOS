@@ -1,3 +1,5 @@
+require 'open-uri'
+
 source_pattern = /(\.m|\.mm|\.h)$/
   
 # Sometimes it's a README fix, or something like that - which isn't relevant for

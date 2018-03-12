@@ -29,9 +29,11 @@
 #import "ASDisplayNodeTestsHelper.h"
 #import <AsyncDisplayKit/UIView+ASConvenience.h>
 #import <AsyncDisplayKit/ASCellNode.h>
+#import <AsyncDisplayKit/ASEditableTextNode.h>
 #import <AsyncDisplayKit/ASImageNode.h>
 #import <AsyncDisplayKit/ASOverlayLayoutSpec.h>
 #import <AsyncDisplayKit/ASInsetLayoutSpec.h>
+#import <AsyncDisplayKit/ASStackLayoutSpec.h>
 #import <AsyncDisplayKit/ASCenterLayoutSpec.h>
 #import <AsyncDisplayKit/ASBackgroundLayoutSpec.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
@@ -87,6 +89,10 @@ for (ASDisplayNode *n in @[ nodes ]) {\
   XCTAssertFalse(n.nodeLoaded, @"%@ should not be loaded", n.debugName);\
 }
 
+@interface UIWindow (Testing)
+// UIWindow has this handy method that is not public but great for testing
+- (UIResponder *)firstResponder;
+@end
 
 @interface ASDisplayNode (HackForTests)
 - (id)initWithViewClass:(Class)viewClass;
@@ -261,6 +267,20 @@ for (ASDisplayNode *n in @[ nodes ]) {\
 
 @end
 
+@interface UIResponderNodeTestDisplayViewCallingSuper : _ASDisplayView
+@end
+@implementation UIResponderNodeTestDisplayViewCallingSuper
+- (BOOL)canBecomeFirstResponder { return YES; }
+- (BOOL)becomeFirstResponder { return [super becomeFirstResponder]; }
+@end
+
+@interface UIResponderNodeTestViewCallingSuper : UIView
+@end
+@implementation UIResponderNodeTestViewCallingSuper
+- (BOOL)canBecomeFirstResponder { return YES; }
+- (BOOL)becomeFirstResponder { return [super becomeFirstResponder]; }
+@end
+
 @interface ASDisplayNodeTests : XCTestCase
 @end
 
@@ -269,16 +289,75 @@ for (ASDisplayNode *n in @[ nodes ]) {\
   dispatch_queue_t queue;
 }
 
-- (void)testOverriddenFirstResponderBehavior {
+- (void)testOverriddenNodeFirstResponderBehavior
+{
   ASTestDisplayNode *node = [[ASTestResponderNode alloc] init];
   XCTAssertTrue([node canBecomeFirstResponder]);
   XCTAssertTrue([node becomeFirstResponder]);
 }
 
-- (void)testDefaultFirstResponderBehavior {
+- (void)testOverriddenDisplayViewFirstResponderBehavior
+{
+  UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+  ASDisplayNode *node = [[ASDisplayNode alloc] initWithViewClass:[UIResponderNodeTestDisplayViewCallingSuper class]];
+  
+  // We have to add the node to a window otherwise the super responder methods call responses are undefined
+  // This will also create the backing view of the node
+  [window addSubnode:node];
+  [window makeKeyAndVisible];
+  
+  XCTAssertTrue([node canBecomeFirstResponder]);
+  XCTAssertTrue([node becomeFirstResponder]);
+}
+
+- (void)testOverriddenViewFirstResponderBehavior
+{
+  UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+  ASDisplayNode *node = [[ASDisplayNode alloc] initWithViewClass:[UIResponderNodeTestViewCallingSuper class]];
+  
+  // We have to add the node to a window otherwise the super responder methods call responses are undefined
+  // This will also create the backing view of the node
+  [window addSubnode:node];
+  [window makeKeyAndVisible];
+  
+  XCTAssertTrue([node canBecomeFirstResponder]);
+  XCTAssertTrue([node becomeFirstResponder]);
+}
+
+- (void)testDefaultFirstResponderBehavior
+{
   ASTestDisplayNode *node = [[ASTestDisplayNode alloc] init];
   XCTAssertFalse([node canBecomeFirstResponder]);
   XCTAssertFalse([node becomeFirstResponder]);
+}
+
+- (void)testResponderMethodsBehavior
+{
+  UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+  ASEditableTextNode *textNode = [[ASEditableTextNode alloc] init];
+  
+  // We have to add the text node to a window otherwise the responder methods responses are undefined
+  // This will also create the backing view of the node
+  [window addSubnode:textNode];
+  [window makeKeyAndVisible];
+  
+  XCTAssertTrue([textNode canBecomeFirstResponder]);
+  XCTAssertTrue([textNode becomeFirstResponder]);
+  XCTAssertTrue([window firstResponder] == textNode.textView);
+  XCTAssertTrue([textNode resignFirstResponder]);
+  
+  // If the textNode resigns it's first responder the view should not be the first responder
+  XCTAssertTrue([window firstResponder] == nil);
+  XCTAssertFalse([textNode.view isFirstResponder]);
+}
+
+- (void)testUnsupportedResponderSetupWillThrow
+{
+  ASTestResponderNode *node = [[ASTestResponderNode alloc] init];
+  [node setViewBlock:^UIView * _Nonnull{
+    return [[UIView alloc] init];
+  }];
+  XCTAssertThrows([node view], @"Externally provided views should be synchronous");
 }
 
 - (void)setUp
@@ -2299,6 +2378,46 @@ static bool stringContainsPointer(NSString *description, id p) {
     return [ASOverlayLayoutSpec overlayLayoutSpecWithChild:[ASInsetLayoutSpec insetLayoutSpecWithInsets:UIEdgeInsetsZero child:subnode] overlay:subnode];
   };
   XCTAssertThrowsSpecificNamed([node calculateLayoutThatFits:ASSizeRangeMake(CGSizeMake(100, 100))], NSException, NSInternalInconsistencyException);
+}
+
+- (void)testThatStackSpecOrdersSubnodesCorrectly
+{
+  // This test ensures that the z-order of nodes matches the stack spec, including after relayout / transition.
+  ASDisplayNode *node = [[ASDisplayNode alloc] init];
+  node.automaticallyManagesSubnodes = YES;
+
+  DeclareNodeNamed(a);
+  DeclareNodeNamed(b);
+  DeclareNodeNamed(c);
+  DeclareNodeNamed(d);
+
+  NSArray *nodesForwardOrder = @[a, b, c, d];
+  NSArray *nodesReverseOrder = @[d, c, b, a];
+  __block BOOL flipItemOrder = NO;
+
+  node.layoutSpecBlock = ^(ASDisplayNode *node, ASSizeRange size) {
+    ASStackLayoutSpec *stack = [ASStackLayoutSpec verticalStackLayoutSpec];
+    stack.children = flipItemOrder ? nodesReverseOrder : nodesForwardOrder;
+    return stack;
+  };
+
+  ASDisplayNodeSizeToFitSize(node, CGSizeMake(100, 100));
+  [node.view layoutIfNeeded];
+
+  // Because automaticallyManagesSubnodes is used, the subnodes array is constructed from the layout spec's children.
+  XCTAssert([node.subnodes isEqualToArray:nodesForwardOrder], @"subnodes: %@, array: %@", node.subnodes, nodesForwardOrder);
+  XCTAssertNodeSubnodeSubviewSublayerOrder(node, YES /* isLoaded */, NO /* isLayerBacked */,
+                                           @"a,b,c,d", @"Forward order");
+
+  flipItemOrder = YES;
+  [node invalidateCalculatedLayout];
+  [node.view layoutIfNeeded];
+
+  // In this case, it's critical that the items are in the new order so that event handling and apparent z-position are correct.
+  // FIXME: The reversal case is not currently passing.
+  // XCTAssert([node.subnodes isEqualToArray:nodesReverseOrder], @"subnodes: %@, array: %@", node.subnodes, nodesReverseOrder);
+  // XCTAssertNodeSubnodeSubviewSublayerOrder(node, YES /* isLoaded */, NO /* isLayerBacked */,
+  //                                          @"d,c,b,a", @"Reverse order");
 }
 
 - (void)testThatOverlaySpecOrdersSubnodesCorrectly

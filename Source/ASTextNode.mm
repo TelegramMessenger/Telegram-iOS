@@ -63,10 +63,13 @@ static NSString *ASTextNodeTruncationTokenAttributeName = @"ASTextNodeTruncation
 @property (assign, nonatomic) CGSize constrainedSize;
 @end
 
-@implementation ASTextNodeRendererKey
+@implementation ASTextNodeRendererKey {
+  std::mutex _m;
+}
 
 - (NSUInteger)hash
 {
+  std::lock_guard<std::mutex> _l(_m);
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Wpadded"
   struct {
@@ -86,7 +89,14 @@ static NSString *ASTextNodeTruncationTokenAttributeName = @"ASTextNodeTruncation
     return YES;
   }
   
-  return _attributes == object.attributes && CGSizeEqualToSize(_constrainedSize, object.constrainedSize);
+  // NOTE: Skip the class check for this specialized, internal Key object.
+
+  // Lock both objects, avoiding deadlock.
+  std::lock(_m, object->_m);
+  std::lock_guard<std::mutex> lk1(_m, std::adopt_lock);
+  std::lock_guard<std::mutex> lk2(object->_m, std::adopt_lock);
+  
+  return _attributes == object->_attributes && CGSizeEqualToSize(_constrainedSize, object->_constrainedSize);
 }
 
 @end
@@ -177,6 +187,7 @@ static ASTextKitRenderer *rendererForAttributes(ASTextKitAttributes attributes, 
   NSArray *_exclusionPaths;
 
   NSAttributedString *_attributedText;
+  NSAttributedString *_truncationAttributedText;
   NSAttributedString *_composedTruncationText;
 
   NSString *_highlightedLinkAttributeName;
@@ -450,10 +461,10 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   // Since truncation text matches style of attributedText, invalidate it now.
   [self _invalidateTruncationText];
   
-  NSUInteger length = attributedText.length;
+  NSUInteger length = _attributedText.length;
   if (length > 0) {
-    self.style.ascender = [[self class] ascenderWithAttributedString:attributedText];
-    self.style.descender = [[attributedText attribute:NSFontAttributeName atIndex:attributedText.length - 1 effectiveRange:NULL] descender];
+    self.style.ascender = [[self class] ascenderWithAttributedString:_attributedText];
+    self.style.descender = [[_attributedText attribute:NSFontAttributeName atIndex:length - 1 effectiveRange:NULL] descender];
   }
 
   // Tell the display node superclasses that the cached layout is incorrect now
@@ -464,7 +475,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   
   
   // Accessiblity
-  self.accessibilityLabel = attributedText.string;
+  self.accessibilityLabel = _attributedText.string;
   self.isAccessibilityElement = (length != 0); // We're an accessibility element by default if there is a string.
 }
 
@@ -768,7 +779,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
 
       if (highlightTargetLayer != nil) {
         ASDN::MutexLocker l(__instanceLock__);
-        ASTextKitRenderer *renderer = [self _renderer];
+        ASTextKitRenderer *renderer = [self _locked_renderer];
 
         NSArray *highlightRects = [renderer rectsForTextRange:highlightRange measureOption:ASTextKitRendererMeasureOptionBlock];
         NSMutableArray *converted = [NSMutableArray arrayWithCapacity:highlightRects.count];
@@ -1187,6 +1198,12 @@ static NSAttributedString *DefaultTruncationAttributedString()
     defaultTruncationAttributedString = [[NSAttributedString alloc] initWithString:NSLocalizedString(@"\u2026", @"Default truncation string")];
   });
   return defaultTruncationAttributedString;
+}
+
+- (NSAttributedString *)truncationAttributedText
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  return _truncationAttributedText;
 }
 
 - (void)setTruncationAttributedText:(NSAttributedString *)truncationAttributedText

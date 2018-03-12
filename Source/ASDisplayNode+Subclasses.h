@@ -15,8 +15,6 @@
 //      http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <pthread.h>
-
 #import <AsyncDisplayKit/ASBlockTypes.h>
 #import <AsyncDisplayKit/ASDisplayNode.h>
 
@@ -102,6 +100,13 @@ NS_ASSUME_NONNULL_BEGIN
  * @note This method is guaranteed to be called on main.
  */
 - (void)nodeDidLayout;
+
+/**
+ * @abstract Called when the node loads.
+ * @discussion Can be used for operations that are performed after the node's view is available.
+ * @note This method is guaranteed to be called on main.
+ */
+- (void)nodeDidLoad;
 
 @end
 

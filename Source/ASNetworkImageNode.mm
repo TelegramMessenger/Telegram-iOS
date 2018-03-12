@@ -142,6 +142,11 @@
     [self _locked_cancelDownloadAndClearImageWithResumePossibility:NO];
   }
   
+  // If our image is being set externally, the image quality is 100%
+  if (imageWasSetExternally) {
+    [self _setCurrentImageQuality:1.0];
+  }
+  
   [self _locked__setImage:image];
 }
 
@@ -193,9 +198,10 @@
     
     _URL = URL;
     
-    BOOL hasURL = (_URL == nil);
-    if (reset || hasURL) {
-      [self _locked_setCurrentImageQuality:(hasURL ? 0.0 : 1.0)];
+    // If URL is nil and URL was not equal to _URL (checked at the top), then we previously had a URL but it's been nil'd out.
+    BOOL hadURL = (URL == nil);
+    if (reset || hadURL) {
+      [self _setCurrentImageQuality:(hadURL ? 0.0 : 1.0)];
       [self _locked__setImage:_defaultImage];
     }
   }
@@ -225,9 +231,8 @@
   _defaultImage = defaultImage;
 
   if (!_imageLoaded) {
-    [self _locked_setCurrentImageQuality:((_URL == nil) ? 0.0 : 1.0)];
+    [self _setCurrentImageQuality:((_URL == nil) ? 0.0 : 1.0)];
     [self _locked__setImage:defaultImage];
-    
   }
 }
 
@@ -250,24 +255,18 @@
 }
 
 /**
- * Always use this methods internally to update the current image quality
+ * Always use these methods internally to update the current image quality
  * We want to maintain the order that currentImageQuality is set regardless of the calling thread,
- * so we always have to dispatch to the main threadto ensure that we queue the operations in the correct order.
+ * so we always have to dispatch to the main thread to ensure that we queue the operations in the correct order.
  * (see comment in displayDidFinish)
  */
 - (void)_setCurrentImageQuality:(CGFloat)imageQuality
-{
-  ASDN::MutexLocker l(__instanceLock__);
-  [self _locked_setCurrentImageQuality:imageQuality];
-}
-
-- (void)_locked_setCurrentImageQuality:(CGFloat)imageQuality
 {
   dispatch_async(dispatch_get_main_queue(), ^{
     // As the setting of the image quality is dispatched the lock is gone by the time the block is executing.
     // Therefore we have to grab the lock again
     __instanceLock__.lock();
-      _currentImageQuality = imageQuality;
+    _currentImageQuality = imageQuality;
     __instanceLock__.unlock();
   });
 }
@@ -340,7 +339,7 @@
     if (_imageLoaded == NO && url && _downloadIdentifier == nil) {
       UIImage *result = [[_cache synchronouslyFetchedCachedImageWithURL:url] asdk_image];
       if (result) {
-        [self _locked_setCurrentImageQuality:1.0];
+        [self _setCurrentImageQuality:1.0];
         [self _locked__setImage:result];
         _imageLoaded = YES;
         
@@ -443,7 +442,7 @@
   }
   
   as_log_verbose(ASImageLoadingLog(), "Received progress image for %@ q: %.2g id: %@", self, progress, progressImage);
-  [self _locked_setCurrentImageQuality:progress];
+  [self _setCurrentImageQuality:progress];
   [self _locked__setImage:progressImage];
 }
 
@@ -516,7 +515,7 @@
   [self _locked_cancelImageDownloadWithResumePossibility:storeResume];
   
   [self _locked_setAnimatedImage:nil];
-  [self _locked_setCurrentImageQuality:0.0];
+  [self _setCurrentImageQuality:0.0];
   [self _locked__setImage:_defaultImage];
 
   _imageLoaded = NO;
@@ -667,7 +666,7 @@
 
         _imageLoaded = YES;
 
-        [self _locked_setCurrentImageQuality:1.0];
+        [self _setCurrentImageQuality:1.0];
 
         if (_delegateFlags.delegateDidLoadImageWithInfo) {
           ASDN::MutexUnlocker u(__instanceLock__);
@@ -706,7 +705,7 @@
           
           UIImage *newImage;
           if (imageContainer != nil) {
-            [strongSelf _locked_setCurrentImageQuality:1.0];
+            [strongSelf _setCurrentImageQuality:1.0];
             NSData *animatedImageData = [imageContainer asdk_animatedImageData];
             if (animatedImageData && strongSelf->_downloaderFlags.downloaderImplementsAnimatedImage) {
               id animatedImage = [strongSelf->_downloader animatedImageWithData:animatedImageData];

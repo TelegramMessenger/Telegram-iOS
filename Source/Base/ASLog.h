@@ -132,7 +132,7 @@ ASDISPLAYNODE_EXTERN_C_END
 
 #define as_log_create(subsystem, category) ({     \
 os_log_t __val;                                   \
-if (AS_AVAILABLE_IOS(9)) {                        \
+if (AS_AVAILABLE_IOS_TVOS(9, 9)) {                \
   __val = os_log_create(subsystem, category);     \
 } else {                                          \
   __val = (os_log_t)0;                            \
@@ -141,28 +141,28 @@ __val;                                            \
 })
 
 #define as_log_debug(log, format, ...)            \
-if (AS_AVAILABLE_IOS(9)) {                        \
+if (AS_AVAILABLE_IOS_TVOS(9, 9)) {                \
   os_log_debug(log, format, ##__VA_ARGS__);       \
 } else {                                          \
   (void)0;                                        \
 }                                                 \
 
 #define as_log_info(log, format, ...)             \
-if (AS_AVAILABLE_IOS(9)) {                        \
+if (AS_AVAILABLE_IOS_TVOS(9, 9)) {                \
   os_log_info(log, format, ##__VA_ARGS__);        \
 } else {                                          \
   (void)0;                                        \
 }                                                 \
 
 #define as_log_error(log, format, ...)            \
-if (AS_AVAILABLE_IOS(9)) {                        \
+if (AS_AVAILABLE_IOS_TVOS(9, 9)) {                \
   os_log_error(log, format, ##__VA_ARGS__);       \
 } else {                                          \
   (void)0;                                        \
 }                                                 \
 
 #define as_log_fault(log, format, ...)            \
-if (AS_AVAILABLE_IOS(9)) {                        \
+if (AS_AVAILABLE_IOS_TVOS(9, 9)) {                \
   os_log_fault(log, format, ##__VA_ARGS__);       \
 } else {                                          \
   (void)0;                                        \

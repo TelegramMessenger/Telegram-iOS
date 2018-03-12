@@ -36,9 +36,13 @@
 
 // Use __builtin_available if we're on Xcode >= 9, AS_AT_LEAST otherwise.
 #if __has_builtin(__builtin_available)
-  #define AS_AVAILABLE_IOS(ver)   __builtin_available(iOS ver, *)
+  #define AS_AVAILABLE_IOS(ver)               __builtin_available(iOS ver, *)
+  #define AS_AVAILABLE_TVOS(ver)              __builtin_available(tvOS ver, *)
+  #define AS_AVAILABLE_IOS_TVOS(ver1, ver2)   __builtin_available(iOS ver1, tvOS ver2, *)
 #else
-  #define AS_AVAILABLE_IOS(ver)   AS_AT_LEAST_IOS##ver
+  #define AS_AVAILABLE_IOS(ver)               (TARGET_OS_IOS && AS_AT_LEAST_IOS##ver)
+  #define AS_AVAILABLE_TVOS(ver)              (TARGET_OS_TV && AS_AT_LEAST_IOS##ver)
+  #define AS_AVAILABLE_IOS_TVOS(ver1, ver2)   (AS_AVAILABLE_IOS(ver1) || AS_AVAILABLE_TVOS(ver2))
 #endif
 
 // If Yoga is available, make it available anywhere we use ASAvailability.

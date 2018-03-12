@@ -120,4 +120,21 @@
   ASSnapshotVerifyNode(textNode, nil);
 }
 
+/**
+ * https://github.com/TextureGroup/Texture/issues/822
+ */
+- (void)DISABLED_testThatTruncationTokenAttributesPrecedeThoseInheritedFromTextWhenTruncateTailMode
+{
+  ASTextNode *textNode = [[ASTextNode alloc] init];
+  textNode.style.maxSize = CGSizeMake(20, 80);
+  NSMutableAttributedString *mas = [[NSMutableAttributedString alloc] initWithString:@"Quality is an important "];
+  [mas appendAttributedString:[[NSAttributedString alloc] initWithString:@"thing" attributes:@{ NSBackgroundColorAttributeName : UIColor.yellowColor}]];
+  textNode.attributedText = mas;
+  textNode.truncationMode = NSLineBreakByTruncatingTail;
+  
+  textNode.truncationAttributedText = [[NSAttributedString alloc] initWithString:@"\u2026" attributes:@{ NSBackgroundColorAttributeName: UIColor.greenColor }];
+  ASDisplayNodeSizeToFitSizeRange(textNode, ASSizeRangeMake(CGSizeZero, CGSizeMake(INFINITY, INFINITY)));
+  ASSnapshotVerifyNode(textNode, nil);
+}
+
 @end
