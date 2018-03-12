@@ -32,8 +32,8 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.interactiveImageNode.activateLocalContent = { [weak self] in
             if let strongSelf = self {
-                if let item = strongSelf.item, !item.message.containsSecretMedia {
-                    item.controllerInteraction.openMessage(item.message)
+                if let item = strongSelf.item {
+                    let _ = item.controllerInteraction.openMessage(item.message)
                 }
             }
         }
@@ -86,7 +86,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 forceFullCorners = true
             }
             
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 7.0, hidesBackgroundForEmptyWallpapers: true, forceFullCorners: forceFullCorners)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 7.0, hidesBackground: .emptyWallpaper, forceFullCorners: forceFullCorners, forceAlignment: .none)
             
             return (contentProperties, unboundSize, initialWidth + bubbleInsets.left + bubbleInsets.right, { constrainedSize, position in
                 var updatedPosition: ChatMessageBubbleContentPosition = position
@@ -123,7 +123,6 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
                     
                     let statusType: ChatMessageDateAndStatusType?
-                    var statusHorizontalOffset: CGFloat = 0.0
                     switch position {
                         case .linear(_, .None):
                             if item.message.effectivelyIncoming(item.account.peerId) {
@@ -184,7 +183,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 statusApply(hasAnimation)
  
-                                let dateAndStatusFrame = CGRect(origin: CGPoint(x: layoutSize.width - bubbleInsets.right - layoutConstants.image.statusInsets.right - statusSize.width + statusHorizontalOffset, y: layoutSize.height -  bubbleInsets.bottom - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
+                                let dateAndStatusFrame = CGRect(origin: CGPoint(x: layoutSize.width - bubbleInsets.right - layoutConstants.image.statusInsets.right - statusSize.width, y: layoutSize.height -  bubbleInsets.bottom - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
                                 
                                 strongSelf.dateAndStatusNode.frame = dateAndStatusFrame
                                 strongSelf.dateAndStatusNode.bounds = CGRect(origin: CGPoint(), size: dateAndStatusFrame.size)
@@ -238,7 +237,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func peekPreviewContent(at point: CGPoint) -> (Message, ChatMessagePeekPreviewContent)? {
-        if let message = self.item?.message, let currentMedia = self.media {
+        if let message = self.item?.message, let currentMedia = self.media, !message.containsSecretMedia {
             if self.interactiveImageNode.frame.contains(point) {
                 return (message, .media(currentMedia))
             }
@@ -262,11 +261,6 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
-        if self.interactiveImageNode.frame.contains(point) {
-            if let item = self.item, item.message.containsSecretMedia {
-                return .holdToPreviewSecretMedia
-            }
-        }
         return .none
     }
     

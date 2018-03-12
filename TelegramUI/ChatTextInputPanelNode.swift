@@ -544,7 +544,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
             
-            if let peer = interfaceState.peer?.peer, previousState?.peer?.peer == nil || !peer.isEqual(previousState!.peer!.peer!) {
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) {
                 let placeholder: String
                 if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                     placeholder = interfaceState.strings.Conversation_InputTextBroadcastPlaceholder

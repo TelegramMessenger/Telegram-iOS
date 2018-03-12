@@ -17,6 +17,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(ExperimentalSettings.self, f: { ExperimentalSettings(decoder: $0) })
     declareEncodable(MusicPlaybackSettings.self, f: { MusicPlaybackSettings(decoder: $0) })
     declareEncodable(ICloudFileResource.self, f: { ICloudFileResource(decoder: $0) })
+    declareEncodable(MediaInputSettings.self, f: { MediaInputSettings(decoder: $0) })
     return
 }()
 

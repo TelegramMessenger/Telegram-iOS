@@ -232,11 +232,13 @@ public final class PresentationThemeItemDisclosureActions {
     public let neutral1: PresentationThemeItemDisclosureAction
     public let neutral2: PresentationThemeItemDisclosureAction
     public let destructive: PresentationThemeItemDisclosureAction
+    public let constructive: PresentationThemeItemDisclosureAction
     
-    public init(neutral1: PresentationThemeItemDisclosureAction, neutral2: PresentationThemeItemDisclosureAction, destructive: PresentationThemeItemDisclosureAction) {
+    public init(neutral1: PresentationThemeItemDisclosureAction, neutral2: PresentationThemeItemDisclosureAction, destructive: PresentationThemeItemDisclosureAction, constructive: PresentationThemeItemDisclosureAction) {
         self.neutral1 = neutral1
         self.neutral2 = neutral2
         self.destructive = destructive
+        self.constructive = constructive
     }
 }
 

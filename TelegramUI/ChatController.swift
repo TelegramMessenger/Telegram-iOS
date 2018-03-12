@@ -100,7 +100,6 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     private let temporaryHiddenGalleryMediaDisposable = MetaDisposable()
-    private weak var secretMediaPreviewController: SecretMediaPreviewController?
     
     private var controllerInteraction: ChatControllerInteraction?
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
@@ -217,7 +216,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self, strongSelf.isNodeLoaded {
-                strongSelf.chatDisplayNode.historyNode.scrollScreenToTop()
+                strongSelf.chatDisplayNode.scrollToTop()
             }
         }
         
@@ -276,30 +275,6 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 })
             }
             return false
-        }, openSecretMessagePreview: { [weak self] messageId in
-            if let strongSelf = self {
-                var galleryMedia: Media?
-                if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                    for media in message.media {
-                        if let file = media as? TelegramMediaFile, file.isVideo {
-                            galleryMedia = file
-                        } else if let image = media as? TelegramMediaImage {
-                            galleryMedia = image
-                        }
-                    }
-                }
-                if let _ = galleryMedia {
-                    let gallery = SecretMediaPreviewController(account: strongSelf.account, messageId: messageId)
-                    strongSelf.secretMediaPreviewController = gallery
-                    strongSelf.chatDisplayNode.dismissInput()
-                    strongSelf.present(gallery, in: .window(.root))
-                }
-            }
-        }, closeSecretMessagePreview: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.secretMediaPreviewController?.dismiss()
-                strongSelf.secretMediaPreviewController = nil
-            }
         }, openPeer: { [weak self] id, navigation, fromMessage in
             if let strongSelf = self {
                 strongSelf.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
@@ -1436,7 +1411,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 return entry ?? GeneratedMediaStoreSettings.defaultSettings
             }
             |> deliverOnMainQueue).start(next: { [weak self] settings in
-                if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.peer?.peer {
+                if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     strongSelf.chatDisplayNode.dismissInput()
                     
                     let legacyController = LegacyController(presentation: .custom, theme: strongSelf.presentationData.theme)
@@ -1450,7 +1425,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     let controller = legacyAttachmentMenu(account: strongSelf.account, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, openGallery: {
                         self?.presentMediaPicker(fileMode: false)
                     }, openCamera: { cameraView, menuController in
-                        if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.peer?.peer {
+                        if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                             presentedLegacyCamera(account: strongSelf.account, peer: peer, cameraView: cameraView, menuController: menuController, parentController: strongSelf, sendMessagesWithSignals: { signals in
                                 self?.enqueueMediaMessages(signals: signals)
                             })
@@ -1517,7 +1492,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 return entry ?? GeneratedMediaStoreSettings.defaultSettings
                 }
             |> deliverOnMainQueue).start(next: { [weak self] settings in
-                if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.peer?.peer {
+                if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     let controller = legacyPasteMenu(account: strongSelf.account, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, images: images, sendMessagesWithSignals: { signals in
                         self?.enqueueMediaMessages(signals: signals)
                     })
@@ -1923,7 +1898,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             self?.enqueueChatContextResult(results, result)
         }, sendBotCommand: { [weak self] botPeer, command in
             if let strongSelf = self {
-                if let peer = strongSelf.presentationInterfaceState.peer, let addressName = botPeer.addressName {
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, let addressName = botPeer.addressName {
                     let messageText: String
                     if peer is TelegramUser {
                         messageText = command
@@ -2042,7 +2017,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
                 strongSelf.chatDisplayNode.dismissInput()
                 
-                if let peer = strongSelf.presentationInterfaceState.peer as? TelegramSecretChat {
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
                     let controller = ChatSecretAutoremoveTimerActionSheetController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, currentValue: peer.messageAutoremoveTimeout == nil ? 0 : peer.messageAutoremoveTimeout!, applyValue: { value in
                         if let strongSelf = self {
                             let _ = setSecretChatMessageAutoremoveTimeoutInteractively(account: strongSelf.account, peerId: peer.id, timeout: value == 0 ? nil : value).start()
@@ -2074,7 +2049,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             self?.unblockPeer()
         }, pinMessage: { [weak self] messageId in
             if let strongSelf = self, case let .peer(currentPeerId) = strongSelf.chatLocation {
-                if let peer = strongSelf.presentationInterfaceState.peer {
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     if let channel = peer as? TelegramChannel {
                         var canManagePin = false
                         if case .broadcast = channel.info {
@@ -2117,7 +2092,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             }
         }, unpinMessage: { [weak self] in
             if let strongSelf = self {
-                if let peer = strongSelf.presentationInterfaceState.peer?.peer {
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     if let channel = peer as? TelegramChannel {
                         var canManagePin = false
                         if case .broadcast = channel.info {
@@ -2407,6 +2382,10 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 if let strongSelf = self, strongSelf.isNodeLoaded && strongSelf.canReadHistoryValue, strongSelf.presentationInterfaceState.interfaceState.editMessage == nil, strongSelf.playlistStateAndType == nil {
                     if strongSelf.firstLoadedMessageToListen() != nil || strongSelf.chatDisplayNode.isTextInputPanelActive {
                         if strongSelf.account.telegramApplicationContext.immediateHasOngoingCall {
+                            return false
+                        }
+                        
+                        if !strongSelf.account.telegramApplicationContext.currentMediaInputSettings.with { $0.enableRaiseToSpeak } {
                             return false
                         }
                         
@@ -2871,7 +2850,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         }
             |> deliverOnMainQueue).start(next: { [weak self] settings in
                 if let strongSelf = self {
-                    if let peer = strongSelf.presentationInterfaceState.peer?.peer {
+                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                         let _ = legacyAssetPicker(theme: strongSelf.presentationData.theme, fileMode: fileMode, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true).start(next: { generator in
                             if let strongSelf = self {
                                 let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
@@ -2903,7 +2882,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     }
     
     private func presentMapPicker() {
-        guard let peer = self.presentationInterfaceState.peer?.peer else {
+        guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
         let selfPeerId: PeerId
@@ -3583,7 +3562,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     }
     
     private func reportPeer() {
-        if let peer = self.presentationInterfaceState.peer {
+        if let peer = self.presentationInterfaceState.renderedPeer?.peer {
             let title: String
             if let _ = peer as? TelegramGroup {
                 title = self.presentationData.strings.Conversation_ReportSpam
@@ -3684,7 +3663,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     @available(iOSApplicationExtension 9.0, *)
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
         if previewingContext.sourceView === (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view {
-            if let peer = self.presentationInterfaceState.peer?.peer {
+            if let peer = self.presentationInterfaceState.renderedPeer?.peer {
                 let galleryController = AvatarGalleryController(account: self.account, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
                 }, synchronousLoad: true)
                 galleryController.setHintWillBePresentedInPreviewingContext(true)
@@ -3989,9 +3968,9 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         var items: [ActionSheetItem] = []
         var personalPeerName: String?
         var isChannel = false
-        if let user = self.presentationInterfaceState.peer as? TelegramUser {
+        if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
             personalPeerName = user.compactDisplayTitle
-        } else if let channel = self.presentationInterfaceState.peer as? TelegramChannel, case .broadcast = channel.info {
+        } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
             isChannel = true
         }
         
@@ -4034,6 +4013,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 actionSheet?.dismissAnimated()
             })
         ])])
+        self.chatDisplayNode.dismissInput()
         self.present(actionSheet, in: .window(.root))
     }
 }

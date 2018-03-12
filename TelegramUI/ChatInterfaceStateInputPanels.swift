@@ -3,7 +3,7 @@ import AsyncDisplayKit
 import TelegramCore
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputPanelNode? {
-    if let peer = chatPresentationInterfaceState.peer, peer.peer?.restrictionText != nil {
+    if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText != nil {
         return nil
     }
     
@@ -71,7 +71,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         }
     }
     
-    if let peer = chatPresentationInterfaceState.peer {
+    if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
         if let secretChat = peer as? TelegramSecretChat {
             switch secretChat.embeddedState {
                 case .handshake:
@@ -154,7 +154,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         if let _ = chatPresentationInterfaceState.botStartPayload {
             displayBotStartPanel = true
         } else if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
-            if let user = chatPresentationInterfaceState.peer as? TelegramUser, user.botInfo != nil {
+            if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
                 displayBotStartPanel = true
             }
         }

@@ -71,8 +71,8 @@ private func currentTimeFormat() -> PresentationTimeFormat {
     }
 }
 
-public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(PresentationData, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings), NoError> {
-    return postbox.modify { modifier -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings) in
+public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(PresentationData, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings), NoError> {
+    return postbox.modify { modifier -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings) in
         let themeSettings: PresentationThemeSettings
         if let current = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
             themeSettings = current
@@ -115,8 +115,15 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(Pres
             inAppNotificationSettings = InAppNotificationSettings.defaultSettings
         }
         
-        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings)
-    } |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings) -> (PresentationData, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings) in
+        let mediaInputSettings: MediaInputSettings
+        if let value = modifier.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.mediaInputSettings) as? MediaInputSettings {
+            mediaInputSettings = value
+        } else {
+            mediaInputSettings = MediaInputSettings.defaultSettings
+        }
+        
+        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings)
+    } |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings) -> (PresentationData, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings) in
         let themeValue: PresentationTheme
         switch themeSettings.theme {
             case let .builtin(reference):
@@ -138,7 +145,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<(Pres
             stringsValue = defaultPresentationStrings
         }
         let timeFormat: PresentationTimeFormat = currentTimeFormat()
-        return (PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat), automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings)
+        return (PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: themeSettings.chatWallpaper, fontSize: themeSettings.fontSize, timeFormat: timeFormat), automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings)
     }
 }
 

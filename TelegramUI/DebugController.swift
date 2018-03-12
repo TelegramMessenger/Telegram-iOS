@@ -22,6 +22,7 @@ private enum DebugControllerSection: Int32 {
     case logs
     case payments
     case logging
+    case experiments
 }
 
 private enum DebugControllerEntry: ItemListNodeEntry {
@@ -30,6 +31,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case clearPaymentData(PresentationTheme)
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
+    case enableRaiseToSpeak(PresentationTheme, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -40,7 +42,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             case .clearPaymentData:
                 return DebugControllerSection.payments.rawValue
             case .logToFile, .logToConsole:
-                return  DebugControllerSection.logging.rawValue
+                return DebugControllerSection.logging.rawValue
+            case .enableRaiseToSpeak:
+                return DebugControllerSection.experiments.rawValue
         }
     }
     
@@ -56,6 +60,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 3
             case .logToConsole:
                 return 4
+            case .enableRaiseToSpeak:
+                return 5
         }
     }
     
@@ -87,6 +93,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }
             case let .logToConsole(lhsTheme, lhsValue):
                 if case let .logToConsole(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .enableRaiseToSpeak(lhsTheme, lhsValue):
+                if case let .enableRaiseToSpeak(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -140,11 +152,17 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         $0.withUpdatedLogToConsole(value)
                     }).start()
                 })
+            case let .enableRaiseToSpeak(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Enable Raise to Speak", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    let _ = updateMediaInputSettingsInteractively(postbox: arguments.account.postbox, {
+                        $0.withUpdatedEnableRaiseToSpeak(value)
+                    }).start()
+                })
         }
     }
 }
 
-private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings) -> [DebugControllerEntry] {
+private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = []
     
     entries.append(.sendLogs(presentationData.theme))
@@ -153,6 +171,8 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     
     entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
     entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
+    
+    entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
     
     return entries
 }
@@ -167,7 +187,7 @@ public func debugController(account: Account, accountManager: AccountManager) ->
         pushControllerImpl?(controller)
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [PreferencesKeys.loggingSettings]))
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [PreferencesKeys.loggingSettings, ApplicationSpecificPreferencesKeys.mediaInputSettings]))
         |> map { presentationData, preferencesView -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
             let loggingSettings: LoggingSettings
             if let value = preferencesView.values[PreferencesKeys.loggingSettings] as? LoggingSettings {
@@ -176,8 +196,15 @@ public func debugController(account: Account, accountManager: AccountManager) ->
                 loggingSettings = LoggingSettings.defaultSettings
             }
             
+            let mediaInputSettings: MediaInputSettings
+            if let value = preferencesView.values[ApplicationSpecificPreferencesKeys.mediaInputSettings] as? MediaInputSettings {
+                mediaInputSettings = value
+            } else {
+                mediaInputSettings = MediaInputSettings.defaultSettings
+            }
+            
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings), style: .blocks)
+            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }

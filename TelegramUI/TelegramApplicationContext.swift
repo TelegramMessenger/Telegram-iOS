@@ -66,6 +66,9 @@ public final class TelegramApplicationContext {
         return self._automaticMediaDownloadSettings.get()
     }
     
+    public let currentMediaInputSettings: Atomic<MediaInputSettings>
+    private var mediaInputSettingsDisposable: Disposable?
+    
     private let presentationDataDisposable = MetaDisposable()
     private let automaticMediaDownloadSettingsDisposable = MetaDisposable()
     
@@ -77,7 +80,7 @@ public final class TelegramApplicationContext {
     }
     private var hasOngoingCallDisposable: Disposable?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>, currentInAppNotificationSettings: InAppNotificationSettings, postbox: Postbox, network: Network, accountPeerId: PeerId?, viewTracker: AccountViewTracker?, stateManager: AccountStateManager?) {
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, currentPresentationData: PresentationData, presentationData: Signal<PresentationData, NoError>, currentMediaDownloadSettings: AutomaticMediaDownloadSettings, automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError>, currentInAppNotificationSettings: InAppNotificationSettings, currentMediaInputSettings: MediaInputSettings, postbox: Postbox, network: Network, accountPeerId: PeerId?, viewTracker: AccountViewTracker?, stateManager: AccountStateManager?) {
         self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
         
         if applicationBindings.isMainApp {
@@ -95,6 +98,7 @@ public final class TelegramApplicationContext {
         self.fetchManager = FetchManager(postbox: postbox)
         self.currentPresentationData = Atomic(value: currentPresentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: currentMediaDownloadSettings)
+        self.currentMediaInputSettings = Atomic(value: currentMediaInputSettings)
         self._presentationData.set(.single(currentPresentationData) |> then(presentationData))
         self._automaticMediaDownloadSettings.set(.single(currentMediaDownloadSettings) |> then(automaticMediaDownloadSettings))
         self.currentInAppNotificationSettings = Atomic(value: currentInAppNotificationSettings)
@@ -106,6 +110,17 @@ public final class TelegramApplicationContext {
                 if let view = views.views[inAppPreferencesKey] as? PreferencesView {
                     if let settings = view.values[ApplicationSpecificPreferencesKeys.inAppNotificationSettings] as? InAppNotificationSettings {
                         let _ = strongSelf.currentInAppNotificationSettings.swap(settings)
+                    }
+                }
+            }
+        })
+        
+        let mediaInputSettingsPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.mediaInputSettings]))
+        self.mediaInputSettingsDisposable = (postbox.combinedView(keys: [mediaInputSettingsPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
+            if let strongSelf = self {
+                if let view = views.views[mediaInputSettingsPreferencesKey] as? PreferencesView {
+                    if let settings = view.values[ApplicationSpecificPreferencesKeys.mediaInputSettings] as? MediaInputSettings {
+                        let _ = strongSelf.currentMediaInputSettings.swap(settings)
                     }
                 }
             }
@@ -149,6 +164,7 @@ public final class TelegramApplicationContext {
         self.presentationDataDisposable.dispose()
         self.automaticMediaDownloadSettingsDisposable.dispose()
         self.inAppNotificationSettingsDisposable?.dispose()
+        self.mediaInputSettingsDisposable?.dispose()
     }
     
     public func attachOverlayMediaController(_ controller: OverlayMediaController) {

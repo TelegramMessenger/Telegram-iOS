@@ -23,7 +23,7 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
     if let _ = presentationInterfaceState.interfaceState.selectionState {
         if let currentButton = currentButton, currentButton.action == .clearHistory {
             return currentButton
-        } else if let peer = presentationInterfaceState.peer {
+        } else if let peer = presentationInterfaceState.renderedPeer?.peer {
             let canClear: Bool
             if peer is TelegramUser || peer is TelegramGroup || peer is TelegramSecretChat {
                 canClear = true
@@ -49,7 +49,7 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         }
     }
     
-    if let peer = presentationInterfaceState.peer?.peer {
+    if let peer = presentationInterfaceState.renderedPeer?.peer {
         if presentationInterfaceState.accountPeerId == peer.id {
             return ChatNavigationButton(action: .search, buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector))
         }

@@ -4,11 +4,23 @@ import Display
 import Postbox
 import TelegramCore
 
+enum ChatMessageBubbleContentBackgroundHiding {
+    case none
+    case emptyWallpaper
+    case always
+}
+
+enum ChatMessageBubbleContentAlignment {
+    case none
+    case center
+}
+
 struct ChatMessageBubbleContentProperties {
     let hidesSimpleAuthorHeader: Bool
     let headerSpacing: CGFloat
-    let hidesBackgroundForEmptyWallpapers: Bool
+    let hidesBackground: ChatMessageBubbleContentBackgroundHiding
     let forceFullCorners: Bool
+    let forceAlignment: ChatMessageBubbleContentAlignment
 }
 
 enum ChatMessageBubbleNoneMergeStatus {
@@ -58,7 +70,6 @@ enum ChatMessageBubbleContentTapAction {
     case botCommand(String)
     case hashtag(String?, String)
     case instantPage
-    case holdToPreviewSecretMedia
     case call(PeerId)
     case ignore
 }

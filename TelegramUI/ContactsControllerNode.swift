@@ -17,15 +17,20 @@ final class ContactsControllerNode: ASDisplayNode {
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((PeerId) -> Void)?
+    var openInvite: (() -> Void)?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
     init(account: Account) {
         self.account = account
-        self.contactListNode = ContactListNode(account: account, presentation: .orderedByPresence)
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        var inviteImpl: (() -> Void)?
+        self.contactListNode = ContactListNode(account: account, presentation: .orderedByPresence(options: [ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/AddMemberIcon"), color: self.presentationData.theme.list.itemAccentColor), action: {
+            inviteImpl?()
+        })]))
         
         super.init()
         
@@ -50,6 +55,10 @@ final class ContactsControllerNode: ASDisplayNode {
                     }
                 }
             })
+        
+        inviteImpl = { [weak self] in
+            self?.openInvite?()
+        }
     }
     
     deinit {

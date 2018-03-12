@@ -195,6 +195,9 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         }
     }
     
+    func updateDismissTransition(_ value: CGFloat) {    
+    }
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let distanceFromEquilibrium = scrollView.contentOffset.y - scrollView.contentSize.height / 3.0
         
@@ -207,6 +210,8 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
             self.navigationBar?.alpha = transition
             self.footerNode.alpha = transition
         }
+        
+        self.updateDismissTransition(transition)
         
         if let toolbarNode = toolbarNode {
             toolbarNode.layer.position = CGPoint(x: toolbarNode.layer.position.x, y: self.bounds.size.height - toolbarNode.bounds.size.height / 2.0 + (1.0 - transition) * toolbarNode.bounds.size.height)
@@ -269,7 +274,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
             case .began:
                 break
             case .changed:
-                print("changed")
+                break
             case .ended:
                 break
             case .cancelled:

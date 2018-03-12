@@ -17,7 +17,7 @@ private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult
 }
 
 func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
-    guard let _ = chatPresentationInterfaceState.peer else {
+    guard let _ = chatPresentationInterfaceState.renderedPeer?.peer else {
         return nil
     }
     
@@ -111,7 +111,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
 }
 
 func chatOverlayContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
-    guard let searchQuerySuggestionResult = chatPresentationInterfaceState.searchQuerySuggestionResult, let _ = chatPresentationInterfaceState.peer else {
+    guard let searchQuerySuggestionResult = chatPresentationInterfaceState.searchQuerySuggestionResult, let _ = chatPresentationInterfaceState.renderedPeer?.peer else {
         return nil
     }
     

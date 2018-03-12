@@ -42,19 +42,21 @@ final class NativeVideoContent: UniversalVideoContent {
     let dimensions: CGSize
     let duration: Int32
     let streamVideo: Bool
+    let loopVideo: Bool
     let enableSound: Bool
     
-    init(id: NativeVideoContentId, file: TelegramMediaFile, streamVideo: Bool = false, enableSound: Bool = true) {
+    init(id: NativeVideoContentId, file: TelegramMediaFile, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true) {
         self.id = id
         self.file = file
         self.dimensions = file.dimensions ?? CGSize(width: 128.0, height: 128.0)
         self.duration = file.duration ?? 0
         self.streamVideo = streamVideo
+        self.loopVideo = loopVideo
         self.enableSound = enableSound
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, file: self.file, streamVideo: self.streamVideo, enableSound: self.enableSound)
+        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, file: self.file, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound)
     }
 }
 
@@ -89,7 +91,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var validLayout: CGSize?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, file: TelegramMediaFile, streamVideo: Bool, enableSound: Bool) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, file: TelegramMediaFile, streamVideo: Bool, loopVideo: Bool, enableSound: Bool) {
         self.postbox = postbox
         self.file = file
         
@@ -97,7 +99,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         
         self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: file.resource, streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound)
         var actionAtEndImpl: (() -> Void)?
-        if enableSound {
+        if enableSound && !loopVideo {
             self.player.actionAtEnd = .action({
                 actionAtEndImpl?()
             })

@@ -111,10 +111,13 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 leftInset += 36.0
                 let boundingSize = CGSize(width: 30.0, height: 30.0)
                 var radius: CGFloat = 2.0
+                var imageSize = imageDimensions.aspectFilled(boundingSize)
                 if hasRoundImage {
                     radius = boundingSize.width / 2.0
+                    imageSize.width += 2.0
+                    imageSize.height += 2.0
                 }
-                applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+                applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
             }
             
             var mediaUpdated = false

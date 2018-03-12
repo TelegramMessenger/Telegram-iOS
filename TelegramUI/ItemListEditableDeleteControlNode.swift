@@ -30,8 +30,8 @@ final class ItemListEditableControlNode: ASDisplayNode {
                 resultNode = node
             } else {
                 resultNode = ItemListEditableControlNode()
-                resultNode.iconNode.image = image
             }
+            resultNode.iconNode.image = image
             
             return (CGSize(width: 38.0, height: height), {
                 if let image = image {

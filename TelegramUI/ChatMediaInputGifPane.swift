@@ -37,7 +37,11 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     }
     
     func fileAt(point: CGPoint) -> TelegramMediaFile? {
-        return self.multiplexedNode?.fileAt(point: point)
+        if let multiplexedNode = self.multiplexedNode {
+            return multiplexedNode.fileAt(point: point.offsetBy(dx: -multiplexedNode.frame.minX, dy: -multiplexedNode.frame.minY))
+        } else {
+            return nil
+        }
     }
     
     override func willEnterHierarchy() {

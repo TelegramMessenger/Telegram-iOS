@@ -166,7 +166,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 })
             }
             return false
-        }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { [weak self] peerId, _, message in
+        }, openPeer: { [weak self] peerId, _, message in
             if let peerId = peerId {
                 self?.openPeer(peerId: peerId, peer: message?.peers[peerId])
             }

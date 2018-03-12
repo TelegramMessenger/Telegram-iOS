@@ -66,7 +66,7 @@ private enum UserInfoEntryTag {
 private enum UserInfoEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, displayCall: Bool)
     case about(PresentationTheme, String, String)
-    case phoneNumber(PresentationTheme, Int, String, String)
+    case phoneNumber(PresentationTheme, Int, String, String, Bool)
     case userName(PresentationTheme, String, String)
     case sendMessage(PresentationTheme, String)
     case addContact(PresentationTheme, String)
@@ -144,8 +144,8 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .phoneNumber(lhsTheme, lhsIndex, lhsLabel, lhsValue):
-                if case let .phoneNumber(rhsTheme, rhsIndex, rhsLabel, rhsValue) = rhs, lhsTheme === rhsTheme, lhsIndex == rhsIndex, lhsLabel == rhsLabel, lhsValue == rhsValue {
+            case let .phoneNumber(lhsTheme, lhsIndex, lhsLabel, lhsValue, lhsMain):
+                if case let .phoneNumber(rhsTheme, rhsIndex, rhsLabel, rhsValue, rhsMain) = rhs, lhsTheme === rhsTheme, lhsIndex == rhsIndex, lhsLabel == rhsLabel, lhsValue == rhsValue, lhsMain == rhsMain {
                     return true
                 } else {
                     return false
@@ -225,7 +225,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return 0
             case .about:
                 return 1
-            case let .phoneNumber(_, index, _, _):
+            case let .phoneNumber(_, index, _, _, _):
                 return 2 + index
             case .userName:
                 return 1000
@@ -270,8 +270,8 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return ItemListTextWithLabelItem(theme: theme, label: text, text: value, enabledEntitiyTypes: [], multiline: true, sectionId: self.section, action: {
                     arguments.displayAboutContextMenu(value)
                 }, tag: UserInfoEntryTag.about)
-            case let .phoneNumber(theme, _, label, value):
-                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
+            case let .phoneNumber(theme, _, label, value, isMain):
+                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: isMain ? .accent : .primary, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.openCallMenu(value)
                 }, longTapAction: {
                     arguments.displayCopyContextMenu(.phoneNumber, value)
@@ -394,7 +394,17 @@ private func stringForBlockAction(strings: PresentationStrings, action: Destruct
     }
 }
 
-private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
+private func localizedPhoneNumberLabel(label: String, strings: PresentationStrings) -> String {
+    if label == "_$!<Mobile>!$_" {
+        return "mobile"
+    } else if label == "_$!<Home>!$_" {
+        return "home"
+    } else {
+        return label
+    }
+}
+
+private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, deviceContacts: [DeviceContact], state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
     var entries: [UserInfoEntry] = []
     
     guard let peer = view.peers[view.peerId], let user = peerViewMainPeer(view) as? TelegramUser else {
@@ -420,7 +430,26 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
     }
     
     if let phoneNumber = user.phone, !phoneNumber.isEmpty {
-        entries.append(UserInfoEntry.phoneNumber(presentationData.theme, 0, "home", formatPhoneNumber(phoneNumber)))
+        let formattedNumber = formatPhoneNumber(phoneNumber)
+        let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formattedNumber)
+        
+        var index = 0
+        var found = false
+        for contact in deviceContacts {
+            for number in contact.phoneNumbers {
+                var isMain = false
+                if number.number.normalized == normalizedNumber {
+                    found = true
+                    isMain = true
+                }
+                entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.number.normalized.rawValue, isMain))
+                index += 1
+            }
+        }
+        if !found {
+            entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, "home", formattedNumber, false))
+            index += 1
+        }
     }
     
     if !isEditing {
@@ -566,7 +595,11 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             }
         }
     }, tapAvatarAction: {
-        let _ = (account.postbox.loadedPeerWithId(peerId) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+        let _ = (getUserPeer(postbox: account.postbox, peerId: peerId) |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            
             if peer.profileImageRepresentations.isEmpty {
                 return
             }
@@ -737,9 +770,28 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
         })
     })
     
+    let peerView = Promise<PeerView>()
+    peerView.set(account.viewTracker.peerView(peerId))
+    
+    let deviceContacts: Signal<[DeviceContact], NoError> = peerView.get()
+    |> map { peerView -> String in
+        if let peer = peerView.peers[peerId] as? TelegramUser {
+            return peer.phone ?? ""
+        }
+        return ""
+    }
+    |> distinctUntilChanged
+    |> mapToSignal { number -> Signal<[DeviceContact], NoError> in
+        if number.isEmpty {
+            return .single([])
+        } else {
+            return account.telegramApplicationContext.contactsManager.subscribe(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(number)))
+        }
+    }
+    
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [.peerChatState(peerId: peerId), globalNotificationsKey]))
-        |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView.get(), deviceContacts, account.postbox.combinedView(keys: [.peerChatState(peerId: peerId), globalNotificationsKey]))
+        |> map { presentationData, state, view, deviceContacts, combinedView -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             
             var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
@@ -818,7 +870,7 @@ public func userInfoController(account: Account, peerId: PeerId) -> ViewControll
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
-            let listState = ItemListNodeState(entries: userInfoEntries(account: account, presentationData: presentationData, view: view, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
+            let listState = ItemListNodeState(entries: userInfoEntries(account: account, presentationData: presentationData, view: view, deviceContacts: deviceContacts, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

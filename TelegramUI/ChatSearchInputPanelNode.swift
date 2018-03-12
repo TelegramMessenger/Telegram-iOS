@@ -131,9 +131,9 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         var canSearchMembers = false
         if let search = interfaceState.search {
             if case .everything = search.domain {
-                if let _ = interfaceState.peer as? TelegramGroup {
+                if let _ = interfaceState.renderedPeer?.peer as? TelegramGroup {
                     canSearchMembers = true
-                } else if let peer = interfaceState.peer as? TelegramChannel, case .group = peer.info {
+                } else if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel, case .group = peer.info {
                     canSearchMembers = true
                 }
             } else {

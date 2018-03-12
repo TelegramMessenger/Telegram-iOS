@@ -79,7 +79,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func buttonPressed() {
-        guard let account = self.account, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.peer else {
+        guard let account = self.account, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
             return
         }
         

@@ -28,11 +28,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     private var replyInfoNode: ChatMessageReplyInfoNode?
     private var replyBackgroundNode: ASImageNode?
     
+    private var durationNode: ChatInstantVideoMessageDurationNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     
     private let infoBackgroundNode: ASImageNode
     private let muteIconNode: ASImageNode
-    private let consumableContentNode: ASImageNode
     
     private var status: FileMediaResourceStatus?
     private let playbackStatusDisposable = MetaDisposable()
@@ -69,18 +69,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         self.muteIconNode.displayWithoutProcessing = true
         self.muteIconNode.displaysAsynchronously = false
         
-        self.consumableContentNode = ASImageNode()
-        self.consumableContentNode.isLayerBacked = true
-        self.consumableContentNode.displayWithoutProcessing = true
-        self.consumableContentNode.displaysAsynchronously = false
-        self.consumableContentNode.alpha = 0.0
-        
         super.init(layerBacked: false)
         
         self.addSubnode(self.dateAndStatusNode)
         self.addSubnode(self.infoBackgroundNode)
         self.infoBackgroundNode.addSubnode(self.muteIconNode)
-        self.infoBackgroundNode.addSubnode(self.consumableContentNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -134,12 +127,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             var updatedInfoBackgroundImage: UIImage?
             var updatedMuteIconImage: UIImage?
-            var updatedConsumableContentIcon: UIImage?
             if item.presentationData.theme !== currentItem?.presentationData.theme {
                 updatedTheme = item.presentationData.theme
                 updatedInfoBackgroundImage = PresentationResourcesChat.chatInstantMessageInfoBackgroundImage(item.presentationData.theme)
                 updatedMuteIconImage = PresentationResourcesChat.chatInstantMessageMuteIconImage(item.presentationData.theme)
-                updatedConsumableContentIcon = PresentationResourcesChat.chatMediaConsumableContentIcon(item.presentationData.theme)
             }
             
             let instantVideoBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(item.presentationData.theme)
@@ -319,17 +310,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         strongSelf.muteIconNode.image = updatedMuteIconImage
                     }
                     
-                    if let updatedConsumableContentIcon = updatedConsumableContentIcon {
-                        strongSelf.consumableContentNode.image = updatedConsumableContentIcon
-                    }
-                    
                     strongSelf.telegramFile = updatedFile
                     
-                    if let infoBackgroundImage = strongSelf.infoBackgroundNode.image, let muteImage = strongSelf.muteIconNode.image, let consumableContentImage = strongSelf.consumableContentNode.image {
-                        var infoWidth = muteImage.size.width
-                        if notConsumed {
-                            infoWidth += infoBackgroundImage.size.height - 6.0
-                        }
+                    if let infoBackgroundImage = strongSelf.infoBackgroundNode.image, let muteImage = strongSelf.muteIconNode.image {
+                        let infoWidth = muteImage.size.width
                         let transition: ContainedViewLayoutTransition
                         if animation.isAnimated {
                             transition = .animated(duration: 0.2, curve: .spring)
@@ -340,9 +324,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         transition.updateFrame(node: strongSelf.infoBackgroundNode, frame: infoBackgroundFrame)
                         let muteIconFrame = CGRect(origin: CGPoint(x: infoBackgroundFrame.width - muteImage.size.width, y: 0.0), size: muteImage.size)
                         transition.updateFrame(node: strongSelf.muteIconNode, frame: muteIconFrame)
-                        let consumableContentFrame = CGRect(origin: CGPoint(x: floor((infoBackgroundFrame.height - consumableContentImage.size.width) / 2.0), y: floor((infoBackgroundFrame.height - consumableContentImage.size.width) / 2.0)), size: consumableContentImage.size)
-                        transition.updateFrame(node: strongSelf.consumableContentNode, frame: consumableContentFrame)
-                        transition.updateAlpha(node: strongSelf.consumableContentNode, alpha: notConsumed ? 1.0 : 0.0)
                     }
                     
                     if let updatedPlaybackStatus = updatedPlaybackStatus {
@@ -452,24 +433,42 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                     }
                                     playbackStatusNode.frame = videoFrame.insetBy(dx: 1.5, dy: 1.5)
                                     if let updatedFile = updatedFile {
-                                        playbackStatusNode.status = messageFileMediaPlaybackStatus(account: item.account, file: updatedFile, message: item.message)
+                                        let status = messageFileMediaPlaybackStatus(account: item.account, file: updatedFile, message: item.message)
+                                        playbackStatusNode.status = status
+                                        strongSelf.durationNode?.status = status |> map(Optional.init)
                                     }
-                                } else if let playbackStatusNode = strongSelf.playbackStatusNode {
-                                    strongSelf.playbackStatusNode = nil
-                                    playbackStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak playbackStatusNode] _ in
-                                        playbackStatusNode?.removeFromSupernode()
-                                    })
+                                } else {
+                                    if let playbackStatusNode = strongSelf.playbackStatusNode {
+                                        strongSelf.playbackStatusNode = nil
+                                        playbackStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak playbackStatusNode] _ in
+                                            playbackStatusNode?.removeFromSupernode()
+                                        })
+                                    }
+                                    
+                                    strongSelf.durationNode?.status = .single(nil)
                                 }
                             }
                         }))
                     }
                     
                     dateAndStatusApply(false)
-                    strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floor(videoFrame.midX) + 70.0, params.width - params.rightInset - dateAndStatusSize.width - 4.0), y: videoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
+                    strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floor(videoFrame.midX) + 55.0, params.width - params.rightInset - dateAndStatusSize.width - 4.0), y: videoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
                     
                     if let telegramFile = updatedFile, updatedMedia {
+                        let durationNode: ChatInstantVideoMessageDurationNode
+                        if let current = strongSelf.durationNode {
+                            durationNode = current
+                        } else {
+                            durationNode = ChatInstantVideoMessageDurationNode(textColor: theme.chat.serviceMessage.serviceMessagePrimaryTextColor, fillColor: theme.chat.serviceMessage.serviceMessageFillColor)
+                            strongSelf.durationNode = durationNode
+                            strongSelf.addSubnode(durationNode)
+                        }
+                        durationNode.defaultDuration = telegramFile.duration.flatMap(Double.init)
+                        
                         if let videoNode = strongSelf.videoNode {
-                            videoNode.removeFromSupernode()
+                            videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
+                                videoNode?.removeFromSupernode()
+                            })
                         }
                         let videoNode = UniversalVideoNode(postbox: item.account.postbox, audioSession: item.account.telegramApplicationContext.mediaManager.audioSession, manager: item.account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleInstantVideoDecoration(diameter: 214.0, backgroundImage: instantVideoBackgroundImage, tapped: {
                             if let strongSelf = self {
@@ -485,6 +484,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         strongSelf.videoNode = videoNode
                         strongSelf.insertSubnode(videoNode, belowSubnode: strongSelf.dateAndStatusNode)
                         videoNode.canAttachContent = strongSelf.shouldAcquireVideoContext
+                    }
+                    
+                    if let durationNode = strongSelf.durationNode {
+                        durationNode.frame = CGRect(origin: CGPoint(x: videoFrame.midX - 56.0, y: videoFrame.maxY - 18.0), size: CGSize(width: 1.0, height: 1.0))
+                        durationNode.isSeen = !notConsumed
                     }
                     
                     if let videoNode = strongSelf.videoNode {

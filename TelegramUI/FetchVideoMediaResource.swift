@@ -21,7 +21,7 @@ private final class AVURLAssetCopyItem: MediaResourceDataFetchCopyLocalItem {
     }
 }
 
-private final class VideoConversionWatcher: TGMediaVideoFileWatcher {
+class VideoConversionWatcher: TGMediaVideoFileWatcher {
     private let update: (String, Int) -> Void
     private var path: String?
     

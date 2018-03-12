@@ -60,7 +60,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: 14.0), size: closeButtonSize))
         
         let updatedButtons: [ChatReportPeerTitleButton]
-        if let _ = interfaceState.peer {
+        if let _ = interfaceState.renderedPeer?.peer {
             updatedButtons = peerButtons(interfaceState)
         } else {
             updatedButtons = []

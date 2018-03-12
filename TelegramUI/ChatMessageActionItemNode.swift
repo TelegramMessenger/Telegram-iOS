@@ -377,14 +377,12 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
     return attributedString
 }
 
-class ChatMessageActionItemNode: ChatMessageItemView {
+class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     let labelNode: TextNode
     let filledBackgroundNode: LinkHighlightingNode
     var linkHighlightingNode: LinkHighlightingNode?
     
     private let fetchDisposable = MetaDisposable()
-    
-    private var appliedItem: ChatMessageItem?
     
     required init() {
         self.labelNode = TextNode()
@@ -393,7 +391,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
         
         self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
         
-        super.init(layerBacked: false)
+        super.init()
         
         self.addSubnode(self.filledBackgroundNode)
         self.addSubnode(self.labelNode)
@@ -410,7 +408,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
     override func didLoad() {
         super.didLoad()
         
-        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        /*let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
         recognizer.tapActionAtPoint = { _ in
             return .waitForSingleTap
         }
@@ -419,89 +417,63 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                 strongSelf.updateTouchesAtPoint(point)
             }
         }
-        self.view.addGestureRecognizer(recognizer)
+        self.view.addGestureRecognizer(recognizer)*/
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
-        let layoutConstants = self.layoutConstants
         
         let backgroundLayout = self.filledBackgroundNode.asyncLayout()
         
-        return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
-            let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, message: item.message, accountPeerId: item.account.peerId)
+        return { item, layoutConstants, _, _, _ in
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
             
-            let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, message: item.message, accountPeerId: item.account.peerId)
             
-            var labelRects = labelLayout.linesRects()
-            if labelRects.count > 1 {
-                let sortedIndices = (0 ..< labelRects.count).sorted(by: { labelRects[$0].width > labelRects[$1].width })
-                for i in 0 ..< sortedIndices.count {
-                    let index = sortedIndices[i]
-                    for j in -1 ... 1 {
-                        if j != 0 && index + j >= 0 && index + j < sortedIndices.count {
-                            if abs(labelRects[index + j].width - labelRects[index].width) < 40.0 {
-                                labelRects[index + j].size.width = max(labelRects[index + j].width, labelRects[index].width)
+                let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            
+                var labelRects = labelLayout.linesRects()
+                if labelRects.count > 1 {
+                    let sortedIndices = (0 ..< labelRects.count).sorted(by: { labelRects[$0].width > labelRects[$1].width })
+                    for i in 0 ..< sortedIndices.count {
+                        let index = sortedIndices[i]
+                        for j in -1 ... 1 {
+                            if j != 0 && index + j >= 0 && index + j < sortedIndices.count {
+                                if abs(labelRects[index + j].width - labelRects[index].width) < 40.0 {
+                                    labelRects[index + j].size.width = max(labelRects[index + j].width, labelRects[index].width)
+                                }
                             }
                         }
                     }
                 }
-            }
-            for i in 0 ..< labelRects.count {
-                /*if i != 0 && i != labelRects.count - 1 {
-                    if labelRects[i - 1].width > labelRects[i].width && labelRects[i + 1].width > labelRects[i].width {
-                        if abs(labelRects[i - 1].width - labelRects[i].width) < abs(labelRects[i + 1].width - labelRects[i].width) {
-                            labelRects[i].size.width = labelRects[i - 1].width
-                        } else {
-                            labelRects[i].size.width = labelRects[i + 1].width
-                        }
-                    }
-                }*/
-                
-                labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: floor((labelRects[i].height - 20.0) / 2.0))
-                labelRects[i].size.height = 20.0
-                labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
-            }
-            
-            let backgroundApply = backgroundLayout(item.presentationData.theme.chat.serviceMessage.serviceMessageFillColor, labelRects, 10.0, 10.0, 0.0)
-            
-            let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
-            var layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
-            if dateHeaderAtBottom {
-                layoutInsets.top += layoutConstants.timestampHeaderHeight
-            }
-            
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: labelLayout.size.height + 4.0), insets: layoutInsets), { [weak self] animation in
-                if let strongSelf = self {
-                    strongSelf.appliedItem = item
-                    
-                    let _ = apply()
-                    let _ = backgroundApply()
-                    
-                    let labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - labelLayout.size.width) / 2.0), y: floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
-                    strongSelf.labelNode.frame = labelFrame
-                    strongSelf.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
+                for i in 0 ..< labelRects.count {
+                    labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: floor((labelRects[i].height - 20.0) / 2.0))
+                    labelRects[i].size.height = 20.0
+                    labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
                 }
+            
+                let backgroundApply = backgroundLayout(item.presentationData.theme.chat.serviceMessage.serviceMessageFillColor, labelRects, 10.0, 10.0, 0.0)
+            
+                let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
+                var layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
+                
+                return (backgroundSize.width, { boundingWidth in
+                    return (backgroundSize, { [weak self] animation in
+                        if let strongSelf = self {
+                            strongSelf.item = item
+                            
+                            let _ = apply()
+                            let _ = backgroundApply()
+                            
+                            let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
+                            strongSelf.labelNode.frame = labelFrame
+                            strongSelf.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
+                        }
+                    })
+                })
             })
         }
-    }
-    
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        super.animateInsertion(currentTimestamp, duration: duration, short: short)
-        
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-    }
-    
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
-        super.animateAdded(currentTimestamp, duration: duration)
-        
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-    }
-    
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
-        super.animateRemoved(currentTimestamp, duration: duration)
-        
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
@@ -539,8 +511,6 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                                     if let item = self.item {
                                         item.controllerInteraction.openInstantPage(item.message)
                                     }
-                                case .holdToPreviewSecretMedia:
-                                    foundTapAction = true
                                 case let .call(peerId):
                                     foundTapAction = true
                                     self.item?.controllerInteraction.callPeer(peerId)
@@ -583,8 +553,6 @@ class ChatMessageActionItemNode: ChatMessageItemView {
                                         item.controllerInteraction.longTap(.hashtag(hashtag))
                                     case .instantPage:
                                         break
-                                    case .holdToPreviewSecretMedia:
-                                        break
                                     case .call:
                                         break
                                 }
@@ -604,7 +572,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
         }
     }
     
-    private func updateTouchesAtPoint(_ point: CGPoint?) {
+    override func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
             var rects: [(CGRect, CGRect)]?
             let textNodeFrame = self.labelNode.frame
@@ -655,7 +623,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
         }
     }
 
-    private func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+    override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.labelNode.frame
         if let (_, attributes) = self.labelNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)) {
             if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {

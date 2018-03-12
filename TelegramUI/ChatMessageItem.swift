@@ -62,30 +62,30 @@ public enum ChatMessageItemContent: Sequence {
     }
 }
 
-private func mediaIsNotMergeable(_ media: Media) -> Bool {
+private func mediaMergeableStyle(_ media: Media) -> ChatMessageMerge {
     if let file = media as? TelegramMediaFile {
         for attribute in file.attributes {
             switch attribute {
                 case .Sticker:
-                    return false
+                    return .semanticallyMerged
                 case let .Video(_, _, flags):
                     if flags.contains(.instantRoundVideo) {
-                        return false
+                        return .semanticallyMerged
                     }
                 default:
                     break
             }
         }
-        return true
+        return .fullyMerged
     }
     if let _ = media as? TelegramMediaAction {
-        return true
+        return .none
     }
     if let _ = media as? TelegramMediaExpiredContent {
-        return true
+        return .none
     }
     
-    return false
+    return .fullyMerged
 }
 
 private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs: Message) -> ChatMessageMerge {
@@ -103,26 +103,31 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
     }
     
     if abs(lhs.timestamp - rhs.timestamp) < Int32(5 * 60) && lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id {
+        var upperStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
+        var lowerStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
         for media in lhs.media {
-            if mediaIsNotMergeable(media) {
-                return .semanticallyMerged
+            let style = mediaMergeableStyle(media).rawValue
+            if style < upperStyle {
+                upperStyle = style
             }
         }
         for media in rhs.media {
-            if mediaIsNotMergeable(media) {
-                return .semanticallyMerged
+            let style = mediaMergeableStyle(media).rawValue
+            if style < lowerStyle {
+                lowerStyle = style
             }
         }
         for attribute in lhs.attributes {
             if let attribute = attribute as? ReplyMarkupMessageAttribute {
                 if attribute.flags.contains(.inline) && !attribute.rows.isEmpty {
-                    return .semanticallyMerged
+                    upperStyle = ChatMessageMerge.semanticallyMerged.rawValue
                 }
                 break
             }
         }
         
-        return .fullyMerged
+        let style = min(upperStyle, lowerStyle)
+        return ChatMessageMerge(rawValue: style)!
     }
     
     return .none
@@ -168,10 +173,10 @@ public enum ChatMessageItemAdditionalContent {
     case eventLogPreviousLink(Message)
 }
 
-enum ChatMessageMerge {
-    case none
-    case fullyMerged
-    case semanticallyMerged
+enum ChatMessageMerge: Int32 {
+    case none = 0
+    case fullyMerged = 1
+    case semanticallyMerged = 2
     
     var merged: Bool {
         if case .none = self {
@@ -292,13 +297,9 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     }
                 }
             } else if let action = media as? TelegramMediaAction {
-                if case .phoneCall = action.action {
-                    viewClassName = ChatMessageBubbleItemNode.self
-                } else {
-                    viewClassName = ChatMessageActionItemNode.self
-                }
+                viewClassName = ChatMessageBubbleItemNode.self
             } else if let _ = media as? TelegramMediaExpiredContent {
-                viewClassName = ChatMessageActionItemNode.self
+                viewClassName = ChatMessageBubbleItemNode.self
             }
         }
         

@@ -14,6 +14,7 @@ private enum ChatMessageGalleryControllerData {
     case stickerPack(StickerPackReference)
     case audio(TelegramMediaFile)
     case gallery(GalleryController)
+    case secretGallery(SecretMediaPreviewController)
     case other(Media)
 }
 
@@ -86,10 +87,15 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
         } else if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "application/vnd.apple.pkpass" || (file.fileName != nil && file.fileName!.lowercased().hasSuffix(".pkpass")) {
             return .pass(file)
         } else {
-            let gallery = GalleryController(account: account, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                navigationController?.replaceTopController(controller, animated: false, ready: ready)
-            }, baseNavigationController: navigationController)
-            return .gallery(gallery)
+            if message.containsSecretMedia {
+                let gallery = SecretMediaPreviewController(account: account, messageId: message.id)
+                return .secretGallery(gallery)
+            } else {
+                let gallery = GalleryController(account: account, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                    navigationController?.replaceTopController(controller, animated: false, ready: ready)
+                }, baseNavigationController: navigationController)
+                return .gallery(gallery)
+            }
         }
     }
     if let otherMedia = otherMedia {
@@ -191,6 +197,16 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 account.telegramApplicationContext.mediaManager.setPlaylist(PeerMessagesMediaPlaylist(postbox: account.postbox, network: account.network, location: location), type: playerType)
                 return true
             case let .gallery(gallery):
+                dismissInput()
+                present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
+                    let selectedTransitionNode = transitionNode(messageId, media)
+                    if let selectedTransitionNode = selectedTransitionNode {
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                    }
+                    return nil
+                }))
+                return true
+            case let .secretGallery(gallery):
                 dismissInput()
                 present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
                     let selectedTransitionNode = transitionNode(messageId, media)

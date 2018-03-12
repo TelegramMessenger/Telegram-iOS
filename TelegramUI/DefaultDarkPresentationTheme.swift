@@ -3,6 +3,7 @@ import UIKit
 
 private let accentColor: UIColor = UIColor(rgb: 0xffffff)
 private let destructiveColor: UIColor = UIColor(rgb: 0xFF736B)
+private let constructiveColor: UIColor = UIColor(rgb: 0x4cd964)
 private let secretColor: UIColor = UIColor(rgb: 0x00B12C)
 
 private let rootStatusBar = PresentationThemeRootNavigationStatusBar(
@@ -80,7 +81,8 @@ private let list = PresentationThemeList(
     itemDisclosureActions: PresentationThemeItemDisclosureActions(
         neutral1: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x666666), foregroundColor: .white),
         neutral2: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x414141), foregroundColor: .white),
-        destructive: PresentationThemeItemDisclosureAction(fillColor: destructiveColor, foregroundColor: .white)
+        destructive: PresentationThemeItemDisclosureAction(fillColor: destructiveColor, foregroundColor: .white),
+        constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white)
     ),
     itemCheckColors: PresentationThemeCheck(
         strokeColor: UIColor(rgb: 0xffffff, alpha: 0.5),

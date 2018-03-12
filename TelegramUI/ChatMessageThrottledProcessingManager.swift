@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 
 final class ChatMessageThrottledProcessingManager {
-    private let queue = Queue(target: Queue.concurrentBackgroundQueue())
+    private let queue = Queue()
     
     private let delay: Double
     

@@ -17,6 +17,7 @@ enum PresentationResourceKey: Int32 {
     case navigationCallIcon
     case navigationShareIcon
     case navigationSearchIcon
+    case navigationAddIcon
     case navigationPlayerCloseButton
     
     case navigationLiveLocationIcon
@@ -38,6 +39,7 @@ enum PresentationResourceKey: Int32 {
     case itemListDeleteIndicatorIcon
     case itemListReorderIndicatorIcon
     case itemListAddPersonIcon
+    case itemListAddPhoneIcon
     
     case itemListStickerItemUnreadDot
     case itemListVerifiedPeerIcon

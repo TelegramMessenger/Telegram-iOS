@@ -37,6 +37,7 @@ public class ContactsController: ViewController {
         self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -102,6 +103,12 @@ public class ContactsController: ViewController {
             }
         }
         
+        self.contactsNode.openInvite = { [weak self] in
+            if let strongSelf = self {
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(InviteContactsController(account: strongSelf.account))
+            }
+        }
+        
         self.displayNodeDidLoad()
     }
     
@@ -138,5 +145,9 @@ public class ContactsController: ViewController {
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
             self.contactsNode.deactivateSearch()
         }
+    }
+    
+    @objc func addPressed() {
+        (self.navigationController as? NavigationController)?.pushViewController(createContactController(account: self.account))
     }
 }

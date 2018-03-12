@@ -64,7 +64,7 @@ private final class ContactListNodeInteraction {
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
-    case peer(Int, Peer, PeerPresence?, ContactListNameIndexHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings)
+    case peer(Int, Peer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings)
     
     var stableId: ContactListNodeEntryId {
         switch self {
@@ -83,7 +83,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     interaction.activateSearch()
                 })
-            case let .option(_, option, theme, strings):
+            case let .option(_, option, theme, _):
                 return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
             case let .peer(_, peer, presence, header, selection, theme, strings):
                 let status: ContactsPeerItemStatus
@@ -128,7 +128,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         } else if (lhsPresence != nil) != (rhsPresence != nil) {
                             return false
                         }
-                        if lhsHeader != rhsHeader {
+                        if lhsHeader?.id != rhsHeader?.id {
                             return false
                         }
                         if lhsSelection != rhsSelection {
@@ -214,7 +214,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
     var headers: [PeerId: ContactListNameIndexHeader] = [:]
     
     switch presentation {
-        case .orderedByPresence:
+        case let .orderedByPresence(options):
             entries.append(.search(theme, strings))
             orderedPeers = peers.sorted(by: { lhs, rhs in
                 let lhsPresence = presences[lhs.id]
@@ -232,6 +232,9 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
                 }
                 return lhs.id < rhs.id
             })
+            for i in 0 ..< options.count {
+                entries.append(.option(i, options[i], theme, strings))
+            }
         case let .natural(displaySearch, options):
             orderedPeers = peers.sorted(by: { lhs, rhs in
                 let result = lhs.indexName.isLessThan(other: rhs.indexName)
@@ -294,6 +297,14 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
         }
     }
     
+    var commonHeader: ListViewItemHeader?
+    switch presentation {
+        case .orderedByPresence:
+            commonHeader = ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
+        default:
+            break
+    }
+    
     for i in 0 ..< orderedPeers.count {
         let selection: ContactsPeerItemSelection
         if let selectionState = selectionState {
@@ -301,7 +312,14 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [Peer], presences
         } else {
             selection = .none
         }
-        entries.append(.peer(i, orderedPeers[i], presences[orderedPeers[i].id], headers[orderedPeers[i].id], selection, theme, strings))
+        let header: ListViewItemHeader?
+        switch presentation {
+            case .orderedByPresence:
+                header = commonHeader
+            default:
+                header = headers[orderedPeers[i].id]
+        }
+        entries.append(.peer(i, orderedPeers[i], presences[orderedPeers[i].id], header, selection, theme, strings))
     }
     return entries
 }
@@ -335,7 +353,7 @@ public struct ContactListAdditionalOption: Equatable {
 }
 
 enum ContactListPresentation {
-    case orderedByPresence
+    case orderedByPresence(options: [ContactListAdditionalOption])
     case natural(displaySearch: Bool, options: [ContactListAdditionalOption])
     case search(Signal<String, NoError>)
 }
@@ -401,9 +419,9 @@ final class ContactListNode: ASDisplayNode {
             if value != self.enableUpdatesValue {
                 self.enableUpdatesValue = value
                 if value {
-                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId))
+                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId, includePresences: true))
                 } else {
-                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId) |> take(1))
+                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId, includePresences: true) |> take(1))
                 }
             }
         }
@@ -584,7 +602,7 @@ final class ContactListNode: ASDisplayNode {
                     options.insert(.Synchronous)
                     options.insert(.LowLatency)
                 } else if transition.animated {
-                    options.insert(.AnimateInsertion)
+                    options.insert(.AnimateCrossfade)
                 }
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
                     if let strongSelf = self {

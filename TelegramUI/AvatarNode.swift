@@ -211,7 +211,11 @@ public final class AvatarNode: ASDisplayNode {
         let colorIndex: Int
         if let parameters = parameters as? AvatarNodeParameters {
             if let accountPeerId = parameters.accountPeerId, let peerId = parameters.peerId {
-                colorIndex = abs(Int(accountPeerId.id + peerId.id))
+                if peerId.namespace == -1 {
+                    colorIndex = -1
+                } else {
+                    colorIndex = abs(Int(accountPeerId.id + peerId.id))
+                }
             } else {
                 colorIndex = -1
             }

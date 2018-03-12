@@ -886,9 +886,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         listViewTransaction(ListViewUpdateSizeAndInsets(size: contentBounds.size, insets: listInsets, duration: duration, curve: listViewCurve, ensureTopInsetForOverlayHighlightedItems: ensureTopInsetForOverlayHighlightedItems), additionalScrollDistance, scrollToTop)
         
         let navigateButtonsSize = self.navigateButtons.updateLayout(transition: transition)
-        var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 6.0, y: layout.size.height - containerInsets.bottom - inputPanelsHeight - navigateButtonsSize.height - 6.0), size: navigateButtonsSize)
+        var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 6.0, y: layout.size.height - containerInsets.bottom - inputPanelsHeight - navigateButtonsSize.height - 6.0 - bottomOverflowOffset), size: navigateButtonsSize)
         if case .overlay = self.chatPresentationInterfaceState.mode {
-            navigateButtonsFrame = navigateButtonsFrame.offsetBy(dx: -8.0, dy: -8.0 - bottomOverflowOffset)
+            navigateButtonsFrame = navigateButtonsFrame.offsetBy(dx: -8.0, dy: -8.0)
         }
         
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: inputBackgroundFrame)
@@ -1157,7 +1157,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: animated)
             }
             
-            if let peer = chatPresentationInterfaceState.peer?.peer, let restrictionText = peer.restrictionText {
+            if let peer = chatPresentationInterfaceState.renderedPeer?.peer, let restrictionText = peer.restrictionText {
                 if self.restrictedNode == nil {
                     let restrictedNode = ChatRecentActionsEmptyNode(theme: chatPresentationInterfaceState.theme)
                     self.historyNodeContainer.supernode?.insertSubnode(restrictedNode, aboveSubnode: self.historyNodeContainer)
@@ -1545,6 +1545,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     return (state.inputMode, nil)
                 }
             }
+        }
+    }
+    
+    func scrollToTop() {
+        if case .media(_, true) = self.chatPresentationInterfaceState.inputMode {
+            self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { state in
+                if case let .media(mode, true) = state.inputMode {
+                    return (.media(mode: mode, expanded: false), nil)
+                } else {
+                    return (state.inputMode, nil)
+                }
+            }
+        } else {
+            self.historyNode.scrollScreenToTop()
         }
     }
 }

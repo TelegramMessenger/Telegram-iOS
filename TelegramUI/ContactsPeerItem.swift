@@ -17,6 +17,7 @@ enum ContactsPeerItemStatus {
     case none
     case presence(PeerPresence)
     case addressName(String)
+    case custom(String)
 }
 
 enum ContactsPeerItemSelection: Equatable {
@@ -222,7 +223,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let titleNode: TextNode
     private var verificationIconNode: ASImageNode?
     private let statusNode: TextNode
-    private var selectionNode: ASImageNode?
+    private var selectionNode: CheckNode?
     
     private var avatarState: (Account, Peer?)?
     
@@ -321,23 +322,23 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             var leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = 10.0 + params.rightInset
             
-            let updatedSelectionNode: ASImageNode?
-            var updatedSelectionImage: UIImage?
+            let updatedSelectionNode: CheckNode?
+            var isSelected = false
             switch item.selection {
                 case .none:
                     updatedSelectionNode = nil
                 case let .selectable(selected):
                     leftInset += 28.0
+                    isSelected = selected
                     
-                    let selectionNode: ASImageNode
+                    let selectionNode: CheckNode
                     if let current = currentSelectionNode {
                         selectionNode = current
                         updatedSelectionNode = selectionNode
                     } else {
-                        selectionNode = ASImageNode()
+                        selectionNode = CheckNode(strokeColor: item.theme.list.itemCheckColors.strokeColor, fillColor: item.theme.list.itemCheckColors.fillColor, foregroundColor: item.theme.list.itemCheckColors.foregroundColor, style: .plain)
                         updatedSelectionNode = selectionNode
                     }
-                    updatedSelectionImage = selected ? selectedImage : selectableImage
             }
             
             var isVerified = false
@@ -409,6 +410,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         } else if !suffix.isEmpty {
                             statusAttributedString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                         }
+                    case let .custom(text):
+                        statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                 }
             }
             
@@ -495,12 +498,9 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.selectionNode = updatedSelectionNode
                                     strongSelf.addSubnode(updatedSelectionNode)
                                 }
-                                if updatedSelectionImage !== updatedSelectionNode.image {
-                                    updatedSelectionNode.image = updatedSelectionImage
-                                }
-                                if let updatedSelectionImage = updatedSelectionImage {
-                                    updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 10.0, y: floor((nodeLayout.contentSize.height - updatedSelectionImage.size.height) / 2.0)), size: updatedSelectionImage.size)
-                                }
+                                updatedSelectionNode.setIsChecked(isSelected, animated: animated)
+                                
+                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 6.0, y: floor((nodeLayout.contentSize.height - 32.0) / 2.0)), size: CGSize(width: 32.0, height: 32.0))
                             } else if let selectionNode = strongSelf.selectionNode {
                                 selectionNode.removeFromSupernode()
                                 strongSelf.selectionNode = nil

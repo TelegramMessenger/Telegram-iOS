@@ -196,13 +196,13 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             } else {
                 if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
                     var accessoryItems: [ChatTextInputAccessoryItem] = []
-                    if let peer = chatPresentationInterfaceState.peer as? TelegramSecretChat {
+                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
                         accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
                     }
-                    if let peer = chatPresentationInterfaceState.peer as? TelegramChannel, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
+                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
                         accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
                     }
-                    if let peer = chatPresentationInterfaceState.peer as? TelegramUser {
+                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
                         if let _ = peer.botInfo {
                             accessoryItems.append(.commands)
                         }

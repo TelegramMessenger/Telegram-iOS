@@ -97,10 +97,13 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 if let imageDimensions = imageDimensions {
                     let boundingSize = CGSize(width: 35.0, height: 35.0)
                     var radius: CGFloat = 2.0
+                    var imageSize = imageDimensions.aspectFilled(boundingSize)
                     if isRoundImage {
                         radius = floor(boundingSize.width / 2.0)
+                        imageSize.width += 2.0
+                        imageSize.height += 2.0
                     }
-                    applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+                    applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
                 }
                 
                 var mediaUpdated = false

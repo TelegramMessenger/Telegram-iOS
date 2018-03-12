@@ -82,7 +82,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func buttonPressed() {
-        guard let account = self.account, let action = self.action, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.peer?.peer else {
+        guard let account = self.account, let action = self.action, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
             return
         }
         
@@ -102,7 +102,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             case .kicked:
                 break
             case .muteNotifications, .unmuteNotifications:
-                if let account = self.account, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.peer?.peer {
+                if let account = self.account, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
                     self.actionDisposable.set(togglePeerMuted(account: account, peerId: peer.id).start())
                 }
         }
@@ -115,7 +115,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
             
-            if let peer = interfaceState.peer?.peer, previousState?.peer?.peer == nil || !peer.isEqual(previousState!.peer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted {
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted {
                 if let action = actionForPeer(peer: peer, isMuted: interfaceState.peerIsMuted) {
                     self.action = action
                     let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)

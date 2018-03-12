@@ -134,7 +134,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 maximumWidth = imageSize.width + bubbleInsets.left + bubbleInsets.right
             }
             
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 5.0, hidesBackgroundForEmptyWallpapers: activeLiveBroadcastingTimeout == nil && selectedMedia?.venue == nil, forceFullCorners: false)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 5.0, hidesBackground: (activeLiveBroadcastingTimeout == nil && selectedMedia?.venue == nil) ? .emptyWallpaper : .none, forceFullCorners: false, forceAlignment: .none)
             
             var pinPeer: Peer?
             var pinLiveLocationActive: Bool?

@@ -82,6 +82,12 @@ struct PresentationResourcesRootController {
         })
     }
     
+    static func navigationAddIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationAddIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/AddIcon"), color: theme.rootController.navigationBar.accentTextColor)
+        })
+    }
+    
     static func navigationPlayerCloseButton(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationPlayerCloseButton.rawValue, { theme in
             return generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in

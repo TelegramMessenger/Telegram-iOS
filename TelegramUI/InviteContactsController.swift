@@ -1,0 +1,169 @@
+import Foundation
+import Display
+import AsyncDisplayKit
+import Postbox
+import SwiftSignalKit
+import TelegramCore
+import MessageUI
+
+public class InviteContactsController: ViewController, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {
+    private let account: Account
+    
+    private var contactsNode: InviteContactsControllerNode {
+        return self.displayNode as! InviteContactsControllerNode
+    }
+    
+    private var _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
+    private var composer: MFMessageComposeViewController?
+    
+    public init(account: Account) {
+        self.account = account
+        
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        
+        self.title = self.presentationData.strings.Contacts_InviteFriends
+        
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: presentationData.strings.Contacts_SelectAll, style: .plain, target: self, action: #selector(self.selectAllPressed))
+        
+        self.scrollToTop = { [weak self] in
+            if let strongSelf = self {
+                //strongSelf.contactsNode.listNode.scrollToTop()
+            }
+        }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    let previousTheme = strongSelf.presentationData.theme
+                    let previousStrings = strongSelf.presentationData.strings
+                    
+                    strongSelf.presentationData = presentationData
+                    
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                        strongSelf.updateThemeAndStrings()
+                    }
+                }
+            })
+    }
+    
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.title = self.presentationData.strings.Contacts_InviteFriends
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+    }
+    
+    override public func loadDisplayNode() {
+        self.displayNode = InviteContactsControllerNode(account: self.account)
+        self._ready.set(self.contactsNode.ready)
+        
+        self.contactsNode.navigationBar = self.navigationBar
+        
+        self.contactsNode.requestDeactivateSearch = { [weak self] in
+            self?.deactivateSearch()
+        }
+        
+        self.contactsNode.requestActivateSearch = { [weak self] in
+            self?.activateSearch()
+        }
+        
+        self.contactsNode.requestShareTelegram = { [weak self] in
+            if let strongSelf = self {
+                let shareController = ShareController(account: strongSelf.account, subject: .url("https://telegram.org/dl"), externalShare: true, immediateExternalShare: true)
+                strongSelf.present(shareController, in: .window(.root))
+            }
+        }
+        
+        self.contactsNode.requestShare = { [weak self] numbers in
+            if let strongSelf = self, MFMessageComposeViewController.canSendText() {
+                let composer = MFMessageComposeViewController()
+                composer.messageComposeDelegate = strongSelf
+                let recipients: [String] = Array(numbers.map {
+                    return $0.0.phoneNumbers.map { $0.number.plain }
+                }.joined())
+                composer.recipients = Array(Set(recipients))
+                let url = strongSelf.presentationData.strings.InviteText_URL
+                var body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
+                if numbers.count == 1, numbers[0].1 > 0 {
+                    body = strongSelf.presentationData.strings.InviteText_ContactsCount(numbers[0].1)
+                    body = body.replacingOccurrences(of: "(null)", with: url)
+                }
+                composer.body = body
+                strongSelf.composer = composer
+                if let window = strongSelf.view.window {
+                    window.rootViewController?.present(composer, animated: true)
+                }
+            }
+        }
+        
+        self.displayNodeDidLoad()
+    }
+    
+    override public func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+    }
+    
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+    }
+    
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+        
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+    }
+    
+    private func activateSearch() {
+        if self.displayNavigationBar {
+            if let scrollToTop = self.scrollToTop {
+                scrollToTop()
+            }
+            self.contactsNode.activateSearch()
+            self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
+        }
+    }
+    
+    private func deactivateSearch() {
+        if !self.displayNavigationBar {
+            self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
+            self.contactsNode.deactivateSearch()
+        }
+    }
+    
+    @objc func selectAllPressed() {
+        self.contactsNode.selectAll()
+    }
+    
+    @objc public func messageComposeViewController(_ controller: MFMessageComposeViewController, didFinishWith result: MessageComposeResult) {
+        self.composer = nil
+        
+        controller.dismiss(animated: true, completion: nil)
+        
+        guard case .sent = result else {
+            return
+        }
+        
+        self.contactsNode.selectionState = self.contactsNode.selectionState.withClearedSelection()
+    }
+}
+

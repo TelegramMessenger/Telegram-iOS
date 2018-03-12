@@ -19,7 +19,7 @@ private let starIconEmpty = UIImage(bundleImageName: "Chat/Context Menu/StarIcon
 private let starIconFilled = UIImage(bundleImageName: "Chat/Context Menu/StarIconFilled")?.precomposed()
 
 func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> Bool {
-    guard let peer = chatPresentationInterfaceState.peer else {
+    guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return false
     }
     
@@ -85,7 +85,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             } else if let _ = media as? TelegramMediaAction {
                 isAction = true
             } else if let image = media as? TelegramMediaImage {
-                loadCopyMediaResource = largestImageRepresentation(image.representations)?.resource
+                if !messages[0].containsSecretMedia {
+                    loadCopyMediaResource = largestImageRepresentation(image.representations)?.resource
+                }
             }
         }
     }

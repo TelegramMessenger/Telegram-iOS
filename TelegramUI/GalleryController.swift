@@ -71,7 +71,7 @@ private func mediaForMessage(message: Message) -> Media? {
     return nil
 }
 
-func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: PresentationStrings, entry: MessageHistoryEntry, streamVideos: Bool) -> GalleryItem? {
+func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: PresentationStrings, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}) -> GalleryItem? {
     switch entry {
         case let .MessageEntry(message, _, location, _):
             if let media = mediaForMessage(message: message) {
@@ -79,7 +79,7 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
                     return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo || file.mimeType.hasPrefix("video/") {
-                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: .message(message.id, file.fileId), file: file, streamVideo: streamVideos), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: message.text)
+                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: .message(message.id, file.fileId), file: file, streamVideo: streamVideos, loopVideo: loopVideos), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: message.text, hideControls: hideControls, playbackCompleted: playbackCompleted)
                     } else {
                         if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" && (file.size == nil || file.size! < 5 * 1024 * 1024) {
                             return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)

@@ -9,6 +9,7 @@ enum RadialStatusNodeState: Equatable {
     case progress(color: UIColor, value: CGFloat?, cancelEnabled: Bool)
     case check(UIColor)
     case customIcon(UIImage)
+    case secretTimeout(color: UIColor, icon: UIImage?, beginTime: Double, timeout: Double)
     
     static func ==(lhs: RadialStatusNodeState, rhs: RadialStatusNodeState) -> Bool {
         switch lhs {
@@ -54,6 +55,12 @@ enum RadialStatusNodeState: Equatable {
                 } else {
                     return false
                 }
+            case let .secretTimeout(lhsColor, lhsIcon, lhsBeginTime, lhsTimeout):
+                if case let .secretTimeout(rhsColor, rhsIcon, rhsBeginTime, rhsTimeout) = rhs, lhsColor.isEqual(rhsColor), lhsIcon === rhsIcon, lhsBeginTime.isEqual(to: rhsBeginTime), lhsTimeout.isEqual(to: rhsTimeout) {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -92,6 +99,8 @@ enum RadialStatusNodeState: Equatable {
                     node.progress = value
                     return node
                 }
+        case let .secretTimeout(color, icon, beginTime, timeout):
+            return RadialStatusSecretTimeoutContentNode(color: color, beginTime: beginTime, timeout: timeout, icon: icon)
         }
     }
 }
@@ -99,7 +108,7 @@ enum RadialStatusNodeState: Equatable {
 final class RadialStatusNode: ASControlNode {
     private var backgroundNodeColor: UIColor
     
-    private var state: RadialStatusNodeState = .none
+    private(set) var state: RadialStatusNodeState = .none
     
     private var backgroundNode: RadialStatusBackgroundNode?
     private var contentNode: RadialStatusContentNode?

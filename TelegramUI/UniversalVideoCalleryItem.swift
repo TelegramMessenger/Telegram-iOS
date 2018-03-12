@@ -19,8 +19,10 @@ class UniversalVideoGalleryItem: GalleryItem {
     let indexData: GalleryItemIndexData?
     let contentInfo: UniversalVideoGalleryItemContentInfo?
     let caption: String
+    let hideControls: Bool
+    let playbackCompleted: () -> Void
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: String) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: String, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -29,6 +31,8 @@ class UniversalVideoGalleryItem: GalleryItem {
         self.indexData = indexData
         self.contentInfo = contentInfo
         self.caption = caption
+        self.hideControls = hideControls
+        self.playbackCompleted = playbackCompleted
     }
     
     func node() -> GalleryItemNode {
@@ -108,6 +112,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private let statusDisposable = MetaDisposable()
     
+    var playbackCompleted: (() -> Void)?
+    
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
         self.strings = strings
@@ -171,6 +177,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     func setupItem(_ item: UniversalVideoGalleryItem) {
         if self.item?.content.id != item.content.id {
+            if item.hideControls {
+                self.statusButtonNode.isHidden = true
+            }
+            
             if let videoNode = self.videoNode {
                 videoNode.canAttachContent = false
                 videoNode.removeFromSupernode()
@@ -242,7 +252,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     strongSelf.isPaused = isPaused
                     
-                    strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused || value == nil)
+                    if !item.hideControls {
+                        strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused || value == nil)
+                    }
                     if isPaused {
                         if strongSelf.didPause {
                             strongSelf.footerContentNode.content = .playbackPlay
@@ -273,6 +285,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if !isAnimated {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
                 self._rightBarButtonItem.set(.single(rightBarButtonItem))
+            }
+            
+            videoNode.playbackCompleted = {
+                Queue.mainQueue().async {
+                    item.playbackCompleted()
+                }
             }
             
             self._ready.set(videoNode.ready)

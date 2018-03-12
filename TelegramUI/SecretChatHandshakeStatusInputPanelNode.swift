@@ -43,10 +43,17 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
             
-            if let peer = interfaceState.peer as? TelegramSecretChat {
+            if let renderedPeer = interfaceState.renderedPeer, let peer = renderedPeer.peer as? TelegramSecretChat, let userPeer = renderedPeer.peers[peer.regularPeerId] {
                 switch peer.embeddedState {
                     case .handshake:
-                        self.button.setAttributedTitle(NSAttributedString(string: interfaceState.strings.Conversation_EncryptionProcessing, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.primaryTextColor), for: [])
+                        let text: String
+                        switch peer.role {
+                            case .creator:
+                                text = interfaceState.strings.DialogList_AwaitingEncryption(userPeer.compactDisplayTitle).0
+                            case .participant:
+                                text = interfaceState.strings.Conversation_EncryptionProcessing
+                        }
+                        self.button.setAttributedTitle(NSAttributedString(string: text, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.primaryTextColor), for: [])
                     case .active, .terminated:
                         break
                 }

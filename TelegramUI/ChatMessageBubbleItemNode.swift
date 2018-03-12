@@ -19,8 +19,12 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                 } else {
                     result.append((message, ChatMessageFileBubbleContentNode.self))
                 }
-            } else if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
-                result.append((message, ChatMessageCallBubbleContentNode.self))
+            } else if let action = media as? TelegramMediaAction {
+                if case .phoneCall = action.action {
+                    result.append((message, ChatMessageCallBubbleContentNode.self))
+                } else {
+                    result.append((message, ChatMessageActionBubbleContentNode.self))
+                }
             } else if let _ = media as? TelegramMediaMap {
                 result.append((message, ChatMessageMapBubbleContentNode.self))
             } else if let _ = media as? TelegramMediaGame {
@@ -33,6 +37,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                 break inner
             } else if let _ = media as? TelegramMediaContact {
                 result.append((message, ChatMessageContactBubbleContentNode.self))
+            } else if let _ = media as? TelegramMediaExpiredContent {
+                result.append((message, ChatMessageActionBubbleContentNode.self))
             }
         }
         
@@ -217,8 +223,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             return .fail
                         case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .call:
                             return .waitForSingleTap
-                        case .holdToPreviewSecretMedia:
-                            return .waitForHold(timeout: 0.12, acceptTap: false)
                     }
                 }
                 if !strongSelf.backgroundNode.frame.contains(point) {
@@ -434,10 +438,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             let topNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedTop.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
             let bottomNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedBottom.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
             
-            var canPossiblyHideBackground = false
+            var backgroundHiding: ChatMessageBubbleContentBackgroundHiding = .none
+            var hasSolidWallpaper = false
             if case .color = item.presentationData.wallpaper {
-                canPossiblyHideBackground = true
+                hasSolidWallpaper = true
             }
+            var alignment: ChatMessageBubbleContentAlignment = .none
             
             var maximumNodeWidth = maximumContentWidth
             
@@ -519,17 +525,38 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 
                 contentPropertiesAndLayouts.append((unboundSize, properties, prepareContentPosition, nodeLayout))
                 
-                if !properties.hidesBackgroundForEmptyWallpapers {
-                    canPossiblyHideBackground = false
+                switch properties.hidesBackground {
+                    case .none:
+                        break
+                    case .emptyWallpaper:
+                        switch backgroundHiding {
+                            case .none:
+                                backgroundHiding = properties.hidesBackground
+                            default:
+                                break
+                        }
+                    case .always:
+                        backgroundHiding = .always
+                }
+                
+                switch properties.forceAlignment {
+                    case .none:
+                        break
+                    case .center:
+                        alignment = .center
                 }
                 
                 index += 1
             }
             
             var initialDisplayHeader = true
-            if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil {
-                if let first = contentPropertiesAndLayouts.first, first.1.hidesSimpleAuthorHeader {
-                    initialDisplayHeader = false
+            if case .always = backgroundHiding {
+                initialDisplayHeader = false
+            } else {
+                if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil {
+                    if let first = contentPropertiesAndLayouts.first, first.1.hidesSimpleAuthorHeader {
+                        initialDisplayHeader = false
+                    }
                 }
             }
             
@@ -730,7 +757,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
             
-            let hideBackground = canPossiblyHideBackground && !displayHeader
+            let hideBackground: Bool
+            switch backgroundHiding {
+                case .none:
+                    hideBackground = false
+                case .emptyWallpaper:
+                    hideBackground = hasSolidWallpaper && !displayHeader
+                case .always:
+                    hideBackground = true
+            }
             
             var removedContentNodeIndices: [Int]?
             findRemoved: for i in 0 ..< currentContentClassesPropertiesAndLayouts.count {
@@ -940,11 +975,25 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 actionButtonsSizeAndApply = actionButtonsFinalize(maxContentWidth)
             }
             
-            let layoutBubbleSize = CGSize(width: max(contentSize.width, headerSize.width) + layoutConstants.bubble.contentInsets.left + layoutConstants.bubble.contentInsets.right, height: max(layoutConstants.bubble.minimumSize.height, headerSize.height + contentSize.height + layoutConstants.bubble.contentInsets.top + layoutConstants.bubble.contentInsets.bottom))
+            let minimalContentSize: CGSize
+            if hideBackground {
+                minimalContentSize = CGSize(width: 1.0, height: 1.0)
+            } else {
+                minimalContentSize = layoutConstants.bubble.minimumSize
+            }
+            let layoutBubbleSize = CGSize(width: max(contentSize.width, headerSize.width) + layoutConstants.bubble.contentInsets.left + layoutConstants.bubble.contentInsets.right, height: max(minimalContentSize.height, headerSize.height + contentSize.height + layoutConstants.bubble.contentInsets.top + layoutConstants.bubble.contentInsets.bottom))
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset), y: 0.0), size: layoutBubbleSize)
-            
-            let contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
+            let backgroundFrame: CGRect
+            let contentOrigin: CGPoint
+            switch alignment {
+                case .none:
+                    backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset), y: 0.0), size: layoutBubbleSize)
+                    contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
+                case .center:
+                    let availableWidth = params.width - params.leftInset - params.rightInset
+                    backgroundFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((availableWidth - layoutBubbleSize.width) / 2.0), y: 0.0), size: layoutBubbleSize)
+                    contentOrigin = CGPoint(x: backgroundFrame.minX + floor(layoutConstants.bubble.contentInsets.right + layoutConstants.bubble.contentInsets.left) / 2.0, y: backgroundFrame.minY + layoutConstants.bubble.contentInsets.top + headerSize.height)
+            }
 
             var layoutSize = CGSize(width: params.width, height: layoutBubbleSize.height)
             if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
@@ -1312,12 +1361,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
-            case .began:
-                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture {
-                    if let item = self.item, item.message.containsSecretMedia {
-                        item.controllerInteraction.openSecretMessagePreview(item.message.id)
-                    }
-                }
             case .ended:
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
@@ -1404,8 +1447,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             item.controllerInteraction.openInstantPage(item.message)
                                         }
                                         break loop
-                                    case .holdToPreviewSecretMedia:
-                                        foundTapAction = true
                                     case let .call(peerId):
                                         foundTapAction = true
                                         self.item?.controllerInteraction.callPeer(peerId)
@@ -1450,8 +1491,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             break loop
                                         case .instantPage:
                                             break
-                                        case .holdToPreviewSecretMedia:
-                                            break
                                         case .call:
                                             break
                                     }
@@ -1460,15 +1499,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     item.controllerInteraction.openMessageContextMenu(tapMessage, self, self.backgroundNode.frame)
                                 }
                             }
-                        case .hold:
-                            if let item = self.item, item.message.containsSecretMedia {
-                                item.controllerInteraction.closeSecretMessagePreview()
-                            }
+                        default:
+                            break
                     }
-                }
-            case .cancelled:
-                if let item = self.item, item.message.containsSecretMedia {
-                    item.controllerInteraction.closeSecretMessagePreview()
                 }
             default:
                 break

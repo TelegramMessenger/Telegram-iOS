@@ -2,6 +2,7 @@ import Foundation
 import Display
 import SafariServices
 import TelegramCore
+import Postbox
 import SwiftSignalKit
 
 public func openExternalUrl(account: Account, url: String, presentationData: PresentationData, applicationContext: TelegramApplicationContext, navigationController: NavigationController?) {
@@ -90,6 +91,22 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                             result += "?game=\(game)"
                         }
                         convertedUrl = result
+                    }
+                }
+            } else if parsedUrl.host == "localpeer" {
+                 if let components = URLComponents(string: "/?" + query) {
+                    var peerId: PeerId?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "id", let intValue = Int64(value) {
+                                    peerId = PeerId(intValue)
+                                }
+                            }
+                        }
+                    }
+                    if let peerId = peerId, let navigationController = navigationController {
+                        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
                     }
                 }
             } else if parsedUrl.host == "join" {

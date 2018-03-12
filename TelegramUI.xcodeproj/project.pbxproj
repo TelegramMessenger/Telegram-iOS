@@ -65,6 +65,10 @@
 		D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */; };
 		D02F4AF01FD4C46D004DFBAE /* SystemVideoContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02F4AEF1FD4C46D004DFBAE /* SystemVideoContent.swift */; };
 		D033C60B1F0D306E0044EABA /* TelegramVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033C60A1F0D306E0044EABA /* TelegramVideoNode.swift */; };
+		D0380DA9204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DA8204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift */; };
+		D0380DAB204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */; };
+		D0380DAD204ED434000414AB /* LegacyLiveUploadInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */; };
+		D0380DB8204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DB7204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift */; };
 		D03AA4DF202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4DE202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift */; };
 		D03AA4E5202DF8840056C405 /* StickerPreviewPeekContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4E4202DF8840056C405 /* StickerPreviewPeekContent.swift */; };
 		D03AA4E7202DFB160056C405 /* ItemListEditableReorderControlNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4E6202DFB160056C405 /* ItemListEditableReorderControlNode.swift */; };
@@ -198,6 +202,14 @@
 		D0AF7C4A1ED84CE000CD8E0F /* LanguageSelectionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF7C491ED84CE000CD8E0F /* LanguageSelectionControllerNode.swift */; };
 		D0AFCC791F4C8D2C000720C6 /* InstantPageSlideshowItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AFCC781F4C8D2C000720C6 /* InstantPageSlideshowItem.swift */; };
 		D0AFCC7B1F4C8D39000720C6 /* InstantPageSlideshowItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AFCC7A1F4C8D39000720C6 /* InstantPageSlideshowItemNode.swift */; };
+		D0B2F76220506E2A00D3BFB9 /* MediaInputSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F76120506E2A00D3BFB9 /* MediaInputSettings.swift */; };
+		D0B2F7642052739100D3BFB9 /* CreateContactController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7632052739100D3BFB9 /* CreateContactController.swift */; };
+		D0B2F76820528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F76720528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift */; };
+		D0B2F76A2052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7692052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift */; };
+		D0B2F76C2052A7D600D3BFB9 /* SinglePhoneInputNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F76B2052A7D600D3BFB9 /* SinglePhoneInputNode.swift */; };
+		D0B2F76E2052B59F00D3BFB9 /* InviteContactsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F76D2052B59F00D3BFB9 /* InviteContactsController.swift */; };
+		D0B2F7702052B5A800D3BFB9 /* InviteContactsControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F76F2052B5A800D3BFB9 /* InviteContactsControllerNode.swift */; };
+		D0B2F7722052D0DD00D3BFB9 /* InviteContactsCountPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7712052D0DD00D3BFB9 /* InviteContactsCountPanelNode.swift */; };
 		D0B37C5C1F8D22AE004252DF /* ThemeSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B37C5B1F8D22AE004252DF /* ThemeSettingsController.swift */; };
 		D0B37C5E1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B37C5D1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift */; };
 		D0B37C601F8D286E004252DF /* ThemeSettingsFontSizeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B37C5F1F8D286E004252DF /* ThemeSettingsFontSizeItem.swift */; };
@@ -1037,6 +1049,10 @@
 		D03120F51DA534C1006A2A60 /* ItemListActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListActionItem.swift; sourceTree = "<group>"; };
 		D033C60A1F0D306E0044EABA /* TelegramVideoNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramVideoNode.swift; sourceTree = "<group>"; };
 		D033FEAA1E61BFC100644997 /* GroupAdminsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupAdminsController.swift; sourceTree = "<group>"; };
+		D0380DA8204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretMediaPreviewFooterContentNode.swift; sourceTree = "<group>"; };
+		D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialStatusSecretTimeoutContentNode.swift; sourceTree = "<group>"; };
+		D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyLiveUploadInterface.swift; sourceTree = "<group>"; };
+		D0380DB7204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInstantVideoMessageDurationNode.swift; sourceTree = "<group>"; };
 		D03922A61DF70E3F000F2CE9 /* MediaPlayerScrubbingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaPlayerScrubbingNode.swift; sourceTree = "<group>"; };
 		D039EB021DEAEFEE00886EBC /* ChatTextInputAudioRecordingOverlayButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputAudioRecordingOverlayButton.swift; sourceTree = "<group>"; };
 		D039EB071DEC725600886EBC /* ChatTextInputAudioRecordingTimeNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputAudioRecordingTimeNode.swift; sourceTree = "<group>"; };
@@ -1376,6 +1392,14 @@
 		D0AF7C491ED84CE000CD8E0F /* LanguageSelectionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LanguageSelectionControllerNode.swift; sourceTree = "<group>"; };
 		D0AFCC781F4C8D2C000720C6 /* InstantPageSlideshowItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSlideshowItem.swift; sourceTree = "<group>"; };
 		D0AFCC7A1F4C8D39000720C6 /* InstantPageSlideshowItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSlideshowItemNode.swift; sourceTree = "<group>"; };
+		D0B2F76120506E2A00D3BFB9 /* MediaInputSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaInputSettings.swift; sourceTree = "<group>"; };
+		D0B2F7632052739100D3BFB9 /* CreateContactController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateContactController.swift; sourceTree = "<group>"; };
+		D0B2F76720528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserInfoEditingPhoneActionItem.swift; sourceTree = "<group>"; };
+		D0B2F7692052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserInfoEditingPhoneItem.swift; sourceTree = "<group>"; };
+		D0B2F76B2052A7D600D3BFB9 /* SinglePhoneInputNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SinglePhoneInputNode.swift; sourceTree = "<group>"; };
+		D0B2F76D2052B59F00D3BFB9 /* InviteContactsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteContactsController.swift; sourceTree = "<group>"; };
+		D0B2F76F2052B5A800D3BFB9 /* InviteContactsControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteContactsControllerNode.swift; sourceTree = "<group>"; };
+		D0B2F7712052D0DD00D3BFB9 /* InviteContactsCountPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteContactsCountPanelNode.swift; sourceTree = "<group>"; };
 		D0B37C5B1F8D22AE004252DF /* ThemeSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsController.swift; sourceTree = "<group>"; };
 		D0B37C5D1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsChatPreviewItem.swift; sourceTree = "<group>"; };
 		D0B37C5F1F8D286E004252DF /* ThemeSettingsFontSizeItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsFontSizeItem.swift; sourceTree = "<group>"; };
@@ -1873,6 +1897,7 @@
 			children = (
 				D00C7CDB1E3776E50080C3D5 /* SecretMediaPreviewController.swift */,
 				D00C7CDD1E37770A0080C3D5 /* SecretMediaPreviewControllerNode.swift */,
+				D0380DA8204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift */,
 			);
 			name = "Secret Preview";
 			sourceTree = "<group>";
@@ -1921,6 +1946,7 @@
 				D01776B71F1D6FB30044446D /* RadialProgressContentNode.swift */,
 				D0A723531FC3B40E0094D167 /* RadialCheckContentNode.swift */,
 				D01776B91F1D704F0044446D /* RadialStatusIconContentNode.swift */,
+				D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */,
 			);
 			name = "Radial Status";
 			sourceTree = "<group>";
@@ -2466,6 +2492,7 @@
 				D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */,
 				D07ABBA4202A14BC003671DE /* LegacyImagePicker.swift */,
 				D07ABBAA202A1BD1003671DE /* LegacyWallpaperEditor.swift */,
+				D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */,
 			);
 			name = "Legacy Components";
 			sourceTree = "<group>";
@@ -2543,6 +2570,7 @@
 				D073D2DA1FB61DA9009E1DA2 /* CallListSettings.swift */,
 				D09250031FE5363D003F693F /* ExperimentalSettings.swift */,
 				D056CD711FF1569800880D28 /* MusicPlaybackSettings.swift */,
+				D0B2F76120506E2A00D3BFB9 /* MediaInputSettings.swift */,
 				D048B33A203C777500038D05 /* RenderedTotalUnreadCount.swift */,
 			);
 			name = Settings;
@@ -3341,6 +3369,7 @@
 				D0568AAC1DF198130022E7DA /* AudioWaveformNode.swift */,
 				D0BC38621E3F9EFA0044D6FE /* EditableTokenListNode.swift */,
 				D050F2121E48B61500988324 /* PhoneInputNode.swift */,
+				D0B2F76B2052A7D600D3BFB9 /* SinglePhoneInputNode.swift */,
 				D0DA44531E4E7302005FDCA7 /* ProgressNavigationButtonNode.swift */,
 				D0C0B58F1EDB505E000F4D2C /* ActivityIndicator.swift */,
 				D0C0B5911EDC5A3B000F4D2C /* LinkHighlightingNode.swift */,
@@ -3531,6 +3560,7 @@
 				D0E8174B2011F8A300B82BBB /* ChatMessageEventLogPreviousMessageContentNode.swift */,
 				D0E8174D2011FC3800B82BBB /* ChatMessageEventLogPreviousDescriptionContentNode.swift */,
 				D0E8174F2012027900B82BBB /* ChatMessageEventLogPreviousLinkContentNode.swift */,
+				D0380DB7204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -3627,6 +3657,12 @@
 				D0F69E6D1D6B8C340046BCD6 /* ContactsController.swift */,
 				D0F69E6E1D6B8C340046BCD6 /* ContactsControllerNode.swift */,
 				D0F69E701D6B8C340046BCD6 /* ContactsSearchContainerNode.swift */,
+				D0B2F7632052739100D3BFB9 /* CreateContactController.swift */,
+				D0B2F76720528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift */,
+				D0B2F7692052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift */,
+				D0B2F76D2052B59F00D3BFB9 /* InviteContactsController.swift */,
+				D0B2F76F2052B5A800D3BFB9 /* InviteContactsControllerNode.swift */,
+				D0B2F7712052D0DD00D3BFB9 /* InviteContactsCountPanelNode.swift */,
 			);
 			name = Contacts;
 			sourceTree = "<group>";
@@ -4060,9 +4096,11 @@
 				D0F0AAE21EC20EF8005EE2A5 /* CallControllerStatusNode.swift in Sources */,
 				D0EC6CB41EB9F58800EBF1C3 /* timing.c in Sources */,
 				D0EC6CB51EB9F58800EBF1C3 /* platform_log.c in Sources */,
+				D0B2F76C2052A7D600D3BFB9 /* SinglePhoneInputNode.swift in Sources */,
 				D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */,
 				D0EC6CB61EB9F58800EBF1C3 /* RMGeometry.m in Sources */,
 				D079FCDD1F05C4F20038FADE /* LocalAuth.swift in Sources */,
+				D0B2F76820528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift in Sources */,
 				D0EC6CB71EB9F58800EBF1C3 /* RMIntroPageView.m in Sources */,
 				D0EC6CB81EB9F58800EBF1C3 /* RMIntroViewController.m in Sources */,
 				D0EC6CB91EB9F58800EBF1C3 /* RMLoginViewController.m in Sources */,
@@ -4126,6 +4164,7 @@
 				D0EC6CDA1EB9F58800EBF1C3 /* NumericFormat.swift in Sources */,
 				D0EC6CDB1EB9F58800EBF1C3 /* Markdown.swift in Sources */,
 				D0471B641EFEB5CB0074D609 /* BotPaymentItemNode.swift in Sources */,
+				D0380DB8204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift in Sources */,
 				D01C7F001EF9D45B008305F1 /* DeviceContactsManager.swift in Sources */,
 				D0EC6CDC1EB9F58800EBF1C3 /* TelegramAccountAuxiliaryMethods.swift in Sources */,
 				D01BAA1A1ECC8E0D00295217 /* CallListControllerNode.swift in Sources */,
@@ -4312,9 +4351,11 @@
 				D0EC6D4B1EB9F58800EBF1C3 /* ChatListNode.swift in Sources */,
 				D0EC6D4D1EB9F58800EBF1C3 /* ChatListHoleItem.swift in Sources */,
 				D0EC6D4E1EB9F58800EBF1C3 /* ChatListItem.swift in Sources */,
+				D0B2F76A2052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift in Sources */,
 				D0EC6D4F1EB9F58800EBF1C3 /* ChatListSearchItem.swift in Sources */,
 				D0EC6D501EB9F58800EBF1C3 /* ChatListNodeEntries.swift in Sources */,
 				D0EC6D511EB9F58800EBF1C3 /* ChatListViewTransition.swift in Sources */,
+				D0380DAB204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift in Sources */,
 				D0EC6D521EB9F58800EBF1C3 /* ChatListNodeLocation.swift in Sources */,
 				D0EC6D531EB9F58800EBF1C3 /* ChatHistoryViewForLocation.swift in Sources */,
 				D06BB8821F58994B0084FC30 /* LegacyInstantVideoController.swift in Sources */,
@@ -4327,6 +4368,7 @@
 				D0EC6D561EB9F58800EBF1C3 /* ChatHistoryNode.swift in Sources */,
 				D0EC6D571EB9F58800EBF1C3 /* ChatHistoryListNode.swift in Sources */,
 				D0EC6D581EB9F58800EBF1C3 /* ChatHistoryGridNode.swift in Sources */,
+				D0B2F76E2052B59F00D3BFB9 /* InviteContactsController.swift in Sources */,
 				D0EC6D591EB9F58800EBF1C3 /* ChatMessageThrottledProcessingManager.swift in Sources */,
 				D06E0F8E1F79ABFB003CF3DD /* ChatLoadingNode.swift in Sources */,
 				D0EC6D5A1EB9F58800EBF1C3 /* ListMessageItem.swift in Sources */,
@@ -4375,6 +4417,7 @@
 				D0EC6D761EB9F58800EBF1C3 /* ChatListController.swift in Sources */,
 				D0EC6D771EB9F58800EBF1C3 /* ChatListControllerNode.swift in Sources */,
 				D0EC6D781EB9F58800EBF1C3 /* NetworkStatusTitleView.swift in Sources */,
+				D0B2F7642052739100D3BFB9 /* CreateContactController.swift in Sources */,
 				D048EA8D1F4F299A00188713 /* InstantPageSettingsSwitchItemNode.swift in Sources */,
 				D0E9B9F41F018A6700F079A4 /* BotCheckoutPaymentMethodSheet.swift in Sources */,
 				D0F6800A1EE750EE000E5906 /* ChannelBannedMemberController.swift in Sources */,
@@ -4428,6 +4471,7 @@
 				D0EC6D951EB9F58900EBF1C3 /* ChatMessageInteractiveFileNode.swift in Sources */,
 				D01A21B11F3A050E00DDA104 /* InstantPageNavigationBar.swift in Sources */,
 				D0EC6D961EB9F58900EBF1C3 /* ChatMessageInteractiveMediaNode.swift in Sources */,
+				D0B2F7722052D0DD00D3BFB9 /* InviteContactsCountPanelNode.swift in Sources */,
 				D0EC6D971EB9F58900EBF1C3 /* ChatMessageItem.swift in Sources */,
 				D0E8175720122DAD00B82BBB /* ChatRecentActionsSearchNavigationContentNode.swift in Sources */,
 				D0E8174E2011FC3800B82BBB /* ChatMessageEventLogPreviousDescriptionContentNode.swift in Sources */,
@@ -4531,6 +4575,7 @@
 				D0EC6DD71EB9F58900EBF1C3 /* VerticalListContextResultsChatInputPanelItem.swift in Sources */,
 				D0EC6DD81EB9F58900EBF1C3 /* VerticalListContextResultsChatInputPanelButtonItem.swift in Sources */,
 				D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */,
+				D0B2F76220506E2A00D3BFB9 /* MediaInputSettings.swift in Sources */,
 				D064EF871F69A06F00AC0398 /* MessageContentKind.swift in Sources */,
 				D020A9DA1FEAE675008C66F7 /* OverlayPlayerController.swift in Sources */,
 				D0E817472010E62F00B82BBB /* MergeLists.swift in Sources */,
@@ -4614,6 +4659,7 @@
 				D0EC6E0F1EB9F58900EBF1C3 /* MapInputController.swift in Sources */,
 				D04B4D111EEA04D400711AF6 /* MapResources.swift in Sources */,
 				D0EC6E101EB9F58900EBF1C3 /* MapInputControllerNode.swift in Sources */,
+				D0380DA9204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift in Sources */,
 				D0AFCC7B1F4C8D39000720C6 /* InstantPageSlideshowItemNode.swift in Sources */,
 				D0E9BA211F05577700F079A4 /* STPCardParams.m in Sources */,
 				D0EC6E111EB9F58900EBF1C3 /* InstantPageNode.swift in Sources */,
@@ -4641,6 +4687,7 @@
 				D0EC6E1E1EB9F58900EBF1C3 /* InstantPageShapeItem.swift in Sources */,
 				D0EC6E1F1EB9F58900EBF1C3 /* InstantPageTile.swift in Sources */,
 				D0EC6E201EB9F58900EBF1C3 /* InstantPageTileNode.swift in Sources */,
+				D0B2F7702052B5A800D3BFB9 /* InviteContactsControllerNode.swift in Sources */,
 				D0EC6E211EB9F58900EBF1C3 /* InstantPageController.swift in Sources */,
 				D0EC6E221EB9F58900EBF1C3 /* InstantPageControllerNode.swift in Sources */,
 				D0EC6E231EB9F58900EBF1C3 /* StickerPackPreviewController.swift in Sources */,
@@ -4703,6 +4750,7 @@
 				D0EC6E4B1EB9F58900EBF1C3 /* ItemListControllerSegmentedTitleView.swift in Sources */,
 				D0EC6E4D1EB9F58900EBF1C3 /* PeerInfoController.swift in Sources */,
 				D0EC6E4E1EB9F58900EBF1C3 /* GroupInfoController.swift in Sources */,
+				D0380DAD204ED434000414AB /* LegacyLiveUploadInterface.swift in Sources */,
 				D0E9BA331F05583A00F079A4 /* STPPostalCodeValidator.m in Sources */,
 				D0EC6E4F1EB9F58900EBF1C3 /* ChannelVisibilityController.swift in Sources */,
 				D09250061FE5371D003F693F /* GlobalExperimentalSettings.swift in Sources */,

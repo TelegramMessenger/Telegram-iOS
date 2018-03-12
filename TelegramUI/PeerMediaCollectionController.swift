@@ -94,7 +94,7 @@ public class PeerMediaCollectionController: TelegramController {
                 })
             }
             return false
-            }, openSecretMessagePreview: { _ in }, closeSecretMessagePreview: { }, openPeer: { [weak self] id, navigation, _ in
+            }, openPeer: { [weak self] id, navigation, _ in
                 if let strongSelf = self {
                     if let id = id {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(id), messageId: nil))

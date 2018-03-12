@@ -89,12 +89,12 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
             
             var title = " "
             var incoming = false
-            if let peer = interfaceState.peer {
-                if let chatPeer = peer.peers[peer.peerId] as? TelegramSecretChat {
+            if let renderedPeer = interfaceState.renderedPeer {
+                if let chatPeer = renderedPeer.peers[renderedPeer.peerId] as? TelegramSecretChat {
                     if case .participant = chatPeer.role {
                         incoming = true
                     }
-                    if let user = peer.peers[chatPeer.regularPeerId] {
+                    if let user = renderedPeer.peers[chatPeer.regularPeerId] {
                         title = user.compactDisplayTitle
                     }
                 }
@@ -220,7 +220,7 @@ final class ChatEmptyNode: ASDisplayNode {
         }
         
         let contentType: ChatEmptyNodeContentType
-        if let peer = interfaceState.peer?.peer {
+        if let peer = interfaceState.renderedPeer?.peer {
             if let _ = peer as? TelegramSecretChat {
                 contentType = .secret
             } else {

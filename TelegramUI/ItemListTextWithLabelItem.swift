@@ -3,10 +3,16 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+enum ItemListTextWithLabelItemTextColor {
+    case primary
+    case accent
+}
+
 final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let label: String
     let text: String
+    let textColor: ItemListTextWithLabelItemTextColor
     let enabledEntitiyTypes: EnabledEntityTypes
     let multiline: Bool
     let sectionId: ItemListSectionId
@@ -16,10 +22,11 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     
     let tag: Any?
     
-    init(theme: PresentationTheme, label: String, text: String, enabledEntitiyTypes: EnabledEntityTypes, multiline: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    init(theme: PresentationTheme, label: String, text: String, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntitiyTypes: EnabledEntityTypes, multiline: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.label = label
         self.text = text
+        self.textColor = textColor
         self.enabledEntitiyTypes = enabledEntitiyTypes
         self.multiline = multiline
         self.sectionId = sectionId
@@ -159,7 +166,14 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntitiyTypes)
-            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: item.theme.list.itemPrimaryTextColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, fixedFont: textFixedFont)
+            let baseColor: UIColor
+            switch item.textColor {
+                case .primary:
+                    baseColor = item.theme.list.itemPrimaryTextColor
+                case .accent:
+                    baseColor = item.theme.list.itemAccentColor
+            }
+            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: baseColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, fixedFont: textFixedFont)
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let contentSize = CGSize(width: params.width, height: textLayout.size.height + 39.0)

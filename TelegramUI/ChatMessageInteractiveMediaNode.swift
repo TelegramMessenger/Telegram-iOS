@@ -20,7 +20,6 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     private var videoNode: UniversalVideoNode?
     private var statusNode: RadialStatusNode?
     private var badgeNode: ChatMessageInteractiveMediaBadge?
-    private var timeoutNode: RadialTimeoutNode?
     private var labelNode: ChatMessageInteractiveMediaLabelNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
@@ -364,7 +363,6 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                             strongSelf.themeAndStrings = (theme, strings)
                             transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
                             strongSelf.statusNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
-                            strongSelf.timeoutNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             
                             if let replaceVideoNode = replaceVideoNode {
                                 if let videoNode = strongSelf.videoNode {
@@ -400,27 +398,13 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 strongSelf.imageNode.setSignal(updateImageSignal)
                             }
                             
-                            if let secretBeginTimeAndTimeout = secretBeginTimeAndTimeout {
-                                if strongSelf.timeoutNode == nil {
-                                    let timeoutNode = RadialTimeoutNode(backgroundColor: theme.chat.bubble.mediaOverlayControlBackgroundColor, foregroundColor: theme.chat.bubble.mediaOverlayControlForegroundColor)
-                                    timeoutNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: radialStatusSize, height: radialStatusSize))
-                                    timeoutNode.position = strongSelf.imageNode.position
-                                    strongSelf.timeoutNode = timeoutNode
-                                    strongSelf.addSubnode(timeoutNode)
-                                    timeoutNode.setTimeout(beginTimestamp: secretBeginTimeAndTimeout.0, timeout: secretBeginTimeAndTimeout.1)
-                                } else if let updatedTheme = updatedTheme {
-                                    strongSelf.timeoutNode?.updateTheme(backgroundColor: updatedTheme.chat.bubble.mediaOverlayControlBackgroundColor, foregroundColor: updatedTheme.chat.bubble.mediaOverlayControlForegroundColor)
+                            if let _ = secretBeginTimeAndTimeout {
+                                if updatedStatusSignal == nil, let fetchStatus = strongSelf.fetchStatus, case .Local = fetchStatus {
+                                    if let statusNode = strongSelf.statusNode, case .secretTimeout = statusNode.state {   
+                                    } else {
+                                        updatedStatusSignal = .single(fetchStatus)
+                                    }
                                 }
-                                
-                                if let statusNode = strongSelf.statusNode {
-                                    statusNode.transitionToState(.none, completion: { [weak statusNode] in
-                                        statusNode?.removeFromSupernode()
-                                    })
-                                    strongSelf.statusNode = nil
-                                }
-                            } else if let timeoutNode = strongSelf.timeoutNode {
-                                timeoutNode.removeFromSupernode()
-                                strongSelf.timeoutNode = nil
                             }
                             
                             if let updatedStatusSignal = updatedStatusSignal {
@@ -430,7 +414,9 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                             strongSelf.fetchStatus = status
                                             
                                             var progressRequired = false
-                                            if secretBeginTimeAndTimeout == nil {
+                                            if let _ = secretBeginTimeAndTimeout {
+                                                progressRequired = true
+                                            } else {
                                                 if case .Local = status {
                                                     if let file = media as? TelegramMediaFile, file.isVideo {
                                                         progressRequired = true
@@ -486,8 +472,10 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                                     }
                                                 case .Local:
                                                     state = .none
-                                                    if isSecretMedia && secretProgressIcon != nil {
-                                                        state = .customIcon(secretProgressIcon!)
+                                                    if isSecretMedia, let (beginTime, timeout) = secretBeginTimeAndTimeout {
+                                                        state = .secretTimeout(color: bubbleTheme.mediaOverlayControlForegroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout)
+                                                    } else if isSecretMedia, let secretProgressIcon = secretProgressIcon {
+                                                        state = .customIcon(secretProgressIcon)
                                                     } else if let file = media as? TelegramMediaFile {
                                                         if !isInlinePlayableVideo && file.isVideo {
                                                             state = .play(bubbleTheme.mediaOverlayControlForegroundColor)

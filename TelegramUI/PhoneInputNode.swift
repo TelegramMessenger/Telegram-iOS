@@ -6,7 +6,7 @@ import TelegramCore
 private func removeDuplicatedPlus(_ text: String?) -> String {
     var result = ""
     if let text = text {
-        for c in text.characters {
+        for c in text {
             if c == "+" {
                 if result.isEmpty {
                     result += String(c)
@@ -22,7 +22,7 @@ private func removeDuplicatedPlus(_ text: String?) -> String {
 private func removePlus(_ text: String?) -> String {
     var result = ""
     if let text = text {
-        for c in text.characters {
+        for c in text {
             if c != "+" {
                 result += String(c)
             }
@@ -34,7 +34,7 @@ private func removePlus(_ text: String?) -> String {
 private func cleanPhoneNumber(_ text: String?) -> String {
     var cleanNumber = ""
     if let text = text {
-        for c in text.characters {
+        for c in text {
             if c == "+" {
                 if cleanNumber.isEmpty {
                     cleanNumber += String(c)
@@ -50,7 +50,7 @@ private func cleanPhoneNumber(_ text: String?) -> String {
 private func cleanPrefix(_ text: String) -> String {
     var result = ""
     var checked = false
-    for c in text.characters {
+    for c in text {
         if c != " " {
             checked = true
         }
@@ -64,7 +64,7 @@ private func cleanPrefix(_ text: String) -> String {
 private func cleanSuffix(_ text: String) -> String {
     var result = ""
     var checked = false
-    for c in text.characters.reversed() {
+    for c in text.reversed() {
         if c != " " {
             checked = true
         }
@@ -162,7 +162,7 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
             if !realRegionPrefix.hasPrefix("+") {
                 realRegionPrefix = "+" + realRegionPrefix
             }
-            numberText = cleanPrefix(text.substring(from: realRegionPrefix.endIndex))
+            numberText = cleanPrefix(String(text[realRegionPrefix.endIndex...]))
         } else {
             realRegionPrefix = text
             if !realRegionPrefix.hasPrefix("+") {
