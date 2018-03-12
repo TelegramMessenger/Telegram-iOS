@@ -24,7 +24,11 @@ public final class Subscriber<T, E> {
             self.disposable = nil
         }
         pthread_mutex_unlock(&self.lock)
-        freeDisposable = nil
+        if let freeDisposableValue = freeDisposable {
+            withExtendedLifetime(freeDisposableValue, {
+            })
+            freeDisposable = nil
+        }
         
         pthread_mutex_destroy(&self.lock)
     }
