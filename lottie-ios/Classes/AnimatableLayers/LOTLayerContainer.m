@@ -160,8 +160,8 @@
         image = [UIImage imageWithContentsOfFile:imagePath];
       }
     } else {
-      NSArray *components = [asset.imageName componentsSeparatedByString:@"."];
-      image = [UIImage imageNamed:components.firstObject inBundle:asset.assetBundle compatibleWithTraitCollection:nil];
+        NSString *imagePath = [asset.assetBundle pathForResource:asset.imageName ofType:nil];
+        image = [UIImage imageWithContentsOfFile:imagePath];
     }
     
     if (image) {
@@ -271,7 +271,7 @@
   if (_contentsGroup == nil && [keypath pushKey:self.layerName]) {
     // Matches self.
     if ([keypath pushKey:@"Transform"]) {
-      // Is a transform node, check  interpolators
+      // Is a transform node, check interpolators
       LOTValueInterpolator *interpolator = _valueInterpolators[keypath.currentKey];
       if (interpolator) {
         // We have a match!
@@ -297,7 +297,7 @@
   if ([keypath pushKey:self.layerName]) {
     // Matches self.
     if ([keypath pushKey:@"Transform"]) {
-      // Is a transform node, check  interpolators
+      // Is a transform node, check interpolators
       LOTValueInterpolator *interpolator = _valueInterpolators[keypath.currentKey];
       if (interpolator) {
         // We have a match!

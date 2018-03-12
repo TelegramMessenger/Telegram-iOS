@@ -37,7 +37,7 @@ static NSString * const kCompContainerAnimationKey = @"play";
 
 + (nonnull instancetype)animationNamed:(nonnull NSString *)animationName inBundle:(nonnull NSBundle *)bundle {
   LOTComposition *comp = [LOTComposition animationNamed:animationName inBundle:bundle];
-  return [[LOTAnimationView alloc] initWithModel:comp inBundle:bundle];
+  return [[self alloc] initWithModel:comp inBundle:bundle];
 }
 
 + (nonnull instancetype)animationFromJSON:(nonnull NSDictionary *)animationJSON {
@@ -46,12 +46,12 @@ static NSString * const kCompContainerAnimationKey = @"play";
 
 + (nonnull instancetype)animationFromJSON:(nullable NSDictionary *)animationJSON inBundle:(nullable NSBundle *)bundle {
   LOTComposition *comp = [LOTComposition animationFromJSON:animationJSON inBundle:bundle];
-  return [[LOTAnimationView alloc] initWithModel:comp inBundle:bundle];
+  return [[self alloc] initWithModel:comp inBundle:bundle];
 }
 
 + (nonnull instancetype)animationWithFilePath:(nonnull NSString *)filePath {
   LOTComposition *comp = [LOTComposition animationWithFilePath:filePath];
-  return [[LOTAnimationView alloc] initWithModel:comp inBundle:[NSBundle mainBundle]];
+  return [[self alloc] initWithModel:comp inBundle:[NSBundle mainBundle]];
 }
 
 # pragma mark - Initializers
@@ -116,6 +116,16 @@ static NSString * const kCompContainerAnimationKey = @"play";
     [self _commonInit];
   }
   return self;
+}
+
+# pragma mark - Inspectables
+
+- (void)setAnimation:(NSString *)animationName {
+    
+    _animation = animationName;
+    
+    [self setAnimationNamed:animationName];
+    
 }
 
 # pragma mark - Internal Methods
@@ -209,6 +219,15 @@ static NSString * const kCompContainerAnimationKey = @"play";
     self.completionBlock = nil;
     completion(complete);
   }
+}
+
+# pragma mark - External Methods
+
+- (void)setAnimationNamed:(nonnull NSString *)animationName {
+  LOTComposition *comp = [LOTComposition animationNamed:animationName];
+
+  [self _initializeAnimationContainer];
+  [self _setupWithSceneModel:comp];
 }
 
 # pragma mark - External Methods - Model

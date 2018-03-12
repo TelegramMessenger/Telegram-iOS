@@ -77,13 +77,13 @@ NSInteger indentation_level = 0;
   printf("%s %s\n", NSStringFromClass([self class]).UTF8String, logString.UTF8String);
 }
 
-// TOBO BW Perf, make updates perform only when necessarry. Currently everything in a node is updated
+// TOBO BW Perf, make updates perform only when necessary. Currently everything in a node is updated
 /// Performs any local content update and updates self.localPath
 - (void)performLocalUpdate {
   self.localPath = [[LOTBezierPath alloc] init];
 }
 
-/// Rebuilts outputs by adding localPath to inputNodes output path.
+/// Rebuilds outputs by adding localPath to inputNodes output path.
 - (void)rebuildOutputs {
   if (self.inputNode) {
     self.outputPath = [self.inputNode.outputPath copy];

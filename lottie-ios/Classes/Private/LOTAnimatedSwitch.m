@@ -23,13 +23,13 @@
 
 /// Convenience method to initialize a control from the Main Bundle by name
 + (instancetype _Nonnull)switchNamed:(NSString * _Nonnull)toggleName {
-  return [LOTAnimatedSwitch switchNamed:toggleName inBundle:[NSBundle mainBundle]];
+  return [self switchNamed:toggleName inBundle:[NSBundle mainBundle]];
 }
 
 /// Convenience method to initialize a control from the specified bundle by name
 + (instancetype _Nonnull)switchNamed:(NSString * _Nonnull)toggleName inBundle:(NSBundle * _Nonnull)bundle {
   LOTComposition *composition = [LOTComposition animationNamed:toggleName inBundle:bundle];
-  LOTAnimatedSwitch *animatedControl = [[LOTAnimatedSwitch alloc] initWithFrame:CGRectZero];
+  LOTAnimatedSwitch *animatedControl = [[self alloc] initWithFrame:CGRectZero];
   if (composition) {
     [animatedControl setAnimationComp:composition];
     animatedControl.bounds = composition.compBounds;
@@ -148,7 +148,13 @@
     // The touch has moved enough to register as its own gesture. Suppress the touch up toggle.
     _suppressToggle = YES;
   }
-  if (floor(NSFoundationVersionNumber) >= floor(NSFoundationVersionNumber_iOS_9_0)) {
+#ifdef __IPHONE_11_0
+  // Xcode 9+
+  if (@available(iOS 9.0, *)) {
+#else
+    // Xcode 8-
+    if ([UIView respondsToSelector:@selector(userInterfaceLayoutDirectionForSemanticContentAttribute:)]) {
+#endif
       if ([UIView userInterfaceLayoutDirectionForSemanticContentAttribute:self.semanticContentAttribute] == UIUserInterfaceLayoutDirectionRightToLeft) {
           diff = diff * -1;
       }
