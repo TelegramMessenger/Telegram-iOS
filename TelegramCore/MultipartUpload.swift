@@ -203,7 +203,7 @@ private final class MultipartUploadManager {
             self.bigParts = true
         } else {
             self.bigParts = false
-            self.defaultPartSize = 32 * 1024
+            self.defaultPartSize = 16 * 1024
             self.bigTotalParts = nil
         }
     }

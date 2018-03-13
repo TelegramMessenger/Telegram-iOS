@@ -163,7 +163,7 @@ public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundSt
         for info in infos {
             if let info = info.1 as? StickerPackCollectionInfo {
                 let split = info.title.split(separator: " ")
-                if !split.filter({$0.lowercased().hasPrefix(query)}).isEmpty {
+                if !split.filter({$0.lowercased().hasPrefix(query.lowercased())}).isEmpty || info.shortName.lowercased().hasPrefix(query.lowercased()) {
                     collections.append((info.id, info))
                 }
             }
