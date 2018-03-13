@@ -81,9 +81,10 @@ func fetchPeerCloudReadState(network: Network, postbox: Postbox, peerId: PeerId,
                                 apiReadInboxMaxId = readInboxMaxId
                                 apiReadOutboxMaxId = readOutboxMaxId
                                 apiUnreadCount = unreadCount
-                            case .dialogFeed:
+                            /*feed*/
+                            /*case .dialogFeed:
                                 assertionFailure()
-                                return nil
+                                return nil*/
                         }
                         
                         return .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
@@ -122,9 +123,10 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                                                 if let pts = pts {
                                                     apiChannelPts = pts
                                                 }
-                                            case .dialogFeed:
+                                            /*feed*/
+                                            /*case .dialogFeed:
                                                 assertionFailure()
-                                                return .fail(.Abort)
+                                                return .fail(.Abort)*/
                                         }
                                         
                                         let marker: PeerReadStateMarker

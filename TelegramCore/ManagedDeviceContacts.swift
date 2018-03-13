@@ -168,13 +168,17 @@ func managedDeviceContacts(postbox: Postbox, network: Network, deviceContacts: S
                 }
                 
                 return (applyRemovedContacts(postbox: postbox, network: network, peerIds: removedPeerIds)
-                    |> map { _ -> ([Peer], [PeerId: PeerPresence], [ValueBoxKey: ManagedDeviceContactEntryContents]) in
+                    |> map { _ -> ([Peer], [PeerId: PeerPresence], [ValueBoxKey: ManagedDeviceContactEntryContents], [String: Int32]) in
                         assertionFailure()
-                        return ([], [:], [:])
+                        return ([], [:], [:], [:])
                     }
                     |> then(applyAddedOrUpdatedContacts(network: network, contacts: addedOrUpdatedContacts)))
-                    |> mapToSignal { peers, peerPresences, importedContents -> Signal<Void, ManagedDeviceContactsError> in
+                    |> mapToSignal { peers, peerPresences, importedContents, importedByCounts -> Signal<Void, ManagedDeviceContactsError> in
                         return postbox.modify { modifier -> Signal<Void, ManagedDeviceContactsError> in
+                            for (phone, count) in importedByCounts {
+                                modifier.setDeviceContactImportInfo(TelegramDeviceContactImportIdentifier.phoneNumber(phone), value: TelegramDeviceContactImportInfo(importedByCount: count))
+                            }
+                            
                             let updatedInfo: UnorderedItemListTagMetaInfo
                             if let previousInfo = metaInfo as? ManagedDeviceContactsMetaInfo {
                                 updatedInfo = ManagedDeviceContactsMetaInfo(version: previousInfo.version + 1)
@@ -245,19 +249,20 @@ private func applyRemovedContacts(postbox: Postbox, network: Network, peerIds: [
                 inputUsers.append(inputUser)
             }
         }
-        return network.request(Api.functions.contacts.deleteContacts(id: inputUsers))
+        return .complete()
+        /*return network.request(Api.functions.contacts.deleteContacts(id: inputUsers))
             |> `catch` { _ -> Signal<Api.Bool, ManagedDeviceContactsError> in
                 return .single(.boolFalse)
             }
             |> mapToSignal { _ -> Signal<Void, ManagedDeviceContactsError> in
                 return .complete()
-            }
+            }*/
     } |> mapError { _ -> ManagedDeviceContactsError in return .generic } |> switchToLatest
 }
 
-private func applyAddedOrUpdatedContacts(network: Network, contacts: [ManagedDeviceContactEntryContents]) -> Signal<([Peer], [PeerId: PeerPresence], [ValueBoxKey: ManagedDeviceContactEntryContents]), ManagedDeviceContactsError> {
+private func applyAddedOrUpdatedContacts(network: Network, contacts: [ManagedDeviceContactEntryContents]) -> Signal<([Peer], [PeerId: PeerPresence], [ValueBoxKey: ManagedDeviceContactEntryContents], [String: Int32]), ManagedDeviceContactsError> {
     if contacts.isEmpty {
-        return .single(([], [:], [:]))
+        return .single(([], [:], [:], [:]))
     }
     
     var clientIdToContact: [Int64: ManagedDeviceContactEntryContents] = [:]
@@ -272,9 +277,9 @@ private func applyAddedOrUpdatedContacts(network: Network, contacts: [ManagedDev
         |> `catch` { _ -> Signal<Api.contacts.ImportedContacts, ManagedDeviceContactsError> in
             return .fail(.generic)
         }
-        |> mapToSignal { result -> Signal<([Peer], [PeerId: PeerPresence], [ValueBoxKey: ManagedDeviceContactEntryContents]), ManagedDeviceContactsError> in
+        |> mapToSignal { result -> Signal<([Peer], [PeerId: PeerPresence], [ValueBoxKey: ManagedDeviceContactEntryContents], [String: Int32]), ManagedDeviceContactsError> in
             switch result {
-                case let .importedContacts(imported, _, retryContacts, users):
+                case let .importedContacts(imported, popularInvites, retryContacts, users):
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     var importedContents: [ValueBoxKey: ManagedDeviceContactEntryContents] = [:]
@@ -308,8 +313,18 @@ private func applyAddedOrUpdatedContacts(network: Network, contacts: [ManagedDev
                             importedContents[ValueBoxKey(contents.phoneNumber)] = updatedContents
                         }
                     }
+                    
+                    var importedByCounts: [String: Int32] = [:]
+                    for item in popularInvites {
+                        switch item {
+                            case let .popularContact(clientId, importers):
+                                if let contact = clientIdToContact[clientId] {
+                                    importedByCounts[contact.phoneNumber] = importers
+                                }
+                        }
+                    }
                 
-                    return .single((peers, peerPresences, importedContents))
+                    return .single((peers, peerPresences, importedContents, importedByCounts))
             }
         }
 }

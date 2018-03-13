@@ -185,9 +185,10 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                 apiUnreadCount = unreadCount
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
-                            case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+                            /*feed*/
+                            /*case let .dialogFeed(_, _, _, feedId, _, _, _, _):
                                 remoteItemIds.append(.group(PeerGroupId(rawValue: feedId)))
-                                continue loop
+                                continue loop*/
                         }
                         
                         let peerId: PeerId
@@ -271,7 +272,9 @@ private func synchronizePinnedChats(modifier: Modifier, postbox: Postbox, networ
                                     inputDialogPeers.append(Api.InputDialogPeer.inputDialogPeer(peer: inputPeer))
                                 }
                             case let .group(groupId):
-                                inputDialogPeers.append(.inputDialogPeerFeed(feedId: groupId.rawValue))
+                                /*feed*/
+                                /*inputDialogPeers.append(.inputDialogPeerFeed(feedId: groupId.rawValue))*/
+                                break
                         }
                     }
                     

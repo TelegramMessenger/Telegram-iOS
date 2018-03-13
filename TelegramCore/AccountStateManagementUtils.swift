@@ -835,12 +835,13 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
-            case let .updateReadFeed(_, feedId, maxPosition, unreadCount, unreadMutedCount):
+            /*feed*/
+            /*case let .updateReadFeed(_, feedId, maxPosition, unreadCount, unreadMutedCount):
                 switch maxPosition {
                     case let .feedPosition(date, peer, id):
                         let index = MessageIndex(id: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date)
                         updatedState.readGroupFeedInbox(groupId: PeerGroupId(rawValue: feedId), index: index)
-                }
+                }*/
             case let .updateWebPage(apiWebpage, _, _):
                 switch apiWebpage {
                     case let .webPageEmpty(id):
@@ -1018,8 +1019,9 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                 switch peer {
                     case let .dialogPeer(peer):
                         item = .peer(peer.peerId)
-                    case let .dialogPeerFeed(feedId):
-                        item = .group(PeerGroupId(rawValue: feedId))
+                    /*feed*/
+                    /*case let .dialogPeerFeed(feedId):
+                        item = .group(PeerGroupId(rawValue: feedId))*/
                 }
                 if (flags & (1 << 0)) != 0 {
                     updatedState.addUpdatePinnedItemIds(.pin(item))
@@ -1033,8 +1035,9 @@ private func finalStateWithUpdates(account: Account, state: AccountMutableState,
                         switch $0 {
                             case let .dialogPeer(peer):
                                 item = .peer(peer.peerId)
-                            case let .dialogPeerFeed(feedId):
-                                item = .group(PeerGroupId(rawValue: feedId))
+                            /*feed*/
+                            /*case let .dialogPeerFeed(feedId):
+                                item = .group(PeerGroupId(rawValue: feedId))*/
                         }
                         return item
                     }))
@@ -1378,9 +1381,10 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
                                     apiUnreadMentionsCount = unreadMentionsCount
                                     apiNotificationSettings = peerNotificationSettings
                                     apiChannelPts = pts
-                                case .dialogFeed:
+                                /*feed*/
+                                /*case .dialogFeed:
                                     assertionFailure()
-                                    continue loop
+                                    continue loop*/
                             }
                             
                             let peerId: PeerId

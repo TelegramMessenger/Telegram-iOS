@@ -397,6 +397,7 @@
 		D0B1671E1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */; };
 		D0B167231F9F972E00976B40 /* LoggingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B167221F9F972E00976B40 /* LoggingSettings.swift */; };
 		D0B167241F9F972E00976B40 /* LoggingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B167221F9F972E00976B40 /* LoggingSettings.swift */; };
+		D0B2F7742052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */; };
 		D0B417C11D7DCEEF004562A4 /* ApiGroupOrChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B417C01D7DCEEF004562A4 /* ApiGroupOrChannel.swift */; };
 		D0B4186B1D7E03D5004562A4 /* TelegramCoreMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B418691D7E03D5004562A4 /* TelegramCoreMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0B418721D7E0409004562A4 /* PostboxMac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B418701D7E0409004562A4 /* PostboxMac.framework */; };
@@ -865,6 +866,7 @@
 		D0AF32371FAE8C910097362B /* MultipeerConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MultipeerConnectivity.framework; path = System/Library/Frameworks/MultipeerConnectivity.framework; sourceTree = SDKROOT; };
 		D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryPreloadManager.swift; sourceTree = "<group>"; };
 		D0B167221F9F972E00976B40 /* LoggingSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggingSettings.swift; sourceTree = "<group>"; };
+		D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelegramDeviceContactImportInfo.swift; sourceTree = "<group>"; };
 		D0B417C01D7DCEEF004562A4 /* ApiGroupOrChannel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApiGroupOrChannel.swift; sourceTree = "<group>"; };
 		D0B418671D7E03D5004562A4 /* TelegramCoreMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramCoreMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B418691D7E03D5004562A4 /* TelegramCoreMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramCoreMac.h; sourceTree = "<group>"; };
@@ -1358,6 +1360,7 @@
 			children = (
 				D03B0D6C1D631AA300955575 /* ContactManagement.swift */,
 				D01C7F091EFC3607008305F1 /* ManagedDeviceContacts.swift */,
+				D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */,
 			);
 			name = Contacts;
 			sourceTree = "<group>";
@@ -1947,6 +1950,7 @@
 				D0448C991E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */,
 				D03DC9131F82F89D001D584C /* RegularChatState.swift in Sources */,
 				D0613FCF1E60520700202CDB /* ChannelMembers.swift in Sources */,
+				D0B2F7742052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift in Sources */,
 				C2366C891E4F40480097CCFF /* SupportPeerId.swift in Sources */,
 				D0AF32351FAE8C6B0097362B /* MultipeerManager.swift in Sources */,
 				D05A32E11E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */,

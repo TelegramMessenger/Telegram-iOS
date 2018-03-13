@@ -94,7 +94,9 @@ func managedGroupFeedReadStateSyncOperations(postbox: Postbox, network: Network,
 }
 
 private func fetchReadStateNext(network: Network, groupId: PeerGroupId) -> Signal<GroupFeedReadState?, NoError> {
-    return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeerFeed(feedId: groupId.rawValue)]))
+    /*feed*/
+    return .single(nil)
+    /*return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeerFeed(feedId: groupId.rawValue)]))
     |> retryRequest
     |> map { result -> GroupFeedReadState? in
         switch result {
@@ -120,11 +122,13 @@ private func fetchReadStateNext(network: Network, groupId: PeerGroupId) -> Signa
                 }
                 return nil
         }       
-    }
+    }*/
 }
 
 private func fetchReadState(network: Network, groupId: PeerGroupId) -> Signal<GroupFeedReadState?, NoError> {
-    return network.request(Api.functions.channels.getFeed(flags: 0, feedId: groupId.rawValue, offsetPosition: nil, addOffset: 0, limit: 1, maxPosition: nil, minPosition: nil, hash: 0))
+    /*feed*/
+    return .single(nil)
+    /*return network.request(Api.functions.channels.getFeed(flags: 0, feedId: groupId.rawValue, offsetPosition: nil, addOffset: 0, limit: 1, maxPosition: nil, minPosition: nil, hash: 0))
         |> retryRequest
         |> map { result -> GroupFeedReadState? in
             switch result {
@@ -153,18 +157,20 @@ private func fetchReadState(network: Network, groupId: PeerGroupId) -> Signal<Gr
             case .feedMessagesNotModified:
                 return nil
             }
-    }
+    }*/
 }
 
 private func pushReadState(network: Network, accountPeerId: PeerId, groupId: PeerGroupId, state: GroupFeedReadState) -> Signal<Api.Updates?, NoError> {
-    let position: Api.FeedPosition = .feedPosition(date: state.maxReadIndex.timestamp, peer: groupBoundaryPeer(state.maxReadIndex.id.peerId, accountPeerId: accountPeerId), id: state.maxReadIndex.id.id)
+    /*feed*/
+    return .single(nil)
+    /*let position: Api.FeedPosition = .feedPosition(date: state.maxReadIndex.timestamp, peer: groupBoundaryPeer(state.maxReadIndex.id.peerId, accountPeerId: accountPeerId), id: state.maxReadIndex.id.id)
     if GlobalTelegramCoreConfiguration.readMessages {
         return network.request(Api.functions.channels.readFeed(feedId: groupId.rawValue, maxPosition: position))
             |> retryRequest
             |> map(Optional.init)
     } else {
         return .single(nil)
-    }
+    }*/
 }
 
 private func performSyncOperation(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, groupId: PeerGroupId, operation: GroupFeedReadStateSyncOperation) -> Signal<Void, NoError> {
