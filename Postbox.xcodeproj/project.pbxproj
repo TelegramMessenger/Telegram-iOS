@@ -168,8 +168,8 @@
 		D0B166EB1F9D142A00976B40 /* MessageOfInterestHolesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B166E91F9D142A00976B40 /* MessageOfInterestHolesView.swift */; };
 		D0B167201F9EAAA900976B40 /* OrderedList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671F1F9EAAA900976B40 /* OrderedList.swift */; };
 		D0B167211F9EAAA900976B40 /* OrderedList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671F1F9EAAA900976B40 /* OrderedList.swift */; };
-		D0B2F75D204F551D00D3BFB9 /* DeviceContactsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F75C204F551D00D3BFB9 /* DeviceContactsTable.swift */; };
-		D0B2F75E204F551D00D3BFB9 /* DeviceContactsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F75C204F551D00D3BFB9 /* DeviceContactsTable.swift */; };
+		D0B2F75D204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F75C204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift */; };
+		D0B2F75E204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F75C204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift */; };
 		D0B418171D7DFAF3004562A4 /* PostboxMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B418151D7DFAF3004562A4 /* PostboxMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0B4181C1D7DFDF1004562A4 /* SQLite-Bridging.m in Sources */ = {isa = PBXBuildFile; fileRef = D07516761B2EC90400AE42E0 /* SQLite-Bridging.m */; };
 		D0B4181D1D7DFDF4004562A4 /* sqlite3.c in Sources */ = {isa = PBXBuildFile; fileRef = D07516401B2D9CEF00AE42E0 /* sqlite3.c */; settings = {COMPILER_FLAGS = "-Wno-conversion -Wno-ambiguous-macro -Wno-conditional-uninitialized -Wno-unused-const-variable -Wno-unused-function -Wno-unreachable-code"; }; };
@@ -472,7 +472,7 @@
 		D0AE3EBB1F68261B0069BC90 /* PeerNotificationSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerNotificationSettingsView.swift; sourceTree = "<group>"; };
 		D0B166E91F9D142A00976B40 /* MessageOfInterestHolesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageOfInterestHolesView.swift; sourceTree = "<group>"; };
 		D0B1671F1F9EAAA900976B40 /* OrderedList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderedList.swift; sourceTree = "<group>"; };
-		D0B2F75C204F551D00D3BFB9 /* DeviceContactsTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceContactsTable.swift; sourceTree = "<group>"; };
+		D0B2F75C204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceContactImportInfoTable.swift; sourceTree = "<group>"; };
 		D0B418131D7DFAF2004562A4 /* PostboxMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PostboxMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B418151D7DFAF3004562A4 /* PostboxMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PostboxMac.h; sourceTree = "<group>"; };
 		D0B418161D7DFAF3004562A4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -732,7 +732,7 @@
 				D0C26D621FDFF062004ABF18 /* GroupFeedStateTable.swift */,
 				D0C26D711FE2E7A8004ABF18 /* GroupFeedReadStateTable.swift */,
 				D046142F2004E24600EC0EF2 /* LocalMessageHistoryTagsTable.swift */,
-				D0B2F75C204F551D00D3BFB9 /* DeviceContactsTable.swift */,
+				D0B2F75C204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift */,
 			);
 			name = Tables;
 			sourceTree = "<group>";
@@ -1112,7 +1112,7 @@
 				D0C26D731FE2E7A8004ABF18 /* GroupFeedReadStateTable.swift in Sources */,
 				D0575AE41E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */,
 				C2A315BC1E2E730400D89000 /* PeerOperationLogTable.swift in Sources */,
-				D0B2F75E204F551D00D3BFB9 /* DeviceContactsTable.swift in Sources */,
+				D0B2F75E204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift in Sources */,
 				D0C26D7F1FE3FA4E004ABF18 /* PinnedItemId.swift in Sources */,
 				C2AC9C131E1E5D200085C7DE /* UnreadMessageCountsView.swift in Sources */,
 				D0B418481D7DFE20004562A4 /* MessageHistoryView.swift in Sources */,
@@ -1281,7 +1281,7 @@
 				D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */,
 				D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */,
 				D0DF0C8F1D81A350008AEB01 /* PeerView.swift in Sources */,
-				D0B2F75D204F551D00D3BFB9 /* DeviceContactsTable.swift in Sources */,
+				D0B2F75D204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift in Sources */,
 				D0079F651D5A457A00A27A2C /* ContactPeersView.swift in Sources */,
 				D09ADF0A1D2E89F300C8208D /* RandomAccessMediaResourceContext.swift in Sources */,
 				D08CEFB41D2AD8BE0015D3BC /* RedBlackTree.swift in Sources */,

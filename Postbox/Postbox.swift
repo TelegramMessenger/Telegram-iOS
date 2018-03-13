@@ -806,6 +806,16 @@ public final class Modifier {
     public func getChatListIndices() {
         assert(!self.disposed)
     }
+    
+    public func getDeviceContactImportInfo(_ identifier: DeviceContactImportIdentifier) -> PostboxCoding? {
+        assert(!self.disposed)
+        return self.postbox?.deviceContactImportInfoTable.get(identifier)
+    }
+    
+    public func setDeviceContactImportInfo(_ identifier: DeviceContactImportIdentifier, value: PostboxCoding?) {
+        assert(!self.disposed)
+        self.postbox?.deviceContactImportInfoTable.set(identifier, value: value)
+    }
 }
 
 fileprivate class PipeNotifier: NSObject {
@@ -1032,6 +1042,7 @@ public final class Postbox {
     let pendingMessageActionsMetadataTable: PendingMessageActionsMetadataTable
     let groupFeedIndexTable: GroupFeedIndexTable
     let groupFeedReadStateTable: GroupFeedReadStateTable
+    let deviceContactImportInfoTable: DeviceContactImportInfoTable
     
     //temporary
     let peerRatingTable: RatingTable<PeerId>
@@ -1118,6 +1129,7 @@ public final class Postbox {
         self.orderedItemListTable = OrderedItemListTable(valueBox: self.valueBox, table: OrderedItemListTable.tableSpec(38), indexTable: self.orderedItemListIndexTable)
         self.unorderedItemListTable = UnorderedItemListTable(valueBox: self.valueBox, table: UnorderedItemListTable.tableSpec(42))
         self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(43))
+        self.deviceContactImportInfoTable = DeviceContactImportInfoTable(valueBox: self.valueBox, table: DeviceContactImportInfoTable.tableSpec(54))
         
         var tables: [Table] = []
         tables.append(self.metadataTable)
@@ -1171,6 +1183,7 @@ public final class Postbox {
         tables.append(self.pendingMessageActionsMetadataTable)
         tables.append(self.groupFeedIndexTable)
         tables.append(self.groupFeedReadStateTable)
+        tables.append(self.deviceContactImportInfoTable)
         
         self.tables = tables
         
@@ -2508,7 +2521,7 @@ public final class Postbox {
         }
     }
     
-    public func contactPeersView(accountPeerId: PeerId) -> Signal<ContactPeersView, NoError> {
+    public func contactPeersView(accountPeerId: PeerId?, includePresences: Bool) -> Signal<ContactPeersView, NoError> {
         return self.transactionSignal { subscriber, modifier in
             var peers: [PeerId: Peer] = [:]
             var peerPresences: [PeerId: PeerPresence] = [:]
@@ -2517,12 +2530,14 @@ public final class Postbox {
                 if let peer = self.peerTable.get(peerId) {
                     peers[peerId] = peer
                 }
-                if let presence = self.peerPresenceTable.get(peerId) {
-                    peerPresences[peerId] = presence
+                if includePresences {
+                    if let presence = self.peerPresenceTable.get(peerId) {
+                        peerPresences[peerId] = presence
+                    }
                 }
             }
             
-            let view = MutableContactPeersView(peers: peers, peerPresences: peerPresences, accountPeer: self.peerTable.get(accountPeerId))
+            let view = MutableContactPeersView(peers: peers, peerPresences: peerPresences, accountPeer: accountPeerId.flatMap(self.peerTable.get), includePresences: includePresences)
             let (index, signal) = self.viewTracker.addContactPeersView(view)
             
             subscriber.putNext(ContactPeersView(view))

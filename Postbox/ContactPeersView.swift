@@ -5,12 +5,14 @@ final class MutableContactPeersView {
     fileprivate var peerPresences: [PeerId: PeerPresence]
     fileprivate var peerIds: Set<PeerId>
     fileprivate var accountPeer: Peer?
+    private let includePresences: Bool
     
-    init(peers: [PeerId: Peer], peerPresences: [PeerId: PeerPresence], accountPeer: Peer?) {
+    init(peers: [PeerId: Peer], peerPresences: [PeerId: PeerPresence], accountPeer: Peer?, includePresences: Bool) {
         self.peers = peers
         self.peerIds = Set<PeerId>(peers.map { $0.0 })
         self.peerPresences = peerPresences
         self.accountPeer = accountPeer
+        self.includePresences = includePresences
     }
     
     func replay(replacePeerIds: Set<PeerId>?, updatedPeerPresences: [PeerId: PeerPresence], getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) -> Bool {
@@ -30,8 +32,10 @@ final class MutableContactPeersView {
                 if let peer = getPeer(peerId) {
                     self.peers[peerId] = peer
                 }
-                if let presence = getPeerPresence(peerId) {
-                    self.peerPresences[peerId] = presence
+                if self.includePresences {
+                    if let presence = getPeerPresence(peerId) {
+                        self.peerPresences[peerId] = presence
+                    }
                 }
             }
             
@@ -40,10 +44,12 @@ final class MutableContactPeersView {
             }
         }
         
-        for peerId in self.peerIds {
-            if let presence = updatedPeerPresences[peerId] {
-                updated = true
-                self.peerPresences[peerId] = presence
+        if self.includePresences, !updatedPeerPresences.isEmpty {
+            for peerId in self.peerIds {
+                if let presence = updatedPeerPresences[peerId] {
+                    updated = true
+                    self.peerPresences[peerId] = presence
+                }
             }
         }
         
