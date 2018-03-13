@@ -282,7 +282,9 @@ func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
 }
 
 func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, postbox: Postbox, groupId: PeerGroupId, minIndex: MessageIndex, maxIndex: MessageIndex, direction: MessageHistoryViewRelativeHoleDirection, limit: Int = 100) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> (Peer?, Peer?) in
+    /*feed*/
+    return .complete()
+    /*return postbox.modify { modifier -> (Peer?, Peer?) in
             return (modifier.getPeer(minIndex.id.peerId), modifier.getPeer(maxIndex.id.peerId))
         }
         |> mapToSignal { lowerPeer, upperPeer in
@@ -454,7 +456,7 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
                         return
                     }
             }
-    }
+    }*/
 }
 
 func fetchChatListHole(postbox: Postbox, network: Network, groupId: PeerGroupId?, hole: ChatListHole) -> Signal<Void, NoError> {

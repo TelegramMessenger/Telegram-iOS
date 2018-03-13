@@ -358,7 +358,9 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                     return .complete()
                 }
             case let .group(groupId, _):
-                let hash = hashForMessages(previousMessages, withChannelIds: true)
+                /*feed*/
+                signal = .single(.notModified)
+                /*let hash = hashForMessages(previousMessages, withChannelIds: true)
                 let upperIndex = MessageIndex(previousMessages[previousMessages.count - 1])
                 let minIndex = MessageIndex(previousMessages[0]).predecessor()
                 
@@ -383,7 +385,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                     case .feedMessagesNotModified:
                         return .notModified
                 }
-            }
+            }*/
         }
         
         return signal

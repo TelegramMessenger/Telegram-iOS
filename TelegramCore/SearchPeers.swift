@@ -47,7 +47,8 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                 peers[groupOrChannel.id] = groupOrChannel
                                 switch chat {
-                                    case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
+                                    /*feed*/
+                                    case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount/*, _*/):
                                         if let participantsCount = participantsCount {
                                             subscribers[groupOrChannel.id] = participantsCount
                                         }
