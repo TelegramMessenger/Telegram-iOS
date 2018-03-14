@@ -119,12 +119,25 @@
 
 + (UIImage *)gifBackgroundImage
 {
-    return TGComponentsImageNamed(@"PhotoEditorGifShadow.png");
+    static dispatch_once_t onceToken;
+    static UIImage *muteBackground;
+    dispatch_once(&onceToken, ^
+    {
+        CGRect rect = CGRectMake(0, 0, 39.0f, 39.0f);
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.6f).CGColor);
+        CGContextFillEllipseInRect(context, CGRectInset(rect, 3, 3));
+        
+        muteBackground = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+    });
+    return muteBackground;
 }
 
 + (UIImage *)gifIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorGif.png");
+    return TGComponentsImageNamed(@"PhotoEditorMute.png");
 }
 
 + (UIImage *)gifActiveIcon

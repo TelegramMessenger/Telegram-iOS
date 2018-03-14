@@ -550,6 +550,12 @@ typedef enum
 
 - (void)dismissAnimated:(bool)animated manual:(bool)manual completion:(void (^)(void))completion
 {
+    if (_ignoreNextDismissal)
+    {
+        _ignoreNextDismissal = false;
+        return;
+    }
+    
     bool compact = ([self sizeClass] == UIUserInterfaceSizeClassCompact);
     
     if (self.willDismiss != nil)

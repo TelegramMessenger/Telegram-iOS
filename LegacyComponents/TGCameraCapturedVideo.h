@@ -11,4 +11,6 @@
 
 - (instancetype)initWithURL:(NSURL *)url;
 
+- (void)_cleanUp;
+
 @end

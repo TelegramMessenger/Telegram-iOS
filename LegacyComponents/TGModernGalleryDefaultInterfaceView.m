@@ -35,6 +35,7 @@
 @property (nonatomic, strong, readonly) UIView *toolbarView;
 @property (nonatomic, strong, readonly) UIView *navigationBarView;
 @property (nonatomic, copy) void (^closePressed)();
+@property (nonatomic, copy) UIViewController *(^controller)();
 
 @end
 

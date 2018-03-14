@@ -53,9 +53,10 @@
 
 @implementation TGWebDocument
 
-- (instancetype)initWithUrl:(NSString *)url accessHash:(int64_t)accessHash size:(int32_t)size mimeType:(NSString *)mimeType attributes:(NSArray *)attributes datacenterId:(int32_t)datacenterId {
+- (instancetype)initWithNoProxy:(bool)noProxy url:(NSString *)url accessHash:(int64_t)accessHash size:(int32_t)size mimeType:(NSString *)mimeType attributes:(NSArray *)attributes datacenterId:(int32_t)datacenterId {
     self = [super init];
     if (self != nil) {
+        _noProxy = noProxy;
         _url = url;
         _accessHash = accessHash;
         _size = size;
@@ -67,10 +68,11 @@
 }
 
 - (instancetype)initWithCoder:(NSCoder *)aDecoder {
-    return [self initWithUrl:[aDecoder decodeObjectForKey:@"url"] accessHash:[aDecoder decodeInt64ForKey:@"accessHash"] size:[aDecoder decodeInt32ForKey:@"size"] mimeType:[aDecoder decodeObjectForKey:@"mimeType"] attributes:[aDecoder decodeObjectForKey:@"attributes"] datacenterId:[aDecoder decodeInt32ForKey:@"datacenterId"]];
+    return [self initWithNoProxy:[aDecoder decodeBoolForKey:@"noProxy"] url:[aDecoder decodeObjectForKey:@"url"] accessHash:[aDecoder decodeInt64ForKey:@"accessHash"] size:[aDecoder decodeInt32ForKey:@"size"] mimeType:[aDecoder decodeObjectForKey:@"mimeType"] attributes:[aDecoder decodeObjectForKey:@"attributes"] datacenterId:[aDecoder decodeInt32ForKey:@"datacenterId"]];
 }
 
 - (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeBool:_noProxy forKey:@"noProxy"];
     [aCoder encodeObject:_url forKey:@"url"];
     [aCoder encodeInt64:_accessHash forKey:@"accessHash"];
     [aCoder encodeInt32:_size forKey:@"size"];
@@ -84,6 +86,9 @@
         return false;
     }
     TGWebDocument *other = object;
+    if (_noProxy != other->_noProxy) {
+        return false;
+    }
     if (!TGStringCompare(_url, other->_url)) {
         return false;
     }

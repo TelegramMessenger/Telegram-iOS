@@ -64,6 +64,11 @@
 
 - (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)thumbnailSignal
 {
+    return [self initWithWebPageAttachment:webPage thumbnailSignal:nil alternateCachePathSignal:nil];
+}
+
+- (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)thumbnailSignal alternateCachePathSignal:(SSignal *)__unused alternateCachePathSignal
+{
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
     {

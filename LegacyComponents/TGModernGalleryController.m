@@ -445,6 +445,11 @@
     __weak TGModernGalleryController *weakSelf = self;
     _view = [[TGModernGalleryView alloc] initWithFrame:self.view.bounds context:_context itemPadding:TGModernGalleryItemPadding interfaceView:interfaceView previewMode:_previewMode previewSize:previewSize];
     _view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [_view.interfaceView setController:^UIViewController *(void)
+    {
+        __strong TGModernGalleryController *strongSelf = weakSelf;
+        return strongSelf;
+    }];
     [self.view addSubview:_view];
     
     _defaultHeaderView = [_model createDefaultHeaderView];

@@ -560,7 +560,7 @@
         
         void (^changeBlock)(void) = ^
         {
-            _scrubberPanelView.frame = CGRectMake(0.0f, -64.0f, _scrubberPanelView.frame.size.width, _scrubberPanelView.frame.size.height);
+            _scrubberPanelView.frame = CGRectMake(0.0f, -64.0f - _safeAreaInset.top, _scrubberPanelView.frame.size.width, _scrubberPanelView.frame.size.height);
         };
         void (^completionBlock)(BOOL) = ^(BOOL finished)
         {

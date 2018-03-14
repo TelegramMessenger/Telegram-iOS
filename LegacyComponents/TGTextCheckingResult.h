@@ -3,6 +3,7 @@
 typedef enum {
     TGTextCheckingResultTypeMention,
     TGTextCheckingResultTypeHashtag,
+    TGTextCheckingResultTypeCashtag,
     TGTextCheckingResultTypeCommand,
     TGTextCheckingResultTypeBold,
     TGTextCheckingResultTypeUltraBold,

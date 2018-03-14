@@ -24,6 +24,11 @@
     return self;
 }
 
+- (void)_cleanUp
+{
+    [[NSFileManager defaultManager] removeItemAtPath:_avAsset.URL.path error:nil];
+}
+
 - (bool)isVideo
 {
     return true;

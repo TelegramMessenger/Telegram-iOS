@@ -88,7 +88,6 @@ static void *kPlayerLayerReadyToDisplayContext = (void *) 4;
 
 - (void)stopPrepairing
 {
-
 }
 
 #pragma mark -
@@ -96,9 +95,7 @@ static void *kPlayerLayerReadyToDisplayContext = (void *) 4;
 
 - (void)createVideoPlayer
 {
-	[[NSNotificationCenter defaultCenter] addObserver:self
-											 selector:@selector(restartAVPlayer:)
-												 name:AVPlayerItemDidPlayToEndTimeNotification object:nil];
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(restartAVPlayer:) name:AVPlayerItemDidPlayToEndTimeNotification object:nil];
 
     self.videoPlayer = [AVPlayer new];
     _videoPlayer.actionAtItemEnd = AVPlayerActionAtItemEndNone;
@@ -146,10 +143,8 @@ static void *kPlayerLayerReadyToDisplayContext = (void *) 4;
 - (void)restartAVPlayer:(NSNotification *)notification
 {
 	AVPlayerItem *playerItem = [notification object];
-	if(playerItem == _videoPlayer.currentItem)
-	{
+	if (playerItem == _videoPlayer.currentItem)
 		[_videoPlayer seekToTime:kCMTimeZero];
-	}
 }
 
 #pragma mark -

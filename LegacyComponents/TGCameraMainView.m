@@ -148,8 +148,8 @@
 
 - (void)doneButtonPressed
 {
-    if (self.donePressed != nil)
-        self.donePressed();
+    if (self.resultPressed != nil)
+        self.resultPressed();
 }
 
 - (void)flipButtonPressed

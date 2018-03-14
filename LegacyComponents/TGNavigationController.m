@@ -966,6 +966,11 @@ TGNavigationController *findNavigationController()
     __edgeRegionSize = edgeRegionSize;
 }
 
+- (id)recognizerTouchesToIgnoreForEvent:(id)event
+{
+    return nil;
+}
+
 @end
 
 

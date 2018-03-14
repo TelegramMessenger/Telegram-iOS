@@ -310,6 +310,7 @@
         if (_showGroupLast && indexPath.row == 0)
         {
             TGStickerKeyboardTabCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabCell" forIndexPath:indexPath];
+            [cell setPallete:_pallete];
             [cell setStyle:_style];
             [cell setUrl:_avatarUrl peerId:_peerId title:_title];
             [cell setInnerAlpha:_innerAlpha];
@@ -319,6 +320,7 @@
         else
         {
             TGStickerKeyboardTabSettingsCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"TGStickerKeyboardTabSettingsCell" forIndexPath:indexPath];
+            [cell setPallete:_pallete];
             [cell setStyle:_style];
 
             if (_showTrendingLast && ((_showGroupLast && indexPath.item == 1) || (!_showGroupLast && indexPath.item == 0))) {

@@ -241,7 +241,8 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
             if (strongSelf != nil && strongSelf.sendPressed != nil)
             {
-                [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
+                if (strongSelf->_selectionContext.allowGrouping)
+                    [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
                 strongSelf.sendPressed(nil, false);
             }
         }];

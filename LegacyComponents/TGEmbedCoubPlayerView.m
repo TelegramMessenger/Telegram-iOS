@@ -35,7 +35,7 @@
     
     CBPlayerView *_playerView;
     CBCoubPlayer *_coubPlayer;
-    NSURL *_videoPath;
+    SVariable *_videoPath;
     
     SDisposableSet *_disposables;
     
@@ -45,32 +45,33 @@
 
 @implementation TGEmbedCoubPlayerView
 
-- (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)thumbnailSignal
+- (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)thumbnailSignal alternateCachePathSignal:(SSignal *)alternateCachePathSignal
 {
-    self = [super initWithWebPageAttachment:webPage thumbnailSignal:thumbnailSignal];
+    self = [super initWithWebPageAttachment:webPage thumbnailSignal:thumbnailSignal alternateCachePathSignal:alternateCachePathSignal];
     if (self != nil)
     {
         _permalink = [TGEmbedCoubPlayerView _coubVideoIdFromText:webPage.embedUrl];
         _disposables = [[SDisposableSet alloc] init];
         
-        if (thumbnailSignal == nil)
+        TGDocumentMediaAttachment *document = webPage.document;
+        NSString *videoPath = nil;
+        if ([document.mimeType isEqualToString:@"video/mp4"])
         {
-            TGDocumentMediaAttachment *document = webPage.document;
-            NSString *videoPath = nil;
-            if ([document.mimeType isEqualToString:@"video/mp4"])
-            {
-                if (document.localDocumentId != 0) {
-                    videoPath = [[[LegacyComponentsGlobals provider] localDocumentDirectoryForLocalDocumentId:document.localDocumentId version:document.version] stringByAppendingPathComponent:[document safeFileName]];
-                } else {
-                    videoPath = [[[LegacyComponentsGlobals provider] localDocumentDirectoryForDocumentId:document.documentId version:document.version] stringByAppendingPathComponent:[document safeFileName]];
-                }
+            if (document.localDocumentId != 0) {
+                videoPath = [[[LegacyComponentsGlobals provider] localDocumentDirectoryForLocalDocumentId:document.localDocumentId version:document.version] stringByAppendingPathComponent:[document safeFileName]];
+            } else {
+                videoPath = [[[LegacyComponentsGlobals provider] localDocumentDirectoryForDocumentId:document.documentId version:document.version] stringByAppendingPathComponent:[document safeFileName]];
             }
+        }
+        
+        __weak TGEmbedCoubPlayerView *weakSelf = self;
+        if (videoPath != nil && [[NSFileManager defaultManager] fileExistsAtPath:videoPath isDirectory:NULL])
+        {
+            _videoPath = [[SVariable alloc] init];
+            [_videoPath set:[SSignal single:[NSURL fileURLWithPath:videoPath]]];
             
-            if (videoPath != nil && [[NSFileManager defaultManager] fileExistsAtPath:videoPath isDirectory:NULL])
+            if (thumbnailSignal == nil)
             {
-                _videoPath = [NSURL fileURLWithPath:videoPath];
-                
-                __weak TGEmbedCoubPlayerView *weakSelf = self;
                 [_disposables add:[[[TGMediaAssetImageSignals videoThumbnailForAVAsset:[AVURLAsset assetWithURL:[NSURL fileURLWithPath:videoPath]] size:CGSizeMake(480, 480) timestamp:CMTimeMake(1, 100)] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
                 {
                     __strong TGEmbedCoubPlayerView *strongSelf = weakSelf;
@@ -81,6 +82,46 @@
                         [strongSelf setCoverImage:next];
                 }]];
             }
+        }
+        else if (alternateCachePathSignal != nil)
+        {
+            _videoPath = [[SVariable alloc] init];
+            
+            [_disposables add:[alternateCachePathSignal startWithNext:^(NSString *path)
+            {
+                __strong TGEmbedCoubPlayerView *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                if ([[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:NULL])
+                {
+                    if (path.pathExtension.length == 0)
+                    {
+                        [[NSFileManager defaultManager] createSymbolicLinkAtPath:[path stringByAppendingString:@".mov"] withDestinationPath:[path lastPathComponent] error:nil];
+                        path = [path stringByAppendingString:@".mov"];
+                    }
+                    
+                    NSURL *url = [NSURL fileURLWithPath:path];
+                    [strongSelf->_videoPath set:[SSignal single:url]];
+                    
+                    if (thumbnailSignal == nil)
+                    {
+                        [strongSelf->_disposables add:[[[TGMediaAssetImageSignals videoThumbnailForAVAsset:[AVURLAsset assetWithURL:url] size:CGSizeMake(480, 480) timestamp:CMTimeMake(1, 100)] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
+                        {
+                            __strong TGEmbedCoubPlayerView *strongSelf = weakSelf;
+                            if (strongSelf == nil)
+                                return;
+                            
+                            if ([next isKindOfClass:[UIImage class]])
+                                [strongSelf setCoverImage:next];
+                        }]];
+                    }
+                }
+                else
+                {
+                    [strongSelf->_videoPath set:[SSignal single:nil]];
+                }
+            }]];
         }
         
         self.controlsView.watermarkImage = TGComponentsImageNamed(@"CoubWatermark");
@@ -286,21 +327,32 @@
         if (strongSelf == nil)
             return;
         
-        CBCoubNew *coub = [CBCoubNew coubWithAttributes:data];
-        coub.customLocalVideoFileURL = strongSelf->_videoPath;
-        strongSelf->_asset = coub;
+        SSignal *signal = [SSignal single:nil];
+        if (strongSelf->_videoPath != nil)
+            signal = strongSelf->_videoPath.signal;
         
-        if ([coub isKindOfClass:[CBCoubNew class]])
+        [strongSelf->_disposables add:[signal startWithNext:^(NSURL *videoPath)
         {
-            CBCoubNew *coubNew = (CBCoubNew *)coub;
-            if (strongSelf.onMetadataLoaded != nil)
-                strongSelf.onMetadataLoaded(coubNew.title, coubNew.author.name);
-        }
-        
-        [strongSelf->_coubPlayer playAsset:strongSelf->_asset];
-        
-        if (![data[@"cached"] boolValue])
-            [TGEmbedCoubPlayerView setCoubJSON:data[@"json"] forPermalink:strongSelf->_permalink];
+            __strong TGEmbedCoubPlayerView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            CBCoubNew *coub = [CBCoubNew coubWithAttributes:data];
+            coub.customLocalVideoFileURL = videoPath;
+            strongSelf->_asset = coub;
+            
+            if ([coub isKindOfClass:[CBCoubNew class]])
+            {
+                CBCoubNew *coubNew = (CBCoubNew *)coub;
+                if (strongSelf.onMetadataLoaded != nil)
+                    strongSelf.onMetadataLoaded(coubNew.title, coubNew.author.name);
+            }
+            
+            [strongSelf->_coubPlayer playAsset:strongSelf->_asset];
+            
+            if (![data[@"cached"] boolValue])
+                [TGEmbedCoubPlayerView setCoubJSON:data[@"json"] forPermalink:strongSelf->_permalink];
+        }]];
     }]];
 }
 

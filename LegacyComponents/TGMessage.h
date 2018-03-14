@@ -254,6 +254,7 @@ static inline TGMessageSortKey TGTaggedMessageSortKeyExtract(NSData *data, int32
 + (void)registerMediaAttachmentParser:(int)type parser:(id<TGMediaAttachmentParser>)parser;
 + (NSArray *)textCheckingResultsForText:(NSString *)text highlightMentionsAndTags:(bool)highlightMentionsAndTags highlightCommands:(bool)highlightCommands entities:(NSArray *)entities;
 + (NSArray *)entitiesForMarkedUpText:(NSString *)text resultingText:(__autoreleasing NSString **)resultingText;
++ (NSArray *)textCheckingResultsForText:(NSString *)text highlightMentionsAndTags:(bool)highlightMentionsAndTags highlightCommands:(bool)highlightCommands entities:(NSArray *)entities highlightAsExternalMentionsAndHashtags:(bool)highlightAsExternalMentionsAndHashtags;
 
 - (NSData *)serializeMediaAttachments:(bool)includeMeta;
 + (NSData *)serializeMediaAttachments:(bool)includeMeta attachments:(NSArray *)attachments;

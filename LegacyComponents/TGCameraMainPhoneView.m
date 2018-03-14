@@ -170,7 +170,6 @@
         [_bottomPanelView addSubview:_cancelButton];
         
         _doneButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 60, 44)];
-        _doneButton.alpha = 0.0f;
         _doneButton.backgroundColor = [UIColor clearColor];
         _doneButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight;
         _doneButton.exclusiveTouch = true;
@@ -182,7 +181,7 @@
         [_doneButton sizeToFit];
         _doneButton.frame = CGRectMake(0, 0, MAX(60.0f, _doneButton.frame.size.width), 44);
         [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-        [_bottomPanelView addSubview:_doneButton];
+        [_topPanelView addSubview:_doneButton];
         
         _shutterButton = [[TGCameraShutterButton alloc] initWithFrame:CGRectMake((frame.size.width - shutterButtonWidth) / 2, 10, shutterButtonWidth, shutterButtonWidth)];
         [_shutterButton addTarget:self action:@selector(shutterButtonReleased) forControlEvents:UIControlEventTouchUpInside];
@@ -336,6 +335,7 @@
     {
         _resultButton.hidden = true;
         _cancelButton.hidden = false;
+        _doneButton.hidden = true;
     }
     else
     {
@@ -358,6 +358,7 @@
         }
         _resultButton.hidden = false;
         _cancelButton.hidden = true;
+        _doneButton.hidden = false;
         
         [_resultButton setImage:image forState:UIControlStateNormal];
     }
@@ -524,6 +525,8 @@
 
 - (void)setInterfaceHiddenForVideoRecording:(bool)hidden animated:(bool)animated
 {
+    bool hasDoneButton = [_resultButton imageForState:UIControlStateNormal] != nil;
+    
     if (animated)
     {
         if (!hidden)
@@ -545,6 +548,9 @@
             _flashControl.alpha = alpha;
             _flipButton.alpha = alpha;
             _bottomPanelBackgroundView.alpha = alpha;
+            
+            if (hasDoneButton)
+                _doneButton.alpha = alpha;
         } completion:^(BOOL finished)
         {
             if (finished)
@@ -555,6 +561,9 @@
                 _flashControl.hidden = hidden;
                 _flipButton.hidden = hidden;
                 _bottomPanelBackgroundView.hidden = hidden;
+                
+                if (hasDoneButton)
+                    _doneButton.hidden = hidden;
             }
         }];
     }
@@ -574,6 +583,11 @@
         _bottomPanelBackgroundView.hidden = hidden;
         _bottomPanelBackgroundView.alpha = alpha;
         
+        if (hasDoneButton)
+        {
+            _doneButton.hidden = hidden;
+            _doneButton.alpha = alpha;
+        }
         _resultButton.alpha = alpha;
         _resultButton.userInteractionEnabled = !hidden;
     }
@@ -799,7 +813,7 @@
     _modeControl.frame = CGRectMake(0, 0, self.frame.size.width, _modeControlHeight);
     _shutterButton.frame = CGRectMake(round((self.frame.size.width - _shutterButton.frame.size.width) / 2), _modeControlHeight, _shutterButton.frame.size.width, _shutterButton.frame.size.height);
     _cancelButton.frame = CGRectMake(0, round(_shutterButton.center.y - _cancelButton.frame.size.height / 2.0f), _cancelButton.frame.size.width, _cancelButton.frame.size.height);
-    _doneButton.frame = CGRectMake(_bottomPanelView.frame.size.width - _doneButton.frame.size.width, round(_shutterButton.center.y - _doneButton.frame.size.height / 2.0f), _doneButton.frame.size.width, _doneButton.frame.size.height);
+    _doneButton.frame = CGRectMake(_topPanelView.frame.size.width - _doneButton.frame.size.width, 0.0f, _doneButton.frame.size.width, _topPanelView.frame.size.height);
     _resultButton.frame = CGRectMake(15.0f, round(_shutterButton.center.y - _resultButton.frame.size.height / 2.0f), _resultButton.frame.size.width, _resultButton.frame.size.height);
     
     _flipButton.frame = CGRectMake(self.frame.size.width - _flipButton.frame.size.width - 4.0f - 7.0f, round(_shutterButton.center.y - _flipButton.frame.size.height / 2.0f), _flipButton.frame.size.width, _flipButton.frame.size.height);

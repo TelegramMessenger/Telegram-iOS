@@ -486,7 +486,7 @@
 {
     bool storeAssets = (_editingContext != nil) && self.shouldStoreAssets;
     
-    if (_intent == TGMediaAssetsControllerSendMediaIntent)
+    if (_intent == TGMediaAssetsControllerSendMediaIntent && _selectionContext.allowGrouping)
         [[NSUserDefaults standardUserDefaults] setObject:@(!_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
     
     return [TGMediaAssetsController resultSignalsForSelectionContext:_selectionContext editingContext:_editingContext intent:_intent currentItem:currentItem storeAssets:storeAssets useMediaCache:self.localMediaCacheEnabled descriptionGenerator:descriptionGenerator saveEditedPhotos:_saveEditedPhotos];

@@ -2,16 +2,6 @@
 
 @implementation TGEmbedSoundCloudPlayerView
 
-- (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)thumbnailSignal
-{
-    self = [super initWithWebPageAttachment:webPage thumbnailSignal:thumbnailSignal];
-    if (self != nil)
-    {
-        
-    }
-    return self;
-}
-
 - (NSURL *)_embedURL
 {
     NSString *trackId = [TGEmbedSoundCloudPlayerView _soundCloudIdFromText:_webPage.embedUrl];

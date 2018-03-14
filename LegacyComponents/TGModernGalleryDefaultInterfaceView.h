@@ -4,8 +4,6 @@
 
 @interface TGModernGalleryDefaultInterfaceView : UIView <TGModernGalleryInterfaceView>
 
-- (void)setClosePressed:(void (^)())closePressed;
-
 - (void)addItemHeaderView:(UIView *)itemHeaderView;
 - (void)removeItemHeaderView:(UIView *)itemHeaderView;
 - (void)addItemFooterView:(UIView *)itemFooterView;

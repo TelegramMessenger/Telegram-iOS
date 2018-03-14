@@ -36,6 +36,7 @@
 
 @property (nonatomic, assign) bool followsKeyboard;
 
+@property (nonatomic, assign) bool ignoreNextDismissal;
 @property (nonatomic, assign) bool narrowInLandscape;
 @property (nonatomic, assign) bool inhibitPopoverPresentation;
 @property (nonatomic, assign) bool stickWithSpecifiedParentController;

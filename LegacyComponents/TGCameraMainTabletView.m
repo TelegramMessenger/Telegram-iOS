@@ -1,5 +1,6 @@
 #import "TGCameraMainTabletView.h"
 
+#import <SSignalKit/SSignalKit.h>
 #import "LegacyComponentsInternal.h"
 #import "TGFont.h"
 
@@ -20,6 +21,9 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
 {
     UIView *_panelView;
     UIView *_panelBackgroundView;
+    
+    TGModernButton *_resultButton;
+    SMetaDisposable *_resultDisposable;
 }
 @end
 
@@ -107,8 +111,78 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
                 [strongSelf->_timecodeView setHidden:false animated:true];
             }
         };
+        
+        _resultButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 49.0f, 49.0f)];
+        _resultButton.clipsToBounds = true;
+        _resultButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
+        _resultButton.hidden = true;
+        _resultButton.layer.cornerRadius = 3.0f;
+        [_resultButton addTarget:self action:@selector(resultButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+        [_panelView addSubview:_resultButton];
     }
     return self;
+}
+
+- (void)setResultSignal:(SSignal *)signal
+{
+    if (_resultDisposable == nil)
+        _resultDisposable = [[SMetaDisposable alloc] init];
+    
+    __weak TGCameraMainTabletView *weakSelf = self;
+    [_resultDisposable setDisposable:[[signal deliverOn:[SQueue mainQueue]] startWithNext:^(UIImage *next)
+    {
+        __strong TGCameraMainTabletView *strongSelf = weakSelf;
+        if (strongSelf != nil)
+            [strongSelf setResultImage:next];
+    }]];
+}
+
+- (void)setResultImage:(UIImage *)image
+{
+    if (image == nil)
+    {
+        _resultButton.hidden = true;
+        _cancelButton.hidden = false;
+    }
+    else
+    {
+        if (_resultButton.alpha < FLT_EPSILON)
+        {
+            _resultButton.transform = CGAffineTransformMakeScale(0.45f, 0.45f);
+            [UIView animateWithDuration:0.2 animations:^
+             {
+                 _resultButton.alpha = 1.0f;
+             } completion:nil];
+            [UIView animateWithDuration:0.3 delay:0.0 usingSpringWithDamping:1.1 initialSpringVelocity:0.1 options:kNilOptions animations:^{
+                _resultButton.transform = CGAffineTransformIdentity;
+            } completion:^(BOOL finished) {
+                _resultButton.userInteractionEnabled = true;
+            }];
+        }
+        else
+        {
+            _resultButton.userInteractionEnabled = true;
+        }
+        _resultButton.hidden = false;
+        _cancelButton.hidden = true;
+        
+        [_resultButton setImage:image forState:UIControlStateNormal];
+    }
+}
+
+- (void)hideResultUntilNext
+{
+    _resultButton.userInteractionEnabled = false;
+    [UIView animateWithDuration:0.2 animations:^
+     {
+         _resultButton.alpha = 0.0f;
+     }];
+}
+
+- (void)resultButtonPressed
+{
+    if (self.resultPressed != nil)
+        self.resultPressed();
 }
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
@@ -125,10 +199,13 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
 {
     if (animated)
     {
-        _modeControl.hidden = false;
-        _cancelButton.hidden = false;
-        _flipButton.hidden = false;
-        _panelBackgroundView.hidden = false;
+        if (!hidden)
+        {
+            _modeControl.hidden = false;
+            _cancelButton.hidden = !_resultButton.hidden;
+            _flipButton.hidden = false;
+            _panelBackgroundView.hidden = false;
+        }
         
         [UIView animateWithDuration:0.25f
                          animations:^
@@ -143,7 +220,7 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
              if (finished)
              {
                  _modeControl.hidden = hidden;
-                 _cancelButton.hidden = hidden;
+                 _cancelButton.hidden = hidden || !_resultButton.hidden;
                  _flipButton.hidden = hidden;
                  _panelBackgroundView.hidden = hidden;
              }
@@ -156,7 +233,7 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
         CGFloat alpha = hidden ? 0.0f : 1.0f;
         _modeControl.hidden = hidden;
         _modeControl.alpha = alpha;
-        _cancelButton.hidden = hidden;
+        _cancelButton.hidden = hidden || !_resultButton.hidden;
         _cancelButton.alpha = alpha;
         _flipButton.hidden = hidden;
         _flipButton.alpha = alpha;
@@ -185,6 +262,8 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
     _timecodeView.frame = CGRectMake((_panelView.frame.size.width - _timecodeView.frame.size.width) / 2, _panelView.frame.size.height / 4 - _timecodeView.frame.size.height / 2, _timecodeView.frame.size.width, _timecodeView.frame.size.height);
     
     _zoomView.frame = CGRectMake(10, referenceSize.height - 18, referenceSize.width - 20 - _panelView.frame.size.width, 1.5f);
+    
+    _resultButton.frame = CGRectMake((_panelView.frame.size.width - _resultButton.frame.size.width) / 2, _panelView.frame.size.height - _resultButton.frame.size.height - 7, _resultButton.frame.size.width, _resultButton.frame.size.height);
 }
 
 @end

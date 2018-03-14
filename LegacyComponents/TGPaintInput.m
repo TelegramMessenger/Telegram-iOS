@@ -126,6 +126,7 @@
     if (_pointsCount != 0)
         pressure = (pressure + _points[_pointsCount - 1].z) / 2.0f;
     
+    pressure = 1.0f;
     TGPaintPoint *point = [TGPaintPoint pointWithX:location.x y:location.y z:pressure];
     _points[_pointsCount++] = point;
     

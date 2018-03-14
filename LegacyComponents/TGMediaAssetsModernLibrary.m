@@ -185,8 +185,14 @@
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
         NSMutableArray *identifiers = [[NSMutableArray alloc] init];
+        NSMutableDictionary *order = [[NSMutableDictionary alloc] init];
+        NSInteger i = 0;
         for (TGMediaAsset *asset in assets)
+        {
             [identifiers addObject:asset.identifier];
+            order[asset.identifier] = @(i);
+            i++;
+        }
         
         NSMutableArray *updatedAssets = [[NSMutableArray alloc] init];
         
@@ -202,6 +208,13 @@
             }
         }
         [[TGMediaAssetsModernLibrary sharedRequestLock] unlock];
+        
+        [updatedAssets sortUsingComparator:^NSComparisonResult(TGMediaAsset *obj1, TGMediaAsset *obj2)
+        {
+            NSInteger order1 = [order[obj1.identifier] integerValue];
+            NSInteger order2 = [order[obj2.identifier] integerValue];
+            return order1 > order2 ? NSOrderedDescending : NSOrderedAscending;
+        }];
         
         [subscriber putNext:updatedAssets];
         [subscriber putCompletion];

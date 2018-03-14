@@ -6,6 +6,7 @@
 
 @protocol TGModernGalleryInterfaceView <NSObject>
 
+- (void)setController:(UIViewController *(^)(void))closePressed;
 - (void)setClosePressed:(void (^)())closePressed;
 - (void)setScrollViewOffsetRequested:(void (^)(CGFloat offset))scrollViewOffsetRequested;
 

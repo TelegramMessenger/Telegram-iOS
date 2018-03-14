@@ -68,7 +68,6 @@ typedef enum
     PGCameraVolumeButtonHandler *_buttonHandler;
     bool _autorotationWasEnabled;
     bool _dismissed;
-    bool _changing;
     bool _gpuAvailable;
     bool _locked;
     bool _positionChangeLocked;
@@ -837,12 +836,10 @@ typedef enum
         }
     }
     
-    if (!_dismissed && !_changing && self.finishedWithVideo != nil)
+    if (!_dismissed && self.finishedWithVideo != nil)
         self.finishedWithVideo(url, image, fileSize, duration, dimensions, liveUploadData, adjustments);
     else
         [[NSFileManager defaultManager] removeItemAtURL:url error:NULL];
-    
-    _changing = false;
 }
 
 - (UIImageOrientation)orientationForThumbnailWithTransform:(CGAffineTransform)transform mirrored:(bool)mirrored

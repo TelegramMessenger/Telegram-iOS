@@ -24,9 +24,9 @@
 		098C0E5B20245179007B4539 /* TGMessageEntityPhone.m in Sources */ = {isa = PBXBuildFile; fileRef = 098C0E5920245179007B4539 /* TGMessageEntityPhone.m */; };
 		098C0E5E20245191007B4539 /* TGMessageEntityCashtag.h in Headers */ = {isa = PBXBuildFile; fileRef = 098C0E5C20245191007B4539 /* TGMessageEntityCashtag.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		098C0E5F20245191007B4539 /* TGMessageEntityCashtag.m in Sources */ = {isa = PBXBuildFile; fileRef = 098C0E5D20245191007B4539 /* TGMessageEntityCashtag.m */; };
-		0995BFAE20331A8900AA2700 /* TGCameraCapturedPhoto.h in Headers */ = {isa = PBXBuildFile; fileRef = 0995BFAC20331A8900AA2700 /* TGCameraCapturedPhoto.h */; };
+		0995BFAE20331A8900AA2700 /* TGCameraCapturedPhoto.h in Headers */ = {isa = PBXBuildFile; fileRef = 0995BFAC20331A8900AA2700 /* TGCameraCapturedPhoto.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		0995BFAF20331A8900AA2700 /* TGCameraCapturedPhoto.m in Sources */ = {isa = PBXBuildFile; fileRef = 0995BFAD20331A8900AA2700 /* TGCameraCapturedPhoto.m */; };
-		0995BFB220331BD600AA2700 /* TGCameraCapturedVideo.h in Headers */ = {isa = PBXBuildFile; fileRef = 0995BFB020331BD600AA2700 /* TGCameraCapturedVideo.h */; };
+		0995BFB220331BD600AA2700 /* TGCameraCapturedVideo.h in Headers */ = {isa = PBXBuildFile; fileRef = 0995BFB020331BD600AA2700 /* TGCameraCapturedVideo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		0995BFB320331BD600AA2700 /* TGCameraCapturedVideo.m in Sources */ = {isa = PBXBuildFile; fileRef = 0995BFB120331BD600AA2700 /* TGCameraCapturedVideo.m */; };
 		09A8BD761F6B4C390043A393 /* TGLocationInfoCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 09A8BD741F6B4C390043A393 /* TGLocationInfoCell.h */; };
 		09A8BD771F6B4C390043A393 /* TGLocationInfoCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 09A8BD751F6B4C390043A393 /* TGLocationInfoCell.m */; };

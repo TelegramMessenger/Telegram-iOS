@@ -6,8 +6,11 @@
 
 @interface TGCameraCapturedPhoto : NSObject <TGMediaEditableItem, TGMediaSelectableItem>
 
+@property (nonatomic, readonly) NSURL *url;
 @property (nonatomic, readonly) PGCameraShotMetadata *metadata;
 
 - (instancetype)initWithImage:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata;
+
+- (void)_cleanUp;
 
 @end

@@ -14,6 +14,7 @@
 #import <LegacyComponents/TGMediaAsset.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 #import <LegacyComponents/TGMediaVideoConverter.h>
+#import "TGCameraCapturedVideo.h"
 
 #import "TGPaintingWrapperView.h"
 #import "TGMessageImageViewOverlayView.h"
@@ -127,8 +128,8 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     CGSize dimensions = CGSizeZero;
     if ([self.item isKindOfClass:[TGMediaAsset class]])
         dimensions = ((TGMediaAsset *)self.item).dimensions;
-    else if ([self.item isKindOfClass:[AVAsset class]])
-        dimensions = [((AVAsset *)self.item) tracksWithMediaType:AVMediaTypeVideo].firstObject.naturalSize;
+    else if ([self.item isKindOfClass:[TGCameraCapturedVideo class]])
+        dimensions = [((TGCameraCapturedVideo *)self.item).avAsset tracksWithMediaType:AVMediaTypeVideo].firstObject.naturalSize;
     
     if (!CGSizeEqualToSize(dimensions, CGSizeZero))
         _quality.maximumValue = [TGMediaVideoConverter bestAvailablePresetForDimensions:dimensions] - 1;
@@ -628,7 +629,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     
     [self updateInfo];
     
-    SSignal *assetSignal = [self.item isKindOfClass:[TGMediaAsset class]] ? [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)self.item] : [SSignal single:(AVAsset *)self.item];
+    SSignal *assetSignal = [self.item isKindOfClass:[TGMediaAsset class]] ? [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)self.item] : [SSignal single:((TGCameraCapturedVideo *)self.item).avAsset];
 
     if ([self.item isKindOfClass:[TGMediaAsset class]])
         [self _updateVideoDuration:((TGMediaAsset *)self.item).videoDuration hasAudio:true];

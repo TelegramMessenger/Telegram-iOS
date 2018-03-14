@@ -31,6 +31,11 @@
     return self;
 }
 
+- (void)_cleanUp
+{
+    [[NSFileManager defaultManager] removeItemAtPath:[self filePath] error:nil];
+}
+
 #define PGTick   NSDate *startTime = [NSDate date]
 #define PGTock   NSLog(@"!=========== %s Time: %f", __func__, -[startTime timeIntervalSinceNow])
 
@@ -74,6 +79,11 @@
 - (NSString *)filePath
 {
     return [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"camphoto_%@.jpg", _identifier]];
+}
+
+- (NSURL *)url
+{
+    return [NSURL fileURLWithPath:[self filePath]];
 }
 
 - (bool)isVideo

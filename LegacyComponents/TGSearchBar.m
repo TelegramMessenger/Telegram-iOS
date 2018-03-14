@@ -53,10 +53,16 @@
 - (CGFloat)baseHeight {
     if (self.showsScopeBar)
         return 44.0f;
+    if (_style == TGSearchBarStyleKeyboard) {
+        return [self inputHeight] + 17.0f;
+    }
     return [self inputHeight] + 12.0f;
 }
 
 - (CGFloat)inputContentOffset {
+    if (_style == TGSearchBarStyleKeyboard) {
+        return 3.0f;
+    }
     return _style == TGSearchBarStyleLightAlwaysPlain ? 3.0f : 0.0f;
 }
 
@@ -65,7 +71,11 @@
 }
 
 - (CGFloat)inputHeight {
-    return _style == TGSearchBarStyleLightAlwaysPlain ? 36.0f : 28.0f;
+    if (_style == TGSearchBarStyleKeyboard) {
+        return 33.0f;
+    } else {
+        return _style == TGSearchBarStyleLightAlwaysPlain ? 36.0f : 28.0f;
+    }
 }
 
 + (CGFloat)searchBarScopeHeight
@@ -75,7 +85,18 @@
 
 - (CGFloat)topPadding
 {
+    if (_style == TGSearchBarStyleKeyboard)
+        return 4.0f;
+    
     return -1.0f;
+}
+
+- (CGFloat)cancelButtonPadding
+{
+    if (_style == TGSearchBarStyleKeyboard)
+        return -2.0f;
+    
+    return 0.0f;
 }
 
 - (id)initWithFrame:(CGRect)frame
@@ -230,7 +251,7 @@
         {
             iconImage = [TGSearchBar searchBarIcon:UIColorRGB(0x8e8e93)];
         }
-        else if (_style == TGSearchBarStyleLightAlwaysPlain)
+        else if (_style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleKeyboard)
         {
             iconImage = TGImageNamed(@"SearchBarIconLightLarge.png");
         }
@@ -339,7 +360,7 @@
     UIImage *backgroundManualImage = nil;
     UIImage *backgroundManualActiveImage = nil;
     
-    if (_style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain || _style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader)
+    if (_style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain || _style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader || _style == TGSearchBarStyleKeyboard)
     {
         [(TGModernButton *)_customCancelButton setTitleColor:_pallete.accentColor];
         
@@ -438,6 +459,19 @@
             _normalTextFieldBackgroundImage = image;
             return _normalTextFieldBackgroundImage;
         }
+        else if (_style == TGSearchBarStyleKeyboard)
+        {
+            CGFloat diameter = 33.0;
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(diameter, diameter), false, 0.0f);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            CGContextSetFillColorWithColor(context, (_pallete != nil ? _pallete.highContrastBackgroundColor : UIColorRGB(0xe4e4e4)).CGColor);
+            CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
+            UIImage *image = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:(NSInteger)(diameter / 2.0f) topCapHeight:(NSInteger)(diameter / 2.0f)];
+            UIGraphicsEndImageContext();
+            
+            _normalTextFieldBackgroundImage = image;
+            return _normalTextFieldBackgroundImage;
+        }
         else if (_style == TGSearchBarStyleHeader)
         {
             CGFloat diameter = 10.0f;
@@ -483,7 +517,7 @@
             _activeTextFieldBackgroundImage = image;
             return _activeTextFieldBackgroundImage;
         }
-        else if (_style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader) {
+        else if (_style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader || _style == TGSearchBarStyleKeyboard) {
             _activeTextFieldBackgroundImage = [self normalTextFieldBackgroundImage];
             return _activeTextFieldBackgroundImage;
         }
@@ -525,7 +559,7 @@
         UIColor *textColor = nil;
         UIImage *clearImage = nil;
         
-        if (_style == TGSearchBarStyleDefault || _style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain || _style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader)
+        if (_style == TGSearchBarStyleDefault || _style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain || _style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader || _style == TGSearchBarStyleKeyboard)
         {
             textColor = _pallete != nil ? _pallete.textColor : [UIColor blackColor];
             clearImage = TGImageNamed(@"SearchBarClearIcon.png");
@@ -570,7 +604,7 @@
         
         UIColor *buttonColor = nil;
         
-        if (_style == TGSearchBarStyleDefault || _style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain || _style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader)
+        if (_style == TGSearchBarStyleDefault || _style == TGSearchBarStyleLight || _style == TGSearchBarStyleLightPlain || _style == TGSearchBarStyleLightAlwaysPlain || _style == TGSearchBarStyleHeader || _style == TGSearchBarStyleKeyboard)
             buttonColor = _pallete != nil ? _pallete.accentColor : TGAccentColor();
         else if (_style == TGSearchBarStyleDark)
             buttonColor = [UIColor whiteColor];
@@ -753,7 +787,7 @@
     
     if (_customCancelButton != nil)
     {
-        _customCancelButton.frame = CGRectMake(self.frame.size.width + (_showsCustomCancelButton ? (-_customCancelButton.frame.size.width - 9 - self.safeAreaInset.right) : 9), [self topPadding] + 2.0f, _cancelButtonWidth, [self baseHeight]);
+        _customCancelButton.frame = CGRectMake(self.frame.size.width + (_showsCustomCancelButton ? (-_customCancelButton.frame.size.width - 9 - self.safeAreaInset.right) : 9), [self topPadding] + 2.0f + [self cancelButtonPadding], _cancelButtonWidth, [self baseHeight]);
     }
     
     if (_customScopeButtonContainer != nil)
@@ -1057,7 +1091,7 @@
     _cancelButtonWidth = [TGLocalized(@"Common.Cancel") sizeWithFont:TGSystemFontOfSize(17.0f)].width + 11.0f;
     
     CGRect textFieldBackgroundFrame = _textFieldBackground.frame;
-    _customCancelButton.frame = CGRectMake(textFieldBackgroundFrame.origin.x + textFieldBackgroundFrame.size.width + 10, 0, _cancelButtonWidth, [self baseHeight]);
+    _customCancelButton.frame = CGRectMake(textFieldBackgroundFrame.origin.x + textFieldBackgroundFrame.size.width + 10, _customCancelButton.frame.origin.y, _cancelButtonWidth, [self baseHeight]);
     [_customCancelButton setTitle:TGLocalized(@"Common.Cancel") forState:UIControlStateNormal];
     
     [_customSegmentedControl removeAllSegments];

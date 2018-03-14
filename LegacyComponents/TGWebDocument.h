@@ -20,6 +20,7 @@
 
 @interface TGWebDocument : NSObject <NSCoding>
 
+@property (nonatomic, readonly) bool noProxy;
 @property (nonatomic, strong, readonly) NSString *url;
 @property (nonatomic, readonly) int64_t accessHash;
 @property (nonatomic, readonly) int32_t size;
@@ -29,6 +30,6 @@
 
 @property (nonatomic, strong, readonly) TGWebDocumentReference *reference;
 
-- (instancetype)initWithUrl:(NSString *)url accessHash:(int64_t)accessHash size:(int32_t)size mimeType:(NSString *)mimeType attributes:(NSArray *)attributes datacenterId:(int32_t)datacenterId;
+- (instancetype)initWithNoProxy:(bool)noProxy url:(NSString *)url accessHash:(int64_t)accessHash size:(int32_t)size mimeType:(NSString *)mimeType attributes:(NSArray *)attributes datacenterId:(int32_t)datacenterId;
 
 @end

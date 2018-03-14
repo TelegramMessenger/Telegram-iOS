@@ -8,7 +8,8 @@ typedef enum {
     TGSearchBarStyleLight = 2,
     TGSearchBarStyleLightPlain = 3,
     TGSearchBarStyleLightAlwaysPlain = 4,
-    TGSearchBarStyleHeader = 5
+    TGSearchBarStyleHeader = 5,
+    TGSearchBarStyleKeyboard = 6
 } TGSearchBarStyle;
 
 @protocol TGSearchBarDelegate <UISearchBarDelegate>

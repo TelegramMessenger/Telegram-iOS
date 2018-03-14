@@ -125,6 +125,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     id<LegacyComponentsContext> _context;
     bool _saveEditedPhotos;
     bool _saveCapturedMedia;
+    
+    bool _shutterIsBusy;
 }
 @end
 
@@ -884,6 +886,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     [_startRecordingTimer invalidate];
     _startRecordingTimer = nil;
+ 
+    if (_shutterIsBusy)
+        return;
     
     PGCameraMode cameraMode = _camera.cameraMode;
     if (cameraMode == PGCameraModePhoto || cameraMode == PGCameraModeSquare)
@@ -892,7 +897,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         [_buttonHandler ignoreEventsFor:1.5f andDisable:true];
         
         _camera.disabled = true;
-        
+
+        _shutterIsBusy = true;
         if (![self willPresentResultController])
         {
             TGDispatchAfter(0.35, dispatch_get_main_queue(), ^
@@ -901,10 +907,13 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 [_interfaceView hideResultUntilNext];
             });
         }
+        
         [_camera takePhotoWithCompletion:^(UIImage *result, PGCameraShotMetadata *metadata)
         {
             TGDispatchOnMainThread(^
             {
+                _shutterIsBusy = false;
+                
                 if (_intent == TGCameraControllerAvatarIntent)
                 {
                     [self presentPhotoResultControllerWithImage:result metadata:metadata completion:^{}];
@@ -1081,7 +1090,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
     }];
     
-    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:true recipientName:self.recipientName];
+    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:!_shortcut recipientName:self.recipientName];
     model.controller = galleryController;
     model.suggestionContext = self.suggestionContext;
     
@@ -1127,7 +1136,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             return [strongSelf _signalForItem:item];
         return nil;
     };
-    model.interfaceView.donePressed = ^(__unused TGMediaPickerGalleryItem *item)
+    model.interfaceView.donePressed = ^(TGMediaPickerGalleryItem *item)
     {
         __strong TGCameraController *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -1140,37 +1149,16 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         __strong TGModernGalleryController *strongController = weakGalleryController;
         if (strongController == nil)
             return;
-//
-//        TGMediaPickerGalleryVideoItemView *itemView = (TGMediaPickerGalleryVideoItemView *)[strongController itemViewForItem:strongController.currentItem];
-//        [itemView stop];
-//        [itemView setPlayButtonHidden:true animated:true];
-//
-//        TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[strongSelf->_editingContext adjustmentsForItem:videoItem.avAsset];
-//        NSString *caption = [strongSelf->_editingContext captionForItem:videoItem.avAsset];
-//        NSArray *entities = [strongSelf->_editingContext entitiesForItem:videoItem.avAsset];
-//        NSNumber *timer = [strongSelf->_editingContext timerForItem:videoItem.avAsset];
-//
-//        SSignal *thumbnailSignal = [SSignal single:thumbnailImage];
-//        if (adjustments.trimStartValue > FLT_EPSILON)
-//        {
-//            thumbnailSignal = [TGMediaAssetImageSignals videoThumbnailForAVAsset:[AVURLAsset URLAssetWithURL:url options:nil] size:dimensions timestamp:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC)];
-//        }
-//
-//        if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting)
-//        {
-//            thumbnailSignal = [thumbnailSignal map:^UIImage *(UIImage *image)
-//                               {
-//                                   CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
-//
-//                                   return TGPhotoEditorCrop(image, adjustments.paintingData.image, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, CGSizeMake(256, 256), image.size, true);
-//                               }];
-//        }
-//
-//        [[thumbnailSignal deliverOn:[SQueue mainQueue]] startWithNext:^(UIImage *thumbnailImage)
-//         {
-//             if (strongSelf.finishedWithVideo != nil)
-//                 strongSelf.finishedWithVideo(strongController, url, thumbnailImage, duration, dimensions, adjustments, caption, entities, adjustments.paintingData.stickers, timer);
-//         }];
+
+        if ([item isKindOfClass:[TGMediaPickerGalleryVideoItem class]])
+        {
+            TGMediaPickerGalleryVideoItemView *itemView = (TGMediaPickerGalleryVideoItemView *)[strongController itemViewForItem:item];
+            [itemView stop];
+            [itemView setPlayButtonHidden:true animated:true];
+        }
+        
+        if (strongSelf->_selectionContext.allowGrouping)
+            [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
 
         if (strongSelf.finishedWithResults != nil)
             strongSelf.finishedWithResults(strongController, strongSelf->_selectionContext, strongSelf->_editingContext, item.asset);
@@ -1179,7 +1167,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             return;
 
         [strongSelf _dismissTransitionForResultController:strongController];
-//
+
 //        if (strongSelf.shouldStoreCapturedAssets && timer == nil)
 //            [strongSelf _saveVideoToCameraRollWithURL:url completion:nil];
     };
@@ -1256,7 +1244,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 strongSelf->_interfaceView.alpha = 1.0f;
             } completion:nil];
             
-            if (strongSelf->_items.count == 1 && !strongModel.interfaceView.capturing)
+            if (!strongModel.interfaceView.capturing)
             {
                 [strongSelf->_items removeAllObjects];
                 [strongSelf->_interfaceView setResultSignal:[SSignal single:nil]];
@@ -2084,23 +2072,49 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     return iosMajorVersion() < 7 || [UIDevice currentDevice].platformType == UIDevice4iPhone || [UIDevice currentDevice].platformType == UIDevice4GiPod;
 }
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem storeAssets:(bool)storeAssets saveEditedPhotos:(bool)saveEditedPhotos descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     NSMutableArray *selectedItems = [selectionContext.selectedItems mutableCopy];
     if (selectedItems.count == 0 && currentItem != nil)
         [selectedItems addObject:currentItem];
     
-    bool storeAssets = false; //self.shouldStoreCapturedAssets;
-    bool saveEditedPhotos = true;
-    
-    if (saveEditedPhotos && storeAssets)
+    if (storeAssets)
     {
         NSMutableArray *fullSizeSignals = [[NSMutableArray alloc] init];
         for (id<TGMediaEditableItem> item in selectedItems)
         {
             if ([editingContext timerForItem:item] == nil)
-                [fullSizeSignals addObject:[editingContext fullSizeImageUrlForItem:item]];
+            {
+                SSignal *saveMedia = [SSignal defer:^SSignal *
+                {
+                    if ([item isKindOfClass:[TGCameraCapturedPhoto class]])
+                    {
+                        TGCameraCapturedPhoto *photo = (TGCameraCapturedPhoto *)item;
+                        return [SSignal single:@{@"type": @"photo", @"url": photo.url}];
+                    }
+                    else if ([item isKindOfClass:[TGCameraCapturedVideo class]])
+                    {
+                        TGCameraCapturedVideo *video = (TGCameraCapturedVideo *)item;
+                        return [SSignal single:@{@"type": @"video", @"url": video.avAsset.URL}];
+                    }
+                    
+                    return [SSignal complete];
+                }];
+                
+                [fullSizeSignals addObject:saveMedia];
+                
+                if (saveEditedPhotos)
+                {
+                    [fullSizeSignals addObject:[[[editingContext fullSizeImageUrlForItem:item] filter:^bool(id result)
+                    {
+                        return [result isKindOfClass:[NSURL class]];
+                    }] mapToSignal:^SSignal *(NSURL *url)
+                    {
+                        return [SSignal single:@{@"type": @"photo", @"url": url}];
+                    }]];
+                }
+            }
         }
         
         SSignal *combinedSignal = nil;
@@ -2114,13 +2128,29 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 combinedSignal = [[combinedSignal then:signal] startOn:queue];
         }
         
-        [[[[combinedSignal deliverOn:[SQueue mainQueue]] filter:^bool(id result)
+        [[[combinedSignal deliverOn:[SQueue mainQueue]] mapToSignal:^SSignal *(NSDictionary *desc)
         {
-            return [result isKindOfClass:[NSURL class]];
-        }] mapToSignal:^SSignal *(NSURL *url)
-        {
-            return [[TGMediaAssetsLibrary sharedLibrary] saveAssetWithImageAtUrl:url];
+            if ([desc[@"type"] isEqualToString:@"photo"])
+            {
+                return [[TGMediaAssetsLibrary sharedLibrary] saveAssetWithImageAtUrl:desc[@"url"]];
+            }
+            else if ([desc[@"type"] isEqualToString:@"video"])
+            {
+                return [[TGMediaAssetsLibrary sharedLibrary] saveAssetWithVideoAtUrl:desc[@"url"]];
+            }
+            else
+            {
+                return [SSignal complete];
+            }
         }] startWithNext:nil];
+//
+//        [[[[combinedSignal deliverOn:[SQueue mainQueue]] filter:^bool(id result)
+//        {
+//            return [result isKindOfClass:[NSURL class]];
+//        }] mapToSignal:^SSignal *(NSURL *url)
+//        {
+//            return [[TGMediaAssetsLibrary sharedLibrary] saveAssetWithImageAtUrl:url];
+//        }] startWithNext:nil];
     }
     
     static dispatch_once_t onceToken;

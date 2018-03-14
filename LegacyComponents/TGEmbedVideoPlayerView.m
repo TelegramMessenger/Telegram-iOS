@@ -23,9 +23,9 @@
 
 @implementation TGEmbedVideoPlayerView
 
-- (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)thumbnailSignal
+- (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)thumbnailSignal alternateCachePathSignal:(SSignal *)alternateCachePathSignal
 {
-    self = [super initWithWebPageAttachment:webPage thumbnailSignal:thumbnailSignal];
+    self = [super initWithWebPageAttachment:webPage thumbnailSignal:thumbnailSignal alternateCachePathSignal:alternateCachePathSignal];
     if (self != nil)
     {
         _url = webPage.embedUrl;

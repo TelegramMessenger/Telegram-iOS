@@ -48,6 +48,7 @@
 
 - (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage;
 - (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)thumbnailSignal;
+- (instancetype)initWithWebPageAttachment:(TGWebPageMediaAttachment *)webPage thumbnailSignal:(SSignal *)thumbnailSignal alternateCachePathSignal:(SSignal *)alternateCachePathSignal;
 - (void)setupWithEmbedSize:(CGSize)embedSize;
 
 - (void)setDimmed:(bool)dimmed animated:(bool)animated shouldDelay:(bool)shouldDelay;
