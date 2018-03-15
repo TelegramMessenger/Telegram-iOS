@@ -13,7 +13,10 @@
 @property (nonatomic, assign) UIInterfaceOrientation interfaceOrientation;
 @property (nonatomic, readonly) bool isAnimating;
 
+@property (nonatomic, assign) bool removable;
+
 @property (nonatomic, copy) void (^itemSelected)(NSInteger index);
+@property (nonatomic, copy) void (^itemRemoved)(NSInteger index);
 @property (nonatomic, copy) SSignal *(^thumbnailSignalForItem)(id item);
 
 - (bool)isInternalHidden;

@@ -1,16 +1,18 @@
 #import "TGCameraFlipButton.h"
 
 #import "LegacyComponentsInternal.h"
+#import "TGImageUtils.h"
 
 @implementation TGCameraFlipButton
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)initWithFrame:(CGRect)frame large:(bool)large
 {
     self = [super initWithFrame:frame];
     if (self != nil)
     {
         self.exclusiveTouch = true;
-        [self setImage:TGComponentsImageNamed(@"CameraLargeFlipButton") forState:UIControlStateNormal];
+        UIImage *image = large ? TGComponentsImageNamed(@"CameraLargeFlipButton") : TGTintedImage(TGComponentsImageNamed(@"CameraFlipButton"), [UIColor whiteColor]);
+        [self setImage:image forState:UIControlStateNormal];
     }
     return self;
 }

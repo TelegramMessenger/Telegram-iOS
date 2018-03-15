@@ -379,7 +379,7 @@
     SSignal *updateSignal = [[_captionPipe.signalProducer() filter:^bool(TGMediaCaptionUpdate *update)
     {
         return [update.item.uniqueIdentifier isEqualToString:uniqueIdentifier];
-    }] map:^NSString *(TGMediaCaptionUpdate *update)
+    }] map:^NSDictionary *(TGMediaCaptionUpdate *update)
     {
         return [self _dictionaryWithCaption:update.caption entities:update.entities];;
     }];

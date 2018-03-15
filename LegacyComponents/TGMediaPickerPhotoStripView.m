@@ -317,7 +317,16 @@
         
         [strongSelf.selectionContext setItem:item selected:selected animated:true sender:strongSelf.selectedItemsModel];
     };
-    [cell setItem:item signal:self.thumbnailSignalForItem(item)];
+    cell.itemRemoved = ^
+    {
+        __strong TGMediaPickerPhotoStripView *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        if (strongSelf.itemRemoved != nil)
+            strongSelf.itemRemoved([strongSelf->_selectedItemsModel.items indexOfObject:item]);
+    };
+    [cell setItem:item signal:self.thumbnailSignalForItem(item) removable:self.removable];
 
     return cell;
 }

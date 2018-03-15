@@ -3,6 +3,7 @@
 #import "LegacyComponentsInternal.h"
 #import "TGFont.h"
 
+#import "TGModernButton.h"
 #import "TGCheckButtonView.h"
 #import <LegacyComponents/TGImageView.h>
 
@@ -18,8 +19,13 @@
 
 NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
 
+@interface TGMediaPickerPhotoStripDeleteButton : TGModernButton
+
+@end
+
 @interface TGMediaPickerPhotoStripCell ()
 {
+    TGMediaPickerPhotoStripDeleteButton *_deleteButton;
     TGCheckButtonView *_checkButton;
     UIImageView *_iconView;
     UIImageView *_gradientView;
@@ -111,33 +117,45 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
     [_adjustmentsDisposable dispose];
 }
 
-- (void)setItem:(NSObject *)item signal:(SSignal *)signal
+- (void)setItem:(NSObject *)item signal:(SSignal *)signal removable:(bool)removable
 {
     _item = item;
     
-    if (self.selectionContext != nil)
+    if (removable)
     {
-        if (_checkButton == nil)
+        if (_deleteButton == nil)
         {
-            _checkButton = [[TGCheckButtonView alloc] initWithStyle:TGCheckButtonStyleMedia];
-            [_checkButton addTarget:self action:@selector(checkButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            [self addSubview:_checkButton];
+            _deleteButton = [[TGMediaPickerPhotoStripDeleteButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 32.0f, 32.0f)];
+            [_deleteButton addTarget:self action:@selector(deleteButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+            [self addSubview:_deleteButton];
         }
-        
-        if (_itemSelectedDisposable == nil)
-            _itemSelectedDisposable = [[SMetaDisposable alloc] init];
-        
-        [self setChecked:[self.selectionContext isItemSelected:(id<TGMediaSelectableItem>)item] animated:false];
-        __weak TGMediaPickerPhotoStripCell *weakSelf = self;
-        [_itemSelectedDisposable setDisposable:[[self.selectionContext itemInformativeSelectedSignal:(id<TGMediaSelectableItem>)item] startWithNext:^(TGMediaSelectionChange *next)
+    }
+    else
+    {
+        if (self.selectionContext != nil)
         {
-            __strong TGMediaPickerPhotoStripCell *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
+            if (_checkButton == nil)
+            {
+                _checkButton = [[TGCheckButtonView alloc] initWithStyle:TGCheckButtonStyleMedia];
+                [_checkButton addTarget:self action:@selector(checkButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+                [self addSubview:_checkButton];
+            }
             
-            if (![next.sender isKindOfClass:[TGMediaPickerGallerySelectedItemsModel class]])
-                [strongSelf setChecked:next.selected animated:next.animated];
-        }]];
+            if (_itemSelectedDisposable == nil)
+                _itemSelectedDisposable = [[SMetaDisposable alloc] init];
+            
+            [self setChecked:[self.selectionContext isItemSelected:(id<TGMediaSelectableItem>)item] animated:false];
+            __weak TGMediaPickerPhotoStripCell *weakSelf = self;
+            [_itemSelectedDisposable setDisposable:[[self.selectionContext itemInformativeSelectedSignal:(id<TGMediaSelectableItem>)item] startWithNext:^(TGMediaSelectionChange *next)
+            {
+                __strong TGMediaPickerPhotoStripCell *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                if (![next.sender isKindOfClass:[TGMediaPickerGallerySelectedItemsModel class]])
+                    [strongSelf setChecked:next.selected animated:next.animated];
+            }]];
+        }
     }
     
     if (_item == nil)
@@ -205,6 +223,12 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
         }
             break;
     }
+}
+
+- (void)deleteButtonPressed
+{
+    if (self.itemRemoved != nil)
+        self.itemRemoved();
 }
 
 - (void)checkButtonPressed
@@ -276,9 +300,10 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
     [super layoutSubviews];
     
     if (_checkButton != nil)
-    {
         _checkButton.frame = CGRectMake(self.bounds.size.width - _checkButton.frame.size.width, 0, _checkButton.frame.size.width, _checkButton.frame.size.height);
-    }
+
+    if (_deleteButton != nil)
+        _deleteButton.frame = CGRectMake(self.bounds.size.width - _deleteButton.frame.size.width, 0, _deleteButton.frame.size.width, _deleteButton.frame.size.height);
     
     if (!_gradientView.hidden)
         _gradientView.frame = CGRectMake(0, self.frame.size.height - 20.0f, self.frame.size.width, 20.0f);
@@ -289,6 +314,59 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
     CGSize durationSize = CGSizeMake(ceil(_label.frame.size.width), ceil(_label.frame.size.height));
     CGFloat x = _isGif ? 4 : self.frame.size.width - durationSize.width - 4;
     _label.frame = CGRectMake(x, self.frame.size.height - durationSize.height - 2, durationSize.width, durationSize.height);
+}
+
+@end
+
+
+@implementation TGMediaPickerPhotoStripDeleteButton
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self != nil)
+    {
+        static dispatch_once_t onceToken;
+        static UIImage *image;
+        dispatch_once(&onceToken, ^
+        {
+            CGFloat insideInset = 4.0f;
+            CGSize size = CGSizeMake(32.0f, 32.0f);
+
+            CGRect rect = CGRectMake(0, 0, size.width, size.height);
+            UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            
+            CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.7f).CGColor);
+            CGContextFillEllipseInRect(context, CGRectInset(rect, insideInset + 0.5f, insideInset + 0.5f));
+            
+            CGContextSetShadowWithColor(context, CGSizeZero, 2.5f, [UIColor colorWithWhite:0.0f alpha:0.22f].CGColor);
+            CGContextSetLineWidth(context, 1.5f);
+            CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
+            CGContextStrokeEllipseInRect(context, CGRectInset(rect, insideInset + 0.5f, insideInset + 0.5f));
+            
+            CGContextSetShadowWithColor(context, CGSizeZero, 0.0f, [UIColor clearColor].CGColor);
+            CGContextSetLineCap(context, kCGLineCapRound);
+            CGContextSetLineWidth(context, 1.75f);
+            CGContextMoveToPoint(context, insideInset + 8.0f, insideInset + 8.0f);
+            CGContextAddLineToPoint(context, size.width - insideInset - 8.0f, size.height - insideInset - 8.0f);
+            CGContextStrokePath(context);
+            
+            CGContextMoveToPoint(context, size.width - insideInset - 8.0f, insideInset + 8.0f);
+            CGContextAddLineToPoint(context, insideInset + 8.0f, size.height - insideInset - 8.0f);
+            CGContextStrokePath(context);
+            
+            image = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            
+
+        });
+        
+        [self setImage:image forState:UIControlStateNormal];
+        
+        self.adjustsImageWhenHighlighted = false;
+    }
+    return self;
 }
 
 @end

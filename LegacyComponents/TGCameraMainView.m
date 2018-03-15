@@ -10,7 +10,19 @@
 #import "TGCameraZoomView.h"
 #import "TGCameraSegmentsView.h"
 
+#import "TGMediaPickerPhotoCounterButton.h"
+#import "TGMediaPickerPhotoStripView.h"
+
+@interface TGCameraMainView ()
+{
+    
+}
+@end
+
 @implementation TGCameraMainView
+
+@dynamic thumbnailSignalForItem;
+@dynamic editingContext;
 
 #pragma mark - Mode
 
@@ -34,7 +46,6 @@
         {
             [_shutterButton setButtonMode:TGCameraShutterButtonNormalMode animated:true];
             [_timecodeView setHidden:true animated:true];
-            [_segmentsView setHidden:true animated:true delay:0.0];
         }
             break;
             
@@ -42,7 +53,6 @@
         {
             [_shutterButton setButtonMode:TGCameraShutterButtonVideoMode animated:true];
             [_timecodeView setHidden:false animated:true];
-            [_segmentsView setHidden:true animated:true delay:0.0];
         }
             break;
             
@@ -63,8 +73,6 @@
 
 - (void)updateForCameraModeChangeAfterResize
 {
-    if (_modeControl.cameraMode == PGCameraModeClip)
-        [_segmentsView setHidden:false animated:true delay:0.1];
 }
 
 - (void)setHasModeControl:(bool)hasModeControl
@@ -148,8 +156,11 @@
 
 - (void)doneButtonPressed
 {
+    [_photoCounterButton setSelected:false animated:true];
+    [_selectedPhotosView setHidden:true animated:true];
+    
     if (self.resultPressed != nil)
-        self.resultPressed();
+        self.resultPressed(-1);
 }
 
 - (void)flipButtonPressed
@@ -207,33 +218,6 @@
 
 #pragma mark - 
 
-- (void)setStartedSegmentCapture
-{
-    [_segmentsView startCurrentSegment];
-}
-
-- (void)setCurrentSegmentLength:(CGFloat)length
-{
-    [_segmentsView setCurrentSegment:length];
-}
-
-- (void)setCommitSegmentCapture
-{
-    [_segmentsView commitCurrentSegmentWithCompletion:nil];
-}
-
-- (void)previewLastSegment
-{
-    [_segmentsView highlightLastSegment];
-}
-
-- (void)removeLastSegment
-{
-    [_segmentsView removeLastSegment];
-}
-
-#pragma mark - 
-
 - (void)showMomentCaptureDismissWarningWithCompletion:(void (^)(bool dismiss))completion
 {
     if (completion != nil)
@@ -243,6 +227,79 @@
 - (void)layoutPreviewRelativeViews
 {
     
+}
+
+#pragma mark -
+
+- (void)setThumbnailSignalForItem:(SSignal *(^)(id))thumbnailSignalForItem
+{
+    [_selectedPhotosView setThumbnailSignalForItem:thumbnailSignalForItem];
+}
+
+- (void)setSelectedItemsModel:(TGMediaPickerGallerySelectedItemsModel *)selectedItemsModel
+{
+    _selectedPhotosView.selectedItemsModel = selectedItemsModel;
+    [_selectedPhotosView reloadData];
+    
+    if (selectedItemsModel != nil && _selectedPhotosView != nil)
+        _photoCounterButton.userInteractionEnabled = true;
+}
+
+- (void)photoCounterButtonPressed
+{
+    [_photoCounterButton setSelected:!_photoCounterButton.selected animated:true];
+    [_selectedPhotosView setHidden:!_photoCounterButton.selected animated:true];
+}
+
+- (void)updateSelectionInterface:(NSUInteger)selectedCount counterVisible:(bool)counterVisible animated:(bool)animated
+{
+    if (counterVisible)
+    {
+        bool animateCount = animated && !(counterVisible && _photoCounterButton.internalHidden);
+        [_photoCounterButton setSelectedCount:selectedCount animated:animateCount];
+        [_photoCounterButton setInternalHidden:false animated:animated completion:nil];
+    }
+    else
+    {
+        bool animate = animated || (selectedCount == 0 && !counterVisible);
+        __weak TGMediaPickerPhotoCounterButton *weakButton = _photoCounterButton;
+        [_photoCounterButton setInternalHidden:true animated:animate completion:^
+         {
+             __strong TGMediaPickerPhotoCounterButton *strongButton = weakButton;
+             if (strongButton != nil)
+             {
+                 strongButton.selected = false;
+                 [strongButton setSelectedCount:selectedCount animated:false];
+             }
+         }];
+        [_selectedPhotosView setHidden:true animated:animated];
+    }
+}
+
+- (void)updateSelectedPhotosView:(bool)reload incremental:(bool)incremental add:(bool)add index:(NSInteger)index
+{
+    if (_selectedPhotosView == nil)
+        return;
+    
+    if (!reload)
+        return;
+    
+    if (incremental)
+    {
+        if (add)
+            [_selectedPhotosView insertItemAtIndex:index];
+        else
+            [_selectedPhotosView deleteItemAtIndex:index];
+    }
+    else
+    {
+        [_selectedPhotosView reloadData];
+    }
+}
+
+- (void)setEditingContext:(TGMediaEditingContext *)editingContext
+{
+    _selectedPhotosView.editingContext = editingContext;
 }
 
 @end

@@ -1,5 +1,6 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import <SSignalKit/SSignalKit.h>
 #import <LegacyComponents/PGCamera.h>
 
 @class SSignal;
@@ -10,22 +11,29 @@
 @class TGCameraTimeCodeView;
 @class TGCameraZoomView;
 @class TGCameraSegmentsView;
+@class TGMediaPickerPhotoCounterButton;
+@class TGMediaPickerPhotoStripView;
+@class TGMediaPickerGallerySelectedItemsModel;
+@class TGMediaEditingContext;
 
 @interface TGCameraMainView : UIView
 {
     UIInterfaceOrientation _interfaceOrientation;
     
-    TGModernButton *_cancelButton;
-    TGModernButton *_doneButton;
     TGCameraShutterButton *_shutterButton;
     TGCameraModeControl *_modeControl;
     
     TGCameraFlipButton *_flipButton;
     TGCameraTimeCodeView *_timecodeView;
     
-    TGCameraSegmentsView *_segmentsView;
+    TGMediaPickerPhotoCounterButton *_photoCounterButton;
+    TGMediaPickerPhotoStripView *_selectedPhotosView;
     
     TGCameraZoomView *_zoomView;
+    
+@public
+    TGModernButton *_cancelButton;
+    TGModernButton *_doneButton;
 }
 
 @property (nonatomic, copy) void(^cameraFlipped)(void);
@@ -40,7 +48,8 @@
 @property (nonatomic, copy) void(^shutterReleased)(bool fromHardwareButton);
 @property (nonatomic, copy) void(^cancelPressed)(void);
 @property (nonatomic, copy) void(^donePressed)(void);
-@property (nonatomic, copy) void(^resultPressed)(void);
+@property (nonatomic, copy) void(^resultPressed)(NSInteger index);
+@property (nonatomic, copy) void(^itemRemoved)(NSInteger index);
 
 @property (nonatomic, copy) void (^deleteSegmentButtonPressed)(void);
 
@@ -77,20 +86,19 @@
 - (void)setRecordingVideo:(bool)recordingVideo animated:(bool)animated;
 - (void)setInterfaceHiddenForVideoRecording:(bool)hidden animated:(bool)animated;
 
-- (void)setStartedSegmentCapture;
-- (void)setCurrentSegmentLength:(CGFloat)length;
-- (void)setCommitSegmentCapture;
-- (void)previewLastSegment;
-- (void)removeLastSegment;
+@property (nonatomic, weak) TGMediaEditingContext *editingContext;
 
-- (void)showMomentCaptureDismissWarningWithCompletion:(void (^)(bool dismiss))completion;
-
-- (void)setResultSignal:(SSignal *)signal;
-- (void)hideResultUntilNext;
+@property (nonatomic, copy) SSignal *(^thumbnailSignalForItem)(id item);
+- (void)setResults:(NSArray *)results;
+- (void)setSelectedItemsModel:(TGMediaPickerGallerySelectedItemsModel *)selectedItemsModel;
+- (void)updateSelectionInterface:(NSUInteger)selectedCount counterVisible:(bool)counterVisible animated:(bool)animated;
+- (void)updateSelectedPhotosView:(bool)reload incremental:(bool)incremental add:(bool)add index:(NSInteger)index;
 
 - (UIInterfaceOrientation)interfaceOrientation;
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)orientation animated:(bool)animated;
 
 - (void)layoutPreviewRelativeViews;
+
+- (void)photoCounterButtonPressed;
 
 @end

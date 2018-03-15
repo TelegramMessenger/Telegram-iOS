@@ -169,10 +169,12 @@
             _cameraButton = [[TGMediaPickerCameraButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 44.0f, 44.0f)];
             _cameraButton.adjustsImageWhenHighlighted = false;
             [_cameraButton addTarget:self action:@selector(cameraButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            [_wrapperView addSubview:_cameraButton];
             
-            if (_selectionContext != nil)
-                [_cameraButton setHidden:true animated:false];
+            if (_selectionContext == nil)
+                [_wrapperView addSubview:_cameraButton];
+            
+            //if (_selectionContext != nil)
+            //    [_cameraButton setHidden:true animated:false];
         }
         
         if (_selectionContext != nil)
@@ -578,59 +580,7 @@
 
 - (void)cancelButtonPressed
 {
-    if (_cameraButton != nil && _selectionContext != nil)
-    {
-        __weak TGMediaPickerGalleryInterfaceView *weakSelf = self;
-        
-        TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
-        controller.dismissesByOutsideTap = true;
-        controller.narrowInLandscape = true;
-        __weak TGMenuSheetController *weakController = controller;
-        
-        NSArray *items = @
-        [
-         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Camera.Discard") type:TGMenuSheetButtonTypeDefault action:^
-          {
-              __strong TGMenuSheetController *strongController = weakController;
-              if (strongController == nil)
-                  return;
-              
-              __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
-              if (strongSelf == nil)
-                  return;
-              
-              strongSelf->_capturing = false;
-              strongSelf->_closePressed();
-              
-              [strongController dismissAnimated:true manual:false completion:nil];
-          }],
-         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
-          {
-              __strong TGMenuSheetController *strongController = weakController;
-              if (strongController != nil)
-                  [strongController dismissAnimated:true];
-          }]
-         ];
-        
-        [controller setItemViews:items];
-        controller.sourceRect = ^
-        {
-            __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return CGRectZero;
-            
-            if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
-                return [strongSelf convertRect:strongSelf->_portraitToolbarView.cancelButtonFrame fromView:strongSelf->_portraitToolbarView];
-            else
-                return [strongSelf convertRect:strongSelf->_landscapeToolbarView.cancelButtonFrame fromView:strongSelf->_landscapeToolbarView];
-        };
-        [controller presentInViewController:self.controller() sourceView:self animated:true];
-    }
-    else
-    {
-        _capturing = false;
-        _closePressed();
-    }
+    _closePressed();
 }
 
 - (void)cameraButtonPressed
@@ -997,8 +947,9 @@
     }
     else
     {
+        bool animate = animated || (selectedCount == 0 && !counterVisible);
         __weak TGMediaPickerPhotoCounterButton *weakButton = _photoCounterButton;
-        [_photoCounterButton setInternalHidden:true animated:animated completion:^
+        [_photoCounterButton setInternalHidden:true animated:animate completion:^
         {
             __strong TGMediaPickerPhotoCounterButton *strongButton = weakButton;
             if (strongButton != nil)
