@@ -4,6 +4,6 @@
 @interface TGEmbedPlayerState : NSObject <TGPIPAblePlayerState>
 
 + (instancetype)stateWithPlaying:(bool)playing;
-+ (instancetype)stateWithPlaying:(bool)playing duration:(NSTimeInterval)duration position:(NSTimeInterval)position downloadProgress:(CGFloat)downloadProgress;
++ (instancetype)stateWithPlaying:(bool)playing duration:(NSTimeInterval)duration position:(NSTimeInterval)position downloadProgress:(CGFloat)downloadProgress buffering:(bool)buffering;
 
 @end

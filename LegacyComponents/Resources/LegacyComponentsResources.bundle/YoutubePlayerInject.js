@@ -6,6 +6,10 @@ function fixChrome() {
     button.style.display = 'none';
     button.style.opacity = '0';
     
+    var progress = document.getElementsByClassName('ytp-spinner-container')[0];
+    progress.style.display = 'none';
+    progress.style.opacity = '0';
+    
     var video = document.getElementsByTagName('video')[0];
     video.setAttribute('webkit-playsinline', '');
     video.setAttribute('playsinline', '');

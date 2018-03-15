@@ -18,7 +18,7 @@
     
     [self _evaluateJS:@"injectCmd('play')" completion:nil];
     
-    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:true duration:0.0 position:-1.0 downloadProgress:0.0];
+    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:true duration:0.0 position:-1.0 downloadProgress:0.0 buffering:false];
     [self updateState:newState];
 }
 
@@ -27,7 +27,7 @@
     [super pauseVideo:manually];
     [self _evaluateJS:@"injectCmd('play')" completion:nil];
     
-    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:false duration:0.0 position:-1.0 downloadProgress:0.0];
+    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:false duration:0.0 position:-1.0 downloadProgress:0.0 buffering:false];
     [self updateState:newState];
 }
 
@@ -38,7 +38,7 @@
         [super _onPageReady];
     });
     
-    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:false duration:0.0 position:-1.0 downloadProgress:0.0];
+    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:false duration:0.0 position:-1.0 downloadProgress:0.0 buffering:false];
     [self updateState:newState];
 }
 
@@ -64,7 +64,7 @@
             [self _didBeginPlayback];
         }
         
-        TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:true duration:0.0 position:-1.0 downloadProgress:0.0];
+        TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:true duration:0.0 position:-1.0 downloadProgress:0.0 buffering:false];
         [self updateState:newState];
     }
 }

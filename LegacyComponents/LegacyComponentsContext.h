@@ -46,8 +46,6 @@ typedef enum {
 - (UIStatusBarStyle)statusBarStyle;
 - (void)setStatusBarStyle:(UIStatusBarStyle)statusBarStyle animated:(BOOL)animated;
 - (void)forceStatusBarAppearanceUpdate;
-
-@optional
 - (bool)prefersLightStatusBar;
 
 @required

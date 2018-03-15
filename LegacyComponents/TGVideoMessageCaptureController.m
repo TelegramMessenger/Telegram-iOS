@@ -439,6 +439,10 @@ typedef enum
 
 - (void)viewWillAppear:(BOOL)animated
 {
+    if (self.ignoreAppearEvents) {
+        return;
+    }
+    
     [super viewWillAppear:animated];
     
     _capturePipeline.renderingEnabled = true;
@@ -460,6 +464,9 @@ typedef enum
 
 - (void)viewDidAppear:(BOOL)animated
 {
+    if (self.ignoreAppearEvents) {
+        return;
+    }
     [super viewDidAppear:animated];
     
     _autorotationWasEnabled = [TGViewController autorotationAllowed];
@@ -1058,12 +1065,14 @@ typedef enum
         __weak TGVideoMessageCaptureController *weakSelf = self;
         [_currentAudioSession setDisposable:[[LegacyComponentsGlobals provider] requestAudioSession:speaker ? TGAudioSessionTypePlayAndRecordHeadphones : TGAudioSessionTypePlayAndRecord interrupted:^
         {
-            __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
-            if (strongSelf != nil)
-            {
-                strongSelf->_automaticDismiss = true;
-                [strongSelf complete];
-            }
+            TGDispatchOnMainThread(^{
+                __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+                if (strongSelf != nil)
+                {
+                    strongSelf->_automaticDismiss = true;
+                    [strongSelf complete];
+                }
+            });
         }]];
     }];
 }

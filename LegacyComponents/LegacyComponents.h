@@ -307,3 +307,9 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGLocationLiveSessionItemView.h>
 
 #import <LegacyComponents/TGTooltipView.h>
+
+#import <LegacyComponents/TGCheckButtonView.h>
+#import <LegacyComponents/TGBuiltinWallpaperInfo.h>
+#import <LegacyComponents/TGColorWallpaperInfo.h>
+#import <LegacyComponents/TGCustomImageWallpaperInfo.h>
+#import <LegacyComponents/TGClipboardMenu.h>

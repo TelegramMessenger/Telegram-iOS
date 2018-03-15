@@ -57,7 +57,7 @@ NSString *const TGVimeoPlayerCallbackOnState = @"onState";
     NSString *command = [NSString stringWithFormat:@"player.api('seekTo', %@);", @(position)];
     [self _evaluateJS:command completion:nil];
     
-    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:self.state.isPlaying duration:self.state.duration position:position downloadProgress:self.state.downloadProgress];
+    TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:self.state.isPlaying duration:self.state.duration position:position downloadProgress:self.state.downloadProgress buffering:self.state.buffering];
     [self updateState:newState];
     
     _ignorePositionUpdates = 2;
@@ -106,6 +106,7 @@ NSString *const TGVimeoPlayerCallbackOnState = @"onState";
         NSTimeInterval position = self.state.position;
         NSTimeInterval duration = self.state.duration;
         CGFloat downloadProgress = self.state.downloadProgress;
+        bool buffering = self.state.buffering;
 
         for (NSURLQueryItem *queryItem in queryItems)
         {
@@ -140,7 +141,7 @@ NSString *const TGVimeoPlayerCallbackOnState = @"onState";
         if (finished)
             position = 0.0;
         
-        TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:playing duration:duration position:position downloadProgress:downloadProgress];
+        TGEmbedPlayerState *newState = [TGEmbedPlayerState stateWithPlaying:playing duration:duration position:position downloadProgress:downloadProgress buffering:buffering];
         [self updateState:newState];
     }
 }

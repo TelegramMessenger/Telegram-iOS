@@ -39,7 +39,14 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
     [fillImages removeAllObjects];
 }
 
-- (instancetype)initWithStyle:(TGCheckButtonStyle)style
+- (instancetype)initWithStyle:(TGCheckButtonStyle)style {
+    TGCheckButtonPallete *pallete = nil;
+    if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(checkButtonPallete)])
+        pallete = [[LegacyComponentsGlobals provider] checkButtonPallete];
+    return [self initWithStyle:style pallete:pallete];
+}
+
+- (instancetype)initWithStyle:(TGCheckButtonStyle)style pallete:(TGCheckButtonPallete *)pallete
 {
     CGSize size = CGSizeMake(32.0f, 32.0f);
     if (style == TGCheckButtonStyleGallery)
@@ -71,10 +78,6 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
         
         UIColor *backgroundColor = [UIColor whiteColor];
         UIColor *chatBorderColor = [UIColor whiteColor];
-        
-        TGCheckButtonPallete *pallete = nil;
-        if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(checkButtonPallete)])
-            pallete = [[LegacyComponentsGlobals provider] checkButtonPallete];
         
         if (pallete != nil)
         {
@@ -324,6 +327,11 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
 
 - (void)setSelected:(bool)selected animated:(bool)animated bump:(bool)bump
 {
+    [self setSelected:selected animated:animated bump:bump completion:nil];
+}
+
+- (void)setSelected:(bool)selected animated:(bool)animated bump:(bool)bump completion:(void (^)())completion
+{
     if (selected)
         [self _createCheckButtonDetailsIfNeeded];
     
@@ -342,8 +350,12 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
     
     if (animated)
     {
-        if (self.selected == selected)
+        if (self.selected == selected) {
+            if (completion) {
+                completion();
+            }
             return;
+        }
         
         if (bump)
         {
@@ -380,7 +392,11 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
             [UIView animateWithDuration:duration delay:0.0f usingSpringWithDamping:damping initialSpringVelocity:initialVelocity options:UIViewAnimationOptionBeginFromCurrentState animations:^
              {
                  _wrapperView.transform = CGAffineTransformIdentity;
-             } completion:nil];
+             } completion:^(__unused BOOL finished) {
+                 if (completion) {
+                     completion();
+                 }
+             }];
             
             if (_number == 0)
             {
@@ -399,7 +415,8 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
                     {
                         _checkLongFragment.transform = CGAffineTransformIdentity;
                     }];
-                } completion:nil];
+                } completion:^(__unused BOOL finished) {
+                }];
             }
         }
         else
@@ -425,6 +442,9 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
             } completion:^(__unused BOOL finished)
             {
                 _checkView.transform = TGCheckButtonDefaultTransform;
+                if (completion) {
+                    completion();
+                }
             }];
         }
     }
@@ -443,6 +463,10 @@ static CGAffineTransform TGCheckButtonDefaultTransform;
             _checkView.transform = TGCheckButtonDefaultTransform;
             _checkShortFragment.transform = CGAffineTransformIdentity;
             _checkLongFragment.transform = CGAffineTransformIdentity;
+        }
+        
+        if (completion) {
+            completion();
         }
     }
     

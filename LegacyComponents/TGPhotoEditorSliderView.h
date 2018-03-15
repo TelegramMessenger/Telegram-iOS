@@ -31,6 +31,8 @@
 @property (nonatomic, assign) NSInteger positionsCount;
 @property (nonatomic, assign) CGFloat dotSize;
 
+@property (nonatomic, assign) bool enablePanHandling;
+
 - (void)setValue:(CGFloat)value animated:(BOOL)animated;
 
 @end
