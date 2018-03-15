@@ -572,12 +572,9 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
     _internalTextView.disableContentOffsetAnimation = true;
     _internalTextView.freezeContentOffset = true;
     
-    //NSMutableAttributedString *mutableString = [[NSMutableAttributedString alloc] initWithAttributedString:string];
-    //[mutableString removeAttribute:NSForegroundColorAttributeName range:NSMakeRange(0, string.length)];
     [_internalTextView.textStorage removeAttribute:NSForegroundColorAttributeName range:NSMakeRange(0, string.length)];
     
     if (_intrinsicTextColor != nil) {
-        //[mutableString addAttribute:NSForegroundColorAttributeName value:_intrinsicTextColor == nil ? [UIColor blackColor] : _intrinsicTextColor range:NSMakeRange(0, string.length)];
         [_internalTextView.textStorage addAttribute:NSForegroundColorAttributeName value:_intrinsicTextColor == nil ? [UIColor blackColor] : _intrinsicTextColor range:NSMakeRange(0, string.length)];
     }
 
@@ -595,10 +592,6 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
     }];
     
     if (inputTextTags != nil) {
-        /*if (mutableString == nil) {
-            mutableString = [[NSMutableAttributedString alloc] initWithAttributedString:string];
-        }*/
-        
         static NSCharacterSet *alphanumericSet = nil;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
@@ -610,7 +603,6 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
             TGInputTextTagAndRange *tagAndRange = inputTextTags[i];
             if ([removeTags containsObject:@(tagAndRange.tag.uniqueId)]) {
                 [inputTextTags removeObjectAtIndex:i];
-                //[mutableString removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                 [_internalTextView.textStorage removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                 
                 i--;
@@ -626,10 +618,8 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
                 
                 if (j != (NSInteger)tagAndRange.range.location) {
                     NSRange updatedRange = NSMakeRange(j, tagAndRange.range.location + tagAndRange.range.length - j);
-                    //[mutableString removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                     [_internalTextView.textStorage removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                     
-                    //[mutableString addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                     [_internalTextView.textStorage addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                     
                     inputTextTags[i] = [[TGInputTextTagAndRange alloc] initWithTag:tagAndRange.tag range:updatedRange];
@@ -648,10 +638,8 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
                     
                     if (j < ((NSInteger)tagAndRange.range.location)) {
                         NSRange updatedRange = NSMakeRange(j, tagAndRange.range.location + tagAndRange.range.length - j);
-                        //[mutableString removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                         [_internalTextView.textStorage removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                         
-                        //[mutableString addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                         [_internalTextView.textStorage addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                          
                         inputTextTags[i] = [[TGInputTextTagAndRange alloc] initWithTag:tagAndRange.tag range:updatedRange];
@@ -682,14 +670,11 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
                             
                             if (j == candidateStart) {
                                 [removeTags addObject:@(tagAndRange.tag.uniqueId)];
-                                //[mutableString addAttribute:NSForegroundColorAttributeName value:TGAccentColor() range:tagAndRange.range];
                                 [_internalTextView.textStorage addAttribute:NSForegroundColorAttributeName value:TGAccentColor() range:tagAndRange.range];
                             } else {
-                                //[mutableString removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                                 [_internalTextView.textStorage removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                                 
                                 NSRange updatedRange = NSMakeRange(tagAndRange.range.location, j - tagAndRange.range.location);
-                                //[mutableString addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                                 [_internalTextView.textStorage addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                                 inputTextTags[i] = [[TGInputTextTagAndRange alloc] initWithTag:tagAndRange.tag range:updatedRange];
                                 
@@ -708,15 +693,12 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
                             }
                             
                             if (j == candidateEnd) {
-                                //[mutableString removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                                 [_internalTextView.textStorage removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                                 
-                                //[mutableString removeAttribute:TGMentionUidAttributeName range:nextTagAndRange.range];
                                 [_internalTextView.textStorage removeAttribute:TGMentionUidAttributeName range:nextTagAndRange.range];
                                 
                                 NSRange updatedRange = NSMakeRange(tagAndRange.range.location, nextTagAndRange.range.location + nextTagAndRange.range.length - tagAndRange.range.location);
                                 
-                                //[mutableString addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                                 [_internalTextView.textStorage addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                                 
                                 inputTextTags[i] = [[TGInputTextTagAndRange alloc] initWithTag:tagAndRange.tag range:updatedRange];
@@ -724,11 +706,9 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
                                 
                                 i--;
                             } else if (j != candidateStart) {
-                                //[mutableString removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                                 [_internalTextView.textStorage removeAttribute:TGMentionUidAttributeName range:tagAndRange.range];
                                 
                                 NSRange updatedRange = NSMakeRange(tagAndRange.range.location, j - tagAndRange.range.location);
-                                //[mutableString addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                                 [_internalTextView.textStorage addAttribute:TGMentionUidAttributeName value:tagAndRange.tag range:updatedRange];
                                 
                                 inputTextTags[i] = [[TGInputTextTagAndRange alloc] initWithTag:tagAndRange.tag range:updatedRange];
@@ -736,7 +716,6 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
                                 i--;
                             } else {
                                 [removeTags addObject:@(tagAndRange.tag.uniqueId)];
-                                //[mutableString addAttribute:NSForegroundColorAttributeName value:TGAccentColor() range:tagAndRange.range];
                                 [_internalTextView.textStorage addAttribute:NSForegroundColorAttributeName value:TGAccentColor() range:tagAndRange.range];
                             }
                         }
@@ -750,22 +729,6 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
     [_internalTextView setContentOffset:contentOffset];
     _internalTextView.disableContentOffsetAnimation = false;
     [_internalTextView setScrollEnabled:true];
-    
-    /*if (mutableString != nil && ![mutableString isEqualToAttributedString:_internalTextView.attributedText])*/ {
-        /*[_internalTextView.textStorage removeAttribute:NSForegroundColorAttributeName range:NSMakeRange(0, string.length)];
-        [_internalTextView.textStorage addAttribute:NSForegroundColorAttributeName value:TGAccentColor() range:NSMakeRange(string.length - 1, 1)];
-        
-        return;
-        
-        UITextRange *previousRange = [_internalTextView selectedTextRange];
-        UITextPosition *selStartPos = previousRange.start;
-        NSInteger previousIdx = [_internalTextView offsetFromPosition:_internalTextView.beginningOfDocument toPosition:selStartPos];
-        
-        _internalTextView.attributedText = mutableString;
-        
-        UITextPosition *textPosition = [_internalTextView positionFromPosition:_internalTextView.beginningOfDocument offset:MIN(previousIdx, (NSInteger)mutableString.length)];
-        [_internalTextView setSelectedTextRange:[_internalTextView textRangeFromPosition:textPosition toPosition:textPosition]];*/
-    }
 }
 
 - (NSString *)textWithEntities:(__autoreleasing NSArray<TGMessageEntity *> ** _Nullable)entities {
