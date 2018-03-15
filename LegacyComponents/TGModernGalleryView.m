@@ -130,11 +130,13 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
     _scrollViewContainer.frame = bounds;
     _overlayContainerView.frame = bounds;
     
-    CGRect scrollViewFrame = CGRectMake(-_itemPadding, _scrollViewVerticalOffset, frame.size.width + _itemPadding * 2.0f, frame.size.height);
-    if (!CGRectEqualToRect(_scrollView.frame, scrollViewFrame))
-    {
-        NSInteger currentItemIndex = (NSInteger)(CGFloor((_scrollView.bounds.origin.x + _scrollView.bounds.size.width / 2.0f) / _scrollView.bounds.size.width));
-        [_scrollView setFrameAndBoundsInTransaction:scrollViewFrame bounds:CGRectMake(currentItemIndex * scrollViewFrame.size.width, 0.0f, scrollViewFrame.size.width, scrollViewFrame.size.height)];
+    if (_scrollView != nil) {
+        CGRect scrollViewFrame = CGRectMake(-_itemPadding, _scrollViewVerticalOffset, frame.size.width + _itemPadding * 2.0f, frame.size.height);
+        if (!CGRectEqualToRect(_scrollView.frame, scrollViewFrame))
+        {
+            NSInteger currentItemIndex = (NSInteger)(CGFloor((_scrollView.bounds.origin.x + _scrollView.bounds.size.width / 2.0f) / _scrollView.bounds.size.width));
+            [_scrollView setFrameAndBoundsInTransaction:scrollViewFrame bounds:CGRectMake(currentItemIndex * scrollViewFrame.size.width, 0.0f, scrollViewFrame.size.width, scrollViewFrame.size.height)];
+        }
     }
 }
 

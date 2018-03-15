@@ -80,7 +80,11 @@
     CGPathRelease(path);
     CGContextStrokePath(context);
     
-    NSDictionary *attributes = @{ NSFontAttributeName: [TGFont roundedFontOfSize:14.0f], NSForegroundColorAttributeName: _color };
+    UIFont *font = [TGFont roundedFontOfSize:14.0f];
+    if (font == nil) {
+        font = [UIFont systemFontOfSize:14.0];
+    }
+    NSDictionary *attributes = @{ NSFontAttributeName: font, NSForegroundColorAttributeName: _color };
     CGSize size = iosMajorVersion() >= 7 ? [_string sizeWithAttributes:attributes] : [_string sizeWithFont:attributes[NSFontAttributeName]];
     if (iosMajorVersion() >= 7)
     {
@@ -89,7 +93,7 @@
     else
     {
         CGContextSetFillColorWithColor(context, _color.CGColor);
-        [_string drawAtPoint:CGPointMake((allRect.size.width - size.width) / 2.0f, floor((allRect.size.height - size.height) / 2.0f)) forWidth:FLT_MAX withFont:[TGFont roundedFontOfSize:14.0f] lineBreakMode:NSLineBreakByWordWrapping];
+        [_string drawAtPoint:CGPointMake((allRect.size.width - size.width) / 2.0f, floor((allRect.size.height - size.height) / 2.0f)) forWidth:FLT_MAX withFont:font lineBreakMode:NSLineBreakByWordWrapping];
     }
 }
 

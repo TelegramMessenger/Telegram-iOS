@@ -1300,13 +1300,17 @@ static CGFloat transformRotation(CGAffineTransform transform)
 
 - (NSUInteger)currentItemIndex
 {
-    return _model.items.count == 0 ? 0 : (NSUInteger)[self currentItemFuzzyIndex];
+    return _model.items.count == 0 ? 0 : (NSUInteger)([self currentItemFuzzyIndex]);
 }
 
 - (CGFloat)currentItemFuzzyIndex
 {
     if (_model.items.count == 0)
         return 0.0f;
+    
+    if (_view.scrollView.bounds.size.width <= FLT_EPSILON) {
+        return 0.0f;
+    }
     
     return CGFloor((_view.scrollView.bounds.origin.x + _view.scrollView.bounds.size.width / 2.0f) / _view.scrollView.bounds.size.width);
 }

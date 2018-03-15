@@ -192,6 +192,10 @@ typedef enum
     [_thumbnailsDisposable dispose];
     [[NSNotificationCenter defaultCenter] removeObserver:_didEnterBackgroundObserver];
     [_activityDisposable dispose];
+    id<SDisposable> currentAudioSession = _currentAudioSession;
+    [_queue dispatch:^{
+         [currentAudioSession dispose];
+    }];
 }
 
 + (NSURL *)tempOutputPath

@@ -522,6 +522,8 @@
 		D04269121F586E430037ECE8 /* TGVideoCameraPipeline.m in Sources */ = {isa = PBXBuildFile; fileRef = D04269101F586E430037ECE8 /* TGVideoCameraPipeline.m */; };
 		D04269151F586EC80037ECE8 /* TGVideoMessageCaptureController.h in Headers */ = {isa = PBXBuildFile; fileRef = D04269131F586EC80037ECE8 /* TGVideoMessageCaptureController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D04269161F586EC80037ECE8 /* TGVideoMessageCaptureController.m in Sources */ = {isa = PBXBuildFile; fileRef = D04269141F586EC80037ECE8 /* TGVideoMessageCaptureController.m */; };
+		D07ABBA8202A193A003671DE /* TGWallpaperController.m in Sources */ = {isa = PBXBuildFile; fileRef = D07ABBA6202A1939003671DE /* TGWallpaperController.m */; };
+		D07ABBA9202A193A003671DE /* TGWallpaperController.h in Headers */ = {isa = PBXBuildFile; fileRef = D07ABBA7202A1939003671DE /* TGWallpaperController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D07BC6CF1F2A18B700ED97AA /* TGCameraMainPhoneView.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BC6C91F2A18B700ED97AA /* TGCameraMainPhoneView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D07BC6D01F2A18B700ED97AA /* TGCameraMainPhoneView.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BC6CA1F2A18B700ED97AA /* TGCameraMainPhoneView.m */; };
 		D07BC6D11F2A18B700ED97AA /* TGCameraMainTabletView.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BC6CB1F2A18B700ED97AA /* TGCameraMainTabletView.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1692,6 +1694,8 @@
 		D04269101F586E430037ECE8 /* TGVideoCameraPipeline.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGVideoCameraPipeline.m; sourceTree = "<group>"; };
 		D04269131F586EC80037ECE8 /* TGVideoMessageCaptureController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoMessageCaptureController.h; sourceTree = "<group>"; };
 		D04269141F586EC80037ECE8 /* TGVideoMessageCaptureController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGVideoMessageCaptureController.m; sourceTree = "<group>"; };
+		D07ABBA6202A1939003671DE /* TGWallpaperController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGWallpaperController.m; sourceTree = "<group>"; };
+		D07ABBA7202A1939003671DE /* TGWallpaperController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGWallpaperController.h; sourceTree = "<group>"; };
 		D07BC6C91F2A18B700ED97AA /* TGCameraMainPhoneView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGCameraMainPhoneView.h; sourceTree = "<group>"; };
 		D07BC6CA1F2A18B700ED97AA /* TGCameraMainPhoneView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGCameraMainPhoneView.m; sourceTree = "<group>"; };
 		D07BC6CB1F2A18B700ED97AA /* TGCameraMainTabletView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGCameraMainTabletView.h; sourceTree = "<group>"; };
@@ -3675,6 +3679,8 @@
 		D07BCB2A1F2B65C400ED97AA /* Wallpapers */ = {
 			isa = PBXGroup;
 			children = (
+				D07ABBA7202A1939003671DE /* TGWallpaperController.h */,
+				D07ABBA6202A1939003671DE /* TGWallpaperController.m */,
 				D07BCB2B1F2B65F100ED97AA /* TGBuiltinWallpaperInfo.h */,
 				D07BCB2C1F2B65F100ED97AA /* TGBuiltinWallpaperInfo.m */,
 				D07BCB2D1F2B65F100ED97AA /* TGColorWallpaperInfo.h */,
@@ -4091,6 +4097,7 @@
 				D07BC85C1F2A2DBD00ED97AA /* TGMenuSheetItemView.h in Headers */,
 				D07BC8721F2A2F6500ED97AA /* TGInputTextTag.h in Headers */,
 				D07BCB721F2B6A5600ED97AA /* TGEmbedVKPlayerView.h in Headers */,
+				D07ABBA9202A193A003671DE /* TGWallpaperController.h in Headers */,
 				D07BC81C1F2A2C0B00ED97AA /* PGPhotoLookupFilterPass.h in Headers */,
 				D07BCACC1F2B4E7300ED97AA /* TGMediaAvatarMenuMixin.h in Headers */,
 				D01778CB1F200BAC0044446D /* TGRTLScreenEdgePanGestureRecognizer.h in Headers */,
@@ -4584,6 +4591,7 @@
 				D07BC6F41F2A19A700ED97AA /* TGCameraModeControl.m in Sources */,
 				D017782C1F1F961D0044446D /* TGBotReplyMarkupButton.m in Sources */,
 				D07BCAB81F2B4DE200ED97AA /* TGAttachmentCarouselItemView.m in Sources */,
+				D07ABBA8202A193A003671DE /* TGWallpaperController.m in Sources */,
 				D026605B1F34A7F8000E2DC5 /* TGLocationMapModeControl.m in Sources */,
 				D01777771F1F92570044446D /* RMPhoneFormat.m in Sources */,
 				D07BCA221F2A9A5300ED97AA /* TGCheckButtonView.m in Sources */,

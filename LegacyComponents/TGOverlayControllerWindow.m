@@ -227,8 +227,10 @@
             [super setHidden:true];
         }
         
-        _managedIsHidden = hidden;
-        [_manager setHidden:hidden window:self];
+        if (_managedIsHidden != hidden) {
+            _managedIsHidden = hidden;
+            [_manager setHidden:hidden window:self];
+        }
     } else {
         [super setHidden:hidden];
         
