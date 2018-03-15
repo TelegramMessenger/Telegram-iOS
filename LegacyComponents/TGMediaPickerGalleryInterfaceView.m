@@ -88,6 +88,8 @@
     void (^_scrollViewOffsetRequested)(CGFloat offset);
     
     id<LegacyComponentsContext> _context;
+    
+    bool _ignoreSelectionUpdates;
 }
 
 @property (nonatomic, strong) ASHandle *actionHandle;
@@ -170,8 +172,7 @@
             _cameraButton.adjustsImageWhenHighlighted = false;
             [_cameraButton addTarget:self action:@selector(cameraButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             
-            if (_selectionContext == nil)
-                [_wrapperView addSubview:_cameraButton];
+            [_wrapperView addSubview:_cameraButton];
             
             //if (_selectionContext != nil)
             //    [_cameraButton setHidden:true animated:false];
@@ -580,7 +581,60 @@
 
 - (void)cancelButtonPressed
 {
-    _closePressed();
+    _ignoreSelectionUpdates = true;
+    if (_cameraButton != nil && _selectionContext != nil)
+    {
+        __weak TGMediaPickerGalleryInterfaceView *weakSelf = self;
+        
+        TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
+        controller.dismissesByOutsideTap = true;
+        controller.narrowInLandscape = true;
+        __weak TGMenuSheetController *weakController = controller;
+        
+        NSArray *items = @
+        [
+         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Camera.Discard") type:TGMenuSheetButtonTypeDefault action:^
+          {
+              __strong TGMenuSheetController *strongController = weakController;
+              if (strongController == nil)
+                  return;
+              
+              __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+              if (strongSelf == nil)
+                  return;
+              
+              strongSelf->_capturing = false;
+              strongSelf->_closePressed();
+              
+              [strongController dismissAnimated:true manual:false completion:nil];
+          }],
+         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
+          {
+              __strong TGMenuSheetController *strongController = weakController;
+              if (strongController != nil)
+                  [strongController dismissAnimated:true];
+          }]
+         ];
+        
+        [controller setItemViews:items];
+        controller.sourceRect = ^
+        {
+            __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return CGRectZero;
+            
+            if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
+                return [strongSelf convertRect:strongSelf->_portraitToolbarView.cancelButtonFrame fromView:strongSelf->_portraitToolbarView];
+            else
+                return [strongSelf convertRect:strongSelf->_landscapeToolbarView.cancelButtonFrame fromView:strongSelf->_landscapeToolbarView];
+        };
+        [controller presentInViewController:self.controller() sourceView:self animated:true];
+    }
+    else
+    {
+        _capturing = false;
+        _closePressed();
+    }
 }
 
 - (void)cameraButtonPressed
@@ -614,7 +668,7 @@
     [_photoCounterButton setSelected:!_photoCounterButton.selected animated:true];
     [_selectedPhotosView setHidden:!_photoCounterButton.selected animated:true];
     [_groupButton setHidden:!_photoCounterButton.selected animated:true];
-    [_cameraButton setHidden:!_photoCounterButton.selected animated:true];
+    //[_cameraButton setHidden:!_photoCounterButton.selected animated:true];
     
     void (^changeBlock)(void) = ^
     {
@@ -939,9 +993,14 @@
 
 - (void)updateSelectionInterface:(NSUInteger)selectedCount counterVisible:(bool)counterVisible animated:(bool)animated
 {
+    if (_ignoreSelectionUpdates)
+        return;
+    
     if (counterVisible)
     {
         bool animateCount = animated && !(counterVisible && _photoCounterButton.internalHidden);
+        if (!animateCount && !_photoCounterButton.selected && !_photoCounterButton.internalHidden)
+            animateCount = true;
         [_photoCounterButton setSelectedCount:selectedCount animated:animateCount];
         [_photoCounterButton setInternalHidden:false animated:animated completion:nil];
     }
@@ -1437,21 +1496,21 @@
     screenEdges.right -= _safeAreaInset.right;
     
     CGFloat headerInset = hasHeaderView ? 64.0f : 0.0f;
-    CGFloat buttonInset = _selectionContext != nil ? -60.0f : 0.0f;
-    CGFloat panelInset = 0.0f; //panelVisible ? 100.0f : 0.0f;
+    CGFloat buttonInset = _selectionContext != nil ? 50.0f : 0.0f;
+    CGFloat panelInset = 0.0f;
     
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
-            frame = CGRectMake(screenEdges.left + TGPhotoEditorToolbarSize + 1 + _safeAreaInset.left + buttonInset, screenEdges.top + 1 + headerInset, 44, 44);
+            frame = CGRectMake(screenEdges.left + TGPhotoEditorToolbarSize + 1 + _safeAreaInset.left - 34.0f, screenEdges.top + 1 + headerInset + buttonInset, 44, 44);
             break;
     
         case UIInterfaceOrientationLandscapeRight:
-             frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - 64 - 1 - _safeAreaInset.right - buttonInset, screenEdges.top + 1 + headerInset, 44, 44);
+             frame = CGRectMake(screenEdges.right - TGPhotoEditorToolbarSize - 1 - _safeAreaInset.right - 11.0f, screenEdges.top + 1 + headerInset + buttonInset, 44, 44);
             break;
     
         default:
-             frame = CGRectMake(screenEdges.right - 46 - _safeAreaInset.right + buttonInset, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 45 - _safeAreaInset.bottom - panelInset, 44, 44);
+             frame = CGRectMake(screenEdges.right - 46 - _safeAreaInset.right - buttonInset, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 45 - _safeAreaInset.bottom - panelInset, 44, 44);
             break;
     }
     

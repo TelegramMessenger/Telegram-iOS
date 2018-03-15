@@ -601,6 +601,7 @@
                 _flashControl.alpha = 0.0f;
             }
             
+            _topFlipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
             _flipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         } completion:^(__unused BOOL finished)
         {

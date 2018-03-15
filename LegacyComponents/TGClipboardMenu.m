@@ -103,7 +103,7 @@
 
 }
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem descriptionGenerator:(id (^)(id, NSString *, NSString *))descriptionGenerator
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     NSMutableArray *selectedItems = [selectionContext.selectedItems mutableCopy];
@@ -113,6 +113,7 @@
     for (UIImage *asset in selectedItems)
     {
         NSString *caption = [editingContext captionForItem:asset];
+        NSArray *entities = [editingContext entitiesForItem:asset];
         id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
         NSNumber *timer = [editingContext timerForItem:asset];
         
@@ -125,7 +126,7 @@
             if (timer != nil)
                 dict[@"timer"] = timer;
             
-            id generatedItem = descriptionGenerator(dict, caption, nil);
+            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
             return generatedItem;
         }];
         
@@ -169,7 +170,7 @@
             if (timer != nil)
                 dict[@"timer"] = timer;
             
-            id generatedItem = descriptionGenerator(dict, caption, nil);
+            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
             return generatedItem;
         }] catch:^SSignal *(__unused id error)
         {

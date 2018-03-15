@@ -327,7 +327,25 @@
 
 + (UIImage *)cameraIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorCamera.png");
+    static dispatch_once_t onceToken;
+    static UIImage *image;
+    dispatch_once(&onceToken, ^
+    {
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(30.0f, 30.0f), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.7f).CGColor);
+        
+        UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0.5f, 0.5f, 29.0f, 29.0f) cornerRadius:8.5f];
+        CGContextAddPath(context, path.CGPath);
+        CGContextFillPath(context);
+        
+        [TGComponentsImageNamed(@"PhotoEditorCamera.png") drawAtPoint:CGPointZero];
+        
+        image = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+    });
+    
+    return image;
 }
 
 @end

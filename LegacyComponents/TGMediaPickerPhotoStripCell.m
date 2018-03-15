@@ -345,21 +345,21 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
             CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
             CGContextStrokeEllipseInRect(context, CGRectInset(rect, insideInset + 0.5f, insideInset + 0.5f));
             
-            CGContextSetShadowWithColor(context, CGSizeZero, 0.0f, [UIColor clearColor].CGColor);
-            CGContextSetLineCap(context, kCGLineCapRound);
-            CGContextSetLineWidth(context, 1.75f);
-            CGContextMoveToPoint(context, insideInset + 8.0f, insideInset + 8.0f);
-            CGContextAddLineToPoint(context, size.width - insideInset - 8.0f, size.height - insideInset - 8.0f);
-            CGContextStrokePath(context);
-            
-            CGContextMoveToPoint(context, size.width - insideInset - 8.0f, insideInset + 8.0f);
-            CGContextAddLineToPoint(context, insideInset + 8.0f, size.height - insideInset - 8.0f);
-            CGContextStrokePath(context);
+            UIImage *icon = TGComponentsImageNamed(@"CameraDeleteIcon.png");
+            [icon drawAtPoint:CGPointMake((size.width - icon.size.width) / 2.0f, (size.height - icon.size.height) / 2.0f)];
+//            CGContextSetShadowWithColor(context, CGSizeZero, 0.0f, [UIColor clearColor].CGColor);
+//            CGContextSetLineCap(context, kCGLineCapRound);
+//            CGContextSetLineWidth(context, 1.75f);
+//            CGContextMoveToPoint(context, insideInset + 8.0f, insideInset + 8.0f);
+//            CGContextAddLineToPoint(context, size.width - insideInset - 8.0f, size.height - insideInset - 8.0f);
+//            CGContextStrokePath(context);
+//
+//            CGContextMoveToPoint(context, size.width - insideInset - 8.0f, insideInset + 8.0f);
+//            CGContextAddLineToPoint(context, insideInset + 8.0f, size.height - insideInset - 8.0f);
+//            CGContextStrokePath(context);
             
             image = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
-            
-
         });
         
         [self setImage:image forState:UIControlStateNormal];

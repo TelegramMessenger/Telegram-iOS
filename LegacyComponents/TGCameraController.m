@@ -131,7 +131,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     bool _saveCapturedMedia;
     
     bool _shutterIsBusy;
-    bool _multiCapture;
 }
 @end
 
@@ -1074,12 +1073,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
 - (bool)willPresentResultController
 {
-    return (_items.count == 0 && !_multiCapture) || (_items.count > 0 && (_items.count + 1) % 10 == 0);
+    return _items.count == 0 || (_items.count > 0 && (_items.count + 1) % 10 == 0);
 }
 
 - (bool)shouldPresentResultController
 {
-    return (_items.count == 1 && !_multiCapture) || (_items.count > 0 && _items.count % 10 == 0);
+    return _items.count == 1 || (_items.count > 0 && _items.count % 10 == 0);
 }
 
 - (bool)maybePresentResultControllerForItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)editableItem completion:(void (^)(void))completion
@@ -1335,11 +1334,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 strongSelf->_interfaceView.alpha = 1.0f;
             } completion:nil];
             
-            if (strongModel.interfaceView.capturing)
-            {
-                strongSelf->_multiCapture = true;
-            }
-            else if (!strongSelf->_multiCapture)
+            if (!strongModel.interfaceView.capturing)
             {
                 [strongSelf->_items removeAllObjects];
                 [strongSelf->_interfaceView setResults:nil];

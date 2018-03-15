@@ -228,8 +228,13 @@
     if (action == @selector(toggleUnderline:)) {
         return false;
     }
-    
-    //TGLegacyLog(@"canPerformAction %@", NSStringFromSelector(action));
+   
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
+    if (action == @selector(_promptForReplace:)) {
+        return false;
+    }
+#pragma clang diagnostic pop
     
     return [super canPerformAction:action withSender:sender];
 }
