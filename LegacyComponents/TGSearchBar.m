@@ -348,8 +348,15 @@
     _prefixLabel.textColor = pallete.placeholderColor;
     _placeholderLabel.textColor = pallete.placeholderColor;
     
-    _customTextField.keyboardAppearance = _style == TGSearchBarStyleDark || _pallete.isDark ? UIKeyboardAppearanceAlert : UIKeyboardAppearanceDefault;
-    
+    [UIView performWithoutAnimation:^
+    {
+        bool shouldFlip = _customTextField.isFirstResponder;
+        if (shouldFlip)
+            [_customTextField resignFirstResponder];
+        _customTextField.keyboardAppearance = _style == TGSearchBarStyleDark || _pallete.isDark ? UIKeyboardAppearanceAlert : UIKeyboardAppearanceDefault;
+        if (shouldFlip)
+            [_customTextField becomeFirstResponder];
+    }];
     _customSearchIcon.image = [TGSearchBar searchBarIcon:pallete.placeholderColor];
     [_customClearButton setBackgroundImage:_pallete.clearIcon forState:UIControlStateNormal];
     
