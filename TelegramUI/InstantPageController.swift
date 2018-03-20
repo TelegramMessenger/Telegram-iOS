@@ -32,7 +32,7 @@ final class InstantPageController: ViewController {
         self.webPage = webPage
         self.anchor = anchor
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .White
         

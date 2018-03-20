@@ -44,7 +44,7 @@ public class PeerMediaCollectionController: TelegramController {
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.interfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
-        super.init(account: account, navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(self.presentationData.theme.rootController.navigationBar.backgroundColor), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .none)
+        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(self.presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .none)
         
         self.title = self.presentationData.strings.SharedMedia_TitleAll
         

@@ -45,12 +45,12 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
                             let scale = min(1.0, min(size.width / max(1.0, image.size.width), size.height / max(1.0, image.size.height)))
                             let scaledSize = CGSize(width: floor(image.size.width * scale), height: floor(image.size.height * scale))
                             
-                            UIGraphicsBeginImageContextWithOptions(scaledSize, true, image.scale)
+                            UIGraphicsBeginImageContextWithOptions(scaledSize, true, 1.0)
                             image.draw(in: CGRect(origin: CGPoint(), size: scaledSize))
                             let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
                             UIGraphicsEndImageContext()
                             
-                            if let scaledImage = scaledImage, let data = UIImageJPEGRepresentation(scaledImage, 0.6) {
+                            if let scaledImage = scaledImage, let data = UIImageJPEGRepresentation(scaledImage, 0.42) {
                                 subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
                                 subscriber.putCompletion()
                             } else {

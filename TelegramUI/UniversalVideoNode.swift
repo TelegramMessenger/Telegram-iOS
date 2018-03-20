@@ -31,6 +31,14 @@ protocol UniversalVideoContent {
     var duration: Int32 { get }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode
+    
+    func isEqual(to other: UniversalVideoContent) -> Bool
+}
+
+extension UniversalVideoContent {
+    func isEqual(to other: UniversalVideoContent) -> Bool {
+        return false
+    }
 }
 
 protocol UniversalVideoDecoration: class {
@@ -80,7 +88,7 @@ final class UniversalVideoNode: ASDisplayNode {
     private var contentNodeId: Int32?
     
     private var playbackCompletedIndex: Int?
-    private var contentRequestIndex: Int32?
+    private var contentRequestIndex: (AnyHashable, Int32)?
     
     var playbackCompleted: (() -> Void)?
     
@@ -111,7 +119,7 @@ final class UniversalVideoNode: ASDisplayNode {
                     let content = self.content
                     let postbox = self.postbox
                     let audioSession = self.audioSession
-                    self.contentRequestIndex = self.manager.attachUniversalVideoContent(id: self.content.id, priority: self.priority, create: {
+                    self.contentRequestIndex = self.manager.attachUniversalVideoContent(content: self.content, priority: self.priority, create: {
                         return content.makeContentNode(postbox: postbox, audioSession: audioSession)
                     }, update: { [weak self] contentNodeAndFlags in
                         if let strongSelf = self {
@@ -120,9 +128,9 @@ final class UniversalVideoNode: ASDisplayNode {
                     })
                 } else {
                     assert(self.contentRequestIndex != nil)
-                    if let contentRequestIndex = self.contentRequestIndex {
+                    if let (id, index) = self.contentRequestIndex {
                         self.contentRequestIndex = nil
-                        self.manager.detachUniversalVideoContent(id: self.content.id, index: contentRequestIndex)
+                        self.manager.detachUniversalVideoContent(id: id, index: index)
                     }
                 }
             }
@@ -178,9 +186,9 @@ final class UniversalVideoNode: ASDisplayNode {
             self.manager.removePlaybackCompleted(id: self.content.id, index: playbackCompletedIndex)
         }
         
-        if let contentRequestIndex = self.contentRequestIndex {
+        if let (id, index) = self.contentRequestIndex {
             self.contentRequestIndex = nil
-            self.manager.detachUniversalVideoContent(id: self.content.id, index: contentRequestIndex)
+            self.manager.detachUniversalVideoContent(id: id, index: index)
         }
     }
     

@@ -17,7 +17,6 @@ public final class LiveLocationManager {
     private var requiredLocationTypeDisposable: Disposable?
     private let hasActiveMessagesToBroadcast = ValuePromise<Bool>(false, ignoreRepeated: true)
     
-    
     public var isPolling: Signal<Bool, NoError> {
         return self.pollingOnce.get()
     }

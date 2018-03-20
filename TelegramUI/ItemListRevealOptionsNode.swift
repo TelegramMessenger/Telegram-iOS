@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 import Display
-import Lottie
+//import Lottie
 
 struct ItemListRevealOption: Equatable {
     let key: Int32
@@ -37,7 +37,7 @@ final class ItemListRevealOptionNode: ASDisplayNode {
     private let titleNode: ASTextNode
     private let iconNode: ASImageNode?
     
-    private var animView: LOTView?
+    //private var animView: LOTView?
     
     init(title: String, icon: UIImage?, color: UIColor, textColor: UIColor) {
         self.titleNode = ASTextNode()

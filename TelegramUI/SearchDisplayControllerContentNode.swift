@@ -7,6 +7,10 @@ class SearchDisplayControllerContentNode: ASDisplayNode {
     final var dismissInput: (() -> Void)?
     final var cancel: (() -> Void)?
     
+    var isSearching: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
     override init() {
         super.init()
     }

@@ -19,7 +19,7 @@ final class AuthorizationSequenceSplashController: ViewController {
         self.theme = theme
         self.controller = RMIntroViewController(backroundColor: theme.backgroundColor, primaryColor: theme.primaryColor, accentColor: theme.accentColor, regularDotColor: theme.disclosureControlColor, highlightedDotColor: theme.accentColor)
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = theme.statusBarStyle
         

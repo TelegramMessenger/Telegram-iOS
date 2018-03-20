@@ -137,6 +137,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     private var segmentedTitleView: ItemListControllerSegmentedTitleView?
     
     private var theme: PresentationTheme
+    private var strings: PresentationStrings
     
     private var didPlayPresentationAnimation = false
     
@@ -176,9 +177,11 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     init(account: Account, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
         self.state = state
         
-        self.theme = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme
+        let presentationData = (account.telegramApplicationContext.currentPresentationData.with { $0 })
+        self.theme = presentationData.theme
+        self.strings = presentationData.strings
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
         self.statusBar.statusBarStyle = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme.rootController.statusBar.style.style
         
@@ -337,7 +340,7 @@ final class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                     if strongSelf.theme !== controllerState.theme {
                         strongSelf.theme = controllerState.theme
                         
-                        strongSelf.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: strongSelf.theme))
+                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.theme), strings: NavigationBarStrings(presentationStrings: strongSelf.strings)))
                         strongSelf.statusBar.statusBarStyle = strongSelf.theme.rootController.statusBar.style.style
                         
                         strongSelf.segmentedTitleView?.color = controllerState.theme.rootController.navigationBar.accentTextColor

@@ -17,7 +17,7 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, account: 
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
-    if peer is TelegramUser || peer is TelegramSecretChat {
+    if (peer is TelegramUser || peer is TelegramSecretChat) && peer.id != account.peerId {
         controller.hasTimer = true
     }
     controller.dismissalBlock = {
@@ -165,11 +165,26 @@ func legacyAssetPickerEnqueueMessages(account: Account, peerId: PeerId, signals:
                                     arc4random_buf(&randomId, 8)
                                     let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
                                     let scaledSize = image.size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
-                                    if let scaledImage = generateImage(scaledSize, contextGenerator: { size, context in
-                                        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                                    }, opaque: true) {
-                                        if let scaledImageData = UIImageJPEGRepresentation(scaledImage, 0.52) {
+                                    if let scaledImage = TGScaleImageToPixelSize(image, scaledSize) {
+                                        if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.42) {
                                             let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
+                                            #if DEBUG
+                                                if #available(iOSApplicationExtension 11.0, *) {
+                                                    if false, let heicData = compressImage(scaledImage, quality: 0.65) {
+                                                        var randomId: Int64 = 0
+                                                        arc4random_buf(&randomId, 8)
+                                                        let _ = try? heicData.write(to: URL(fileURLWithPath: tempFilePath + ".heic"))
+                                                        let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath + ".heic", randomId: randomId)
+                                                        let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: resource, previewRepresentations: [], mimeType: "image/heic", size: nil, attributes: [.FileName(fileName: "image.heic")])
+                                                        var attributes: [MessageAttribute] = []
+                                                        if let timer = item.timer, timer > 0 && timer <= 60 {
+                                                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
+                                                        }
+                                                        messages.append(.message(text: caption ?? "", attributes: attributes, media: media, replyToMessageId: nil, localGroupingKey: item.groupedId))
+                                                    }
+                                                }
+                                            #endif
+                                            
                                             let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
                                             let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)], reference: nil)
                                             var attributes: [MessageAttribute] = []

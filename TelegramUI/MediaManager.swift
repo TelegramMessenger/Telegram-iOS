@@ -488,7 +488,7 @@ public final class MediaManager: NSObject {
         if let currentActiveContext = self.managedVideoContexts[wrappedId] {
             activeContext = currentActiveContext
         } else {
-            let mediaPlayer = MediaPlayer(audioSessionManager: self.audioSession, postbox: postbox, resource: resource, streamable: false, video: true, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: false)
+            let mediaPlayer = MediaPlayer(audioSessionManager: self.audioSession, postbox: postbox, resource: resource, streamable: false, video: true, preferSoftwareDecoding: preferSoftwareDecoding, enableSound: false, fetchAutomatically: true)
             mediaPlayer.actionAtEnd = .loop(nil)
             let playerNode = MediaPlayerNode(backgroundThread: backgroundThread)
             mediaPlayer.attachPlayerNode(playerNode)

@@ -112,6 +112,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let textBackgroundNode: ASImageNode
+    private var activityIndicator: ActivityIndicator?
     private let iconNode: ASImageNode
     private let textField: SearchBarTextField
     private let clearButton: HighlightableButtonNode
@@ -154,6 +155,29 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             }
         }
     }
+    
+    var activity: Bool = false {
+        didSet {
+            if self.activity != oldValue {
+                if self.activity {
+                    if self.activityIndicator == nil {
+                        let activityIndicator = ActivityIndicator(type: .custom(self.theme.rootController.activeNavigationSearchBar.inputIconColor, 13.0, 1.0))
+                        self.activityIndicator = activityIndicator
+                        self.addSubnode(activityIndicator)
+                        if let (boundingSize, leftInset, rightInset) = self.validLayout {
+                            self.updateLayout(boundingSize: boundingSize, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+                        }
+                    }
+                } else if let activityIndicator = self.activityIndicator {
+                    self.activityIndicator = nil
+                    activityIndicator.removeFromSupernode()
+                }
+                self.iconNode.isHidden = self.activity
+            }
+        }
+    }
+    
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -243,6 +267,8 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     func updateLayout(boundingSize: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (boundingSize, leftInset, rightInset)
+        
         self.backgroundNode.frame = self.bounds
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.bounds.size.height), size: CGSize(width: self.bounds.size.width, height: UIScreenPixel)))
         
@@ -261,6 +287,11 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         if let iconImage = self.iconNode.image {
             let iconSize = iconImage.size
             transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 8.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - iconSize.height) / 2.0)), size: iconSize))
+        }
+        
+        if let activityIndicator = self.activityIndicator {
+            let indicatorSize = activityIndicator.measure(CGSize(width: 32.0, height: 32.0))
+            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 7.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - indicatorSize.height) / 2.0)), size: indicatorSize))
         }
         
         let clearSize = self.clearButton.measure(CGSize(width: 100.0, height: 100.0))

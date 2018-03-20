@@ -35,7 +35,7 @@
 #include <VideoToolbox/VideoToolbox.h>
 #undef Picture
 
-#include "../libavcodecavcodec.h"
+#include "../libavcodec/avcodec.h"
 
 /**
  * This struct holds all the information that needs to be passed
@@ -58,7 +58,8 @@ typedef struct AVVideotoolboxContext {
 
     /**
      * CVPixelBuffer Format Type that Videotoolbox will use for decoded frames.
-     * set by the caller.
+     * set by the caller. If this is set to 0, then no specific format is
+     * requested from the decoder, and its native format is output.
      */
     OSType cv_pix_fmt_type;
 

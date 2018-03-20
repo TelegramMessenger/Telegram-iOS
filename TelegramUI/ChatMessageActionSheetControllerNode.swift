@@ -63,6 +63,8 @@ private final class MessageActionButtonNode: HighlightableButtonNode {
 final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
     private let theme: PresentationTheme
     
+    private let sideDimNode: ASDisplayNode
+    private let sideInputDimNode: ASDisplayNode
     private let inputDimNode: ASDisplayNode
     private let itemsShadowNode: ASImageNode
     private let itemsContainerNode: ASDisplayNode
@@ -78,6 +80,12 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
         self.theme = theme
         self.actions = actions
         self.dismissed = dismissed
+        
+        self.sideDimNode = ASDisplayNode()
+        self.sideDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        
+        self.sideInputDimNode = ASDisplayNode()
+        self.sideInputDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
         self.inputDimNode = ASDisplayNode()
         self.inputDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -101,6 +109,8 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
         
         super.init()
         
+        self.addSubnode(self.sideDimNode)
+        self.addSubnode(self.sideInputDimNode)
         self.addSubnode(self.inputDimNode)
         self.addSubnode(self.itemsShadowNode)
         self.addSubnode(self.itemsContainerNode)
@@ -116,19 +126,27 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
     override func didLoad() {
         super.didLoad()
         
+        self.sideDimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTap(_:))))
+        self.sideInputDimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTap(_:))))
         self.inputDimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTap(_:))))
     }
     
     func animateIn(transition: ContainedViewLayoutTransition) {
         self.inputDimNode.alpha = 0.0
+        self.sideInputDimNode.alpha = 0.0
+        self.sideDimNode.alpha = 0.0
         transition.updateAlpha(node: self.inputDimNode, alpha: 1.0)
-        transition.animatePositionAdditive(node: self.itemsContainerNode, offset: self.bounds.size.height)
-        transition.animatePositionAdditive(node: self.itemsShadowNode, offset: self.bounds.size.height)
+        transition.updateAlpha(node: self.sideInputDimNode, alpha: 1.0)
+        transition.updateAlpha(node: self.sideDimNode, alpha: 1.0)
+        transition.animatePositionAdditive(node: self.itemsContainerNode, offset: CGPoint(x: 0.0, y: self.bounds.size.height))
+        transition.animatePositionAdditive(node: self.itemsShadowNode, offset: CGPoint(x: 0.0, y: self.bounds.size.height))
         
         self.feedback.impact()
     }
     
     func animateOut(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        transition.updateAlpha(node: self.sideInputDimNode, alpha: 0.0)
+        transition.updateAlpha(node: self.sideDimNode, alpha: 0.0)
         transition.updateAlpha(node: self.inputDimNode, alpha: 0.0)
         let position = CGPoint(x: self.itemsContainerNode.position.x, y: self.bounds.size.height + self.itemsContainerNode.bounds.height)
         transition.updatePosition(node: self.itemsContainerNode, position: position, completion: { _ in
@@ -137,24 +155,33 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
         transition.updatePosition(node: self.itemsShadowNode, position: position)
     }
     
-    func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func updateLayout(layout: ContainerViewLayout, horizontalOrigin: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = layout
         
         var height: CGFloat = max(14.0, layout.intrinsicInsets.bottom)
         
+        var horizontalOffset: CGFloat = horizontalOrigin
+        if !horizontalOffset.isZero {
+            horizontalOffset += UIScreenPixel // temporary fix for master-detail separator dimming
+        }
+        
         let inputHeight = layout.inputHeight ?? 0.0
-        transition.updateFrame(node: self.inputDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - inputHeight), size: CGSize(width: layout.size.width, height: inputHeight)))
+        transition.updateFrame(node: self.sideDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: max(0.0, horizontalOffset), height: max(0.0, layout.size.height - inputHeight))))
+        transition.updateFrame(node: self.sideInputDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - inputHeight), size: CGSize(width: max(0.0, horizontalOrigin), height: max(0.0, inputHeight))))
+        transition.updateFrame(node: self.inputDimNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: layout.size.height - inputHeight), size: CGSize(width: layout.size.width, height: inputHeight)))
         
         height += layout.safeInsets.bottom
         
+        let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 7.0 * 2.0)
+        
         var itemsHeight: CGFloat = 0.0
         for actionNode in self.actionNodes {
-            actionNode.frame = CGRect(origin: CGPoint(x: 0.0, y: itemsHeight), size: CGSize(width: layout.size.width - 14.0 * 2.0, height: 57.0))
+            actionNode.frame = CGRect(origin: CGPoint(x: 0.0, y: itemsHeight), size: CGSize(width: containerWidth, height: 57.0))
             actionNode.layout()
             itemsHeight += actionNode.bounds.height
         }
         
-        let containerFrame = CGRect(origin: CGPoint(x: 14.0, y: layout.size.height - height - itemsHeight), size: CGSize(width: layout.size.width - 14.0 * 2.0, height: itemsHeight))
+        let containerFrame = CGRect(origin: CGPoint(x: horizontalOrigin + floor((layout.size.width - containerWidth) / 2.0), y: layout.size.height - height - itemsHeight), size: CGSize(width: containerWidth, height: itemsHeight))
         transition.updateFrame(node: self.itemsContainerNode, frame: containerFrame)
         transition.updateFrame(node: self.itemsShadowNode, frame: containerFrame.insetBy(dx: -shadowInset, dy: -shadowInset))
         

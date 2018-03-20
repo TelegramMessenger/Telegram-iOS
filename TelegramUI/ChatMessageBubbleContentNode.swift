@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 
 enum ChatMessageBubbleContentBackgroundHiding {
-    case none
+    case never
     case emptyWallpaper
     case always
 }

@@ -361,7 +361,7 @@ final class LanguageSelectionController: ViewController {
         self.innerController = InnerLanguageSelectionController(account: account)
         self.innerNavigationController = UINavigationController(rootViewController: self.innerController)
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.innerNavigationController.navigationBar.barTintColor = self.presentationData.theme.rootController.navigationBar.backgroundColor

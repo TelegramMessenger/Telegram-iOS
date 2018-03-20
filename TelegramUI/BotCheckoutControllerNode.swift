@@ -651,6 +651,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                                 controller.delegate = strongSelf
                                 if let window = strongSelf.view.window {
                                     strongSelf.applePayController = controller
+                                    controller.popoverPresentationController?.sourceView = window
+                                    controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
                                     window.rootViewController?.present(controller, animated: true)
                                 }
                             }

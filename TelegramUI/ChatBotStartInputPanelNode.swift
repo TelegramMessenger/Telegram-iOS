@@ -86,7 +86,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.sendBotStart(presentationInterfaceState.botStartPayload)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
@@ -104,7 +104,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
         return 47.0
     }
     
-    override func minimalHeight(interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return 47.0
     }
 }

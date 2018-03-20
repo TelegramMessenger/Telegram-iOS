@@ -29,7 +29,7 @@ public class ComposeController: ViewController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -69,7 +69,7 @@ public class ComposeController: ViewController {
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
-        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.title = self.presentationData.strings.Compose_NewMessage
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }

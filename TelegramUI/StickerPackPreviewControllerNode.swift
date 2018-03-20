@@ -24,7 +24,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     private let contentTitleNode: ASTextNode
     private let contentSeparatorNode: ASDisplayNode
     
-    private var activityIndicatorView: UIActivityIndicatorView?
+    private var activityIndicator: ActivityIndicator?
     
     private var interaction: StickerPackPreviewInteraction!
     
@@ -235,7 +235,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         let sectionSpacing: CGFloat = 8.0
         let titleAreaHeight: CGFloat = 51.0
         
-        let width = min(layout.size.width, layout.size.height) - 20.0
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 10.0 + layout.safeInsets.left)
         
         let sideInset = floor((layout.size.width - width) / 2.0)
         
@@ -254,16 +254,15 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         if let stickerPack = self.stickerPack {
             switch stickerPack {
                 case .fetching, .none:
-                    if self.activityIndicatorView == nil {
-                        let activityIndicatorView = UIActivityIndicatorView(activityIndicatorStyle: .gray)
-                        self.activityIndicatorView = activityIndicatorView
-                        self.view.addSubview(activityIndicatorView)
-                        activityIndicatorView.startAnimating()
+                    if self.activityIndicator == nil {
+                        let activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(self.presentationData.theme.actionSheet.controlAccentColor, 50.0, 2.0))
+                        self.activityIndicator = activityIndicator
+                        self.addSubnode(activityIndicator)
                     }
                 case let .result(info, items, _):
-                    if let activityIndicatorView = self.activityIndicatorView {
-                        activityIndicatorView.removeFromSuperview()
-                        activityIndicatorView.stopAnimating()
+                    if let activityIndicator = self.activityIndicator {
+                        activityIndicator.removeFromSupernode()
+                        self.activityIndicator = nil
                     }
                     itemCount = items.count
                     if !self.didSetItems {
@@ -299,8 +298,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         
-        if let activityIndicatorView = activityIndicatorView {
-            transition.updateFrame(layer: activityIndicatorView.layer, frame: CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - activityIndicatorView.bounds.size.width) / 2.0), y: contentFrame.maxY - activityIndicatorView.bounds.size.height - 34.0), size: activityIndicatorView.bounds.size))
+        if let activityIndicator = self.activityIndicator {
+            let indicatorSize = activityIndicator.calculateSizeThatFits(layout.size)
+            
+            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - indicatorSize.width) / 2.0), y: contentFrame.maxY - indicatorSize.height - 20.0), size: indicatorSize))
         }
         
         transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
@@ -346,7 +347,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             let sectionSpacing: CGFloat = 8.0
             let titleAreaHeight: CGFloat = 51.0
             
-            let width = min(layout.size.width, layout.size.height) - 20.0
+            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 10.0 + layout.safeInsets.left)
             
             let sideInset = floor((layout.size.width - width) / 2.0)
             

@@ -466,7 +466,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         durationNode.defaultDuration = telegramFile.duration.flatMap(Double.init)
                         
                         if let videoNode = strongSelf.videoNode {
-                            videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
+                            videoNode.layer.allowsGroupOpacity = true
+                            videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.5, delay: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
                                 videoNode?.removeFromSupernode()
                             })
                         }
@@ -480,9 +481,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                     }
                                 }
                             }
-                        }), content: NativeVideoContent(id: .message(item.message.id, telegramFile.fileId), file: telegramFile, streamVideo: false, enableSound: false), priority: .embedded, autoplay: true)
+                        }), content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, telegramFile.fileId), file: telegramFile, streamVideo: false, enableSound: false), priority: .embedded, autoplay: true)
+                        let previousVideoNode = strongSelf.videoNode
                         strongSelf.videoNode = videoNode
-                        strongSelf.insertSubnode(videoNode, belowSubnode: strongSelf.dateAndStatusNode)
+                        strongSelf.insertSubnode(videoNode, belowSubnode: previousVideoNode ?? strongSelf.dateAndStatusNode)
                         videoNode.canAttachContent = strongSelf.shouldAcquireVideoContext
                     }
                     

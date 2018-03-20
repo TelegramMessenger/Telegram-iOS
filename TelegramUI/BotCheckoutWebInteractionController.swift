@@ -30,7 +30,7 @@ final class BotCheckoutWebInteractionController: ViewController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: (account.telegramApplicationContext.currentPresentationData.with { $0 })))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         

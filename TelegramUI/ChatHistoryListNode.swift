@@ -490,7 +490,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if apply {
                         switch chatLocation {
                             case .peer:
-                                let _ = applyMaxReadIndexInteractively(postbox: account.postbox, network: account.network, stateManager: account.stateManager, index: messageIndex).start()
+                                let _ = applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: messageIndex).start()
                             case let .group(groupId):
                                 let _ = account.postbox.modify({ modifier -> Void in
                                     modifier.applyGroupFeedInteractiveReadMaxIndex(groupId: groupId, index: messageIndex)
@@ -974,7 +974,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             } else if self.interactiveReadActionDisposable == nil {
                 if case let .peer(peerId) = self.chatLocation {
-                    self.interactiveReadActionDisposable = installInteractiveReadMessagesAction(postbox: self.account.postbox, peerId: peerId)
+                    self.interactiveReadActionDisposable = installInteractiveReadMessagesAction(postbox: self.account.postbox, stateManager: self.account.stateManager, peerId: peerId)
                 }
             }
         }

@@ -12,27 +12,20 @@ struct NetworkStatusTitle: Equatable {
     }
 }
 
-final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
+final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBarTitleTransitionNode {
     private let titleNode: ASTextNode
     private let lockView: ChatListTitleLockView
     private let activityIndicator: ActivityIndicator
     private let buttonView: HighlightTrackingButton
     
+    private var validLayout: (CGSize, CGRect)?
+    
     var title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false) {
         didSet {
             if self.title != oldValue {
                 self.titleNode.attributedText = NSAttributedString(string: title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                if self.title.activity != oldValue.activity {
-                    if self.title.activity {
-                        if self.activityIndicator.layer.superlayer == nil {
-                            self.addSubnode(self.activityIndicator)
-                        }
-                    } else {
-                        if self.activityIndicator.layer.superlayer != nil {
-                            self.activityIndicator.removeFromSupernode()
-                        }
-                    }
-                }
+                self.activityIndicator.isHidden = !self.title.activity
+
                 self.setNeedsLayout()
             }
         }
@@ -77,13 +70,14 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
         
         super.init(frame: CGRect())
         
+        self.addSubnode(self.activityIndicator)
         self.addSubview(self.buttonView)
         self.addSubnode(self.titleNode)
         self.addSubview(self.lockView)
         
         self.buttonView.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if highlighted && (strongSelf.activityIndicator.isHidden || strongSelf.activityIndicator.layer.superlayer == nil) {
+                if highlighted && !strongSelf.lockView.isHidden && strongSelf.activityIndicator.isHidden {
                     strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.lockView.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
@@ -107,12 +101,18 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        let size = self.bounds.size
+        if let (size, clearBounds) = self.validLayout {
+            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+        }
+    }
+    
+    func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, clearBounds)
         
         var indicatorPadding: CGFloat = 0.0
         let indicatorSize = self.activityIndicator.bounds.size
         
-        if self.activityIndicator.layer.superlayer != nil {
+        if !self.activityIndicator.isHidden {
             indicatorPadding = indicatorSize.width + 6.0
         }
         
@@ -127,9 +127,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
         
         self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 4.0, width: 2.0, height: 2.0)
         
-        if self.activityIndicator.layer.superlayer != nil {
-            self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 6.0, y: titleFrame.minY - 1.0), size: indicatorSize)
-        }
+        self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 6.0, y: titleFrame.minY - 1.0), size: indicatorSize)
     }
     
     func updatePasscode(isPasscodeSet: Bool, isManuallyLocked: Bool) {
@@ -162,5 +160,8 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleTransitionNode {
         return ASDisplayNode(viewBlock: {
             return view
         }, didLoad: nil)
+    }
+    
+    func animateLayoutTransition() {
     }
 }

@@ -369,6 +369,18 @@ public func settingsController(account: Account, accountManager: AccountManager)
     var changeProfilePhotoImpl: (() -> Void)?
     var openSavedMessagesImpl: (() -> Void)?
     
+    let openFaq: () -> Void = {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        var faqUrl = presentationData.strings.Settings_FAQ_URL
+        if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
+            faqUrl = "http://telegram.org/faq#general"
+        }
+        
+        if let applicationContext = account.applicationContext as? TelegramApplicationContext {
+            applicationContext.applicationBindings.openUrl(faqUrl)
+        }
+    }
+    
     let arguments = SettingsItemArguments(account: account, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
         updateState {
@@ -418,21 +430,23 @@ public func settingsController(account: Account, accountManager: AccountManager)
         let controller = LanguageSelectionController(account: account)
         presentControllerImpl?(controller, nil)
     }, openSupport: {
-        supportPeerDisposable.set((supportPeerId(account: account) |> deliverOnMainQueue).start(next: { peerId in
-            if let peerId = peerId {
-                pushControllerImpl?(ChatController(account: account, chatLocation: .peer(peerId)))
-            }
-        }))
-    }, openFaq: {
+        let supportPeer = Promise<PeerId?>()
+        supportPeer.set(supportPeerId(account: account))
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        var faqUrl = presentationData.strings.Settings_FAQ_URL
-        if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
-            faqUrl = "http://telegram.org/faq#general"
-        }
-        
-        if let applicationContext = account.applicationContext as? TelegramApplicationContext {
-            applicationContext.applicationBindings.openUrl(faqUrl)
-        }
+        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
+            TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: {
+                openFaq()
+            }),
+            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).start(next: { peerId in
+                    if let peerId = peerId {
+                        pushControllerImpl?(ChatController(account: account, chatLocation: .peer(peerId)))
+                    }
+                }))
+            })
+        ]), nil)
+    }, openFaq: {
+        openFaq()
     }, openEditing: {
         let _ = (account.postbox.modify { modifier -> (Peer?, CachedPeerData?) in
             return (modifier.getPeer(account.peerId), modifier.getPeerCachedData(peerId: account.peerId))

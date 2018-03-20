@@ -22,7 +22,7 @@ final class SecretChatKeyController: ViewController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.title = self.presentationData.strings.EncryptionKey_Title
     }

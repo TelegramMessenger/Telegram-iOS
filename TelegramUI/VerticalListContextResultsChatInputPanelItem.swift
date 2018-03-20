@@ -187,7 +187,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                     }
                 case let .internalReference(_, _, title, _, image, file, _):
                     if let image = image {
-                        imageResource = smallestImageRepresentation(image.representations)?.resource
+                        imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 200.0))?.resource
                     } else if let file = file {
                         imageResource = smallestImageRepresentation(file.previewRepresentations)?.resource
                     }

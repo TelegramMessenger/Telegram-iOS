@@ -161,13 +161,23 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     func updateHighlightedState(animated: Bool) {
-        if let item = self.item {
-            if item.content.firstMessage.stableId == item.controllerInteraction.contextHighlightedState?.messageStableId {
-                self.isHighligtedInOverlay = true
-            } else {
-                self.isHighligtedInOverlay = false
+        var isHighlightedInOverlay = false
+        if let item = self.item, let contextHighlightedState = item.controllerInteraction.contextHighlightedState {
+            switch item.content {
+                case let .message(message, _, _):
+                    if contextHighlightedState.messageStableId == message.stableId {
+                        isHighlightedInOverlay = true
+                    }
+                case let .group(messages):
+                    for (message, _, _) in messages {
+                        if contextHighlightedState.messageStableId == message.stableId {
+                            isHighlightedInOverlay = true
+                            break
+                        }
+                    }
             }
         }
+        self.isHighlightedInOverlay = isHighlightedInOverlay
     }
     
     func updateAutomaticMediaDownloadSettings() {

@@ -86,7 +86,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
                 if let strongSelf = self {
                     var text = ""
                     if let message = message {
-                        text = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
+                        (text, _) = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
                     }
                     
                     var updatedMedia: Media?

@@ -13,6 +13,7 @@ final class StickerPackPreviewController: ViewController {
     private var animatedIn = false
     
     private let account: Account
+    private var presentationData: PresentationData
     private let stickerPack: StickerPackReference
     
     private let stickerPackDisposable = MetaDisposable()
@@ -40,7 +41,9 @@ final class StickerPackPreviewController: ViewController {
         self.account = account
         self.stickerPack = stickerPack
         
-        super.init(navigationBarTheme: nil)
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
         
@@ -75,7 +78,14 @@ final class StickerPackPreviewController: ViewController {
         }
         self.displayNodeDidLoad()
         self.stickerPackDisposable.set((self.stickerPackContents.get() |> deliverOnMainQueue).start(next: { [weak self] next in
-            self?.controllerNode.updateStickerPack(next)
+            if let strongSelf = self {
+                if case .none = next {
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongSelf.dismiss()
+                } else {
+                    strongSelf.controllerNode.updateStickerPack(next)
+                }
+            }
         }))
         self.ready.set(self.controllerNode.ready.get())
     }

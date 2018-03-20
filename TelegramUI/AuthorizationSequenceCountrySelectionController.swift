@@ -358,7 +358,7 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
         self.innerNavigationController.navigationBar.isTranslucent = false
         self.innerNavigationController.navigationBar.titleTextAttributes = [NSAttributedStringKey.font: Font.semibold(17.0), NSAttributedStringKey.foregroundColor: theme.navigationBarTextColor]
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = theme.statusBarStyle
         

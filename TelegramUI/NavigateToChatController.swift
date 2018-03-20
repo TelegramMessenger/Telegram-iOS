@@ -3,7 +3,7 @@ import Display
 import TelegramCore
 import Postbox
 
-public func navigateToChatController(navigationController: NavigationController, account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, animated: Bool = true) {
+public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, animated: Bool = true) {
     var found = false
     var isFirst = true
     for controller in navigationController.viewControllers.reversed() {
@@ -24,7 +24,13 @@ public func navigateToChatController(navigationController: NavigationController,
     }
     
     if !found {
-        navigationController.pushViewController(ChatController(account: account, chatLocation: chatLocation, messageId: messageId))
+        let controller: ChatController
+        if let chatController = chatController {
+            controller = chatController
+        } else {
+            controller = ChatController(account: account, chatLocation: chatLocation, messageId: messageId, botStart: botStart)
+        }
+        navigationController.replaceAllButRootController(controller, animated: animated)
     }
 }
 

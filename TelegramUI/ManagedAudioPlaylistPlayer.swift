@@ -314,7 +314,7 @@ final class ManagedAudioPlaylistPlayer {
                                         itemPlayer = .sharedVideo(videoNode)
                                     }
                                 } else {
-                                    let player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: resource, streamable: item.streamable, video: false, preferSoftwareDecoding: false, enableSound: true)
+                                    let player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: resource, streamable: item.streamable, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
                                     itemPlayer = .player(player)
                                 }
                                 return .single((item, AudioPlaylistItemState(item: item, player: itemPlayer)))

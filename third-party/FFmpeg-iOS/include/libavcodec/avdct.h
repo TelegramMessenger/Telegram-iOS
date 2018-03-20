@@ -19,7 +19,7 @@
 #ifndef AVCODEC_AVDCT_H
 #define AVCODEC_AVDCT_H
 
-#include "../libavutilopt.h"
+#include "../libavutil/opt.h"
 
 /**
  * AVDCT context.

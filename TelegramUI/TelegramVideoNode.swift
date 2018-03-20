@@ -28,7 +28,7 @@ private final class SharedTelegramVideoContext: SharedVideoContext {
     private let playbackCompletedListeners = Bag<() -> Void>()
     
     init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resource: MediaResource) {
-        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: resource, streamable: false, video: true, preferSoftwareDecoding: false, enableSound: false)
+        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: resource, streamable: false, video: true, preferSoftwareDecoding: false, enableSound: false, fetchAutomatically: true)
         var actionAtEndImpl: (() -> Void)?
         self.player.actionAtEnd = .stop
         self.playerNode = MediaPlayerNode(backgroundThread: false)

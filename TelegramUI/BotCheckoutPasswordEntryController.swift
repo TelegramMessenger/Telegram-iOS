@@ -19,18 +19,18 @@ private final class BotCheckoutPasswordAlertActionNode: HighlightableButtonNode 
     
     let action: BotCheckoutPasswordAlertAction
     
-    init(action: BotCheckoutPasswordAlertAction) {
+    init(theme: PresentationTheme, action: BotCheckoutPasswordAlertAction) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = UIColor(rgb: 0xe0e5e6)
+        self.backgroundNode.backgroundColor = theme.actionSheet.opaqueItemHighlightedBackgroundColor
         self.backgroundNode.alpha = 0.0
         
         self.action = action
         
         super.init()
         
-        self.setTitle(action.title, with: Font.regular(17.0), with: UIColor(rgb: 0x007ee5), for: [])
-        self.setTitle(action.title, with: Font.regular(17.0), with: UIColor(rgb: 0xb3b3b3), for: [.disabled])
+        self.setTitle(action.title, with: Font.regular(17.0), with: theme.actionSheet.controlAccentColor, for: [])
+        self.setTitle(action.title, with: Font.regular(17.0), with: theme.actionSheet.disabledActionTextColor, for: [.disabled])
         
         self.highligthedChanged = { [weak self] value in
             if let strongSelf = self {
@@ -90,14 +90,14 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(account: Account, strings: PresentationStrings, cardTitle: String, period: Int32, requiresBiometrics: Bool, cancel: @escaping () -> Void, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, cardTitle: String, period: Int32, requiresBiometrics: Bool, cancel: @escaping () -> Void, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) {
         self.account = account
         self.period = period
         self.requiresBiometrics = requiresBiometrics
         self.completion = completion
         
         let titleNode = ASTextNode()
-        titleNode.attributedText = NSAttributedString(string: strings.Checkout_PasswordEntry_Title, font: Font.semibold(17.0), textColor: .black, paragraphAlignment: .center)
+        titleNode.attributedText = NSAttributedString(string: strings.Checkout_PasswordEntry_Title, font: Font.semibold(17.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
         titleNode.displaysAsynchronously = false
         titleNode.isLayerBacked = true
         titleNode.maximumNumberOfLines = 1
@@ -105,20 +105,20 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.titleNode = titleNode
         
         self.textNode = ASTextNode()
-        self.textNode.attributedText = NSAttributedString(string: strings.Checkout_PasswordEntry_Text(cardTitle).0, font: Font.regular(13.0), textColor: .black, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: strings.Checkout_PasswordEntry_Text(cardTitle).0, font: Font.regular(13.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
         self.textNode.displaysAsynchronously = false
         self.textNode.isLayerBacked = true
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
-        self.actionNodesSeparator.backgroundColor = UIColor(rgb: 0xc9cdd7)
+        self.actionNodesSeparator.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
         
-        self.cancelActionNode = BotCheckoutPasswordAlertActionNode(action: BotCheckoutPasswordAlertAction(title: strings.Common_Cancel, action: {
+        self.cancelActionNode = BotCheckoutPasswordAlertActionNode(theme: theme, action: BotCheckoutPasswordAlertAction(title: strings.Common_Cancel, action: {
             cancel()
         }))
         
         var doneImpl: (() -> Void)?
-        self.doneActionNode = BotCheckoutPasswordAlertActionNode(action: BotCheckoutPasswordAlertAction(title: strings.Checkout_PasswordEntry_Pay, action: {
+        self.doneActionNode = BotCheckoutPasswordAlertActionNode(theme: theme, action: BotCheckoutPasswordAlertAction(title: strings.Checkout_PasswordEntry_Pay, action: {
             doneImpl?()
         }))
         
@@ -129,7 +129,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
             for _ in 0 ..< self.actionNodes.count - 1 {
                 let separatorNode = ASDisplayNode()
                 separatorNode.isLayerBacked = true
-                separatorNode.backgroundColor = UIColor(rgb: 0xc9cdd7)
+                separatorNode.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
                 actionVerticalSeparators.append(separatorNode)
             }
         }
@@ -140,13 +140,13 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.textFieldNodeBackground.displayWithoutProcessing = true
         self.textFieldNodeBackground.image = generateImage(CGSize(width: 4.0, height: 4.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setStrokeColor(UIColor.black.cgColor)
+            context.setStrokeColor(theme.actionSheet.primaryTextColor.cgColor)
             context.setLineWidth(UIScreenPixel)
             context.stroke(CGRect(origin: CGPoint(), size: size))
         })?.stretchableImage(withLeftCapWidth: 2, topCapHeight: 2)
         
         self.textFieldNode = TextFieldNode()
-        self.textFieldNode.textField.textColor = .black
+        self.textFieldNode.textField.textColor = theme.actionSheet.primaryTextColor
         self.textFieldNode.textField.font = Font.regular(12.0)
         self.textFieldNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(12.0)]
         self.textFieldNode.textField.isSecureTextEntry = true
@@ -297,7 +297,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
 func botCheckoutPasswordEntryController(account: Account, strings: PresentationStrings, cartTitle: String, period: Int32, requiresBiometrics: Bool, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) -> AlertController {
     var dismissImpl: (() -> Void)?
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: BotCheckoutPasswordAlertContentNode(account: account, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
+    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: BotCheckoutPasswordAlertContentNode(account: account, theme: presentationData.theme, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
         dismissImpl?()
     }, completion: { token in
         completion(token)

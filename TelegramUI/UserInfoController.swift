@@ -433,11 +433,18 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         let formattedNumber = formatPhoneNumber(phoneNumber)
         let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formattedNumber)
         
+        var existingNumbers = Set<DeviceContactNormalizedPhoneNumber>()
+        
         var index = 0
         var found = false
         for contact in deviceContacts {
-            for number in contact.phoneNumbers {
+            inner: for number in contact.phoneNumbers {
                 var isMain = false
+                if !existingNumbers.contains(number.number.normalized) {
+                    existingNumbers.insert(number.number.normalized)
+                } else {
+                    continue inner
+                }
                 if number.number.normalized == normalizedNumber {
                     found = true
                     isMain = true

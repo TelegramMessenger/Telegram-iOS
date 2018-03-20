@@ -15,6 +15,18 @@ public extension NavigationBarTheme {
     }
 }
 
+public extension NavigationBarStrings {
+    public convenience init(presentationStrings: PresentationStrings) {
+        self.init(back: presentationStrings.Common_Back, close: presentationStrings.Common_Close)
+    }
+}
+
+public extension NavigationBarPresentationData {
+    public convenience init(presentationData: PresentationData) {
+        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
+    }
+}
+
 extension ActionSheetControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
         let actionSheet = presentationTheme.actionSheet
@@ -43,5 +55,11 @@ extension PeekControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
         let actionSheet = presentationTheme.actionSheet
         self.init(isDark: actionSheet.backgroundType == .dark, menuBackgroundColor: actionSheet.opaqueItemBackgroundColor, menuItemHighligtedColor: actionSheet.opaqueItemHighlightedBackgroundColor, menuItemSeparatorColor: actionSheet.opaqueItemSeparatorColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor)
+    }
+}
+
+public extension NavigationControllerTheme {
+    convenience init(presentationTheme: PresentationTheme) {
+        self.init(navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor, emptyDetailIcon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationTheme.chatList.messageTextColor.withAlphaComponent(0.2)))
     }
 }

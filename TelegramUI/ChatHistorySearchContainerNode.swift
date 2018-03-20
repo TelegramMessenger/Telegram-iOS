@@ -108,7 +108,13 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     private var currentEntries: [ChatHistorySearchEntry]?
     
     private let searchQuery = Promise<String?>()
+    private let searchQueryDisposable = MetaDisposable()
     private let searchDisposable = MetaDisposable()
+    
+    private let _isSearching = ValuePromise<Bool>(false, ignoreRepeated: true)
+    override var isSearching: Signal<Bool, NoError> {
+        return self._isSearching.get()
+    }
     
     private var presentationData: PresentationData
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
@@ -138,13 +144,17 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         
         let themeAndStringsPromise = self.themeAndStringsPromise
         
-        let searchItems = searchQuery.get()
-            |> mapToSignal { query -> Signal<[ChatHistorySearchEntry]?, NoError> in
+        let previousEntriesValue = Atomic<[ChatHistorySearchEntry]?>(value: nil)
+        
+        self.searchQueryDisposable.set((searchQuery.get()
+        |> deliverOnMainQueue).start(next: { [weak self] query in
+            if let strongSelf = self {
+                let signal: Signal<[ChatHistorySearchEntry]?, NoError>
                 if let query = query, !query.isEmpty {
                     let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: account, location: .peer(peerId: peerId, fromId: nil, tags: tagMask), query: query)
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     
-                    return combineLatest(foundRemoteMessages, themeAndStringsPromise.get())
+                    signal = combineLatest(foundRemoteMessages, themeAndStringsPromise.get())
                         |> map { messages, themeAndStrings -> [ChatHistorySearchEntry]? in
                             if messages.isEmpty {
                                 return nil
@@ -153,25 +163,28 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
                                     return .message(message, themeAndStrings.0, themeAndStrings.1)
                                 }
                             }
-                        }
-                } else {
-                    return .single(nil)
-                }
-        }
-        
-        let previousEntriesValue = Atomic<[ChatHistorySearchEntry]?>(value: nil)
-        
-        self.searchDisposable.set((searchItems
-            |> deliverOnMainQueue).start(next: { [weak self] entries in
-                if let strongSelf = self {
-                    let previousEntries = previousEntriesValue.swap(entries)
+                    }
                     
-                    let firstTime = previousEntries == nil
-                    let transition = chatHistorySearchContainerPreparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, peerId: peerId, interaction: interfaceInteraction)
-                    strongSelf.currentEntries = entries
-                    strongSelf.enqueueTransition(transition, firstTime: firstTime)
+                    strongSelf._isSearching.set(true)
+                } else {
+                    signal = .single(nil)
+                    strongSelf._isSearching.set(false)
                 }
-            }))
+                
+                strongSelf.searchDisposable.set((signal
+                    |> deliverOnMainQueue).start(next: { entries in
+                        if let strongSelf = self {
+                            let previousEntries = previousEntriesValue.swap(entries)
+                            
+                            let firstTime = previousEntries == nil
+                            let transition = chatHistorySearchContainerPreparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, peerId: peerId, interaction: interfaceInteraction)
+                            strongSelf.currentEntries = entries
+                            strongSelf.enqueueTransition(transition, firstTime: firstTime)
+                            strongSelf._isSearching.set(false)
+                        }
+                    }))
+            }
+        }))
         
         self.listNode.beganInteractiveDragging = { [weak self] in
             self?.dismissInput?()
@@ -179,6 +192,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     }
     
     deinit {
+        self.searchQueryDisposable.dispose()
         self.searchDisposable.dispose()
     }
     

@@ -63,6 +63,7 @@ private final class MediaPlayerContext {
     private let video: Bool
     private let preferSoftwareDecoding: Bool
     private var enableSound: Bool
+    private let fetchAutomatically: Bool
     private var playAndRecord: Bool
     private var keepAudioSessionWhilePaused: Bool
     
@@ -82,7 +83,7 @@ private final class MediaPlayerContext {
     
     private var stoppedAtEnd = false
     
-    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool) {
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, fetchAutomatically: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
@@ -94,6 +95,7 @@ private final class MediaPlayerContext {
         self.video = video
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.enableSound = enableSound
+        self.fetchAutomatically = fetchAutomatically
         self.playAndRecord = playAndRecord
         self.keepAudioSessionWhilePaused = keepAudioSessionWhilePaused
         
@@ -235,7 +237,7 @@ private final class MediaPlayerContext {
             self.playerStatus.set(status)
         }
         
-        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resource: self.resource, streamable: self.streamable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding)
+        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resource: self.resource, streamable: self.streamable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically)
         let disposable = MetaDisposable()
         self.state = .seeking(frameSource: frameSource, timestamp: timestamp, disposable: disposable, action: action, enableSound: self.enableSound)
         
@@ -815,9 +817,9 @@ final class MediaPlayer {
         }
     }
     
-    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, playAndRecord: Bool = false, keepAudioSessionWhilePaused: Bool = true) {
+    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, fetchAutomatically: Bool, playAndRecord: Bool = false, keepAudioSessionWhilePaused: Bool = true) {
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound, playAndRecord: playAndRecord, keepAudioSessionWhilePaused: keepAudioSessionWhilePaused)
+            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound, fetchAutomatically: fetchAutomatically, playAndRecord: playAndRecord, keepAudioSessionWhilePaused: keepAudioSessionWhilePaused)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

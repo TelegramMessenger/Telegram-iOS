@@ -67,7 +67,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     authorName = author.displayTitle
                 }
                 if let message = message {
-                    text = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
+                    (text, _) = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
                 }
                 
                 var updatedMedia: Media?

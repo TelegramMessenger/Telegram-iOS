@@ -88,12 +88,15 @@ final class NotificationItemContainerNode: ASDisplayNode {
             if let statusBarHeight = layout.statusBarHeight, CGFloat(44.0).isLessThanOrEqualTo(statusBarHeight) {
                 contentInsets.top += 34.0
             }
-            let contentWidth = layout.size.width - contentInsets.left - contentInsets.right
+            
+            let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+            
+            let contentWidth = containerWidth - 8.0 * 2.0
             let contentHeight = contentNode.updateLayout(width: contentWidth, transition: transition)
             
-            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: contentInsets.top - 8.0), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: 8.0 + contentHeight + 20.0)))
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - containerWidth - 8.0 * 2.0) / 2.0), y: contentInsets.top - 16.0), size: CGSize(width: containerWidth + 8.0 * 2.0, height: 8.0 + contentHeight + 20.0 + 8.0)))
             
-            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: contentInsets.left, y: contentInsets.top), size: CGSize(width: contentWidth, height: contentHeight)))
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - contentWidth) / 2.0), y: contentInsets.top), size: CGSize(width: contentWidth, height: contentHeight)))
         }
     }
     

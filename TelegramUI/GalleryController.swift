@@ -71,6 +71,55 @@ private func mediaForMessage(message: Message) -> Media? {
     return nil
 }
 
+private let internalExtensions = Set<String>([
+    "txt",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx",
+    "php",
+    "cpp",
+    "h",
+    "swift",
+    "m",
+    "mm",
+    "java",
+])
+
+private let internalMimeTypes = Set<String>([
+    "application/pdf",
+    "application/postscript",
+    "application/text"
+])
+
+private var intermalMimePrefixes: [String] = [
+    "image/",
+    "text/",
+    "application/vnd.ms-",
+    "video/"
+]
+
+func internalDocumentItemSupportsMimeType(_ type: String, fileName: String?) -> Bool {
+    if let fileName = fileName {
+        let ext = (fileName as NSString).pathExtension
+        if internalExtensions.contains(ext.lowercased()) {
+            return true
+        }
+    }
+    
+    if internalMimeTypes.contains(type) {
+        return true
+    }
+    for prefix in intermalMimePrefixes {
+        if type.hasPrefix(prefix) {
+            return true
+        }
+    }
+    return false
+}
+
 func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: PresentationStrings, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}) -> GalleryItem? {
     switch entry {
         case let .MessageEntry(message, _, location, _):
@@ -79,18 +128,24 @@ func galleryItemForEntry(account: Account, theme: PresentationTheme, strings: Pr
                     return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo || file.mimeType.hasPrefix("video/") {
-                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: .message(message.id, file.fileId), file: file, streamVideo: streamVideos, loopVideo: loopVideos), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: message.text, hideControls: hideControls, playbackCompleted: playbackCompleted)
+                        return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), file: file, streamVideo: streamVideos, loopVideo: loopVideos), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: message.text, hideControls: hideControls, playbackCompleted: playbackCompleted)
                     } else {
-                        if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" && (file.size == nil || file.size! < 5 * 1024 * 1024) {
-                            return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
-                        } else {
+                        if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
+                            if file.size == nil || file.size! < 5 * 1024 * 1024 {
+                                return ChatImageGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
+                            } else {
+                                return ChatDocumentGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
+                            }
+                        } else if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName) {
                             return ChatDocumentGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
+                        } else {
+                            return ChatExternalFileGalleryItem(account: account, theme: theme, strings: strings, message: message, location: location)
                         }
                     }
                 } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = webpage.content {
                     switch websiteType(of: webpageContent) {
                         case .instagram where webpageContent.file != nil && webpageContent.image != nil && webpageContent.file!.isVideo:
-                            return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: NativeVideoContentId.message(message.id, webpage.webpageId), file: webpageContent.file!, streamVideo: true, enableSound: true), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")
+                            return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: NativeVideoContent(id: NativeVideoContentId.message(message.id, message.stableId, webpage.webpageId), file: webpageContent.file!, streamVideo: true, enableSound: true), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")
                             //return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: SystemVideoContent(url: webpageContent.embedUrl!, image: webpageContent.image!, dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")
                         /*case .twitter where webpageContent.embedUrl != nil && webpageContent.image != nil:
                             return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: SystemVideoContent(url: webpageContent.embedUrl!, image: webpageContent.image!, dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")*/
@@ -196,7 +251,7 @@ class GalleryController: ViewController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: GalleryController.darkNavigationTheme)
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
         let backItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: self, action: #selector(self.donePressed))
         self.navigationItem.leftBarButtonItem = backItem
@@ -359,12 +414,12 @@ class GalleryController: ViewController {
                 switch style {
                     case .dark:
                         strongSelf.statusBar.statusBarStyle = .White
-                        strongSelf.navigationBar?.updateTheme(GalleryController.darkNavigationTheme)
+                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)))
                         strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor.black
                         strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = true
                     case .light:
                         strongSelf.statusBar.statusBarStyle = .Black
-                        strongSelf.navigationBar?.updateTheme(GalleryController.lightNavigationTheme)
+                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)))
                         strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor(rgb: 0xbdbdc2)
                         strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = false
                 }

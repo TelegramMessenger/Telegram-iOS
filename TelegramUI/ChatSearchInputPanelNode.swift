@@ -87,7 +87,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.toggleMembersSearch(true)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             let themeUpdated = self.presentationInterfaceState?.theme !== interfaceState.theme
             
@@ -153,7 +153,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         return panelHeight
     }
     
-    override func minimalHeight(interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return 47.0
     }
 }

@@ -372,7 +372,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                 }
                                 
                                 if replaceVideoNode, let updatedVideoFile = updateVideoFile {
-                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: 17.0, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, updatedVideoFile.fileId), file: updatedVideoFile, enableSound: false), priority: .embedded)
+                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: 17.0, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), file: updatedVideoFile, enableSound: false, fetchAutomatically: false), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode
@@ -534,6 +534,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                                         strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photo: image).start())
                                     } else if let image = media as? TelegramMediaWebFile {
                                         strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: account, image: image).start())
+                                    } else if let file = media as? TelegramMediaFile {
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, messageId: message.id, file: file).start())
                                     }
                                 }
                             }

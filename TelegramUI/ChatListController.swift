@@ -39,7 +39,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.titleView = NetworkStatusTitleView(theme: self.presentationData.theme)
         
-        super.init(account: account, navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .summary)
+        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .summary)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -170,7 +170,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.titleView.theme = self.presentationData.theme
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
-        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
         if self.isNodeLoaded {
             self.chatListDisplayNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat)
@@ -246,15 +246,19 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)))
-                strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId))
+                    strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                }
             }
         }
         
         self.chatListDisplayNode.chatListNode.groupSelected = { [weak self] groupId in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .group(groupId)))
-                strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .group(groupId))
+                    strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                }
             }
         }
         
@@ -268,7 +272,10 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             if let strongSelf = self {
                 strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(messageId.peerId), messageId: messageId))
+                        if let navigationController = strongSelf.navigationController as? NavigationController {
+                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(messageId.peerId), messageId: messageId)
+                            strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                        }
                     }
                 }))
             }
@@ -286,7 +293,10 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf {
                         strongSelf.dismissSearchOnDisappear = true
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peer.id)))
+                        if let navigationController = strongSelf.navigationController as? NavigationController {
+                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peer.id))
+                            strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                        }
                     }
                 }))
             }
@@ -340,12 +350,22 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             self.dismissSearchOnDisappear = false
             self.deactivateSearch(animated: false)
         }
+        
+        self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+    }
+    
+    override public func navigationStackConfigurationUpdated(next: [ViewController]) {
+        super.navigationStackConfigurationUpdated(next: next)
+        
+        let chatLocation = (next.first as? ChatController)?.chatLocation
+        
+        self.chatListDisplayNode.chatListNode.updateSelectedChatLocation(chatLocation, progress: 1.0, transition: .immediate)
     }
     
     @objc func editPressed() {
@@ -390,7 +410,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     }
     
     @objc func composePressed() {
-        (self.navigationController as? NavigationController)?.pushViewController(ComposeController(account: self.account))
+        (self.navigationController as? NavigationController)?.replaceAllButRootController(ComposeController(account: self.account), animated: true)
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
@@ -487,8 +507,11 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             if let chatController = viewControllerToCommit as? ChatController {
                 chatController.canReadHistory.set(true)
                 chatController.updatePresentationMode(.standard(previewing: false))
+                if let navigationController = self.navigationController as? NavigationController {
+                    navigateToChatController(navigationController: navigationController, chatController: chatController, account: self.account, chatLocation: chatController.chatLocation)
+                    self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                }
             }
-            (self.navigationController as? NavigationController)?.pushViewController(viewControllerToCommit, animated: false)
         }
     }
 }

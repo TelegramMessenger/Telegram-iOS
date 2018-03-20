@@ -72,6 +72,7 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     private let streamable: Bool
     private let video: Bool
     private let preferSoftwareDecoding: Bool
+    private let fetchAutomatically: Bool
     
     private let taskQueue: ThreadTaskQueue
     private let thread: Thread
@@ -90,13 +91,14 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
    
-    init(queue: Queue, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool) {
+    init(queue: Queue, postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool) {
         self.queue = queue
         self.postbox = postbox
         self.resource = resource
         self.streamable = streamable
         self.video = video
         self.preferSoftwareDecoding = preferSoftwareDecoding
+        self.fetchAutomatically = fetchAutomatically
         
         self.taskQueue = ThreadTaskQueue()
         
@@ -148,9 +150,10 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         let streamable = self.streamable
         let video = self.video
         let preferSoftwareDecoding = self.preferSoftwareDecoding
+        let fetchAutomatically = self.fetchAutomatically
         
         self.performWithContext { [weak self] context in
-            context.initializeState(postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding)
+            context.initializeState(postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically)
             
             let (frames, endOfStream) = context.takeFrames(until: timestamp)
             
@@ -195,9 +198,10 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             let streamable = self.streamable
             let video = self.video
             let preferSoftwareDecoding = self.preferSoftwareDecoding
+            let fetchAutomatically = self.fetchAutomatically
             
             self.performWithContext { [weak self] context in
-                context.initializeState(postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding)
+                context.initializeState(postbox: postbox, resource: resource, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically)
                 
                 context.seek(timestamp: timestamp, completed: { streamDescriptions, timestamp in
                     queue.async {

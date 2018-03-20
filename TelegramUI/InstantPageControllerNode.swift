@@ -54,7 +54,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.timeFormat = timeFormat
         self.strings = strings
         self.settings = settings
-        self.theme = settings.flatMap { return instantPageThemeForSettingsAndTime(settings: $0, time: Date()) }
+        self.theme = settings.flatMap { return instantPageThemeForSettingsAndTime(presentationTheme: presentationTheme, settings: $0, time: Date()) }
         
         self.statusBar = statusBar
         self.getNavigationController = getNavigationController
@@ -113,7 +113,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             var updateLayout = previousSettings == nil
             
             self.settings = settings
-            let theme = instantPageThemeForSettingsAndTime(settings: settings, time: Date())
+            let theme = instantPageThemeForSettingsAndTime(presentationTheme: self.presentationTheme, settings: settings, time: Date())
             self.theme = theme
             self.strings = strings
             

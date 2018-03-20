@@ -254,7 +254,7 @@ private final class ThemeSettingsCrossfadeController: ViewController {
     init() {
         self.snapshotView = UIScreen.main.snapshotView(afterScreenUpdates: false)
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Hide
     }

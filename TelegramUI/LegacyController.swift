@@ -288,7 +288,7 @@ public class LegacyController: ViewController {
         self.presentation = presentation
         self.validLayout = initialLayout
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         if let theme = theme {
             self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style

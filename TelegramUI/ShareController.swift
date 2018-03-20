@@ -17,6 +17,7 @@ public enum ShareControllerExternalStatus {
 
 public enum ShareControllerSubject {
     case url(String)
+    case text(String)
     case messages([Message])
     case fromExternal(([PeerId], String) -> Signal<ShareControllerExternalStatus, NoError>)
 }
@@ -173,7 +174,7 @@ public final class ShareController: ViewController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         switch subject {
             case let .url(text):
@@ -181,6 +182,8 @@ public final class ShareController: ViewController {
                     UIPasteboard.general.string = text
                     self?.controllerNode.cancel?()
                 })
+            case .text:
+                break
             case let .messages(messages):
                 if messages.count == 1, let message = messages.first {
                     if saveToCameraRoll {
@@ -256,6 +259,16 @@ public final class ShareController: ViewController {
                             let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
+                    case let .text(string):
+                        for peerId in peerIds {
+                            var messages: [EnqueueMessage] = []
+                            if !text.isEmpty {
+                                messages.append(.message(text: text, attributes: [], media: nil, replyToMessageId: nil, localGroupingKey: nil))
+                            }
+                            messages.append(.message(text: string, attributes: [], media: nil, replyToMessageId: nil, localGroupingKey: nil))
+                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                        }
+                        return .complete()
                     case let .messages(messages):
                         for peerId in peerIds {
                             var messagesToEnqueue: [EnqueueMessage] = []
@@ -283,6 +296,8 @@ public final class ShareController: ViewController {
                 switch strongSelf.subject {
                     case let .url(text):
                         collectableItems.append(CollectableExternalShareItem(url: text, text: "", media: nil))
+                    case let .text(string):
+                        collectableItems.append(CollectableExternalShareItem(url: "", text: string, media: nil))
                     case let .messages(messages):
                         for message in messages {
                             var url: String?
@@ -330,13 +345,16 @@ public final class ShareController: ViewController {
                                             activityItems.append(text as NSString)
                                         case let .image(image):
                                             activityItems.append(image)
-                                        case let .file(url, fileName, mimeType):
+                                        case let .file(url, _, _):
                                             activityItems.append(url)
                                     }
                                 }
                                 let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-                                if let window = strongSelf.view.window {
-                                    window.rootViewController?.present(activityController, animated: true, completion: nil)
+                                
+                                if let window = strongSelf.view.window, let rootViewController = window.rootViewController {
+                                    activityController.popoverPresentationController?.sourceView = window
+                                    activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                                    rootViewController.present(activityController, animated: true, completion: nil)
                                 }
                             }
                             return .done

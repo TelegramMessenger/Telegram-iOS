@@ -226,6 +226,9 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.phoneNode.frame = phoneFrame
                     strongSelf.phoneNode.updateLayout(size: phoneFrame.size)
                     strongSelf.phoneNode.number = item.value
+                    
+                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
                     strongSelf.setRevealOptions([ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: nil, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)])
                 }
             })

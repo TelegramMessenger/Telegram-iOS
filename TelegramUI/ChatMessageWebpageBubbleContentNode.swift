@@ -229,7 +229,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             
             let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.account, item.message, item.read, title, subtitle, text, entities, mediaAndFlags, actionIcon, actionTitle, true, layoutConstants, constrainedSize)
             
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .none, forceFullCorners: false, forceAlignment: .none)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
             return (contentProperties, nil, initialWidth, { constrainedSize, position in
                 let (refinedWidth, finalizeLayout) = continueLayout(constrainedSize, position)

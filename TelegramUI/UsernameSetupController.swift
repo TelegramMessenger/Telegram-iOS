@@ -21,7 +21,7 @@ private enum UsernameSetupSection: Int32 {
 
 private enum UsernameSetupEntry: ItemListNodeEntry {
     case editablePublicLink(PresentationTheme, String?, String)
-    case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus)
+    case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus, String)
     case publicLinkInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -56,8 +56,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .publicLinkStatus(lhsTheme, lhsAddressName, lhsStatus):
-                if case let .publicLinkStatus(rhsTheme, rhsAddressName, rhsStatus) = rhs, lhsTheme === rhsTheme, lhsAddressName == rhsAddressName, lhsStatus == rhsStatus {
+            case let .publicLinkStatus(lhsTheme, lhsAddressName, lhsStatus, lhsText):
+                if case let .publicLinkStatus(rhsTheme, rhsAddressName, rhsStatus, rhsText) = rhs, lhsTheme === rhsTheme, lhsAddressName == rhsAddressName, lhsStatus == rhsStatus, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -78,38 +78,25 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                     
                 })
             case let .publicLinkInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .publicLinkStatus(theme, addressName, status):
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
+            case let .publicLinkStatus(theme, _, status, text):
                 var displayActivity = false
-                let text: NSAttributedString
+                let string: NSAttributedString
                 switch status {
-                    case let .invalidFormat(error):
-                        switch error {
-                        case .startsWithDigit:
-                            text = NSAttributedString(string: "Names can't start with a digit.", textColor: UIColor(rgb: 0xcf3030))
-                        case .startsWithUnderscore:
-                            text = NSAttributedString(string: "Names can't start with an underscore.", textColor: UIColor(rgb: 0xcf3030))
-                        case .endsWithUnderscore:
-                            text = NSAttributedString(string: "Names can't end with an underscore.", textColor: UIColor(rgb: 0xcf3030))
-                        case .tooShort:
-                            text = NSAttributedString(string: "Names must have at least 5 characters.", textColor: UIColor(rgb: 0xcf3030))
-                        case .invalidCharacters:
-                            text = NSAttributedString(string: "Sorry, this name is invalid.", textColor: UIColor(rgb: 0xcf3030))
-                        }
+                    case .invalidFormat:
+                        string = NSAttributedString(string: text, textColor: theme.list.freeTextSuccessColor)
                     case let .availability(availability):
                         switch availability {
-                        case .available:
-                            text = NSAttributedString(string: "\(addressName) is available.", textColor: UIColor(rgb: 0x26972c))
-                        case .invalid:
-                            text = NSAttributedString(string: "Sorry, this name is invalid.", textColor: UIColor(rgb: 0xcf3030))
-                        case .taken:
-                            text = NSAttributedString(string: "\(addressName) is already taken.", textColor: UIColor(rgb: 0xcf3030))
+                            case .available:
+                                string = NSAttributedString(string: text, textColor: theme.list.freeTextSuccessColor)
+                            case .invalid, .taken:
+                                string = NSAttributedString(string: text, textColor: theme.list.freeTextSuccessColor)
                         }
                     case .checking:
-                        text = NSAttributedString(string: "Checking name...", textColor: UIColor(rgb: 0x6d6d72))
+                        string = NSAttributedString(string: text, textColor: theme.list.freeTextColor)
                         displayActivity = true
                 }
-                return ItemListActivityTextItem(displayActivity: displayActivity, theme: theme, text: text, sectionId: self.section)
+                return ItemListActivityTextItem(displayActivity: displayActivity, theme: theme, text: string, sectionId: self.section)
         }
     }
 }
@@ -175,7 +162,30 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
         
         entries.append(.editablePublicLink(presentationData.theme, peer.addressName, currentAddressName))
         if let status = state.addressNameValidationStatus {
-            entries.append(.publicLinkStatus(presentationData.theme, currentAddressName, status))
+            let statusText: String
+            switch status {
+                case let .invalidFormat(error):
+                    switch error {
+                        case .startsWithDigit:
+                            statusText = presentationData.strings.Username_InvalidStartsWithNumber
+                        case .startsWithUnderscore, .endsWithUnderscore, .invalidCharacters:
+                            statusText = presentationData.strings.Username_InvalidCharacters
+                        case .tooShort:
+                            statusText = presentationData.strings.Username_InvalidTooShort
+                    }
+                case let .availability(availability):
+                    switch availability {
+                        case .available:
+                            statusText = presentationData.strings.Username_UsernameIsAvailable(currentAddressName).0
+                        case .invalid:
+                            statusText = presentationData.strings.Username_InvalidCharacters
+                        case .taken:
+                            statusText = presentationData.strings.Username_InvalidTaken
+                    }
+                case .checking:
+                    statusText = presentationData.strings.Username_CheckingUsername
+            }
+            entries.append(.publicLinkStatus(presentationData.theme, currentAddressName, status, statusText))
         }
         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Username_Help))
     }

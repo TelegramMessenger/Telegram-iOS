@@ -26,7 +26,7 @@ final class ChatRecentActionsController: ViewController {
         
         self.titleView = ChatRecentActionsTitleView(color: self.presentationData.theme.rootController.navigationBar.primaryTextColor)
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         

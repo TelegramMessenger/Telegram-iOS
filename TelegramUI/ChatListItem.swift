@@ -9,6 +9,15 @@ import TelegramCore
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?)
     case groupReference(groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters)
+    
+    var chatLocation: ChatLocation {
+        switch self {
+            case let .peer(_, peer, _, _, _, _, _):
+                return .peer(peer.peerId)
+            case let .groupReference(groupId, _, _, _):
+                return .group(groupId)
+        }
+    }
 }
 
 class ChatListItem: ListViewItem {
@@ -54,6 +63,7 @@ class ChatListItem: ListViewItem {
             completion(node, {
                 return (nil, {
                     apply(false)
+                    node.updateIsHighlighted(transition: .immediate)
                 })
             })
         }
@@ -209,6 +219,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams)?
     
+    private var isHighlighted: Bool = false
+    
     override var canBeSelected: Bool {
         if self.editableControlNode != nil {
             return false
@@ -331,31 +343,36 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if highlighted {
-            /*var nodes: [ASDisplayNode] = [self.titleNode, self.textNode, self.dateNode, self.statusNode]
-            for node in nodes {
-                node.backgroundColor = .clear
-                node.recursivelyEnsureDisplaySynchronously(true)
-            }*/
-            
-            self.highlightedBackgroundNode.alpha = 1.0
+        self.isHighlighted = highlighted
+        
+        self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+    }
+    
+    func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        var reallyHighlighted = self.isHighlighted
+        if let item = self.item {
+            let itemChatLocation = item.content.chatLocation
+            if itemChatLocation == item.interaction.highlightedChatLocation?.location {
+                reallyHighlighted = true
+            }
+        }
+        
+        if reallyHighlighted {
             if self.highlightedBackgroundNode.supernode == nil {
                 self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
+                self.highlightedBackgroundNode.alpha = 0.0
             }
+            self.highlightedBackgroundNode.layer.removeAllAnimations()
+            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0)
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
-                if animated {
-                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
-                        if let strongSelf = self {
-                            if completed {
-                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                            }
+                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 0.0, completion: { [weak self] completed in
+                    if let strongSelf = self {
+                        if completed {
+                            strongSelf.highlightedBackgroundNode.removeFromSupernode()
                         }
-                        })
-                    self.highlightedBackgroundNode.alpha = 0.0
-                } else {
-                    self.highlightedBackgroundNode.removeFromSupernode()
-                }
+                    }
+                })
             }
         }
     }
@@ -488,11 +505,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
                     if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                     } else {
-                        peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle
+                        peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(or: item.presentationData.strings.Peer_DeletedUser)
                     }
                 } else if case .groupReference = item.content {
                     if let messagePeer = itemPeer.chatMainPeer {
-                        peerText = messagePeer.displayTitle
+                        peerText = messagePeer.displayTitle(or: item.presentationData.strings.Peer_DeletedUser)
                     }
                 }
                 
@@ -507,7 +524,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 case .peer:
                     if peer?.id == item.account.peerId {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
-                    } else if let displayTitle = peer?.displayTitle {
+                    } else if let displayTitle = peer?.displayTitle(or: item.presentationData.strings.Peer_DeletedUser) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
                 case .groupReference:

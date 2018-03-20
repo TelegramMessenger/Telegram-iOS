@@ -55,7 +55,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         
         return { theme, strings, account, type, message, constrainedSize in
             let titleString = message.author?.displayTitle ?? ""
-            let textString = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
+            let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
             
             let titleColor: UIColor
             let lineImage: UIImage?
@@ -65,7 +65,11 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 case let .bubble(incoming):
                     titleColor = incoming ? theme.chat.bubble.incomingAccentTextColor : theme.chat.bubble.outgoingAccentTextColor
                     lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(theme)
-                    textColor = incoming ? theme.chat.bubble.incomingPrimaryTextColor : theme.chat.bubble.outgoingPrimaryTextColor
+                    if isMedia {
+                        textColor = incoming ? theme.chat.bubble.incomingSecondaryTextColor : theme.chat.bubble.outgoingSecondaryTextColor
+                    } else {
+                        textColor = incoming ? theme.chat.bubble.incomingPrimaryTextColor : theme.chat.bubble.outgoingPrimaryTextColor
+                    }
                 case .standalone:
                     titleColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
                     lineImage = PresentationResourcesChat.chatServiceVerticalLineImage(theme)

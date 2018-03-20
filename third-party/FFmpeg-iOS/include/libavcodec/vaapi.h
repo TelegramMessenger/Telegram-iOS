@@ -31,8 +31,10 @@
  */
 
 #include <stdint.h>
-#include "../libavutilattributes.h"
+#include "../libavutil/attributes.h"
 #include "version.h"
+
+#if FF_API_STRUCT_VAAPI_CONTEXT
 
 /**
  * @defgroup lavc_codec_hwaccel_vaapi VA API Decoding
@@ -48,8 +50,10 @@
  * during initialization or through each AVCodecContext.get_buffer()
  * function call. In any case, they must be valid prior to calling
  * decoding functions.
+ *
+ * Deprecated: use AVCodecContext.hw_frames_ctx instead.
  */
-struct vaapi_context {
+struct attribute_deprecated vaapi_context {
     /**
      * Window system dependent data
      *
@@ -185,5 +189,7 @@ struct vaapi_context {
 };
 
 /* @} */
+
+#endif /* FF_API_STRUCT_VAAPI_CONTEXT */
 
 #endif /* AVCODEC_VAAPI_H */

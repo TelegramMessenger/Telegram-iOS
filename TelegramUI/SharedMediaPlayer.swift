@@ -424,13 +424,13 @@ final class SharedMediaPlayer {
                             case .voice, .music:
                                 switch playbackData.source {
                                     case let .telegramFile(file):
-                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.postbox, resource: file.resource, streamable: playbackData.type == .music, video: false, preferSoftwareDecoding: false, enableSound: true, playAndRecord: controlPlaybackWithProximity))
+                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.postbox, resource: file.resource, streamable: playbackData.type == .music, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
                                 }
                             case .instantVideo:
                                 if let mediaManager = strongSelf.mediaManager, let item = item as? MessageMediaPlaylistItem {
                                     switch playbackData.source {
                                         case let .telegramFile(file):
-                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, file.fileId), file: file, streamVideo: false, enableSound: false), close: { [weak mediaManager] in
+                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, file.fileId), file: file, streamVideo: false, enableSound: false), close: { [weak mediaManager] in
                                                 mediaManager?.setPlaylist(nil, type: .voice)
                                             })
                                             strongSelf.playbackItem = .instantVideo(videoNode)

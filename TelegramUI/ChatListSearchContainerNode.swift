@@ -372,6 +372,11 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private var stateValue = ChatListSearchContainerNodeState()
     private let statePromise: ValuePromise<ChatListSearchContainerNodeState>
     
+    private let _isSearching = ValuePromise<Bool>(false, ignoreRepeated: true)
+    override var isSearching: Signal<Bool, NoError> {
+        return self._isSearching.get()
+    }
+    
     init(account: Account, onlyWriteable: Bool, groupId: PeerGroupId?, openPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void) {
         self.account = account
         self.openMessage = openMessage
@@ -395,16 +400,16 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     
         let presentationDataPromise = self.presentationDataPromise
         let foundItems = searchQuery.get()
-            |> mapToSignal { query -> Signal<[ChatListSearchEntry]?, NoError> in
+            |> mapToSignal { query -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
                 if let query = query, !query.isEmpty {
                     let accountPeer = account.postbox.loadedPeerWithId(account.peerId) |> take(1)
                     let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: groupId)
-                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError>
+                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError>
                     if groupId == nil {
-                        foundRemotePeers = .single(([], [])) |> then(searchPeers(account: account, query: query)
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                        foundRemotePeers = (.single(([], [], true)) |> then(searchPeers(account: account, query: query) |> map { ($0.0, $0.1, false) }
+                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())))
                     } else {
-                        foundRemotePeers = .single(([], []))
+                        foundRemotePeers = .single(([], [], false))
                     }
                     let location: SearchMessagesLocation
                     if let groupId = groupId {
@@ -412,12 +417,14 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     } else {
                         location = .general
                     }
-                    let foundRemoteMessages: Signal<[Message], NoError> = .single([]) |> then(searchMessages(account: account, location: location, query: query)
+                    let foundRemoteMessages: Signal<([Message], Bool), NoError> = .single(([], true)) |> then(searchMessages(account: account, location: location, query: query)
+                        |> map { ($0, false) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                     
                     return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get())
-                        |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData -> [ChatListSearchEntry]? in
+                        |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData -> ([ChatListSearchEntry], Bool)? in
                             var entries: [ChatListSearchEntry] = []
+                            let isSearching = foundRemotePeers.2 || foundRemoteMessages.1
                             var index = 0
                             
                             var existingPeerIds = Set<PeerId>()
@@ -462,12 +469,12 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             }
                             
                             index = 0
-                            for message in foundRemoteMessages {
+                            for message in foundRemoteMessages.0 {
                                 entries.append(.message(message, presentationData))
                                 index += 1
                             }
                             
-                            return entries
+                            return (entries, isSearching)
                         }
                 } else {
                     return .single(nil)
@@ -553,12 +560,14 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }))
         
         self.searchDisposable.set((foundItems
-            |> deliverOnMainQueue).start(next: { [weak self] entries in
+            |> deliverOnMainQueue).start(next: { [weak self] entriesAndFlags in
                 if let strongSelf = self {
-                    let previousEntries = previousSearchItems.swap(entries)
+                    strongSelf._isSearching.set(entriesAndFlags?.1 ?? false)
+                    
+                    let previousEntries = previousSearchItems.swap(entriesAndFlags?.0)
                     
                     let firstTime = previousEntries == nil
-                    let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries ?? [], displayingResults: entries != nil, account: account, enableHeaders: true, onlyWriteable: onlyWriteable, interaction: interaction)
+                    let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndFlags?.0 ?? [], displayingResults: entriesAndFlags?.0 != nil, account: account, enableHeaders: true, onlyWriteable: onlyWriteable, interaction: interaction)
                     strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 }
             }))

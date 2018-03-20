@@ -13,6 +13,7 @@ private enum ChatMessageGalleryControllerData {
     case map(TelegramMediaMap)
     case stickerPack(StickerPackReference)
     case audio(TelegramMediaFile)
+    case document(TelegramMediaFile)
     case gallery(GalleryController)
     case secretGallery(SecretMediaPreviewController)
     case other(Media)
@@ -87,6 +88,22 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
         } else if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "application/vnd.apple.pkpass" || (file.fileName != nil && file.fileName!.lowercased().hasSuffix(".pkpass")) {
             return .pass(file)
         } else {
+            if let file = galleryMedia as? TelegramMediaFile {
+                if file.mimeType.hasPrefix("audio/") {
+                    return .audio(file)
+                }
+                if let fileName = file.fileName {
+                    let ext = (fileName as NSString).pathExtension.lowercased()
+                    if ext == "wav" || ext == "opus" {
+                        return .audio(file)
+                    }
+                }
+                
+                if !file.isVideo, !internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName) {
+                    return .document(file)
+                }
+            }
+            
             if message.containsSecretMedia {
                 let gallery = SecretMediaPreviewController(account: account, messageId: message.id)
                 return .secretGallery(gallery)
@@ -143,6 +160,8 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                             if error == nil {
                                 let controller = PKAddPassesViewController(pass: pass)
                                 if let window = navigationController.view.window {
+                                    controller.popoverPresentationController?.sourceView = window
+                                    controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
                                     window.rootViewController?.present(controller, animated: true)
                                 }
                             }
@@ -180,6 +199,9 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 controller.sendSticker = sendSticker
                 dismissInput()
                 present(controller, nil)
+                return true
+            case .document:
+                present(ShareController(account: account, subject: .messages([message]), saveToCameraRoll: false, showInChat: nil, externalShare: true, immediateExternalShare: true), nil)
                 return true
             case let .audio(file):
                 let location: PeerMessagesPlaylistLocation

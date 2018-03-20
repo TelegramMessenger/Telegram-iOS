@@ -153,42 +153,42 @@ func messageContentKind(_ message: Message, strings: PresentationStrings, accoun
     return .text(message.text)
 }
  
-func descriptionStringForMessage(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> String {
+func descriptionStringForMessage(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> (String, Bool) {
     if !message.text.isEmpty {
-        return message.text
+        return (message.text, false)
     }
     switch messageContentKind(message, strings: strings, accountPeerId: accountPeerId) {
         case let .text(text):
-            return text
+            return (text, false)
         case .image:
-            return strings.Message_Photo
+            return (strings.Message_Photo, true)
         case .video:
-            return strings.Message_Video
+            return (strings.Message_Video, true)
         case .videoMessage:
-            return strings.Message_VideoMessage
+            return (strings.Message_VideoMessage, true)
         case .audioMessage:
-            return strings.Message_Audio
+            return (strings.Message_Audio, true)
         case let .sticker(text):
             if text.isEmpty {
-                return strings.Message_Sticker
+                return (strings.Message_Sticker, true)
             } else {
-                return "\(text) \(strings.Message_Sticker)"
+                return ("\(text) \(strings.Message_Sticker)", true)
             }
         case .animation:
-            return strings.Message_Animation
+            return (strings.Message_Animation, true)
         case let .file(text):
             if text.isEmpty {
-                return strings.Message_File
+                return (strings.Message_File, true)
             } else {
-                return text
+                return (text, true)
             }
         case .contact:
-            return strings.Message_Contact
+            return (strings.Message_Contact, true)
         case let .game(text):
-            return text
+            return (text, true)
         case .location:
-            return strings.Message_Location
+            return (strings.Message_Location, true)
         case .liveLocation:
-            return strings.Message_LiveLocation
+            return (strings.Message_LiveLocation, true)
     }
 }

@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import TelegramCore
 
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
@@ -166,17 +167,31 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                 case let .voice(author, peer):
                     let titleText: String = author?.displayTitle ?? ""
                     let subtitleText: String
-                    if author?.id == peer?.id {
-                        subtitleText = self.strings.MusicPlayer_VoiceNote
+                    if let peer = peer {
+                        if peer is TelegramGroup || peer is TelegramChannel {
+                            subtitleText = peer.displayTitle
+                        } else {
+                            subtitleText = self.strings.MusicPlayer_VoiceNote
+                        }
                     } else {
-                        subtitleText = peer?.displayTitle ?? ""
+                        subtitleText = self.strings.MusicPlayer_VoiceNote
                     }
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                 case let .instantVideo(author, peer):
                     let titleText: String = author?.displayTitle ?? ""
-                    let subtitleText: String = peer?.displayTitle ?? ""
+                    let subtitleText: String
+                    
+                    if let peer = peer {
+                        if peer is TelegramGroup || peer is TelegramChannel {
+                            subtitleText = peer.displayTitle
+                        } else {
+                            subtitleText = self.strings.MusicPlayer_VoiceNote
+                        }
+                    } else {
+                        subtitleText = self.strings.MusicPlayer_VoiceNote
+                    }
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)

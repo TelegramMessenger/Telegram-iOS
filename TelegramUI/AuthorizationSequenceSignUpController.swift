@@ -31,7 +31,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         self.strings = strings
         self.theme = theme
         
-        super.init(navigationBarTheme: AuthorizationSequenceController.navigationBarTheme(theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(self.nextPressed))
     }

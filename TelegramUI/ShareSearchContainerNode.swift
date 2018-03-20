@@ -468,7 +468,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             let gridSize = CGSize(width: size.width, height: size.height - 5.0)
             self.recentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: gridSize, insets: UIEdgeInsets(top: gridTopInset, left: 6.0, bottom: bottomInset, right: 6.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth + 25.0), lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
             
-            transition.animatePositionAdditive(node: self.recentGridNode, offset: offset)
+            transition.animatePositionAdditive(node: self.recentGridNode, offset: CGPoint(x: 0.0, y: offset))
         }
     }
     
@@ -481,7 +481,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             let gridSize = CGSize(width: size.width, height: size.height - 5.0)
             self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: gridSize, insets: UIEdgeInsets(top: gridTopInset, left: 6.0, bottom: bottomInset, right: 6.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth + 25.0), lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
             
-            transition.animatePositionAdditive(node: self.contentGridNode, offset: -offset)
+            transition.animatePositionAdditive(node: self.contentGridNode, offset: CGPoint(x: 0.0, y: -offset))
         }
     }
     

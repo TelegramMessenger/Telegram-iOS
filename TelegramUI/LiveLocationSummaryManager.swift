@@ -6,21 +6,21 @@ import SwiftSignalKit
 private final class LiveLocationSummaryContext {
     private let queue: Queue
     private let postbox: Postbox
-    private var subscribers = Bag<([Peer]) -> Void>()
+    private var subscribers = Bag<([MessageId: Message]) -> Void>()
     
-    var peerIds = Set<PeerId>() {
+    var messageIds = Set<MessageId>() {
         didSet {
             assert(self.queue.isCurrent())
             
-            if self.peerIds != oldValue {
-                if self.peerIds.isEmpty {
+            if self.messageIds != oldValue {
+                if self.messageIds.isEmpty {
                     self.disposable.set(nil)
-                    self.peers = []
+                    self.messages = [:]
                 } else {
-                    self.disposable.set((self.postbox.multiplePeersView(Array(self.peerIds)) |> deliverOn(self.queue)).start(next: { [weak self] view in
+                    let key = PostboxViewKey.messages(self.messageIds)
+                    self.disposable.set((self.postbox.combinedView(keys: [key]) |> deliverOn(self.queue)).start(next: { [weak self] view in
                         if let strongSelf = self {
-                            let peers: [Peer] = Array(view.peers.values)
-                            strongSelf.peers = peers
+                            strongSelf.messages = (view.views[key] as? MessagesView)?.messages ?? [:]
                         }
                     }))
                 }
@@ -28,12 +28,12 @@ private final class LiveLocationSummaryContext {
         }
     }
     
-    private var peers: [Peer] = [] {
+    private var messages: [MessageId: Message] = [:] {
         didSet {
             assert(self.queue.isCurrent())
             
             for f in self.subscribers.copyItems() {
-                f(self.peers)
+                f(self.messages)
             }
         }
     }
@@ -49,7 +49,7 @@ private final class LiveLocationSummaryContext {
         self.disposable.dispose()
     }
     
-    func subscribe() -> Signal<[Peer], NoError> {
+    func subscribe() -> Signal<[MessageId: Message], NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -59,7 +59,7 @@ private final class LiveLocationSummaryContext {
                         subscriber.putNext(next)
                     })
                     
-                    subscriber.putNext(strongSelf.peers)
+                    subscriber.putNext(strongSelf.messages)
                     
                     disposable.set(ActionDisposable { [weak self] in
                         queue.async {
@@ -210,10 +210,10 @@ final class LiveLocationSummaryManager {
             context.isActive = peerIds.contains(peerId)
         }
         
-        self.globalContext.peerIds = peerIds
+        self.globalContext.messageIds = messageIds
     }
     
-    func broadcastingToPeers() -> Signal<[Peer], NoError> {
+    func broadcastingToMessages() -> Signal<[MessageId: Message], NoError> {
         return self.globalContext.subscribe()
     }
     

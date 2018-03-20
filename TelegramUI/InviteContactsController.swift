@@ -28,7 +28,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -68,7 +68,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
-        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.title = self.presentationData.strings.Contacts_InviteFriends
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
@@ -89,30 +89,42 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         
         self.contactsNode.requestShareTelegram = { [weak self] in
             if let strongSelf = self {
-                let shareController = ShareController(account: strongSelf.account, subject: .url("https://telegram.org/dl"), externalShare: true, immediateExternalShare: true)
+                let url = strongSelf.presentationData.strings.InviteText_URL
+                var body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
+                
+                let shareController = ShareController(account: strongSelf.account, subject: .text(body), externalShare: true, immediateExternalShare: true)
                 strongSelf.present(shareController, in: .window(.root))
             }
         }
         
         self.contactsNode.requestShare = { [weak self] numbers in
-            if let strongSelf = self, MFMessageComposeViewController.canSendText() {
-                let composer = MFMessageComposeViewController()
-                composer.messageComposeDelegate = strongSelf
-                let recipients: [String] = Array(numbers.map {
-                    return $0.0.phoneNumbers.map { $0.number.plain }
-                }.joined())
-                composer.recipients = Array(Set(recipients))
-                let url = strongSelf.presentationData.strings.InviteText_URL
-                var body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
-                if numbers.count == 1, numbers[0].1 > 0 {
-                    body = strongSelf.presentationData.strings.InviteText_ContactsCount(numbers[0].1)
-                    body = body.replacingOccurrences(of: "(null)", with: url)
+            let recipients: [String] = Array(numbers.map {
+                return $0.0.phoneNumbers.map { $0.number.plain }
+            }.joined())
+            
+            let f: () -> Void = {
+                if let strongSelf = self, MFMessageComposeViewController.canSendText() {
+                    let composer = MFMessageComposeViewController()
+                    composer.messageComposeDelegate = strongSelf
+                    composer.recipients = Array(Set(recipients))
+                    let url = strongSelf.presentationData.strings.InviteText_URL
+                    var body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
+                    if numbers.count == 1, numbers[0].1 > 0 {
+                        body = strongSelf.presentationData.strings.InviteText_ContactsCount(numbers[0].1)
+                        body = body.replacingOccurrences(of: "(null)", with: url)
+                    }
+                    composer.body = body
+                    strongSelf.composer = composer
+                    if let window = strongSelf.view.window {
+                        window.rootViewController?.present(composer, animated: true)
+                    }
                 }
-                composer.body = body
-                strongSelf.composer = composer
-                if let window = strongSelf.view.window {
-                    window.rootViewController?.present(composer, animated: true)
-                }
+            }
+            
+            if recipients.count < 100 {
+                f()
+            } else if let strongSelf = self {
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Invite_LargeRecipientsCountWarning, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: f)]), in: .window(.root))
             }
         }
         

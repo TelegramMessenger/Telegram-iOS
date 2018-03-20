@@ -51,7 +51,7 @@ final class ChatFeedNavigationInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.navigateFeed()
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
         }
@@ -65,7 +65,7 @@ final class ChatFeedNavigationInputPanelNode: ChatInputPanelNode {
         return 47.0
     }
     
-    override func minimalHeight(interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return 47.0
     }
 }

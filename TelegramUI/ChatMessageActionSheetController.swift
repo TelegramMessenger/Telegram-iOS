@@ -16,7 +16,7 @@ final class ChatMessageActionSheetController: ViewController {
         self.actions = actions
         self.dismissed = dismissed
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
     }
     
     required init(coder aDecoder: NSCoder) {

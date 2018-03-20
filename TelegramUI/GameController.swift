@@ -25,7 +25,7 @@ final class GameController: ViewController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         

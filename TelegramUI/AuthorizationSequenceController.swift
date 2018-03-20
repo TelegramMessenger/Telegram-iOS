@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import MtProtoKitDynamic
 import MessageUI
+import CoreTelephony
 
 public final class AuthorizationSequenceController: NavigationController {
     static func navigationBarTheme(_ theme: AuthorizationTheme) -> NavigationBarTheme {
@@ -28,7 +29,7 @@ public final class AuthorizationSequenceController: NavigationController {
         self.strings = strings
         self.theme = defaultAuthorizationTheme
         
-        super.init(nibName: nil, bundle: nil)
+        super.init(mode: .single, theme: NavigationControllerTheme(navigationBar: AuthorizationSequenceController.navigationBarTheme(theme), emptyAreaColor: .black, emptyDetailIcon: nil))
         
         self.stateDisposable = (account.postbox.stateView() |> deliverOnMainQueue).start(next: { [weak self] view in
             self?.updateState(state: view.state ?? UnauthorizedAccountState(masterDatacenterId: account.masterDatacenterId, contents: .empty))
@@ -60,8 +61,30 @@ public final class AuthorizationSequenceController: NavigationController {
             controller.nextPressed = { [weak self] in
                 if let strongSelf = self {
                     let masterDatacenterId = strongSelf.account.masterDatacenterId
+                    
+                    var countryId: String? = nil
+                    let networkInfo = CTTelephonyNetworkInfo()
+                    if let carrier = networkInfo.subscriberCellularProvider {
+                        countryId = carrier.isoCountryCode
+                    }
+                    
+                    if countryId == nil {
+                        countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
+                    }
+                    
+                    var countryCode: Int32 = 1
+                    
+                    if let countryId = countryId {
+                        for (code, idAndName) in countryCodeToIdAndName {
+                            if idAndName.0 == countryId {
+                                countryCode = Int32(code)
+                                break
+                            }
+                        }
+                    }
+                    
                     let _ = (strongSelf.account.postbox.modify { modifier -> Void in
-                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: 1, number: "")))
+                        modifier.setState(UnauthorizedAccountState(masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
                     }).start()
                 }
             }

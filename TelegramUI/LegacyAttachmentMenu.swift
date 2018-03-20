@@ -14,7 +14,6 @@ func legacyAttachmentMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, 
     
     var itemViews: [Any] = []
     let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping)!
-    //carouselItem.defaultStatusBarStyle = theme.rootController.statusBar.style.style.systemStyle
     carouselItem.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
     carouselItem.recipientName = peer.displayTitle
     carouselItem.cameraPressed = { [weak controller] cameraView in
@@ -22,7 +21,7 @@ func legacyAttachmentMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, 
             openCamera(cameraView, controller)
         }
     }
-    if peer is TelegramUser || peer is TelegramSecretChat {
+    if (peer is TelegramUser || peer is TelegramSecretChat) && peer.id != account.peerId {
         carouselItem.hasTimer = true
     }
     carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles in
@@ -95,7 +94,7 @@ func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allow
     let baseController = TGViewController(context: legacyController.context)!
     legacyController.bind(controller: baseController)
     var hasTimer = false
-    if peer is TelegramUser || peer is TelegramSecretChat {
+    if (peer is TelegramUser || peer is TelegramSecretChat) && peer.id != account.peerId {
         hasTimer = true
     }
     let recipientName = peer.displayTitle

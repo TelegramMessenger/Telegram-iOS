@@ -72,39 +72,41 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     var fetchedCount: Int32 = 0
     
-    let resourceSize: Int = resource.size ?? 0
-    
-    let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
     var fetchedData: Data?
     
     if streamable {
         let data: Signal<Data, NoError>
+        let resourceSize: Int = resource.size ?? Int(Int32.max - 1)
+        let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
         data = postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
         let semaphore = DispatchSemaphore(value: 0)
         if readCount == 0 {
             fetchedData = Data()
         } else {
-            let _ = data.start(next: { data in
+            let disposable = data.start(next: { data in
                 if data.count == readCount {
                     fetchedData = data
                     semaphore.signal()
                 }
             })
             semaphore.wait()
+            disposable.dispose()
         }
     } else {
         let data = postbox.mediaBox.resourceData(resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
-        let range = context.readingOffset ..< (context.readingOffset + readCount)
         let semaphore = DispatchSemaphore(value: 0)
-        let _ = data.start(next: { next in
+        let disposable = data.start(next: { next in
             if next.complete {
+                let readCount = max(0, min(next.size - context.readingOffset, Int(bufferSize)))
+                let range = context.readingOffset ..< (context.readingOffset + readCount)
+                
                 let fd = open(next.path, O_RDONLY, S_IRUSR)
                 if fd >= 0 {
                     lseek(fd, off_t(range.lowerBound), SEEK_SET)
                     var data = Data(count: readCount)
                     data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                         let readBytes = read(fd, bytes, readCount)
-                        assert(readBytes == readCount)
+                        assert(readBytes <= readCount)
                     }
                     fetchedData = data
                     close(fd)
@@ -113,6 +115,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
             }
         })
         semaphore.wait()
+        disposable.dispose()
     }
     if let fetchedData = fetchedData {
         fetchedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
@@ -133,10 +136,30 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
     
     var result: Int64 = offset
     
-    let resourceSize: Int = resource.size ?? 0
+    let resourceSize: Int
+    if let size = resource.size {
+        resourceSize = size
+    } else {
+        if !streamable {
+            var resultSize: Int = Int(Int32.max - 1)
+            let data = postbox.mediaBox.resourceData(resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
+            let semaphore = DispatchSemaphore(value: 0)
+            let disposable = data.start(next: { next in
+                if next.complete {
+                    resultSize = Int(next.size)
+                    semaphore.signal()
+                }
+            })
+            semaphore.wait()
+            disposable.dispose()
+            resourceSize = resultSize
+        } else {
+            resourceSize = Int(Int32.max - 1)
+        }
+    }
     
     if (whence & AVSEEK_SIZE) != 0 {
-        result = Int64(resourceSize)
+        result = Int64(resourceSize == Int(Int32.max - 1) ? -1 : resourceSize)
     } else {
         context.readingOffset = Int(min(Int64(resourceSize), offset))
         
@@ -149,7 +172,7 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
             } else {
                 if streamable {
                     context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, in: context.readingOffset ..< resourceSize, tag: fetchTag).start())
-                } else if !context.requestedCompleteFetch {
+                } else if !context.requestedCompleteFetch && context.fetchAutomatically {
                     context.requestedCompleteFetch = true
                     context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResource(resource, tag: fetchTag).start())
                 }
@@ -183,6 +206,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     private var packetQueue: [FFMpegPacket] = []
     
     private var preferSoftwareDecoding: Bool = false
+    fileprivate var fetchAutomatically: Bool = true
     
     init(thread: Thread) {
         self.thread = thread
@@ -194,7 +218,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         fetchedDataDisposable.dispose()
     }
     
-    func initializeState(postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool) {
+    func initializeState(postbox: Postbox, resource: MediaResource, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool) {
         if self.readingError || self.initializedState != nil {
             return
         }
@@ -205,17 +229,18 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.resource = resource
         self.streamable = streamable
         self.preferSoftwareDecoding = preferSoftwareDecoding
+        self.fetchAutomatically = fetchAutomatically
         if video {
             self.fetchTag = TelegramMediaResourceFetchTag(statsCategory: .video)
         } else {
             self.fetchTag = TelegramMediaResourceFetchTag(statsCategory: .audio)
         }
         
-        let resourceSize: Int = resource.size ?? 0
+        let resourceSize: Int = resource.size ?? Int(Int32.max - 1)
         
         if streamable {
             self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, in: 0 ..< resourceSize, tag: self.fetchTag).start())
-        } else if !self.requestedCompleteFetch {
+        } else if !self.requestedCompleteFetch && self.fetchAutomatically {
             self.requestedCompleteFetch = true
             self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResource(resource, tag: self.fetchTag).start())
         }
@@ -287,7 +312,27 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                         }
                     }
                 } else if codecPar.pointee.codec_id == AV_CODEC_ID_H264 {
-                    if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromCodecData(UInt32(kCMVideoCodecType_H264), codecPar.pointee.width, codecPar.pointee.height, codecPar.pointee.extradata, codecPar.pointee.extradata_size, 0x43637661) {
+                    if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromAVCCodecData(UInt32(kCMVideoCodecType_H264), codecPar.pointee.width, codecPar.pointee.height, codecPar.pointee.extradata, codecPar.pointee.extradata_size) {
+                        let (fps, timebase) = FFMpegMediaFrameSourceContextHelpers.streamFpsAndTimeBase(stream: avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!, defaultTimeBase: CMTimeMake(1, 1000))
+                        
+                        let duration = CMTimeMake(avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!.pointee.duration, timebase.timescale)
+                        
+                        var rotationAngle: Double = 0.0
+                        if let rotationInfo = av_dict_get(avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!.pointee.metadata, "rotate", nil, 0), let value = rotationInfo.pointee.value {
+                            if strcmp(value, "0") != 0 {
+                                if let angle = Double(String(cString: value)) {
+                                    rotationAngle = angle * Double.pi / 180.0
+                                }
+                            }
+                        }
+                        
+                        let aspect = Double(codecPar.pointee.width) / Double(codecPar.pointee.height)
+                        
+                        videoStream = StreamContext(index: streamIndex, codecContext: nil, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
+                        break
+                    }
+                } else if codecPar.pointee.codec_id == AV_CODEC_ID_HEVC {
+                    if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromHEVCCodecData(UInt32(kCMVideoCodecType_HEVC), codecPar.pointee.width, codecPar.pointee.height, codecPar.pointee.extradata, codecPar.pointee.extradata_size) {
                         let (fps, timebase) = FFMpegMediaFrameSourceContextHelpers.streamFpsAndTimeBase(stream: avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!, defaultTimeBase: CMTimeMake(1, 1000))
                         
                         let duration = CMTimeMake(avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!.pointee.duration, timebase.timescale)

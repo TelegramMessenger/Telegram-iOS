@@ -37,7 +37,7 @@ private let gradientColors: [NSArray] = [
 ]
 
 private let grayscaleColors: NSArray = [
-    UIColor(rgb: 0xefefef).cgColor, UIColor(rgb: 0xeeeeee).cgColor
+    UIColor(rgb: 0xb1b1b1).cgColor, UIColor(rgb: 0xcdcdcd).cgColor
 ]
     
 private let savedMessagesColors: NSArray = [

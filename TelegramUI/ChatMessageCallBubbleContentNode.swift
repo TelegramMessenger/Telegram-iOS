@@ -59,7 +59,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
         return { item, layoutConstants, _, _, _ in
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .none, forceFullCorners: false, forceAlignment: .none)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message = item.message
                 
@@ -70,13 +70,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let bubbleTheme = item.presentationData.theme.chat.bubble
                 
-                var titleString: String
-                if message.flags.contains(.Incoming) {
-                    titleString = item.presentationData.strings.Notification_CallIncoming
-                } else {
-                    titleString = item.presentationData.strings.Notification_CallOutgoing
-                }
-                
+                var titleString: String?
                 var callDuration: Int32?
                 var callSuccessful = true
                 for media in item.message.media {
@@ -98,11 +92,22 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
+                if titleString == nil {
+                    let baseString: String
+                    if message.flags.contains(.Incoming) {
+                        baseString = item.presentationData.strings.Notification_CallIncoming
+                    } else {
+                        baseString = item.presentationData.strings.Notification_CallOutgoing
+                    }
+                    
+                    titleString = baseString
+                }
+                
                 var attributedTitle: NSAttributedString?
                 if message.flags.contains(.Incoming) {
-                    attributedTitle = NSAttributedString(string: titleString, font: titleFont, textColor: bubbleTheme.incomingPrimaryTextColor)
+                    attributedTitle = NSAttributedString(string: titleString ?? "", font: titleFont, textColor: bubbleTheme.incomingPrimaryTextColor)
                 } else {
-                    attributedTitle = NSAttributedString(string: titleString, font: titleFont, textColor: bubbleTheme.outgoingPrimaryTextColor)
+                    attributedTitle = NSAttributedString(string: titleString ?? "", font: titleFont, textColor: bubbleTheme.outgoingPrimaryTextColor)
                 }
                 
                 var callIcon: UIImage?
@@ -129,8 +134,15 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let dateText = stringForMessageTimestampStatus(message: item.message, timeFormat: item.presentationData.timeFormat, strings: item.presentationData.strings)
                 
+                let statusText: String
+                if let callDuration = callDuration, callDuration > 1 {
+                    statusText = item.presentationData.strings.Notification_CallFormat(dateText, callDurationString(strings: item.presentationData.strings, value: callDuration)).0
+                } else {
+                    statusText = dateText
+                }
+                
                 var attributedLabel: NSAttributedString?
-                attributedLabel = NSAttributedString(string: dateText, font: labelFont, textColor: message.effectivelyIncoming(item.account.peerId) ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+                attributedLabel = NSAttributedString(string: statusText, font: labelFont, textColor: message.effectivelyIncoming(item.account.peerId) ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
                 
                 let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedLabel, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

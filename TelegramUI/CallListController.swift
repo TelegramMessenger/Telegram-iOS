@@ -40,7 +40,7 @@ public final class CallListController: ViewController {
         
         self.segmentedTitleView = ItemListControllerSegmentedTitleView(segments: [self.presentationData.strings.Calls_All, self.presentationData.strings.Calls_Missed], index: 0, color: self.presentationData.theme.rootController.navigationBar.accentTextColor)
         
-        super.init(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -115,7 +115,7 @@ public final class CallListController: ViewController {
         }
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
-        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
         if self.isNodeLoaded {
             self.controllerNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)

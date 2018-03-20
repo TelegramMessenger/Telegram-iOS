@@ -6,6 +6,7 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import SafariServices
+import MobileCoreServices
 
 public enum ChatControllerPeekActions {
     case standard
@@ -66,7 +67,7 @@ public enum NavigateToMessageLocation {
     }
 }
 
-public final class ChatController: TelegramController, UIViewControllerPreviewingDelegate {
+public final class ChatController: TelegramController, UIViewControllerPreviewingDelegate, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     public var peekActions: ChatControllerPeekActions = .standard
@@ -181,6 +182,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     private weak var silentPostTooltipController: TooltipController?
     private weak var mediaRecordingModeTooltipController: TooltipController?
     
+    private var screenCaptureEventsDisposable: Disposable?
+    
     public init(account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
         self.account = account
         self.chatLocation = chatLocation
@@ -208,7 +211,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         if case .overlay = mode {
             enableMediaAccessoryPanel = false
         }
-        super.init(account: account, navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), enableMediaAccessoryPanel: enableMediaAccessoryPanel, locationBroadcastPanelSource: locationBroadcastPanelSource)
+        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), enableMediaAccessoryPanel: enableMediaAccessoryPanel, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
@@ -1050,6 +1053,14 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 strongSelf.chatTitleView?.networkState = state
             }
         })
+        
+        if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
+            self.screenCaptureEventsDisposable = screenCaptureEvents().start(next: { [weak self] _ in
+                if let strongSelf = self, strongSelf.canReadHistoryValue {
+                    let _ = addSecretChatMessageScreenshot(account: account, peerId: peerId).start()
+                }
+            })
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -1092,6 +1103,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         self.applicationInForegroundDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
         self.networkStateDisposable?.dispose()
+        self.screenCaptureEventsDisposable?.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -1109,7 +1121,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     private func themeAndStringsUpdated() {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
-        self.navigationBar?.updateTheme(NavigationBarTheme(rootControllerTheme: self.presentationData.theme))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
     }
     
     override public func loadDisplayNode() {
@@ -2385,6 +2397,10 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                             return false
                         }
                         
+                        if case .media(_, true) = strongSelf.presentationInterfaceState.inputMode {
+                            return false
+                        }
+                        
                         if !strongSelf.account.telegramApplicationContext.currentMediaInputSettings.with { $0.enableRaiseToSpeak } {
                             return false
                         }
@@ -2421,6 +2437,11 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     self.registerForPreviewing(with: self, sourceView: buttonView, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
                 }
                 self.registerForPreviewing(with: self, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
+            }
+            
+            if #available(iOSApplicationExtension 11.0, *) {
+                let dropInteraction = UIDropInteraction(delegate: self)
+                self.chatDisplayNode.view.addInteraction(dropInteraction)
             }
         }
         
@@ -3644,13 +3665,27 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                                     if let messageId = messageId {
                                         strongSelf.navigateToMessage(from: nil, to: .id(messageId))
                                     }
-                                } else {
-                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId))
+                                } else if let navigationController = strongSelf.navigationController as? NavigationController {
+                                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId)
                                 }
                             case .info:
-                                break
+                                strongSelf.navigationActionDisposable.set((strongSelf.account.postbox.loadedPeerWithId(peerId)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                        if let strongSelf = self, peer.restrictionText == nil {
+                                            if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                                                (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                                            }
+                                        }
+                                    }))
                             case let .withBotStartPayload(startPayload):
-                                break
+                                if case .peer(peerId) = strongSelf.chatLocation {
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                        $0.updatedBotStartPayload(startPayload.payload)
+                                    })
+                                } else if let navigationController = strongSelf.navigationController as? NavigationController {
+                                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), botStart: startPayload)
+                                }
                         }
                     }
                 }, present: { c, a in
@@ -4015,5 +4050,45 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         ])])
         self.chatDisplayNode.dismissInput()
         self.present(actionSheet, in: .window(.root))
+    }
+    
+    @available(iOSApplicationExtension 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDropSession) -> Bool {
+        return session.hasItemsConforming(toTypeIdentifiers: [kUTTypeImage as String])
+    }
+    
+    @available(iOSApplicationExtension 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, sessionDidUpdate session: UIDropSession) -> UIDropProposal {
+        if !canSendMessagesToChat(self.presentationInterfaceState) {
+            return UIDropProposal(operation: .cancel)
+        }
+        
+        let dropLocation = session.location(in: self.chatDisplayNode.view)
+        self.chatDisplayNode.updateDropInteraction(isActive: true)
+        
+        let operation: UIDropOperation
+        operation = .copy
+        return UIDropProposal(operation: operation)
+    }
+    
+    @available(iOSApplicationExtension 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, performDrop session: UIDropSession) {
+        session.loadObjects(ofClass: UIImage.self) { imageItems in
+            let images = imageItems as! [UIImage]
+            
+            self.chatDisplayNode.updateDropInteraction(isActive: false)
+            
+            self.chatDisplayNode.displayPasteMenu(images)
+        }
+    }
+    
+    @available(iOSApplicationExtension 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, sessionDidExit session: UIDropSession) {
+        self.chatDisplayNode.updateDropInteraction(isActive: false)
+    }
+    
+    @available(iOSApplicationExtension 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, sessionDidEnd session: UIDropSession) {
+        self.chatDisplayNode.updateDropInteraction(isActive: false)
     }
 }

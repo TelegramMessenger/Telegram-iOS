@@ -181,7 +181,7 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
             contentFrame.origin.x = 0.0
         }
         
-        if boundsSize.height > contentFrame.size.height {
+        if boundsSize.height >= contentFrame.size.height {
             contentFrame.origin.y = (boundsSize.height - contentFrame.size.height) / 2.0
         } else {
             contentFrame.origin.y = 0.0
@@ -190,8 +190,6 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
         if !self.ignoreZoom {
             transition.updateFrame(view: contentNode.view, frame: contentFrame)
         }
-        
-        //self.scrollView.scrollEnabled = ABS(_scrollView.zoomScale - _scrollView.normalZoomScale) > FLT_EPSILON;
     }
     
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {

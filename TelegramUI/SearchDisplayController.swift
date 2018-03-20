@@ -11,6 +11,8 @@ final class SearchDisplayController {
     
     private(set) var isDeactivating = false
     
+    private var isSearchingDisposable: Disposable?
+    
     init(theme: PresentationTheme, strings: PresentationStrings, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
         self.searchBar = SearchBarNode(theme: theme, strings: strings)
         self.contentNode = contentNode
@@ -29,6 +31,11 @@ final class SearchDisplayController {
         self.contentNode.dismissInput = { [weak self] in
             self?.searchBar.deactivate(clear: false)
         }
+        
+        self.isSearchingDisposable = (contentNode.isSearching
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            self?.searchBar.activity = value
+        })
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {

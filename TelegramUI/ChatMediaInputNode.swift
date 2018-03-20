@@ -369,7 +369,7 @@ final class ChatMediaInputNode: ChatInputNode {
                             }
                     case let .scroll(aroundIndex):
                         var firstTime = true
-                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 200)
+                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 300)
                             |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                                 let update: StickerPacksCollectionUpdate
                                 if firstTime {
@@ -382,7 +382,7 @@ final class ChatMediaInputNode: ChatInputNode {
                             }
                     case let .navigate(index, collectionId):
                         var firstTime = true
-                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 200)
+                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 300)
                             |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                                 let update: StickerPacksCollectionUpdate
                                 if firstTime {

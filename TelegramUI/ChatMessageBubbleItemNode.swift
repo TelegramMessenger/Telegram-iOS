@@ -9,7 +9,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     var skipText = false
     var addFinalText = false
     
-    for message in item.content {
+    outer: for message in item.content {
         inner: for media in message.media {
             if let _ = media as? TelegramMediaImage {
                 result.append((message, ChatMessageMediaBubbleContentNode.self))
@@ -38,7 +38,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             } else if let _ = media as? TelegramMediaContact {
                 result.append((message, ChatMessageContactBubbleContentNode.self))
             } else if let _ = media as? TelegramMediaExpiredContent {
+                result.removeAll()
                 result.append((message, ChatMessageActionBubbleContentNode.self))
+                return result
             }
         }
         
@@ -372,6 +374,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             break loop
                         }
                     }
+                } else {
+                    loop: for media in item.message.media {
+                        if media is TelegramMediaAction {
+                            needShareButton = false
+                            break loop
+                        }
+                    }
                 }
             }
             
@@ -438,7 +447,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             let topNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedTop.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
             let bottomNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedBottom.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
             
-            var backgroundHiding: ChatMessageBubbleContentBackgroundHiding = .none
+            var backgroundHiding: ChatMessageBubbleContentBackgroundHiding?
             var hasSolidWallpaper = false
             if case .color = item.presentationData.wallpaper {
                 hasSolidWallpaper = true
@@ -526,14 +535,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 contentPropertiesAndLayouts.append((unboundSize, properties, prepareContentPosition, nodeLayout))
                 
                 switch properties.hidesBackground {
-                    case .none:
-                        break
+                    case .never:
+                        backgroundHiding = .never
                     case .emptyWallpaper:
-                        switch backgroundHiding {
-                            case .none:
-                                backgroundHiding = properties.hidesBackground
-                            default:
-                                break
+                        if backgroundHiding == nil {
+                            backgroundHiding = properties.hidesBackground
                         }
                     case .always:
                         backgroundHiding = .always
@@ -550,7 +556,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             }
             
             var initialDisplayHeader = true
-            if case .always = backgroundHiding {
+            if let backgroundHiding = backgroundHiding, case .always = backgroundHiding {
                 initialDisplayHeader = false
             } else {
                 if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil {
@@ -758,13 +764,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             }
             
             let hideBackground: Bool
-            switch backgroundHiding {
-                case .none:
-                    hideBackground = false
-                case .emptyWallpaper:
-                    hideBackground = hasSolidWallpaper && !displayHeader
-                case .always:
-                    hideBackground = true
+            if let backgroundHiding = backgroundHiding {
+                switch backgroundHiding {
+                    case .never:
+                        hideBackground = false
+                    case .emptyWallpaper:
+                        hideBackground = hasSolidWallpaper && !displayHeader
+                    case .always:
+                        hideBackground = true
+                }
+            } else {
+                hideBackground = false
             }
             
             var removedContentNodeIndices: [Int]?
@@ -923,7 +933,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     let (contentNodeWidth, contentNodeFinalize) = contentNodeLayout(CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude), contentPosition)
                     #if DEBUG
                     if contentNodeWidth > maximumNodeWidth {
-                        print("\(contentNodeWidth) > \(maximumNodeWidth)")
+                        print("contentNodeWidth \(contentNodeWidth) > \(maximumNodeWidth)")
                     }
                     #endif
                     maxContentWidth = max(maxContentWidth, contentNodeWidth)

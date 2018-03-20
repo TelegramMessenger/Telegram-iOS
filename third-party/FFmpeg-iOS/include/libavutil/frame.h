@@ -25,6 +25,7 @@
 #ifndef AVUTIL_FRAME_H
 #define AVUTIL_FRAME_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "avutil.h"
@@ -120,7 +121,26 @@ enum AVFrameSideDataType {
      * The GOP timecode in 25 bit timecode format. Data format is 64-bit integer.
      * This is set on the first frame of a GOP that has a temporal reference of 0.
      */
-    AV_FRAME_DATA_GOP_TIMECODE
+    AV_FRAME_DATA_GOP_TIMECODE,
+
+    /**
+     * The data represents the AVSphericalMapping structure defined in
+     * libavutil/spherical.h.
+     */
+    AV_FRAME_DATA_SPHERICAL,
+
+    /**
+     * Content light level (based on CTA-861.3). This payload contains data in
+     * the form of the AVContentLightMetadata struct.
+     */
+    AV_FRAME_DATA_CONTENT_LIGHT_LEVEL,
+
+    /**
+     * The data contains an ICC profile as an opaque octet buffer following the
+     * format described by ISO 15076-1 with an optional name defined in the
+     * metadata key entry "name".
+     */
+    AV_FRAME_DATA_ICC_PROFILE,
 };
 
 enum AVActiveFormatDescription {
@@ -173,12 +193,9 @@ typedef struct AVFrameSideData {
  *
  * sizeof(AVFrame) is not a part of the public ABI, so new fields may be added
  * to the end with a minor bump.
- * Similarly fields that are marked as to be only accessed by
- * av_opt_ptr() can be reordered. This allows 2 forks to add fields
- * without breaking compatibility with each other.
  *
  * Fields can be accessed through AVOptions, the name string used, matches the
- * C structure field name for fields accessable through AVOptions. The AVClass
+ * C structure field name for fields accessible through AVOptions. The AVClass
  * for AVFrame can be obtained from avcodec_get_frame_class()
  */
 typedef struct AVFrame {
@@ -231,9 +248,18 @@ typedef struct AVFrame {
     uint8_t **extended_data;
 
     /**
-     * width and height of the video frame
+     * @name Video dimensions
+     * Video frames only. The coded dimensions (in pixels) of the video frame,
+     * i.e. the size of the rectangle that contains some well-defined values.
+     *
+     * @note The part of the frame intended for display/presentation is further
+     * restricted by the @ref cropping "Cropping rectangle".
+     * @{
      */
     int width, height;
+    /**
+     * @}
+     */
 
     /**
      * number of audio samples (per channel) described by this frame
@@ -267,10 +293,14 @@ typedef struct AVFrame {
      */
     int64_t pts;
 
+#if FF_API_PKT_PTS
     /**
      * PTS copied from the AVPacket that was decoded to produce this frame.
+     * @deprecated use the pts field instead
      */
+    attribute_deprecated
     int64_t pkt_pts;
+#endif
 
     /**
      * DTS copied from the AVPacket that triggered returning this frame. (if frame threading isn't used)
@@ -385,6 +415,7 @@ typedef struct AVFrame {
 
 /**
  * @defgroup lavu_frame_flags AV_FRAME_FLAGS
+ * @ingroup lavu_frame
  * Flags describing additional frame properties.
  *
  * @{
@@ -394,6 +425,10 @@ typedef struct AVFrame {
  * The frame data may be corrupted, e.g. due to decoding errors.
  */
 #define AV_FRAME_FLAG_CORRUPT       (1 << 0)
+/**
+ * A flag to mark the frames which need to be decoded, but shouldn't be output.
+ */
+#define AV_FRAME_FLAG_DISCARD   (1 << 2)
 /**
  * @}
  */
@@ -405,8 +440,6 @@ typedef struct AVFrame {
 
     /**
      * MPEG vs JPEG YUV range.
-     * It must be accessed using av_frame_get_color_range() and
-     * av_frame_set_color_range().
      * - encoding: Set by user
      * - decoding: Set by libavcodec
      */
@@ -418,8 +451,6 @@ typedef struct AVFrame {
 
     /**
      * YUV colorspace type.
-     * It must be accessed using av_frame_get_colorspace() and
-     * av_frame_set_colorspace().
      * - encoding: Set by user
      * - decoding: Set by libavcodec
      */
@@ -429,8 +460,6 @@ typedef struct AVFrame {
 
     /**
      * frame timestamp estimated using various heuristics, in stream time base
-     * Code outside libavutil should access this field using:
-     * av_frame_get_best_effort_timestamp(frame)
      * - encoding: unused
      * - decoding: set by libavcodec, read by user.
      */
@@ -438,8 +467,6 @@ typedef struct AVFrame {
 
     /**
      * reordered pos from the last AVPacket that has been input into the decoder
-     * Code outside libavutil should access this field using:
-     * av_frame_get_pkt_pos(frame)
      * - encoding: unused
      * - decoding: Read by user.
      */
@@ -448,8 +475,6 @@ typedef struct AVFrame {
     /**
      * duration of the corresponding packet, expressed in
      * AVStream->time_base units, 0 if unknown.
-     * Code outside libavutil should access this field using:
-     * av_frame_get_pkt_duration(frame)
      * - encoding: unused
      * - decoding: Read by user.
      */
@@ -457,8 +482,6 @@ typedef struct AVFrame {
 
     /**
      * metadata.
-     * Code outside libavutil should access this field using:
-     * av_frame_get_metadata(frame)
      * - encoding: Set by user.
      * - decoding: Set by libavcodec.
      */
@@ -468,8 +491,6 @@ typedef struct AVFrame {
      * decode error flags of the frame, set to a combination of
      * FF_DECODE_ERROR_xxx flags if the decoder produced a frame, but there
      * were errors during the decoding.
-     * Code outside libavutil should access this field using:
-     * av_frame_get_decode_error_flags(frame)
      * - encoding: unused
      * - decoding: set by libavcodec, read by user.
      */
@@ -479,8 +500,6 @@ typedef struct AVFrame {
 
     /**
      * number of audio channels, only used for audio.
-     * Code outside libavutil should access this field using:
-     * av_frame_get_channels(frame)
      * - encoding: unused
      * - decoding: Read by user.
      */
@@ -488,8 +507,7 @@ typedef struct AVFrame {
 
     /**
      * size of the corresponding packet containing the compressed
-     * frame. It must be accessed using av_frame_get_pkt_size() and
-     * av_frame_set_pkt_size().
+     * frame.
      * It is set to a negative value if unknown.
      * - encoding: unused
      * - decoding: set by libavcodec, read by user.
@@ -499,13 +517,11 @@ typedef struct AVFrame {
 #if FF_API_FRAME_QP
     /**
      * QP table
-     * Not to be accessed directly from outside libavutil
      */
     attribute_deprecated
     int8_t *qscale_table;
     /**
      * QP store stride
-     * Not to be accessed directly from outside libavutil
      */
     attribute_deprecated
     int qstride;
@@ -513,9 +529,6 @@ typedef struct AVFrame {
     attribute_deprecated
     int qscale_type;
 
-    /**
-     * Not to be accessed directly from outside libavutil
-     */
     AVBufferRef *qp_table_buf;
 #endif
     /**
@@ -523,12 +536,38 @@ typedef struct AVFrame {
      * AVHWFramesContext describing the frame.
      */
     AVBufferRef *hw_frames_ctx;
+
+    /**
+     * AVBufferRef for free use by the API user. FFmpeg will never check the
+     * contents of the buffer ref. FFmpeg calls av_buffer_unref() on it when
+     * the frame is unreferenced. av_frame_copy_props() calls create a new
+     * reference with av_buffer_ref() for the target frame's opaque_ref field.
+     *
+     * This is unrelated to the opaque field, although it serves a similar
+     * purpose.
+     */
+    AVBufferRef *opaque_ref;
+
+    /**
+     * @anchor cropping
+     * @name Cropping
+     * Video frames only. The number of pixels to discard from the the
+     * top/bottom/left/right border of the frame to obtain the sub-rectangle of
+     * the frame intended for presentation.
+     * @{
+     */
+    size_t crop_top;
+    size_t crop_bottom;
+    size_t crop_left;
+    size_t crop_right;
+    /**
+     * @}
+     */
 } AVFrame;
 
 /**
- * Accessors for some AVFrame fields.
- * The position of these field in the structure is not part of the ABI,
- * they should not be accessed directly outside libavutil.
+ * Accessors for some AVFrame fields. These used to be provided for ABI
+ * compatibility, and do not need to be used anymore.
  */
 int64_t av_frame_get_best_effort_timestamp(const AVFrame *frame);
 void    av_frame_set_best_effort_timestamp(AVFrame *frame, int64_t val);
@@ -642,7 +681,9 @@ void av_frame_move_ref(AVFrame *dst, AVFrame *src);
  *           cases.
  *
  * @param frame frame in which to store the new buffers.
- * @param align required buffer size alignment
+ * @param align Required buffer size alignment. If equal to 0, alignment will be
+ *              chosen automatically for the current CPU. It is highly
+ *              recommended to pass 0 here unless you know what you are doing.
  *
  * @return 0 on success, a negative AVERROR on error.
  */
@@ -733,6 +774,40 @@ AVFrameSideData *av_frame_get_side_data(const AVFrame *frame,
  * from the frame.
  */
 void av_frame_remove_side_data(AVFrame *frame, enum AVFrameSideDataType type);
+
+
+/**
+ * Flags for frame cropping.
+ */
+enum {
+    /**
+     * Apply the maximum possible cropping, even if it requires setting the
+     * AVFrame.data[] entries to unaligned pointers. Passing unaligned data
+     * to FFmpeg API is generally not allowed, and causes undefined behavior
+     * (such as crashes). You can pass unaligned data only to FFmpeg APIs that
+     * are explicitly documented to accept it. Use this flag only if you
+     * absolutely know what you are doing.
+     */
+    AV_FRAME_CROP_UNALIGNED     = 1 << 0,
+};
+
+/**
+ * Crop the given video AVFrame according to its crop_left/crop_top/crop_right/
+ * crop_bottom fields. If cropping is successful, the function will adjust the
+ * data pointers and the width/height fields, and set the crop fields to 0.
+ *
+ * In all cases, the cropping boundaries will be rounded to the inherent
+ * alignment of the pixel format. In some cases, such as for opaque hwaccel
+ * formats, the left/top cropping is ignored. The crop fields are set to 0 even
+ * if the cropping was rounded or ignored.
+ *
+ * @param frame the frame which should be cropped
+ * @param flags Some combination of AV_FRAME_CROP_* flags, or 0.
+ *
+ * @return >= 0 on success, a negative AVERROR on error. If the cropping fields
+ * were invalid, AVERROR(ERANGE) is returned, and nothing is changed.
+ */
+int av_frame_apply_cropping(AVFrame *frame, int flags);
 
 /**
  * @return a string identifying the side data type

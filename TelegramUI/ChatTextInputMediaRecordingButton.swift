@@ -128,7 +128,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
         } else {
             var presentNow = false
             if self.presentationController == nil {
-                let presentationController = ChatTextInputMediaRecordingButtonPresenterController(navigationBarTheme: nil)
+                let presentationController = ChatTextInputMediaRecordingButtonPresenterController(navigationBarPresentationData: nil)
                 presentationController.statusBar.statusBarStyle = .Ignore
                 self.presentationController = presentationController
                 presentNow = true

@@ -26,7 +26,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
     controller.recipientName = peer.displayTitle
-    if peer is TelegramUser || peer is TelegramSecretChat {
+    if (peer is TelegramUser || peer is TelegramSecretChat) && peer.id != account.peerId {
         controller.hasTimer = true
     }
     

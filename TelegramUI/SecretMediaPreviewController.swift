@@ -128,11 +128,13 @@ public final class SecretMediaPreviewController: ViewController {
     
     private let presentationData: PresentationData
     
+    private var screenCaptureEventsDisposable: Disposable?
+    
     public init(account: Account, messageId: MessageId) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: GalleryController.darkNavigationTheme)
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
         let backItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: self, action: #selector(self.donePressed))
         self.navigationItem.leftBarButtonItem = backItem
@@ -154,6 +156,10 @@ public final class SecretMediaPreviewController: ViewController {
             } else {
                 return nil
             }
+        })
+        
+        self.screenCaptureEventsDisposable = screenCaptureEvents().start(next: { _ in
+            let _ = addSecretChatMessageScreenshot(account: account, peerId: messageId.peerId).start()
         })
     }
     
@@ -348,7 +354,17 @@ public final class SecretMediaPreviewController: ViewController {
     }
     
     private func applyMessageView() {
-        if let messageView = self.messageView, let message = messageView.message {
+        var message: Message?
+        if let messageView = self.messageView, let m = messageView.message {
+            message = m
+            for media in m.media {
+                if media is TelegramMediaExpiredContent {
+                    message = nil
+                    break
+                }
+            }
+        }
+        if let message = message {
             if self.currentNodeMessageId != message.id {
                 self.currentNodeMessageId = message.id
                 guard let item = galleryItemForEntry(account: account, theme: self.presentationData.theme, strings: self.presentationData.strings, entry: .MessageEntry(message, false, nil, nil), streamVideos: false, hideControls: true, playbackCompleted: { [weak self] in

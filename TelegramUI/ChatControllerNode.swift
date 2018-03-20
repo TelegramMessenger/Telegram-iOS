@@ -21,6 +21,16 @@ private final class ChatControllerNodeView: UITracingLayerView, WindowInputAcces
     }
 }
 
+private final class ScrollContainerNode: ASScrollNode {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if super.hitTest(point, with: event) == self.view {
+            return nil
+        }
+        
+        return super.hitTest(point, with: event)
+    }
+}
+
 class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let account: Account
     let chatLocation: ChatLocation
@@ -30,7 +40,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var backgroundEffectNode: ASDisplayNode?
     private var containerBackgroundNode: ASImageNode?
-    private var scrollContainerNode: ASScrollNode?
+    private var scrollContainerNode: ScrollContainerNode?
     private var containerNode: ASDisplayNode?
     private var overlayNavigationBar: ChatOverlayNavigationBar?
     
@@ -111,6 +121,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var messageActionSheetBottomDimNode: ASDisplayNode?
     
     private var expandedInputDimNode: ASDisplayNode?
+    
+    private var dropDimNode: ASDisplayNode?
     
     private var containerLayoutAndNavigationBarHeight: (ContainerViewLayout, CGFloat)?
     
@@ -325,20 +337,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if case .overlay = self.chatPresentationInterfaceState.mode {
             if self.backgroundEffectNode == nil {
                 let backgroundEffectNode = ASDisplayNode()
-                switch self.chatPresentationInterfaceState.theme.inAppNotification.expandedNotification.backgroundType {
-                    case .light:
-                        backgroundEffectNode.backgroundColor = UIColor(white: 1.0, alpha: 0.8)
-                    case .dark:
-                        backgroundEffectNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
-                }
+                backgroundEffectNode.backgroundColor = self.chatPresentationInterfaceState.theme.chatList.backgroundColor.withAlphaComponent(0.8)
                 self.insertSubnode(backgroundEffectNode, at: 0)
                 self.backgroundEffectNode = backgroundEffectNode
+                backgroundEffectNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.backgroundEffectTap(_:))))
             }
             if self.scrollContainerNode == nil {
-                let scrollContainerNode = ASScrollNode()
+                let scrollContainerNode = ScrollContainerNode()
                 scrollContainerNode.view.delaysContentTouches = false
-                //scrollContainerNode.view.canCancelContentTouches = false
-                //scrollContainerNode.view.panGestureRecognizer.cancelsTouchesInView = false
                 scrollContainerNode.view.delegate = self
                 scrollContainerNode.view.alwaysBounceVertical = true
                 if #available(iOSApplicationExtension 11.0, *) {
@@ -469,7 +475,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var inputPanelNodeBaseHeight: CGFloat = 0.0
         if let inputPanelNode = self.inputPanelNode {
-            inputPanelNodeBaseHeight = inputPanelNode.minimalHeight(interfaceState: self.chatPresentationInterfaceState)
+            inputPanelNodeBaseHeight = inputPanelNode.minimalHeight(interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
         }
         
         let maximumInputNodeHeight = layout.size.height - max(navigationBarHeight, layout.safeInsets.top) - inputPanelNodeBaseHeight
@@ -519,8 +525,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var wrappingInsets = UIEdgeInsets()
         if case .overlay = self.chatPresentationInterfaceState.mode {
-            wrappingInsets.left = 8.0 + layout.safeInsets.left
-            wrappingInsets.right = 8.0 + layout.safeInsets.right
+            let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 8.0 + layout.safeInsets.left)
+            wrappingInsets.left = floor((layout.size.width - containerWidth) / 2.0)
+            wrappingInsets.right = wrappingInsets.left
+            
             wrappingInsets.top = 8.0
             if let statusBarHeight = layout.statusBarHeight, CGFloat(40.0).isLess(than: statusBarHeight) {
                 wrappingInsets.top += statusBarHeight
@@ -541,12 +549,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 dismissedInputPanelNode = self.inputPanelNode
                 immediatelyLayoutInputPanelAndAnimateAppearance = true
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
                 self.inputPanelNode = inputPanelNode
                 self.insertSubnode(inputPanelNode, aboveSubnode: self.inputPanelBackgroundNode)
             } else {
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
             }
         } else {
@@ -751,7 +759,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.updateFrame(node: containerNode, frame: containerNodeFrame)
             
             if let containerBackgroundNode = self.containerBackgroundNode {
-                transition.updateFrame(node: containerBackgroundNode, frame: CGRect(origin: CGPoint(x: containerNodeFrame.minX - 8.0, y: containerNodeFrame.minY - 8.0), size: CGSize(width: containerNodeFrame.size.width + 8.0 * 2.0, height: containerNodeFrame.size.height + 8.0 + 20.0)))
+                transition.updateFrame(node: containerBackgroundNode, frame: CGRect(origin: CGPoint(x: containerNodeFrame.minX - 8.0 * 2.0, y: containerNodeFrame.minY - 8.0 * 2.0), size: CGSize(width: containerNodeFrame.size.width + 8.0 * 4.0, height: containerNodeFrame.size.height + 8.0 * 2.0 + 20.0)))
             }
         }
         
@@ -765,6 +773,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if case .standard = self.chatPresentationInterfaceState.mode {
             listInsets.left += layout.safeInsets.left
             listInsets.right += layout.safeInsets.right
+            
+            if case .regular = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {
+                listInsets.left += 6.0
+                listInsets.right += 6.0
+                listInsets.top += 6.0
+                listInsets.bottom += 6.0
+            }
         }
         
         var displayTopDimNode = false
@@ -773,7 +788,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let (controller, _) = self.messageActionSheetController {
             displayTopDimNode = true
             
-            let menuHeight = controller.controllerNode.updateLayout(layout: layout, transition: transition)
+            let globalSelfOrigin = self.view.convert(CGPoint(), to: nil)
+            
+            let menuHeight = controller.controllerNode.updateLayout(layout: layout, horizontalOrigin: globalSelfOrigin.x, transition: transition)
             ensureTopInsetForOverlayHighlightedItems = menuHeight
             
             let bottomInset = containerInsets.bottom + inputPanelsHeight + UIScreenPixel
@@ -849,12 +866,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                     transition.updateAlpha(node: expandedInputDimNode, alpha: 1.0)
                     expandedInputDimNode.frame = exandedFrame
-                    transition.animatePositionAdditive(node: expandedInputDimNode, offset: previousInputPanelOrigin.y - inputPanelOrigin)
+                    transition.animatePositionAdditive(node: expandedInputDimNode, offset: CGPoint(x: 0.0, y: previousInputPanelOrigin.y - inputPanelOrigin))
                 }
             } else {
                 if let expandedInputDimNode = self.expandedInputDimNode {
                     self.expandedInputDimNode = nil
-                    transition.animatePositionAdditive(node: expandedInputDimNode, offset: previousInputPanelOrigin.y - inputPanelOrigin)
+                    transition.animatePositionAdditive(node: expandedInputDimNode, offset: CGPoint(x: 0.0, y: previousInputPanelOrigin.y - inputPanelOrigin))
                     transition.updateAlpha(node: expandedInputDimNode, alpha: 0.0, completion: { [weak expandedInputDimNode] _ in
                         expandedInputDimNode?.removeFromSupernode()
                     })
@@ -1357,8 +1374,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let containerNode = self.containerNode {
                 containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 transition.animateFrame(node: containerNode, from: fromFrame)
-                transition.animatePositionAdditive(node: self.backgroundNode, offset: -containerNode.bounds.size.height)
-                transition.animatePositionAdditive(node: self.historyNodeContainer, offset: -containerNode.bounds.size.height)
+                transition.animatePositionAdditive(node: self.backgroundNode, offset: CGPoint(x: 0.0, y: -containerNode.bounds.size.height))
+                transition.animatePositionAdditive(node: self.historyNodeContainer, offset: CGPoint(x: 0.0, y: -containerNode.bounds.size.height))
                 
                 transition.updateFrame(node: fromNode, frame: CGRect(origin: containerNode.frame.origin, size: fromNode.frame.size))
             }
@@ -1484,13 +1501,24 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let (layout, navigationBarHeight) = self.validLayout {
-            let menuHeight = self.messageActionSheetController?.0.controllerNode.updateLayout(layout: layout, transition: .immediate)
+            let globalSelfOrigin = self.view.convert(CGPoint(), to: nil)
+            let menuHeight = self.messageActionSheetController?.0.controllerNode.updateLayout(layout: layout, horizontalOrigin: globalSelfOrigin.x, transition: .immediate)
             if let stableId = self.messageActionSheetController?.1 {
                 var resultItemNode: ListViewItemNode?
                 self.historyNode.forEachItemNode { itemNode in
-                    if let itemNode = itemNode as? ChatMessageItemView {
-                        if itemNode.item?.message.stableId == stableId {
-                            resultItemNode = itemNode
+                    if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                        switch item.content {
+                            case let .message(message, _, _):
+                                if message.stableId == stableId {
+                                    resultItemNode = itemNode
+                                }
+                            case let .group(messages):
+                                for (message, _, _) in messages {
+                                    if message.stableId == stableId {
+                                        resultItemNode = itemNode
+                                        break
+                                    }
+                                }
                         }
                     }
                 }
@@ -1499,10 +1527,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if resultItemNode.frame.minY < menuHeight {
                             messageActionSheetControllerAdditionalInset = menuHeight - resultItemNode.frame.minY
                         }
-                        //self.historyNode.insets.top
                     }
                 }
-                //messageActionSheetControllerAdditionalInset
             }
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop in
                 self.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop)
@@ -1559,6 +1585,32 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         } else {
             self.historyNode.scrollScreenToTop()
+        }
+    }
+    
+    @objc func backgroundEffectTap(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.dismissAsOverlay()
+        }
+    }
+    
+    func updateDropInteraction(isActive: Bool) {
+        if isActive {
+            if self.dropDimNode == nil {
+                let dropDimNode = ASDisplayNode()
+                dropDimNode.backgroundColor = self.chatPresentationInterfaceState.theme.chatList.backgroundColor.withAlphaComponent(0.35)
+                self.dropDimNode = dropDimNode
+                self.addSubnode(dropDimNode)
+                if let (layout, _) = self.validLayout {
+                    dropDimNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+                    dropDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
+            }
+        } else if let dropDimNode = self.dropDimNode {
+            self.dropDimNode = nil
+            dropDimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak dropDimNode] _ in
+                dropDimNode?.removeFromSupernode()
+            })
         }
     }
 }

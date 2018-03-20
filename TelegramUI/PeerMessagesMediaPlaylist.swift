@@ -74,6 +74,15 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                             break
                     }
                 }
+                if file.mimeType.hasPrefix("audio/") {
+                    return SharedMediaPlaybackData(type: .music, source: .telegramFile(file))
+                }
+                if let fileName = file.fileName {
+                    let ext = (fileName as NSString).pathExtension.lowercased()
+                    if ext == "wav" || ext == "opus" {
+                        return SharedMediaPlaybackData(type: .music, source: .telegramFile(file))
+                    }
+                }
             }
         }
         return nil
@@ -105,6 +114,8 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                             break
                     }
                 }
+                
+                return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.author?.displayTitle ?? "", albumArt: nil)
             }
         }
         return nil

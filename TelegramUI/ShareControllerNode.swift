@@ -292,7 +292,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         let maximumContentHeight = layout.size.height - insets.top - max(bottomInset + buttonHeight, insets.bottom) - sectionSpacing
         
-        let width = min(layout.size.width, layout.size.height) - 20.0
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 10.0 + layout.safeInsets.left)
+        
         let sideInset = floor((layout.size.width - width) / 2.0)
         
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
@@ -343,7 +344,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             let buttonHeight: CGFloat = 57.0
             let sectionSpacing: CGFloat = 8.0
             
-            let width = min(layout.size.width, layout.size.height) - 20.0
+            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 10.0 + layout.safeInsets.left)
             
             let sideInset = floor((layout.size.width - width) / 2.0)
             
@@ -367,7 +368,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.animateContentNodeOffsetFromBackgroundOffset = nil
                 let offset = backgroundFrame.minY - animateContentNodeOffsetFromBackgroundOffset
                 if let contentNode = self.contentNode {
-                    transition.animatePositionAdditive(node: contentNode, offset: -offset)
+                    transition.animatePositionAdditive(node: contentNode, offset: CGPoint(x: 0.0, y: -offset))
                 }
                 if let previousContentNode = self.previousContentNode {
                     transition.updatePosition(node: previousContentNode, position: previousContentNode.position.offsetBy(dx: 0.0, dy: offset))

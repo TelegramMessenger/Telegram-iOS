@@ -27,7 +27,7 @@ final class OverlayPlayerController: ViewController {
         self.initialOrder = initialOrder
         self.parentNavigationController = parentNavigationController
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
         

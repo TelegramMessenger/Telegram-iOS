@@ -262,6 +262,11 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
             node.updateLayout(nodeSize)
             
             self.containerLayoutUpdated(validLayout, transition: .immediate)
+            
+            if !customTransition {
+                let positionX = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: location, hidden: true, isMinimized: false, tempExtendedTopInset: node.tempExtendedTopInset), size: nodeSize).center.x
+                node.layer.animatePosition(from: CGPoint(x: positionX - node.layer.position.x, y: 0.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            }
         }
         node.hasAttachedContextUpdated = { [weak self] _ in
             if let strongSelf = self, let validLayout = strongSelf.validLayout, !customTransition {

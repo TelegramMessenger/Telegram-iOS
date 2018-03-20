@@ -65,7 +65,7 @@ class ThemeGalleryController: ViewController {
     init(account: Account, wallpapers: [TelegramWallpaper], at centralWallpaper: TelegramWallpaper) {
         self.account = account
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.donePressed))
         

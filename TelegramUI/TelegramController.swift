@@ -51,6 +51,7 @@ public class TelegramController: ViewController {
     
     private var locationBroadcastMode: LocationBroadcastNavigationAccessoryPanelMode?
     private var locationBroadcastPeers: [Peer]?
+    private var locationBroadcastMessages: [MessageId: Message]?
     private var locationBroadcastAccessoryPanel: LocationBroadcastNavigationAccessoryPanel?
     
     private var dismissingPanel: ASDisplayNode?
@@ -66,12 +67,12 @@ public class TelegramController: ViewController {
         return height
     }
     
-    init(account: Account, navigationBarTheme: NavigationBarTheme?, enableMediaAccessoryPanel: Bool, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
+    init(account: Account, navigationBarPresentationData: NavigationBarPresentationData?, enableMediaAccessoryPanel: Bool, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
         self.account = account
         self.enableMediaAccessoryPanel = enableMediaAccessoryPanel
         self.locationBroadcastPanelSource = locationBroadcastPanelSource
         
-        super.init(navigationBarTheme: navigationBarTheme)
+        super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         if enableMediaAccessoryPanel {
             self.mediaStatusDisposable = (account.telegramApplicationContext.mediaManager.globalMediaPlayerState
@@ -102,20 +103,33 @@ public class TelegramController: ViewController {
                 case .none:
                     self.locationBroadcastMode = nil
                 case .summary, .peer:
-                    let signal: Signal<[Peer]?, NoError>
+                    let signal: Signal<([Peer]?, [MessageId: Message]?), NoError>
                     switch locationBroadcastPanelSource {
                         case let .peer(peerId):
                             self.locationBroadcastMode = .peer
                             signal = liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
+                            |> map { ($0, nil) }
                         default:
                             self.locationBroadcastMode = .summary
-                            signal = liveLocationManager.summaryManager.broadcastingToPeers()
-                                |> map { $0.isEmpty ? nil : $0 }
+                            signal = liveLocationManager.summaryManager.broadcastingToMessages()
+                                |> map { messages -> ([Peer]?, [MessageId: Message]?) in
+                                    if messages.isEmpty {
+                                        return (nil, nil)
+                                    } else {
+                                        var peers: [Peer] = []
+                                        for message in messages.values.sorted(by: { MessageIndex($0) < MessageIndex($1) }) {
+                                            if let peer = message.peers[message.id.peerId] {
+                                                peers.append(peer)
+                                            }
+                                        }
+                                        return (peers, messages)
+                                    }
+                                }
                         
                     }
                     
                     self.locationBroadcastDisposable = (signal
-                    |> deliverOnMainQueue).start(next: { [weak self] peers in
+                    |> deliverOnMainQueue).start(next: { [weak self] peers, messages in
                         if let strongSelf = self {
                             var updated = false
                             if let current = strongSelf.locationBroadcastPeers, let peers = peers {
@@ -123,6 +137,8 @@ public class TelegramController: ViewController {
                             } else if (strongSelf.locationBroadcastPeers != nil) != (peers != nil) {
                                 updated = true
                             }
+                            
+                            strongSelf.locationBroadcastMessages = messages
                             
                             if updated {
                                 let wasEmpty = strongSelf.locationBroadcastPeers == nil
@@ -173,9 +189,11 @@ public class TelegramController: ViewController {
                             case .none:
                                 break
                             case .summary:
-                                if let locationBroadcastPeers = strongSelf.locationBroadcastPeers {
-                                    if locationBroadcastPeers.count == 1 {
-                                        presentLiveLocationController(account: strongSelf.account, peerId: locationBroadcastPeers[0].id, controller: strongSelf)
+                                if let locationBroadcastMessages = strongSelf.locationBroadcastMessages {
+                                    let messages = locationBroadcastMessages.values.sorted(by: { MessageIndex($0) > MessageIndex($1) })
+                                    
+                                    if messages.count == 1 {
+                                        presentLiveLocationController(account: strongSelf.account, peerId: messages[0].id.peerId, controller: strongSelf)
                                     } else {
                                         let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
                                         let controller = ActionSheetController(presentationTheme: presentationData.theme)
@@ -183,15 +201,26 @@ public class TelegramController: ViewController {
                                             controller?.dismissAnimated()
                                         }
                                         var items: [ActionSheetItem] = []
-                                        if !locationBroadcastPeers.isEmpty {
+                                        if !messages.isEmpty {
                                             items.append(ActionSheetTextItem(title: presentationData.strings.LiveLocation_MenuChatsCount(Int32(locationBroadcastPeers.count))))
-                                            for peer in locationBroadcastPeers {
-                                                items.append(ActionSheetButtonItem(title: peer.displayTitle, action: {
-                                                    dismissAction()
-                                                    if let strongSelf = self {
-                                                        presentLiveLocationController(account: strongSelf.account, peerId: peer.id, controller: strongSelf)
+                                            for message in messages {
+                                                if let peer = message.peers[message.id.peerId] {
+                                                    var beginTimeAndTimeout: (Double, Double)?
+                                                    for media in message.media {
+                                                        if let media = media as? TelegramMediaMap, let timeout = media.liveBroadcastingTimeout {
+                                                            beginTimeAndTimeout = (Double(message.timestamp), Double(timeout))
+                                                        }
                                                     }
-                                                }))
+                                                    
+                                                    if let beginTimeAndTimeout = beginTimeAndTimeout {
+                                                        items.append(LocationBroadcastActionSheetItem(title: peer.displayTitle, beginTimestamp: beginTimeAndTimeout.0, timeout: beginTimeAndTimeout.1, strings: presentationData.strings, action: {
+                                                            dismissAction()
+                                                            if let strongSelf = self {
+                                                                presentLiveLocationController(account: strongSelf.account, peerId: peer.id, controller: strongSelf)
+                                                            }
+                                                        }))
+                                                    }
+                                                }
                                             }
                                             items.append(ActionSheetButtonItem(title: presentationData.strings.LiveLocation_MenuStopAll, color: .destructive, action: {
                                                 dismissAction()

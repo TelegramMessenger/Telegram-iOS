@@ -300,7 +300,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.animateContentNodeOffsetFromBackgroundOffset = nil
                 let offset = backgroundFrame.minY - animateContentNodeOffsetFromBackgroundOffset
                 if let contentNode = self.contentNode {
-                    transition.animatePositionAdditive(node: contentNode, offset: -offset)
+                    transition.animatePositionAdditive(node: contentNode, offset: CGPoint(x: 0.0, y: -offset))
                 }
                 if let previousContentNode = self.previousContentNode {
                     transition.updatePosition(node: previousContentNode, position: previousContentNode.position.offsetBy(dx: 0.0, dy: offset))

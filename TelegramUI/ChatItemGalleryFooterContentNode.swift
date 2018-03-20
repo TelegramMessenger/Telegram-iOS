@@ -214,8 +214,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         var messageText = ""
         var hasCaption = false
         for media in message.media {
-            if media is TelegramMediaImage || media is TelegramMediaFile {
+            if media is TelegramMediaImage {
                 hasCaption = true
+            } else if let file = media as? TelegramMediaFile {
+                hasCaption = file.mimeType.hasPrefix("image/")
             }
         }
         if hasCaption {

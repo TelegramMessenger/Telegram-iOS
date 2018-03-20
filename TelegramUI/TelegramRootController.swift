@@ -22,7 +22,7 @@ public final class TelegramRootController: NavigationController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init()
+        super.init(mode: .automaticMasterDetail, theme: NavigationControllerTheme(presentationTheme: self.presentationData.theme))
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -30,7 +30,7 @@ public final class TelegramRootController: NavigationController {
                 let previousTheme = strongSelf.presentationData.theme
                 strongSelf.presentationData = presentationData
                 if previousTheme !== presentationData.theme {
-                    strongSelf.rootTabController?.updateTheme(navigationBarTheme: NavigationBarTheme(rootControllerTheme: presentationData.theme), theme: TabBarControllerTheme(rootControllerTheme: presentationData.theme))
+                    strongSelf.rootTabController?.updateTheme(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData), theme: TabBarControllerTheme(rootControllerTheme: presentationData.theme))
                     strongSelf.rootTabController?.statusBar.statusBarStyle = presentationData.theme.rootController.statusBar.style.style
                 }
             }
@@ -46,7 +46,7 @@ public final class TelegramRootController: NavigationController {
     }
     
     public func addRootControllers(showCallsTab: Bool) {
-        let tabBarController = TabBarController(navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
+        let tabBarController = TabBarController(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
         let chatListController = ChatListController(account: self.account, groupId: nil, controlsHistoryPreload: true)
         let callListController = CallListController(account: self.account, mode: .tab)
         

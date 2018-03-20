@@ -2288,7 +2288,7 @@ public final class PresentationStrings {
     private let _Checkout_LiabilityAlert: String
     private let _Checkout_LiabilityAlert_r: [(Int, NSRange)]
     public func Checkout_LiabilityAlert(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(_Checkout_LiabilityAlert, self._Checkout_LiabilityAlert_r, [_1, _1, _1, _2])
+        return formatWithArgumentRanges(_Checkout_LiabilityAlert, self._Checkout_LiabilityAlert_r, [_1, _2])
     }
     public let Channel_Info_BlackList: String
     public let Profile_BotInfo: String

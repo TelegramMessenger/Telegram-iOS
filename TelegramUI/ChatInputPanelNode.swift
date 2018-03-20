@@ -8,11 +8,11 @@ class ChatInputPanelNode: ASDisplayNode {
     var account: Account?
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     
-    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return 0.0
     }
     
-    func minimalHeight(interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return 0.0
     }
 }

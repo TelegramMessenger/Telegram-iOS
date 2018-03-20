@@ -15,7 +15,7 @@ public final class NotificationContainerController: ViewController {
     public init(account: Account) {
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
         

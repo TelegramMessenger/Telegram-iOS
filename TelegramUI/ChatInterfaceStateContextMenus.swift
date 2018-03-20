@@ -274,19 +274,29 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         if messages.count == 1 {
             let message = messages[0]
             
-            for media in message.media {
-                if let file = media as? TelegramMediaFile {
-                    if file.isVideo {
-                        if file.isAnimated {
-                            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, action: {
-                                let _ = addSavedGif(postbox: account.postbox, file: file).start()
-                            })))
-                        } else if !GlobalExperimentalSettings.isAppStoreBuild {
-                            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: "Stream", action: {
-                                debugStreamSingleVideo(message.id)
-                            })))
+            var hasAutoremove = false
+            for attribute in message.attributes {
+                if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
+                    hasAutoremove = true
+                    break
+                }
+            }
+            
+            if !hasAutoremove {
+                for media in message.media {
+                    if let file = media as? TelegramMediaFile {
+                        if file.isVideo {
+                            if file.isAnimated {
+                                actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, action: {
+                                    let _ = addSavedGif(postbox: account.postbox, file: file).start()
+                                })))
+                            } else if !GlobalExperimentalSettings.isAppStoreBuild {
+                                actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: "Stream", action: {
+                                    debugStreamSingleVideo(message.id)
+                                })))
+                            }
+                            break
                         }
-                        break
                     }
                 }
             }

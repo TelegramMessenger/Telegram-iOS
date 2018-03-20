@@ -21,8 +21,8 @@
 
 #include <stdint.h>
 
-#include "../libavutilpixfmt.h"
-#include "../libavutilrational.h"
+#include "../libavutil/pixfmt.h"
+#include "../libavutil/rational.h"
 #include "avcodec.h"
 
 /* minimum number of bytes to read from a DV stream in order to

@@ -10,7 +10,7 @@ public final class OverlayMediaController: ViewController {
     }
     
     public init() {
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
     }

@@ -111,6 +111,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         var updatedMedia: Media?
         var imageDimensions: CGSize?
+        var isRound = false
         if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
             for media in item.message.media {
                 if let image = media as? TelegramMediaImage {
@@ -124,6 +125,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     if let representation = largestImageRepresentation(file.previewRepresentations) {
                         imageDimensions = representation.dimensions
                     }
+                    isRound = file.isInstantVideo
                     break
                 }
             }
@@ -133,7 +135,11 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var applyImage: (() -> Void)?
         if let imageDimensions = imageDimensions {
             let boundingSize = CGSize(width: 55.0, height: 55.0)
-            applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: 6.0), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+            var radius: CGFloat = 6.0
+            if isRound {
+                radius = floor(boundingSize.width / 2.0)
+            }
+            applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
         }
         
         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
@@ -153,7 +159,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
             messageText = item.strings.ENCRYPTED_MESSAGE("").0
         } else {
-            messageText = descriptionStringForMessage(item.message, strings: item.strings, accountPeerId: item.account.peerId)
+            messageText = descriptionStringForMessage(item.message, strings: item.strings, accountPeerId: item.account.peerId).0
         }
         
         if let applyImage = applyImage {

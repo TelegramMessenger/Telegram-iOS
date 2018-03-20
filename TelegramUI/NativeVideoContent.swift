@@ -6,13 +6,13 @@ import Postbox
 import TelegramCore
 
 enum NativeVideoContentId: Hashable {
-    case message(MessageId, MediaId)
+    case message(MessageId, UInt32, MediaId)
     case instantPage(MediaId, MediaId)
     
     static func ==(lhs: NativeVideoContentId, rhs: NativeVideoContentId) -> Bool {
         switch lhs {
-            case let .message(messageId, mediaId):
-                if case .message(messageId, mediaId) = rhs {
+            case let .message(messageId, stableId, mediaId):
+                if case .message(messageId, stableId, mediaId) = rhs {
                     return true
                 } else {
                     return false
@@ -28,7 +28,7 @@ enum NativeVideoContentId: Hashable {
     
     var hashValue: Int {
         switch self {
-            case let .message(messageId, mediaId):
+            case let .message(messageId, _, mediaId):
                 return messageId.hashValue &* 31 &+ mediaId.hashValue
             case let .instantPage(pageId, mediaId):
                 return pageId.hashValue &* 31 &+ mediaId.hashValue
@@ -38,25 +38,42 @@ enum NativeVideoContentId: Hashable {
 
 final class NativeVideoContent: UniversalVideoContent {
     let id: AnyHashable
+    let nativeId: NativeVideoContentId
     let file: TelegramMediaFile
     let dimensions: CGSize
     let duration: Int32
     let streamVideo: Bool
     let loopVideo: Bool
     let enableSound: Bool
+    let fetchAutomatically: Bool
     
-    init(id: NativeVideoContentId, file: TelegramMediaFile, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true) {
+    init(id: NativeVideoContentId, file: TelegramMediaFile, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, fetchAutomatically: Bool = true) {
         self.id = id
+        self.nativeId = id
         self.file = file
         self.dimensions = file.dimensions ?? CGSize(width: 128.0, height: 128.0)
         self.duration = file.duration ?? 0
         self.streamVideo = streamVideo
         self.loopVideo = loopVideo
         self.enableSound = enableSound
+        self.fetchAutomatically = fetchAutomatically
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, file: self.file, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound)
+        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, file: self.file, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, fetchAutomatically: self.fetchAutomatically)
+    }
+    
+    func isEqual(to other: UniversalVideoContent) -> Bool {
+        if let other = other as? NativeVideoContent {
+            if case let .message(_, stableId, _) = self.nativeId {
+                if case .message(_, stableId, _) = other.nativeId {
+                    if self.file.isInstantVideo {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
     }
 }
 
@@ -91,13 +108,13 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var validLayout: CGSize?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, file: TelegramMediaFile, streamVideo: Bool, loopVideo: Bool, enableSound: Bool) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, file: TelegramMediaFile, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, fetchAutomatically: Bool) {
         self.postbox = postbox
         self.file = file
         
         self.imageNode = TransformImageNode()
         
-        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: file.resource, streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound)
+        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resource: file.resource, streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound, fetchAutomatically: fetchAutomatically)
         var actionAtEndImpl: (() -> Void)?
         if enableSound && !loopVideo {
             self.player.actionAtEnd = .action({
@@ -170,7 +187,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         if let dimensions = self.dimensions {
             let imageSize = CGSize(width: floor(dimensions.width / 2.0), height: floor(dimensions.height / 2.0))
             let makeLayout = self.imageNode.asyncLayout()
-            let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
+            let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.file.isInstantVideo ? .clear : .white))
             applyLayout()
         }
         

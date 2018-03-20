@@ -26,7 +26,7 @@ public final class JoinLinkPreviewController: ViewController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
     }
     
     required public init(coder aDecoder: NSCoder) {

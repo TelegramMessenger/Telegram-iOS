@@ -12,7 +12,7 @@ final class WebController: ViewController {
     init(url: URL) {
         self.url = url
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.edgesForExtendedLayout = []
     }

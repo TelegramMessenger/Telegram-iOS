@@ -135,7 +135,8 @@ private let thumbnailGenerationMimeTypes: Set<String> = Set([
     "image/jpeg",
     "image/jpg",
     "image/png",
-    "image/gif"
+    "image/gif",
+    "image/heic"
 ])
 
 private func chatMessageImageFileThumbnailDatas(account: Account, file: TelegramMediaFile, pathExtension: String? = nil, progressive: Bool = false) -> Signal<(Data?, String?, Bool), NoError> {
@@ -566,11 +567,13 @@ func chatMessagePhoto(postbox: Postbox, photo: TelegramMediaImage) -> Signal<(Tr
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 } else {
@@ -580,6 +583,7 @@ func chatMessagePhoto(postbox: Postbox, photo: TelegramMediaImage) -> Signal<(Tr
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 }
@@ -641,13 +645,13 @@ func chatMessagePhoto(postbox: Postbox, photo: TelegramMediaImage) -> Signal<(Tr
                     c.setBlendMode(.copy)
                     if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
                         c.interpolationQuality = .low
-                        c.draw(cgImage, in: fittedRect)
+                        drawImage(context: c, image: cgImage, orientation: imageOrientation, in: fittedRect)
                         c.setBlendMode(.normal)
                     }
                     
                     if let fullSizeImage = fullSizeImage {
                         c.interpolationQuality = .medium
-                        c.draw(fullSizeImage, in: fittedRect)
+                        drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                     }
                 }
             }
@@ -723,11 +727,13 @@ func chatMessagePhotoThumbnail(account: Account, photo: TelegramMediaImage) -> S
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 } else {
@@ -737,6 +743,7 @@ func chatMessagePhotoThumbnail(account: Account, photo: TelegramMediaImage) -> S
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 }
@@ -771,13 +778,13 @@ func chatMessagePhotoThumbnail(account: Account, photo: TelegramMediaImage) -> S
                 c.setBlendMode(.copy)
                 if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
                     c.interpolationQuality = .low
-                    c.draw(cgImage, in: fittedRect)
+                    drawImage(context: c, image: cgImage, orientation: imageOrientation, in: fittedRect)
                     c.setBlendMode(.normal)
                 }
                 
                 if let fullSizeImage = fullSizeImage {
                     c.interpolationQuality = .medium
-                    c.draw(fullSizeImage, in: fittedRect)
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                 }
             }
             
@@ -807,11 +814,13 @@ func chatMessageVideoThumbnail(account: Account, file: TelegramMediaFile) -> Sig
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
             if let fullSizeData = fullSizeData?.0 {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 } else {
@@ -821,6 +830,7 @@ func chatMessageVideoThumbnail(account: Account, file: TelegramMediaFile) -> Sig
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 }
@@ -855,13 +865,13 @@ func chatMessageVideoThumbnail(account: Account, file: TelegramMediaFile) -> Sig
                 c.setBlendMode(.copy)
                 if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
                     c.interpolationQuality = .low
-                    c.draw(cgImage, in: fittedRect)
+                    drawImage(context: c, image: cgImage, orientation: imageOrientation, in: fittedRect)
                     c.setBlendMode(.normal)
                 }
                 
                 if let fullSizeImage = fullSizeImage {
                     c.interpolationQuality = .medium
-                    c.draw(fullSizeImage, in: fittedRect)
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                 }
             }
             
@@ -918,16 +928,7 @@ func chatSecretPhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tra
                         
                         blurredImage = thumbnailContext2.generateImage()
                     }
-                }/* else {
-                    let imageSource = CGImageSourceCreateIncremental(nil)
-                    CGImageSourceUpdateData(imageSource, fullSizeData as CFData, fullSizeComplete)
-                    
-                    let options = NSMutableDictionary()
-                    options[kCGImageSourceShouldCache as NSString] = false as NSNumber
-                    if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
-                        fullSizeImage = image
-                    }
-                }*/
+                }
             }
             
             if blurredImage == nil {
@@ -965,7 +966,7 @@ func chatSecretPhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tra
                 c.setBlendMode(.copy)
                 if let blurredImage = blurredImage, let cgImage = blurredImage.cgImage {
                     c.interpolationQuality = .low
-                    c.draw(cgImage, in: fittedRect)
+                    drawImage(context: c, image: cgImage, orientation: .up, in: fittedRect)
                 }
                 
                 if !arguments.insets.left.isEqual(to: 0.0) {
@@ -996,12 +997,14 @@ func mediaGridMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signa
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
                     options.setValue(max(fittedSize.width * context.scale, fittedSize.height * context.scale) as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
                     options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
                     if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 } else {
@@ -1011,6 +1014,7 @@ func mediaGridMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signa
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 }
@@ -1044,13 +1048,13 @@ func mediaGridMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signa
                 c.setBlendMode(.copy)
                 if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
                     c.interpolationQuality = .low
-                    c.draw(cgImage, in: fittedRect)
+                    drawImage(context: c, image: cgImage, orientation: imageOrientation, in: fittedRect)
                     c.setBlendMode(.normal)
                 }
                 
                 if let fullSizeImage = fullSizeImage {
                     c.interpolationQuality = .medium
-                    c.draw(fullSizeImage, in: fittedRect)
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                 }
             }
             
@@ -1115,7 +1119,7 @@ func gifPaneVideoThumbnail(account: Account, video: TelegramMediaFile) -> Signal
                         c.setBlendMode(.copy)
                         if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
                             c.interpolationQuality = .low
-                            c.draw(cgImage, in: fittedRect)
+                            drawImage(context: c, image: cgImage, orientation: .up, in: fittedRect)
                             c.setBlendMode(.normal)
                         }
                     }
@@ -1169,12 +1173,12 @@ func internalMediaGridMessageVideo(postbox: Postbox, video: TelegramMediaFile) -
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
-                    //options.setValue(max(fittedSize.width * context.scale, fittedSize.height * context.scale) as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
-                    //options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
                     if let imageSource = CGImageSourceCreateWithData(fullSizeData.0 as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 } else {
@@ -1184,6 +1188,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, video: TelegramMediaFile) -
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 }
@@ -1247,13 +1252,13 @@ func internalMediaGridMessageVideo(postbox: Postbox, video: TelegramMediaFile) -
                 c.setBlendMode(.copy)
                 if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
                     c.interpolationQuality = .low
-                    c.draw(cgImage, in: fittedRect)
+                    drawImage(context: c, image: cgImage, orientation: imageOrientation, in: fittedRect)
                     c.setBlendMode(.normal)
                 }
                 
                 if let fullSizeImage = fullSizeImage {
                     c.interpolationQuality = .medium
-                    c.draw(fullSizeImage, in: fittedRect)
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                 }
             }
             
@@ -1323,9 +1328,11 @@ func chatWebpageSnippetPhoto(account: Account, photo: TelegramMediaImage) -> Sig
     return signal |> map { fullSizeData in
         return { arguments in
             var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
             if let fullSizeData = fullSizeData {
                 let options = NSMutableDictionary()
                 if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                    imageOrientation = imageOrientationFromSource(imageSource)
                     fullSizeImage = image
                 }
             }
@@ -1345,7 +1352,7 @@ func chatWebpageSnippetPhoto(account: Account, photo: TelegramMediaImage) -> Sig
                     }
                     
                     c.interpolationQuality = .medium
-                    c.draw(fullSizeImage, in: fittedRect)
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                 }
                 
                 addCorners(context, arguments: arguments)
@@ -1399,41 +1406,6 @@ func chatSecretMessageVideo(account: Account, video: TelegramMediaFile) -> Signa
             let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
-            /*var fullSizeImage: CGImage?
-            if let fullSizeDataAndPath = fullSizeDataAndPath {
-                if fullSizeComplete {
-                    if video.mimeType.hasPrefix("video/") {
-                        let tempFilePath = NSTemporaryDirectory() + "\(arc4random()).mov"
-                        
-                        _ = try? FileManager.default.removeItem(atPath: tempFilePath)
-                        _ = try? FileManager.default.linkItem(atPath: fullSizeDataAndPath.1, toPath: tempFilePath)
-                        
-                        let asset = AVAsset(url: URL(fileURLWithPath: tempFilePath))
-                        let imageGenerator = AVAssetImageGenerator(asset: asset)
-                        imageGenerator.maximumSize = CGSize(width: 800.0, height: 800.0)
-                        imageGenerator.appliesPreferredTrackTransform = true
-                        if let image = try? imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: asset.duration.timescale), actualTime: nil) {
-                            fullSizeImage = image
-                        }
-                    }
-                    /*let options: [NSString: NSObject] = [
-                     kCGImageSourceThumbnailMaxPixelSize: max(fittedSize.width * context.scale, fittedSize.height * context.scale),
-                     kCGImageSourceCreateThumbnailFromImageAlways: true
-                     ]
-                     if let imageSource = CGImageSourceCreateWithData(fullSizeData, nil), image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options) {
-                     fullSizeImage = image
-                     }*/
-                } else {
-                    /*let imageSource = CGImageSourceCreateIncremental(nil)
-                     CGImageSourceUpdateData(imageSource, fullSizeData as CFDataRef, fullSizeData.length >= fullTotalSize)
-                     
-                     var options: [NSString : NSObject!] = [:]
-                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
-                     if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionaryRef) {
-                     fullSizeImage = image
-                     }*/
-                }
-            }*/
             var blurredImage: UIImage?
             
             if blurredImage == nil {
@@ -1464,14 +1436,13 @@ func chatSecretMessageVideo(account: Account, video: TelegramMediaFile) -> Signa
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
-                    //c.setFillColor(UIColor(white: 0.0, alpha: 0.4).cgColor)
                     c.fill(arguments.drawingRect)
                 }
                 
                 c.setBlendMode(.copy)
                 if let blurredImage = blurredImage, let cgImage = blurredImage.cgImage {
                     c.interpolationQuality = .low
-                    c.draw(cgImage, in: fittedRect)
+                    drawImage(context: c, image: cgImage, orientation: .up, in: fittedRect)
                 }
                 
                 if !arguments.insets.left.isEqual(to: 0.0) {
@@ -1486,6 +1457,40 @@ func chatSecretMessageVideo(account: Account, video: TelegramMediaFile) -> Signa
             
             return context
         }
+    }
+}
+
+private func imageOrientationFromSource(_ source: CGImageSource) -> UIImageOrientation {
+    if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) {
+        let dict = properties as NSDictionary
+        if let value = dict.object(forKey: "Orientation") as? NSNumber {
+            return UIImageOrientation(rawValue: value.intValue) ?? .up
+        }
+    }
+    
+    return .up
+}
+
+private func drawImage(context: CGContext, image: CGImage, orientation: UIImageOrientation, in rect: CGRect) {
+    var restore = true
+    var drawRect = rect
+    switch orientation {
+        case .leftMirrored:
+            context.saveGState()
+            context.translateBy(x: rect.midX, y: rect.midY)
+            context.rotate(by: -CGFloat.pi / 2.0)
+            context.translateBy(x: -rect.midX, y: -rect.midY)
+            var t = CGAffineTransform(translationX: rect.midX, y: rect.midY)
+            t = t.rotated(by: -CGFloat.pi / 2.0)
+            t = t.translatedBy(x: -rect.midX, y: -rect.midY)
+            
+            drawRect = rect.applying(t)
+        default:
+            restore = false
+    }
+    context.draw(image, in: drawRect)
+    if restore {
+        context.restoreGState()
     }
 }
 
@@ -1511,12 +1516,14 @@ func chatMessageImageFile(account: Account, file: TelegramMediaFile, thumbnail: 
             }
             
             var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
             if let fullSizePath = fullSizePath {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
                     options.setValue(max(fittedSize.width * context.scale, fittedSize.height * context.scale) as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
                     options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
                     if let imageSource = CGImageSourceCreateWithURL(URL(fileURLWithPath: fullSizePath) as CFURL, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                         if thumbnail {
                             fittedSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height)).aspectFilled(arguments.boundingSize)
@@ -1558,13 +1565,13 @@ func chatMessageImageFile(account: Account, file: TelegramMediaFile, thumbnail: 
                 c.setBlendMode(.copy)
                 if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
                     c.interpolationQuality = .low
-                    c.draw(cgImage, in: fittedRect)
+                    drawImage(context: c, image: cgImage, orientation: imageOrientation, in: fittedRect)
                 }
                 
                 if let fullSizeImage = fullSizeImage {
                     c.setBlendMode(.normal)
                     c.interpolationQuality = .medium
-                    c.draw(fullSizeImage, in: fittedRect)
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                 }
             }
             
@@ -1654,11 +1661,13 @@ func chatAvatarGalleryPhoto(account: Account, representations: [TelegramMediaIma
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 } else {
@@ -1668,6 +1677,7 @@ func chatAvatarGalleryPhoto(account: Account, representations: [TelegramMediaIma
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                 }
@@ -1695,20 +1705,19 @@ func chatAvatarGalleryPhoto(account: Account, representations: [TelegramMediaIma
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
-                    //c.setFillColor(UIColor(white: 0.0, alpha: 0.4).cgColor)
                     c.fill(arguments.drawingRect)
                 }
                 
                 c.setBlendMode(.copy)
                 if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
                     c.interpolationQuality = .low
-                    c.draw(cgImage, in: fittedRect)
+                    drawImage(context: c, image: cgImage, orientation: imageOrientation, in: fittedRect)
                     c.setBlendMode(.normal)
                 }
                 
                 if let fullSizeImage = fullSizeImage {
                     c.interpolationQuality = .medium
-                    c.draw(fullSizeImage, in: fittedRect)
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                 }
             }
             
@@ -1750,7 +1759,7 @@ func settingsBuiltinWallpaperImage(account: Account) -> Signal<(TransformImageAr
                 c.setBlendMode(.copy)
                 if let fullSizeImage = fullSizeImage.cgImage {
                     c.interpolationQuality = .medium
-                    c.draw(fullSizeImage, in: fittedRect)
+                    drawImage(context: c, image: fullSizeImage, orientation: .up, in: fittedRect)
                 }
             }
             
@@ -1787,10 +1796,12 @@ func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) 
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
             if let fullSizeData = fullSizeData {
                 let options = NSMutableDictionary()
                 options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                 if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                    imageOrientation = imageOrientationFromSource(imageSource)
                     fullSizeImage = image
                 }
                 
@@ -1815,7 +1826,7 @@ func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) 
                         c.setBlendMode(.copy)
                         
                         c.interpolationQuality = .medium
-                        c.draw(fullSizeImage, in: fittedRect)
+                        drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                         
                         c.setBlendMode(.normal)
                         
@@ -1852,10 +1863,12 @@ func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Signal<(T
                 let context = DrawingContext(size: arguments.drawingSize, clear: true)
                 
                 var fullSizeImage: CGImage?
+                var imageOrientation: UIImageOrientation = .up
                 if fullSizeData.complete {
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
                     if let imageSource = CGImageSourceCreateWithURL(URL(fileURLWithPath: fullSizeData.path) as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
                     
@@ -1880,7 +1893,7 @@ func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Signal<(T
                             c.setBlendMode(.copy)
                             
                             c.interpolationQuality = .medium
-                            c.draw(fullSizeImage, in: fittedRect)
+                            drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                             
                             c.setBlendMode(.normal)
                         }

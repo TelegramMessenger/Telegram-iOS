@@ -94,7 +94,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.deleteChat()
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             var updateWaveform = false
             if self.presentationInterfaceState?.recordedMediaPreview != interfaceState.recordedMediaPreview {
@@ -110,7 +110,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                     self.mediaPlayer?.pause()
                 }
                 if let account = self.account {
-                    let mediaPlayer = MediaPlayer(audioSessionManager: account.telegramApplicationContext.mediaManager.audioSession, postbox: account.postbox, resource: recordedMediaPreview.resource, streamable: false, video: false, preferSoftwareDecoding: false, enableSound: true)
+                    let mediaPlayer = MediaPlayer(audioSessionManager: account.telegramApplicationContext.mediaManager.audioSession, postbox: account.postbox, resource: recordedMediaPreview.resource, streamable: false, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
                     self.mediaPlayer = mediaPlayer
                     self.durationLabel.defaultDuration = Double(recordedMediaPreview.duration)
                     self.durationLabel.status = mediaPlayer.status
@@ -157,7 +157,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.mediaPlayer?.togglePlayPause()
     }
     
-    override func minimalHeight(interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return 47.0
     }
 }

@@ -34,7 +34,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         self.strings = strings
         self.theme = theme
         
-        super.init(navigationBarTheme: AuthorizationSequenceController.navigationBarTheme(theme))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
         self.hasActiveInput = true
         

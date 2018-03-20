@@ -27,7 +27,7 @@ final class StickerPreviewController: ViewController {
         self.account = account
         self.item = item
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
     }

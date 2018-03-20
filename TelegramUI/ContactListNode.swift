@@ -419,7 +419,9 @@ final class ContactListNode: ASDisplayNode {
             if value != self.enableUpdatesValue {
                 self.enableUpdatesValue = value
                 if value {
-                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId, includePresences: true))
+                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId, includePresences: true) |> mapToThrottled { next -> Signal<ContactPeersView, NoError> in
+                        return .single(next) |> then(.complete() |> delay(5.0, queue: Queue.concurrentDefaultQueue()))
+                    })
                 } else {
                     self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId, includePresences: true) |> take(1))
                 }

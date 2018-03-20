@@ -22,7 +22,7 @@ final class HashtagSearchController: TelegramController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(account: account, navigationBarTheme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .none)
+        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .none)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         

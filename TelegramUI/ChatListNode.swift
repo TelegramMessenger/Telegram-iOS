@@ -20,6 +20,20 @@ struct ChatListNodeListViewTransition {
     let stationaryItemRange: (Int, Int)?
 }
 
+final class ChatListHighlightedLocation {
+    let location: ChatLocation
+    let progress: CGFloat
+    
+    init(location: ChatLocation, progress: CGFloat) {
+        self.location = location
+        self.progress = progress
+    }
+    
+    func withUpdatedProgress(_ progress: CGFloat) -> ChatListHighlightedLocation {
+        return ChatListHighlightedLocation(location: location, progress: progress)
+    }
+}
+
 final class ChatListNodeInteraction {
     let activateSearch: () -> Void
     let peerSelected: (Peer) -> Void
@@ -30,6 +44,8 @@ final class ChatListNodeInteraction {
     let setPeerMuted: (PeerId, Bool) -> Void
     let deletePeer: (PeerId) -> Void
     let updatePeerGrouping: (PeerId, Bool) -> Void
+    
+    var highlightedChatLocation: ChatListHighlightedLocation?
     
     init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, messageSelected: @escaping (Message) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void) {
         self.activateSearch = activateSearch
@@ -203,6 +219,7 @@ final class ChatListNode: ListView {
     
     private let viewProcessingQueue = Queue()
     private var chatListView: ChatListNodeView?
+    private var interaction: ChatListNodeInteraction?
     
     private var dequeuedInitialTransitionOnLayout = false
     private var enqueuedTransition: (ChatListNodeListViewTransition, () -> Void)?
@@ -368,6 +385,8 @@ final class ChatListNode: ListView {
                 strongSelf.enqueueHistoryPreloadUpdate()
             }
         }
+        
+        self.interaction = nodeInteraction
         
         self.chatListDisposable.set(appliedTransition.start())
         
@@ -666,5 +685,23 @@ final class ChatListNode: ListView {
     
     private func enqueueHistoryPreloadUpdate() {
         
+    }
+    
+    func updateSelectedChatLocation(_ chatLocation: ChatLocation?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard let interaction = self.interaction else {
+            return
+        }
+        
+        if let chatLocation = chatLocation {
+            interaction.highlightedChatLocation = ChatListHighlightedLocation(location: chatLocation, progress: 1.0)
+        } else {
+            interaction.highlightedChatLocation = nil
+        }
+        
+        self.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatListItemNode {
+                itemNode.updateIsHighlighted(transition: transition)
+            }
+        }
     }
 }

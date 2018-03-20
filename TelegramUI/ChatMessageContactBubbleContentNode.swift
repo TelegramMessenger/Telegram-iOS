@@ -86,7 +86,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 updatedPhone = nil
             }
             
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .none, forceFullCorners: false, forceAlignment: .none)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let avatarSize = CGSize(width: 40.0, height: 40.0)
