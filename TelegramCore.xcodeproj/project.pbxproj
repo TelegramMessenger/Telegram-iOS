@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9F10CE8B20613C78002DD61A /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */; };
+		9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */; };
 		C205FEA81EB3B75900455808 /* ExportMessageLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C205FEA71EB3B75900455808 /* ExportMessageLink.swift */; };
 		C205FEA91EB3B75900455808 /* ExportMessageLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C205FEA71EB3B75900455808 /* ExportMessageLink.swift */; };
 		C210DD621FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = C210DD611FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift */; };
@@ -2132,6 +2134,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */,
+				9F10CE8B20613C78002DD61A /* SecretApiLayer73.swift in Sources */,
 				C29340F41F5081280074991E /* UpdateGroupSpecificStickerset.swift in Sources */,
 				C25638021E79E7FC00311607 /* TwoStepVerification.swift in Sources */,
 				D00DBBD81E64E41100DB5485 /* CreateSecretChat.swift in Sources */,
