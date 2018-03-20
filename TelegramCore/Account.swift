@@ -341,16 +341,17 @@ public struct TwoStepAuthData {
     let hasRecovery: Bool
     let currentHint: String?
     let unconfirmedEmailPattern: String?
+    let secretRandom: Data
 }
 
 public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .noPassword(newSalt, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: nil, hasRecovery: false, currentHint: nil, unconfirmedEmailPattern: emailUnconfirmedPattern)
-            case let .password(currentSalt, newSalt, hint, hasRecovery, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: currentSalt.makeData(), hasRecovery: hasRecovery == .boolTrue, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern)
+            case let .noPassword(newSalt, secretRandom, emailUnconfirmedPattern):
+                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: nil, hasRecovery: false, currentHint: nil, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData())
+            case let .password(currentSalt, newSalt, secretRandom, hint, hasRecovery, emailUnconfirmedPattern):
+                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: currentSalt.makeData(), hasRecovery: hasRecovery == .boolTrue, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData())
         }
     }
 }

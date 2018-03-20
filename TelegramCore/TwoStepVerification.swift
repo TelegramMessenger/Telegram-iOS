@@ -19,9 +19,9 @@ public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStep
         |> retryRequest
         |> map { result -> TwoStepVerificationConfiguration in
             switch result {
-                case let .noPassword(_, emailUnconfirmedPattern):
+                case let .noPassword(_, _, emailUnconfirmedPattern):
                     return .notSet(pendingEmailPattern: emailUnconfirmedPattern)
-                case let .password(_, _, hint, hasRecovery, emailUnconfirmedPattern):
+                case let .password(_, _, _, hint, hasRecovery, emailUnconfirmedPattern):
                     return .set(hint: hint, hasRecoveryEmail: hasRecovery == .boolTrue, pendingEmailPattern: emailUnconfirmedPattern)
             }
         }
@@ -43,7 +43,7 @@ public func requestTwoStepVerifiationSettings(account: Account, password: String
             return account.network.request(Api.functions.account.getPasswordSettings(currentPasswordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
                 |> map { result -> TwoStepVerificationSettings in
                     switch result {
-                        case let .passwordSettings(email):
+                        case let .passwordSettings(email, _):
                             return TwoStepVerificationSettings(email: email)
                     }
                 }
@@ -100,7 +100,7 @@ public func updateTwoStepVerificationPassword(account: Account, currentPassword:
                         flags |= (1 << 0)
                     }
                     
-                    return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "")), automaticFloodWait: false)
+                    return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSecret: nil)), automaticFloodWait: false)
                         |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
                             return .generic
                         }
@@ -127,7 +127,7 @@ public func updateTwoStepVerificationPassword(account: Account, currentPassword:
                     updatedData.append(nextSalt)
                     
                     let updatedPasswordHash = sha256Digest(updatedData)
-                    return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: Buffer(data: nextSalt), newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email)), automaticFloodWait: false)
+                    return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: Buffer(data: nextSalt), newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email, newSecureSecret: nil)), automaticFloodWait: false)
                         |> map { _ -> UpdateTwoStepVerificationPasswordResult in
                             return .password(password: password, pendingEmailPattern: nil)
                         }
@@ -170,7 +170,7 @@ public func updateTwoStepVerificationEmail(account: Account, currentPassword: St
             }
 
             let flags: Int32 = 1 << 1
-            return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: updatedEmail)), automaticFloodWait: false)
+            return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: updatedEmail, newSecureSecret: nil)), automaticFloodWait: false)
                 |> map { _ -> UpdateTwoStepVerificationPasswordResult in
                     return .password(password: currentPassword, pendingEmailPattern: nil)
                 }
