@@ -238,7 +238,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2009052699] = { return Api.PhotoSize.parse_photoSize($0) }
     dict[-374917894] = { return Api.PhotoSize.parse_photoCachedSize($0) }
     dict[-244016606] = { return Api.messages.Stickers.parse_stickersNotModified($0) }
-    dict[-1970352846] = { return Api.messages.Stickers.parse_stickers($0) }
+    dict[-463889475] = { return Api.messages.Stickers.parse_stickers($0) }
     dict[1008755359] = { return Api.InlineBotSwitchPM.parse_inlineBotSwitchPM($0) }
     dict[223655517] = { return Api.messages.FoundStickerSets.parse_foundStickerSetsNotModified($0) }
     dict[1359533640] = { return Api.messages.FoundStickerSets.parse_foundStickerSets($0) }
@@ -424,7 +424,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[480546647] = { return Api.InputChatPhoto.parse_inputChatPhotoEmpty($0) }
     dict[-1837345356] = { return Api.InputChatPhoto.parse_inputChatUploadedPhoto($0) }
     dict[-1991004873] = { return Api.InputChatPhoto.parse_inputChatPhoto($0) }
-    dict[-442220033] = { return Api.AuthField.parse_authField($0) }
+    dict[-310262820] = { return Api.AuthField.parse_authField($0) }
     dict[-368917890] = { return Api.PaymentCharge.parse_paymentCharge($0) }
     dict[-484987010] = { return Api.Updates.parse_updatesTooLong($0) }
     dict[-1857044719] = { return Api.Updates.parse_updateShortMessage($0) }
@@ -1292,7 +1292,7 @@ public struct Api {
     
         public enum Stickers {
             case stickersNotModified
-            case stickers(hash: String, stickers: [Api.Document])
+            case stickers(hash: Int32, stickers: [Api.Document])
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
@@ -1304,9 +1304,9 @@ public struct Api {
                         break
                     case .stickers(let hash, let stickers):
                         if boxed {
-                            buffer.appendInt32(-1970352846)
+                            buffer.appendInt32(-463889475)
                         }
-                        serializeString(hash, buffer: buffer, boxed: false)
+                        serializeInt32(hash, buffer: buffer, boxed: false)
                         buffer.appendInt32(481674261)
                         buffer.appendInt32(Int32(stickers.count))
                         for item in stickers {
@@ -1319,8 +1319,8 @@ public struct Api {
                 return Api.messages.Stickers.stickersNotModified
             }
             fileprivate static func parse_stickers(_ reader: BufferReader) -> Stickers? {
-                var _1: String?
-                _1 = parseString(reader)
+                var _1: Int32?
+                _1 = reader.readInt32()
                 var _2: [Api.Document]?
                 if let _ = reader.readInt32() {
                     _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
@@ -11392,19 +11392,18 @@ public struct Api {
     }
 
     public enum AuthField {
-        case authField(flags: Int32, type: Api.AuthFieldType, data: Api.SecureValue, document: Api.SecureValue?, verifyDocument: Api.SecureValue?)
+        case authField(flags: Int32, type: Api.AuthFieldType, data: Api.SecureValue, document: Api.SecureValue?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .authField(let flags, let type, let data, let document, let verifyDocument):
+                case .authField(let flags, let type, let data, let document):
                     if boxed {
-                        buffer.appendInt32(-442220033)
+                        buffer.appendInt32(-310262820)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     type.serialize(buffer, true)
                     data.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 1) != 0 {verifyDocument!.serialize(buffer, true)}
                     break
     }
     }
@@ -11423,17 +11422,12 @@ public struct Api {
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
                 _4 = Api.parse(reader, signature: signature) as? Api.SecureValue
             } }
-            var _5: Api.SecureValue?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.SecureValue
-            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.AuthField.authField(flags: _1!, type: _2!, data: _3!, document: _4, verifyDocument: _5)
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.AuthField.authField(flags: _1!, type: _2!, data: _3!, document: _4)
             }
             else {
                 return nil
@@ -20898,22 +20892,6 @@ public struct Api {
                     })
                 }
             
-                public static func getStickers(flags: Int32, emoticon: String, hash: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Stickers?) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-2050272894)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(emoticon, buffer: buffer, boxed: false)
-                    serializeString(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(messages.getStickers flags: \(flags), emoticon: \(emoticon), hash: \(hash))"}), buffer, { (buffer: Buffer) -> Api.messages.Stickers? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Stickers?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Stickers
-                        }
-                        return result
-                    })
-                }
-            
                 public static func searchStickerSets(flags: Int32, q: String, hash: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.FoundStickerSets?) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1028140917)
@@ -20925,6 +20903,21 @@ public struct Api {
                         var result: Api.messages.FoundStickerSets?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.FoundStickerSets
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getStickers(emoticon: String, hash: Int32) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.messages.Stickers?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(71126828)
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(messages.getStickers emoticon: \(emoticon), hash: \(hash))"}), buffer, { (buffer: Buffer) -> Api.messages.Stickers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Stickers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Stickers
                         }
                         return result
                     })
