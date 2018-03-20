@@ -293,7 +293,7 @@ public final class ChatContextResultCollection: Equatable {
     public let results: [ChatContextResult]
     public let cacheTimeout: Int32
     
-    init(botId: PeerId, queryId: Int64, nextOffset: String?, presentation: ChatContextResultCollectionPresentation, switchPeer: ChatContextResultSwitchPeer?, results: [ChatContextResult], cacheTimeout: Int32) {
+    public init(botId: PeerId, queryId: Int64, nextOffset: String?, presentation: ChatContextResultCollectionPresentation, switchPeer: ChatContextResultSwitchPeer?, results: [ChatContextResult], cacheTimeout: Int32) {
         self.botId = botId
         self.queryId = queryId
         self.nextOffset = nextOffset

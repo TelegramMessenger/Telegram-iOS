@@ -332,7 +332,7 @@ private enum MultipartFetchSource {
                                 }
                             case let .web(_, location):
                                 return download.request(Api.functions.upload.getWebFile(location: location, offset: offset, limit: Int32(updatedLength)))
-                                    |> mapError { _ -> MultipartFetchDownloadError in
+                                    |> mapError { error -> MultipartFetchDownloadError in
                                         return .generic
                                     }
                                     |> mapToSignal { result -> Signal<Data, MultipartFetchDownloadError> in

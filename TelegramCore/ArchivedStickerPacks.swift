@@ -19,7 +19,6 @@ public final class ArchivedStickerPackItem {
 
 public func archivedStickerPacks(account: Account) -> Signal<[ArchivedStickerPackItem], NoError> {
     return account.network.request(Api.functions.messages.getArchivedStickers(flags: 0, offsetId: 0, limit: 100))
-        |> retryRequest
         |> map { result -> [ArchivedStickerPackItem] in
             var archivedItems: [ArchivedStickerPackItem] = []
             switch result {
@@ -30,6 +29,8 @@ public func archivedStickerPacks(account: Account) -> Signal<[ArchivedStickerPac
                     }
             }
             return archivedItems
+        } |> `catch` { _ in
+            return .single([])
         }
 }
 
