@@ -97,7 +97,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
                 |> mapError { _ in } |> map(Optional.init)
     }
-        
+    
     let processedSearchResult = remoteSearchResult
         |> mapToSignal { result -> Signal<[Message], NoError> in
             guard let result = result else {

@@ -396,7 +396,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
             hintSize = Int(size)
         }
-        if file.resource.headerSize != 0 {
+        if file.resource.headerSize != 0 && !file.isAnimated {
             hintFileIsLarge = true
         }
         let upload = messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(file.resource), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes)), hintFileSize: hintSize, hintFileIsLarge: hintFileIsLarge)

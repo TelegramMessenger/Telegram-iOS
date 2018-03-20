@@ -89,58 +89,13 @@ func remoteStickerPack(network: Network, reference: StickerPackReference) -> Sig
 public func loadedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<LoadedStickerPack, NoError> {
     return cachedStickerPack(postbox: postbox, network: network, reference: reference)
         |> map { result -> LoadedStickerPack in
-            if let result = result {
-                return .result(info: result.0, items: result.1, installed: result.2)
-            } else {
-                return .fetching
+            switch result {
+                case .none:
+                    return .none
+                case .fetching:
+                    return .fetching
+                case let .result(info, items, installed):
+                    return .result(info: info, items: items, installed: installed)
             }
         }
-}
-
-private func loadedStickerPack1(account: Account, reference: StickerPackReference) -> Signal<LoadedStickerPack, NoError> {
-    return account.postbox.modify { modifier -> Signal<LoadedStickerPack, NoError> in
-        switch reference {
-            case let .id(id, _):
-                if let info = modifier.getItemCollectionInfo(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id)) as? StickerPackCollectionInfo {
-                    let items = modifier.getItemCollectionItems(collectionId: info.id)
-                    return account.postbox.combinedView(keys: [PostboxViewKey.itemCollectionInfo(id: info.id)])
-                        |> map { view in
-                            if let view = view.views[PostboxViewKey.itemCollectionInfo(id: info.id)] as? ItemCollectionInfoView, let info = view.info as? StickerPackCollectionInfo {
-                                return .result(info: info, items: items, installed: true)
-                            } else {
-                                return .result(info: info, items: items, installed: false)
-                            }
-                        }
-                } else if let info = modifier.getItemCollectionInfo(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudMaskPacks, id: id)) as? StickerPackCollectionInfo {
-                    let items = modifier.getItemCollectionItems(collectionId: info.id)
-                    return account.postbox.combinedView(keys: [PostboxViewKey.itemCollectionInfo(id: info.id)])
-                        |> map { view in
-                            if let view = view.views[PostboxViewKey.itemCollectionInfo(id: info.id)] as? ItemCollectionInfoView, let info = view.info as? StickerPackCollectionInfo {
-                                return .result(info: info, items: items, installed: true)
-                            } else {
-                                return .result(info: info, items: items, installed: false)
-                            }
-                        }
-                }
-            default:
-                break
-        }
-        
-        let signal = remoteStickerPack(network: account.network, reference: reference) |> mapToSignal { result -> Signal<LoadedStickerPack, NoError> in
-            if let result = result {
-                return account.postbox.combinedView(keys: [PostboxViewKey.itemCollectionInfo(id: result.0.id)])
-                    |> map { view in
-                        if let view = view.views[PostboxViewKey.itemCollectionInfo(id: result.0.id)] as? ItemCollectionInfoView, let info = view.info as? StickerPackCollectionInfo {
-                            return .result(info: info, items: result.1, installed: true)
-                        } else {
-                            return .result(info: result.0, items: result.1, installed: false)
-                        }
-                    }
-            } else {
-                return .single(.none)
-            }
-        }
-        
-        return .single(.fetching) |> then(signal)
-    } |> switchToLatest
 }

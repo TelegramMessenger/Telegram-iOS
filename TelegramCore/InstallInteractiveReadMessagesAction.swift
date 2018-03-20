@@ -7,9 +7,11 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func installInteractiveReadMessagesAction(postbox: Postbox, peerId: PeerId) -> Disposable {
+public func installInteractiveReadMessagesAction(postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Disposable {
     return postbox.installStoreMessageAction(peerId: peerId, { messages, modifier in
         var consumeMessageIds: [MessageId] = []
+        
+        var readMessageIndexByNamespace: [MessageId.Namespace: MessageIndex] = [:]
         
         for message in messages {
             if case let .Id(id) = message.id {
@@ -29,6 +31,14 @@ public func installInteractiveReadMessagesAction(postbox: Postbox, peerId: PeerI
                 if hasUnconsumedMention && !hasUnconsumedContent {
                     consumeMessageIds.append(id)
                 }
+                
+                if message.flags.contains(.Incoming) {
+                    let index = MessageIndex(id: id, timestamp: message.timestamp)
+                    let current = readMessageIndexByNamespace[id.namespace]
+                    if current == nil || current! < index {
+                        readMessageIndexByNamespace[id.namespace] = index
+                    }
+                }
             }
         }
         
@@ -45,6 +55,10 @@ public func installInteractiveReadMessagesAction(postbox: Postbox, peerId: PeerI
             })
             
             modifier.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: id, action: ConsumePersonalMessageAction())
+        }
+        
+        for (_, index) in readMessageIndexByNamespace {
+            applyMaxReadIndexInteractively(modifier: modifier, stateManager: stateManager, index: index)
         }
     })
 }

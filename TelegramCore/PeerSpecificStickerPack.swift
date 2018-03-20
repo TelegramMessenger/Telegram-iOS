@@ -27,8 +27,8 @@ public func peerSpecificStickerPack(postbox: Postbox, network: Network, peerId: 
                 if let info = info.info {
                     return cachedStickerPack(postbox: postbox, network: network, reference: .id(id: info.id.id, accessHash: info.accessHash))
                         |> map { result -> (StickerPackCollectionInfo, [ItemCollectionItem])? in
-                            if let result = result {
-                                return (result.0, result.1)
+                            if case let .result(info, items, _) = result {
+                                return (info, items)
                             } else {
                                 return nil
                             }

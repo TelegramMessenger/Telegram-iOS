@@ -451,7 +451,8 @@ static NSArray *GEO_MOBILE_COUNTRIES;
 
 - (NSDictionary *)DIGIT_MAPPINGS
 {
-    if (!DIGIT_MAPPINGS) {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
         DIGIT_MAPPINGS = [NSDictionary dictionaryWithObjectsAndKeys:
                           @"0", @"0", @"1", @"1", @"2", @"2", @"3", @"3", @"4", @"4", @"5", @"5", @"6", @"6", @"7", @"7", @"8", @"8", @"9", @"9",
                           // Fullwidth digit 0 to 9
@@ -460,7 +461,7 @@ static NSArray *GEO_MOBILE_COUNTRIES;
                           @"0", @"\u0660", @"1", @"\u0661", @"2", @"\u0662", @"3", @"\u0663", @"4", @"\u0664", @"5", @"\u0665", @"6", @"\u0666", @"7", @"\u0667", @"8", @"\u0668", @"9", @"\u0669",
                           // Eastern-Arabic digit 0 to 9
                           @"0", @"\u06F0", @"1", @"\u06F1",  @"2", @"\u06F2", @"3", @"\u06F3", @"4", @"\u06F4", @"5", @"\u06F5", @"6", @"\u06F6", @"7", @"\u06F7", @"8", @"\u06F8", @"9", @"\u06F9", nil];
-    }
+    });
     return DIGIT_MAPPINGS;
 }
 

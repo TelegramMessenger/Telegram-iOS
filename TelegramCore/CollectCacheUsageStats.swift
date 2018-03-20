@@ -165,6 +165,9 @@ public func collectCacheUsageStats(account: Account) -> Signal<CacheUsageStatsRe
                             for peerId in finalMedia.keys {
                                 if let peer = modifier.getPeer(peerId) {
                                     peers[peer.id] = peer
+                                    if let associatedPeerId = peer.associatedPeerId, let associatedPeer = modifier.getPeer(associatedPeerId) {
+                                        peers[associatedPeer.id] = associatedPeer
+                                    }
                                 }
                             }
                             return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: otherSize, otherPaths: otherPaths, cacheSize: cacheSize, tempPaths: tempPaths, tempSize: tempSize)

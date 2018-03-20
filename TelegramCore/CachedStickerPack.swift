@@ -44,39 +44,45 @@ final class CachedStickerPack: PostboxCoding {
 
 private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
 
-public func cachedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem], Bool)?, NoError> {
-    return postbox.modify { modifier -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem], Bool)?, NoError> in
+public enum CachedStickerPackResult {
+    case none
+    case fetching
+    case result(StickerPackCollectionInfo, [ItemCollectionItem], Bool)
+}
+
+public func cachedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<CachedStickerPackResult, NoError> {
+    return postbox.modify { modifier -> Signal<CachedStickerPackResult, NoError> in
         let namespace = Namespaces.ItemCollection.CloudStickerPacks
         if case let .id(id, _) = reference, let currentInfo = modifier.getItemCollectionInfo(collectionId: ItemCollectionId(namespace: namespace, id: id)) as? StickerPackCollectionInfo {
             let items = modifier.getItemCollectionItems(collectionId: ItemCollectionId(namespace: namespace, id: id))
-            return .single((currentInfo, items, true))
+            return .single(.result(currentInfo, items, true))
         } else {
-            let current: Signal<(StickerPackCollectionInfo, [ItemCollectionItem], Bool)?, NoError>
+            let current: Signal<CachedStickerPackResult, NoError>
             var loadRemote = false
             
             if case let .id(id, _) = reference, let cached = modifier.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
-                current = .single((info, cached.items, false))
+                current = .single(.result(info, cached.items, false))
                 if cached.hash != info.hash {
                     loadRemote = true
                 }
             } else {
-                current = .single(nil)
+                current = .single(.fetching)
                 loadRemote = true
             }
             
             var signal = current
             if loadRemote {
                 let appliedRemote = remoteStickerPack(network: network, reference: reference)
-                    |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem], Bool)?, NoError> in
-                        return postbox.modify { modifier -> (StickerPackCollectionInfo, [ItemCollectionItem], Bool)? in
+                    |> mapToSignal { result -> Signal<CachedStickerPackResult, NoError> in
+                        return postbox.modify { modifier -> CachedStickerPackResult in
                             if let result = result {
                                 modifier.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(result.0.id)), entry: CachedStickerPack(info: result.0, items: result.1.map { $0 as! StickerPackItem }, hash: result.0.hash), collectionSpec: collectionSpec)
                                 
                                 let currentInfo = modifier.getItemCollectionInfo(collectionId: result.0.id) as? StickerPackCollectionInfo
                                 
-                                return (result.0, result.1, currentInfo != nil)
+                                return .result(result.0, result.1, currentInfo != nil)
                             } else {
-                                return nil
+                                return .none
                             }
                         }
                     }

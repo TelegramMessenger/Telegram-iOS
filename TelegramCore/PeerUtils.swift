@@ -6,6 +6,24 @@ import Foundation
 #endif
 
 public extension Peer {
+    public func displayTitle(or defaultTitle: String) -> String {
+        switch self {
+            case let user as TelegramUser:
+                let name = user.name
+                if name.isEmpty {
+                    return defaultTitle
+                } else {
+                    return name
+                }
+            case let group as TelegramGroup:
+                return group.title
+            case let channel as TelegramChannel:
+                return channel.title
+            default:
+                return ""
+        }
+    }
+    
     public var displayTitle: String {
         switch self {
             case let user as TelegramUser:

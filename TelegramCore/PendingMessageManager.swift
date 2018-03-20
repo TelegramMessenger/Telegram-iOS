@@ -675,23 +675,30 @@ public final class PendingMessageManager {
                         if updatedState != state {
                             modifier.setPeerChatState(message.id.peerId, state: updatedState)
                         }
-                        modifier.updateMessage(message.id, update: { currentMessage in
-                            var flags = StoreMessageFlags(message.flags)
-                            if !flags.contains(.Failed) {
-                                flags.insert(.Sending)
-                            }
-                            var storeForwardInfo: StoreMessageForwardInfo?
-                            if let forwardInfo = currentMessage.forwardInfo {
-                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                            }
-                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
-                        })
+                    } else if case .historyScreenshot = media.action {
+                        sentAsAction = true
+                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .screenshotMessages(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, globallyUniqueIds: []), state: state)
+                        if updatedState != state {
+                            modifier.setPeerChatState(message.id.peerId, state: updatedState)
+                        }
                     }
                     break
                 }
             }
             
-            if !sentAsAction {
+            if sentAsAction {
+                modifier.updateMessage(message.id, update: { currentMessage in
+                    var flags = StoreMessageFlags(message.flags)
+                    if !flags.contains(.Failed) {
+                        flags.insert(.Sending)
+                    }
+                    var storeForwardInfo: StoreMessageForwardInfo?
+                    if let forwardInfo = currentMessage.forwardInfo {
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                    }
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                })
+            } else {
                 let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .sendMessage(layer: layer, id: message.id, file: secretFile), state: state)
                 if updatedState != state {
                     modifier.setPeerChatState(message.id.peerId, state: updatedState)

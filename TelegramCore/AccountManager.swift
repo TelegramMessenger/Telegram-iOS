@@ -14,7 +14,34 @@ private enum AccountKind {
     case unauthorized
 }
 
-public func currentAccount(networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, appGroupPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
+public func rootPathForBasePath(_ appGroupPath: String) -> String {
+    return appGroupPath + "/telegram-data"
+}
+
+public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
+    let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: rootPath), withIntermediateDirectories: true, attributes: nil)
+    
+    do {
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = true
+        var mutableUrl = URL(fileURLWithPath: rootPath)
+        try mutableUrl.setResourceValues(resourceValues)
+    } catch let e {
+        print("\(e)")
+    }
+    
+    if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: appGroupPath), includingPropertiesForKeys: [], options: []) {
+        for url in files {
+            if url.lastPathComponent == "accounts-metadata" ||
+                url.lastPathComponent.hasSuffix("logs") ||
+                url.lastPathComponent.hasPrefix("account-") {
+                let _ = try? FileManager.default.moveItem(at: url, to: URL(fileURLWithPath: rootPath + "/" + url.lastPathComponent))
+            }
+        }
+    }
+}
+
+public func currentAccount(networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, rootPath: String, testingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
     return manager.allocatedCurrentAccountId()
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs == rhs
@@ -23,7 +50,7 @@ public func currentAccount(networkArguments: NetworkInitializationArguments, sup
             if let id = id {
                 let reload = ValuePromise<Bool>(true, ignoreRepeated: false)
                 return reload.get() |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
-                    return accountWithId(networkArguments: networkArguments, id: id, supplementary: supplementary, appGroupPath: appGroupPath, testingEnvironment: testingEnvironment, auxiliaryMethods: auxiliaryMethods)
+                    return accountWithId(networkArguments: networkArguments, id: id, supplementary: supplementary, rootPath: rootPath, testingEnvironment: testingEnvironment, auxiliaryMethods: auxiliaryMethods)
                         |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
                             let postbox: Postbox
                             let initialKind: AccountKind
@@ -98,7 +125,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
     }
 }
 
-public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, appGroupPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
+public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let loggedOutAccounts = Atomic<[AccountRecordId: MetaDisposable]>(value: [:])
         let disposable = accountManager.accountRecords().start(next: { view in
@@ -113,7 +140,6 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                     }
                     return false
                 }.map { $0.id })
-                
                 
                 var disposables = disposables
                 
@@ -141,7 +167,22 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 disposable.dispose()
             }
             for (id, disposable) in beginList {
-                disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, appGroupPath: appGroupPath, auxiliaryMethods: auxiliaryMethods).start())
+                disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods).start())
+            }
+            
+            var validPaths = Set<String>()
+            for record in view.records {
+                validPaths.insert("\(accountRecordIdPathName(record.id))")
+            }
+            
+            if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
+                for url in files {
+                    if url.lastPathComponent.hasPrefix("account-") {
+                        if !validPaths.contains(url.lastPathComponent) {
+                            try? FileManager.default.removeItem(at: url)
+                        }
+                    }
+                }
             }
         })
         
@@ -151,9 +192,8 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
     }
 }
 
-
-private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, id: AccountRecordId, appGroupPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
-    return accountWithId(networkArguments: networkArguments, id: id, supplementary: true, appGroupPath: appGroupPath, testingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
+private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, id: AccountRecordId, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
+    return accountWithId(networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, testingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
         |> mapToSignal { account -> Signal<Void, NoError> in
             switch account {
                 case .upgrading:
