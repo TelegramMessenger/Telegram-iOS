@@ -17,7 +17,7 @@ enum SecureIdAuthPasswordChallengeState {
 enum SecureIdAuthControllerVerificationState: Equatable {
     case noChallenge
     case passwordChallenge(SecureIdAuthPasswordChallengeState)
-    case verified
+    case verified(SecureIdAccessContext)
     
     static func ==(lhs: SecureIdAuthControllerVerificationState, rhs: SecureIdAuthControllerVerificationState) -> Bool {
         switch lhs {

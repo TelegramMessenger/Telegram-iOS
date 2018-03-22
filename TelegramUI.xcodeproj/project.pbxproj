@@ -174,6 +174,7 @@
 		D093D7DD2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7DC2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift */; };
 		D093D7DF2062F3F000BC3599 /* SecureIdIdentityFormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7DE2062F3F000BC3599 /* SecureIdIdentityFormController.swift */; };
 		D093D7E22062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7E12062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift */; };
+		D093D7E72063E57F00BC3599 /* BotPaymentActionItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7E62063E57F00BC3599 /* BotPaymentActionItemNode.swift */; };
 		D0943AF61FDAAE7E001522CC /* MultipleAvatarsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */; };
 		D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */; };
 		D0943B001FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */; };
@@ -1357,6 +1358,7 @@
 		D093D7DC2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthFormFieldNode.swift; sourceTree = "<group>"; };
 		D093D7DE2062F3F000BC3599 /* SecureIdIdentityFormController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityFormController.swift; sourceTree = "<group>"; };
 		D093D7E12062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityFormControllerNode.swift; sourceTree = "<group>"; };
+		D093D7E62063E57F00BC3599 /* BotPaymentActionItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotPaymentActionItemNode.swift; sourceTree = "<group>"; };
 		D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipleAvatarsNode.swift; sourceTree = "<group>"; };
 		D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMultipleAvatarsNavigationNode.swift; sourceTree = "<group>"; };
 		D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFeedNavigationInputPanelNode.swift; sourceTree = "<group>"; };
@@ -2476,6 +2478,7 @@
 				D0471B5B1EFEB4F30074D609 /* BotPaymentFieldItemNode.swift */,
 				D0471B611EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift */,
 				D0E9B9E71EFEFB9500F079A4 /* BotPaymentDisclosureItemNode.swift */,
+				D093D7E62063E57F00BC3599 /* BotPaymentActionItemNode.swift */,
 				D0E9BA621F055AD200F079A4 /* BotPaymentCardInputItemNode.swift */,
 				D0E9B9F31F018A6700F079A4 /* BotCheckoutPaymentMethodSheet.swift */,
 				D0E9BA071F0446A300F079A4 /* BotCheckoutPaymentShippingOptionSheetController.swift */,
@@ -4845,6 +4848,7 @@
 				D0EC6E511EB9F58900EBF1C3 /* ChannelBlacklistController.swift in Sources */,
 				D0EC6E521EB9F58900EBF1C3 /* ChannelInfoController.swift in Sources */,
 				D0EC6E531EB9F58900EBF1C3 /* ChannelMembersController.swift in Sources */,
+				D093D7E72063E57F00BC3599 /* BotPaymentActionItemNode.swift in Sources */,
 				D01C06BA1FBBB076001561AB /* ItemListSelectableControlNode.swift in Sources */,
 				D0EC6E541EB9F58900EBF1C3 /* ConvertToSupergroupController.swift in Sources */,
 				D0EC6E551EB9F58900EBF1C3 /* GroupAdminsController.swift in Sources */,

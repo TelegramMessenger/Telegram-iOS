@@ -129,16 +129,31 @@ final class SecureIdAuthController: ViewController {
                         state.verificationState = .passwordChallenge(.checking)
                         return state
                     }
-                    strongSelf.challengeDisposable.set((requestTwoStepVerifiationSettings(account: strongSelf.account, password: password)
-                    |> deliverOnMainQueue).start(error: { error in
+                    strongSelf.challengeDisposable.set((accessSecureId(network: strongSelf.account.network, password: password)
+                    |> deliverOnMainQueue).start(next: { context in
+                        if let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(.checking) = verificationState {
+                            strongSelf.updateState { state in
+                                var state = state
+                                state.verificationState = .verified(context)
+                                return state
+                            }
+                        }
+                    }, error: { error in
                         if let strongSelf = self {
                             let errorText: String
                             switch error {
-                                case .invalidPassword:
-                                    errorText = strongSelf.presentationData.strings.LoginPassword_InvalidPasswordError
-                                case .limitExceeded:
-                                    errorText = strongSelf.presentationData.strings.LoginPassword_FloodError
+                                case let .passwordError(passwordError):
+                                    switch passwordError {
+                                        case .invalidPassword:
+                                            errorText = strongSelf.presentationData.strings.LoginPassword_InvalidPasswordError
+                                        case .limitExceeded:
+                                            errorText = strongSelf.presentationData.strings.LoginPassword_FloodError
+                                        case .generic:
+                                            errorText = strongSelf.presentationData.strings.Login_UnknownError
+                                    }
                                 case .generic:
+                                    errorText = strongSelf.presentationData.strings.Login_UnknownError
+                                case .secretPasswordMismatch:
                                     errorText = strongSelf.presentationData.strings.Login_UnknownError
                             }
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
@@ -149,14 +164,6 @@ final class SecureIdAuthController: ViewController {
                                     state.verificationState = .passwordChallenge(.invalid)
                                     return state
                                 }
-                            }
-                        }
-                    }, completed: {
-                        if let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(.checking) = verificationState {
-                            strongSelf.updateState { state in
-                                var state = state
-                                state.verificationState = .verified
-                                return state
                             }
                         }
                     }))

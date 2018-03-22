@@ -18,24 +18,36 @@ private final class SecureIdIdentityFormItems {
     let gender: BotPaymentDisclosureItemNode
     let citizenship: BotPaymentDisclosureItemNode
     
-    var items: [BotPaymentItemNode] {
-        return [
+    let documentsHeader: BotPaymentHeaderItemNode
+    let uploadDocumentItem: BotPaymentActionItemNode
+    let documentsInfoItem: BotPaymentTextItemNode
+    
+    var items: [[BotPaymentItemNode]] {
+        return [[
             self.header,
             self.name,
             self.surname,
             self.birthdate,
             self.gender,
             self.citizenship
-        ]
+        ], [
+            self.documentsHeader,
+            self.uploadDocumentItem,
+            self.documentsInfoItem
+        ]]
     }
     
-    init(strings: PresentationStrings, openBirthdateSelection: @escaping () -> Void, openGenderSelection: @escaping () -> Void, openCitizenshipSelection: @escaping () -> Void) {
+    init(strings: PresentationStrings, openBirthdateSelection: @escaping () -> Void, openGenderSelection: @escaping () -> Void, openCitizenshipSelection: @escaping () -> Void, openUploadDocument: @escaping () -> Void) {
         self.header = BotPaymentHeaderItemNode(text: "PERSONAL DETAILS")
-        self.name = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoAddress1, placeholder: strings.CheckoutInfo_ShippingInfoAddress1Placeholder)
-        self.surname = BotPaymentFieldItemNode(title: strings.CheckoutInfo_ShippingInfoAddress2, placeholder: strings.CheckoutInfo_ShippingInfoAddress2Placeholder)
-        self.birthdate = BotPaymentDisclosureItemNode(title: strings.CheckoutInfo_ShippingInfoCountry, placeholder: strings.CheckoutInfo_ShippingInfoCountryPlaceholder, text: "")
-        self.gender = BotPaymentDisclosureItemNode(title: strings.CheckoutInfo_ShippingInfoCountry, placeholder: strings.CheckoutInfo_ShippingInfoCountryPlaceholder, text: "")
-        self.citizenship = BotPaymentDisclosureItemNode(title: strings.CheckoutInfo_ShippingInfoCountry, placeholder: strings.CheckoutInfo_ShippingInfoCountryPlaceholder, text: "")
+        self.name = BotPaymentFieldItemNode(title: "Name", placeholder: "Name")
+        self.surname = BotPaymentFieldItemNode(title: "Surname", placeholder: "Surname")
+        self.birthdate = BotPaymentDisclosureItemNode(title: "Date of Birth", placeholder: "Date of Birth", text: "")
+        self.gender = BotPaymentDisclosureItemNode(title: "Gender", placeholder: "Gender", text: "")
+        self.citizenship = BotPaymentDisclosureItemNode(title: "Nationality", placeholder: "Nationality", text: "")
+        
+        self.documentsHeader = BotPaymentHeaderItemNode(text: "DOCUMENTS")
+        self.uploadDocumentItem = BotPaymentActionItemNode(title: "Upload New Document")
+        self.documentsInfoItem = BotPaymentTextItemNode(text: "To confirm your identity you need to upload a photograph or scan of your Passport, ID card, or Driver's license.\n\nYour Document must contain:\n• Your photograph;\n• Your legal name (as in profile);\n• Your date of birth;\n• Your nationality;\n• Date of issue;\n• Document number.")
         
         self.birthdate.action = {
             openBirthdateSelection()
@@ -47,6 +59,10 @@ private final class SecureIdIdentityFormItems {
         
         self.citizenship.action = {
             openCitizenshipSelection()
+        }
+        
+        self.uploadDocumentItem.action = {
+            openUploadDocument()
         }
     }
 }
@@ -128,16 +144,14 @@ final class SecureIdIdentityFormControllerNode: ViewControllerTracingNode, UIScr
         
         self.scrollNode = SecureIdIdentityFormScrollerNode()
         
-        var itemNodes: [[BotPaymentItemNode]] = []
-        
         self.formItems = SecureIdIdentityFormItems(strings: strings, openBirthdateSelection: {
         }, openGenderSelection: {
         }, openCitizenshipSelection: {
+        }, openUploadDocument: {
+            
         })
         
-        itemNodes.append(self.formItems.items)
-        
-        self.itemNodes = itemNodes
+        self.itemNodes = self.formItems.items
         
         for items in itemNodes {
             for item in items {

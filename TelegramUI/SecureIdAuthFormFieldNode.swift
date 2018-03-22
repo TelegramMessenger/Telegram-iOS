@@ -60,7 +60,6 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         self.titleNode.displaysAsynchronously = false
         self.titleNode.isLayerBacked = true
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.insets = UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0)
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
@@ -111,7 +110,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightTextInset, height: 100.0))
         
         let textOrigin = floor((height - titleSize.height - titleTextSpacing - textSize.height) / 2.0)
-        let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: textOrigin), size: textSize)
+        let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: textOrigin), size: titleSize)
         self.titleNode.frame = titleFrame
         let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + titleTextSpacing), size: textSize)
         self.textNode.frame = textFrame
