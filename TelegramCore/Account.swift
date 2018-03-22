@@ -336,12 +336,12 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
 }
 
 public struct TwoStepAuthData {
-    let nextSalt: Data
-    let currentSalt: Data?
-    let hasRecovery: Bool
-    let currentHint: String?
-    let unconfirmedEmailPattern: String?
-    let secretRandom: Data
+    public let nextSalt: Data
+    public let currentSalt: Data?
+    public let hasRecovery: Bool
+    public let currentHint: String?
+    public let unconfirmedEmailPattern: String?
+    public let secretRandom: Data
 }
 
 public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
@@ -373,6 +373,17 @@ func sha256Digest(_ data : Data) -> Data {
     res.withUnsafeMutableBytes { mutableBytes -> Void in
         data.withUnsafeBytes { bytes -> Void in
             CC_SHA256(bytes, CC_LONG(data.count), mutableBytes)
+        }
+    }
+    return res
+}
+
+func sha512Digest(_ data : Data) -> Data {
+    var res = Data()
+    res.count = Int(CC_SHA512_DIGEST_LENGTH)
+    res.withUnsafeMutableBytes { mutableBytes -> Void in
+        data.withUnsafeBytes { bytes -> Void in
+            CC_SHA512(bytes, CC_LONG(data.count), mutableBytes)
         }
     }
     return res
