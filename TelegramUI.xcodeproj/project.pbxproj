@@ -169,6 +169,11 @@
 		D09250041FE5363D003F693F /* ExperimentalSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09250031FE5363D003F693F /* ExperimentalSettings.swift */; };
 		D09250061FE5371D003F693F /* GlobalExperimentalSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09250051FE5371D003F693F /* GlobalExperimentalSettings.swift */; };
 		D09394132007F5BB00997F31 /* LocationBroadcastNavigationAccessoryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09394122007F5BB00997F31 /* LocationBroadcastNavigationAccessoryPanel.swift */; };
+		D093D7D92062A9CA00BC3599 /* SecureIdAuthControllerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7D82062A9CA00BC3599 /* SecureIdAuthControllerState.swift */; };
+		D093D7DB2062CFF500BC3599 /* SecureIdAuthFormContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7DA2062CFF500BC3599 /* SecureIdAuthFormContentNode.swift */; };
+		D093D7DD2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7DC2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift */; };
+		D093D7DF2062F3F000BC3599 /* SecureIdIdentityFormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7DE2062F3F000BC3599 /* SecureIdIdentityFormController.swift */; };
+		D093D7E22062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7E12062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift */; };
 		D0943AF61FDAAE7E001522CC /* MultipleAvatarsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */; };
 		D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */; };
 		D0943B001FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */; };
@@ -225,6 +230,11 @@
 		D0BDB09B1F79C658002ABF2F /* SaveToCameraRoll.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BDB09A1F79C658002ABF2F /* SaveToCameraRoll.swift */; };
 		D0BE303220601FFC00FBE6D8 /* LocationBroadcastActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE303120601FFC00FBE6D8 /* LocationBroadcastActionSheetItem.swift */; };
 		D0BE3037206139F500FBE6D8 /* ImageCompression.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE3036206139F500FBE6D8 /* ImageCompression.swift */; };
+		D0BE30412061B80100FBE6D8 /* SecureIdAuthController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE30402061B80100FBE6D8 /* SecureIdAuthController.swift */; };
+		D0BE30432061B80B00FBE6D8 /* SecureIdAuthControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE30422061B80B00FBE6D8 /* SecureIdAuthControllerNode.swift */; };
+		D0BE30452061C09000FBE6D8 /* SecureIdAuthContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE30442061C09000FBE6D8 /* SecureIdAuthContentNode.swift */; };
+		D0BE30472061C0BC00FBE6D8 /* SecureIdAuthPasswordOptionContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE30462061C0BC00FBE6D8 /* SecureIdAuthPasswordOptionContentNode.swift */; };
+		D0BE30492061C0F500FBE6D8 /* SecureIdAuthHeaderNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE30482061C0F500FBE6D8 /* SecureIdAuthHeaderNode.swift */; };
 		D0C0B5901EDB505E000F4D2C /* ActivityIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B58F1EDB505E000F4D2C /* ActivityIndicator.swift */; };
 		D0C0B5921EDC5A3B000F4D2C /* LinkHighlightingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5911EDC5A3B000F4D2C /* LinkHighlightingNode.swift */; };
 		D0C0B59B1EE019E5000F4D2C /* ChatSearchNavigationContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B59A1EE019E5000F4D2C /* ChatSearchNavigationContentNode.swift */; };
@@ -1342,6 +1352,11 @@
 		D09250031FE5363D003F693F /* ExperimentalSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperimentalSettings.swift; sourceTree = "<group>"; };
 		D09250051FE5371D003F693F /* GlobalExperimentalSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalExperimentalSettings.swift; sourceTree = "<group>"; };
 		D09394122007F5BB00997F31 /* LocationBroadcastNavigationAccessoryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationBroadcastNavigationAccessoryPanel.swift; sourceTree = "<group>"; };
+		D093D7D82062A9CA00BC3599 /* SecureIdAuthControllerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthControllerState.swift; sourceTree = "<group>"; };
+		D093D7DA2062CFF500BC3599 /* SecureIdAuthFormContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthFormContentNode.swift; sourceTree = "<group>"; };
+		D093D7DC2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthFormFieldNode.swift; sourceTree = "<group>"; };
+		D093D7DE2062F3F000BC3599 /* SecureIdIdentityFormController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityFormController.swift; sourceTree = "<group>"; };
+		D093D7E12062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityFormControllerNode.swift; sourceTree = "<group>"; };
 		D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipleAvatarsNode.swift; sourceTree = "<group>"; };
 		D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMultipleAvatarsNavigationNode.swift; sourceTree = "<group>"; };
 		D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFeedNavigationInputPanelNode.swift; sourceTree = "<group>"; };
@@ -1435,6 +1450,11 @@
 		D0BDB09A1F79C658002ABF2F /* SaveToCameraRoll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveToCameraRoll.swift; sourceTree = "<group>"; };
 		D0BE303120601FFC00FBE6D8 /* LocationBroadcastActionSheetItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationBroadcastActionSheetItem.swift; sourceTree = "<group>"; };
 		D0BE3036206139F500FBE6D8 /* ImageCompression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompression.swift; sourceTree = "<group>"; };
+		D0BE30402061B80100FBE6D8 /* SecureIdAuthController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthController.swift; sourceTree = "<group>"; };
+		D0BE30422061B80B00FBE6D8 /* SecureIdAuthControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthControllerNode.swift; sourceTree = "<group>"; };
+		D0BE30442061C09000FBE6D8 /* SecureIdAuthContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthContentNode.swift; sourceTree = "<group>"; };
+		D0BE30462061C0BC00FBE6D8 /* SecureIdAuthPasswordOptionContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthPasswordOptionContentNode.swift; sourceTree = "<group>"; };
+		D0BE30482061C0F500FBE6D8 /* SecureIdAuthHeaderNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthHeaderNode.swift; sourceTree = "<group>"; };
 		D0BE383B1E7C3E51000079AF /* StickerPreviewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPreviewController.swift; sourceTree = "<group>"; };
 		D0BE931A1E92DFBA00DCC1E6 /* StickerPreviewControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPreviewControllerNode.swift; sourceTree = "<group>"; };
 		D0C0B58F1EDB505E000F4D2C /* ActivityIndicator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActivityIndicator.swift; sourceTree = "<group>"; };
@@ -2654,6 +2674,15 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		D093D7E02062F3F400BC3599 /* Identity */ = {
+			isa = PBXGroup;
+			children = (
+				D093D7DE2062F3F000BC3599 /* SecureIdIdentityFormController.swift */,
+				D093D7E12062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift */,
+			);
+			name = Identity;
+			sourceTree = "<group>";
+		};
 		D096A4601EA681720000A7AE /* Presentation Data */ = {
 			isa = PBXGroup;
 			children = (
@@ -2809,6 +2838,22 @@
 				D0BC38801E40F1D80044D6FE /* ContactSelectionControllerNode.swift */,
 			);
 			name = "Contact Selection";
+			sourceTree = "<group>";
+		};
+		D0BE303F2061B7CF00FBE6D8 /* Secure ID */ = {
+			isa = PBXGroup;
+			children = (
+				D0BE30402061B80100FBE6D8 /* SecureIdAuthController.swift */,
+				D093D7D82062A9CA00BC3599 /* SecureIdAuthControllerState.swift */,
+				D0BE30422061B80B00FBE6D8 /* SecureIdAuthControllerNode.swift */,
+				D0BE30442061C09000FBE6D8 /* SecureIdAuthContentNode.swift */,
+				D0BE30482061C0F500FBE6D8 /* SecureIdAuthHeaderNode.swift */,
+				D0BE30462061C0BC00FBE6D8 /* SecureIdAuthPasswordOptionContentNode.swift */,
+				D093D7DA2062CFF500BC3599 /* SecureIdAuthFormContentNode.swift */,
+				D093D7DC2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift */,
+				D093D7E02062F3F400BC3599 /* Identity */,
+			);
+			name = "Secure ID";
 			sourceTree = "<group>";
 		};
 		D0C50E361E93CAF200F62E39 /* Notifications */ = {
@@ -3439,6 +3484,7 @@
 				D0EE97131D88BB1A006C18E1 /* Peer Info */,
 				D0D2689B1D79D31500C422DA /* Peer Selection */,
 				D0754D251EEE10A100884F6E /* Bot Payments */,
+				D0BE303F2061B7CF00FBE6D8 /* Secure ID */,
 				D099D74B1EEFEE0100A3128C /* Game */,
 				D0EC6B391EB8CF1E00EBF1C3 /* Call */,
 				D01BAA161ECC8DED00295217 /* Call List */,
@@ -4159,6 +4205,7 @@
 				D0EC6CC31EB9F58800EBF1C3 /* LegacyNavigationController.swift in Sources */,
 				D0EC6CC41EB9F58800EBF1C3 /* LegacyLocationPicker.swift in Sources */,
 				D0EC6CC51EB9F58800EBF1C3 /* TGDataItem.m in Sources */,
+				D093D7DD2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift in Sources */,
 				D0EC6CC61EB9F58800EBF1C3 /* PresenceStrings.swift in Sources */,
 				D0EC6CC71EB9F58800EBF1C3 /* PeerNotificationSoundStrings.swift in Sources */,
 				D01C06C01FBF118A001561AB /* MessageUtils.swift in Sources */,
@@ -4187,6 +4234,7 @@
 				D0EC6CD71EB9F58800EBF1C3 /* EmojiUtils.swift in Sources */,
 				D0EC6CD81EB9F58800EBF1C3 /* ShakeAnimation.swift in Sources */,
 				D0EC6CD91EB9F58800EBF1C3 /* ValidateAddressNameInteractive.swift in Sources */,
+				D0BE30452061C09000FBE6D8 /* SecureIdAuthContentNode.swift in Sources */,
 				D0471B5A1EFE70400074D609 /* BotCheckoutInfoControllerNode.swift in Sources */,
 				D0EC6CDA1EB9F58800EBF1C3 /* NumericFormat.swift in Sources */,
 				D0EC6CDB1EB9F58800EBF1C3 /* Markdown.swift in Sources */,
@@ -4243,6 +4291,7 @@
 				D04ECD721FFBF22B00DE9029 /* OpenUrl.swift in Sources */,
 				D04B4D661EEA993A00711AF6 /* LegacyLocationController.swift in Sources */,
 				D056CD7A1FF3CC2A00880D28 /* ListMessagePlaybackOverlayNode.swift in Sources */,
+				D0BE30472061C0BC00FBE6D8 /* SecureIdAuthPasswordOptionContentNode.swift in Sources */,
 				D0EC6CF71EB9F58800EBF1C3 /* RecentGifManagedMediaId.swift in Sources */,
 				D0EC6CF81EB9F58800EBF1C3 /* ManagedVideoNode.swift in Sources */,
 				D0ACCB1A1EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift in Sources */,
@@ -4262,6 +4311,7 @@
 				D0EC6D021EB9F58800EBF1C3 /* diag_range.c in Sources */,
 				D0E9BA1A1F05574500F079A4 /* STPPaymentCardTextField.m in Sources */,
 				D0EC6D031EB9F58800EBF1C3 /* opus_header.c in Sources */,
+				D093D7DF2062F3F000BC3599 /* SecureIdIdentityFormController.swift in Sources */,
 				D0E9BA371F05585000F079A4 /* STPPhoneNumberValidator.m in Sources */,
 				D0EC6D041EB9F58800EBF1C3 /* opusenc.m in Sources */,
 				D0EC6D051EB9F58800EBF1C3 /* picture.c in Sources */,
@@ -4339,6 +4389,7 @@
 				D0EC6D2D1EB9F58800EBF1C3 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */,
 				D0AF7C461ED84BC500CD8E0F /* LanguageSelectionController.swift in Sources */,
 				D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */,
+				D0BE30492061C0F500FBE6D8 /* SecureIdAuthHeaderNode.swift in Sources */,
 				D0EC6D2E1EB9F58800EBF1C3 /* ImageNode.swift in Sources */,
 				D0EC6D2F1EB9F58800EBF1C3 /* TransformImageNode.swift in Sources */,
 				D0EC6D301EB9F58800EBF1C3 /* RadialProgressNode.swift in Sources */,
@@ -4464,6 +4515,7 @@
 				D0EC6D811EB9F58800EBF1C3 /* ChatController.swift in Sources */,
 				D0FFF7F81F55B83600BEBC01 /* InstantPageAudioNode.swift in Sources */,
 				D0B37C5E1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift in Sources */,
+				D093D7DB2062CFF500BC3599 /* SecureIdAuthFormContentNode.swift in Sources */,
 				D0EC6D821EB9F58800EBF1C3 /* ChatControllerInteraction.swift in Sources */,
 				D0EC6D831EB9F58800EBF1C3 /* ChatControllerNode.swift in Sources */,
 				D0E9BA231F05577700F079A4 /* STPCard.m in Sources */,
@@ -4574,6 +4626,7 @@
 				D0EC6DC21EB9F58900EBF1C3 /* ChatMediaInputStickerPackItem.swift in Sources */,
 				D0EC6DC31EB9F58900EBF1C3 /* ChatMediaInputStickerGridItem.swift in Sources */,
 				D0EC6DC41EB9F58900EBF1C3 /* MultiplexedSoftwareVideoNode.swift in Sources */,
+				D0BE30432061B80B00FBE6D8 /* SecureIdAuthControllerNode.swift in Sources */,
 				D0E9BAE81F0574FF00F079A4 /* STPCustomer.m in Sources */,
 				D0C0B59F1EE082F5000F4D2C /* ChatSearchInputPanelNode.swift in Sources */,
 				D079FCD91F05A5550038FADE /* BotCheckoutPasswordEntryController.swift in Sources */,
@@ -4597,6 +4650,7 @@
 				D0EC6DD11EB9F58900EBF1C3 /* HashtagChatInputPanelItem.swift in Sources */,
 				D0EC6DD21EB9F58900EBF1C3 /* MentionChatInputContextPanelNode.swift in Sources */,
 				D00701A22029F6D0006B9E34 /* TGMimeTypeMap.m in Sources */,
+				D0BE30412061B80100FBE6D8 /* SecureIdAuthController.swift in Sources */,
 				D0EC6DD31EB9F58900EBF1C3 /* MentionChatInputPanelItem.swift in Sources */,
 				D0EC6DD41EB9F58900EBF1C3 /* CommandChatInputContextPanelNode.swift in Sources */,
 				D0EC6DD51EB9F58900EBF1C3 /* CommandChatInputPanelItem.swift in Sources */,
@@ -4716,6 +4770,7 @@
 				D0EC6E1E1EB9F58900EBF1C3 /* InstantPageShapeItem.swift in Sources */,
 				D0EC6E1F1EB9F58900EBF1C3 /* InstantPageTile.swift in Sources */,
 				D0EC6E201EB9F58900EBF1C3 /* InstantPageTileNode.swift in Sources */,
+				D093D7E22062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift in Sources */,
 				D0B2F7702052B5A800D3BFB9 /* InviteContactsControllerNode.swift in Sources */,
 				D0EC6E211EB9F58900EBF1C3 /* InstantPageController.swift in Sources */,
 				D0EC6E221EB9F58900EBF1C3 /* InstantPageControllerNode.swift in Sources */,
@@ -4796,6 +4851,7 @@
 				D0EC6E561EB9F58900EBF1C3 /* UserInfoController.swift in Sources */,
 				D0EC6E571EB9F58900EBF1C3 /* GroupsInCommonController.swift in Sources */,
 				D0EC6E581EB9F58900EBF1C3 /* PeerSelectionController.swift in Sources */,
+				D093D7D92062A9CA00BC3599 /* SecureIdAuthControllerState.swift in Sources */,
 				D0EC6E591EB9F58900EBF1C3 /* PeerSelectionControllerNode.swift in Sources */,
 				D0EC6E5B1EB9F58900EBF1C3 /* CallController.swift in Sources */,
 				D0EC6E5C1EB9F58900EBF1C3 /* CallControllerNode.swift in Sources */,

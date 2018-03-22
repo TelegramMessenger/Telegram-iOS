@@ -225,6 +225,38 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                         convertedUrl = result
                     }
                 }
+            } else if parsedUrl.host == "auth" {
+                //http://tg//auth?bot_id=443863171&scope=write%2Cidentity%2Caddress%2Cphone%2Cemail&callback_url=https%3A%2F%2Fkolnogorov.me%2Fsamples%2Fsecure_id_callback.php&public_key=-----BEGIN%20PUBLIC%20KEY-----%0AMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzmgKr0fPP4rB%2FTsNEweC%0AhoG3ntUxuBTmHsFBW6CpABGdaTmKZSjAI%2FcTofhBgtRQIOdX0YRGHHHhwyLf49Wv%0A9l%2BXexbJOa0lTsJSNMj8Y%2F9sZbqUl5ur8ZOTM0sxbXC0XKexu1tM9YavH%2BLbrobk%0Ajt0%2Bcmo%2FzEYZWNtLVihnR2IDv%2B7tSgiDoFWi%2FkoAUdfJ1VMw%2BhReUaLg3vE9CmPK%0AtQiTy%2BNvmrYaBPb75I0Jz3Lrz1%2BmZSjLKO25iT84RIsxarBDd8iYh2avWkCmvtiR%0ALcif8wLxi2QWC1rZoCA3Ip%2BHg9J9vxHlzl6xT01WjUStMhfwrUW6QBpur7FJ%2BaKM%0AoaMoHieFNCG4qIkWVEHHSsUpLum4SYuEnyNH3tkjbrdldZanCvanGq%2BTZyX0buRt%0A4zk7FGcu8iulUkAP%2Fo%2FWZM0HKinFN%2FvuzNVA8iqcO%2FBBhewhzpqmmTMnWmAO8WPP%0ADJMABRtXJnVuPh1CI5pValzomLJM4%2FYvnJGppzI1QiHHNA9JtxVmj2xf8jaXa1LJ%0AWUNJK%2BRvUWkRUxpWiKQQO9FAyTPLRtDQGN9eUeDR1U0jqRk%2FgNT8smHGN6I4H%2BNR%0A3X3%2F1lMfcm1dvk654ql8mxjCA54IpTPr%2FicUMc7cSzyIiQ7Tp9PZTl1gHh281ZWf%0AP7d2%2BfuJMlkjtM7oAwf%2BtI8CAwEAAQ%3D%3D%0A-----END%20PUBLIC%20KEY-----
+                if let components = URLComponents(string: "/?" + query) {
+                    var botId: Int32?
+                    var scope: String?
+                    var callbackUrl: String?
+                    var publicKey: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "bot_id" {
+                                    botId = Int32(value)
+                                } else if queryItem.name == "scope" {
+                                    scope = value
+                                } else if queryItem.name == "callback_url" {
+                                    callbackUrl = value
+                                } else if queryItem.name == "public_key" {
+                                    publicKey = value
+                                }
+                            }
+                        }
+                    }
+                    
+                    if let botId = botId, let scope = scope {
+                        let scopes = scope.split(separator: ",").map(String.init).map { $0.trimmingCharacters(in: .whitespaces) }
+                        let controller = SecureIdAuthController(account: account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scopes, callbackUrl: callbackUrl, publicKey: publicKey)
+                        
+                        if let navigationController = navigationController {
+                            (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: nil)
+                        }
+                    }
+                }
             }
             
             if let convertedUrl = convertedUrl {

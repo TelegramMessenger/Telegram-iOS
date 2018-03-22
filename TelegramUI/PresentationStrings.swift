@@ -667,11 +667,13 @@ public final class PresentationStrings {
     public let Conversation_LiveLocationYou: String
     public let Map_OpenInWaze: String
     public let Checkout_ShippingMethod: String
+    public let SecureId_FormFieldIdentity: String
     public let Login_InfoFirstNamePlaceholder: String
     public let Checkout_ErrorProviderAccountInvalid: String
     public let CallSettings_TabIconDescription: String
     public let Checkout_WebConfirmation_Title: String
     public let PasscodeSettings_AutoLock: String
+    public let SecureId_RequestScopeIdentity: String
     public let Notifications_MessageNotificationsPreview: String
     public let Conversation_BlockUser: String
     public let MessageTimer_Custom: String
@@ -763,6 +765,7 @@ public final class PresentationStrings {
     public func DialogList_MultipleTypingSuffix(_ _0: Int) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_DialogList_MultipleTypingSuffix, self._DialogList_MultipleTypingSuffix_r, ["\(_0)"])
     }
+    public let SecureId_RequestScopePhone: String
     public let Bot_GenericBotStatus: String
     public let PrivacySettings_PasscodeAndTouchId: String
     public let Common_edit: String
@@ -967,6 +970,7 @@ public final class PresentationStrings {
     public let Target_SelectGroup: String
     public let Channel_AdminLog_InfoPanelAlertTitle: String
     public let Notifications_GroupNotificationsPreview: String
+    public let SecureId_FormFieldEmail: String
     public let Message_PinnedLocationMessage: String
     public let Settings_Logout: String
     private let _UserInfo_BlockConfirmation: String
@@ -987,6 +991,7 @@ public final class PresentationStrings {
     public let CheckoutInfo_ShippingInfoStatePlaceholder: String
     public let Notifications_MessageNotificationsSound: String
     public let Call_StatusWaiting: String
+    public let SecureId_FormFieldIdentityPlaceholder: String
     public let Weekday_ShortWednesday: String
     public let Notifications_Title: String
     public let PasscodeSettings_AutoLock_IfAwayFor_5hours: String
@@ -1207,6 +1212,7 @@ public final class PresentationStrings {
     public let Conversation_SearchPlaceholder: String
     public let Channel_Stickers_NotFound: String
     public let WatchRemote_AlertText: String
+    public let SecureId_Title: String
     public let Channel_AdminLog_CanInviteUsers: String
     public let Channel_BanUser_PermissionReadMessages: String
     public let AttachmentMenu_PhotoOrVideo: String
@@ -1304,6 +1310,7 @@ public final class PresentationStrings {
     public func AuthSessions_AppUnofficial(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_AuthSessions_AppUnofficial, self._AuthSessions_AppUnofficial_r, [_0])
     }
+    public let SecureId_FormFieldEmailPlaceholder: String
     public let Conversation_ContextMenuBan: String
     public let Channel_EditAdmin_PermissionsHeader: String
     private let _DialogList_SingleUploadingVideoSuffix: String
@@ -1370,6 +1377,7 @@ public final class PresentationStrings {
     public let Call_AudioRouteHide: String
     public let CallSettings_OnMobile: String
     public let Conversation_GifTooltip: String
+    public let SecureId_FormFieldPhonePlaceholder: String
     public let CheckoutInfo_ErrorCityInvalid: String
     public let Profile_CreateEncryptedChatError: String
     public let Map_LocationTitle: String
@@ -1459,6 +1467,7 @@ public final class PresentationStrings {
     public func Conversation_EncryptedPlaceholderTitleIncoming(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_Conversation_EncryptedPlaceholderTitleIncoming, self._Conversation_EncryptedPlaceholderTitleIncoming_r, [_0])
     }
+    public let SecureId_RequestScopeEmail: String
     private let _Map_AccurateTo: String
     private let _Map_AccurateTo_r: [(Int, NSRange)]
     public func Map_AccurateTo(_ _0: String) -> (String, [(Int, NSRange)]) {
@@ -1657,6 +1666,7 @@ public final class PresentationStrings {
     public func LiveLocationUpdated_YesterdayAt(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(_LiveLocationUpdated_YesterdayAt, self._LiveLocationUpdated_YesterdayAt_r, [_0])
     }
+    public let SecureId_FormFieldAddressPlaceholder: String
     public let Month_GenMarch: String
     public let Watch_UserInfo_Unmute: String
     public let CheckoutInfo_ErrorPostcodeInvalid: String
@@ -1750,6 +1760,11 @@ public final class PresentationStrings {
     public let Conversation_DeleteManyMessages: String
     public let CancelResetAccount_Title: String
     public let Notification_CallOutgoingShort: String
+    private let _SecureId_RequestText: String
+    private let _SecureId_RequestText_r: [(Int, NSRange)]
+    public func SecureId_RequestText(_ _1: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(_SecureId_RequestText, self._SecureId_RequestText_r, [_1])
+    }
     public let SharedMedia_TitleAll: String
     public let Conversation_SlideToCancel: String
     public let AuthSessions_TerminateSession: String
@@ -1995,10 +2010,12 @@ public final class PresentationStrings {
         return formatWithArgumentRanges(_Call_StatusBar, self._Call_StatusBar_r, [_0])
     }
     public let EditProfile_NameAndPhotoHelp: String
+    public let SecureId_FormFieldPhone: String
     public let Month_ShortJuly: String
     public let CheckoutInfo_ShippingInfoAddress1Placeholder: String
     public let Watch_MessageView_ViewOnPhone: String
     public let CallSettings_Never: String
+    public let SecureId_RequestScopeLastJoiner: String
     public let TwoStepAuth_EmailSent: String
     private let _Notification_PinnedAnimationMessage: String
     private let _Notification_PinnedAnimationMessage_r: [(Int, NSRange)]
@@ -2130,6 +2147,7 @@ public final class PresentationStrings {
     public let CheckoutInfo_ShippingInfoCityPlaceholder: String
     public let Calls_CallTabDescription: String
     public let Resolve_ErrorNotFound: String
+    public let SecureId_RequestScopeAddress: String
     public let PhotoEditor_FadeTool: String
     public let Channel_Setup_TypePublicHelp: String
     public let GroupInfo_InviteLink_RevokeAlert_Success: String
@@ -2637,6 +2655,11 @@ public final class PresentationStrings {
     public let TwoStepAuth_ConfirmationTitle: String
     public let ChatSettings_Title: String
     public let AuthSessions_CurrentSession: String
+    private let _SecureId_RequestTitle: String
+    private let _SecureId_RequestTitle_r: [(Int, NSRange)]
+    public func SecureId_RequestTitle(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(_SecureId_RequestTitle, self._SecureId_RequestTitle_r, [_1, _2])
+    }
     public let Watch_Microphone_Access: String
     private let _Notification_RenamedChat: String
     private let _Notification_RenamedChat_r: [(Int, NSRange)]
@@ -2748,6 +2771,7 @@ public final class PresentationStrings {
     public let ReportPeer_Report: String
     public let Channel_EditMessageErrorGeneric: String
     public let LoginPassword_FloodError: String
+    public let SecureId_FormFieldAddress: String
     public let TwoStepAuth_SetupPasswordTitle: String
     public let PhotoEditor_DiscardChanges: String
     public let Group_UpgradeNoticeText2: String
@@ -5179,11 +5203,13 @@ public final class PresentationStrings {
         self.Conversation_LiveLocationYou = getValue(dict, "Conversation.LiveLocationYou")
         self.Map_OpenInWaze = getValue(dict, "Map.OpenInWaze")
         self.Checkout_ShippingMethod = getValue(dict, "Checkout.ShippingMethod")
+        self.SecureId_FormFieldIdentity = getValue(dict, "SecureId.FormFieldIdentity")
         self.Login_InfoFirstNamePlaceholder = getValue(dict, "Login.InfoFirstNamePlaceholder")
         self.Checkout_ErrorProviderAccountInvalid = getValue(dict, "Checkout.ErrorProviderAccountInvalid")
         self.CallSettings_TabIconDescription = getValue(dict, "CallSettings.TabIconDescription")
         self.Checkout_WebConfirmation_Title = getValue(dict, "Checkout.WebConfirmation.Title")
         self.PasscodeSettings_AutoLock = getValue(dict, "PasscodeSettings.AutoLock")
+        self.SecureId_RequestScopeIdentity = getValue(dict, "SecureId.RequestScopeIdentity")
         self.Notifications_MessageNotificationsPreview = getValue(dict, "Notifications.MessageNotificationsPreview")
         self.Conversation_BlockUser = getValue(dict, "Conversation.BlockUser")
         self.MessageTimer_Custom = getValue(dict, "MessageTimer.Custom")
@@ -5251,6 +5277,7 @@ public final class PresentationStrings {
         self.FastTwoStepSetup_EmailPlaceholder = getValue(dict, "FastTwoStepSetup.EmailPlaceholder")
         self._DialogList_MultipleTypingSuffix = getValue(dict, "DialogList.MultipleTypingSuffix")
         self._DialogList_MultipleTypingSuffix_r = extractArgumentRanges(self._DialogList_MultipleTypingSuffix)
+        self.SecureId_RequestScopePhone = getValue(dict, "SecureId.RequestScopePhone")
         self.Bot_GenericBotStatus = getValue(dict, "Bot.GenericBotStatus")
         self.PrivacySettings_PasscodeAndTouchId = getValue(dict, "PrivacySettings.PasscodeAndTouchId")
         self.Common_edit = getValue(dict, "Common.edit")
@@ -5398,6 +5425,7 @@ public final class PresentationStrings {
         self.Target_SelectGroup = getValue(dict, "Target.SelectGroup")
         self.Channel_AdminLog_InfoPanelAlertTitle = getValue(dict, "Channel.AdminLog.InfoPanelAlertTitle")
         self.Notifications_GroupNotificationsPreview = getValue(dict, "Notifications.GroupNotificationsPreview")
+        self.SecureId_FormFieldEmail = getValue(dict, "SecureId.FormFieldEmail")
         self.Message_PinnedLocationMessage = getValue(dict, "Message.PinnedLocationMessage")
         self.Settings_Logout = getValue(dict, "Settings.Logout")
         self._UserInfo_BlockConfirmation = getValue(dict, "UserInfo.BlockConfirmation")
@@ -5415,6 +5443,7 @@ public final class PresentationStrings {
         self.CheckoutInfo_ShippingInfoStatePlaceholder = getValue(dict, "CheckoutInfo.ShippingInfoStatePlaceholder")
         self.Notifications_MessageNotificationsSound = getValue(dict, "Notifications.MessageNotificationsSound")
         self.Call_StatusWaiting = getValue(dict, "Call.StatusWaiting")
+        self.SecureId_FormFieldIdentityPlaceholder = getValue(dict, "SecureId.FormFieldIdentityPlaceholder")
         self.Weekday_ShortWednesday = getValue(dict, "Weekday.ShortWednesday")
         self.Notifications_Title = getValue(dict, "Notifications.Title")
         self.PasscodeSettings_AutoLock_IfAwayFor_5hours = getValue(dict, "PasscodeSettings.AutoLock.IfAwayFor_5hours")
@@ -5572,6 +5601,7 @@ public final class PresentationStrings {
         self.Conversation_SearchPlaceholder = getValue(dict, "Conversation.SearchPlaceholder")
         self.Channel_Stickers_NotFound = getValue(dict, "Channel.Stickers.NotFound")
         self.WatchRemote_AlertText = getValue(dict, "WatchRemote.AlertText")
+        self.SecureId_Title = getValue(dict, "SecureId.Title")
         self.Channel_AdminLog_CanInviteUsers = getValue(dict, "Channel.AdminLog.CanInviteUsers")
         self.Channel_BanUser_PermissionReadMessages = getValue(dict, "Channel.BanUser.PermissionReadMessages")
         self.AttachmentMenu_PhotoOrVideo = getValue(dict, "AttachmentMenu.PhotoOrVideo")
@@ -5636,6 +5666,7 @@ public final class PresentationStrings {
         self.Group_Setup_HistoryHiddenHelp = getValue(dict, "Group.Setup.HistoryHiddenHelp")
         self._AuthSessions_AppUnofficial = getValue(dict, "AuthSessions.AppUnofficial")
         self._AuthSessions_AppUnofficial_r = extractArgumentRanges(self._AuthSessions_AppUnofficial)
+        self.SecureId_FormFieldEmailPlaceholder = getValue(dict, "SecureId.FormFieldEmailPlaceholder")
         self.Conversation_ContextMenuBan = getValue(dict, "Conversation.ContextMenuBan")
         self.Channel_EditAdmin_PermissionsHeader = getValue(dict, "Channel.EditAdmin.PermissionsHeader")
         self._DialogList_SingleUploadingVideoSuffix = getValue(dict, "DialogList.SingleUploadingVideoSuffix")
@@ -5678,6 +5709,7 @@ public final class PresentationStrings {
         self.Call_AudioRouteHide = getValue(dict, "Call.AudioRouteHide")
         self.CallSettings_OnMobile = getValue(dict, "CallSettings.OnMobile")
         self.Conversation_GifTooltip = getValue(dict, "Conversation.GifTooltip")
+        self.SecureId_FormFieldPhonePlaceholder = getValue(dict, "SecureId.FormFieldPhonePlaceholder")
         self.CheckoutInfo_ErrorCityInvalid = getValue(dict, "CheckoutInfo.ErrorCityInvalid")
         self.Profile_CreateEncryptedChatError = getValue(dict, "Profile.CreateEncryptedChatError")
         self.Map_LocationTitle = getValue(dict, "Map.LocationTitle")
@@ -5737,6 +5769,7 @@ public final class PresentationStrings {
         self.DialogList_SavedMessagesHelp = getValue(dict, "DialogList.SavedMessagesHelp")
         self._Conversation_EncryptedPlaceholderTitleIncoming = getValue(dict, "Conversation.EncryptedPlaceholderTitleIncoming")
         self._Conversation_EncryptedPlaceholderTitleIncoming_r = extractArgumentRanges(self._Conversation_EncryptedPlaceholderTitleIncoming)
+        self.SecureId_RequestScopeEmail = getValue(dict, "SecureId.RequestScopeEmail")
         self._Map_AccurateTo = getValue(dict, "Map.AccurateTo")
         self._Map_AccurateTo_r = extractArgumentRanges(self._Map_AccurateTo)
         self._Call_ParticipantVersionOutdatedError = getValue(dict, "Call.ParticipantVersionOutdatedError")
@@ -5866,6 +5899,7 @@ public final class PresentationStrings {
         self._Time_PreciseDate_m3_r = extractArgumentRanges(self._Time_PreciseDate_m3)
         self._LiveLocationUpdated_YesterdayAt = getValue(dict, "LiveLocationUpdated.YesterdayAt")
         self._LiveLocationUpdated_YesterdayAt_r = extractArgumentRanges(self._LiveLocationUpdated_YesterdayAt)
+        self.SecureId_FormFieldAddressPlaceholder = getValue(dict, "SecureId.FormFieldAddressPlaceholder")
         self.Month_GenMarch = getValue(dict, "Month.GenMarch")
         self.Watch_UserInfo_Unmute = getValue(dict, "Watch.UserInfo.Unmute")
         self.CheckoutInfo_ErrorPostcodeInvalid = getValue(dict, "CheckoutInfo.ErrorPostcodeInvalid")
@@ -5926,6 +5960,8 @@ public final class PresentationStrings {
         self.Conversation_DeleteManyMessages = getValue(dict, "Conversation.DeleteManyMessages")
         self.CancelResetAccount_Title = getValue(dict, "CancelResetAccount.Title")
         self.Notification_CallOutgoingShort = getValue(dict, "Notification.CallOutgoingShort")
+        self._SecureId_RequestText = getValue(dict, "SecureId.RequestText")
+        self._SecureId_RequestText_r = extractArgumentRanges(self._SecureId_RequestText)
         self.SharedMedia_TitleAll = getValue(dict, "SharedMedia.TitleAll")
         self.Conversation_SlideToCancel = getValue(dict, "Conversation.SlideToCancel")
         self.AuthSessions_TerminateSession = getValue(dict, "AuthSessions.TerminateSession")
@@ -6084,10 +6120,12 @@ public final class PresentationStrings {
         self._Call_StatusBar = getValue(dict, "Call.StatusBar")
         self._Call_StatusBar_r = extractArgumentRanges(self._Call_StatusBar)
         self.EditProfile_NameAndPhotoHelp = getValue(dict, "EditProfile.NameAndPhotoHelp")
+        self.SecureId_FormFieldPhone = getValue(dict, "SecureId.FormFieldPhone")
         self.Month_ShortJuly = getValue(dict, "Month.ShortJuly")
         self.CheckoutInfo_ShippingInfoAddress1Placeholder = getValue(dict, "CheckoutInfo.ShippingInfoAddress1Placeholder")
         self.Watch_MessageView_ViewOnPhone = getValue(dict, "Watch.MessageView.ViewOnPhone")
         self.CallSettings_Never = getValue(dict, "CallSettings.Never")
+        self.SecureId_RequestScopeLastJoiner = getValue(dict, "SecureId.RequestScopeLastJoiner")
         self.TwoStepAuth_EmailSent = getValue(dict, "TwoStepAuth.EmailSent")
         self._Notification_PinnedAnimationMessage = getValue(dict, "Notification.PinnedAnimationMessage")
         self._Notification_PinnedAnimationMessage_r = extractArgumentRanges(self._Notification_PinnedAnimationMessage)
@@ -6177,6 +6215,7 @@ public final class PresentationStrings {
         self.CheckoutInfo_ShippingInfoCityPlaceholder = getValue(dict, "CheckoutInfo.ShippingInfoCityPlaceholder")
         self.Calls_CallTabDescription = getValue(dict, "Calls.CallTabDescription")
         self.Resolve_ErrorNotFound = getValue(dict, "Resolve.ErrorNotFound")
+        self.SecureId_RequestScopeAddress = getValue(dict, "SecureId.RequestScopeAddress")
         self.PhotoEditor_FadeTool = getValue(dict, "PhotoEditor.FadeTool")
         self.Channel_Setup_TypePublicHelp = getValue(dict, "Channel.Setup.TypePublicHelp")
         self.GroupInfo_InviteLink_RevokeAlert_Success = getValue(dict, "GroupInfo.InviteLink.RevokeAlert.Success")
@@ -6516,6 +6555,8 @@ public final class PresentationStrings {
         self.TwoStepAuth_ConfirmationTitle = getValue(dict, "TwoStepAuth.ConfirmationTitle")
         self.ChatSettings_Title = getValue(dict, "ChatSettings.Title")
         self.AuthSessions_CurrentSession = getValue(dict, "AuthSessions.CurrentSession")
+        self._SecureId_RequestTitle = getValue(dict, "SecureId.RequestTitle")
+        self._SecureId_RequestTitle_r = extractArgumentRanges(self._SecureId_RequestTitle)
         self.Watch_Microphone_Access = getValue(dict, "Watch.Microphone.Access")
         self._Notification_RenamedChat = getValue(dict, "Notification.RenamedChat")
         self._Notification_RenamedChat_r = extractArgumentRanges(self._Notification_RenamedChat)
@@ -6600,6 +6641,7 @@ public final class PresentationStrings {
         self.ReportPeer_Report = getValue(dict, "ReportPeer.Report")
         self.Channel_EditMessageErrorGeneric = getValue(dict, "Channel.EditMessageErrorGeneric")
         self.LoginPassword_FloodError = getValue(dict, "LoginPassword.FloodError")
+        self.SecureId_FormFieldAddress = getValue(dict, "SecureId.FormFieldAddress")
         self.TwoStepAuth_SetupPasswordTitle = getValue(dict, "TwoStepAuth.SetupPasswordTitle")
         self.PhotoEditor_DiscardChanges = getValue(dict, "PhotoEditor.DiscardChanges")
         self.Group_UpgradeNoticeText2 = getValue(dict, "Group.UpgradeNoticeText2")
