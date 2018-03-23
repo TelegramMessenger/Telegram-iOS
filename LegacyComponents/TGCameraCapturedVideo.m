@@ -49,6 +49,11 @@
     return _cachedSize;
 }
 
+- (NSTimeInterval)videoDuration
+{
+    return [self originalDuration];
+}
+
 - (NSTimeInterval)originalDuration
 {
     if (_cachedDuration > DBL_EPSILON)
