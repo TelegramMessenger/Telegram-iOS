@@ -77,6 +77,7 @@ bool TGIsLocaleArabic();
 
 @interface NSData (Telegraph)
 
++ (NSData *)dataWithHexString:(NSString *)hex;
 - (NSString *)stringByEncodingInHex;
 - (NSString *)stringByEncodingInHexSeparatedByString:(NSString *)string;
 
