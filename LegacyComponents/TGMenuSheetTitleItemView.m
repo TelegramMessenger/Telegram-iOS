@@ -58,7 +58,7 @@
     _titleLabel.textColor = pallete.textColor;
     
     _subtitleLabel.backgroundColor = [UIColor clearColor];
-    _subtitleLabel.textColor = pallete.textColor;
+    _subtitleLabel.textColor = pallete.secondaryTextColor;
 }
 
 - (CGFloat)preferredHeightForWidth:(CGFloat)width screenHeight:(CGFloat)__unused screenHeight
