@@ -15,6 +15,7 @@
 
 #import <LegacyComponents/TGVideoEditAdjustments.h>
 
+#import "TGCameraCapturedVideo.h"
 #import "TGMediaAsset+TGMediaEditableItem.h"
 
 NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
@@ -121,6 +122,8 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
 {
     _item = item;
     
+    [_adjustmentsDisposable setDisposable:nil];
+    
     if (removable)
     {
         if (_deleteButton == nil)
@@ -165,6 +168,33 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
     }
     
     [_imageView setSignal:signal];
+    
+    if ([item isKindOfClass:[TGCameraCapturedVideo class]])
+    {
+        TGCameraCapturedVideo *video = (TGCameraCapturedVideo *)item;
+        _gradientView.hidden = false;
+        _label.text = [NSString stringWithFormat:@"%d:%02d", (int)ceil(video.videoDuration) / 60, (int)ceil(video.videoDuration) % 60];
+        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemVideoIcon");
+        
+        if (self.editingContext != nil)
+        {
+            SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:video];
+            
+            __weak TGMediaPickerPhotoStripCell *weakSelf = self;
+            [_adjustmentsDisposable setDisposable:[adjustmentsSignal startWithNext:^(TGVideoEditAdjustments *next)
+            {
+                __strong TGMediaPickerPhotoStripCell *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                if ([next isKindOfClass:[TGVideoEditAdjustments class]])
+                    [strongSelf _layoutImageForOriginalSize:next.originalSize cropRect:next.cropRect cropOrientation:next.cropOrientation];
+                else
+                    [strongSelf _layoutImageWithoutAdjustments];
+            }]];
+        }
+        return;
+    }
     
     TGMediaAsset *asset = (TGMediaAsset *)item;
     if (![asset isKindOfClass:[TGMediaAsset class]])
@@ -347,16 +377,6 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
             
             UIImage *icon = TGComponentsImageNamed(@"CameraDeleteIcon.png");
             [icon drawAtPoint:CGPointMake((size.width - icon.size.width) / 2.0f, (size.height - icon.size.height) / 2.0f)];
-//            CGContextSetShadowWithColor(context, CGSizeZero, 0.0f, [UIColor clearColor].CGColor);
-//            CGContextSetLineCap(context, kCGLineCapRound);
-//            CGContextSetLineWidth(context, 1.75f);
-//            CGContextMoveToPoint(context, insideInset + 8.0f, insideInset + 8.0f);
-//            CGContextAddLineToPoint(context, size.width - insideInset - 8.0f, size.height - insideInset - 8.0f);
-//            CGContextStrokePath(context);
-//
-//            CGContextMoveToPoint(context, size.width - insideInset - 8.0f, insideInset + 8.0f);
-//            CGContextAddLineToPoint(context, insideInset + 8.0f, size.height - insideInset - 8.0f);
-//            CGContextStrokePath(context);
             
             image = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();

@@ -7,7 +7,7 @@
 @interface TGCameraCapturedVideo : NSObject <TGMediaEditableItem, TGMediaSelectableItem>
 
 @property (nonatomic, readonly) AVURLAsset *avAsset;
-@property (nonatomic, readonly) NSTimeInterval duration;
+@property (nonatomic, readonly) NSTimeInterval videoDuration;
 
 - (instancetype)initWithURL:(NSURL *)url;
 

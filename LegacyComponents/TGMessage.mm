@@ -809,6 +809,27 @@ typedef enum {
         return _textCheckingResults;
     }
     
+    NSString *legacyCaption = nil;
+    NSArray *legacyTextCheckingResults = nil;
+    for (id attachment in self.mediaAttachments) {
+        if ([attachment isKindOfClass:[TGImageMediaAttachment class]]) {
+            legacyCaption = ((TGImageMediaAttachment *)attachment).caption;
+            if (legacyCaption.length > 0)
+                legacyTextCheckingResults = ((TGImageMediaAttachment *)attachment).textCheckingResults;
+        } else if ([attachment isKindOfClass:[TGVideoMediaAttachment class]]) {
+            legacyCaption = ((TGVideoMediaAttachment *)attachment).caption;
+            if (legacyCaption.length > 0)
+                legacyTextCheckingResults = ((TGVideoMediaAttachment *)attachment).textCheckingResults;
+        } else if ([attachment isKindOfClass:[TGDocumentMediaAttachment class]]) {
+            legacyCaption = ((TGDocumentMediaAttachment *)attachment).caption;
+            if (legacyCaption.length > 0)
+                legacyTextCheckingResults = ((TGDocumentMediaAttachment *)attachment).textCheckingResults;
+        }
+    }
+    
+    if (legacyTextCheckingResults.count > 0)
+        return legacyTextCheckingResults;
+    
     if (_mediaAttachments.count != 0) {
         bool hasPhoneEntities = false;
         
