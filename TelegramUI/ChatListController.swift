@@ -508,11 +508,10 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 chatController.canReadHistory.set(true)
                 chatController.updatePresentationMode(.standard(previewing: false))
                 if let navigationController = self.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, chatController: chatController, account: self.account, chatLocation: chatController.chatLocation)
+                    navigateToChatController(navigationController: navigationController, chatController: chatController, account: self.account, chatLocation: chatController.chatLocation, animated: false)
                     self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
             }
         }
     }
 }
-
