@@ -19,22 +19,37 @@ public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStep
         |> retryRequest
         |> map { result -> TwoStepVerificationConfiguration in
             switch result {
-                case let .noPassword(_, _, emailUnconfirmedPattern):
+                case let .noPassword(_, _, _, emailUnconfirmedPattern):
                     return .notSet(pendingEmailPattern: emailUnconfirmedPattern)
-                case let .password(_, _, _, hint, hasRecovery, emailUnconfirmedPattern):
+                case let .password(_, _, _, _, hint, hasRecovery, emailUnconfirmedPattern):
                     return .set(hint: hint, hasRecoveryEmail: hasRecovery == .boolTrue, pendingEmailPattern: emailUnconfirmedPattern)
             }
         }
 }
 
+public struct TwoStepVerificationSecureSecret {
+    public let data: Data
+    public let salt: Data
+    public let hash: Int64
+}
+
 public struct TwoStepVerificationSettings {
     public let email: String
-    public let secureSecret: Data?
+    public let secureSecret: TwoStepVerificationSecureSecret?
 }
 
 public func requestTwoStepVerifiationSettings(network: Network, password: String) -> Signal<TwoStepVerificationSettings, AuthorizationPasswordVerificationError> {
     return twoStepAuthData(network)
-        |> mapToSignal { authData -> Signal<TwoStepVerificationSettings, MTRpcError> in
+        |> mapError { error -> AuthorizationPasswordVerificationError in
+            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                return .limitExceeded
+            } else if error.errorDescription == "PASSWORD_HASH_INVALID" {
+                return .invalidPassword
+            } else {
+                return .generic
+            }
+        }
+        |> mapToSignal { authData -> Signal<TwoStepVerificationSettings, AuthorizationPasswordVerificationError> in
             var data = Data()
             data.append(authData.currentSalt!)
             data.append(password.data(using: .utf8, allowLossyConversion: true)!)
@@ -42,21 +57,22 @@ public func requestTwoStepVerifiationSettings(network: Network, password: String
             let currentPasswordHash = sha256Digest(data)
             
             return network.request(Api.functions.account.getPasswordSettings(currentPasswordHash: Buffer(data: currentPasswordHash)), automaticFloodWait: false)
-                |> map { result -> TwoStepVerificationSettings in
+                |> mapError { _ -> AuthorizationPasswordVerificationError in
+                    return .generic
+                }
+                |> mapToSignal { result -> Signal<TwoStepVerificationSettings, AuthorizationPasswordVerificationError> in
                     switch result {
-                        case let .passwordSettings(email, secureSecret):
-                            return TwoStepVerificationSettings(email: email, secureSecret: secureSecret.size == 0 ? nil : secureSecret.makeData())
+                        case let .passwordSettings(email, secureSalt, secureSecret, secureSecretHash):
+                            var parsedSecureSecret: TwoStepVerificationSecureSecret?
+                            if secureSalt.size != 0 && secureSecret.size != 0 {
+                                if secureSecret.size != 32 {
+                                    return .fail(.generic)
+                                }
+                                parsedSecureSecret = TwoStepVerificationSecureSecret(data: secureSecret.makeData(), salt: secureSalt.makeData(), hash: secureSecretHash)
+                            }
+                            return .single(TwoStepVerificationSettings(email: email, secureSecret: parsedSecureSecret))
                     }
                 }
-        }
-        |> `catch` { error -> Signal<TwoStepVerificationSettings, AuthorizationPasswordVerificationError> in
-            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-                return .fail(.limitExceeded)
-            } else if error.errorDescription == "PASSWORD_HASH_INVALID" {
-                return .fail(.invalidPassword)
-            } else {
-                return .fail(.generic)
-            }
         }
 }
 
@@ -80,7 +96,7 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
         |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
             return .generic
         }
-        |> mapToSignal { authData -> Signal<(TwoStepAuthData, Data?), UpdateTwoStepVerificationPasswordError> in
+        |> mapToSignal { authData -> Signal<(TwoStepAuthData, TwoStepVerificationSecureSecret?), UpdateTwoStepVerificationPasswordError> in
             if authData.currentSalt != nil {
                 return requestTwoStepVerifiationSettings(network: network, password: currentPassword ?? "")
                 |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
@@ -114,7 +130,7 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                         flags |= (1 << 0)
                     }
                     
-                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSecret: nil)), automaticFloodWait: false)
+                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSalt: nil, newSecureSecret: nil, newSecureSecretHash: nil)), automaticFloodWait: false)
                         |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
                             return .generic
                         }
@@ -140,18 +156,22 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                     updatedData.append(password.data(using: .utf8, allowLossyConversion: true)!)
                     updatedData.append(nextSalt)
                     
-                    var updatedSecureSecret: Data?
+                    var updatedSecureSecret: TwoStepVerificationSecureSecret?
                     if let encryptedSecret = secureSecret {
                         flags |= 1 << 2
-                        if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: encryptedSecret, password: currentPassword ?? "") {
-                            updatedSecureSecret = encryptedSecureSecret(secretData: decryptedSecret, password: password)
+                        if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: encryptedSecret.data, password: currentPassword ?? "", salt: encryptedSecret.salt, hash: encryptedSecret.hash) {
+                            if let (data, salt, hash) = encryptedSecureSecret(secretData: decryptedSecret, password: password, inputSalt: authData.nextSecureSalt) {
+                                updatedSecureSecret = TwoStepVerificationSecureSecret(data: data, salt: salt, hash: hash)
+                            } else {
+                                return .fail(.generic)
+                            }
                         } else {
-                            updatedSecureSecret = Data()
+                            return .fail(.generic)
                         }
                     }
                     
                     let updatedPasswordHash = sha256Digest(updatedData)
-                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: Buffer(data: nextSalt), newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email, newSecureSecret: updatedSecureSecret.flatMap(Buffer.init))), automaticFloodWait: false)
+                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: Buffer(data: nextSalt), newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email, newSecureSalt: (updatedSecureSecret?.salt).flatMap(Buffer.init), newSecureSecret: (updatedSecureSecret?.data).flatMap(Buffer.init), newSecureSecretHash: updatedSecureSecret?.hash)), automaticFloodWait: false)
                         |> map { _ -> UpdateTwoStepVerificationPasswordResult in
                             return .password(password: password, pendingEmailPattern: nil)
                         }
@@ -184,7 +204,7 @@ enum UpdateTwoStepVerificationSecureSecretError {
     case generic
 }
 
-func updateTwoStepVerificationSecureSecret(network: Network, password: String, updatedSecret: Data) -> Signal<UpdateTwoStepVerificationSecureSecretResult, UpdateTwoStepVerificationSecureSecretError> {
+func updateTwoStepVerificationSecureSecret(network: Network, password: String, secret: Data) -> Signal<UpdateTwoStepVerificationSecureSecretResult, UpdateTwoStepVerificationSecureSecretError> {
     return twoStepAuthData(network)
         |> mapError { _ -> UpdateTwoStepVerificationSecureSecretError in
             return .generic
@@ -194,14 +214,22 @@ func updateTwoStepVerificationSecureSecret(network: Network, password: String, u
                 return .fail(.generic)
             }
             
+            guard let passwordData = password.data(using: .utf8) else {
+                return .fail(.generic)
+            }
+            
             var data = Data()
             data.append(currentSalt)
-            data.append(password.data(using: .utf8, allowLossyConversion: true)!)
+            data.append(passwordData)
             data.append(currentSalt)
             let currentPasswordHash = Buffer(data: sha256Digest(data))
             
+            guard let (encryptedSecret, secretSalt, secretHash) = encryptedSecureSecret(secretData: secret, password: password, inputSalt: authData.nextSecureSalt) else {
+                return .fail(.generic)
+            }
+            
             let flags: Int32 = (1 << 2)
-            return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSecret: Buffer(data: updatedSecret))), automaticFloodWait: false)
+            return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSalt: Buffer(data: secretSalt), newSecureSecret: Buffer(data: encryptedSecret), newSecureSecretHash: secretHash)), automaticFloodWait: false)
             |> mapError { _ -> UpdateTwoStepVerificationSecureSecretError in
                 return .generic
             }
@@ -229,7 +257,7 @@ public func updateTwoStepVerificationEmail(account: Account, currentPassword: St
             }
 
             let flags: Int32 = 1 << 1
-            return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: updatedEmail, newSecureSecret: nil)), automaticFloodWait: false)
+            return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: updatedEmail, newSecureSalt: nil, newSecureSecret: nil, newSecureSecretHash: nil)), automaticFloodWait: false)
                 |> map { _ -> UpdateTwoStepVerificationPasswordResult in
                     return .password(password: currentPassword, pendingEmailPattern: nil)
                 }

@@ -15,11 +15,58 @@ private enum GenerateSecureSecretError {
     case generic
 }
 
-func decryptedSecureSecret(encryptedSecretData: Data, password: String) -> Data? {
+func encryptSecureData(key: Data, iv: Data, data: Data, decrypt: Bool) -> Data? {
+    if data.count % 16 != 0 {
+        return nil
+    }
+    
+    var processedData = Data(count: data.count)
+    guard processedData.withUnsafeMutableBytes({ (processedDataBytes: UnsafeMutablePointer<Int8>) -> Bool in
+        return key.withUnsafeBytes { (keyBytes: UnsafePointer<Int8>) -> Bool in
+            return iv.withUnsafeBytes { (ivBytes: UnsafePointer<Int8>) -> Bool in
+                return data.withUnsafeBytes { (dataBytes: UnsafePointer<Int8>) -> Bool in
+                    var processedCount: Int = 0
+                    let result = CCCrypt(CCOperation(decrypt ? kCCDecrypt : kCCEncrypt), CCAlgorithm(kCCAlgorithmAES128), 0, keyBytes, key.count, ivBytes, dataBytes, data.count, processedDataBytes, processedData.count, &processedCount)
+                    if result != kCCSuccess {
+                        return false
+                    }
+                    if processedCount != processedData.count {
+                        return false
+                    }
+                    return true
+                }
+            }
+        }
+    }) else {
+        return nil
+    }
+    
+    return processedData
+}
+
+func verifySecureSecret(_ data: Data) -> Bool {
+    guard data.withUnsafeBytes({ (bytes: UnsafePointer<UInt8>) -> Bool in
+        var checksum: UInt32 = 0
+        for i in 0 ..< data.count {
+            checksum += UInt32(bytes.advanced(by: i).pointee)
+            checksum = checksum % 255
+        }
+        if checksum == 239 {
+            return true
+        } else {
+            return false
+        }
+    }) else {
+        return false
+    }
+    return true
+}
+
+func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Data, hash: Int64) -> Data? {
     guard let passwordData = password.data(using: .utf8) else {
         return nil
     }
-    let passwordHash = sha512Digest(passwordData)
+    let passwordHash = sha512Digest(salt + passwordData + salt)
     let secretKey = passwordHash.subdata(in: 0 ..< 32)
     let iv = passwordHash.subdata(in: 32 ..< (32 + 16))
     
@@ -45,30 +92,45 @@ func decryptedSecureSecret(encryptedSecretData: Data, password: String) -> Data?
         return nil
     }
     
-    guard decryptedSecret.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<UInt8>) -> Bool in
-        var checksum: UInt32 = 0
-        for i in 0 ..< decryptedSecret.count {
-            checksum += UInt32(bytes.advanced(by: i).pointee)
-            checksum = checksum % 255
-        }
-        if checksum == 239 {
-            return true
-        } else {
-            return false
-        }
-    }) else {
+    if !verifySecureSecret(decryptedSecret) {
+        return nil
+    }
+    
+    let secretHashData = sha256Digest(decryptedSecret)
+    var secretHash: Int64 = 0
+    secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+        memcpy(&secretHash, bytes.advanced(by: secretHashData.count - 8), 8)
+    }
+    
+    if secretHash != hash {
         return nil
     }
     
     return decryptedSecret
 }
 
-func encryptedSecureSecret(secretData: Data, password: String) -> Data? {
+func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) -> (data: Data, salt: Data, hash: Int64)? {
+    let secretHashData = sha256Digest(secretData)
+    var secretHash: Int64 = 0
+    secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+        memcpy(&secretHash, bytes.advanced(by: secretHashData.count - 8), 8)
+    }
+    
     guard let passwordData = password.data(using: .utf8) else {
         return nil
     }
     
-    let passwordHash = sha512Digest(passwordData)
+    var randomSalt = Data(count: 8)
+    guard randomSalt.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
+        let result = SecRandomCopyBytes(nil, randomSalt.count, bytes)
+        return result == errSecSuccess
+    }) else {
+        return nil
+    }
+    
+    let secretSalt = inputSalt + randomSalt
+    
+    let passwordHash = sha512Digest(secretSalt + passwordData + secretSalt)
     let secretKey = passwordHash.subdata(in: 0 ..< 32)
     let iv = passwordHash.subdata(in: 32 ..< (32 + 16))
     
@@ -94,20 +156,20 @@ func encryptedSecureSecret(secretData: Data, password: String) -> Data? {
         return nil
     }
     
-    if decryptedSecureSecret(encryptedSecretData: encryptedSecret, password: password) != secretData {
+    if decryptedSecureSecret(encryptedSecretData: encryptedSecret, password: password, salt: secretSalt, hash: secretHash) != secretData {
         return nil
     }
     
-    return encryptedSecret
+    return (encryptedSecret, secretSalt, secretHash)
 }
 
-private func generateSecureSecret(network: Network, password: String) -> Signal<Data, GenerateSecureSecretError> {
+func generateSecureSecretData() -> Data? {
     var secretData = Data(count: 32)
     guard secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
         let copyResult = SecRandomCopyBytes(nil, 32, bytes)
         return copyResult == errSecSuccess
     }) else {
-        return .fail(.generic)
+        return nil
     }
     
     secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<UInt8>) in
@@ -136,12 +198,15 @@ private func generateSecureSecret(network: Network, password: String) -> Signal<
             }
         }
     })
-    
-    guard let encryptedSecret = encryptedSecureSecret(secretData: secretData, password: password) else {
+    return secretData
+}
+
+private func generateSecureSecret(network: Network, password: String) -> Signal<Data, GenerateSecureSecretError> {
+    guard let secretData = generateSecureSecretData() else {
         return .fail(.generic)
     }
     
-    return updateTwoStepVerificationSecureSecret(network: network, password: password, updatedSecret: encryptedSecret)
+    return updateTwoStepVerificationSecureSecret(network: network, password: password, secret: secretData)
     |> mapError { _ -> GenerateSecureSecretError in
         return .generic
     }
@@ -152,6 +217,7 @@ private func generateSecureSecret(network: Network, password: String) -> Signal<
 
 public struct SecureIdAccessContext {
     let secret: Data
+    let hash: Int64
 }
 
 public enum SecureIdAccessError {
@@ -167,8 +233,8 @@ public func accessSecureId(network: Network, password: String) -> Signal<SecureI
     }
     |> mapToSignal { settings -> Signal<SecureIdAccessContext, SecureIdAccessError> in
         if let secureSecret = settings.secureSecret {
-            if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: secureSecret, password: "q") { //password
-                return .single(SecureIdAccessContext(secret: decryptedSecret))
+            if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: secureSecret.data, password: password, salt: secureSecret.salt, hash: secureSecret.hash) {
+                return .single(SecureIdAccessContext(secret: decryptedSecret, hash: secureSecret.hash))
             } else {
                 return .fail(.secretPasswordMismatch)
             }
@@ -178,7 +244,12 @@ public func accessSecureId(network: Network, password: String) -> Signal<SecureI
                 return SecureIdAccessError.generic
             }
             |> map { decryptedSecret in
-                return SecureIdAccessContext(secret: decryptedSecret)
+                let secretHashData = sha256Digest(decryptedSecret)
+                var secretHash: Int64 = 0
+                secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                    memcpy(&secretHash, bytes.advanced(by: secretHashData.count - 8), 8)
+                }
+                return SecureIdAccessContext(secret: decryptedSecret, hash: secretHash)
             }
         }
     }

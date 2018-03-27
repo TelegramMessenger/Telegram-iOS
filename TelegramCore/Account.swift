@@ -342,18 +342,45 @@ public struct TwoStepAuthData {
     public let currentHint: String?
     public let unconfirmedEmailPattern: String?
     public let secretRandom: Data
+    public let nextSecureSalt: Data
 }
 
 public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .noPassword(newSalt, secretRandom, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: nil, hasRecovery: false, currentHint: nil, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData())
-            case let .password(currentSalt, newSalt, secretRandom, hint, hasRecovery, emailUnconfirmedPattern):
-                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: currentSalt.makeData(), hasRecovery: hasRecovery == .boolTrue, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData())
+            case let .noPassword(newSalt, newSecureSalt, secretRandom, emailUnconfirmedPattern):
+                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: nil, hasRecovery: false, currentHint: nil, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData(), nextSecureSalt: newSecureSalt.makeData())
+            case let .password(currentSalt, newSalt, newSecureSalt, secretRandom, hint, hasRecovery, emailUnconfirmedPattern):
+                return TwoStepAuthData(nextSalt: newSalt.makeData(), currentSalt: currentSalt.makeData(), hasRecovery: hasRecovery == .boolTrue, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secretRandom.makeData(), nextSecureSalt: newSecureSalt.makeData())
         }
     }
+}
+
+func hexString(_ data: Data) -> String {
+    let hexString = NSMutableString()
+    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        for i in 0 ..< data.count {
+            hexString.appendFormat("%02x", UInt(bytes.advanced(by: i).pointee))
+        }
+    }
+    
+    return hexString as String
+}
+
+func dataWithHexString(_ string: String) -> Data {
+    var hex = string
+    var data = Data()
+    while hex.count > 0 {
+        let subIndex = hex.index(hex.startIndex, offsetBy: 2)
+        let c = String(hex[..<subIndex])
+        hex = String(hex[subIndex...])
+        var ch: UInt32 = 0
+        Scanner(string: c).scanHexInt32(&ch)
+        var char = UInt8(ch)
+        data.append(&char, count: 1)
+    }
+    return data
 }
 
 func sha1Digest(_ data : Data) -> Data {
@@ -467,6 +494,81 @@ public struct AccountRunningImportantTasks: OptionSet {
     public static let pendingMessages = AccountRunningImportantTasks(rawValue: 1 << 1)
 }
 
+private struct MasterNotificationKey {
+    let id: Data
+    let data: Data
+}
+
+private func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
+    if let key = account.masterNotificationKey.with({ $0 }) {
+        //return .single(key)
+    }
+    
+    return account.postbox.modify(ignoreDisabled: ignoreDisabled, { modifier -> MasterNotificationKey in
+        if let value = modifier.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
+            let authKeyHash = sha1Digest(value)
+            let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
+            let keyData = MasterNotificationKey(id: authKeyId, data: value)
+            let _ = account.masterNotificationKey.swap(keyData)
+            return keyData
+        } else {
+            var secretData = Data(count: 256)
+            if !secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
+                let copyResult = SecRandomCopyBytes(nil, secretData.count, bytes)
+                return copyResult == errSecSuccess
+            }) {
+                assertionFailure()
+            }
+            
+            modifier.setKeychainEntry(secretData, forKey: "master-notification-secret")
+            let authKeyHash = sha1Digest(secretData)
+            let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
+            let keyData = MasterNotificationKey(id: authKeyId, data: secretData)
+            let _ = account.masterNotificationKey.swap(keyData)
+            return keyData
+        }
+    })
+}
+
+public func decryptedNotificationPayload(account: Account, data: Data) -> Signal<Data?, NoError> {
+    return masterNotificationsKey(account: account, ignoreDisabled: true)
+    |> map { secret -> Data? in
+        if data.subdata(in: 0 ..< 8) != secret.id {
+            return nil
+        }
+        
+        let x = 8
+        let msgKey = data.subdata(in: 8 ..< (8 + 16))
+        let rawData = data.subdata(in: (8 + 16) ..< data.count)
+        let sha256_a = sha256Digest(msgKey + secret.data.subdata(in: x ..< (x + 36)))
+        let sha256_b = sha256Digest(secret.data.subdata(in: (40 + x) ..< (40 + x + 36)) + msgKey)
+        let aesKey = sha256_a.subdata(in: 0 ..< 8) + sha256_b.subdata(in: 8 ..< (8 + 16)) + sha256_a.subdata(in: 24 ..< (24 + 8))
+        let aesIv = sha256_b.subdata(in: 0 ..< 8) + sha256_a.subdata(in: 8 ..< (8 + 16)) + sha256_b.subdata(in: 24 ..< (24 + 8))
+        
+        guard let data = MTAesDecrypt(rawData, aesKey, aesIv), data.count > 4 else {
+            return nil
+        }
+        
+        var dataLength: Int32 = 0
+        data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+            memcpy(&dataLength, bytes, 4)
+        }
+        
+        if dataLength < 0 || dataLength > data.count - 4 {
+            return nil
+        }
+        
+        let checkMsgKeyLarge = sha256Digest(secret.data.subdata(in: (88 + x) ..< (88 + x + 32)) + data)
+        let checkMsgKey = checkMsgKeyLarge.subdata(in: 8 ..< (8 + 16))
+        
+        if checkMsgKey != msgKey {
+            return nil
+        }
+        
+        return data.subdata(in: 4 ..< (4 + Int(dataLength)))
+    }
+}
+
 public class Account {
     public let id: AccountRecordId
     public let basePath: String
@@ -523,6 +625,8 @@ public class Account {
     public var importantTasksRunning: Signal<AccountRunningImportantTasks, NoError> {
         return self._importantTasksRunning.get()
     }
+    
+    fileprivate let masterNotificationKey = Atomic<MasterNotificationKey?>(value: nil)
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
@@ -588,11 +692,15 @@ public class Account {
                 #if DEBUG
                     appSandbox = .boolTrue
                 #endif
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(), otherUids: []))
+
+                return masterNotificationsKey(account: self, ignoreDisabled: false)
+                |> mapToSignal { secret -> Signal<Void, NoError> in
+                    return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
                     }
+                }
             }
         self.notificationTokenDisposable.set(appliedNotificationToken.start())
         
@@ -612,11 +720,14 @@ public class Account {
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(), otherUids: []))
+                return masterNotificationsKey(account: self, ignoreDisabled: false)
+                    |> mapToSignal { secret -> Signal<Void, NoError> in
+                        return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
                     }
+                }
             }
         self.voipTokenDisposable.set(appliedVoipToken.start())
         

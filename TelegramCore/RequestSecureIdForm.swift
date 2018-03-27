@@ -13,139 +13,87 @@ public enum RequestSecureIdFormError {
     case generic
 }
 
-public enum RequestedSecureIdField {
-    case identity
-    case address
-    case phone
-    case email
-}
-
-private func parseRequestedFieldType(_ type: Api.AuthFieldType) -> RequestedSecureIdField {
+private func parseSecureValueType(_ type: Api.SecureValueType) -> SecureIdRequestedFormField {
     switch type {
-        case .authFieldTypeIdentity:
+        case .secureValueTypeIdentity:
             return .identity
-        case .authFieldTypeAddress:
+        case .secureValueTypeAddress:
             return .address
-        case .authFieldTypePhone:
+        case .secureValueTypePhone:
             return .phone
-        case .authFieldTypeEmail:
+        case .secureValueTypeEmail:
             return .email
     }
 }
 
-private func parseFileReference(_ file: Api.SecureFile) -> SecureIdFileReference {
-    switch file {
-        case .secureFileEmpty:
-            return .none
-        case let .secureFile(id, accessHash, size, dcId, fileHash):
-            return .file(id: id, accessHash: accessHash, size: size, datacenterId: dcId, fileHash: fileHash)
+//secureData data:bytes data_hash:bytes = SecureData;
+
+private func parseSecureData(_ value: Api.SecureData) -> (data: Data, hash: Data) {
+    switch value {
+        case let .secureData(data, dataHash):
+            return (data.makeData(), dataHash.makeData())
     }
 }
 
-/*private func parseValue(_ value: Api.SecureValue) -> SecureIdFieldValue {
+private func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) -> SecureIdValue? {
     switch value {
-        case let .secureValueEmpty(name):
-            return SecureIdFieldValue(name: name, data: .none)
-        case let .secureValueData(name, data, hash, secret):
-            return SecureIdFieldValue(name: name, data: .data(data: data.makeData(), hash: hash, secret: secret.makeData()))
-        case let .secureValueFile(name, file, hash, secret):
-            return SecureIdFieldValue(name: name, data: .files(files: file.map(parseFileReference), hash: hash, secret: secret.makeData()))
-        case let .secureValueText(name, text, hash):
-            return SecureIdFieldValue(name: name, data: .text(text: text, hash: hash))
-    }
-}*/
-
-private func parseIdentityField(context: SecureIdAccessContext, value: Api.SecureValue, document: Api.SecureValue?) -> SecureIdIdentityField? {
-    switch value {
-        case let .secureValueData(name, data, hash, secret):
+        case let .secureValueIdentity(_, data, files, secret, hash, verified):
+            let (encryptedData, encryptedHash) = parseSecureData(data)
+            guard let decryptedData = decryptedSecureData(context: context, data: encryptedData, dataHash: encryptedHash, encryptedSecret: secret.makeData()) else {
+                return nil
+            }
+            var fileReferences: [Int64: SecureIdFileReference] = [:]
+            for file in files.map(SecureIdFileReference.init).flatMap({ $0 }) {
+                fileReferences[file.id] = file
+            }
+            guard let value = SecureIdIdentityValue(data: decryptedData, fileReferences: fileReferences) else {
+                return nil
+            }
+            return .identity(value)
+        case let .secureValueAddress(_, data, files, secret, hash, verified):
             return nil
-        default:
-            return nil
+        case let .secureValuePhone(_, phone, hash, verified):
+            guard let phoneData = phone.data(using: .utf8) else {
+                return nil
+            }
+            if sha256Digest(phoneData) != hash.makeData() {
+                return nil
+            }
+            return .phone(SecureIdPhoneValue(phone: phone))
+        case let .secureValueEmail(_, email, hash, verified):
+            guard let emailData = email.data(using: .utf8) else {
+                return nil
+            }
+            if sha256Digest(emailData) != hash.makeData() {
+                return nil
+            }
+            return .email(SecureIdEmailValue(email: email))
     }
 }
 
-private func parsePhoneField(context: SecureIdAccessContext, value: Api.SecureValue) -> SecureIdPhoneField? {
-    switch value {
-        case let .secureValueText(name, text, _):
-            return SecureIdPhoneField(rawValue: text)
-        default:
-            return nil
-    }
-}
-
-private func parseEmailField(context: SecureIdAccessContext, value: Api.SecureValue) -> SecureIdEmailField? {
-    switch value {
-        case let .secureValueText(name, text, _):
-            return SecureIdEmailField(rawValue: text)
-        default:
-            return nil
-    }
-}
-
-private func parseFields(context: SecureIdAccessContext, fields: [Api.AuthField]) -> SecureIdFields {
-    var result = SecureIdFields(identity: nil, phone: nil, email: nil)
-    for field in fields {
-        switch field {
-            case let .authField(_, type, data, document):
-                switch type {
-                    case .authFieldTypeIdentity:
-                        if let identity = parseIdentityField(context: context, value: data, document: document) {
-                            result.identity = .value(identity)
-                        } else {
-                            result.identity = .empty
-                        }
-                    case .authFieldTypeAddress:
-                        break
-                    case .authFieldTypePhone:
-                        if let phone = parsePhoneField(context: context, value: data) {
-                            result.phone = .value(phone)
-                        } else {
-                            result.phone = .empty
-                        }
-                    case .authFieldTypeEmail:
-                        if let email = parseEmailField(context: context, value: data) {
-                            result.email = .value(email)
-                        } else {
-                            result.email = .empty
-                        }
-                }
-        }
-    }
-    return result
+private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue]) -> [SecureIdValue] {
+    return values.map({ parseSecureValue(context: context, value: $0) }).flatMap({ $0 })
 }
 
 public struct EncryptedSecureIdForm {
     public let peerId: PeerId
-    public let requestedFields: [RequestedSecureIdField]
+    public let requestedFields: [SecureIdRequestedFormField]
     
-    let encryptedFields: [Api.AuthField]
+    let encryptedValues: [Api.SecureValue]
 }
 
-public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: PeerId, scope: [String], origin: String?, packageName: String?, bundleId: String?, publicKey: String?) -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> {
+public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: PeerId, scope: String, publicKey: String) -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> {
     if peerId.namespace != Namespaces.Peer.CloudUser {
         return .fail(.generic)
     }
-    var flags: Int32 = 0
-    if let _ = origin {
-        flags |= 1 << 0
-    }
-    if let _ = packageName {
-        flags |= 1 << 1
-    }
-    if let _ = bundleId {
-        flags |= 1 << 2
-    }
-    if let _ = publicKey {
-        flags |= 1 << 3
-    }
-    return network.request(Api.functions.account.getAuthorizationForm(flags: flags, botId: peerId.id, scope: scope, origin: origin, packageName: packageName, bundleId: bundleId, publicKey: publicKey))
+    return network.request(Api.functions.account.getAuthorizationForm(botId: peerId.id, scope: scope, publicKey: publicKey))
     |> mapError { _ -> RequestSecureIdFormError in
         return .generic
     }
     |> mapToSignal { result -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> in
         return postbox.modify { modifier -> EncryptedSecureIdForm in
             switch result {
-                case let .authorizationForm(_, botId, fields, _, users):
+                case let .authorizationForm(_, requiredTypes, values, users):
                     var peers: [Peer] = []
                     for user in users {
                         let parsed = TelegramUser(user: user)
@@ -155,17 +103,12 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
                         return updated
                     })
                     
-                    return EncryptedSecureIdForm(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), requestedFields: fields.map { field -> RequestedSecureIdField in
-                        switch field {
-                            case let .authField(_, type, data, document):
-                                return parseRequestedFieldType(type)
-                        }
-                    }, encryptedFields: fields)
+                    return EncryptedSecureIdForm(peerId: peerId, requestedFields: requiredTypes.map(parseSecureValueType), encryptedValues: values)
             }
         } |> mapError { _ in return RequestSecureIdFormError.generic }
     }
 }
 
 public func decryptedSecureIdForm(context: SecureIdAccessContext, form: EncryptedSecureIdForm) -> SecureIdForm? {
-    return SecureIdForm(peerId: form.peerId, fields: parseFields(context: context, fields: form.encryptedFields))
+    return SecureIdForm(peerId: form.peerId, requestedFields: form.requestedFields, values: parseSecureValues(context: context, values: form.encryptedValues))
 }

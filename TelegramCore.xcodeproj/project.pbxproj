@@ -362,16 +362,15 @@
 		D08F4A671E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A691E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A6A1E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */; };
-		D093D7EB206413C900BC3599 /* SecureIdPassportIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7EA206413C900BC3599 /* SecureIdPassportIdentity.swift */; };
-		D093D7EC206413C900BC3599 /* SecureIdPassportIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7EA206413C900BC3599 /* SecureIdPassportIdentity.swift */; };
+		D093D7EB206413C900BC3599 /* SecureIdIdentityValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7EA206413C900BC3599 /* SecureIdIdentityValue.swift */; };
+		D093D7EC206413C900BC3599 /* SecureIdIdentityValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7EA206413C900BC3599 /* SecureIdIdentityValue.swift */; };
 		D093D7EE206413F600BC3599 /* SecureIdDataTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7ED206413F600BC3599 /* SecureIdDataTypes.swift */; };
 		D093D7EF206413F600BC3599 /* SecureIdDataTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7ED206413F600BC3599 /* SecureIdDataTypes.swift */; };
-		D093D7F12064194600BC3599 /* SecureIdIdentityField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F02064194600BC3599 /* SecureIdIdentityField.swift */; };
-		D093D7F22064194600BC3599 /* SecureIdIdentityField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F02064194600BC3599 /* SecureIdIdentityField.swift */; };
-		D093D7F520641A4900BC3599 /* SecureIdPhoneField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F420641A4900BC3599 /* SecureIdPhoneField.swift */; };
-		D093D7F620641A4900BC3599 /* SecureIdPhoneField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F420641A4900BC3599 /* SecureIdPhoneField.swift */; };
-		D093D7F920641AA500BC3599 /* SecureIdEmailField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F820641AA500BC3599 /* SecureIdEmailField.swift */; };
-		D093D7FA20641AA500BC3599 /* SecureIdEmailField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F820641AA500BC3599 /* SecureIdEmailField.swift */; };
+		D093D7F520641A4900BC3599 /* SecureIdPhoneValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F420641A4900BC3599 /* SecureIdPhoneValue.swift */; };
+		D093D7F620641A4900BC3599 /* SecureIdPhoneValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F420641A4900BC3599 /* SecureIdPhoneValue.swift */; };
+		D093D7F920641AA500BC3599 /* SecureIdEmailValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F820641AA500BC3599 /* SecureIdEmailValue.swift */; };
+		D093D7FA20641AA500BC3599 /* SecureIdEmailValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F820641AA500BC3599 /* SecureIdEmailValue.swift */; };
+		D093D806206539D000BC3599 /* SaveSecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D805206539D000BC3599 /* SaveSecureIdValue.swift */; };
 		D099D7461EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D7451EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift */; };
 		D099D7471EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D7451EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift */; };
 		D099D7491EEF418D00A3128C /* HistoryViewChannelStateValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D7481EEF418D00A3128C /* HistoryViewChannelStateValidation.swift */; };
@@ -852,11 +851,11 @@
 		D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Localizations.swift; sourceTree = "<group>"; };
 		D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
 		D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
-		D093D7EA206413C900BC3599 /* SecureIdPassportIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPassportIdentity.swift; sourceTree = "<group>"; };
+		D093D7EA206413C900BC3599 /* SecureIdIdentityValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityValue.swift; sourceTree = "<group>"; };
 		D093D7ED206413F600BC3599 /* SecureIdDataTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdDataTypes.swift; sourceTree = "<group>"; };
-		D093D7F02064194600BC3599 /* SecureIdIdentityField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityField.swift; sourceTree = "<group>"; };
-		D093D7F420641A4900BC3599 /* SecureIdPhoneField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPhoneField.swift; sourceTree = "<group>"; };
-		D093D7F820641AA500BC3599 /* SecureIdEmailField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdEmailField.swift; sourceTree = "<group>"; };
+		D093D7F420641A4900BC3599 /* SecureIdPhoneValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPhoneValue.swift; sourceTree = "<group>"; };
+		D093D7F820641AA500BC3599 /* SecureIdEmailValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdEmailValue.swift; sourceTree = "<group>"; };
+		D093D805206539D000BC3599 /* SaveSecureIdValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveSecureIdValue.swift; sourceTree = "<group>"; };
 		D099D7451EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelMessageStateVersionAttribute.swift; sourceTree = "<group>"; };
 		D099D7481EEF418D00A3128C /* HistoryViewChannelStateValidation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HistoryViewChannelStateValidation.swift; sourceTree = "<group>"; };
 		D099EA1B1DE72867001AF5A8 /* PeerCommands.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerCommands.swift; sourceTree = "<group>"; };
@@ -1497,40 +1496,31 @@
 			name = Localization;
 			sourceTree = "<group>";
 		};
-		D093D7E82064135300BC3599 /* Fields */ = {
+		D093D7E82064135300BC3599 /* Values */ = {
 			isa = PBXGroup;
 			children = (
 				D093D7ED206413F600BC3599 /* SecureIdDataTypes.swift */,
 				D093D7E92064135A00BC3599 /* Identity */,
-				D093D7F320641A3F00BC3599 /* Phone */,
-				D093D7F720641A9600BC3599 /* Email */,
+				D093D7F320641A3F00BC3599 /* Other */,
 			);
-			name = Fields;
+			name = Values;
 			sourceTree = "<group>";
 		};
 		D093D7E92064135A00BC3599 /* Identity */ = {
 			isa = PBXGroup;
 			children = (
-				D093D7F02064194600BC3599 /* SecureIdIdentityField.swift */,
-				D093D7EA206413C900BC3599 /* SecureIdPassportIdentity.swift */,
+				D093D7EA206413C900BC3599 /* SecureIdIdentityValue.swift */,
 			);
 			name = Identity;
 			sourceTree = "<group>";
 		};
-		D093D7F320641A3F00BC3599 /* Phone */ = {
+		D093D7F320641A3F00BC3599 /* Other */ = {
 			isa = PBXGroup;
 			children = (
-				D093D7F420641A4900BC3599 /* SecureIdPhoneField.swift */,
+				D093D7F420641A4900BC3599 /* SecureIdPhoneValue.swift */,
+				D093D7F820641AA500BC3599 /* SecureIdEmailValue.swift */,
 			);
-			name = Phone;
-			sourceTree = "<group>";
-		};
-		D093D7F720641A9600BC3599 /* Email */ = {
-			isa = PBXGroup;
-			children = (
-				D093D7F820641AA500BC3599 /* SecureIdEmailField.swift */,
-			);
-			name = Email;
+			name = Other;
 			sourceTree = "<group>";
 		};
 		D09D8BF71D4FAB1D0081DBEC = {
@@ -1621,10 +1611,11 @@
 		D0BE303820619E9E00FBE6D8 /* Secure ID */ = {
 			isa = PBXGroup;
 			children = (
-				D0BE303920619EE800FBE6D8 /* SecureIdForm.swift */,
 				D0BE303C2061A29100FBE6D8 /* RequestSecureIdForm.swift */,
 				D0BE304A20627D9800FBE6D8 /* AccessSecureId.swift */,
-				D093D7E82064135300BC3599 /* Fields */,
+				D0BE303920619EE800FBE6D8 /* SecureIdForm.swift */,
+				D093D805206539D000BC3599 /* SaveSecureIdValue.swift */,
+				D093D7E82064135300BC3599 /* Values */,
 			);
 			name = "Secure ID";
 			sourceTree = "<group>";
@@ -1952,7 +1943,7 @@
 				D0DF0CA81D82BF32008AEB01 /* PeerParticipants.swift in Sources */,
 				D0FA8BA71E1FA6DF001E855B /* TelegramSecretChat.swift in Sources */,
 				D03B0D5F1D631A6900955575 /* Serialization.swift in Sources */,
-				D093D7F920641AA500BC3599 /* SecureIdEmailField.swift in Sources */,
+				D093D7F920641AA500BC3599 /* SecureIdEmailValue.swift in Sources */,
 				D0C44B611FC616E200227BE0 /* SearchGroupMembers.swift in Sources */,
 				D03B0D441D6319F900955575 /* CloudFileMediaResource.swift in Sources */,
 				D018D3371E648ACF00C5E089 /* CreateChannel.swift in Sources */,
@@ -2046,7 +2037,7 @@
 				D0F7AB2C1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */,
 				D0FA8BAA1E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift in Sources */,
 				D00D97C71E32901700E5C2B6 /* PeerInputActivity.swift in Sources */,
-				D093D7EB206413C900BC3599 /* SecureIdPassportIdentity.swift in Sources */,
+				D093D7EB206413C900BC3599 /* SecureIdIdentityValue.swift in Sources */,
 				D0FA8BAD1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */,
 				D03B0CBF1D62234A00955575 /* Log.swift in Sources */,
 				C2FD33E41E687BF1008D13D4 /* PeerPhotoUpdater.swift in Sources */,
@@ -2082,7 +2073,7 @@
 				D033FEB61E61F3F900644997 /* BlockedPeers.swift in Sources */,
 				D00C7CCC1E3620C30080C3D5 /* CachedChannelParticipants.swift in Sources */,
 				D09BB6B41DB02C2B00A905C0 /* PendingMessageManager.swift in Sources */,
-				D093D7F520641A4900BC3599 /* SecureIdPhoneField.swift in Sources */,
+				D093D7F520641A4900BC3599 /* SecureIdPhoneValue.swift in Sources */,
 				D0B167231F9F972E00976B40 /* LoggingSettings.swift in Sources */,
 				D0BC387B1E40D2880044D6FE /* TogglePeerChatPinned.swift in Sources */,
 				D0BB7C5A1E5C8074001527C3 /* ChannelParticipants.swift in Sources */,
@@ -2103,6 +2094,7 @@
 				D0C26D6C1FE286C3004ABF18 /* FetchChatList.swift in Sources */,
 				D0B843831DA6EDB8005F29E1 /* CachedGroupData.swift in Sources */,
 				D0E35A121DE4A25E00BC6096 /* OutgoingChatContextResultMessageAttribute.swift in Sources */,
+				D093D806206539D000BC3599 /* SaveSecureIdValue.swift in Sources */,
 				C239BE9C1E630CA700C2C453 /* UpdatePinnedMessage.swift in Sources */,
 				D08CAA7D1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */,
 				D0B844531DAC0773005F29E1 /* TelegramUserPresence.swift in Sources */,
@@ -2156,7 +2148,6 @@
 				D021E0E21DB5401A00C6B04F /* StickerManagement.swift in Sources */,
 				D0BC38701E40853E0044D6FE /* UpdatePeers.swift in Sources */,
 				D0F3A8A81E82CD7D00B4C64C /* UpdatePeerChatInterfaceState.swift in Sources */,
-				D093D7F12064194600BC3599 /* SecureIdIdentityField.swift in Sources */,
 				D03B0CE21D62249B00955575 /* InlineBotMessageAttribute.swift in Sources */,
 				D0AB0B9A1D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift in Sources */,
 				D03B0D5B1D631A6900955575 /* Buffer.swift in Sources */,
@@ -2223,7 +2214,6 @@
 				C26A37EF1E5E0C41006977AC /* ChannelParticipants.swift in Sources */,
 				D00D343D1E6EC9770057B307 /* TelegramMediaGame.swift in Sources */,
 				D0C26D6A1FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift in Sources */,
-				D093D7F22064194600BC3599 /* SecureIdIdentityField.swift in Sources */,
 				D01C7F051EFC1C49008305F1 /* DeviceContact.swift in Sources */,
 				D050F26A1E4A5B6D00988324 /* ManagedGlobalNotificationSettings.swift in Sources */,
 				D050F26B1E4A5B6D00988324 /* ApplyMaxReadIndexInteractively.swift in Sources */,
@@ -2344,10 +2334,10 @@
 				D0B8442A1DAB91E0005F29E1 /* NBAsYouTypeFormatter.m in Sources */,
 				D07047B51F3DF1FE00F6A8D4 /* ConsumablePersonalMentionMessageAttribute.swift in Sources */,
 				D0448C8F1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */,
-				D093D7F620641A4900BC3599 /* SecureIdPhoneField.swift in Sources */,
+				D093D7F620641A4900BC3599 /* SecureIdPhoneValue.swift in Sources */,
 				D0C26D6D1FE286C3004ABF18 /* FetchChatList.swift in Sources */,
 				D073CE6E1DCBCF17007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
-				D093D7FA20641AA500BC3599 /* SecureIdEmailField.swift in Sources */,
+				D093D7FA20641AA500BC3599 /* SecureIdEmailValue.swift in Sources */,
 				D05A32E21E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */,
 				D0613FD01E60520700202CDB /* ChannelMembers.swift in Sources */,
 				D001F3E81E128A1C007A8C60 /* ChannelState.swift in Sources */,
@@ -2463,7 +2453,7 @@
 				D099D7471EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift in Sources */,
 				D058E0D21E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */,
 				D03C536F1DAD5CA9004C17B3 /* BotInfo.swift in Sources */,
-				D093D7EC206413C900BC3599 /* SecureIdPassportIdentity.swift in Sources */,
+				D093D7EC206413C900BC3599 /* SecureIdIdentityValue.swift in Sources */,
 				D0FA8BBA1E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift in Sources */,
 				D033FEB41E61F3C000644997 /* ReportPeer.swift in Sources */,
 				D0FA8BAE1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */,

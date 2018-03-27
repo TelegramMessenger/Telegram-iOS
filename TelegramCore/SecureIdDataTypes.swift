@@ -1,7 +1,7 @@
 import Foundation
 
 public struct SecureIdDate: Equatable {
-    private var timestamp: Int32
+    public let timestamp: Int32
     
     public init(timestamp: Int32) {
         self.timestamp = timestamp
@@ -20,24 +20,40 @@ public enum SecureIdGender {
     case female
 }
 
-public enum SecureIdFileReference: Equatable {
-    case none
-    case file(id: Int64, accessHash: Int64, size: Int32, datacenterId: Int32, fileHash: String)
+public struct SecureIdFileReference: Equatable {
+    let id: Int64
+    let accessHash: Int64
+    let size: Int32
+    let datacenterId: Int32
+    let fileHash: Data
     
     public static func ==(lhs: SecureIdFileReference, rhs: SecureIdFileReference) -> Bool {
-        switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .file(id, accessHash, size, datacenterId, fileHash):
-                if case .file(id, accessHash, size, datacenterId, fileHash) = rhs {
-                    return true
-                } else {
-                    return false
-                }
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.accessHash != rhs.accessHash {
+            return false
+        }
+        if lhs.size != rhs.size {
+            return false
+        }
+        if lhs.datacenterId != rhs.datacenterId {
+            return false
+        }
+        if lhs.fileHash != rhs.fileHash {
+            return false
+        }
+        return true
+    }
+}
+
+extension SecureIdFileReference {
+    init?(apiFile: Api.SecureFile) {
+        switch apiFile {
+            case let .secureFile(id, accessHash, size, dcId, fileHash):
+                self.init(id: id, accessHash: accessHash, size: size, datacenterId: dcId, fileHash: fileHash.makeData())
+            case .secureFileEmpty:
+                return nil
         }
     }
 }

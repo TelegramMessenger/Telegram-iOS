@@ -5,77 +5,72 @@ import Foundation
     import Postbox
 #endif
 
-public enum SecureIdFieldValue<T>: Equatable where T: Equatable {
-    case empty
-    case value(T)
+public enum SecureIdValue: Equatable {
+    case identity(SecureIdIdentityValue)
+    case phone(SecureIdPhoneValue)
+    case email(SecureIdEmailValue)
     
-    public static func ==(lhs: SecureIdFieldValue<T>, rhs: SecureIdFieldValue<T>) -> Bool {
+    public static func ==(lhs: SecureIdValue, rhs: SecureIdValue) -> Bool {
         switch lhs {
-            case .empty:
-                if case .empty = rhs {
+            case let .identity(value):
+                if case .identity(value) = rhs {
                     return true
                 } else {
                     return false
                 }
-            case let .value(value):
-                if case .value(value) = rhs {
+            case let .phone(value):
+                if case .phone(value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .email(value):
+                if case .email(value) = rhs {
                     return true
                 } else {
                     return false
                 }
         }
     }
+    
+    func serialize() -> (Data, [SecureIdFileReference])? {
+        switch self {
+            case let .identity(value):
+                return value.serialize()
+            case .phone, .email:
+                return nil
+        }
+    }
 }
 
-public struct SecureIdFields: Equatable {
-    public var identity: SecureIdFieldValue<SecureIdIdentityField>?
-    public var phone: SecureIdFieldValue<SecureIdPhoneField>?
-    public var email: SecureIdFieldValue<SecureIdEmailField>?
+public enum SecureIdRequestedFormField {
+    case identity
+    case address
+    case phone
+    case email
+}
+
+public struct SecureIdForm: Equatable {
+    public let peerId: PeerId
+    public let requestedFields: [SecureIdRequestedFormField]
+    public let values: [SecureIdValue]
     
-    public static func ==(lhs: SecureIdFields, rhs: SecureIdFields) -> Bool {
-        if lhs.identity != rhs.identity {
+    public init(peerId: PeerId, requestedFields: [SecureIdRequestedFormField], values: [SecureIdValue]) {
+        self.peerId = peerId
+        self.requestedFields = requestedFields
+        self.values = values
+    }
+    
+    public static func ==(lhs: SecureIdForm, rhs: SecureIdForm) -> Bool {
+        if lhs.peerId != rhs.peerId {
             return false
         }
-        if lhs.phone != rhs.phone {
+        if lhs.requestedFields != rhs.requestedFields {
             return false
         }
-        if lhs.email != rhs.email {
+        if lhs.values != rhs.values {
             return false
         }
         return true
     }
-}
-
-public enum SecureIdField: Equatable {
-    case identity(SecureIdIdentityField)
-    case phone(SecureIdPhoneField)
-    case email(SecureIdEmailField)
-    
-    public static func ==(lhs: SecureIdField, rhs: SecureIdField) -> Bool {
-        switch lhs {
-            case let .identity(field):
-                if case .identity(field) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .phone(field):
-                if case .phone(field) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .email(field):
-                if case .email(field) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-}
-
-public struct SecureIdForm {
-    public let peerId: PeerId
-    public let fields: SecureIdFields
 }
