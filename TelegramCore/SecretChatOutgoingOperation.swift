@@ -113,7 +113,7 @@ enum SecretChatOutgoingOperationContents: PostboxCoding {
     case sendMessage(layer: SecretChatLayer, id: MessageId, file: SecretChatOutgoingFile?)
     case readMessagesContent(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
     case deleteMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
-    case screenshotMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
+    case screenshotMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64], messageId: MessageId)
     case clearHistory(layer: SecretChatLayer, actionGloballyUniqueId: Int64)
     case resendOperations(layer : SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, fromSeqNo: Int32, toSeqNo: Int32)
     case reportLayerSupport(layer: SecretChatLayer, actionGloballyUniqueId: Int64, layerSupport: Int32)
@@ -136,7 +136,7 @@ enum SecretChatOutgoingOperationContents: PostboxCoding {
             case SecretChatOutgoingOperationValue.deleteMessages.rawValue:
                 self = .deleteMessages(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"))
             case SecretChatOutgoingOperationValue.screenshotMessages.rawValue:
-                self = .screenshotMessages(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"))
+                self = .screenshotMessages(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"), messageId: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("m.n", orElse: 0), id: decoder.decodeInt32ForKey("m.i", orElse: 0)))
             case SecretChatOutgoingOperationValue.clearHistory.rawValue:
                 self = .clearHistory(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0))
             case SecretChatOutgoingOperationValue.resendOperations.rawValue:
@@ -191,11 +191,14 @@ enum SecretChatOutgoingOperationContents: PostboxCoding {
                 encoder.encodeInt32(layer.rawValue, forKey: "l")
                 encoder.encodeInt64(actionGloballyUniqueId, forKey: "i")
                 encoder.encodeInt64Array(globallyUniqueIds, forKey: "u")
-            case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
+            case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds, messageId):
                 encoder.encodeInt32(SecretChatOutgoingOperationValue.screenshotMessages.rawValue, forKey: "r")
                 encoder.encodeInt32(layer.rawValue, forKey: "l")
                 encoder.encodeInt64(actionGloballyUniqueId, forKey: "i")
                 encoder.encodeInt64Array(globallyUniqueIds, forKey: "u")
+                encoder.encodeInt64(messageId.peerId.toInt64(), forKey: "m.p")
+                encoder.encodeInt32(messageId.namespace, forKey: "m.n")
+                encoder.encodeInt32(messageId.id, forKey: "m.i")
             case let .clearHistory(layer, actionGloballyUniqueId):
                 encoder.encodeInt32(SecretChatOutgoingOperationValue.clearHistory.rawValue, forKey: "r")
                 encoder.encodeInt32(layer.rawValue, forKey: "l")

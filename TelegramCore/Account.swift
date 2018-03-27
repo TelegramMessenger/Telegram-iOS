@@ -455,6 +455,81 @@ public struct AccountRunningImportantTasks: OptionSet {
     public static let pendingMessages = AccountRunningImportantTasks(rawValue: 1 << 1)
 }
 
+private struct MasterNotificationKey {
+    let id: Data
+    let data: Data
+}
+
+private func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
+    if let key = account.masterNotificationKey.with({ $0 }) {
+        //return .single(key)
+    }
+    
+    return account.postbox.modify(ignoreDisabled: ignoreDisabled, { modifier -> MasterNotificationKey in
+        if let value = modifier.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
+            let authKeyHash = sha1Digest(value)
+            let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
+            let keyData = MasterNotificationKey(id: authKeyId, data: value)
+            let _ = account.masterNotificationKey.swap(keyData)
+            return keyData
+        } else {
+            var secretData = Data(count: 256)
+            if !secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
+                let copyResult = SecRandomCopyBytes(nil, secretData.count, bytes)
+                return copyResult == errSecSuccess
+            }) {
+                assertionFailure()
+            }
+            
+            modifier.setKeychainEntry(secretData, forKey: "master-notification-secret")
+            let authKeyHash = sha1Digest(secretData)
+            let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
+            let keyData = MasterNotificationKey(id: authKeyId, data: secretData)
+            let _ = account.masterNotificationKey.swap(keyData)
+            return keyData
+        }
+    })
+}
+
+public func decryptedNotificationPayload(account: Account, data: Data) -> Signal<Data?, NoError> {
+    return masterNotificationsKey(account: account, ignoreDisabled: true)
+        |> map { secret -> Data? in
+            if data.subdata(in: 0 ..< 8) != secret.id {
+                return nil
+            }
+            
+            let x = 8
+            let msgKey = data.subdata(in: 8 ..< (8 + 16))
+            let rawData = data.subdata(in: (8 + 16) ..< data.count)
+            let sha256_a = sha256Digest(msgKey + secret.data.subdata(in: x ..< (x + 36)))
+            let sha256_b = sha256Digest(secret.data.subdata(in: (40 + x) ..< (40 + x + 36)) + msgKey)
+            let aesKey = sha256_a.subdata(in: 0 ..< 8) + sha256_b.subdata(in: 8 ..< (8 + 16)) + sha256_a.subdata(in: 24 ..< (24 + 8))
+            let aesIv = sha256_b.subdata(in: 0 ..< 8) + sha256_a.subdata(in: 8 ..< (8 + 16)) + sha256_b.subdata(in: 24 ..< (24 + 8))
+            
+            guard let data = MTAesDecrypt(rawData, aesKey, aesIv), data.count > 4 else {
+                return nil
+            }
+            
+            var dataLength: Int32 = 0
+            data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                memcpy(&dataLength, bytes, 4)
+            }
+            
+            if dataLength < 0 || dataLength > data.count - 4 {
+                return nil
+            }
+            
+            let checkMsgKeyLarge = sha256Digest(secret.data.subdata(in: (88 + x) ..< (88 + x + 32)) + data)
+            let checkMsgKey = checkMsgKeyLarge.subdata(in: 8 ..< (8 + 16))
+            
+            if checkMsgKey != msgKey {
+                return nil
+            }
+            
+            return data.subdata(in: 4 ..< (4 + Int(dataLength)))
+    }
+}
+
 public class Account {
     public let id: AccountRecordId
     public let basePath: String
@@ -512,6 +587,8 @@ public class Account {
         return self._importantTasksRunning.get()
     }
     
+    fileprivate let masterNotificationKey = Atomic<MasterNotificationKey?>(value: nil)
+    
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
     public init(id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods) {
@@ -545,25 +622,25 @@ public class Account {
         let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue))
             |> map { isUpdating, connectionStatus -> AccountNetworkState in
                 switch connectionStatus {
-                    case .waitingForNetwork:
-                        return .waitingForNetwork
-                    case let .connecting(toProxy):
-                        return .connecting(toProxy: toProxy)
-                    case .updating:
+                case .waitingForNetwork:
+                    return .waitingForNetwork
+                case let .connecting(toProxy):
+                    return .connecting(toProxy: toProxy)
+                case .updating:
+                    return .updating
+                case .online:
+                    if isUpdating {
                         return .updating
-                    case .online:
-                        if isUpdating {
-                            return .updating
-                        } else {
-                            return .online
-                        }
+                    } else {
+                        return .online
+                    }
                 }
-            }
+        }
         self.networkStateValue.set(networkStateSignal |> distinctUntilChanged)
         
         let appliedNotificationToken = self.notificationToken.get()
             |> distinctUntilChanged
-            |> mapToSignal { token -> Signal<Void, NoError> in                
+            |> mapToSignal { token -> Signal<Void, NoError> in
                 var tokenString = ""
                 token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
                     for i in 0 ..< token.count {
@@ -576,12 +653,16 @@ public class Account {
                 #if DEBUG
                     appSandbox = .boolTrue
                 #endif
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(), otherUids: []))
-                    |> retryRequest
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
-            }
+                
+                return masterNotificationsKey(account: self, ignoreDisabled: false)
+                    |> mapToSignal { secret -> Signal<Void, NoError> in
+                        return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
+                            |> retryRequest
+                            |> mapToSignal { _ -> Signal<Void, NoError> in
+                                return .complete()
+                        }
+                }
+        }
         self.notificationTokenDisposable.set(appliedNotificationToken.start())
         
         let appliedVoipToken = self.voipToken.get()
@@ -600,12 +681,15 @@ public class Account {
                     appSandbox = .boolTrue
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(), otherUids: []))
-                    |> retryRequest
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
-            }
+                return masterNotificationsKey(account: self, ignoreDisabled: false)
+                    |> mapToSignal { secret -> Signal<Void, NoError> in
+                        return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
+                            |> retryRequest
+                            |> mapToSignal { _ -> Signal<Void, NoError> in
+                                return .complete()
+                        }
+                }
+        }
         self.voipTokenDisposable.set(appliedVoipToken.start())
         
         let serviceTasksMasterBecomeMaster = shouldBeServiceTaskMaster.get()
@@ -640,7 +724,7 @@ public class Account {
                     Logger.shared.log("Account", "Resigned master")
                     return .never()
                 }
-            }
+        }
         self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
         
         let pendingMessageManager = self.pendingMessageManager
@@ -678,7 +762,7 @@ public class Account {
                     result.formUnion(value)
                 }
                 return result
-            }
+        }
         
         self.managedOperationsDisposable.add(importantBackgroundOperationsRunning.start(next: { [weak self] value in
             if let strongSelf = self {
@@ -784,10 +868,5 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     
     account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox).start())
     account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
-    
-    /*account.network.request(Api.functions.help.getScheme(version: 0)).start(next: { result in
-        if case let .scheme(text, _, _, _) = result {
-            print("\(text)")
-        }
-    })*/
 }
+
