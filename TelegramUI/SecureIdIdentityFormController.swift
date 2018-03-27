@@ -5,29 +5,36 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-final class SecureIdIdentityFormController: ViewController {
-    private var controllerNode: SecureIdIdentityFormControllerNode {
-        return self.displayNode as! SecureIdIdentityFormControllerNode
-    }
-    
+enum SecureIdIdentityFormType {
+    case passport
+}
+
+final class SecureIdIdentityFormController: FormController<SecureIdIdentityFormState, SecureIdIdentityFormControllerNode> {
     private let account: Account
     private var presentationData: PresentationData
+    private let updatedValue: (SecureIdIdentityValue?) -> Void
     
-    private var data: SecureIdIdentityData?
+    private let context: SecureIdAccessContext
+    private let type: SecureIdIdentityFormType
+    private var value: SecureIdIdentityValue?
     
-    private var didPlayPresentationAnimation = false
+    private var doneItem: UIBarButtonItem?
     
-    init(account: Account, data: SecureIdIdentityData?) {
+    init(account: Account, context: SecureIdAccessContext, type: SecureIdIdentityFormType, value: SecureIdIdentityValue?, updatedValue: @escaping (SecureIdIdentityValue?) -> Void) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        self.data = data
+        self.context = context
+        self.type = type
+        self.value = value
+        self.updatedValue = updatedValue
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
-        
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        super.init(presentationData: self.presentationData)
         
         self.title = self.presentationData.strings.SecureId_Title
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        
+        self.doneItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+        self.navigationItem.rightBarButtonItem = doneItem
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -37,37 +44,11 @@ final class SecureIdIdentityFormController: ViewController {
     deinit {
     }
     
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        if !self.didPlayPresentationAnimation {
-            self.didPlayPresentationAnimation = true
-            self.controllerNode.animateIn()
-        }
-    }
-    
-    override func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
-    }
-    
-    override func loadDisplayNode() {
-        self.displayNode = SecureIdIdentityFormControllerNode(account: self.account, data: self.data, theme: self.presentationData.theme, strings: self.presentationData.strings, dismiss: { [weak self] in
-            self?.dismiss()
-        }, present: { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a)
-        })
-    }
-    
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        super.containerLayoutUpdated(layout, transition: transition)
-        
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
-    }
-    
     @objc private func cancelPressed() {
         self.dismiss()
+    }
+    
+    @objc private func donePressed() {
+        self.controllerNode.verify()
     }
 }

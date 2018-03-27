@@ -55,6 +55,9 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     override public func loadDisplayNode() {
         self.displayNode = AuthorizationSequencePhoneEntryControllerNode(strings: self.strings, theme: self.theme)
+        if let (code, number) = self.currentData {
+            self.controllerNode.codeAndNumber = (code, number)
+        }
         self.displayNodeDidLoad()
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {

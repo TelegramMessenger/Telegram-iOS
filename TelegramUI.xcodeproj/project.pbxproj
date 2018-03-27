@@ -175,6 +175,12 @@
 		D093D7DF2062F3F000BC3599 /* SecureIdIdentityFormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7DE2062F3F000BC3599 /* SecureIdIdentityFormController.swift */; };
 		D093D7E22062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7E12062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift */; };
 		D093D7E72063E57F00BC3599 /* BotPaymentActionItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7E62063E57F00BC3599 /* BotPaymentActionItemNode.swift */; };
+		D093D80820654A2900BC3599 /* BotPaymentDateItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D80720654A2900BC3599 /* BotPaymentDateItemNode.swift */; };
+		D093D81D206994FD00BC3599 /* FindSecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D81C206994FD00BC3599 /* FindSecureIdValue.swift */; };
+		D093D82020699A7300BC3599 /* FormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D81F20699A7300BC3599 /* FormController.swift */; };
+		D093D82220699A7C00BC3599 /* FormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D82120699A7C00BC3599 /* FormControllerNode.swift */; };
+		D093D8242069A06600BC3599 /* FormControllerScrollerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D8232069A06600BC3599 /* FormControllerScrollerNode.swift */; };
+		D093D8262069A31700BC3599 /* FormControllerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D8252069A31700BC3599 /* FormControllerItem.swift */; };
 		D0943AF61FDAAE7E001522CC /* MultipleAvatarsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */; };
 		D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */; };
 		D0943B001FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */; };
@@ -263,6 +269,7 @@
 		D0DE66061F9A51E200EF4AE9 /* GalleryHiddenMediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE66051F9A51E200EF4AE9 /* GalleryHiddenMediaManager.swift */; };
 		D0DFD5E21FCE2BA50039B3B1 /* CalculatingCacheSizeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DFD5E11FCE2BA50039B3B1 /* CalculatingCacheSizeItem.swift */; };
 		D0E266FD1F66706500BFC79F /* ChatBubbleVideoDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E266FC1F66706500BFC79F /* ChatBubbleVideoDecoration.swift */; };
+		D0E412C62069B60600BEE4A2 /* FormControllerHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412C52069B60600BEE4A2 /* FormControllerHeaderItem.swift */; };
 		D0E817472010E62F00B82BBB /* MergeLists.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E817462010E62E00B82BBB /* MergeLists.swift */; };
 		D0E8174C2011F8A300B82BBB /* ChatMessageEventLogPreviousMessageContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8174B2011F8A300B82BBB /* ChatMessageEventLogPreviousMessageContentNode.swift */; };
 		D0E8174E2011FC3800B82BBB /* ChatMessageEventLogPreviousDescriptionContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8174D2011FC3800B82BBB /* ChatMessageEventLogPreviousDescriptionContentNode.swift */; };
@@ -1359,6 +1366,12 @@
 		D093D7DE2062F3F000BC3599 /* SecureIdIdentityFormController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityFormController.swift; sourceTree = "<group>"; };
 		D093D7E12062F40100BC3599 /* SecureIdIdentityFormControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityFormControllerNode.swift; sourceTree = "<group>"; };
 		D093D7E62063E57F00BC3599 /* BotPaymentActionItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotPaymentActionItemNode.swift; sourceTree = "<group>"; };
+		D093D80720654A2900BC3599 /* BotPaymentDateItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotPaymentDateItemNode.swift; sourceTree = "<group>"; };
+		D093D81C206994FD00BC3599 /* FindSecureIdValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindSecureIdValue.swift; sourceTree = "<group>"; };
+		D093D81F20699A7300BC3599 /* FormController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormController.swift; sourceTree = "<group>"; };
+		D093D82120699A7C00BC3599 /* FormControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormControllerNode.swift; sourceTree = "<group>"; };
+		D093D8232069A06600BC3599 /* FormControllerScrollerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormControllerScrollerNode.swift; sourceTree = "<group>"; };
+		D093D8252069A31700BC3599 /* FormControllerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormControllerItem.swift; sourceTree = "<group>"; };
 		D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipleAvatarsNode.swift; sourceTree = "<group>"; };
 		D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMultipleAvatarsNavigationNode.swift; sourceTree = "<group>"; };
 		D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFeedNavigationInputPanelNode.swift; sourceTree = "<group>"; };
@@ -1565,6 +1578,7 @@
 		D0E305AE1E5BA8E000D7A3A2 /* ItemListLoadingIndicatorEmptyStateItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListLoadingIndicatorEmptyStateItem.swift; sourceTree = "<group>"; };
 		D0E35A061DE4803400BC6096 /* VerticalListContextResultsChatInputContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VerticalListContextResultsChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		D0E35A081DE4804900BC6096 /* VerticalListContextResultsChatInputPanelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VerticalListContextResultsChatInputPanelItem.swift; sourceTree = "<group>"; };
+		D0E412C52069B60600BEE4A2 /* FormControllerHeaderItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormControllerHeaderItem.swift; sourceTree = "<group>"; };
 		D0E7A1BC1D8C246D00C37A6F /* ChatHistoryListNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryListNode.swift; sourceTree = "<group>"; };
 		D0E7A1BE1D8C24B900C37A6F /* ChatHistoryViewForLocation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryViewForLocation.swift; sourceTree = "<group>"; };
 		D0E7A1C01D8C258D00C37A6F /* ChatHistoryEntriesForView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryEntriesForView.swift; sourceTree = "<group>"; };
@@ -1990,7 +2004,6 @@
 		D01B27931E38F3920022A4C0 /* Item List */ = {
 			isa = PBXGroup;
 			children = (
-				D0E6521D1E3A2305004EEA91 /* Items */,
 				D01B27981E39144C0022A4C0 /* ItemListController.swift */,
 				D0E305AC1E5BA3E700D7A3A2 /* ItemListControllerEmptyStateItem.swift */,
 				D01B27941E38F3BF0022A4C0 /* ItemListControllerNode.swift */,
@@ -2478,6 +2491,7 @@
 				D0471B5B1EFEB4F30074D609 /* BotPaymentFieldItemNode.swift */,
 				D0471B611EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift */,
 				D0E9B9E71EFEFB9500F079A4 /* BotPaymentDisclosureItemNode.swift */,
+				D093D80720654A2900BC3599 /* BotPaymentDateItemNode.swift */,
 				D093D7E62063E57F00BC3599 /* BotPaymentActionItemNode.swift */,
 				D0E9BA621F055AD200F079A4 /* BotPaymentCardInputItemNode.swift */,
 				D0E9B9F31F018A6700F079A4 /* BotCheckoutPaymentMethodSheet.swift */,
@@ -2686,6 +2700,18 @@
 			name = Identity;
 			sourceTree = "<group>";
 		};
+		D093D81E20699A6000BC3599 /* Form */ = {
+			isa = PBXGroup;
+			children = (
+				D093D81F20699A7300BC3599 /* FormController.swift */,
+				D093D82120699A7C00BC3599 /* FormControllerNode.swift */,
+				D093D8232069A06600BC3599 /* FormControllerScrollerNode.swift */,
+				D093D8252069A31700BC3599 /* FormControllerItem.swift */,
+				D0E412C52069B60600BEE4A2 /* FormControllerHeaderItem.swift */,
+			);
+			name = Form;
+			sourceTree = "<group>";
+		};
 		D096A4601EA681720000A7AE /* Presentation Data */ = {
 			isa = PBXGroup;
 			children = (
@@ -2855,6 +2881,7 @@
 				D093D7DA2062CFF500BC3599 /* SecureIdAuthFormContentNode.swift */,
 				D093D7DC2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift */,
 				D093D7E02062F3F400BC3599 /* Identity */,
+				D093D81C206994FD00BC3599 /* FindSecureIdValue.swift */,
 			);
 			name = "Secure ID";
 			sourceTree = "<group>";
@@ -3465,7 +3492,9 @@
 		D0F69DD31D6B8A160046BCD6 /* Controllers */ = {
 			isa = PBXGroup;
 			children = (
+				D01B27931E38F3920022A4C0 /* Item List */,
 				D0736F261DF4D2F300F2C02A /* Telegram Controller */,
+				D093D81E20699A6000BC3599 /* Form */,
 			);
 			name = Controllers;
 			sourceTree = "<group>";
@@ -3483,7 +3512,6 @@
 				D0F69E4E1D6B8BB90046BCD6 /* Media */,
 				D0F69E6C1D6B8C220046BCD6 /* Contacts */,
 				D0BC38681E3FB92B0044D6FE /* Compose */,
-				D01B27931E38F3920022A4C0 /* Item List */,
 				D0EE97131D88BB1A006C18E1 /* Peer Info */,
 				D0D2689B1D79D31500C422DA /* Peer Selection */,
 				D0754D251EEE10A100884F6E /* Bot Payments */,
@@ -3717,6 +3745,7 @@
 		D0F69E671D6B8C030046BCD6 /* Map Input */ = {
 			isa = PBXGroup;
 			children = (
+				D0E6521D1E3A2305004EEA91 /* Items */,
 				D0F69E681D6B8C160046BCD6 /* MapInputController.swift */,
 				D0F69E691D6B8C160046BCD6 /* MapInputControllerNode.swift */,
 			);
@@ -4240,6 +4269,7 @@
 				D0BE30452061C09000FBE6D8 /* SecureIdAuthContentNode.swift in Sources */,
 				D0471B5A1EFE70400074D609 /* BotCheckoutInfoControllerNode.swift in Sources */,
 				D0EC6CDA1EB9F58800EBF1C3 /* NumericFormat.swift in Sources */,
+				D093D82220699A7C00BC3599 /* FormControllerNode.swift in Sources */,
 				D0EC6CDB1EB9F58800EBF1C3 /* Markdown.swift in Sources */,
 				D0471B641EFEB5CB0074D609 /* BotPaymentItemNode.swift in Sources */,
 				D0380DB8204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift in Sources */,
@@ -4575,6 +4605,7 @@
 				D0E9B9E81EFEFB9500F079A4 /* BotPaymentDisclosureItemNode.swift in Sources */,
 				D0EC6DA01EB9F58900EBF1C3 /* ChatHoleItem.swift in Sources */,
 				D09E63A21F0FA723003444CD /* EmbedVideoNode.swift in Sources */,
+				D093D82020699A7300BC3599 /* FormController.swift in Sources */,
 				D0EC6DA11EB9F58900EBF1C3 /* ChatMessageSelectionNode.swift in Sources */,
 				D0EC6DA21EB9F58900EBF1C3 /* ChatMessageBubbleImages.swift in Sources */,
 				D0EC6DA31EB9F58900EBF1C3 /* ChatMessageDateHeader.swift in Sources */,
@@ -4797,6 +4828,7 @@
 				D0EC6E2F1EB9F58900EBF1C3 /* ContactMultiselectionControllerNode.swift in Sources */,
 				D0EC6E301EB9F58900EBF1C3 /* ContactSelectionController.swift in Sources */,
 				D0EC6E311EB9F58900EBF1C3 /* ContactSelectionControllerNode.swift in Sources */,
+				D093D81D206994FD00BC3599 /* FindSecureIdValue.swift in Sources */,
 				D0EC6E321EB9F58900EBF1C3 /* CreateGroupController.swift in Sources */,
 				D00BED221F73F82400922292 /* SharePeersContainerNode.swift in Sources */,
 				D0EC6E331EB9F58900EBF1C3 /* CreateChannelController.swift in Sources */,
@@ -4830,6 +4862,7 @@
 				D0EC6E461EB9F58900EBF1C3 /* ItemListLoadingIndicatorEmptyStateItem.swift in Sources */,
 				D01A21AF1F39EA2E00DDA104 /* InstantPageTheme.swift in Sources */,
 				D0EC6E471EB9F58900EBF1C3 /* ItemListTextEmptyStateItem.swift in Sources */,
+				D0E412C62069B60600BEE4A2 /* FormControllerHeaderItem.swift in Sources */,
 				D0EC6E481EB9F58900EBF1C3 /* ItemListController.swift in Sources */,
 				D0EC6E491EB9F58900EBF1C3 /* ItemListControllerEmptyStateItem.swift in Sources */,
 				D0EC6E4A1EB9F58900EBF1C3 /* ItemListControllerNode.swift in Sources */,
@@ -4848,6 +4881,7 @@
 				D0EC6E511EB9F58900EBF1C3 /* ChannelBlacklistController.swift in Sources */,
 				D0EC6E521EB9F58900EBF1C3 /* ChannelInfoController.swift in Sources */,
 				D0EC6E531EB9F58900EBF1C3 /* ChannelMembersController.swift in Sources */,
+				D093D8242069A06600BC3599 /* FormControllerScrollerNode.swift in Sources */,
 				D093D7E72063E57F00BC3599 /* BotPaymentActionItemNode.swift in Sources */,
 				D01C06BA1FBBB076001561AB /* ItemListSelectableControlNode.swift in Sources */,
 				D0EC6E541EB9F58900EBF1C3 /* ConvertToSupergroupController.swift in Sources */,
@@ -4903,6 +4937,7 @@
 				D0EC6E7A1EB9F58900EBF1C3 /* DebugController.swift in Sources */,
 				D07ABBAB202A1BD1003671DE /* LegacyWallpaperEditor.swift in Sources */,
 				D0EC6E7B1EB9F58900EBF1C3 /* DebugAccountsController.swift in Sources */,
+				D093D8262069A31700BC3599 /* FormControllerItem.swift in Sources */,
 				D0EC6E7C1EB9F58900EBF1C3 /* UsernameSetupController.swift in Sources */,
 				D0471B621EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift in Sources */,
 				D09250041FE5363D003F693F /* ExperimentalSettings.swift in Sources */,
@@ -4922,6 +4957,7 @@
 				D0EC6E851EB9F58900EBF1C3 /* ChatMessageNotificationItem.swift in Sources */,
 				D0EC6E861EB9F58900EBF1C3 /* UIImage+WebP.m in Sources */,
 				D0EC6E871EB9F58900EBF1C3 /* FastBlur.m in Sources */,
+				D093D80820654A2900BC3599 /* BotPaymentDateItemNode.swift in Sources */,
 				D04281FE200E639A009DDE36 /* ChatRecentActionsTitleView.swift in Sources */,
 				D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */,
 				D046142E2004DB3700EC0EF2 /* LiveLocationManager.swift in Sources */,

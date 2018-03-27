@@ -13,16 +13,16 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
     
     private var validLayout: CGFloat?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, form: SecureIdForm, openField: @escaping (SecureIdFieldType) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, form: SecureIdForm, openField: @escaping (SecureIdRequestedFormField) -> Void) {
         self.fieldBackgroundNode = ASDisplayNode()
         self.fieldBackgroundNode.isLayerBacked = true
         self.fieldBackgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
         
         var fieldNodes: [SecureIdAuthFormFieldNode] = []
         
-        for field in form.fields {
-            fieldNodes.append(SecureIdAuthFormFieldNode(theme: theme, strings: strings, field: field, selected: {
-                openField(field.type)
+        for type in form.requestedFields {
+            fieldNodes.append(SecureIdAuthFormFieldNode(theme: theme, strings: strings, type: type, values: form.values, selected: {
+                openField(type)
             }))
         }
         

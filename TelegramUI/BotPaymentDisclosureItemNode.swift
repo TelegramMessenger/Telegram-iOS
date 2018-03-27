@@ -4,7 +4,7 @@ import Display
 
 private let titleFont = Font.regular(17.0)
 
-final class BotPaymentDisclosureItemNode: BotPaymentItemNode {
+class BotPaymentDisclosureItemNode: BotPaymentItemNode {
     private let title: String
     private let placeholder: String
     var text: String {

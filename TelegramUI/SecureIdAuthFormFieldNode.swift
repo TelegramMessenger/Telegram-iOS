@@ -6,11 +6,11 @@ import TelegramCore
 private let titleFont = Font.regular(17.0)
 private let textFont = Font.regular(15.0)
 
-private func fieldTitleAndText(field: SecureIdField, strings: PresentationStrings) -> (String, String) {
+private func fieldTitleAndText(type: SecureIdRequestedFormField, strings: PresentationStrings) -> (String, String) {
     let title: String
     let placeholder: String
     
-    switch field.type {
+    switch type {
         case .identity:
             title = strings.SecureId_FormFieldIdentity
             placeholder = strings.SecureId_FormFieldIdentityPlaceholder
@@ -40,7 +40,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
     
     private let buttonNode: HighlightableButtonNode
     
-    init(theme: PresentationTheme, strings: PresentationStrings, field: SecureIdField, selected: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, type: SecureIdRequestedFormField, values: [SecureIdValue], selected: @escaping () -> Void) {
         self.selected = selected
         
         self.topSeparatorNode = ASDisplayNode()
@@ -77,7 +77,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         self.addSubnode(self.textNode)
         self.addSubnode(self.buttonNode)
         
-        let (title, text) = fieldTitleAndText(field: field, strings: strings)
+        let (title, text) = fieldTitleAndText(type: type, strings: strings)
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: theme.list.itemPrimaryTextColor)
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: theme.list.itemSecondaryTextColor)

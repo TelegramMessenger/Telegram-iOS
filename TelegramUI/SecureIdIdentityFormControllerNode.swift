@@ -5,291 +5,85 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-enum SecureIdIdentityFormFocus {
-    case name
-    case surname
-}
-
-private final class SecureIdIdentityFormItems {
-    let header: BotPaymentHeaderItemNode
-    let name: BotPaymentFieldItemNode
-    let surname: BotPaymentFieldItemNode
-    let birthdate: BotPaymentDisclosureItemNode
-    let gender: BotPaymentDisclosureItemNode
-    let citizenship: BotPaymentDisclosureItemNode
-    
-    let documentsHeader: BotPaymentHeaderItemNode
-    let uploadDocumentItem: BotPaymentActionItemNode
-    let documentsInfoItem: BotPaymentTextItemNode
-    
-    var items: [[BotPaymentItemNode]] {
-        return [[
-            self.header,
-            self.name,
-            self.surname,
-            self.birthdate,
-            self.gender,
-            self.citizenship
-        ], [
-            self.documentsHeader,
-            self.uploadDocumentItem,
-            self.documentsInfoItem
-        ]]
+final class SecureIdIdentityFormState: FormControllerInnerState {
+    func isEqual(to: SecureIdIdentityFormState) -> Bool {
+        return false
     }
     
-    init(strings: PresentationStrings, openBirthdateSelection: @escaping () -> Void, openGenderSelection: @escaping () -> Void, openCitizenshipSelection: @escaping () -> Void, openUploadDocument: @escaping () -> Void) {
-        self.header = BotPaymentHeaderItemNode(text: "PERSONAL DETAILS")
-        self.name = BotPaymentFieldItemNode(title: "Name", placeholder: "Name")
-        self.surname = BotPaymentFieldItemNode(title: "Surname", placeholder: "Surname")
-        self.birthdate = BotPaymentDisclosureItemNode(title: "Date of Birth", placeholder: "Date of Birth", text: "")
-        self.gender = BotPaymentDisclosureItemNode(title: "Gender", placeholder: "Gender", text: "")
-        self.citizenship = BotPaymentDisclosureItemNode(title: "Nationality", placeholder: "Nationality", text: "")
-        
-        self.documentsHeader = BotPaymentHeaderItemNode(text: "DOCUMENTS")
-        self.uploadDocumentItem = BotPaymentActionItemNode(title: "Upload New Document")
-        self.documentsInfoItem = BotPaymentTextItemNode(text: "To confirm your identity you need to upload a photograph or scan of your Passport, ID card, or Driver's license.\n\nYour Document must contain:\n• Your photograph;\n• Your legal name (as in profile);\n• Your date of birth;\n• Your nationality;\n• Date of issue;\n• Document number.")
-        
-        self.birthdate.action = {
-            openBirthdateSelection()
-        }
-        
-        self.gender.action = {
-            openGenderSelection()
-        }
-        
-        self.citizenship.action = {
-            openCitizenshipSelection()
-        }
-        
-        self.uploadDocumentItem.action = {
-            openUploadDocument()
-        }
+    func entries() -> [FormControllerItemEntry<SecureIdIdentityFormEntry>] {
+        return [.entry(SecureIdIdentityFormEntry.scansHeader)]
     }
 }
 
-private final class SecureIdIdentityFormScrollerNodeView: UIScrollView {
-    var ignoreUpdateBounds = false
+enum SecureIdIdentityFormEntryId: Hashable {
+    case scansHeader
+    case scan(Int)
     
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        
-        if #available(iOSApplicationExtension 11.0, *) {
-            self.contentInsetAdjustmentBehavior = .never
-        }
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override var bounds: CGRect {
-        get {
-            return super.bounds
-        } set(value) {
-            if !self.ignoreUpdateBounds {
-                super.bounds = value
-            }
-        }
-    }
-    
-    override func scrollRectToVisible(_ rect: CGRect, animated: Bool) {
-    }
-}
-
-private final class SecureIdIdentityFormScrollerNode: ASDisplayNode {
-    override var view: SecureIdIdentityFormScrollerNodeView {
-        return super.view as! SecureIdIdentityFormScrollerNodeView
-    }
-    
-    override init() {
-        super.init()
-        
-        self.setViewBlock({
-            return SecureIdIdentityFormScrollerNodeView(frame: CGRect())
-        })
-    }
-}
-
-final class SecureIdIdentityFormControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let account: Account
-    
-    private var focus: SecureIdIdentityFormFocus?
-    
-    private let dismiss: () -> Void
-    private let present: (ViewController, Any?) -> Void
-    
-    private var theme: PresentationTheme
-    private var strings: PresentationStrings
-    
-    private var containerLayout: (ContainerViewLayout, CGFloat)?
-    
-    private let scrollNode: SecureIdIdentityFormScrollerNode
-    private let itemNodes: [[BotPaymentItemNode]]
-    
-    private let formItems: SecureIdIdentityFormItems
-    private var data: SecureIdIdentityData?
-    
-    private let verifyDisposable = MetaDisposable()
-    private var isVerifying = false
-    
-    init(account: Account, data: SecureIdIdentityData?, theme: PresentationTheme, strings: PresentationStrings, dismiss: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
-        self.data = data
-        //self.focus = .name
-        self.dismiss = dismiss
-        self.present = present
-        
-        self.theme = theme
-        self.strings = strings
-        
-        self.scrollNode = SecureIdIdentityFormScrollerNode()
-        
-        self.formItems = SecureIdIdentityFormItems(strings: strings, openBirthdateSelection: {
-        }, openGenderSelection: {
-        }, openCitizenshipSelection: {
-        }, openUploadDocument: {
-            
-        })
-        
-        self.itemNodes = self.formItems.items
-        
-        for items in itemNodes {
-            for item in items {
-                self.scrollNode.addSubnode(item)
-            }
-        }
-        
-        super.init()
-        
-        self.backgroundColor = self.theme.list.blocksBackgroundColor
-        self.scrollNode.backgroundColor = nil
-        self.scrollNode.isOpaque = false
-        self.scrollNode.view.alwaysBounceVertical = true
-        self.scrollNode.view.showsVerticalScrollIndicator = false
-        self.scrollNode.view.showsHorizontalScrollIndicator = false
-        self.scrollNode.view.delegate = self
-        
-        self.addSubnode(self.scrollNode)
-        
-        for items in itemNodes {
-            for item in items {
-                if let item = item as? BotPaymentFieldItemNode {
-                    item.textUpdated = { [weak self] in
-                        self?.updateDone()
-                    }
+    static func ==(lhs: SecureIdIdentityFormEntryId, rhs: SecureIdIdentityFormEntryId) -> Bool {
+        switch lhs {
+            case .scansHeader:
+                if case .scansHeader = rhs {
+                    return true
+                } else {
+                    return false
                 }
-            }
+            case let .scan(index):
+                if case .scan(index) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
-        
-        self.updateDone()
     }
     
-    deinit {
-        self.verifyDisposable.dispose()
+    var hashValue: Int {
+        switch self {
+            case .scansHeader:
+                return 0
+            case let .scan(index):
+                return index.hashValue
+        }
+    }
+}
+
+enum SecureIdIdentityFormEntry: FormControllerEntry {
+    case scansHeader
+    
+    var stableId: SecureIdIdentityFormEntryId {
+        switch self {
+            case .scansHeader:
+                return .scansHeader
+        }
+    }
+    
+    func isEqual(to: SecureIdIdentityFormEntry) -> Bool {
+        switch self {
+            case .scansHeader:
+                if case .scansHeader = to {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    func item(strings: PresentationStrings) -> FormControllerItem {
+        switch self {
+            case .scansHeader:
+                return FormControllerHeaderItem(text: "SCANS")
+        }
+    }
+}
+
+final class SecureIdIdentityFormControllerNode: FormControllerNode<SecureIdIdentityFormState> {
+    required init(theme: PresentationTheme, strings: PresentationStrings) {
+        super.init(theme: theme, strings: strings)
+        
+        self.updateInnerState(transition: .immediate, with: SecureIdIdentityFormState())
     }
     
     func verify() {
-        self.isVerifying = true
-        self.updateDone()
-    }
-    
-    private func updateDone() {
-        var enabled = true
-    }
-    
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        let previousLayout = self.containerLayout
-        self.containerLayout = (layout, navigationBarHeight)
         
-        var insets = layout.insets(options: [.input])
-        insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
-        
-        var contentHeight: CGFloat = 0.0
-        
-        var commonInset: CGFloat = 0.0
-        for items in self.itemNodes {
-            for item in items {
-                commonInset = max(commonInset, item.measureInset(theme: self.theme, width: layout.size.width))
-            }
-        }
-        
-        for items in self.itemNodes {
-            if !items.isEmpty && items[0] is BotPaymentHeaderItemNode {
-                contentHeight += 24.0
-            } else {
-                contentHeight += 32.0
-            }
-            
-            for i in 0 ..< items.count {
-                let item = items[i]
-                let itemHeight = item.updateLayout(theme: self.theme, width: layout.size.width, measuredInset: commonInset, previousItemNode: i == 0 ? nil : items[i - 1], nextItemNode: i == (items.count - 1) ? nil : items[i + 1], transition: transition)
-                transition.updateFrame(node: item, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: itemHeight)))
-                contentHeight += itemHeight
-            }
-        }
-        
-        contentHeight += 24.0
-        
-        let scrollContentSize = CGSize(width: layout.size.width, height: contentHeight)
-        
-        let previousBoundsOrigin = self.scrollNode.bounds.origin
-        self.scrollNode.view.ignoreUpdateBounds = true
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.scrollNode.view.contentSize = scrollContentSize
-        self.scrollNode.view.contentInset = insets
-        self.scrollNode.view.scrollIndicatorInsets = insets
-        self.scrollNode.view.ignoreUpdateBounds = false
-        
-        if let focus = self.focus {
-            var focusItem: ASDisplayNode?
-            switch focus {
-                case .name:
-                    focusItem = self.formItems.name
-                case .surname:
-                    focusItem = self.formItems.surname
-            }
-            if let focusItem = focusItem {
-                let scrollVisibleSize = CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom)
-                var contentOffset = CGPoint(x: 0.0, y: -insets.top + floor(focusItem.frame.midY - scrollVisibleSize.height / 2.0))
-                contentOffset.y = min(contentOffset.y, scrollContentSize.height + insets.bottom - layout.size.height)
-                contentOffset.y = max(contentOffset.y, -insets.top)
-                transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
-                
-                if previousLayout == nil, let focusItem = focusItem as? BotPaymentFieldItemNode {
-                    focusItem.activateInput()
-                }
-            }
-        } else if let previousLayout = previousLayout {
-            var previousInsets = previousLayout.0.insets(options: [.input])
-            previousInsets.top += max(previousLayout.1, previousLayout.0.insets(options: [.statusBar]).top)
-            let insetsScrollOffset = insets.top - previousInsets.top
-            
-            var contentOffset = CGPoint(x: 0.0, y: previousBoundsOrigin.y + insetsScrollOffset)
-            contentOffset.y = min(contentOffset.y, scrollContentSize.height + insets.bottom - layout.size.height)
-            contentOffset.y = max(contentOffset.y, -insets.top)
-            
-            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
-        } else {
-            let contentOffset = CGPoint(x: 0.0, y: -insets.top)
-            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
-        }
-    }
-    
-    func animateIn() {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-    }
-    
-    func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak self] _ in
-            if let strongSelf = self {
-                strongSelf.dismiss()
-            }
-            completion?()
-        })
-    }
-    
-    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        self.focus = nil
     }
 }
 

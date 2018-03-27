@@ -18,6 +18,8 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     private var scheduledLayoutTransitionRequestId: Int = 0
     private var scheduledLayoutTransitionRequest: (Int, ContainedViewLayoutTransition)?
     
+    private var state: SecureIdAuthControllerState?
+    
     init(account: Account, presentationData: PresentationData, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, interaction: SecureIdAuthControllerInteraction) {
         self.account = account
         self.presentationData = presentationData
@@ -54,7 +56,8 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         let headerHeight = self.headerNode.updateLayout(width: layout.size.width, transition: headerNodeTransition)
         
         if let contentNode = self.contentNode {
-            let contentNodeTransition: ContainedViewLayoutTransition = contentNode.bounds.isEmpty ? .immediate : transition
+            let contentFirstTime = contentNode.bounds.isEmpty
+            let contentNodeTransition: ContainedViewLayoutTransition = contentFirstTime ? .immediate : transition
             let contentLayout = contentNode.updateLayout(width: layout.size.width, transition: contentNodeTransition)
             
             let contentSpacing: CGFloat = 70.0
@@ -66,12 +69,23 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             headerNodeTransition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: boundingRect.minY), size: CGSize(width: boundingRect.width, height: headerHeight)))
             
             contentNodeTransition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: boundingRect.minY + headerHeight + contentSpacing), size: CGSize(width: boundingRect.width, height: contentLayout.height)))
+            
+            if contentFirstTime {
+                contentNode.didAppear()
+                if transition.isAnimated {
+                    contentNode.animateIn()
+                    if !(contentNode is SecureIdAuthPasswordOptionContentNode) {
+                        transition.animateOffsetAdditive(node: contentNode, offset: -layout.size.height)
+                    }
+                }
+            }
         }
     }
     
     func transitionToContentNode(_ contentNode: (ASDisplayNode & SecureIdAuthContentNode)?, transition: ContainedViewLayoutTransition) {
         if let current = self.contentNode {
             current.willDisappear()
+            current.layer.animateBoundsOriginYAdditive(from: 0.0, to: -self.bounds.height, duration: 0.3, removeOnCompletion: false)
             current.animateOut { [weak current] in
                 current?.removeFromSupernode()
             }
@@ -81,51 +95,73 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         
         if let contentNode = self.contentNode {
             self.addSubnode(contentNode)
-            if let (layout, navigationBarHeight) = self.validLayout {
+            if let _ = self.validLayout {
                 self.scheduleLayoutTransitionRequest(.animated(duration: 0.5, curve: .spring))
-                contentNode.didAppear()
-                contentNode.animateIn()
             }
         }
     }
     
     func updateState(_ state: SecureIdAuthControllerState, transition: ContainedViewLayoutTransition) {
-        if let formData = state.formData, let verificationState = state.verificationState {
+        self.state = state
+        
+        if let encryptedFormData = state.encryptedFormData, let verificationState = state.verificationState {
             if self.headerNode.supernode == nil {
                 self.addSubnode(self.headerNode)
                 self.headerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             }
-            self.headerNode.updateState(formData: formData, verificationState: verificationState)
+            self.headerNode.updateState(formData: encryptedFormData, verificationState: verificationState)
+            
+            var contentNode: (ASDisplayNode & SecureIdAuthContentNode)?
             
             switch verificationState {
                 case let .passwordChallenge(challengeState):
-                    if let contentNode = self.contentNode as? SecureIdAuthPasswordOptionContentNode {
-                        contentNode.updateIsChecking(challengeState == .checking)
+                    if let current = self.contentNode as? SecureIdAuthPasswordOptionContentNode {
+                        current.updateIsChecking(challengeState == .checking)
+                        contentNode = current
                     } else {
-                        let contentNode = SecureIdAuthPasswordOptionContentNode(theme: presentationData.theme, strings: presentationData.strings, checkPassword: { [weak self] password in
+                        let current = SecureIdAuthPasswordOptionContentNode(theme: presentationData.theme, strings: presentationData.strings, checkPassword: { [weak self] password in
                             if let strongSelf = self {
                                 strongSelf.interaction.checkPassword(password)
                             }
                         })
-                        contentNode.updateIsChecking(challengeState == .checking)
-                        self.transitionToContentNode(contentNode, transition: transition)
-                        
+                        current.updateIsChecking(challengeState == .checking)
+                        contentNode = current
                     }
                 case .noChallenge:
-                    if self.contentNode != nil {
-                        self.transitionToContentNode(nil, transition: transition)
-                    }
+                    contentNode = nil
                 case .verified:
-                    if let contentNode = self.contentNode as? SecureIdAuthFormContentNode {
-                        
-                    } else {
-                        let contentNode = SecureIdAuthFormContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, form: formData.form, openField: { [weak self] type in
-                            if let strongSelf = self {
-                                strongSelf.interaction.present(SecureIdIdentityFormController(account: strongSelf.account, data: nil), nil)
-                            }
-                        })
-                        self.transitionToContentNode(contentNode, transition: transition)
+                    if let formData = state.formData {
+                        if let current = self.contentNode as? SecureIdAuthFormContentNode {
+                            contentNode = current
+                        } else {
+                            let current = SecureIdAuthFormContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, form: formData, openField: { [weak self] type in
+                                if let strongSelf = self, let state = strongSelf.state, let verificationState = state.verificationState, case let .verified(context) = verificationState, let formData = state.formData {
+                                    strongSelf.interaction.present(SecureIdIdentityFormController(account: strongSelf.account, context: context, type: .passport, value: findIdentity(formData.values)?.1, updatedValue: { value in
+                                        if let strongSelf = self {
+                                            strongSelf.interaction.updateState { state in
+                                                if let formData = state.formData {
+                                                    var values = formData.values
+                                                    while let index = findIdentity(formData.values)?.0 {
+                                                        values.remove(at: index)
+                                                    }
+                                                    if let value = value {
+                                                        values.append(.identity(value))
+                                                    }
+                                                    return SecureIdAuthControllerState(encryptedFormData: state.encryptedFormData, formData: SecureIdForm(peerId: formData.peerId, requestedFields: formData.requestedFields, values: values), verificationState: state.verificationState)
+                                                }
+                                                return state
+                                            }
+                                        }
+                                    }), nil)
+                                }
+                            })
+                            contentNode = current
+                        }
                     }
+            }
+            
+            if self.contentNode !== contentNode {
+                self.transitionToContentNode(contentNode, transition: transition)
             }
         }
     }

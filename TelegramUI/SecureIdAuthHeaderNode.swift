@@ -47,7 +47,7 @@ final class SecureIdAuthHeaderNode: ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func updateState(formData: SecureIdFormData, verificationState: SecureIdAuthControllerVerificationState) {
+    func updateState(formData: SecureIdEncryptedFormData, verificationState: SecureIdAuthControllerVerificationState) {
         self.accountAvatarNode.setPeer(account: self.account, peer: formData.accountPeer)
         self.serviceAvatarNode.setPeer(account: self.account, peer: formData.servicePeer)
         
@@ -56,15 +56,15 @@ final class SecureIdAuthHeaderNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: self.strings.SecureId_RequestTitle(formData.servicePeer.displayTitle, formData.servicePeer.displayTitle).0, font: titleFont, textColor: self.theme.list.freeTextColor)
         
         var scopeText = ""
-        for i in 0 ..< formData.form.fields.count {
+        for i in 0 ..< formData.form.requestedFields.count {
             if !scopeText.isEmpty {
-                if i == formData.form.fields.count - 1 {
+                if i == formData.form.requestedFields.count - 1 {
                     scopeText.append(self.strings.SecureId_RequestScopeLastJoiner)
                 } else {
                     scopeText.append(", ")
                 }
             }
-            switch formData.form.fields[i].type {
+            switch formData.form.requestedFields[i] {
                 case .identity:
                     scopeText.append(self.strings.SecureId_RequestScopeIdentity)
                 case .address:
@@ -88,12 +88,12 @@ final class SecureIdAuthHeaderNode: ASDisplayNode {
         let avatarSize = CGSize(width: 70.0, height: 70.0)
         
         if isVerified {
-            transition.updateAlpha(node: self.accountAvatarNode, alpha: 0.0)
             transition.updateAlpha(node: self.accountAvatarContainerNode, alpha: 0.0)
-            transition.updateSublayerTransformScale(node: self.accountAvatarContainerNode, scale: 0.1)
-            transition.updateFrame(node: self.accountAvatarContainerNode, frame: CGRect(origin: CGPoint(x: -avatarSize.width, y: 0.0), size: avatarSize))
+            transition.updateSublayerTransformScale(node: self.accountAvatarContainerNode, scale: 0.3)
             transition.updateFrame(node: self.accountAvatarNode, frame: CGRect(origin: CGPoint(), size: avatarSize))
-            transition.updateFrame(node: self.serviceAvatarNode, frame: CGRect(origin: CGPoint(x: floor((width - avatarSize.width) / 2.0), y: 0.0), size: avatarSize))
+            let serviceAvatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize.width) / 2.0), y: 0.0), size: avatarSize)
+            transition.updateFrame(node: self.serviceAvatarNode, frame: serviceAvatarFrame)
+            transition.updateFrame(node: self.accountAvatarContainerNode, frame: serviceAvatarFrame)
         } else {
             transition.updateAlpha(node: self.accountAvatarContainerNode, alpha: 1.0)
             transition.updateSublayerTransformScale(node: self.accountAvatarContainerNode, scale: 1.0)

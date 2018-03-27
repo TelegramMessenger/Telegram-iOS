@@ -6,10 +6,12 @@ import Postbox
 import TelegramCore
 
 final class SecureIdAuthControllerInteraction {
+    let updateState: ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void
     let present: (ViewController, Any?) -> Void
     let checkPassword: (String) -> Void
     
-    fileprivate init(present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void) {
+    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void) {
+        self.updateState = updateState
         self.present = present
         self.checkPassword = checkPassword
     }
@@ -32,11 +34,11 @@ final class SecureIdAuthController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(account: Account, peerId: PeerId, scope: [String], callbackUrl: String?, publicKey: String?) {
+    init(account: Account, peerId: PeerId, scope: String, publicKey: String) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.state = SecureIdAuthControllerState(formData: nil, verificationState: nil)
+        self.state = SecureIdAuthControllerState(encryptedFormData: nil, formData: nil, verificationState: nil)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -60,13 +62,13 @@ final class SecureIdAuthController: ViewController {
             }
         }))
         
-        self.formDisposable = (requestSecureIdForm(postbox: account.postbox, network: account.network, peerId: peerId, scope: scope, origin: callbackUrl, packageName: nil, bundleId: nil, publicKey: publicKey)
-        |> mapToSignal { form -> Signal<SecureIdFormData, RequestSecureIdFormError> in
-            return account.postbox.modify { modifier -> Signal<SecureIdFormData, RequestSecureIdFormError> in
+        self.formDisposable = (requestSecureIdForm(postbox: account.postbox, network: account.network, peerId: peerId, scope: scope, publicKey: publicKey)
+        |> mapToSignal { form -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
+            return account.postbox.modify { modifier -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
                 guard let accountPeer = modifier.getPeer(account.peerId), let servicePeer = modifier.getPeer(form.peerId) else {
                     return .fail(.generic)
                 }
-                return .single(SecureIdFormData(form: form, accountPeer: accountPeer, servicePeer: servicePeer))
+                return .single(SecureIdEncryptedFormData(form: form, accountPeer: accountPeer, servicePeer: servicePeer))
             }
             |> mapError { _ in return RequestSecureIdFormError.generic }
             |> switchToLatest
@@ -75,7 +77,7 @@ final class SecureIdAuthController: ViewController {
             if let strongSelf = self {
                 strongSelf.updateState { state in
                     var state = state
-                    state.formData = formData
+                    state.encryptedFormData = formData
                     return state
                 }
             }
@@ -113,7 +115,9 @@ final class SecureIdAuthController: ViewController {
     }
     
     override func loadDisplayNode() {
-        let interaction = SecureIdAuthControllerInteraction(present: { [weak self] c, a in
+        let interaction = SecureIdAuthControllerInteraction(updateState: { [weak self] f in
+            self?.updateState(f)
+        }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, checkPassword: { [weak self] password in
             if let strongSelf = self {
@@ -135,6 +139,7 @@ final class SecureIdAuthController: ViewController {
                             strongSelf.updateState { state in
                                 var state = state
                                 state.verificationState = .verified(context)
+                                state.formData = state.encryptedFormData.flatMap({ decryptedSecureIdForm(context: context, form: $0.form) })
                                 return state
                             }
                         }

@@ -74,12 +74,17 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         if #available(iOS 9.0, *) {
-            let webView = WKWebView()
+            let preferences = WKPreferences()
+            preferences.javaScriptEnabled = false
+            let configuration = WKWebViewConfiguration()
+            configuration.preferences = preferences
+            let webView = WKWebView(frame: CGRect(), configuration: configuration)
             webView.allowsLinkPreview = false
             webView.allowsBackForwardNavigationGestures = false
             self.webView = webView
         } else {
             let webView = UIWebView()
+            
             webView.scalesPageToFit = true
             self.webView = webView
         }

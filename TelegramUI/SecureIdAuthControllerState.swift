@@ -2,8 +2,8 @@ import Foundation
 import Postbox
 import TelegramCore
 
-struct SecureIdFormData {
-    let form: SecureIdForm
+struct SecureIdEncryptedFormData {
+    let form: EncryptedSecureIdForm
     let accountPeer: Peer
     let servicePeer: Peer
 }
@@ -44,11 +44,24 @@ enum SecureIdAuthControllerVerificationState: Equatable {
 }
 
 struct SecureIdAuthControllerState: Equatable {
-    var formData: SecureIdFormData?
+    var encryptedFormData: SecureIdEncryptedFormData?
+    var formData: SecureIdForm?
     var verificationState: SecureIdAuthControllerVerificationState?
     
     static func ==(lhs: SecureIdAuthControllerState, rhs: SecureIdAuthControllerState) -> Bool {
         if (lhs.formData != nil) != (rhs.formData != nil) {
+            return false
+        }
+        
+        if (lhs.encryptedFormData != nil) != (rhs.encryptedFormData != nil) {
+            return false
+        }
+        
+        if let lhsFormData = lhs.formData, let rhsFormData = rhs.formData {
+            if lhsFormData != rhsFormData {
+                return false
+            }
+        } else if (lhs.formData != nil) != (rhs.formData != nil) {
             return false
         }
         
