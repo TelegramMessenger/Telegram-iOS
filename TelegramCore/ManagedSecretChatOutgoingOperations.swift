@@ -150,12 +150,12 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .noop(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .readMessagesContent(layer, actionGloballyUniqueId, globallyUniqueIds):
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .readMessageContents(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout,messageId):
+                                    case let .setMessageAutoremoveTimeout(layer, actionGloballyUniqueId, timeout, messageId):
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, timeout: timeout, messageId: messageId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .resendOperations(layer, actionGloballyUniqueId, fromSeqNo, toSeqNo):
                                         return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .resendOperations(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
-                                    case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
-                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .screenshotMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
+                                    case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds, messageId):
+                                        return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .screenshotMessages(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, globallyUniqueIds: globallyUniqueIds, messageId: messageId), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                     case let .terminate(reportSpam):
                                         return requestTerminateSecretChat(postbox: postbox, network: network, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, reportSpam: reportSpam)
                                 }
@@ -378,7 +378,7 @@ private enum BoxedDecryptedMessage {
 
 private enum SecretMessageAction {
     case deleteMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
-    case screenshotMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
+    case screenshotMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64], messageId: MessageId)
     case clearHistory(layer: SecretChatLayer, actionGloballyUniqueId: Int64)
     case resendOperations(layer: SecretChatSequenceBasedLayer, actionGloballyUniqueId: Int64, fromSeqNo: Int32, toSeqNo: Int32)
     case reportLayerSupport(layer: SecretChatLayer, actionGloballyUniqueId: Int64, layerSupport: Int32)
@@ -394,7 +394,7 @@ private enum SecretMessageAction {
         switch self {
             case let .deleteMessages(_, actionGloballyUniqueId, _):
                 return actionGloballyUniqueId
-            case let .screenshotMessages(_, actionGloballyUniqueId, _):
+            case let .screenshotMessages(_, actionGloballyUniqueId, _, _):
                 return actionGloballyUniqueId
             case let .clearHistory(_, actionGloballyUniqueId):
                 return actionGloballyUniqueId
@@ -422,6 +422,8 @@ private enum SecretMessageAction {
     var messageId: MessageId? {
         switch self {
             case let .setMessageAutoremoveTimeout(_, _, _, messageId):
+                return messageId
+            case let .screenshotMessages(_, _, _, messageId):
                 return messageId
             default:
                 return nil
@@ -815,7 +817,7 @@ private func boxedDecryptedSecretMessageAction(action: SecretMessageAction) -> B
                 case .layer73:
                     return .layer73(.decryptedMessageService(randomId: actionGloballyUniqueId, action: .decryptedMessageActionDeleteMessages(randomIds: globallyUniqueIds)))
             }
-        case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
+        case let .screenshotMessages(layer, actionGloballyUniqueId, globallyUniqueIds, _):
             switch layer {
                 case .layer8:
                     let randomBytesData = malloc(15)!

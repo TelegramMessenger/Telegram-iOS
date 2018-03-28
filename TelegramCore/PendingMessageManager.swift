@@ -677,7 +677,7 @@ public final class PendingMessageManager {
                         }
                     } else if case .historyScreenshot = media.action {
                         sentAsAction = true
-                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .screenshotMessages(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, globallyUniqueIds: []), state: state)
+                        let updatedState = addSecretChatOutgoingOperation(modifier: modifier, peerId: message.id.peerId, operation: .screenshotMessages(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, globallyUniqueIds: [], messageId: message.id), state: state)
                         if updatedState != state {
                             modifier.setPeerChatState(message.id.peerId, state: updatedState)
                         }

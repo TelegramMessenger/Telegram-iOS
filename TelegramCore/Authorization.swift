@@ -32,8 +32,8 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
                     return updatedAccount
                         |> mapToSignalPromotingError { updatedAccount -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
                             return updatedAccount.network.request(sendCode, automaticFloodWait: false)
-                                |> map { sentCode in
-                                    return (sentCode, updatedAccount)
+                            |> map { sentCode in
+                                return (sentCode, updatedAccount)
                             }
                     }
             case _:
@@ -156,7 +156,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                                             switch result {
                                                 case .noPassword:
                                                     return .fail(.generic)
-                                                case let .password(_, _, _, hint, _, _):
+                                                case let .password(_, _, _, _, hint, _, _):
                                                     return .single(.password(hint: hint))
                                             }
                                         }
