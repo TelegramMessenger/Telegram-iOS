@@ -12,6 +12,13 @@ public enum PhoneCallDiscardReason: Int32 {
     case busy = 3
 }
 
+public enum SentSecureValueType: Int32 {
+    case identity = 0
+    case address = 1
+    case phone = 2
+    case email = 3
+}
+
 public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case unknown
     case groupCreated(title: String)
@@ -31,6 +38,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case paymentSent(currency: String, totalAmount: Int64)
     case customText(text: String, entities: [MessageTextEntity])
     case botDomainAccessGranted(domain: String)
+    case botSentSecureValues(types: [SentSecureValueType])
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -73,6 +81,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 self = .customText(text: decoder.decodeStringForKey("text", orElse: ""), entities: decoder.decodeObjectArrayWithDecoderForKey("ent"))
             case 17:
                 self = .botDomainAccessGranted(domain: decoder.decodeStringForKey("do", orElse: ""))
+            case 18:
+                self = .botSentSecureValues(types: decoder.decodeInt32ArrayForKey("ty").map { value -> SentSecureValueType in
+                    return SentSecureValueType(rawValue: value) ?? .identity
+                })
             default:
                 self = .unknown
         }
@@ -150,6 +162,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             case let .botDomainAccessGranted(domain):
                 encoder.encodeInt32(17, forKey: "_rawValue")
                 encoder.encodeString(domain, forKey: "do")
+            case let .botSentSecureValues(types):
+                encoder.encodeInt32(18, forKey: "_rawValue")
+                encoder.encodeInt32Array(types.map { $0.rawValue }, forKey: "ty")
         }
     }
     
@@ -281,6 +296,12 @@ public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bo
             } else {
                 return false
             }
+        case let .botSentSecureValues(lhsTypes):
+            if case let .botSentSecureValues(rhsTypes) = rhs, lhsTypes == rhsTypes {
+                return true
+            } else {
+                return false
+            }
     }
     return false
 }
@@ -359,6 +380,10 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .customText(text: message, entities: []))
         case let .messageActionBotAllowed(domain):
             return TelegramMediaAction(action: .botDomainAccessGranted(domain: domain))
+        case .messageActionSecureValuesSentMe:
+            return nil
+        case let .messageActionSecureValuesSent(types):
+            return TelegramMediaAction(action: .botSentSecureValues(types: types.map(SentSecureValueType.init)))
     }
 }
 
@@ -373,6 +398,21 @@ extension PhoneCallDiscardReason {
                 self = .hangup
             case .phoneCallDiscardReasonMissed:
                 self = .missed
+        }
+    }
+}
+
+extension SentSecureValueType {
+    init(apiType: Api.SecureValueType) {
+        switch apiType {
+            case .secureValueTypeIdentity:
+                self = .identity
+            case .secureValueTypeAddress:
+                self = .address
+            case .secureValueTypePhone:
+                self = .phone
+            case .secureValueTypeEmail:
+                self = .email
         }
     }
 }

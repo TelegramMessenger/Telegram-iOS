@@ -26,8 +26,6 @@ private func parseSecureValueType(_ type: Api.SecureValueType) -> SecureIdReques
     }
 }
 
-//secureData data:bytes data_hash:bytes = SecureData;
-
 private func parseSecureData(_ value: Api.SecureData) -> (data: Data, hash: Data) {
     switch value {
         case let .secureData(data, dataHash):
@@ -35,23 +33,47 @@ private func parseSecureData(_ value: Api.SecureData) -> (data: Data, hash: Data
     }
 }
 
-private func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) -> SecureIdValue? {
+struct ParsedSecureValue {
+    let valueWithContext: SecureIdValueWithContext
+    let hash: Data
+}
+
+func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) -> ParsedSecureValue? {
     switch value {
         case let .secureValueIdentity(_, data, files, secret, hash, verified):
-            let (encryptedData, encryptedHash) = parseSecureData(data)
-            guard let decryptedData = decryptedSecureData(context: context, data: encryptedData, dataHash: encryptedHash, encryptedSecret: secret.makeData()) else {
+            let (encryptedData, decryptedHash) = parseSecureData(data)
+            guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: secret.makeData(), hash: hash.makeData()) else {
                 return nil
             }
-            var fileReferences: [Int64: SecureIdFileReference] = [:]
-            for file in files.map(SecureIdFileReference.init).flatMap({ $0 }) {
-                fileReferences[file.id] = file
-            }
-            guard let value = SecureIdIdentityValue(data: decryptedData, fileReferences: fileReferences) else {
+            
+            let parsedFileReferences = files.map(SecureIdFileReference.init).flatMap({ $0 })
+            let parsedFileHashes = parsedFileReferences.map { $0.fileHash }
+            let parsedFiles = parsedFileReferences.map(SecureIdVerificationDocumentReference.remote)
+            
+            guard let decryptedData = decryptedSecureValueData(context: valueContext, encryptedData: encryptedData, decryptedDataHash: decryptedHash) else {
                 return nil
             }
-            return .identity(value)
+            guard let value = SecureIdIdentityValue(data: decryptedData, fileReferences: parsedFiles) else {
+                return nil
+            }
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .identity(value), context: valueContext, encryptedMetadata: SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, fileHashes: parsedFileHashes, valueSecret: valueContext.secret, hash: hash.makeData())), hash: hash.makeData())
         case let .secureValueAddress(_, data, files, secret, hash, verified):
-            return nil
+            let (encryptedData, decryptedHash) = parseSecureData(data)
+            guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: secret.makeData(), hash: hash.makeData()) else {
+                return nil
+            }
+            
+            let parsedFileReferences = files.map(SecureIdFileReference.init).flatMap({ $0 })
+            let parsedFileHashes = parsedFileReferences.map { $0.fileHash }
+            let parsedFiles = parsedFileReferences.map(SecureIdVerificationDocumentReference.remote)
+            
+            guard let decryptedData = decryptedSecureValueData(context: valueContext, encryptedData: encryptedData, decryptedDataHash: decryptedHash) else {
+                return nil
+            }
+            guard let value = SecureIdAddressValue(data: decryptedData, fileReferences: parsedFiles) else {
+                return nil
+            }
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .address(value), context: valueContext, encryptedMetadata: SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, fileHashes: parsedFileHashes, valueSecret: valueContext.secret, hash: hash.makeData())), hash: hash.makeData())
         case let .secureValuePhone(_, phone, hash, verified):
             guard let phoneData = phone.data(using: .utf8) else {
                 return nil
@@ -59,7 +81,7 @@ private func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureV
             if sha256Digest(phoneData) != hash.makeData() {
                 return nil
             }
-            return .phone(SecureIdPhoneValue(phone: phone))
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .phone(SecureIdPhoneValue(phone: phone)), context: SecureIdValueAccessContext(secret: Data(), hash: 0), encryptedMetadata: nil), hash: hash.makeData())
         case let .secureValueEmail(_, email, hash, verified):
             guard let emailData = email.data(using: .utf8) else {
                 return nil
@@ -67,12 +89,12 @@ private func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureV
             if sha256Digest(emailData) != hash.makeData() {
                 return nil
             }
-            return .email(SecureIdEmailValue(email: email))
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .email(SecureIdEmailValue(email: email)), context: SecureIdValueAccessContext(secret: Data(), hash: 0), encryptedMetadata: nil), hash: hash.makeData())
     }
 }
 
-private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue]) -> [SecureIdValue] {
-    return values.map({ parseSecureValue(context: context, value: $0) }).flatMap({ $0 })
+private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue]) -> [SecureIdValueWithContext] {
+    return values.map({ parseSecureValue(context: context, value: $0) }).flatMap({ $0?.valueWithContext })
 }
 
 public struct EncryptedSecureIdForm {

@@ -32,8 +32,8 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
                     return updatedAccount
                         |> mapToSignalPromotingError { updatedAccount -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
                             return updatedAccount.network.request(sendCode, automaticFloodWait: false)
-                                |> map { sentCode in
-                                    return (sentCode, updatedAccount)
+                            |> map { sentCode in
+                                return (sentCode, updatedAccount)
                             }
                     }
             case _:

@@ -255,6 +255,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SynchronizeGroupedPeersOperation.self, f: { SynchronizeGroupedPeersOperation(decoder: $0) })
     declareEncodable(ContentPrivacySettings.self, f: { ContentPrivacySettings(decoder: $0) })
     declareEncodable(TelegramDeviceContactImportInfo.self, f: { TelegramDeviceContactImportInfo(decoder: $0) })
+    declareEncodable(SecureFileMediaResource.self, f: { SecureFileMediaResource(decoder: $0) })
     
     return
 }()
@@ -661,25 +662,25 @@ public class Account {
         let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue))
             |> map { isUpdating, connectionStatus -> AccountNetworkState in
                 switch connectionStatus {
-                    case .waitingForNetwork:
-                        return .waitingForNetwork
-                    case let .connecting(toProxy):
-                        return .connecting(toProxy: toProxy)
-                    case .updating:
+                case .waitingForNetwork:
+                    return .waitingForNetwork
+                case let .connecting(toProxy):
+                    return .connecting(toProxy: toProxy)
+                case .updating:
+                    return .updating
+                case .online:
+                    if isUpdating {
                         return .updating
-                    case .online:
-                        if isUpdating {
-                            return .updating
-                        } else {
-                            return .online
-                        }
+                    } else {
+                        return .online
+                    }
                 }
-            }
+        }
         self.networkStateValue.set(networkStateSignal |> distinctUntilChanged)
         
         let appliedNotificationToken = self.notificationToken.get()
             |> distinctUntilChanged
-            |> mapToSignal { token -> Signal<Void, NoError> in                
+            |> mapToSignal { token -> Signal<Void, NoError> in
                 var tokenString = ""
                 token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
                     for i in 0 ..< token.count {
@@ -692,16 +693,16 @@ public class Account {
                 #if DEBUG
                     appSandbox = .boolTrue
                 #endif
-
+                
                 return masterNotificationsKey(account: self, ignoreDisabled: false)
-                |> mapToSignal { secret -> Signal<Void, NoError> in
-                    return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
-                    |> retryRequest
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
+                    |> mapToSignal { secret -> Signal<Void, NoError> in
+                        return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
+                            |> retryRequest
+                            |> mapToSignal { _ -> Signal<Void, NoError> in
+                                return .complete()
+                        }
                 }
-            }
+        }
         self.notificationTokenDisposable.set(appliedNotificationToken.start())
         
         let appliedVoipToken = self.voipToken.get()
@@ -763,7 +764,7 @@ public class Account {
                     Logger.shared.log("Account", "Resigned master")
                     return .never()
                 }
-            }
+        }
         self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
         
         let pendingMessageManager = self.pendingMessageManager
@@ -801,7 +802,7 @@ public class Account {
                     result.formUnion(value)
                 }
                 return result
-            }
+        }
         
         self.managedOperationsDisposable.add(importantBackgroundOperationsRunning.start(next: { [weak self] value in
             if let strongSelf = self {
@@ -907,10 +908,5 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     
     account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox).start())
     account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
-    
-    /*account.network.request(Api.functions.help.getScheme(version: 0)).start(next: { result in
-        if case let .scheme(text, _, _, _) = result {
-            print("\(text)")
-        }
-    })*/
 }
+

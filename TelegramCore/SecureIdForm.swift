@@ -5,44 +5,6 @@ import Foundation
     import Postbox
 #endif
 
-public enum SecureIdValue: Equatable {
-    case identity(SecureIdIdentityValue)
-    case phone(SecureIdPhoneValue)
-    case email(SecureIdEmailValue)
-    
-    public static func ==(lhs: SecureIdValue, rhs: SecureIdValue) -> Bool {
-        switch lhs {
-            case let .identity(value):
-                if case .identity(value) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .phone(value):
-                if case .phone(value) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .email(value):
-                if case .email(value) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    func serialize() -> (Data, [SecureIdFileReference])? {
-        switch self {
-            case let .identity(value):
-                return value.serialize()
-            case .phone, .email:
-                return nil
-        }
-    }
-}
-
 public enum SecureIdRequestedFormField {
     case identity
     case address
@@ -53,9 +15,9 @@ public enum SecureIdRequestedFormField {
 public struct SecureIdForm: Equatable {
     public let peerId: PeerId
     public let requestedFields: [SecureIdRequestedFormField]
-    public let values: [SecureIdValue]
+    public let values: [SecureIdValueWithContext]
     
-    public init(peerId: PeerId, requestedFields: [SecureIdRequestedFormField], values: [SecureIdValue]) {
+    public init(peerId: PeerId, requestedFields: [SecureIdRequestedFormField], values: [SecureIdValueWithContext]) {
         self.peerId = peerId
         self.requestedFields = requestedFields
         self.values = values
