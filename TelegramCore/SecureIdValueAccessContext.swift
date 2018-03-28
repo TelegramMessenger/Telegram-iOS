@@ -15,6 +15,11 @@ public struct SecureIdValueAccessContext: Equatable {
     }
 }
 
+public func generateSecureIdValueEmptyAccessContext() -> SecureIdValueAccessContext? {
+    return SecureIdValueAccessContext(secret: Data(), hash: 0)
+}
+
+
 public func generateSecureIdValueAccessContext() -> SecureIdValueAccessContext? {
     guard let secret = generateSecureSecretData() else {
         return nil
