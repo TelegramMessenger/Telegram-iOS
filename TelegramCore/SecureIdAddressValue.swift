@@ -119,8 +119,10 @@ extension SecureIdAddressValue {
         var dict: [String: Any] = [:]
         dict["document_type"] = self.type.serialize()
         dict["street_line1"] = self.street1
-        dict["street_line2"] = self.street2
-        dict["street_city"] = self.city
+        if !self.street2.isEmpty {
+            dict["street_line2"] = self.street2   
+        }
+        dict["city"] = self.city
         dict["region"] = self.region
         dict["country_code"] = self.countryCode
         dict["postcode"] = self.postcode
