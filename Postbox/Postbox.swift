@@ -28,6 +28,16 @@ public final class Modifier {
         self.postbox = postbox
     }
     
+    public func keychainEntryForKey(_ key: String) -> Data? {
+        assert(!self.disposed)
+        return self.postbox?.keychainTable.get(key)
+    }
+    
+    public func setKeychainEntry(_ value: Data, forKey key: String) {
+        assert(!self.disposed)
+        self.postbox?.keychainTable.set(key, value: value)
+    }
+    
     public func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -2117,17 +2127,35 @@ public final class Postbox {
         return result
     }
     
-    #if DEBUG
-    private let debugIsInTransactionValue = Atomic<Bool>(value: false)
-    public var debugIsInTransaction: Bool {
-        return self.debugIsInTransactionValue.with { $0 }
+    private let canBeginTransactionsValue = Atomic<Bool>(value: true)
+    public func setCanBeginTransactions(_ value: Bool) {
+        self.queue.async {
+            let previous = self.canBeginTransactionsValue.swap(value)
+            if previous != value && value {
+                let fs = self.queuedInternalTransactions.swap([])
+                for f in fs {
+                    f()
+                }
+            }
+        }
     }
-    #endif
+    
+    private var queuedInternalTransactions = Atomic<[() -> Void]>(value: [])
+    
+    private func beginInternalTransaction(ignoreDisabled: Bool = false, _ f: @escaping () -> Void) {
+        assert(self.queue.isCurrent())
+        if ignoreDisabled || self.canBeginTransactionsValue.with({ $0 }) {
+            f()
+        } else {
+            let _ = self.queuedInternalTransactions.modify { fs in
+                var fs = fs
+                fs.append(f)
+                return fs
+            }
+        }
+    }
     
     private func internalTransaction<T>(_ f: (Modifier) -> T) -> (result: T, updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
-        #if DEBUG
-        let _ = self.debugIsInTransactionValue.swap(true)
-        #endif
         self.valueBox.begin()
         self.afterBegin()
         let modifier = Modifier(postbox: self)
@@ -2135,9 +2163,6 @@ public final class Postbox {
         modifier.disposed = true
         let (updatedTransactionState, updatedMasterClientId) = self.beforeCommit()
         self.valueBox.commit()
-        #if DEBUG
-        let _ = self.debugIsInTransactionValue.swap(false)
-        #endif
         
         if let currentUpdatedState = self.currentUpdatedState {
             self.statePipe.putNext(currentUpdatedState)
@@ -2152,16 +2177,18 @@ public final class Postbox {
             let disposable = MetaDisposable()
             
             let f: () -> Void = {
-                let (_, updatedTransactionState, updatedMasterClientId) = self.internalTransaction({ modifier in
-                    disposable.set(f(subscriber, modifier))
-                })
-                
-                if updatedTransactionState != nil || updatedMasterClientId != nil {
-                    //self.pipeNotifier.notify()
-                }
-                
-                if let updatedMasterClientId = updatedMasterClientId {
-                    self.masterClientId.set(.single(updatedMasterClientId))
+                self.beginInternalTransaction {
+                    let (_, updatedTransactionState, updatedMasterClientId) = self.internalTransaction({ modifier in
+                        disposable.set(f(subscriber, modifier))
+                    })
+                    
+                    if updatedTransactionState != nil || updatedMasterClientId != nil {
+                        //self.pipeNotifier.notify()
+                    }
+                    
+                    if let updatedMasterClientId = updatedMasterClientId {
+                        self.masterClientId.set(.single(updatedMasterClientId))
+                    }
                 }
             }
             if userInteractive {
@@ -2174,23 +2201,25 @@ public final class Postbox {
         }
     }
     
-    public func modify<T>(userInteractive: Bool = false, _ f: @escaping(Modifier) -> T) -> Signal<T, NoError> {
+    public func modify<T>(userInteractive: Bool = false, ignoreDisabled: Bool = false, _ f: @escaping(Modifier) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
             let f: () -> Void = {
-                let (result, updatedTransactionState, updatedMasterClientId) = self.internalTransaction({ modifier in
-                    return f(modifier)
+                self.beginInternalTransaction(ignoreDisabled: ignoreDisabled, {
+                    let (result, updatedTransactionState, updatedMasterClientId) = self.internalTransaction({ modifier in
+                        return f(modifier)
+                    })
+                    
+                    if updatedTransactionState != nil || updatedMasterClientId != nil {
+                        //self.pipeNotifier.notify()
+                    }
+                    
+                    if let updatedMasterClientId = updatedMasterClientId {
+                        self.masterClientId.set(.single(updatedMasterClientId))
+                    }
+                    
+                    subscriber.putNext(result)
+                    subscriber.putCompletion()
                 })
-                
-                if updatedTransactionState != nil || updatedMasterClientId != nil {
-                    //self.pipeNotifier.notify()
-                }
-                
-                if let updatedMasterClientId = updatedMasterClientId {
-                    self.masterClientId.set(.single(updatedMasterClientId))
-                }
-                
-                subscriber.putNext(result)
-                subscriber.putCompletion()
             }
             if userInteractive {
                 self.queue.justDispatchWithQoS(qos: DispatchQoS.userInteractive, f)
