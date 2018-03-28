@@ -44,6 +44,24 @@
 @implementation MTBackupAddressSignals
 
 + (MTSignal *)fetchBackupIpsGoogle:(bool)isTesting {
+    NSDictionary *headers = @{@"Host": @"dns-telegram.appspot.com"};
+    
+    return [[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:isTesting ? @"https://google.com/test/" : @"https://google.com/"] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
+        NSString *text = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        text = [text stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"="]];
+        NSData *result = [[NSData alloc] initWithBase64EncodedString:text options:NSDataBase64DecodingIgnoreUnknownCharacters];
+        NSMutableData *finalData = [[NSMutableData alloc] initWithData:result];
+        [finalData setLength:256];
+        MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData);
+        if (datacenterData != nil) {
+            return [MTSignal single:datacenterData];
+        } else {
+            return [MTSignal complete];
+        };
+    }];
+}
+
++ (MTSignal *)fetchBackupIpsAzure:(bool)isTesting {
     NSDictionary *headers = @{@"Host": @"tcdnb.azureedge.net"};
     
     return [[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:isTesting ? @"https://software-download.microsoft.com/test/config.txt" : @"https://software-download.microsoft.com/prod/config.txt"] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
@@ -105,7 +123,7 @@
 }
 
 + (MTSignal *)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext *)currentContext {
-    NSArray *signals = @[[self fetchBackupIpsGoogle:isTestingEnvironment], [self fetchBackupIpsResolveGoogle:isTestingEnvironment]];
+    NSArray *signals = @[[self fetchBackupIpsGoogle:isTestingEnvironment], [self fetchBackupIpsAzure:isTestingEnvironment], [self fetchBackupIpsResolveGoogle:isTestingEnvironment]];
     
     return [[[MTSignal mergeSignals:signals] take:1] mapToSignal:^MTSignal *(MTBackupDatacenterData *data) {
         if (data != nil && data.addressList.count != 0) {

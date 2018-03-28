@@ -9,16 +9,6 @@
 
 @implementation MTRsa
 
-/*
- static NSString *base64_encode(NSString *str){
-	NSData* data = [str dataUsingEncoding:NSUTF8StringEncoding];
-	if(!data){
- return nil;
-	}
-	return base64_encode_data(data);
- }
- */
-
 NSString *MTStringByEncodingInBase64(NSData *data) {
     NSUInteger length = [data length];
     NSMutableData *mutableData = [[NSMutableData alloc] initWithLength:((length + 2) / 3) * 4];

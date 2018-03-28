@@ -61,6 +61,8 @@ bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain);
     
 uint64_t MTRsaFingerprint(NSString *key);
     
+NSData *MTRsaEncryptPKCS1OAEP(NSString *key, NSData *data);
+    
 @interface MTBackupDatacenterAddress : NSObject
 
 @property (nonatomic, strong, readonly) NSString *ip;

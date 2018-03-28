@@ -309,7 +309,6 @@ NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv)
 NSData *MTRsaEncrypt(NSString *publicKey, NSData *data)
 {
 #if TARGET_OS_IOS
-    
     NSMutableData *updatedData = [[NSMutableData alloc] initWithData:data];
     while (updatedData.length < 256) {
         uint8_t zero = 0;
@@ -705,6 +704,33 @@ uint64_t MTRsaFingerprint(NSString *key) {
     BIO_free(keyBio);
     
     return fingerprint;
+}
+
+NSData *MTRsaEncryptPKCS1OAEP(NSString *key, NSData *data) {
+    BIO *keyBio = BIO_new(BIO_s_mem());
+    
+    NSData *keyData = [key dataUsingEncoding:NSUTF8StringEncoding];
+    BIO_write(keyBio, keyData.bytes, (int)keyData.length);
+    RSA *rsaKey = PEM_read_bio_RSA_PUBKEY(keyBio, NULL, NULL, NULL);
+    if (rsaKey == nil) {
+        BIO_free(keyBio);
+        return nil;
+    }
+    
+    NSMutableData *outData = [[NSMutableData alloc] initWithLength:data.length + 2048];
+    
+    int encryptedLength = RSA_public_encrypt((int)data.length, data.bytes, outData.mutableBytes, rsaKey, RSA_PKCS1_OAEP_PADDING);
+    RSA_free(rsaKey);
+    BIO_free(keyBio);
+    
+    if (encryptedLength < 0) {
+        return nil;
+    }
+    
+    assert(encryptedLength <= outData.length);
+    [outData setLength:encryptedLength];
+    
+    return outData;
 }
 
 static NSData *decrypt_TL_data(unsigned char buffer[256]) {
