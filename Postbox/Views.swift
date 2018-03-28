@@ -23,6 +23,7 @@ public enum PostboxViewKey: Hashable {
     case chatListTopPeers(groupId: PeerGroupId)
     case groupFeedReadStateSyncOperations
     case localMessageTag(LocalMessageTags)
+    case messages(Set<MessageId>)
     
     public var hashValue: Int {
         switch self {
@@ -70,6 +71,8 @@ public enum PostboxViewKey: Hashable {
                 return 9
             case let .localMessageTag(tag):
                 return tag.hashValue
+            case .messages:
+                return 10
         }
     }
     
@@ -207,6 +210,12 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case let .messages(ids):
+                if case .messages(ids) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -257,5 +266,7 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutableGroupFeedReadStateSyncOperationsView(postbox: postbox)
         case let .localMessageTag(tag):
             return MutableLocalMessageTagsView(postbox: postbox, tag: tag)
+        case let .messages(ids):
+            return MutableMessagesView(postbox: postbox, ids: ids)
     }
 }
