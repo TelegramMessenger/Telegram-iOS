@@ -22,6 +22,7 @@
 @property (nonatomic, assign) bool hasCaptions;
 @property (nonatomic, assign) bool allowCaptionEntities;
 @property (nonatomic, assign) bool hasTimer;
+@property (nonatomic, assign) bool onlyCrop;
 @property (nonatomic, assign) bool inhibitDocumentCaptions;
 @property (nonatomic, assign) bool usesSimpleLayout;
 @property (nonatomic, assign) bool hasSwipeGesture;

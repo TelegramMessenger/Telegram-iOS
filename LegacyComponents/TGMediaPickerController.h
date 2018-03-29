@@ -24,6 +24,7 @@
 @property (nonatomic, assign) bool inhibitDocumentCaptions;
 @property (nonatomic, assign) bool shouldStoreAssets;
 @property (nonatomic, assign) bool hasTimer;
+@property (nonatomic, assign) bool onlyCrop;
 @property (nonatomic, strong) NSString *recipientName;
 
 @property (nonatomic, strong) TGMediaAssetsPallete *pallete;

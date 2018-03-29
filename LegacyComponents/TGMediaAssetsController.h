@@ -12,7 +12,8 @@ typedef enum
     TGMediaAssetsControllerSendMediaIntent,
     TGMediaAssetsControllerSendFileIntent,
     TGMediaAssetsControllerSetProfilePhotoIntent,
-    TGMediaAssetsControllerSetCustomWallpaperIntent
+    TGMediaAssetsControllerSetCustomWallpaperIntent,
+    TGMediaAssetsControllerPassportIntent
 } TGMediaAssetsControllerIntent;
 
 @interface TGMediaAssetsPallete : NSObject
@@ -49,6 +50,8 @@ typedef enum
 @property (nonatomic, assign) bool shouldStoreAssets;
 
 @property (nonatomic, assign) bool hasTimer;
+@property (nonatomic, assign) bool onlyCrop;
+
 @property (nonatomic, assign) bool liveVideoUploadEnabled;
 @property (nonatomic, assign) bool shouldShowFileTipIfNeeded;
 

@@ -33,6 +33,7 @@
     bool _hasCaptions;
     bool _allowCaptionEntities;
     bool _hasTimer;
+    bool _onlyCrop;
     bool _hasSelectionPanel;
     bool _inhibitDocumentCaptions;
     NSString *_recipientName;
@@ -45,7 +46,7 @@
 
 @implementation TGMediaPickerGalleryModel
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context items:(NSArray *)items focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities hasTimer:(bool)hasTimer inhibitDocumentCaptions:(bool)inhibitDocumentCaptions hasSelectionPanel:(bool)hasSelectionPanel hasCamera:(bool)hasCamera recipientName:(NSString *)recipientName
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context items:(NSArray *)items focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities hasTimer:(bool)hasTimer onlyCrop:(bool)onlyCrop inhibitDocumentCaptions:(bool)inhibitDocumentCaptions hasSelectionPanel:(bool)hasSelectionPanel hasCamera:(bool)hasCamera recipientName:(NSString *)recipientName
 {
     self = [super init];
     if (self != nil)
@@ -61,6 +62,7 @@
         _hasCaptions = hasCaptions;
         _allowCaptionEntities = allowCaptionEntities;
         _hasTimer = hasTimer;
+        _onlyCrop = true;
         _hasSelectionPanel = hasSelectionPanel;
         _inhibitDocumentCaptions = inhibitDocumentCaptions;
         _recipientName = recipientName;
@@ -185,6 +187,7 @@
         _interfaceView.hasCaptions = _hasCaptions;
         _interfaceView.allowCaptionEntities = _allowCaptionEntities;
         _interfaceView.hasTimer = _hasTimer;
+        _interfaceView.onlyCrop = _onlyCrop;
         _interfaceView.inhibitDocumentCaptions = _inhibitDocumentCaptions;
         [_interfaceView setEditorTabPressed:^(TGPhotoEditorTab tab)
         {

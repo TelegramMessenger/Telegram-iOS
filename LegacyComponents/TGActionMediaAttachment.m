@@ -192,6 +192,12 @@
         int32_t domainLength = (int32_t)domainBytes.length;
         [data appendBytes:&domainLength length:4];
         [data appendData:domainBytes];
+    } else if (actionType == TGMessageActionSecureValuesSent) {
+        NSString *values = _actionData[@"values"];
+        NSData *valuesBytes = [values dataUsingEncoding:NSUTF8StringEncoding];
+        int32_t valuesLength = (int32_t)valuesBytes.length;
+        [data appendBytes:&valuesLength length:4];
+        [data appendData:valuesBytes];
     }
 
     int dataLength = (int)data.length - dataLengthPtr - 4;
@@ -408,6 +414,15 @@
         if (domain == nil)
             domain = @"";
         actionAttachment.actionData = @{@"domain": domain};
+    } else if (actionType == TGMessageActionSecureValuesSent) {
+        int32_t valuesLength = 0;
+        [is read:(uint8_t *)&valuesLength maxLength:4];
+        uint8_t *valuesBytes = malloc(valuesLength);
+        [is read:valuesBytes maxLength:valuesLength];
+        NSString *values = [[NSString alloc] initWithBytesNoCopy:valuesBytes length:valuesLength encoding:NSUTF8StringEncoding freeWhenDone:true];
+        if (values == nil)
+            values = @"";
+        actionAttachment.actionData = @{@"values": values};
     }
     
     return actionAttachment;

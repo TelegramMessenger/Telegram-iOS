@@ -24,6 +24,7 @@
 @property (nonatomic) bool allowCaptionEntities;
 @property (nonatomic) bool inhibitDocumentCaptions;
 @property (nonatomic) bool hasTimer;
+@property (nonatomic) bool onlyCrop;
 
 @property (nonatomic, strong) NSArray *underlyingViews;
 @property (nonatomic, assign) bool openEditor;

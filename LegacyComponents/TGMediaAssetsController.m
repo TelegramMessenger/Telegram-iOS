@@ -120,6 +120,7 @@
         pickerController.catchToolbarView = catchToolbarView;
         pickerController.recipientName = recipientName;
         pickerController.hasTimer = strongController.hasTimer;
+        pickerController.onlyCrop = strongController.onlyCrop;
         [strongController pushViewController:pickerController animated:true];
     };
     [groupsController loadViewIfNeeded];
@@ -191,6 +192,12 @@
 {
     _hasTimer = hasTimer;
     self.pickerController.hasTimer = hasTimer;
+}
+
+- (void)setOnlyCrop:(bool)onlyCrop
+{
+    _onlyCrop = onlyCrop;
+    self.pickerController.onlyCrop = onlyCrop;
 }
 
 - (TGMediaAssetsPickerController *)pickerController
@@ -293,7 +300,7 @@
                 [strongSelf setupTooltip:[strongSelf->_toolbarView convertRect:strongSelf->_toolbarView.centerButton.frame toView:strongSelf.view]];
         }]];
         
-        if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent)
+        if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent || intent == TGMediaAssetsControllerPassportIntent)
             _editingContext = [[TGMediaEditingContext alloc] init];
         else if (intent == TGMediaAssetsControllerSendFileIntent)
             _editingContext = [TGMediaEditingContext contextForCaptionsOnly];
@@ -1047,6 +1054,7 @@
     {
         case TGMediaAssetsControllerSetProfilePhotoIntent:
         case TGMediaAssetsControllerSetCustomWallpaperIntent:
+        case TGMediaAssetsControllerPassportIntent:
             assetType = TGMediaAssetPhotoType;
             break;
             

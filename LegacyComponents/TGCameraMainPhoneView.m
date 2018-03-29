@@ -807,7 +807,7 @@
     _photoCounterButton.frame = CGRectMake(self.frame.size.width - 56.0f - 10.0f, _counterOffset, 64, 38);
     _selectedPhotosView.frame = CGRectMake(4.0f, [_photoCounterButton convertRect:_photoCounterButton.bounds toView:self].origin.y - photosViewSize - 20.0f, self.frame.size.width - 4.0f * 2.0f, photosViewSize);
     
-    if (!_displayedTooltip)
+    if (!_displayedTooltip && _modeControl.superview != nil)
     {
         _displayedTooltip = true;
         [self setupTooltip];

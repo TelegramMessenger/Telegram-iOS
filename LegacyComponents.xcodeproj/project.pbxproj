@@ -36,6 +36,8 @@
 		09AB58151F6C401B0087449F /* TGLocationWavesView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09AB58131F6C401B0087449F /* TGLocationWavesView.m */; };
 		09B51E001F6AF476000EE471 /* TGLocationMapViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09B51E011F6AF476000EE471 /* TGLocationMapViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */; };
+		09C0BEE02069FDD400380399 /* TGPassportAttachMenu.h in Headers */ = {isa = PBXBuildFile; fileRef = 09C0BEDE2069FDD300380399 /* TGPassportAttachMenu.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09C0BEE12069FDD400380399 /* TGPassportAttachMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C0BEDF2069FDD300380399 /* TGPassportAttachMenu.m */; };
 		09E97B571F97C11700526020 /* TGTooltipView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09E97B551F97C11600526020 /* TGTooltipView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09E97B581F97C11700526020 /* TGTooltipView.m in Sources */ = {isa = PBXBuildFile; fileRef = 09E97B561F97C11600526020 /* TGTooltipView.m */; };
 		09F36E561F748E040022A5FE /* TGLocationLiveSessionItemView.h in Headers */ = {isa = PBXBuildFile; fileRef = 09F36E541F748E040022A5FE /* TGLocationLiveSessionItemView.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1206,6 +1208,8 @@
 		09AB58131F6C401B0087449F /* TGLocationWavesView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationWavesView.m; sourceTree = "<group>"; };
 		09B51DFE1F6AF476000EE471 /* TGLocationMapViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGLocationMapViewController.h; sourceTree = "<group>"; };
 		09B51DFF1F6AF476000EE471 /* TGLocationMapViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGLocationMapViewController.m; sourceTree = "<group>"; };
+		09C0BEDE2069FDD300380399 /* TGPassportAttachMenu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPassportAttachMenu.h; sourceTree = "<group>"; };
+		09C0BEDF2069FDD300380399 /* TGPassportAttachMenu.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPassportAttachMenu.m; sourceTree = "<group>"; };
 		09E97B551F97C11600526020 /* TGTooltipView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGTooltipView.h; sourceTree = "<group>"; };
 		09E97B561F97C11600526020 /* TGTooltipView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGTooltipView.m; sourceTree = "<group>"; };
 		09F36E541F748E040022A5FE /* TGLocationLiveSessionItemView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGLocationLiveSessionItemView.h; sourceTree = "<group>"; };
@@ -3646,6 +3650,8 @@
 				D07BCAF21F2B509200ED97AA /* TGAttachmentAssetCell.m */,
 				D07BCAF51F2B50AA00ED97AA /* TGMediaAvatarEditorTransition.h */,
 				D07BCAF61F2B50AA00ED97AA /* TGMediaAvatarEditorTransition.m */,
+				09C0BEDE2069FDD300380399 /* TGPassportAttachMenu.h */,
+				09C0BEDF2069FDD300380399 /* TGPassportAttachMenu.m */,
 			);
 			name = "Attachment Menu";
 			sourceTree = "<group>";
@@ -4256,6 +4262,7 @@
 				D017796D1F2103DB0044446D /* TGPhotoPaintStickerEntity.h in Headers */,
 				D02660861F34B9B1000E2DC5 /* TGSearchBar.h in Headers */,
 				D07BC8021F2A2C0B00ED97AA /* PGHighlightsTool.h in Headers */,
+				09C0BEE02069FDD400380399 /* TGPassportAttachMenu.h in Headers */,
 				D026605C1F34A7F8000E2DC5 /* TGLocationMapView.h in Headers */,
 				D07BC95C1F2A3EF000ED97AA /* TGLetteredAvatarView.h in Headers */,
 				D026606C1F34A7F8000E2DC5 /* TGLocationTitleView.h in Headers */,
@@ -4863,6 +4870,7 @@
 				D0177B151F2641B10044446D /* PGCamera.m in Sources */,
 				D07BCBF61F2B72DC00ED97AA /* STKLocalFileDataSource.m in Sources */,
 				D07BC7FB1F2A2C0B00ED97AA /* PGEnhanceTool.m in Sources */,
+				09C0BEE12069FDD400380399 /* TGPassportAttachMenu.m in Sources */,
 				D07BC9511F2A3EA900ED97AA /* TGMentionPanelCell.m in Sources */,
 				D01779501F2100280044446D /* TGMediaSelectionContext.m in Sources */,
 				D07BC9651F2A3F4000ED97AA /* TGRemoteImageView.m in Sources */,

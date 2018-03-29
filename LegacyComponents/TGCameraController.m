@@ -160,7 +160,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         
         _items = [[NSMutableArray alloc] init];
         
-        if (_intent == TGCameraControllerAvatarIntent)
+        if (_intent != TGCameraControllerGenericIntent)
             _allowCaptions = false;
         _saveEditedPhotos = saveEditedPhotos;
         _saveCapturedMedia = saveCapturedMedia;
@@ -408,7 +408,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
     };
     
-    if (_intent == TGCameraControllerAvatarIntent)
+    if (_intent != TGCameraControllerGenericIntent)
         [_interfaceView setHasModeControl:false];
 
     if (iosMajorVersion() >= 11)
@@ -884,7 +884,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     {
         case PGCameraModePhoto:
         {
-            if (_intent != TGCameraControllerAvatarIntent)
+            if (_intent == TGCameraControllerGenericIntent)
             {
                 _switchToVideoTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(startVideoRecording) interval:0.25 repeat:false];
             }
@@ -1186,7 +1186,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
     }];
     
-    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:!_shortcut recipientName:self.recipientName];
+    bool hasCamera = _intent == TGCameraControllerGenericIntent && !_shortcut;
+    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
     model.controller = galleryController;
     model.suggestionContext = self.suggestionContext;
     
@@ -2057,7 +2058,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     if (gestureRecognizer == _panGestureRecognizer)
         return !_camera.isRecordingVideo && _items.count == 0;
     else if (gestureRecognizer == _photoSwipeGestureRecognizer || gestureRecognizer == _videoSwipeGestureRecognizer)
-        return _intent != TGCameraControllerAvatarIntent && !_camera.isRecordingVideo;
+        return _intent == TGCameraControllerGenericIntent && !_camera.isRecordingVideo;
     else if (gestureRecognizer == _pinchGestureRecognizer)
         return _camera.isZoomAvailable;
     

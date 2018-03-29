@@ -277,6 +277,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGEmbedPlayerState.h>
 #import <LegacyComponents/TGAttachmentCameraView.h>
 #import <LegacyComponents/TGMediaAvatarMenuMixin.h>
+#import <LegacyComponents/TGPassportAttachMenu.h>
 #import <LegacyComponents/TGPasscodeEntryController.h>
 #import <LegacyComponents/TGEmbedPlayerView.h>
 #import <LegacyComponents/TGWallpaperInfo.h>

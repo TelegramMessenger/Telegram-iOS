@@ -702,7 +702,7 @@
     if ([item conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
         tabs = [(id<TGModernGalleryEditableItem>)item toolbarTabs];
         
-    if (iosMajorVersion() < 7)
+    if (iosMajorVersion() < 7 || self.onlyCrop)
     {
         tabs &= ~ TGPhotoEditorPaintTab;
         tabs &= ~ TGPhotoEditorToolsTab;
