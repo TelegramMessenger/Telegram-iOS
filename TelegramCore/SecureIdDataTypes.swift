@@ -25,7 +25,7 @@ public struct SecureIdFileReference: Equatable {
     let accessHash: Int64
     let size: Int32
     let datacenterId: Int32
-    let date: Int32
+    public let timestamp: Int32
     let fileHash: Data
     let encryptedSecret: Data
     
@@ -42,7 +42,7 @@ public struct SecureIdFileReference: Equatable {
         if lhs.datacenterId != rhs.datacenterId {
             return false
         }
-        if lhs.date != rhs.date {
+        if lhs.timestamp != rhs.timestamp {
             return false
         }
         if lhs.fileHash != rhs.fileHash {
@@ -59,7 +59,7 @@ extension SecureIdFileReference {
     init?(apiFile: Api.SecureFile) {
         switch apiFile {
             case let .secureFile(id, accessHash, size, dcId, date, fileHash, secret):
-                self.init(id: id, accessHash: accessHash, size: size, datacenterId: dcId, date: date, fileHash: fileHash.makeData(), encryptedSecret: secret.makeData())
+                self.init(id: id, accessHash: accessHash, size: size, datacenterId: dcId, timestamp: date, fileHash: fileHash.makeData(), encryptedSecret: secret.makeData())
             case .secureFileEmpty:
                 return nil
         }

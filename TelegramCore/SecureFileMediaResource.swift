@@ -53,7 +53,7 @@ public class SecureFileMediaResource: TelegramCloudMediaResource, TelegramMultip
     }
     
     public required init(decoder: PostboxDecoder) {
-        self.file = SecureIdFileReference(id: decoder.decodeInt64ForKey("f", orElse: 0), accessHash: decoder.decodeInt64ForKey("a", orElse: 0), size: decoder.decodeInt32ForKey("n", orElse: 0), datacenterId: decoder.decodeInt32ForKey("d", orElse: 0), date: decoder.decodeInt32ForKey("t", orElse: 0), fileHash: decoder.decodeBytesForKey("h")?.makeData() ?? Data(), encryptedSecret: decoder.decodeBytesForKey("s")?.makeData() ?? Data())
+        self.file = SecureIdFileReference(id: decoder.decodeInt64ForKey("f", orElse: 0), accessHash: decoder.decodeInt64ForKey("a", orElse: 0), size: decoder.decodeInt32ForKey("n", orElse: 0), datacenterId: decoder.decodeInt32ForKey("d", orElse: 0), timestamp: decoder.decodeInt32ForKey("t", orElse: 0), fileHash: decoder.decodeBytesForKey("h")?.makeData() ?? Data(), encryptedSecret: decoder.decodeBytesForKey("s")?.makeData() ?? Data())
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -61,7 +61,7 @@ public class SecureFileMediaResource: TelegramCloudMediaResource, TelegramMultip
         encoder.encodeInt64(self.file.accessHash, forKey: "a")
         encoder.encodeInt32(self.file.size, forKey: "n")
         encoder.encodeInt32(self.file.datacenterId, forKey: "d")
-        encoder.encodeInt32(self.file.date, forKey: "t")
+        encoder.encodeInt32(self.file.timestamp, forKey: "t")
         encoder.encodeBytes(MemoryBuffer(data: self.file.fileHash), forKey: "h")
         encoder.encodeBytes(MemoryBuffer(data: self.file.encryptedSecret), forKey: "s")
     }
