@@ -47,7 +47,6 @@ extension Sequence {
     }
 }
 
-
 public func searchStickers(account: Account, query: String) -> Signal<[FoundStickerItem], NoError> {
     return account.viewTracker.featuredStickerPacks() |> mapToSignal { featured in
         return account.postbox.modify { modifier -> [FoundStickerItem] in
@@ -108,14 +107,14 @@ public func searchStickers(account: Account, query: String) -> Signal<[FoundStic
 }
 
 public struct FoundStickerSets {
-    public let infos:[(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?, Bool)]
+    public let infos: [(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?, Bool)]
     public let entries: [ItemCollectionViewEntry]
-    public init(infos:[(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?, Bool)] = [], entries: [ItemCollectionViewEntry] = []) {
+    public init(infos: [(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?, Bool)] = [], entries: [ItemCollectionViewEntry] = []) {
         self.infos = infos
         self.entries = entries
     }
     
-    public func withUpdatedInfosAndEntries(infos:[(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?, Bool)], entries: [ItemCollectionViewEntry]) -> FoundStickerSets {
+    public func withUpdatedInfosAndEntries(infos: [(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?, Bool)], entries: [ItemCollectionViewEntry]) -> FoundStickerSets {
         let infoResult = self.infos + infos
         let entriesResult = self.entries + entries
         return FoundStickerSets(infos: infoResult, entries: entriesResult)
@@ -126,8 +125,7 @@ public struct FoundStickerSets {
     }
 }
 
-
-public func searchStickerSetsRemotly(network: Network, query: String) -> Signal<FoundStickerSets, NoError> {
+public func searchStickerSetsRemotely(network: Network, query: String) -> Signal<FoundStickerSets, NoError> {
     return network.request(Api.functions.messages.searchStickerSets(flags: 0, q: query, hash: 0))
         |> mapError {_ in}
         |> mapToSignal { value in
@@ -137,7 +135,7 @@ public func searchStickerSetsRemotly(network: Network, query: String) -> Signal<
                 var result = FoundStickerSets()
                 for set in sets {
                     let parsed = parsePreviewStickerSet(set)
-                    let values = parsed.1.map({ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: index, collectionId: parsed.0.id, itemIndex: $0.index), item: $0)})
+                    let values = parsed.1.map({ ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: index, collectionId: parsed.0.id, itemIndex: $0.index), item: $0) })
                     result = result.withUpdatedInfosAndEntries(infos: [(parsed.0.id, parsed.0, parsed.1.first, false)], entries: values)
                     index += 1
                 }
@@ -158,7 +156,7 @@ public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundSt
         let infos = modifier.getItemCollectionsInfos(namespace: Namespaces.ItemCollection.CloudStickerPacks)
         
         var collections: [(ItemCollectionId, ItemCollectionInfo)] = []
-        var topItems:[ItemCollectionId: ItemCollectionItem] = [:]
+        var topItems: [ItemCollectionId: ItemCollectionItem] = [:]
         var entries: [ItemCollectionViewEntry] = []
         for info in infos {
             if let info = info.1 as? StickerPackCollectionInfo {
@@ -172,7 +170,7 @@ public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundSt
         
         for info in collections {
             let items = modifier.getItemCollectionItems(collectionId: info.0)
-            let values = items.map({ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: index, collectionId: info.0, itemIndex: $0.index), item: $0)})
+            let values = items.map({ ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: index, collectionId: info.0, itemIndex: $0.index), item: $0) })
             entries.append(contentsOf: values)
             if let first = items.first {
                 topItems[info.0] = first
@@ -183,23 +181,23 @@ public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundSt
         let result = FoundStickerSets(infos: collections.map { ($0.0, $0.1, topItems[$0.0], true) }, entries: entries)
         
         return .single(result)
-        } |> switchToLatest
+    } |> switchToLatest
 }
-
 
 public func searchGifs(account: Account, query: String) -> Signal<ChatContextResultCollection?, Void> {
     return resolvePeerByName(account: account, name: "gif")
-        |> filter {$0 != nil}
-        |> map {$0!}
-        |> mapToSignal { peerId -> Signal<Peer, NoError> in
-            return account.postbox.loadedPeerWithId(peerId)
-        }
-        |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
-            return requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: "")
+    |> filter {$0 != nil}
+    |> map {$0!}
+    |> mapToSignal { peerId -> Signal<Peer, NoError> in
+        return account.postbox.loadedPeerWithId(peerId)
+    }
+    |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
+        return requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: "")
     }
 }
+
 extension TelegramMediaFile {
-    var stickerString:String? {
+    var stickerString: String? {
         for attr in attributes {
             if case let .Sticker(displayText, _, _) = attr {
                 return displayText

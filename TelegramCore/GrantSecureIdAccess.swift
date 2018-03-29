@@ -98,7 +98,7 @@ public enum GrantSecureIdAccessError {
     case generic
 }
 
-public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: String, scope: String, values: [SecureIdValueWithContext]) -> Signal<Void, GrantSecureIdAccessError> {
+public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: String, scope: String, opaquePayload: Data, values: [SecureIdValueWithContext]) -> Signal<Void, GrantSecureIdAccessError> {
     guard peerId.namespace == Namespaces.Peer.CloudUser else {
         return .fail(.generic)
     }
@@ -123,7 +123,7 @@ public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: Str
         valueHashes.append(hash)
     }
     
-    return network.request(Api.functions.account.acceptAuthorization(botId: peerId.id, scope: scope, publicKey: publicKey, valueHashes: valueHashes, credentials: .secureCredentialsEncrypted(data: Buffer(data: encryptedCredentialsData), secret: Buffer(data: encryptedSecretData), hash: Buffer(data: decryptedCredentialsHash))))
+    return network.request(Api.functions.account.acceptAuthorization(botId: peerId.id, scope: scope, publicKey: publicKey, valueHashes: valueHashes, credentials: .secureCredentialsEncrypted(data: Buffer(data: encryptedCredentialsData), hash: Buffer(data: decryptedCredentialsHash), secret: Buffer(data: encryptedSecretData)), payload: Buffer(data: opaquePayload)))
     |> mapError { _ -> GrantSecureIdAccessError in
         return .generic
     }

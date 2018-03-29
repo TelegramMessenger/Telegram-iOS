@@ -58,19 +58,27 @@ func encryptedSecureValueData(context: SecureIdAccessContext, valueContext: Secu
         return nil
     }
     
-    var hashData = valueHash
+    var hashData = valueHash + valueContext.secret
     for file in files {
         switch file {
             case let .remote(file):
                 hashData.append(file.fileHash)
+                guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: file.fileHash, encryptedSecret: file.encryptedSecret) else {
+                    return nil
+                }
+                hashData.append(fileSecret)
             case let .uploaded(file):
                 hashData.append(file.fileHash)
+                guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: file.fileHash, encryptedSecret: file.encryptedSecret) else {
+                    return nil
+                }
+                hashData.append(fileSecret)
         }
     }
     hashData.append(valueContext.secret)
     let hash = sha256Digest(hashData)
     
-    let secretHash = sha512Digest(context.secret + hash)
+    let secretHash = sha512Digest(context.secret + valueHash)
     let secretKey = secretHash.subdata(in: 0 ..< 32)
     let secretIv = secretHash.subdata(in: 32 ..< (32 + 16))
     
@@ -81,8 +89,8 @@ func encryptedSecureValueData(context: SecureIdAccessContext, valueContext: Secu
     return EncryptedSecureData(data: encryptedValueData, dataHash: valueHash, hash: hash, encryptedSecret: encryptedValueSecret)
 }
 
-func decryptedSecureValueAccessContext(context: SecureIdAccessContext, encryptedSecret: Data, hash: Data) -> SecureIdValueAccessContext? {
-    let secretHash = sha512Digest(context.secret + hash)
+func decryptedSecureValueAccessContext(context: SecureIdAccessContext, encryptedSecret: Data, decryptedDataHash: Data) -> SecureIdValueAccessContext? {
+    let secretHash = sha512Digest(context.secret + decryptedDataHash)
     let secretKey = secretHash.subdata(in: 0 ..< 32)
     let secretIv = secretHash.subdata(in: 32 ..< (32 + 16))
     
@@ -134,7 +142,7 @@ private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: 
             guard let encryptedData = encryptedSecureValueData(context: context, valueContext: valueContext, data: decryptedData, files: fileReferences) else {
                 return nil
             }
-            guard let checkValueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedData.encryptedSecret, hash: encryptedData.hash) else {
+            guard let checkValueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedData.encryptedSecret, decryptedDataHash: encryptedData.dataHash) else {
                 return nil
             }
             if checkValueContext != valueContext {
@@ -154,11 +162,11 @@ private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: 
                     case let .remote(file):
                         return Api.InputSecureFile.inputSecureFile(id: file.id, accessHash: file.accessHash)
                     case let .uploaded(file):
-                        return Api.InputSecureFile.inputSecureFileUploaded(id: file.id, parts: file.parts, md5Checksum: file.md5Checksum, fileHash: Buffer(data: file.fileHash))
+                        return Api.InputSecureFile.inputSecureFileUploaded(id: file.id, parts: file.parts, md5Checksum: file.md5Checksum, fileHash: Buffer(data: file.fileHash), secret: Buffer(data: file.encryptedSecret), secureSecretHash: context.hash)
                 }
             }
             
-            return (Api.InputSecureValue.inputSecureValueIdentity(data: Api.SecureData.secureData(data: Buffer(data: encryptedData.data), dataHash: Buffer(data: encryptedData.dataHash)), files: files, secret: Buffer(data: encryptedData.encryptedSecret), hash: Buffer(data: encryptedData.hash)), encryptedData.hash)
+            return (Api.InputSecureValue.inputSecureValueIdentity(data: Api.SecureData.secureData(data: Buffer(data: encryptedData.data), dataHash: Buffer(data: encryptedData.dataHash), secret: Buffer(data: encryptedData.encryptedSecret)), files: files, hash: Buffer(data: encryptedData.hash)), encryptedData.hash)
         case .address:
             guard let (decryptedData, fileReferences) = value.serialize() else {
                 return nil
@@ -166,7 +174,7 @@ private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: 
             guard let encryptedData = encryptedSecureValueData(context: context, valueContext: valueContext, data: decryptedData, files: fileReferences) else {
                 return nil
             }
-            guard let checkValueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedData.encryptedSecret, hash: encryptedData.hash) else {
+            guard let checkValueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedData.encryptedSecret, decryptedDataHash: encryptedData.dataHash) else {
                 return nil
             }
             if checkValueContext != valueContext {
@@ -186,11 +194,11 @@ private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: 
                     case let .remote(file):
                         return Api.InputSecureFile.inputSecureFile(id: file.id, accessHash: file.accessHash)
                     case let .uploaded(file):
-                        return Api.InputSecureFile.inputSecureFileUploaded(id: file.id, parts: file.parts, md5Checksum: file.md5Checksum, fileHash: Buffer(data: file.fileHash))
+                        return Api.InputSecureFile.inputSecureFileUploaded(id: file.id, parts: file.parts, md5Checksum: file.md5Checksum, fileHash: Buffer(data: file.fileHash), secret: Buffer(data: file.encryptedSecret), secureSecretHash: context.hash)
                 }
             }
             
-            return (Api.InputSecureValue.inputSecureValueAddress(data: Api.SecureData.secureData(data: Buffer(data: encryptedData.data), dataHash: Buffer(data: encryptedData.dataHash)), files: files, secret: Buffer(data: encryptedData.encryptedSecret), hash: Buffer(data: encryptedData.hash)), encryptedData.hash)
+            return (Api.InputSecureValue.inputSecureValueAddress(data: Api.SecureData.secureData(data: Buffer(data: encryptedData.data), dataHash: Buffer(data: encryptedData.dataHash), secret: Buffer(data: encryptedData.encryptedSecret)), files: files, hash: Buffer(data: encryptedData.hash)), encryptedData.hash)
         case let .phone(value):
             guard let phoneData = value.phone.data(using: .utf8) else {
                 return nil

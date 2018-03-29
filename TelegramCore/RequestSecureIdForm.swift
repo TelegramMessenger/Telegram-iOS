@@ -26,10 +26,10 @@ private func parseSecureValueType(_ type: Api.SecureValueType) -> SecureIdReques
     }
 }
 
-private func parseSecureData(_ value: Api.SecureData) -> (data: Data, hash: Data) {
+private func parseSecureData(_ value: Api.SecureData) -> (data: Data, hash: Data, secret: Data) {
     switch value {
-        case let .secureData(data, dataHash):
-            return (data.makeData(), dataHash.makeData())
+        case let .secureData(data, dataHash, secret):
+            return (data.makeData(), dataHash.makeData(), secret.makeData())
     }
 }
 
@@ -40,9 +40,9 @@ struct ParsedSecureValue {
 
 func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) -> ParsedSecureValue? {
     switch value {
-        case let .secureValueIdentity(_, data, files, secret, hash, verified):
-            let (encryptedData, decryptedHash) = parseSecureData(data)
-            guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: secret.makeData(), hash: hash.makeData()) else {
+        case let .secureValueIdentity(_, data, files, hash, verified):
+            let (encryptedData, decryptedHash, encryptedSecret) = parseSecureData(data)
+            guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedSecret, decryptedDataHash: decryptedHash) else {
                 return nil
             }
             
@@ -57,9 +57,9 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
                 return nil
             }
             return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .identity(value), context: valueContext, encryptedMetadata: SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, fileHashes: parsedFileHashes, valueSecret: valueContext.secret, hash: hash.makeData())), hash: hash.makeData())
-        case let .secureValueAddress(_, data, files, secret, hash, verified):
-            let (encryptedData, decryptedHash) = parseSecureData(data)
-            guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: secret.makeData(), hash: hash.makeData()) else {
+        case let .secureValueAddress(_, data, files, hash, verified):
+            let (encryptedData, decryptedHash, encryptedSecret) = parseSecureData(data)
+            guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedSecret, decryptedDataHash: decryptedHash) else {
                 return nil
             }
             
@@ -115,7 +115,7 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
     |> mapToSignal { result -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> in
         return postbox.modify { modifier -> EncryptedSecureIdForm in
             switch result {
-                case let .authorizationForm(_, requiredTypes, values, users):
+                case let .authorizationForm(requiredTypes, values, users):
                     var peers: [Peer] = []
                     for user in users {
                         let parsed = TelegramUser(user: user)

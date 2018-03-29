@@ -14,6 +14,8 @@ public struct UploadedSecureIdFile: Equatable {
     let parts: Int32
     let md5Checksum: String
     let fileHash: Data
+    let encryptedSecret: Data
+    let masterSecretHash: Int64
     
     public static func ==(lhs: UploadedSecureIdFile, rhs: UploadedSecureIdFile) -> Bool {
         if lhs.id != rhs.id {
@@ -26,6 +28,12 @@ public struct UploadedSecureIdFile: Equatable {
             return false
         }
         if lhs.fileHash != rhs.fileHash {
+            return false
+        }
+        if lhs.encryptedSecret != rhs.encryptedSecret {
+            return false
+        }
+        if lhs.masterSecretHash != rhs.masterSecretHash {
             return false
         }
         return true
@@ -44,25 +52,54 @@ public enum UploadSecureIdFileError {
 private struct EncryptedSecureIdFile {
     let data: Data
     let hash: Data
+    let encryptedSecret: Data
 }
 
-private func encryptedSecureIdFile(valueContext: SecureIdValueAccessContext, data: Data) -> EncryptedSecureIdFile? {
+private func encryptedSecureIdFile(context: SecureIdAccessContext, data: Data) -> EncryptedSecureIdFile? {
+    guard let fileSecret = generateSecureSecretData() else {
+        return nil
+    }
+    
     let paddedFileData = paddedSecureIdData(data)
     let fileHash = sha256Digest(paddedFileData)
-    let fileSecretHash = sha512Digest(valueContext.secret + fileHash)
+    let fileSecretHash = sha512Digest(fileSecret + fileHash)
     let fileKey = fileSecretHash.subdata(in: 0 ..< 32)
     let fileIv = fileSecretHash.subdata(in: 32 ..< (32 + 16))
     guard let encryptedFileData = encryptSecureData(key: fileKey, iv: fileIv, data: paddedFileData, decrypt: false) else {
         return nil
     }
-    return EncryptedSecureIdFile(data: encryptedFileData, hash: fileHash)
+    
+    let secretHash = sha512Digest(context.secret + fileHash)
+    let secretKey = secretHash.subdata(in: 0 ..< 32)
+    let secretIv = secretHash.subdata(in: 32 ..< (32 + 16))
+    guard let encryptedSecretData = encryptSecureData(key: secretKey, iv: secretIv, data: fileSecret, decrypt: false) else {
+        return nil
+    }
+    
+    return EncryptedSecureIdFile(data: encryptedFileData, hash: fileHash, encryptedSecret: encryptedSecretData)
 }
 
-func decryptedSecureIdFile(valueContext: SecureIdValueAccessContext, encryptedData: Data, fileHash: Data) -> Data? {
-    let fileSecretHash = sha512Digest(valueContext.secret + fileHash)
+func decryptedSecureIdFileSecret(context: SecureIdAccessContext, fileHash: Data, encryptedSecret: Data) -> Data? {
+    let secretHash = sha512Digest(context.secret + fileHash)
+    let secretKey = secretHash.subdata(in: 0 ..< 32)
+    let secretIv = secretHash.subdata(in: 32 ..< (32 + 16))
+    guard let fileSecret = encryptSecureData(key: secretKey, iv: secretIv, data: encryptedSecret, decrypt: true) else {
+        return nil
+    }
+    guard verifySecureSecret(fileSecret) else {
+        return nil
+    }
+    return fileSecret
+}
+
+func decryptedSecureIdFile(context: SecureIdAccessContext, encryptedData: Data, fileHash: Data, encryptedSecret: Data) -> Data? {
+    guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: fileHash, encryptedSecret: encryptedSecret) else {
+        return nil
+    }
+    
+    let fileSecretHash = sha512Digest(fileSecret + fileHash)
     let fileKey = fileSecretHash.subdata(in: 0 ..< 32)
     let fileIv = fileSecretHash.subdata(in: 32 ..< (32 + 16))
-    
     guard let paddedFileData = encryptSecureData(key: fileKey, iv: fileIv, data: encryptedData, decrypt: true) else {
         return nil
     }
@@ -79,7 +116,7 @@ func decryptedSecureIdFile(valueContext: SecureIdValueAccessContext, encryptedDa
     return unpaddedFileData
 }
 
-public func uploadSecureIdFile(valueContext: SecureIdValueAccessContext, postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadSecureIdFileResult, UploadSecureIdFileError> {
+public func uploadSecureIdFile(context: SecureIdAccessContext, postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadSecureIdFileResult, UploadSecureIdFileError> {
     return postbox.mediaBox.resourceData(resource)
     |> mapError { _ -> UploadSecureIdFileError in
         return .generic
@@ -93,7 +130,7 @@ public func uploadSecureIdFile(valueContext: SecureIdValueAccessContext, postbox
             return .fail(.generic)
         }
         
-        guard let encryptedData = encryptedSecureIdFile(valueContext: valueContext, data: data) else {
+        guard let encryptedData = encryptedSecureIdFile(context: context, data: data) else {
             return .fail(.generic)
         }
         
@@ -107,7 +144,7 @@ public func uploadSecureIdFile(valueContext: SecureIdValueAccessContext, postbox
                     return .single(.progress(value))
                 case let .inputFile(file):
                     if case let .inputFile(id, parts, _, md5Checksum) = file {
-                        return .single(.result(UploadedSecureIdFile(id: id, parts: parts, md5Checksum: md5Checksum, fileHash: encryptedData.hash)))
+                        return .single(.result(UploadedSecureIdFile(id: id, parts: parts, md5Checksum: md5Checksum, fileHash: encryptedData.hash, encryptedSecret: encryptedData.encryptedSecret, masterSecretHash: context.hash)))
                     } else {
                         return .fail(.generic)
                     }
