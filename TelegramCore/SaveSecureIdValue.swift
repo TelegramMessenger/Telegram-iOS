@@ -103,12 +103,12 @@ func decryptedSecureValueAccessContext(context: SecureIdAccessContext, encrypted
     }
     
     let valueSecretHash = sha512Digest(valueSecret)
-    var valueSecretHashValue: Int64 = 0
+    var valueSecretIdValue: Int64 = 0
     valueSecretHash.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-        memcpy(&valueSecretHashValue, bytes.advanced(by: valueSecretHash.count - 8), 8)
+        memcpy(&valueSecretIdValue, bytes.advanced(by: valueSecretHash.count - 8), 8)
     }
     
-    return SecureIdValueAccessContext(secret: valueSecret, hash: valueSecretHashValue)
+    return SecureIdValueAccessContext(secret: valueSecret, id: valueSecretIdValue)
 }
 
 func decryptedSecureValueData(context: SecureIdValueAccessContext, encryptedData: Data, decryptedDataHash: Data) -> Data? {
@@ -162,7 +162,7 @@ private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: 
                     case let .remote(file):
                         return Api.InputSecureFile.inputSecureFile(id: file.id, accessHash: file.accessHash)
                     case let .uploaded(file):
-                        return Api.InputSecureFile.inputSecureFileUploaded(id: file.id, parts: file.parts, md5Checksum: file.md5Checksum, fileHash: Buffer(data: file.fileHash), secret: Buffer(data: file.encryptedSecret), secureSecretHash: context.hash)
+                        return Api.InputSecureFile.inputSecureFileUploaded(id: file.id, parts: file.parts, md5Checksum: file.md5Checksum, fileHash: Buffer(data: file.fileHash), secret: Buffer(data: file.encryptedSecret))
                 }
             }
             
@@ -194,7 +194,7 @@ private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: 
                     case let .remote(file):
                         return Api.InputSecureFile.inputSecureFile(id: file.id, accessHash: file.accessHash)
                     case let .uploaded(file):
-                        return Api.InputSecureFile.inputSecureFileUploaded(id: file.id, parts: file.parts, md5Checksum: file.md5Checksum, fileHash: Buffer(data: file.fileHash), secret: Buffer(data: file.encryptedSecret), secureSecretHash: context.hash)
+                        return Api.InputSecureFile.inputSecureFileUploaded(id: file.id, parts: file.parts, md5Checksum: file.md5Checksum, fileHash: Buffer(data: file.fileHash), secret: Buffer(data: file.encryptedSecret))
                 }
             }
             
@@ -231,7 +231,7 @@ public func saveSecureIdValue(network: Network, context: SecureIdAccessContext, 
     guard let (inputValue, inputHash) = makeInputSecureValue(context: context, valueContext: valueContext, value: value) else {
         return .fail(.generic)
     }
-    return network.request(Api.functions.account.saveSecureValue(value: inputValue, secureSecretHash: context.hash))
+    return network.request(Api.functions.account.saveSecureValue(value: inputValue, secureSecretId: context.id))
     |> mapError { error -> SaveSecureIdValueError in
         if error.errorDescription == "PHONE_VERIFICATION_NEEDED" || error.errorDescription == "EMAIL_VERIFICATION_NEEDED" {
             return .verificationRequired

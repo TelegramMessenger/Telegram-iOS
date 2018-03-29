@@ -15,7 +15,6 @@ public struct UploadedSecureIdFile: Equatable {
     let md5Checksum: String
     let fileHash: Data
     let encryptedSecret: Data
-    let masterSecretHash: Int64
     
     public static func ==(lhs: UploadedSecureIdFile, rhs: UploadedSecureIdFile) -> Bool {
         if lhs.id != rhs.id {
@@ -31,9 +30,6 @@ public struct UploadedSecureIdFile: Equatable {
             return false
         }
         if lhs.encryptedSecret != rhs.encryptedSecret {
-            return false
-        }
-        if lhs.masterSecretHash != rhs.masterSecretHash {
             return false
         }
         return true
@@ -144,7 +140,7 @@ public func uploadSecureIdFile(context: SecureIdAccessContext, postbox: Postbox,
                     return .single(.progress(value))
                 case let .inputFile(file):
                     if case let .inputFile(id, parts, _, md5Checksum) = file {
-                        return .single(.result(UploadedSecureIdFile(id: id, parts: parts, md5Checksum: md5Checksum, fileHash: encryptedData.hash, encryptedSecret: encryptedData.encryptedSecret, masterSecretHash: context.hash)))
+                        return .single(.result(UploadedSecureIdFile(id: id, parts: parts, md5Checksum: md5Checksum, fileHash: encryptedData.hash, encryptedSecret: encryptedData.encryptedSecret)))
                     } else {
                         return .fail(.generic)
                     }

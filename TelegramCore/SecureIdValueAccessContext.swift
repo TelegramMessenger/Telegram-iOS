@@ -2,13 +2,13 @@ import Foundation
 
 public struct SecureIdValueAccessContext: Equatable {
     let secret: Data
-    let hash: Int64
+    let id: Int64
     
     public static func ==(lhs: SecureIdValueAccessContext, rhs: SecureIdValueAccessContext) -> Bool {
         if lhs.secret != rhs.secret {
             return false
         }
-        if lhs.hash != rhs.hash {
+        if lhs.id != rhs.id {
             return false
         }
         return true
@@ -16,7 +16,7 @@ public struct SecureIdValueAccessContext: Equatable {
 }
 
 public func generateSecureIdValueEmptyAccessContext() -> SecureIdValueAccessContext? {
-    return SecureIdValueAccessContext(secret: Data(), hash: 0)
+    return SecureIdValueAccessContext(secret: Data(), id: 0)
 }
 
 public func generateSecureIdValueAccessContext() -> SecureIdValueAccessContext? {
@@ -28,5 +28,5 @@ public func generateSecureIdValueAccessContext() -> SecureIdValueAccessContext? 
     secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
         memcpy(&secretHash, bytes.advanced(by: secretHashData.count - 8), 8)
     }
-    return SecureIdValueAccessContext(secret: secret, hash: secretHash)
+    return SecureIdValueAccessContext(secret: secret, id: secretHash)
 }

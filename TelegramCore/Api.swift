@@ -92,7 +92,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-292807034] = { return Api.InputChannel.parse_inputChannelEmpty($0) }
     dict[-1343524562] = { return Api.InputChannel.parse_inputChannel($0) }
     dict[98092748] = { return Api.DcOption.parse_dcOption($0) }
-    dict[1223432016] = { return Api.account.PasswordSettings.parse_passwordSettings($0) }
+    dict[2077869041] = { return Api.account.PasswordSettings.parse_passwordSettings($0) }
     dict[292985073] = { return Api.LangPackLanguage.parse_langPackLanguage($0) }
     dict[-1987579119] = { return Api.help.AppUpdate.parse_appUpdate($0) }
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
@@ -343,7 +343,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[747528674] = { return Api.SecureValueVerified.parse_secureValueVerified($0) }
     dict[-543777747] = { return Api.auth.ExportedAuthorization.parse_exportedAuthorization($0) }
     dict[-1269012015] = { return Api.messages.AffectedHistory.parse_affectedHistory($0) }
-    dict[-447502641] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
+    dict[570402317] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
     dict[649453030] = { return Api.messages.MessageEditData.parse_messageEditData($0) }
     dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
@@ -491,7 +491,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[178373535] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsApplePay($0) }
     dict[-905587442] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsAndroidPay($0) }
     dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
-    dict[-822647097] = { return Api.InputSecureFile.parse_inputSecureFileUploaded($0) }
+    dict[859091184] = { return Api.InputSecureFile.parse_inputSecureFileUploaded($0) }
     dict[1399317950] = { return Api.InputSecureFile.parse_inputSecureFile($0) }
     dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
@@ -13376,21 +13376,20 @@ public struct Api {
     }
 
     public enum InputSecureFile {
-        case inputSecureFileUploaded(id: Int64, parts: Int32, md5Checksum: String, fileHash: Buffer, secret: Buffer, secureSecretHash: Int64)
+        case inputSecureFileUploaded(id: Int64, parts: Int32, md5Checksum: String, fileHash: Buffer, secret: Buffer)
         case inputSecureFile(id: Int64, accessHash: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputSecureFileUploaded(let id, let parts, let md5Checksum, let fileHash, let secret, let secureSecretHash):
+                case .inputSecureFileUploaded(let id, let parts, let md5Checksum, let fileHash, let secret):
                     if boxed {
-                        buffer.appendInt32(-822647097)
+                        buffer.appendInt32(859091184)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt32(parts, buffer: buffer, boxed: false)
                     serializeString(md5Checksum, buffer: buffer, boxed: false)
                     serializeBytes(fileHash, buffer: buffer, boxed: false)
                     serializeBytes(secret, buffer: buffer, boxed: false)
-                    serializeInt64(secureSecretHash, buffer: buffer, boxed: false)
                     break
                 case .inputSecureFile(let id, let accessHash):
                     if boxed {
@@ -13412,16 +13411,13 @@ public struct Api {
             _4 = parseBytes(reader)
             var _5: Buffer?
             _5 = parseBytes(reader)
-            var _6: Int64?
-            _6 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.InputSecureFile.inputSecureFileUploaded(id: _1!, parts: _2!, md5Checksum: _3!, fileHash: _4!, secret: _5!, secureSecretHash: _6!)
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.InputSecureFile.inputSecureFileUploaded(id: _1!, parts: _2!, md5Checksum: _3!, fileHash: _4!, secret: _5!)
             }
             else {
                 return nil
@@ -18935,18 +18931,18 @@ public struct Api {
         }
     
         public enum PasswordSettings {
-            case passwordSettings(email: String, secureSalt: Buffer, secureSecret: Buffer, secureSecretHash: Int64)
+            case passwordSettings(email: String, secureSalt: Buffer, secureSecret: Buffer, secureSecretId: Int64)
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
-                    case .passwordSettings(let email, let secureSalt, let secureSecret, let secureSecretHash):
+                    case .passwordSettings(let email, let secureSalt, let secureSecret, let secureSecretId):
                         if boxed {
-                            buffer.appendInt32(1223432016)
+                            buffer.appendInt32(2077869041)
                         }
                         serializeString(email, buffer: buffer, boxed: false)
                         serializeBytes(secureSalt, buffer: buffer, boxed: false)
                         serializeBytes(secureSecret, buffer: buffer, boxed: false)
-                        serializeInt64(secureSecretHash, buffer: buffer, boxed: false)
+                        serializeInt64(secureSecretId, buffer: buffer, boxed: false)
                         break
         }
         }
@@ -18964,7 +18960,7 @@ public struct Api {
                 let _c3 = _3 != nil
                 let _c4 = _4 != nil
                 if _c1 && _c2 && _c3 && _c4 {
-                    return Api.account.PasswordSettings.passwordSettings(email: _1!, secureSalt: _2!, secureSecret: _3!, secureSecretHash: _4!)
+                    return Api.account.PasswordSettings.passwordSettings(email: _1!, secureSalt: _2!, secureSecret: _3!, secureSecretId: _4!)
                 }
                 else {
                     return nil
@@ -18975,13 +18971,13 @@ public struct Api {
         }
     
         public enum PasswordInputSettings {
-            case passwordInputSettings(flags: Int32, newSalt: Buffer?, newPasswordHash: Buffer?, hint: String?, email: String?, newSecureSalt: Buffer?, newSecureSecret: Buffer?, newSecureSecretHash: Int64?)
+            case passwordInputSettings(flags: Int32, newSalt: Buffer?, newPasswordHash: Buffer?, hint: String?, email: String?, newSecureSalt: Buffer?, newSecureSecret: Buffer?, newSecureSecretId: Int64?)
         
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
         switch self {
-                    case .passwordInputSettings(let flags, let newSalt, let newPasswordHash, let hint, let email, let newSecureSalt, let newSecureSecret, let newSecureSecretHash):
+                    case .passwordInputSettings(let flags, let newSalt, let newPasswordHash, let hint, let email, let newSecureSalt, let newSecureSecret, let newSecureSecretId):
                         if boxed {
-                            buffer.appendInt32(-447502641)
+                            buffer.appendInt32(570402317)
                         }
                         serializeInt32(flags, buffer: buffer, boxed: false)
                         if Int(flags) & Int(1 << 0) != 0 {serializeBytes(newSalt!, buffer: buffer, boxed: false)}
@@ -18990,7 +18986,7 @@ public struct Api {
                         if Int(flags) & Int(1 << 1) != 0 {serializeString(email!, buffer: buffer, boxed: false)}
                         if Int(flags) & Int(1 << 2) != 0 {serializeBytes(newSecureSalt!, buffer: buffer, boxed: false)}
                         if Int(flags) & Int(1 << 2) != 0 {serializeBytes(newSecureSecret!, buffer: buffer, boxed: false)}
-                        if Int(flags) & Int(1 << 2) != 0 {serializeInt64(newSecureSecretHash!, buffer: buffer, boxed: false)}
+                        if Int(flags) & Int(1 << 2) != 0 {serializeInt64(newSecureSecretId!, buffer: buffer, boxed: false)}
                         break
         }
         }
@@ -19020,7 +19016,7 @@ public struct Api {
                 let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
                 let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
                 if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                    return Api.account.PasswordInputSettings.passwordInputSettings(flags: _1!, newSalt: _2, newPasswordHash: _3, hint: _4, email: _5, newSecureSalt: _6, newSecureSecret: _7, newSecureSecretHash: _8)
+                    return Api.account.PasswordInputSettings.passwordInputSettings(flags: _1!, newSalt: _2, newPasswordHash: _3, hint: _4, email: _5, newSecureSalt: _6, newSecureSecret: _7, newSecureSecretId: _8)
                 }
                 else {
                     return nil
@@ -23132,12 +23128,12 @@ public struct Api {
                     })
                 }
             
-                public static func saveSecureValue(value: Api.InputSecureValue, secureSecretHash: Int64) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.SecureValueSaved?) {
+                public static func saveSecureValue(value: Api.InputSecureValue, secureSecretId: Int64) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.SecureValueSaved?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-2077861467)
+                    buffer.appendInt32(2023136523)
                     value.serialize(buffer, true)
-                    serializeInt64(secureSecretHash, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(account.saveSecureValue value: \(value), secureSecretHash: \(secureSecretHash))"}), buffer, { (buffer: Buffer) -> Api.SecureValueSaved? in
+                    serializeInt64(secureSecretId, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(account.saveSecureValue value: \(value), secureSecretId: \(secureSecretId))"}), buffer, { (buffer: Buffer) -> Api.SecureValueSaved? in
                         let reader = BufferReader(buffer)
                         var result: Api.SecureValueSaved?
                         if let signature = reader.readInt32() {

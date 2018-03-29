@@ -62,7 +62,7 @@ func verifySecureSecret(_ data: Data) -> Bool {
     return true
 }
 
-func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Data, hash: Int64) -> Data? {
+func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Data, id: Int64) -> Data? {
     guard let passwordData = password.data(using: .utf8) else {
         return nil
     }
@@ -97,23 +97,23 @@ func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Da
     }
     
     let secretHashData = sha256Digest(decryptedSecret)
-    var secretHash: Int64 = 0
+    var secretId: Int64 = 0
     secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-        memcpy(&secretHash, bytes.advanced(by: secretHashData.count - 8), 8)
+        memcpy(&secretId, bytes.advanced(by: secretHashData.count - 8), 8)
     }
     
-    if secretHash != hash {
+    if secretId != id {
         return nil
     }
     
     return decryptedSecret
 }
 
-func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) -> (data: Data, salt: Data, hash: Int64)? {
+func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) -> (data: Data, salt: Data, id: Int64)? {
     let secretHashData = sha256Digest(secretData)
-    var secretHash: Int64 = 0
+    var secretId: Int64 = 0
     secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-        memcpy(&secretHash, bytes.advanced(by: secretHashData.count - 8), 8)
+        memcpy(&secretId, bytes.advanced(by: secretHashData.count - 8), 8)
     }
     
     guard let passwordData = password.data(using: .utf8) else {
@@ -156,11 +156,11 @@ func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) 
         return nil
     }
     
-    if decryptedSecureSecret(encryptedSecretData: encryptedSecret, password: password, salt: secretSalt, hash: secretHash) != secretData {
+    if decryptedSecureSecret(encryptedSecretData: encryptedSecret, password: password, salt: secretSalt, id: secretId) != secretData {
         return nil
     }
     
-    return (encryptedSecret, secretSalt, secretHash)
+    return (encryptedSecret, secretSalt, secretId)
 }
 
 func generateSecureSecretData() -> Data? {
@@ -217,7 +217,7 @@ private func generateSecureSecret(network: Network, password: String) -> Signal<
 
 public struct SecureIdAccessContext {
     let secret: Data
-    let hash: Int64
+    let id: Int64
 }
 
 public enum SecureIdAccessError {
@@ -233,8 +233,8 @@ public func accessSecureId(network: Network, password: String) -> Signal<SecureI
     }
     |> mapToSignal { settings -> Signal<SecureIdAccessContext, SecureIdAccessError> in
         if let secureSecret = settings.secureSecret {
-            if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: secureSecret.data, password: password, salt: secureSecret.salt, hash: secureSecret.hash) {
-                return .single(SecureIdAccessContext(secret: decryptedSecret, hash: secureSecret.hash))
+            if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: secureSecret.data, password: password, salt: secureSecret.salt, id: secureSecret.id) {
+                return .single(SecureIdAccessContext(secret: decryptedSecret, id: secureSecret.id))
             } else {
                 return .fail(.secretPasswordMismatch)
             }
@@ -245,11 +245,11 @@ public func accessSecureId(network: Network, password: String) -> Signal<SecureI
             }
             |> map { decryptedSecret in
                 let secretHashData = sha256Digest(decryptedSecret)
-                var secretHash: Int64 = 0
+                var secretId: Int64 = 0
                 secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-                    memcpy(&secretHash, bytes.advanced(by: secretHashData.count - 8), 8)
+                    memcpy(&secretId, bytes.advanced(by: secretHashData.count - 8), 8)
                 }
-                return SecureIdAccessContext(secret: decryptedSecret, hash: secretHash)
+                return SecureIdAccessContext(secret: decryptedSecret, id: secretId)
             }
         }
     }

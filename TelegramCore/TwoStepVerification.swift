@@ -30,7 +30,7 @@ public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStep
 public struct TwoStepVerificationSecureSecret {
     public let data: Data
     public let salt: Data
-    public let hash: Int64
+    public let id: Int64
 }
 
 public struct TwoStepVerificationSettings {
@@ -62,13 +62,13 @@ public func requestTwoStepVerifiationSettings(network: Network, password: String
                 }
                 |> mapToSignal { result -> Signal<TwoStepVerificationSettings, AuthorizationPasswordVerificationError> in
                     switch result {
-                        case let .passwordSettings(email, secureSalt, secureSecret, secureSecretHash):
+                    case let .passwordSettings(email, secureSalt, secureSecret, secureSecretId):
                             var parsedSecureSecret: TwoStepVerificationSecureSecret?
                             if secureSalt.size != 0 && secureSecret.size != 0 {
                                 if secureSecret.size != 32 {
                                     return .fail(.generic)
                                 }
-                                parsedSecureSecret = TwoStepVerificationSecureSecret(data: secureSecret.makeData(), salt: secureSalt.makeData(), hash: secureSecretHash)
+                                parsedSecureSecret = TwoStepVerificationSecureSecret(data: secureSecret.makeData(), salt: secureSalt.makeData(), id: secureSecretId)
                             }
                             return .single(TwoStepVerificationSettings(email: email, secureSecret: parsedSecureSecret))
                     }
@@ -130,7 +130,7 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                         flags |= (1 << 0)
                     }
                     
-                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSalt: nil, newSecureSecret: nil, newSecureSecretHash: nil)), automaticFloodWait: false)
+                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSalt: nil, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: false)
                         |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
                             return .generic
                         }
@@ -159,9 +159,9 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                     var updatedSecureSecret: TwoStepVerificationSecureSecret?
                     if let encryptedSecret = secureSecret {
                         flags |= 1 << 2
-                        if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: encryptedSecret.data, password: currentPassword ?? "", salt: encryptedSecret.salt, hash: encryptedSecret.hash) {
-                            if let (data, salt, hash) = encryptedSecureSecret(secretData: decryptedSecret, password: password, inputSalt: authData.nextSecureSalt) {
-                                updatedSecureSecret = TwoStepVerificationSecureSecret(data: data, salt: salt, hash: hash)
+                        if let decryptedSecret = decryptedSecureSecret(encryptedSecretData: encryptedSecret.data, password: currentPassword ?? "", salt: encryptedSecret.salt, id: encryptedSecret.id) {
+                            if let (data, salt, id) = encryptedSecureSecret(secretData: decryptedSecret, password: password, inputSalt: authData.nextSecureSalt) {
+                                updatedSecureSecret = TwoStepVerificationSecureSecret(data: data, salt: salt, id: id)
                             } else {
                                 return .fail(.generic)
                             }
@@ -171,7 +171,7 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                     }
                     
                     let updatedPasswordHash = sha256Digest(updatedData)
-                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: Buffer(data: nextSalt), newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email, newSecureSalt: (updatedSecureSecret?.salt).flatMap(Buffer.init), newSecureSecret: (updatedSecureSecret?.data).flatMap(Buffer.init), newSecureSecretHash: updatedSecureSecret?.hash)), automaticFloodWait: false)
+                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: Buffer(data: nextSalt), newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email, newSecureSalt: (updatedSecureSecret?.salt).flatMap(Buffer.init), newSecureSecret: (updatedSecureSecret?.data).flatMap(Buffer.init), newSecureSecretId: updatedSecureSecret?.id)), automaticFloodWait: false)
                         |> map { _ -> UpdateTwoStepVerificationPasswordResult in
                             return .password(password: password, pendingEmailPattern: nil)
                         }
@@ -224,12 +224,12 @@ func updateTwoStepVerificationSecureSecret(network: Network, password: String, s
             data.append(currentSalt)
             let currentPasswordHash = Buffer(data: sha256Digest(data))
             
-            guard let (encryptedSecret, secretSalt, secretHash) = encryptedSecureSecret(secretData: secret, password: password, inputSalt: authData.nextSecureSalt) else {
+            guard let (encryptedSecret, secretSalt, secretId) = encryptedSecureSecret(secretData: secret, password: password, inputSalt: authData.nextSecureSalt) else {
                 return .fail(.generic)
             }
             
             let flags: Int32 = (1 << 2)
-            return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSalt: Buffer(data: secretSalt), newSecureSecret: Buffer(data: encryptedSecret), newSecureSecretHash: secretHash)), automaticFloodWait: false)
+            return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSalt: Buffer(data: secretSalt), newSecureSecret: Buffer(data: encryptedSecret), newSecureSecretId: secretId)), automaticFloodWait: false)
             |> mapError { _ -> UpdateTwoStepVerificationSecureSecretError in
                 return .generic
             }
@@ -257,7 +257,7 @@ public func updateTwoStepVerificationEmail(account: Account, currentPassword: St
             }
 
             let flags: Int32 = 1 << 1
-            return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: updatedEmail, newSecureSalt: nil, newSecureSecret: nil, newSecureSecretHash: nil)), automaticFloodWait: false)
+            return account.network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: nil, newPasswordHash: nil, hint: nil, email: updatedEmail, newSecureSalt: nil, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: false)
                 |> map { _ -> UpdateTwoStepVerificationPasswordResult in
                     return .password(password: currentPassword, pendingEmailPattern: nil)
                 }

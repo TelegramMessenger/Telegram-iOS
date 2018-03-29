@@ -81,7 +81,7 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
             if sha256Digest(phoneData) != hash.makeData() {
                 return nil
             }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .phone(SecureIdPhoneValue(phone: phone)), context: SecureIdValueAccessContext(secret: Data(), hash: 0), encryptedMetadata: nil), hash: hash.makeData())
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .phone(SecureIdPhoneValue(phone: phone)), context: SecureIdValueAccessContext(secret: Data(), id: 0), encryptedMetadata: nil), hash: hash.makeData())
         case let .secureValueEmail(_, email, hash, verified):
             guard let emailData = email.data(using: .utf8) else {
                 return nil
@@ -89,7 +89,7 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
             if sha256Digest(emailData) != hash.makeData() {
                 return nil
             }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .email(SecureIdEmailValue(email: email)), context: SecureIdValueAccessContext(secret: Data(), hash: 0), encryptedMetadata: nil), hash: hash.makeData())
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .email(SecureIdEmailValue(email: email)), context: SecureIdValueAccessContext(secret: Data(), id: 0), encryptedMetadata: nil), hash: hash.makeData())
     }
 }
 

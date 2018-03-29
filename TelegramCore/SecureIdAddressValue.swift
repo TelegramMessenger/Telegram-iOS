@@ -103,10 +103,10 @@ extension SecureIdAddressValue {
         guard let region = dict["region"] as? String else {
             return nil
         }
-        guard let countryCode = dict["country_code"] as? String else {
+        guard let countryCode = dict["country_iso2"] as? String else {
             return nil
         }
-        guard let postcode = dict["postcode"] as? String else {
+        guard let postcode = dict["post_code"] as? String else {
             return nil
         }
         
@@ -124,7 +124,7 @@ extension SecureIdAddressValue {
         }
         dict["city"] = self.city
         dict["region"] = self.region
-        dict["country_code"] = self.countryCode
+        dict["country_iso2"] = self.countryCode
         dict["postcode"] = self.postcode
         
         guard let data = try? JSONSerialization.data(withJSONObject: dict, options: []) else {
