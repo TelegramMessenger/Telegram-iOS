@@ -125,7 +125,7 @@ extension SecureIdAddressValue {
         dict["city"] = self.city
         dict["region"] = self.region
         dict["country_iso2"] = self.countryCode
-        dict["postcode"] = self.postcode
+        dict["post_code"] = self.postcode
         
         guard let data = try? JSONSerialization.data(withJSONObject: dict, options: []) else {
             return nil
