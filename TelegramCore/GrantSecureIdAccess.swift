@@ -9,7 +9,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-private func generateCredentials(values: [SecureIdValueWithContext]) -> Data? {
+private func generateCredentials(values: [SecureIdValueWithContext], opaquePayload: Data) -> Data? {
     var dict: [String: Any] = [:]
     for value in values {
         switch value.value {
@@ -50,6 +50,10 @@ private func generateCredentials(values: [SecureIdValueWithContext]) -> Data? {
         }
     }
     
+    if !opaquePayload.isEmpty, let opaquePayload = String(data: opaquePayload, encoding: .utf8) {
+        dict["payload"] = opaquePayload
+    }
+    
     guard let data = try? JSONSerialization.data(withJSONObject: dict, options: []) else {
         return nil
     }
@@ -71,16 +75,54 @@ private func encryptedCredentialsData(data: Data, secretData: Data) -> (data: Da
 
 private func valueHash(_ value: SecureIdValueWithContext) -> Api.SecureValueHash? {
     switch value.value {
-        case .identity:
+        case let .identity(identity):
             guard let encryptedMetadata = value.encryptedMetadata else {
                 return nil
             }
-            return .secureValueHash(type: .secureValueTypeIdentity, hash: Buffer(data: encryptedMetadata.hash))
-        case .address:
+            guard let files = identity.serialize()?.1 else {
+                return nil
+            }
+            
+            var hashData = Data()
+            hashData.append(encryptedMetadata.valueDataHash)
+            hashData.append(encryptedMetadata.encryptedSecret)
+            for file in files {
+                switch file {
+                    case let .remote(file):
+                        hashData.append(file.fileHash)
+                        hashData.append(file.encryptedSecret)
+                    case let .uploaded(file):
+                        hashData.append(file.fileHash)
+                        hashData.append(file.encryptedSecret)
+                }
+            }
+            let hash = sha256Digest(hashData)
+            
+            return .secureValueHash(type: .secureValueTypeIdentity, hash: Buffer(data: hash))
+        case let .address(address):
             guard let encryptedMetadata = value.encryptedMetadata else {
                 return nil
             }
-            return .secureValueHash(type: .secureValueTypeAddress, hash: Buffer(data: encryptedMetadata.hash))
+            guard let files = address.serialize()?.1 else {
+                return nil
+            }
+            
+            var hashData = Data()
+            hashData.append(encryptedMetadata.valueDataHash)
+            hashData.append(encryptedMetadata.encryptedSecret)
+            for file in files {
+                switch file {
+                    case let .remote(file):
+                        hashData.append(file.fileHash)
+                        hashData.append(file.encryptedSecret)
+                    case let .uploaded(file):
+                        hashData.append(file.fileHash)
+                        hashData.append(file.encryptedSecret)
+                }
+            }
+            let hash = sha256Digest(hashData)
+            
+            return .secureValueHash(type: .secureValueTypeAddress, hash: Buffer(data: hash))
         case let .phone(phone):
             guard let phoneData = phone.phone.data(using: .utf8) else {
                 return nil
@@ -105,7 +147,7 @@ public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: Str
     guard let credentialsSecretData = generateSecureSecretData() else {
         return .fail(.generic)
     }
-    guard let credentialsData = generateCredentials(values: values) else {
+    guard let credentialsData = generateCredentials(values: values, opaquePayload: opaquePayload) else {
         return .fail(.generic)
     }
     guard let (encryptedCredentialsData, decryptedCredentialsHash) = encryptedCredentialsData(data: credentialsData, secretData: credentialsSecretData) else {
@@ -123,7 +165,7 @@ public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: Str
         valueHashes.append(hash)
     }
     
-    return network.request(Api.functions.account.acceptAuthorization(botId: peerId.id, scope: scope, publicKey: publicKey, valueHashes: valueHashes, credentials: .secureCredentialsEncrypted(data: Buffer(data: encryptedCredentialsData), hash: Buffer(data: decryptedCredentialsHash), secret: Buffer(data: encryptedSecretData)), payload: Buffer(data: opaquePayload)))
+    return network.request(Api.functions.account.acceptAuthorization(botId: peerId.id, scope: scope, publicKey: publicKey, valueHashes: valueHashes, credentials: .secureCredentialsEncrypted(data: Buffer(data: encryptedCredentialsData), hash: Buffer(data: decryptedCredentialsHash), secret: Buffer(data: encryptedSecretData))))
     |> mapError { _ -> GrantSecureIdAccessError in
         return .generic
     }

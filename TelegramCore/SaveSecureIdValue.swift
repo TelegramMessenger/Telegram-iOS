@@ -126,7 +126,7 @@ func decryptedSecureValueData(context: SecureIdValueAccessContext, encryptedData
     return unpaddedValueData
 }
 
-private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: SecureIdValueAccessContext, value: SecureIdValue) -> (Api.InputSecureValue, Data)? {
+private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: SecureIdValueAccessContext, value: SecureIdValue) -> Api.InputSecureValue? {
     switch value {
         case .identity:
             guard let (decryptedData, fileReferences) = value.serialize() else {
@@ -159,7 +159,7 @@ private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: 
                 }
             }
             
-            return (Api.InputSecureValue.inputSecureValueIdentity(data: Api.SecureData.secureData(data: Buffer(data: encryptedData.data), dataHash: Buffer(data: encryptedData.dataHash), secret: Buffer(data: encryptedData.encryptedSecret)), files: files, hash: Buffer(data: encryptedData.hash)), encryptedData.hash)
+            return Api.InputSecureValue.inputSecureValueIdentity(data: Api.SecureData.secureData(data: Buffer(data: encryptedData.data), dataHash: Buffer(data: encryptedData.dataHash), secret: Buffer(data: encryptedData.encryptedSecret)), files: files)
         case .address:
             guard let (decryptedData, fileReferences) = value.serialize() else {
                 return nil
@@ -191,19 +191,11 @@ private func makeInputSecureValue(context: SecureIdAccessContext, valueContext: 
                 }
             }
             
-            return (Api.InputSecureValue.inputSecureValueAddress(data: Api.SecureData.secureData(data: Buffer(data: encryptedData.data), dataHash: Buffer(data: encryptedData.dataHash), secret: Buffer(data: encryptedData.encryptedSecret)), files: files, hash: Buffer(data: encryptedData.hash)), encryptedData.hash)
+            return Api.InputSecureValue.inputSecureValueAddress(data: Api.SecureData.secureData(data: Buffer(data: encryptedData.data), dataHash: Buffer(data: encryptedData.dataHash), secret: Buffer(data: encryptedData.encryptedSecret)), files: files)
         case let .phone(value):
-            guard let phoneData = value.phone.data(using: .utf8) else {
-                return nil
-            }
-            let hash = sha256Digest(phoneData)
-            return (Api.InputSecureValue.inputSecureValuePhone(phone: value.phone, hash: Buffer(data: hash)), hash)
+            return Api.InputSecureValue.inputSecureValuePhone(phone: value.phone)
         case let .email(value):
-            guard let emailData = value.email.data(using: .utf8) else {
-                return nil
-            }
-            let hash = sha256Digest(emailData)
-            return (Api.InputSecureValue.inputSecureValueEmail(email: value.email, hash: Buffer(data: hash)), hash)
+            return Api.InputSecureValue.inputSecureValueEmail(email: value.email)
     }
 }
 
@@ -221,7 +213,7 @@ private func inputSecureValueType(_ value: SecureIdValue) -> Api.SecureValueType
 }
 
 public func saveSecureIdValue(network: Network, context: SecureIdAccessContext, valueContext: SecureIdValueAccessContext, value: SecureIdValue) -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> {
-    guard let (inputValue, inputHash) = makeInputSecureValue(context: context, valueContext: valueContext, value: value) else {
+    guard let inputValue = makeInputSecureValue(context: context, valueContext: valueContext, value: value) else {
         return .fail(.generic)
     }
     return network.request(Api.functions.account.saveSecureValue(value: inputValue, secureSecretId: context.id))
@@ -244,9 +236,6 @@ public func saveSecureIdValue(network: Network, context: SecureIdAccessContext, 
                 return .fail(.generic)
             }
             guard parsedValue.valueWithContext.context == valueContext else {
-                return .fail(.generic)
-            }
-            if parsedValue.hash != inputHash {
                 return .fail(.generic)
             }
             

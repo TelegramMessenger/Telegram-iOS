@@ -51,7 +51,7 @@ struct SecureIdEncryptedValueMetadata: Equatable {
     let valueDataHash: Data
     let fileHashes: [Data]
     let valueSecret: Data
-    let hash: Data
+    let encryptedSecret: Data
     
     static func ==(lhs: SecureIdEncryptedValueMetadata, rhs: SecureIdEncryptedValueMetadata) -> Bool {
         if lhs.valueDataHash != rhs.valueDataHash {
@@ -63,7 +63,7 @@ struct SecureIdEncryptedValueMetadata: Equatable {
         if lhs.valueSecret != rhs.valueSecret {
             return false
         }
-        if lhs.hash != rhs.hash {
+        if lhs.encryptedSecret != rhs.encryptedSecret {
             return false
         }
         return true

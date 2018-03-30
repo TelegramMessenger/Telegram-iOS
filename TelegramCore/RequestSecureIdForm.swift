@@ -35,12 +35,11 @@ private func parseSecureData(_ value: Api.SecureData) -> (data: Data, hash: Data
 
 struct ParsedSecureValue {
     let valueWithContext: SecureIdValueWithContext
-    let hash: Data
 }
 
 func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) -> ParsedSecureValue? {
     switch value {
-        case let .secureValueIdentity(_, data, files, hash, verified):
+        case let .secureValueIdentity(_, data, files, verified):
             let (encryptedData, decryptedHash, encryptedSecret) = parseSecureData(data)
             guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedSecret, decryptedDataHash: decryptedHash) else {
                 return nil
@@ -56,8 +55,8 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
             guard let value = SecureIdIdentityValue(data: decryptedData, fileReferences: parsedFiles) else {
                 return nil
             }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .identity(value), context: valueContext, encryptedMetadata: SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, fileHashes: parsedFileHashes, valueSecret: valueContext.secret, hash: hash.makeData())), hash: hash.makeData())
-        case let .secureValueAddress(_, data, files, hash, verified):
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .identity(value), context: valueContext, encryptedMetadata: SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, fileHashes: parsedFileHashes, valueSecret: valueContext.secret, encryptedSecret: encryptedSecret)))
+        case let .secureValueAddress(_, data, files, verified):
             let (encryptedData, decryptedHash, encryptedSecret) = parseSecureData(data)
             guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedSecret, decryptedDataHash: decryptedHash) else {
                 return nil
@@ -73,23 +72,17 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
             guard let value = SecureIdAddressValue(data: decryptedData, fileReferences: parsedFiles) else {
                 return nil
             }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .address(value), context: valueContext, encryptedMetadata: SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, fileHashes: parsedFileHashes, valueSecret: valueContext.secret, hash: hash.makeData())), hash: hash.makeData())
-        case let .secureValuePhone(_, phone, hash, verified):
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .address(value), context: valueContext, encryptedMetadata: SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, fileHashes: parsedFileHashes, valueSecret: valueContext.secret, encryptedSecret: encryptedSecret)))
+        case let .secureValuePhone(_, phone, verified):
             guard let phoneData = phone.data(using: .utf8) else {
                 return nil
             }
-            if sha256Digest(phoneData) != hash.makeData() {
-                return nil
-            }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .phone(SecureIdPhoneValue(phone: phone)), context: SecureIdValueAccessContext(secret: Data(), id: 0), encryptedMetadata: nil), hash: hash.makeData())
-        case let .secureValueEmail(_, email, hash, verified):
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .phone(SecureIdPhoneValue(phone: phone)), context: SecureIdValueAccessContext(secret: Data(), id: 0), encryptedMetadata: nil))
+        case let .secureValueEmail(_, email, verified):
             guard let emailData = email.data(using: .utf8) else {
                 return nil
             }
-            if sha256Digest(emailData) != hash.makeData() {
-                return nil
-            }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .email(SecureIdEmailValue(email: email)), context: SecureIdValueAccessContext(secret: Data(), id: 0), encryptedMetadata: nil), hash: hash.makeData())
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .email(SecureIdEmailValue(email: email)), context: SecureIdValueAccessContext(secret: Data(), id: 0), encryptedMetadata: nil))
     }
 }
 

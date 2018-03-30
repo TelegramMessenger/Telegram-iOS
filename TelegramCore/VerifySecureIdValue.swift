@@ -12,6 +12,7 @@ import Foundation
 public enum SecureIdPreparePhoneVerificationError {
     case generic
     case flood
+    case occupied
 }
 
 public struct SecureIdPreparePhoneVerificationPayload {
@@ -27,6 +28,8 @@ public func secureIdPreparePhoneVerification(network: Network, value: SecureIdPh
     |> mapError { error -> SecureIdPreparePhoneVerificationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .flood
+        } else if error.errorDescription == "PHONE_NUMBER_OCCUPIED" {
+            return .occupied
         }
         return .generic
     }
@@ -41,18 +44,25 @@ public func secureIdPreparePhoneVerification(network: Network, value: SecureIdPh
 public enum SecureIdCommitPhoneVerificationError {
     case generic
     case flood
+    case invalid
 }
 
-public func secureIdCommitPhoneVerification(network: Network, payload: SecureIdPreparePhoneVerificationPayload, code: String) -> Signal<Void, SecureIdCommitPhoneVerificationError> {
+public func secureIdCommitPhoneVerification(network: Network, context: SecureIdAccessContext, payload: SecureIdPreparePhoneVerificationPayload, code: String) -> Signal<SecureIdValueWithContext, SecureIdCommitPhoneVerificationError> {
     return network.request(Api.functions.account.verifyPhone(phoneNumber: payload.phone, phoneCodeHash: payload.phoneCodeHash, phoneCode: code))
     |> mapError { error -> SecureIdCommitPhoneVerificationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .flood
+        } else if error.errorDescription == "PHONE_CODE_INVALID" {
+            return .invalid
         }
+        
         return .generic
     }
-    |> mapToSignal { _ -> Signal<Void, SecureIdCommitPhoneVerificationError> in
-        return .complete()
+    |> mapToSignal { _ -> Signal<SecureIdValueWithContext, SecureIdCommitPhoneVerificationError> in
+        return saveSecureIdValue(network: network, context: context, valueContext: generateSecureIdValueEmptyAccessContext()!, value: .phone(SecureIdPhoneValue(phone: payload.phone)))
+        |> mapError { _ -> SecureIdCommitPhoneVerificationError in
+            return .generic
+        }
     }
 }
 

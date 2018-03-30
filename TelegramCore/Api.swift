@@ -347,10 +347,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[649453030] = { return Api.messages.MessageEditData.parse_messageEditData($0) }
     dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
-    dict[234435588] = { return Api.InputSecureValue.parse_inputSecureValueIdentity($0) }
-    dict[89691394] = { return Api.InputSecureValue.parse_inputSecureValueAddress($0) }
-    dict[337510584] = { return Api.InputSecureValue.parse_inputSecureValuePhone($0) }
-    dict[767646618] = { return Api.InputSecureValue.parse_inputSecureValueEmail($0) }
+    dict[156214875] = { return Api.InputSecureValue.parse_inputSecureValueIdentity($0) }
+    dict[-1771531435] = { return Api.InputSecureValue.parse_inputSecureValueAddress($0) }
+    dict[-1654506090] = { return Api.InputSecureValue.parse_inputSecureValuePhone($0) }
+    dict[-1635232935] = { return Api.InputSecureValue.parse_inputSecureValueEmail($0) }
     dict[-313079300] = { return Api.account.WebAuthorizations.parse_webAuthorizations($0) }
     dict[-236044656] = { return Api.help.TermsOfService.parse_termsOfService($0) }
     dict[1490799288] = { return Api.ReportReason.parse_inputReportReasonSpam($0) }
@@ -381,10 +381,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1493171408] = { return Api.HighScore.parse_highScore($0) }
     dict[-305282981] = { return Api.TopPeer.parse_topPeer($0) }
     dict[986597452] = { return Api.contacts.Link.parse_link($0) }
-    dict[1211694980] = { return Api.SecureValue.parse_secureValueIdentity($0) }
-    dict[731868143] = { return Api.SecureValue.parse_secureValueAddress($0) }
-    dict[-1580563202] = { return Api.SecureValue.parse_secureValuePhone($0) }
-    dict[-992254599] = { return Api.SecureValue.parse_secureValueEmail($0) }
+    dict[368997026] = { return Api.SecureValue.parse_secureValueIdentity($0) }
+    dict[-2012177543] = { return Api.SecureValue.parse_secureValueAddress($0) }
+    dict[-476811073] = { return Api.SecureValue.parse_secureValuePhone($0) }
+    dict[903349453] = { return Api.SecureValue.parse_secureValueEmail($0) }
     dict[-316748368] = { return Api.SecureValueHash.parse_secureValueHash($0) }
     dict[1444661369] = { return Api.ContactBlocked.parse_contactBlocked($0) }
     dict[-2128698738] = { return Api.auth.CheckedPhone.parse_checkedPhone($0) }
@@ -595,7 +595,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1200788123] = { return Api.MessageAction.parse_messageActionScreenshotTaken($0) }
     dict[-85549226] = { return Api.MessageAction.parse_messageActionCustomAction($0) }
     dict[-1410748418] = { return Api.MessageAction.parse_messageActionBotAllowed($0) }
-    dict[163352260] = { return Api.MessageAction.parse_messageActionSecureValuesSentMe($0) }
+    dict[455635795] = { return Api.MessageAction.parse_messageActionSecureValuesSentMe($0) }
     dict[-648257196] = { return Api.MessageAction.parse_messageActionSecureValuesSent($0) }
     dict[1399245077] = { return Api.PhoneCall.parse_phoneCallEmpty($0) }
     dict[462375633] = { return Api.PhoneCall.parse_phoneCallWaiting($0) }
@@ -9724,16 +9724,16 @@ public struct Api {
     }
 
     public enum InputSecureValue {
-        case inputSecureValueIdentity(data: Api.SecureData, files: [Api.InputSecureFile], hash: Buffer)
-        case inputSecureValueAddress(data: Api.SecureData, files: [Api.InputSecureFile], hash: Buffer)
-        case inputSecureValuePhone(phone: String, hash: Buffer)
-        case inputSecureValueEmail(email: String, hash: Buffer)
+        case inputSecureValueIdentity(data: Api.SecureData, files: [Api.InputSecureFile])
+        case inputSecureValueAddress(data: Api.SecureData, files: [Api.InputSecureFile])
+        case inputSecureValuePhone(phone: String)
+        case inputSecureValueEmail(email: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputSecureValueIdentity(let data, let files, let hash):
+                case .inputSecureValueIdentity(let data, let files):
                     if boxed {
-                        buffer.appendInt32(234435588)
+                        buffer.appendInt32(156214875)
                     }
                     data.serialize(buffer, true)
                     buffer.appendInt32(481674261)
@@ -9741,11 +9741,10 @@ public struct Api {
                     for item in files {
                         item.serialize(buffer, true)
                     }
-                    serializeBytes(hash, buffer: buffer, boxed: false)
                     break
-                case .inputSecureValueAddress(let data, let files, let hash):
+                case .inputSecureValueAddress(let data, let files):
                     if boxed {
-                        buffer.appendInt32(89691394)
+                        buffer.appendInt32(-1771531435)
                     }
                     data.serialize(buffer, true)
                     buffer.appendInt32(481674261)
@@ -9753,21 +9752,18 @@ public struct Api {
                     for item in files {
                         item.serialize(buffer, true)
                     }
-                    serializeBytes(hash, buffer: buffer, boxed: false)
                     break
-                case .inputSecureValuePhone(let phone, let hash):
+                case .inputSecureValuePhone(let phone):
                     if boxed {
-                        buffer.appendInt32(337510584)
+                        buffer.appendInt32(-1654506090)
                     }
                     serializeString(phone, buffer: buffer, boxed: false)
-                    serializeBytes(hash, buffer: buffer, boxed: false)
                     break
-                case .inputSecureValueEmail(let email, let hash):
+                case .inputSecureValueEmail(let email):
                     if boxed {
-                        buffer.appendInt32(767646618)
+                        buffer.appendInt32(-1635232935)
                     }
                     serializeString(email, buffer: buffer, boxed: false)
-                    serializeBytes(hash, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -9780,13 +9776,10 @@ public struct Api {
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputSecureFile.self)
             }
-            var _3: Buffer?
-            _3 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputSecureValue.inputSecureValueIdentity(data: _1!, files: _2!, hash: _3!)
+            if _c1 && _c2 {
+                return Api.InputSecureValue.inputSecureValueIdentity(data: _1!, files: _2!)
             }
             else {
                 return nil
@@ -9801,13 +9794,10 @@ public struct Api {
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputSecureFile.self)
             }
-            var _3: Buffer?
-            _3 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputSecureValue.inputSecureValueAddress(data: _1!, files: _2!, hash: _3!)
+            if _c1 && _c2 {
+                return Api.InputSecureValue.inputSecureValueAddress(data: _1!, files: _2!)
             }
             else {
                 return nil
@@ -9816,12 +9806,9 @@ public struct Api {
         fileprivate static func parse_inputSecureValuePhone(_ reader: BufferReader) -> InputSecureValue? {
             var _1: String?
             _1 = parseString(reader)
-            var _2: Buffer?
-            _2 = parseBytes(reader)
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputSecureValue.inputSecureValuePhone(phone: _1!, hash: _2!)
+            if _c1 {
+                return Api.InputSecureValue.inputSecureValuePhone(phone: _1!)
             }
             else {
                 return nil
@@ -9830,12 +9817,9 @@ public struct Api {
         fileprivate static func parse_inputSecureValueEmail(_ reader: BufferReader) -> InputSecureValue? {
             var _1: String?
             _1 = parseString(reader)
-            var _2: Buffer?
-            _2 = parseBytes(reader)
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputSecureValue.inputSecureValueEmail(email: _1!, hash: _2!)
+            if _c1 {
+                return Api.InputSecureValue.inputSecureValueEmail(email: _1!)
             }
             else {
                 return nil
@@ -10420,16 +10404,16 @@ public struct Api {
     }
 
     public enum SecureValue {
-        case secureValueIdentity(flags: Int32, data: Api.SecureData, files: [Api.SecureFile], hash: Buffer, verified: Api.SecureValueVerified?)
-        case secureValueAddress(flags: Int32, data: Api.SecureData, files: [Api.SecureFile], hash: Buffer, verified: Api.SecureValueVerified?)
-        case secureValuePhone(flags: Int32, phone: String, hash: Buffer, verified: Api.SecureValueVerified?)
-        case secureValueEmail(flags: Int32, email: String, hash: Buffer, verified: Api.SecureValueVerified?)
+        case secureValueIdentity(flags: Int32, data: Api.SecureData, files: [Api.SecureFile], verified: Api.SecureValueVerified?)
+        case secureValueAddress(flags: Int32, data: Api.SecureData, files: [Api.SecureFile], verified: Api.SecureValueVerified?)
+        case secureValuePhone(flags: Int32, phone: String, verified: Api.SecureValueVerified?)
+        case secureValueEmail(flags: Int32, email: String, verified: Api.SecureValueVerified?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .secureValueIdentity(let flags, let data, let files, let hash, let verified):
+                case .secureValueIdentity(let flags, let data, let files, let verified):
                     if boxed {
-                        buffer.appendInt32(1211694980)
+                        buffer.appendInt32(368997026)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     data.serialize(buffer, true)
@@ -10438,12 +10422,11 @@ public struct Api {
                     for item in files {
                         item.serialize(buffer, true)
                     }
-                    serializeBytes(hash, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {verified!.serialize(buffer, true)}
                     break
-                case .secureValueAddress(let flags, let data, let files, let hash, let verified):
+                case .secureValueAddress(let flags, let data, let files, let verified):
                     if boxed {
-                        buffer.appendInt32(731868143)
+                        buffer.appendInt32(-2012177543)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     data.serialize(buffer, true)
@@ -10452,25 +10435,22 @@ public struct Api {
                     for item in files {
                         item.serialize(buffer, true)
                     }
-                    serializeBytes(hash, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {verified!.serialize(buffer, true)}
                     break
-                case .secureValuePhone(let flags, let phone, let hash, let verified):
+                case .secureValuePhone(let flags, let phone, let verified):
                     if boxed {
-                        buffer.appendInt32(-1580563202)
+                        buffer.appendInt32(-476811073)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(phone, buffer: buffer, boxed: false)
-                    serializeBytes(hash, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {verified!.serialize(buffer, true)}
                     break
-                case .secureValueEmail(let flags, let email, let hash, let verified):
+                case .secureValueEmail(let flags, let email, let verified):
                     if boxed {
-                        buffer.appendInt32(-992254599)
+                        buffer.appendInt32(903349453)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(email, buffer: buffer, boxed: false)
-                    serializeBytes(hash, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {verified!.serialize(buffer, true)}
                     break
     }
@@ -10486,19 +10466,16 @@ public struct Api {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureFile.self)
             }
-            var _4: Buffer?
-            _4 = parseBytes(reader)
-            var _5: Api.SecureValueVerified?
+            var _4: Api.SecureValueVerified?
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.SecureValueVerified
+                _4 = Api.parse(reader, signature: signature) as? Api.SecureValueVerified
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.SecureValue.secureValueIdentity(flags: _1!, data: _2!, files: _3!, hash: _4!, verified: _5)
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.SecureValue.secureValueIdentity(flags: _1!, data: _2!, files: _3!, verified: _4)
             }
             else {
                 return nil
@@ -10515,19 +10492,16 @@ public struct Api {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureFile.self)
             }
-            var _4: Buffer?
-            _4 = parseBytes(reader)
-            var _5: Api.SecureValueVerified?
+            var _4: Api.SecureValueVerified?
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.SecureValueVerified
+                _4 = Api.parse(reader, signature: signature) as? Api.SecureValueVerified
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.SecureValue.secureValueAddress(flags: _1!, data: _2!, files: _3!, hash: _4!, verified: _5)
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.SecureValue.secureValueAddress(flags: _1!, data: _2!, files: _3!, verified: _4)
             }
             else {
                 return nil
@@ -10538,18 +10512,15 @@ public struct Api {
             _1 = reader.readInt32()
             var _2: String?
             _2 = parseString(reader)
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            var _4: Api.SecureValueVerified?
+            var _3: Api.SecureValueVerified?
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.SecureValueVerified
+                _3 = Api.parse(reader, signature: signature) as? Api.SecureValueVerified
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.SecureValue.secureValuePhone(flags: _1!, phone: _2!, hash: _3!, verified: _4)
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValue.secureValuePhone(flags: _1!, phone: _2!, verified: _3)
             }
             else {
                 return nil
@@ -10560,18 +10531,15 @@ public struct Api {
             _1 = reader.readInt32()
             var _2: String?
             _2 = parseString(reader)
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            var _4: Api.SecureValueVerified?
+            var _3: Api.SecureValueVerified?
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.SecureValueVerified
+                _3 = Api.parse(reader, signature: signature) as? Api.SecureValueVerified
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.SecureValue.secureValueEmail(flags: _1!, email: _2!, hash: _3!, verified: _4)
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValue.secureValueEmail(flags: _1!, email: _2!, verified: _3)
             }
             else {
                 return nil
@@ -14958,7 +14926,7 @@ public struct Api {
         case messageActionScreenshotTaken
         case messageActionCustomAction(message: String)
         case messageActionBotAllowed(domain: String)
-        case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted, payload: Buffer)
+        case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
         case messageActionSecureValuesSent(types: [Api.SecureValueType])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -15104,9 +15072,9 @@ public struct Api {
                     }
                     serializeString(domain, buffer: buffer, boxed: false)
                     break
-                case .messageActionSecureValuesSentMe(let values, let credentials, let payload):
+                case .messageActionSecureValuesSentMe(let values, let credentials):
                     if boxed {
-                        buffer.appendInt32(163352260)
+                        buffer.appendInt32(455635795)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(values.count))
@@ -15114,7 +15082,6 @@ public struct Api {
                         item.serialize(buffer, true)
                     }
                     credentials.serialize(buffer, true)
-                    serializeBytes(payload, buffer: buffer, boxed: false)
                     break
                 case .messageActionSecureValuesSent(let types):
                     if boxed {
@@ -15368,13 +15335,10 @@ public struct Api {
             if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.SecureCredentialsEncrypted
             }
-            var _3: Buffer?
-            _3 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionSecureValuesSentMe(values: _1!, credentials: _2!, payload: _3!)
+            if _c1 && _c2 {
+                return Api.MessageAction.messageActionSecureValuesSentMe(values: _1!, credentials: _2!)
             }
             else {
                 return nil
@@ -23177,9 +23141,9 @@ public struct Api {
                     })
                 }
             
-                public static func acceptAuthorization(botId: Int32, scope: String, publicKey: String, valueHashes: [Api.SecureValueHash], credentials: Api.SecureCredentialsEncrypted, payload: Buffer) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                public static func acceptAuthorization(botId: Int32, scope: String, publicKey: String, valueHashes: [Api.SecureValueHash], credentials: Api.SecureCredentialsEncrypted) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1923218714)
+                    buffer.appendInt32(-419267436)
                     serializeInt32(botId, buffer: buffer, boxed: false)
                     serializeString(scope, buffer: buffer, boxed: false)
                     serializeString(publicKey, buffer: buffer, boxed: false)
@@ -23189,8 +23153,7 @@ public struct Api {
                         item.serialize(buffer, true)
                     }
                     credentials.serialize(buffer, true)
-                    serializeBytes(payload, buffer: buffer, boxed: false)
-                    return (FunctionDescription({return "(account.acceptAuthorization botId: \(botId), scope: \(scope), publicKey: \(publicKey), valueHashes: \(valueHashes), credentials: \(credentials), payload: \(payload))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription({return "(account.acceptAuthorization botId: \(botId), scope: \(scope), publicKey: \(publicKey), valueHashes: \(valueHashes), credentials: \(credentials))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
