@@ -58,26 +58,6 @@ func encryptedSecureValueData(context: SecureIdAccessContext, valueContext: Secu
         return nil
     }
     
-    var hashData = valueHash + valueContext.secret
-    for file in files {
-        switch file {
-            case let .remote(file):
-                hashData.append(file.fileHash)
-                guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: file.fileHash, encryptedSecret: file.encryptedSecret) else {
-                    return nil
-                }
-                hashData.append(fileSecret)
-            case let .uploaded(file):
-                hashData.append(file.fileHash)
-                guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: file.fileHash, encryptedSecret: file.encryptedSecret) else {
-                    return nil
-                }
-                hashData.append(fileSecret)
-        }
-    }
-    hashData.append(valueContext.secret)
-    let hash = sha256Digest(hashData)
-    
     let secretHash = sha512Digest(context.secret + valueHash)
     let secretKey = secretHash.subdata(in: 0 ..< 32)
     let secretIv = secretHash.subdata(in: 32 ..< (32 + 16))
@@ -85,6 +65,19 @@ func encryptedSecureValueData(context: SecureIdAccessContext, valueContext: Secu
     guard let encryptedValueSecret = encryptSecureData(key: secretKey, iv: secretIv, data: valueContext.secret, decrypt: false) else {
         return nil
     }
+    
+    var hashData = valueHash + encryptedValueSecret
+    for file in files {
+        switch file {
+            case let .remote(file):
+                hashData.append(file.fileHash)
+                hashData.append(file.encryptedSecret)
+            case let .uploaded(file):
+                hashData.append(file.fileHash)
+                hashData.append(file.encryptedSecret)
+        }
+    }
+    let hash = sha256Digest(hashData)
     
     return EncryptedSecureData(data: encryptedValueData, dataHash: valueHash, hash: hash, encryptedSecret: encryptedValueSecret)
 }

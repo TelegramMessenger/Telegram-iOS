@@ -66,7 +66,7 @@ extension SecureIdIdentityInternationalPassportValue {
         guard let lastName = dict["last_name"] as? String else {
             return nil
         }
-        guard let birthdate = (dict["date_of_birth"] as? String).flatMap(SecureIdDate.init) else {
+        guard let birthdate = (dict["birth_date"] as? String).flatMap(SecureIdDate.init) else {
             return nil
         }
         guard let gender = (dict["gender"] as? String).flatMap(SecureIdGender.init) else {
@@ -90,7 +90,7 @@ extension SecureIdIdentityInternationalPassportValue {
         dict["document_no"] = self.identifier
         dict["first_name"] = self.firstName
         dict["last_name"] = self.lastName
-        dict["date_of_birth"] = self.birthdate.serialize()
+        dict["birth_date"] = self.birthdate.serialize()
         dict["gender"] = self.gender.serialize()
         dict["country_iso2"] = self.countryCode
         dict["issue_date"] = self.issueDate.serialize()
