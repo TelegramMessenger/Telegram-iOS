@@ -94,9 +94,10 @@ public func secureIdPrepareEmailVerification(network: Network, value: SecureIdEm
 public enum SecureIdCommitEmailVerificationError {
     case generic
     case flood
+    case invalid
 }
 
-public func secureIdCommitEmailVerification(network: Network, payload: SecureIdPrepareEmailVerificationPayload, code: String) -> Signal<Void, SecureIdCommitEmailVerificationError> {
+public func secureIdCommitEmailVerification(network: Network, context: SecureIdAccessContext, payload: SecureIdPrepareEmailVerificationPayload, code: String) -> Signal<SecureIdValueWithContext, SecureIdCommitEmailVerificationError> {
     return network.request(Api.functions.account.verifyEmail(email: payload.email, code: code), automaticFloodWait: false)
     |> mapError { error -> SecureIdCommitEmailVerificationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -104,7 +105,10 @@ public func secureIdCommitEmailVerification(network: Network, payload: SecureIdP
         }
         return .generic
     }
-    |> mapToSignal { _ -> Signal<Void, SecureIdCommitEmailVerificationError> in
-        return .complete()
+    |> mapToSignal { _ -> Signal<SecureIdValueWithContext, SecureIdCommitEmailVerificationError> in
+        return saveSecureIdValue(network: network, context: context, valueContext: generateSecureIdValueEmptyAccessContext()!, value: .email(SecureIdEmailValue(email: payload.email)))
+        |> mapError { _ -> SecureIdCommitEmailVerificationError in
+            return .generic
+        }
     }
 }

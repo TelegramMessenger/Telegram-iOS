@@ -307,6 +307,18 @@
 		D053B41C1F18DEF500E2D58A /* TelegramMediaExpiredContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D053B41A1F18DEF500E2D58A /* TelegramMediaExpiredContent.swift */; };
 		D05452071E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05452061E7B5093006EEF19 /* LoadedStickerPack.swift */; };
 		D05452081E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05452061E7B5093006EEF19 /* LoadedStickerPack.swift */; };
+		D054648B2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D054648A2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift */; };
+		D054648C2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D054648A2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift */; };
+		D054648E20738626002ECC1E /* SecureIdDriversLicenseValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D054648D20738626002ECC1E /* SecureIdDriversLicenseValue.swift */; };
+		D054648F20738626002ECC1E /* SecureIdDriversLicenseValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D054648D20738626002ECC1E /* SecureIdDriversLicenseValue.swift */; };
+		D054649120738653002ECC1E /* SecureIdIDCardValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D054649020738653002ECC1E /* SecureIdIDCardValue.swift */; };
+		D054649220738653002ECC1E /* SecureIdIDCardValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D054649020738653002ECC1E /* SecureIdIDCardValue.swift */; };
+		D0546494207386D7002ECC1E /* SecureIdUtilityBillValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0546493207386D7002ECC1E /* SecureIdUtilityBillValue.swift */; };
+		D0546495207386D7002ECC1E /* SecureIdUtilityBillValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0546493207386D7002ECC1E /* SecureIdUtilityBillValue.swift */; };
+		D05464972073872C002ECC1E /* SecureIdBankStatementValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05464962073872C002ECC1E /* SecureIdBankStatementValue.swift */; };
+		D05464982073872C002ECC1E /* SecureIdBankStatementValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05464962073872C002ECC1E /* SecureIdBankStatementValue.swift */; };
+		D054649A20738760002ECC1E /* SecureIdRentalAgreementValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D054649920738760002ECC1E /* SecureIdRentalAgreementValue.swift */; };
+		D054649B20738760002ECC1E /* SecureIdRentalAgreementValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D054649920738760002ECC1E /* SecureIdRentalAgreementValue.swift */; };
 		D0561DE31E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */; };
 		D0561DE41E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */; };
 		D0561DEA1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */; };
@@ -371,8 +383,6 @@
 		D08F4A671E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A691E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */; };
 		D08F4A6A1E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */; };
-		D093D7EB206413C900BC3599 /* SecureIdIdentityValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7EA206413C900BC3599 /* SecureIdIdentityValue.swift */; };
-		D093D7EC206413C900BC3599 /* SecureIdIdentityValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7EA206413C900BC3599 /* SecureIdIdentityValue.swift */; };
 		D093D7EE206413F600BC3599 /* SecureIdDataTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7ED206413F600BC3599 /* SecureIdDataTypes.swift */; };
 		D093D7EF206413F600BC3599 /* SecureIdDataTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7ED206413F600BC3599 /* SecureIdDataTypes.swift */; };
 		D093D7F520641A4900BC3599 /* SecureIdPhoneValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7F420641A4900BC3599 /* SecureIdPhoneValue.swift */; };
@@ -549,6 +559,8 @@
 		D0C48F3D1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */; };
 		D0C50E341E93A86600F62E39 /* CallSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E331E93A86600F62E39 /* CallSessionManager.swift */; };
 		D0C50E351E93A86600F62E39 /* CallSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E331E93A86600F62E39 /* CallSessionManager.swift */; };
+		D0CA3F84207391560042D2B6 /* SecureIdPadding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */; };
+		D0CA3F85207391560042D2B6 /* SecureIdPadding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */; };
 		D0CAF2EA1D75EC600011F558 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */; };
 		D0D748021E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */; };
 		D0D748031E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */; };
@@ -594,16 +606,10 @@
 		D0E412EB206AD18E00BEE4A2 /* DecryptedResourceData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412E9206AD18E00BEE4A2 /* DecryptedResourceData.swift */; };
 		D0E412EE206AF65500BEE4A2 /* GrantSecureIdAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412ED206AF65500BEE4A2 /* GrantSecureIdAccess.swift */; };
 		D0E412EF206AF65500BEE4A2 /* GrantSecureIdAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412ED206AF65500BEE4A2 /* GrantSecureIdAccess.swift */; };
-		D0E412F1206B9BB700BEE4A2 /* SecureIdIdentityPassportValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F0206B9BB700BEE4A2 /* SecureIdIdentityPassportValue.swift */; };
-		D0E412F2206B9BB700BEE4A2 /* SecureIdIdentityPassportValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F0206B9BB700BEE4A2 /* SecureIdIdentityPassportValue.swift */; };
+		D0E412F1206B9BB700BEE4A2 /* SecureIdPassportValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F0206B9BB700BEE4A2 /* SecureIdPassportValue.swift */; };
+		D0E412F2206B9BB700BEE4A2 /* SecureIdPassportValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F0206B9BB700BEE4A2 /* SecureIdPassportValue.swift */; };
 		D0E412F4206B9BDC00BEE4A2 /* SecureIdVerificationDocumentReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F3206B9BDC00BEE4A2 /* SecureIdVerificationDocumentReference.swift */; };
 		D0E412F5206B9BDC00BEE4A2 /* SecureIdVerificationDocumentReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F3206B9BDC00BEE4A2 /* SecureIdVerificationDocumentReference.swift */; };
-		D0E412F7206B9D2F00BEE4A2 /* SecureIdIdentityInternationalPassportValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F6206B9D2F00BEE4A2 /* SecureIdIdentityInternationalPassportValue.swift */; };
-		D0E412F8206B9D2F00BEE4A2 /* SecureIdIdentityInternationalPassportValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F6206B9D2F00BEE4A2 /* SecureIdIdentityInternationalPassportValue.swift */; };
-		D0E412FA206B9D6900BEE4A2 /* SecureIdIdentityDriversLicenseValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F9206B9D6900BEE4A2 /* SecureIdIdentityDriversLicenseValue.swift */; };
-		D0E412FB206B9D6900BEE4A2 /* SecureIdIdentityDriversLicenseValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412F9206B9D6900BEE4A2 /* SecureIdIdentityDriversLicenseValue.swift */; };
-		D0E412FD206B9D8F00BEE4A2 /* SecureIdIdentityIDCardValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412FC206B9D8F00BEE4A2 /* SecureIdIdentityIDCardValue.swift */; };
-		D0E412FE206B9D8F00BEE4A2 /* SecureIdIdentityIDCardValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412FC206B9D8F00BEE4A2 /* SecureIdIdentityIDCardValue.swift */; };
 		D0E41301206B9E6E00BEE4A2 /* SecureIdAddressValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E41300206B9E6E00BEE4A2 /* SecureIdAddressValue.swift */; };
 		D0E41302206B9E6E00BEE4A2 /* SecureIdAddressValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E41300206B9E6E00BEE4A2 /* SecureIdAddressValue.swift */; };
 		D0E6521F1E3A364A004EEA91 /* UpdateAccountPeerName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E6521E1E3A364A004EEA91 /* UpdateAccountPeerName.swift */; };
@@ -852,6 +858,12 @@
 		D053B4171F18DE4F00E2D58A /* AuthorSignatureMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorSignatureMessageAttribute.swift; sourceTree = "<group>"; };
 		D053B41A1F18DEF500E2D58A /* TelegramMediaExpiredContent.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramMediaExpiredContent.swift; sourceTree = "<group>"; };
 		D05452061E7B5093006EEF19 /* LoadedStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedStickerPack.swift; sourceTree = "<group>"; };
+		D054648A2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPersonalDetailsValue.swift; sourceTree = "<group>"; };
+		D054648D20738626002ECC1E /* SecureIdDriversLicenseValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdDriversLicenseValue.swift; sourceTree = "<group>"; };
+		D054649020738653002ECC1E /* SecureIdIDCardValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIDCardValue.swift; sourceTree = "<group>"; };
+		D0546493207386D7002ECC1E /* SecureIdUtilityBillValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdUtilityBillValue.swift; sourceTree = "<group>"; };
+		D05464962073872C002ECC1E /* SecureIdBankStatementValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdBankStatementValue.swift; sourceTree = "<group>"; };
+		D054649920738760002ECC1E /* SecureIdRentalAgreementValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdRentalAgreementValue.swift; sourceTree = "<group>"; };
 		D0561DE21E5737FC00E6B9E9 /* UpdatePeerInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatePeerInfo.swift; sourceTree = "<group>"; };
 		D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdmins.swift; sourceTree = "<group>"; };
 		D0575AF01E9FFA5D006F2541 /* SynchronizeSavedGifsOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeSavedGifsOperation.swift; sourceTree = "<group>"; };
@@ -887,7 +899,6 @@
 		D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Localizations.swift; sourceTree = "<group>"; };
 		D08F4A651E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
 		D08F4A681E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeInstalledStickerPacksOperations.swift; sourceTree = "<group>"; };
-		D093D7EA206413C900BC3599 /* SecureIdIdentityValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityValue.swift; sourceTree = "<group>"; };
 		D093D7ED206413F600BC3599 /* SecureIdDataTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdDataTypes.swift; sourceTree = "<group>"; };
 		D093D7F420641A4900BC3599 /* SecureIdPhoneValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPhoneValue.swift; sourceTree = "<group>"; };
 		D093D7F820641AA500BC3599 /* SecureIdEmailValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdEmailValue.swift; sourceTree = "<group>"; };
@@ -990,6 +1001,7 @@
 		D0C48F381E8138DF0075317D /* ArchivedStickerPacksInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchivedStickerPacksInfo.swift; sourceTree = "<group>"; };
 		D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedPeerFromMessage.swift; sourceTree = "<group>"; };
 		D0C50E331E93A86600F62E39 /* CallSessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallSessionManager.swift; sourceTree = "<group>"; };
+		D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPadding.swift; sourceTree = "<group>"; };
 		D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPackInteractiveOperations.swift; sourceTree = "<group>"; };
 		D0DA1D311F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedPendingPeerNotificationSettings.swift; sourceTree = "<group>"; };
@@ -1015,11 +1027,8 @@
 		D0E412E6206ABC7500BEE4A2 /* EncryptedMediaResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptedMediaResource.swift; sourceTree = "<group>"; };
 		D0E412E9206AD18E00BEE4A2 /* DecryptedResourceData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecryptedResourceData.swift; sourceTree = "<group>"; };
 		D0E412ED206AF65500BEE4A2 /* GrantSecureIdAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrantSecureIdAccess.swift; sourceTree = "<group>"; };
-		D0E412F0206B9BB700BEE4A2 /* SecureIdIdentityPassportValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityPassportValue.swift; sourceTree = "<group>"; };
+		D0E412F0206B9BB700BEE4A2 /* SecureIdPassportValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPassportValue.swift; sourceTree = "<group>"; };
 		D0E412F3206B9BDC00BEE4A2 /* SecureIdVerificationDocumentReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdVerificationDocumentReference.swift; sourceTree = "<group>"; };
-		D0E412F6206B9D2F00BEE4A2 /* SecureIdIdentityInternationalPassportValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityInternationalPassportValue.swift; sourceTree = "<group>"; };
-		D0E412F9206B9D6900BEE4A2 /* SecureIdIdentityDriversLicenseValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityDriversLicenseValue.swift; sourceTree = "<group>"; };
-		D0E412FC206B9D8F00BEE4A2 /* SecureIdIdentityIDCardValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdIdentityIDCardValue.swift; sourceTree = "<group>"; };
 		D0E41300206B9E6E00BEE4A2 /* SecureIdAddressValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAddressValue.swift; sourceTree = "<group>"; };
 		D0E6521E1E3A364A004EEA91 /* UpdateAccountPeerName.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdateAccountPeerName.swift; sourceTree = "<group>"; };
 		D0E817482010E7E300B82BBB /* ChannelAdminEventLogContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelAdminEventLogContext.swift; sourceTree = "<group>"; };
@@ -1555,32 +1564,18 @@
 				D0E412DB206A99AE00BEE4A2 /* SecureIdValueAccessContext.swift */,
 				D093D7ED206413F600BC3599 /* SecureIdDataTypes.swift */,
 				D0E412F3206B9BDC00BEE4A2 /* SecureIdVerificationDocumentReference.swift */,
-				D093D7E92064135A00BC3599 /* Identity */,
-				D0E412FF206B9E5F00BEE4A2 /* Address */,
-				D093D7F320641A3F00BC3599 /* Other */,
-			);
-			name = Values;
-			sourceTree = "<group>";
-		};
-		D093D7E92064135A00BC3599 /* Identity */ = {
-			isa = PBXGroup;
-			children = (
-				D093D7EA206413C900BC3599 /* SecureIdIdentityValue.swift */,
-				D0E412F0206B9BB700BEE4A2 /* SecureIdIdentityPassportValue.swift */,
-				D0E412F6206B9D2F00BEE4A2 /* SecureIdIdentityInternationalPassportValue.swift */,
-				D0E412F9206B9D6900BEE4A2 /* SecureIdIdentityDriversLicenseValue.swift */,
-				D0E412FC206B9D8F00BEE4A2 /* SecureIdIdentityIDCardValue.swift */,
-			);
-			name = Identity;
-			sourceTree = "<group>";
-		};
-		D093D7F320641A3F00BC3599 /* Other */ = {
-			isa = PBXGroup;
-			children = (
+				D054648A2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift */,
+				D0E412F0206B9BB700BEE4A2 /* SecureIdPassportValue.swift */,
+				D054648D20738626002ECC1E /* SecureIdDriversLicenseValue.swift */,
+				D054649020738653002ECC1E /* SecureIdIDCardValue.swift */,
+				D0E41300206B9E6E00BEE4A2 /* SecureIdAddressValue.swift */,
+				D0546493207386D7002ECC1E /* SecureIdUtilityBillValue.swift */,
+				D05464962073872C002ECC1E /* SecureIdBankStatementValue.swift */,
+				D054649920738760002ECC1E /* SecureIdRentalAgreementValue.swift */,
 				D093D7F420641A4900BC3599 /* SecureIdPhoneValue.swift */,
 				D093D7F820641AA500BC3599 /* SecureIdEmailValue.swift */,
 			);
-			name = Other;
+			name = Values;
 			sourceTree = "<group>";
 		};
 		D09D8BF71D4FAB1D0081DBEC = {
@@ -1671,6 +1666,7 @@
 		D0BE303820619E9E00FBE6D8 /* Secure ID */ = {
 			isa = PBXGroup;
 			children = (
+				D0CA3F82207391450042D2B6 /* Utils */,
 				D0BE303C2061A29100FBE6D8 /* RequestSecureIdForm.swift */,
 				D0BE304A20627D9800FBE6D8 /* AccessSecureId.swift */,
 				D0BE303920619EE800FBE6D8 /* SecureIdForm.swift */,
@@ -1690,6 +1686,14 @@
 				C2F4ED1C1EC60064005F2696 /* RateCall.swift */,
 			);
 			name = Calls;
+			sourceTree = "<group>";
+		};
+		D0CA3F82207391450042D2B6 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */,
+			);
+			name = Utils;
 			sourceTree = "<group>";
 		};
 		D0DF0C881D819C5F008AEB01 /* Peers */ = {
@@ -1745,14 +1749,6 @@
 				D018EE042045E95000CBB130 /* CkeckPeerChatServiceActions.swift */,
 			);
 			name = Peers;
-			sourceTree = "<group>";
-		};
-		D0E412FF206B9E5F00BEE4A2 /* Address */ = {
-			isa = PBXGroup;
-			children = (
-				D0E41300206B9E6E00BEE4A2 /* SecureIdAddressValue.swift */,
-			);
-			name = Address;
 			sourceTree = "<group>";
 		};
 		D0FA8B961E1E952D001E855B /* Secret Chats */ = {
@@ -1972,7 +1968,6 @@
 				D050F2511E4A59C200988324 /* JoinLink.swift in Sources */,
 				D07827C91E02F59C00071108 /* InstantPage.swift in Sources */,
 				D0458C881E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */,
-				D0E412FD206B9D8F00BEE4A2 /* SecureIdIdentityIDCardValue.swift in Sources */,
 				D07827CB1E02F5B200071108 /* RichText.swift in Sources */,
 				D0613FD71E606B3B00202CDB /* ConvertGroupToSupergroup.swift in Sources */,
 				D0E412F4206B9BDC00BEE4A2 /* SecureIdVerificationDocumentReference.swift in Sources */,
@@ -1994,13 +1989,14 @@
 				D0F3A89F1E82C65400B4C64C /* SynchronizeChatInputStateOperation.swift in Sources */,
 				D01AC9231DD5E9A200E8160F /* ApplyUpdateMessage.swift in Sources */,
 				D0E8B8B32044706300605593 /* ForwardGame.swift in Sources */,
-				D0E412F7206B9D2F00BEE4A2 /* SecureIdIdentityInternationalPassportValue.swift in Sources */,
 				D0BE303D2061A29100FBE6D8 /* RequestSecureIdForm.swift in Sources */,
 				D01A21AC1F38D10E00DDA104 /* SavedStickerItem.swift in Sources */,
 				D0642EF91F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift in Sources */,
 				D03B0CF71D62250800955575 /* TelegramMediaImage.swift in Sources */,
+				D054648E20738626002ECC1E /* SecureIdDriversLicenseValue.swift in Sources */,
 				C210DD621FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift in Sources */,
 				D0E23DDF1E8082A400B9B6D2 /* ArchivedStickerPacks.swift in Sources */,
+				D0546494207386D7002ECC1E /* SecureIdUtilityBillValue.swift in Sources */,
 				D0BC386E1E3FDAB70044D6FE /* CreateGroup.swift in Sources */,
 				D0FA8BB31E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */,
 				D0FC19582020CC4B00FEDBB2 /* TelegramPeerGroupState.swift in Sources */,
@@ -2079,6 +2075,7 @@
 				D099D7491EEF418D00A3128C /* HistoryViewChannelStateValidation.swift in Sources */,
 				C23BC3871E9BE3CA00D79F92 /* ImportContact.swift in Sources */,
 				D03B0D0A1D62255C00955575 /* Holes.swift in Sources */,
+				D05464972073872C002ECC1E /* SecureIdBankStatementValue.swift in Sources */,
 				D0B843CB1DA7FF30005F29E1 /* NBPhoneNumberUtil.m in Sources */,
 				D03B0D5E1D631A6900955575 /* Network.swift in Sources */,
 				D0B8438E1DA7D296005F29E1 /* CachedGroupParticipants.swift in Sources */,
@@ -2116,7 +2113,6 @@
 				D0F7AB2C1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */,
 				D0FA8BAA1E1FB76E001E855B /* ManagedSecretChatOutgoingOperations.swift in Sources */,
 				D00D97C71E32901700E5C2B6 /* PeerInputActivity.swift in Sources */,
-				D093D7EB206413C900BC3599 /* SecureIdIdentityValue.swift in Sources */,
 				D0FA8BAD1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */,
 				D03B0CBF1D62234A00955575 /* Log.swift in Sources */,
 				C2FD33E41E687BF1008D13D4 /* PeerPhotoUpdater.swift in Sources */,
@@ -2178,13 +2174,12 @@
 				D093D806206539D000BC3599 /* SaveSecureIdValue.swift in Sources */,
 				C239BE9C1E630CA700C2C453 /* UpdatePinnedMessage.swift in Sources */,
 				D08CAA7D1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */,
-				D0E412FA206B9D6900BEE4A2 /* SecureIdIdentityDriversLicenseValue.swift in Sources */,
 				D0B844531DAC0773005F29E1 /* TelegramUserPresence.swift in Sources */,
 				D08F4A661E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */,
 				D05A32E71E6F0B5C002760B4 /* RecentAccountSession.swift in Sources */,
 				D0E41301206B9E6E00BEE4A2 /* SecureIdAddressValue.swift in Sources */,
 				D0B843871DA6F705005F29E1 /* UpdateCachedPeerData.swift in Sources */,
-				D0E412F1206B9BB700BEE4A2 /* SecureIdIdentityPassportValue.swift in Sources */,
+				D0E412F1206B9BB700BEE4A2 /* SecureIdPassportValue.swift in Sources */,
 				D03B0D6D1D631AA300955575 /* ContactManagement.swift in Sources */,
 				D03B0D0F1D62255C00955575 /* UpdateMessageService.swift in Sources */,
 				D03B0CF61D62250800955575 /* TelegramMediaFile.swift in Sources */,
@@ -2207,11 +2202,13 @@
 				D0AAD1AA1E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift in Sources */,
 				D03B0D5C1D631A6900955575 /* Download.swift in Sources */,
 				D0C27B421F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */,
+				D054648B2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift in Sources */,
 				D01749591E1092BC0057C89A /* RequestStartBot.swift in Sources */,
 				D03DC9101F82E344001D584C /* AccountStateReset.swift in Sources */,
 				D01B27A21E394D8B0022A4C0 /* PrivacySettings.swift in Sources */,
 				D0223A9B1EA5654D00211D94 /* TelegramMediaResource.swift in Sources */,
 				D017495E1E118F790057C89A /* AccountStateManager.swift in Sources */,
+				D0CA3F84207391560042D2B6 /* SecureIdPadding.swift in Sources */,
 				D0FA8BB61E223C16001E855B /* SecretApiLayer8.swift in Sources */,
 				D0B843C71DA7FF30005F29E1 /* NBPhoneNumberDefines.m in Sources */,
 				D049EAF51E44DF3300A2CD3A /* AccountState.swift in Sources */,
@@ -2223,6 +2220,7 @@
 				D05A32E41E6F0B2E002760B4 /* RecentAccountSessions.swift in Sources */,
 				D01A21A61F38CDC700DDA104 /* SynchronizeSavedStickersOperation.swift in Sources */,
 				D03E5E0C1E55E02D0029569A /* LoggedOutAccountAttribute.swift in Sources */,
+				D054649120738653002ECC1E /* SecureIdIDCardValue.swift in Sources */,
 				D018EE052045E95000CBB130 /* CkeckPeerChatServiceActions.swift in Sources */,
 				D0F3A8A51E82C94C00B4C64C /* SynchronizeableChatInputState.swift in Sources */,
 				D03B0CD71D62245300955575 /* TelegramGroup.swift in Sources */,
@@ -2266,6 +2264,7 @@
 				D0B417C11D7DCEEF004562A4 /* ApiGroupOrChannel.swift in Sources */,
 				D041E3F51E535464008C24B4 /* AddPeerMember.swift in Sources */,
 				D0AF32311FACEDEC0097362B /* CoreSettings.swift in Sources */,
+				D054649A20738760002ECC1E /* SecureIdRentalAgreementValue.swift in Sources */,
 				D0B843BF1DA7FF30005F29E1 /* NBNumberFormat.m in Sources */,
 				D0E305A71E5B5CBE00D7A3A2 /* PeerAdmins.swift in Sources */,
 				D0B843C51DA7FF30005F29E1 /* NBPhoneNumber.m in Sources */,
@@ -2311,7 +2310,6 @@
 				D0458C891E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */,
 				D050F26C1E4A5B6D00988324 /* UpdatePeers.swift in Sources */,
 				D050F26D1E4A5B6D00988324 /* CreateGroup.swift in Sources */,
-				D0E412FE206B9D8F00BEE4A2 /* SecureIdIdentityIDCardValue.swift in Sources */,
 				D0575AF51E9FFDDE006F2541 /* ManagedSynchronizeSavedGifsOperations.swift in Sources */,
 				D00D34461E6EDD420057B307 /* SynchronizeConsumeMessageContentsOperation.swift in Sources */,
 				D0E412E8206ABC7500BEE4A2 /* EncryptedMediaResource.swift in Sources */,
@@ -2390,7 +2388,7 @@
 				D0FA8BA81E1FA6DF001E855B /* TelegramSecretChat.swift in Sources */,
 				C23BC3881E9BE3CB00D79F92 /* ImportContact.swift in Sources */,
 				D0B85AC61F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift in Sources */,
-				D0E412F2206B9BB700BEE4A2 /* SecureIdIdentityPassportValue.swift in Sources */,
+				D0E412F2206B9BB700BEE4A2 /* SecureIdPassportValue.swift in Sources */,
 				D001F3EB1E128A1C007A8C60 /* EnqueueMessage.swift in Sources */,
 				D01A21A71F38CDC700DDA104 /* SynchronizeSavedStickersOperation.swift in Sources */,
 				D00C7CEC1E37A8540080C3D5 /* SetSecretChatMessageAutoremoveTimeoutInteractively.swift in Sources */,
@@ -2401,6 +2399,7 @@
 				D0FA8B991E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */,
 				D001F3F01E128A1C007A8C60 /* AccountStateManagementUtils.swift in Sources */,
 				D0BEAF611E54ACF900BD963D /* AccountManager.swift in Sources */,
+				D0CA3F85207391560042D2B6 /* SecureIdPadding.swift in Sources */,
 				D0F3CC791DDE2859008148FA /* SearchMessages.swift in Sources */,
 				D0B8442B1DAB91E0005F29E1 /* NBMetadataCore.m in Sources */,
 				D093D7EF206413F600BC3599 /* SecureIdDataTypes.swift in Sources */,
@@ -2451,7 +2450,6 @@
 				D049EAD91E43DAD200A2CD3A /* ManagedRecentStickers.swift in Sources */,
 				D0B418A61D7E0592004562A4 /* CloudFileMediaResource.swift in Sources */,
 				D073CEA51DCBF3F5007511FD /* StickerManagement.swift in Sources */,
-				D0E412F8206B9D2F00BEE4A2 /* SecureIdIdentityInternationalPassportValue.swift in Sources */,
 				D03C536D1DAD5CA9004C17B3 /* ApiGroupOrChannel.swift in Sources */,
 				D01C06B81FBBA269001561AB /* CanSendMessagesToPeer.swift in Sources */,
 				D0E35A151DE4C6A200BC6096 /* OutgoingMessageWithChatContextResult.swift in Sources */,
@@ -2482,7 +2480,6 @@
 				D0F7AB301DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
 				D0F02CE61E9926C50065DEE2 /* ManagedConfigurationUpdates.swift in Sources */,
 				D073CE6D1DCBCF17007511FD /* InlineBotMessageAttribute.swift in Sources */,
-				D0E412FB206B9D6900BEE4A2 /* SecureIdIdentityDriversLicenseValue.swift in Sources */,
 				D033FEB71E61F3F900644997 /* BlockedPeers.swift in Sources */,
 				D0448C9A1E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */,
 				D0E412D8206A866B00BEE4A2 /* UploadSecureIdFile.swift in Sources */,
@@ -2513,6 +2510,7 @@
 				D0FA8BB11E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */,
 				D0B418AA1D7E0597004562A4 /* Download.swift in Sources */,
 				D001F3F41E128A1C007A8C60 /* UpdatesApiUtils.swift in Sources */,
+				D05464982073872C002ECC1E /* SecureIdBankStatementValue.swift in Sources */,
 				D0B4188E1D7E0578004562A4 /* StoreMessage_Telegram.swift in Sources */,
 				D0B844461DAB91FD005F29E1 /* RecentPeers.swift in Sources */,
 				D0E412E2206AB24700BEE4A2 /* SecureFileMediaResource.swift in Sources */,
@@ -2524,6 +2522,7 @@
 				D0DFD5E01FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift in Sources */,
 				D0B418991D7E0580004562A4 /* TelegramMediaMap.swift in Sources */,
 				D0E8174A2010E7E300B82BBB /* ChannelAdminEventLogContext.swift in Sources */,
+				D054649B20738760002ECC1E /* SecureIdRentalAgreementValue.swift in Sources */,
 				D0561DEB1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */,
 				D0AD02E41FFFA14800C1DCFF /* PeerLiveLocationsContext.swift in Sources */,
 				D0613FCB1E60440600202CDB /* InvitationLinks.swift in Sources */,
@@ -2545,6 +2544,7 @@
 				C27982511E72C97800262BFD /* MacosLegacy.swift in Sources */,
 				D0B418AB1D7E0597004562A4 /* MultipartFetch.swift in Sources */,
 				D01A21AA1F38CDDC00DDA104 /* ManagedSynchronizeSavedStickersOperations.swift in Sources */,
+				D0546495207386D7002ECC1E /* SecureIdUtilityBillValue.swift in Sources */,
 				D03C53741DAD5CA9004C17B3 /* CachedChannelData.swift in Sources */,
 				D0B418861D7E056D004562A4 /* Namespaces.swift in Sources */,
 				D05A32E51E6F0B2E002760B4 /* RecentAccountSessions.swift in Sources */,
@@ -2553,11 +2553,11 @@
 				D03E5E0D1E55E02D0029569A /* LoggedOutAccountAttribute.swift in Sources */,
 				D0B418AD1D7E0597004562A4 /* Serialization.swift in Sources */,
 				C28725431EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */,
+				D054648C2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift in Sources */,
 				D0F8C3A12017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift in Sources */,
 				D099D7471EEF0C2700A3128C /* ChannelMessageStateVersionAttribute.swift in Sources */,
 				D058E0D21E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */,
 				D03C536F1DAD5CA9004C17B3 /* BotInfo.swift in Sources */,
-				D093D7EC206413C900BC3599 /* SecureIdIdentityValue.swift in Sources */,
 				D0FA8BBA1E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift in Sources */,
 				D033FEB41E61F3C000644997 /* ReportPeer.swift in Sources */,
 				D0FA8BAE1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */,
@@ -2565,6 +2565,7 @@
 				D0F3A8A31E82C65E00B4C64C /* ManagedSynchronizeChatInputStateOperations.swift in Sources */,
 				D0448CA61E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */,
 				D001F3F11E128A1C007A8C60 /* SynchronizePeerReadState.swift in Sources */,
+				D054648F20738626002ECC1E /* SecureIdDriversLicenseValue.swift in Sources */,
 				D050F2641E4A5AEB00988324 /* ManagedSynchronizePinnedChatsOperations.swift in Sources */,
 				D0575AF21E9FFA5D006F2541 /* SynchronizeSavedGifsOperation.swift in Sources */,
 				D0528E661E65C82400E2FEF5 /* UpdateContactName.swift in Sources */,
@@ -2599,6 +2600,7 @@
 				D073CE6F1DCBCF17007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
 				D0B844431DAB91FD005F29E1 /* Account.swift in Sources */,
 				D08CAA7E1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */,
+				D054649220738653002ECC1E /* SecureIdIDCardValue.swift in Sources */,
 				D0448CA01E27F5EB005A61A7 /* Random.swift in Sources */,
 				C251D7441E65E50500283EDE /* StickerSetInstallation.swift in Sources */,
 				D053B41C1F18DEF500E2D58A /* TelegramMediaExpiredContent.swift in Sources */,

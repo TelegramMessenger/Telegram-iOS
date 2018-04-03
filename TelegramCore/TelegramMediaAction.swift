@@ -13,10 +13,16 @@ public enum PhoneCallDiscardReason: Int32 {
 }
 
 public enum SentSecureValueType: Int32 {
-    case identity = 0
-    case address = 1
-    case phone = 2
-    case email = 3
+    case personalDetails = 0
+    case passport = 1
+    case driversLicense = 2
+    case idCard = 3
+    case address = 4
+    case bankStatement = 5
+    case utilityBill = 6
+    case rentalAgreement = 7
+    case phone = 8
+    case email = 9
 }
 
 public enum TelegramMediaActionType: PostboxCoding, Equatable {
@@ -83,7 +89,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 self = .botDomainAccessGranted(domain: decoder.decodeStringForKey("do", orElse: ""))
             case 18:
                 self = .botSentSecureValues(types: decoder.decodeInt32ArrayForKey("ty").map { value -> SentSecureValueType in
-                    return SentSecureValueType(rawValue: value) ?? .identity
+                    return SentSecureValueType(rawValue: value) ?? .personalDetails
                 })
             default:
                 self = .unknown
@@ -405,10 +411,22 @@ extension PhoneCallDiscardReason {
 extension SentSecureValueType {
     init(apiType: Api.SecureValueType) {
         switch apiType {
-            case .secureValueTypeIdentity:
-                self = .identity
+            case .secureValueTypePersonalDetails:
+                self = .personalDetails
+            case .secureValueTypePassport:
+                self = .passport
+            case .secureValueTypeDriverLicense:
+                self = .driversLicense
+            case .secureValueTypeIdentityCard:
+                self = .idCard
             case .secureValueTypeAddress:
                 self = .address
+            case .secureValueTypeBankStatement:
+                self = .bankStatement
+            case .secureValueTypeUtilityBill:
+                self = .utilityBill
+            case .secureValueTypeRentalAgreement:
+                self = .rentalAgreement
             case .secureValueTypePhone:
                 self = .phone
             case .secureValueTypeEmail:

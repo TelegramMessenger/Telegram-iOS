@@ -13,12 +13,24 @@ public enum RequestSecureIdFormError {
     case generic
 }
 
-private func parseSecureValueType(_ type: Api.SecureValueType) -> SecureIdRequestedFormField {
+private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool) -> SecureIdRequestedFormField {
     switch type {
-        case .secureValueTypeIdentity:
-            return .identity
+        case .secureValueTypePersonalDetails:
+            return .personalDetails
+        case .secureValueTypePassport:
+            return .passport(selfie: selfie)
+        case .secureValueTypeDriverLicense:
+            return .driversLicense(selfie: selfie)
+        case .secureValueTypeIdentityCard:
+            return .idCard(selfie: selfie)
         case .secureValueTypeAddress:
             return .address
+        case .secureValueTypeUtilityBill:
+            return .utilityBill
+        case .secureValueTypeBankStatement:
+            return .bankStatement
+        case .secureValueTypeRentalAgreement:
+            return .rentalAgreement
         case .secureValueTypePhone:
             return .phone
         case .secureValueTypeEmail:
@@ -39,60 +51,137 @@ struct ParsedSecureValue {
 
 func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) -> ParsedSecureValue? {
     switch value {
-        case let .secureValueIdentity(_, data, files, verified):
-            let (encryptedData, decryptedHash, encryptedSecret) = parseSecureData(data)
-            guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedSecret, decryptedDataHash: decryptedHash) else {
-                return nil
-            }
-            
-            let parsedFileReferences = files.map(SecureIdFileReference.init).flatMap({ $0 })
-            let parsedFileHashes = parsedFileReferences.map { $0.fileHash }
+        case let .secureValue(_, type, data, files, plainData, selfie, hash):
+            let parsedFileReferences = files.flatMap { $0.compactMap(SecureIdFileReference.init) } ?? []
             let parsedFiles = parsedFileReferences.map(SecureIdVerificationDocumentReference.remote)
+            let parsedSelfie = selfie.flatMap(SecureIdFileReference.init).flatMap(SecureIdVerificationDocumentReference.remote)
             
-            guard let decryptedData = decryptedSecureValueData(context: valueContext, encryptedData: encryptedData, decryptedDataHash: decryptedHash) else {
-                return nil
-            }
-            guard let value = SecureIdIdentityValue(data: decryptedData, fileReferences: parsedFiles) else {
-                return nil
-            }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .identity(value), context: valueContext, encryptedMetadata: SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, fileHashes: parsedFileHashes, valueSecret: valueContext.secret, encryptedSecret: encryptedSecret)))
-        case let .secureValueAddress(_, data, files, verified):
-            let (encryptedData, decryptedHash, encryptedSecret) = parseSecureData(data)
-            guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedSecret, decryptedDataHash: decryptedHash) else {
-                return nil
+            let decryptedData: Data?
+            let encryptedMetadata: SecureIdEncryptedValueMetadata?
+            if let data = data {
+                let (encryptedData, decryptedHash, encryptedSecret) = parseSecureData(data)
+                guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedSecret, decryptedDataHash: decryptedHash) else {
+                    return nil
+                }
+            
+                decryptedData = decryptedSecureValueData(context: valueContext, encryptedData: encryptedData, decryptedDataHash: decryptedHash)
+                if decryptedData == nil {
+                    return nil
+                }
+                var parsedFileMetadata: [SecureIdEncryptedValueFileMetadata] = []
+                for file in parsedFileReferences {
+                    guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: file.fileHash, encryptedSecret: file.encryptedSecret) else {
+                        return nil
+                    }
+                    parsedFileMetadata.append(SecureIdEncryptedValueFileMetadata(hash: file.fileHash, secret: fileSecret))
+                }
+                encryptedMetadata = SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, decryptedSecret: valueContext.secret, files: parsedFileMetadata)
+            } else {
+                decryptedData = nil
+                encryptedMetadata = nil
             }
             
-            let parsedFileReferences = files.map(SecureIdFileReference.init).flatMap({ $0 })
-            let parsedFileHashes = parsedFileReferences.map { $0.fileHash }
-            let parsedFiles = parsedFileReferences.map(SecureIdVerificationDocumentReference.remote)
+            let value: SecureIdValue
             
-            guard let decryptedData = decryptedSecureValueData(context: valueContext, encryptedData: encryptedData, decryptedDataHash: decryptedHash) else {
-                return nil
+            switch type {
+                case .secureValueTypePersonalDetails:
+                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
+                        return nil
+                    }
+                    guard let personalDetails = SecureIdPersonalDetailsValue(dict: dict, fileReferences: parsedFiles) else {
+                        return nil
+                    }
+                    value = .personalDetails(personalDetails)
+                case .secureValueTypePassport:
+                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
+                        return nil
+                    }
+                    guard let passport = SecureIdPassportValue(dict: dict, fileReferences: parsedFiles, selfieDocument: parsedSelfie) else {
+                        return nil
+                    }
+                    value = .passport(passport)
+                case .secureValueTypeDriverLicense:
+                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
+                        return nil
+                    }
+                    guard let driversLicense = SecureIdDriversLicenseValue(dict: dict, fileReferences: parsedFiles, selfieDocument: parsedSelfie) else {
+                        return nil
+                    }
+                    value = .driversLicense(driversLicense)
+                case .secureValueTypeIdentityCard:
+                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
+                        return nil
+                    }
+                    guard let idCard = SecureIdIDCardValue(dict: dict, fileReferences: parsedFiles, selfieDocument: parsedSelfie) else {
+                        return nil
+                    }
+                    value = .idCard(idCard)
+                case .secureValueTypeAddress:
+                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
+                        return nil
+                    }
+                    guard let address = SecureIdAddressValue(dict: dict, fileReferences: parsedFiles) else {
+                        return nil
+                    }
+                    value = .address(address)
+                case .secureValueTypeUtilityBill:
+                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
+                        return nil
+                    }
+                    guard let utilityBill = SecureIdUtilityBillValue(dict: dict, fileReferences: parsedFiles) else {
+                        return nil
+                    }
+                    value = .utilityBill(utilityBill)
+                case .secureValueTypeBankStatement:
+                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
+                        return nil
+                    }
+                    guard let bankStatement = SecureIdBankStatementValue(dict: dict, fileReferences: parsedFiles) else {
+                        return nil
+                    }
+                    value = .bankStatement(bankStatement)
+                case .secureValueTypeRentalAgreement:
+                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
+                        return nil
+                    }
+                    guard let rentalAgreement = SecureIdRentalAgreementValue(dict: dict, fileReferences: parsedFiles) else {
+                        return nil
+                    }
+                    value = .rentalAgreement(rentalAgreement)
+                case .secureValueTypePhone:
+                    guard let publicData = plainData else {
+                        return nil
+                    }
+                    switch publicData {
+                        case let .securePlainPhone(phone):
+                            value = .phone(SecureIdPhoneValue(phone: phone))
+                        default:
+                            return nil
+                    }
+                case .secureValueTypeEmail:
+                    guard let publicData = plainData else {
+                        return nil
+                    }
+                    switch publicData {
+                        case let .securePlainEmail(email):
+                            value = .email(SecureIdEmailValue(email: email))
+                        default:
+                            return nil
+                    }
             }
-            guard let value = SecureIdAddressValue(data: decryptedData, fileReferences: parsedFiles) else {
-                return nil
-            }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .address(value), context: valueContext, encryptedMetadata: SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, fileHashes: parsedFileHashes, valueSecret: valueContext.secret, encryptedSecret: encryptedSecret)))
-        case let .secureValuePhone(_, phone, verified):
-            guard let phoneData = phone.data(using: .utf8) else {
-                return nil
-            }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .phone(SecureIdPhoneValue(phone: phone)), context: SecureIdValueAccessContext(secret: Data(), id: 0), encryptedMetadata: nil))
-        case let .secureValueEmail(_, email, verified):
-            guard let emailData = email.data(using: .utf8) else {
-                return nil
-            }
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: .email(SecureIdEmailValue(email: email)), context: SecureIdValueAccessContext(secret: Data(), id: 0), encryptedMetadata: nil))
+        
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: value, encryptedMetadata: encryptedMetadata, opaqueHash: hash.makeData()))
     }
 }
 
 private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue]) -> [SecureIdValueWithContext] {
-    return values.map({ parseSecureValue(context: context, value: $0) }).flatMap({ $0?.valueWithContext })
+    return values.map({ parseSecureValue(context: context, value: $0) }).compactMap({ $0?.valueWithContext })
 }
 
 public struct EncryptedSecureIdForm {
     public let peerId: PeerId
     public let requestedFields: [SecureIdRequestedFormField]
+    public let termsUrl: String?
     
     let encryptedValues: [Api.SecureValue]
 }
@@ -108,7 +197,7 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
     |> mapToSignal { result -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> in
         return postbox.modify { modifier -> EncryptedSecureIdForm in
             switch result {
-                case let .authorizationForm(requiredTypes, values, users):
+                case let .authorizationForm(flags, requiredTypes, values, users, termsUrl):
                     var peers: [Peer] = []
                     for user in users {
                         let parsed = TelegramUser(user: user)
@@ -118,7 +207,9 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
                         return updated
                     })
                     
-                    return EncryptedSecureIdForm(peerId: peerId, requestedFields: requiredTypes.map(parseSecureValueType), encryptedValues: values)
+                    return EncryptedSecureIdForm(peerId: peerId, requestedFields: requiredTypes.map {
+                        return parseSecureValueType($0, selfie: (flags & 1 << 1) != 0)
+                    }, termsUrl: termsUrl, encryptedValues: values)
             }
         } |> mapError { _ in return RequestSecureIdFormError.generic }
     }

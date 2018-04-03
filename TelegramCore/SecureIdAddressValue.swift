@@ -1,31 +1,20 @@
 import Foundation
 
-public enum SecureIdAddressValueType {
-    case passportRegistration
-    case utilityBill
-    case bankStatement
-    case rentalAgreement
-}
-
 public struct SecureIdAddressValue: Equatable {
-    public var type: SecureIdAddressValueType
     public var street1: String
     public var street2: String
     public var city: String
     public var region: String
     public var countryCode: String
     public var postcode: String
-    public var verificationDocuments: [SecureIdVerificationDocumentReference]
     
-    public init(type: SecureIdAddressValueType, street1: String, street2: String, city: String, region: String, countryCode: String, postcode: String, verificationDocuments: [SecureIdVerificationDocumentReference]) {
-        self.type = type
+    public init(street1: String, street2: String, city: String, region: String, countryCode: String, postcode: String) {
         self.street1 = street1
         self.street2 = street2
         self.city = city
         self.region = region
         self.countryCode = countryCode
         self.postcode = postcode
-        self.verificationDocuments = verificationDocuments
     }
     
     public static func ==(lhs: SecureIdAddressValue, rhs: SecureIdAddressValue) -> Bool {
@@ -47,52 +36,12 @@ public struct SecureIdAddressValue: Equatable {
         if lhs.postcode != rhs.postcode {
             return false
         }
-        if lhs.verificationDocuments != rhs.verificationDocuments {
-            return false
-        }
         return true
     }
 }
 
-private extension SecureIdAddressValueType {
-    init?(serializedString: String) {
-        switch serializedString {
-            case "passport_registration":
-                self = .passportRegistration
-            case "utility_bill":
-                self = .utilityBill
-            case "bank_statement":
-                self = .bankStatement
-            case "rental_agreement":
-                self = .rentalAgreement
-            default:
-                return nil
-        }
-    }
-    
-    func serialize() -> String {
-        switch self {
-            case .passportRegistration:
-                return "passport_registration"
-            case .utilityBill:
-                return "utility_bill"
-            case .bankStatement:
-                return "bank_statement"
-            case .rentalAgreement:
-                return "rental_agreement"
-        }
-    }
-}
-
 extension SecureIdAddressValue {
-    init?(data: Data, fileReferences: [SecureIdVerificationDocumentReference]) {
-        guard let dict = (try? JSONSerialization.jsonObject(with: data, options: [])) as? [String: Any] else {
-            return nil
-        }
-        
-        guard let documentTypeString = dict["document_type"] as? String, let type = SecureIdAddressValueType(serializedString: documentTypeString) else {
-            return nil
-        }
+    init?(dict: [String: Any], fileReferences: [SecureIdVerificationDocumentReference]) {
         guard let street1 = dict["street_line1"] as? String else {
             return nil
         }
@@ -110,14 +59,11 @@ extension SecureIdAddressValue {
             return nil
         }
         
-        let verificationDocuments: [SecureIdVerificationDocumentReference] = fileReferences
-        
-        self.init(type: type, street1: street1, street2: street2, city: city, region: region, countryCode: countryCode, postcode: postcode, verificationDocuments: verificationDocuments)
+        self.init(street1: street1, street2: street2, city: city, region: region, countryCode: countryCode, postcode: postcode)
     }
     
-    func serialize() -> (Data, [SecureIdVerificationDocumentReference])? {
+    func serialize() -> ([String: Any], [SecureIdVerificationDocumentReference]) {
         var dict: [String: Any] = [:]
-        dict["document_type"] = self.type.serialize()
         dict["street_line1"] = self.street1
         if !self.street2.isEmpty {
             dict["street_line2"] = self.street2   
@@ -127,9 +73,6 @@ extension SecureIdAddressValue {
         dict["country_iso2"] = self.countryCode
         dict["post_code"] = self.postcode
         
-        guard let data = try? JSONSerialization.data(withJSONObject: dict, options: []) else {
-            return nil
-        }
-        return (data, self.verificationDocuments)
+        return (dict, [])
     }
 }

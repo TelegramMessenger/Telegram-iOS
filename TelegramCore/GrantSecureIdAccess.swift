@@ -9,46 +9,84 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+func apiSecureValueType(value: SecureIdValue) -> Api.SecureValueType {
+    let type: Api.SecureValueType
+    switch value {
+        case .personalDetails:
+            type = .secureValueTypePersonalDetails
+        case .passport:
+            type = .secureValueTypePassport
+        case .driversLicense:
+            type = .secureValueTypeDriverLicense
+        case .idCard:
+            type = .secureValueTypeIdentityCard
+        case .address:
+            type = .secureValueTypeAddress
+        case .bankStatement:
+            type = .secureValueTypeBankStatement
+        case .utilityBill:
+            type = .secureValueTypeUtilityBill
+        case .rentalAgreement:
+            type = .secureValueTypeRentalAgreement
+        case .phone:
+            type = .secureValueTypePhone
+        case .email:
+            type = .secureValueTypeEmail
+    }
+    return type
+}
+
+private func credentialsValueTypeName(value: SecureIdValue) -> String {
+    switch value {
+        case .personalDetails:
+            return "personal_details"
+        case .passport:
+            return "passport"
+        case .driversLicense:
+            return "driver_license"
+        case .idCard:
+            return "identity_card"
+        case .address:
+            return "address"
+        case .bankStatement:
+            return "bank_statement"
+        case .utilityBill:
+            return "utility_bill"
+        case .rentalAgreement:
+            return "rental_agreement"
+        case .phone:
+            return "phone"
+        case .email:
+            return "email"
+    }
+}
+
 private func generateCredentials(values: [SecureIdValueWithContext], opaquePayload: Data) -> Data? {
-    var dict: [String: Any] = [:]
+    var secureData: [String: Any] = [:]
     for value in values {
-        switch value.value {
-            case .identity:
-                guard let encryptedMetadata = value.encryptedMetadata else {
-                    return nil
+        if let encryptedMetadata = value.encryptedMetadata {
+            var valueDict: [String: Any] = [:]
+            
+            valueDict["data"] = [
+                "data_hash": encryptedMetadata.valueDataHash.base64EncodedString(),
+                "secret": encryptedMetadata.decryptedSecret.base64EncodedString()
+            ] as [String: Any]
+            
+            if !encryptedMetadata.files.isEmpty {
+                valueDict["files"] = encryptedMetadata.files.map { file -> [String: Any] in
+                    return [
+                        "file_hash": file.hash.base64EncodedString(),
+                        "secret": file.secret.base64EncodedString()
+                    ]
                 }
-                var identity: [String: Any] = [:]
-                identity["data"] = ["data_hash": encryptedMetadata.valueDataHash.base64EncodedString()] as [String: Any]
-                if !encryptedMetadata.fileHashes.isEmpty {
-                    var files: [[String: Any]] = []
-                    for fileHash in encryptedMetadata.fileHashes {
-                        files.append(["file_hash": fileHash.base64EncodedString()])
-                    }
-                    identity["files"] = files
-                }
-                identity["secret"] = encryptedMetadata.valueSecret.base64EncodedString()
-                dict["identity"] = identity
-            case .address:
-                guard let encryptedMetadata = value.encryptedMetadata else {
-                    return nil
-                }
-                var identity: [String: Any] = [:]
-                identity["data"] = ["data_hash": encryptedMetadata.valueDataHash.base64EncodedString()] as [String: Any]
-                if !encryptedMetadata.fileHashes.isEmpty {
-                    var files: [[String: Any]] = []
-                    for fileHash in encryptedMetadata.fileHashes {
-                        files.append(["file_hash": fileHash.base64EncodedString()])
-                    }
-                    identity["files"] = files
-                }
-                identity["secret"] = encryptedMetadata.valueSecret.base64EncodedString()
-                dict["address"] = identity
-            case .email, .phone:
-                guard value.encryptedMetadata == nil else {
-                    return nil
-                }
+            }
+            
+            secureData[credentialsValueTypeName(value: value.value)] = valueDict
         }
     }
+    
+    var dict: [String: Any] = [:]
+    dict["secure_data"] = secureData
     
     if !opaquePayload.isEmpty, let opaquePayload = String(data: opaquePayload, encoding: .utf8) {
         dict["payload"] = opaquePayload
@@ -71,69 +109,6 @@ private func encryptedCredentialsData(data: Data, secretData: Data) -> (data: Da
         return nil
     }
     return (encryptedData, hash)
-}
-
-private func valueHash(_ value: SecureIdValueWithContext) -> Api.SecureValueHash? {
-    switch value.value {
-        case let .identity(identity):
-            guard let encryptedMetadata = value.encryptedMetadata else {
-                return nil
-            }
-            guard let files = identity.serialize()?.1 else {
-                return nil
-            }
-            
-            var hashData = Data()
-            hashData.append(encryptedMetadata.valueDataHash)
-            hashData.append(encryptedMetadata.encryptedSecret)
-            for file in files {
-                switch file {
-                    case let .remote(file):
-                        hashData.append(file.fileHash)
-                        hashData.append(file.encryptedSecret)
-                    case let .uploaded(file):
-                        hashData.append(file.fileHash)
-                        hashData.append(file.encryptedSecret)
-                }
-            }
-            let hash = sha256Digest(hashData)
-            
-            return .secureValueHash(type: .secureValueTypeIdentity, hash: Buffer(data: hash))
-        case let .address(address):
-            guard let encryptedMetadata = value.encryptedMetadata else {
-                return nil
-            }
-            guard let files = address.serialize()?.1 else {
-                return nil
-            }
-            
-            var hashData = Data()
-            hashData.append(encryptedMetadata.valueDataHash)
-            hashData.append(encryptedMetadata.encryptedSecret)
-            for file in files {
-                switch file {
-                    case let .remote(file):
-                        hashData.append(file.fileHash)
-                        hashData.append(file.encryptedSecret)
-                    case let .uploaded(file):
-                        hashData.append(file.fileHash)
-                        hashData.append(file.encryptedSecret)
-                }
-            }
-            let hash = sha256Digest(hashData)
-            
-            return .secureValueHash(type: .secureValueTypeAddress, hash: Buffer(data: hash))
-        case let .phone(phone):
-            guard let phoneData = phone.phone.data(using: .utf8) else {
-                return nil
-            }
-            return .secureValueHash(type: .secureValueTypePhone, hash: Buffer(data: sha256Digest(phoneData)))
-        case let .email(email):
-            guard let emailData = email.email.data(using: .utf8) else {
-                return nil
-            }
-            return .secureValueHash(type: .secureValueTypeEmail, hash: Buffer(data: sha256Digest(emailData)))
-    }
 }
 
 public enum GrantSecureIdAccessError {
@@ -159,10 +134,7 @@ public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: Str
     
     var valueHashes: [Api.SecureValueHash] = []
     for value in values {
-        guard let hash = valueHash(value) else {
-            return .fail(.generic)
-        }
-        valueHashes.append(hash)
+        valueHashes.append(.secureValueHash(type: apiSecureValueType(value: value.value), hash: Buffer(data: value.opaqueHash)))
     }
     
     return network.request(Api.functions.account.acceptAuthorization(botId: peerId.id, scope: scope, publicKey: publicKey, valueHashes: valueHashes, credentials: .secureCredentialsEncrypted(data: Buffer(data: encryptedCredentialsData), hash: Buffer(data: decryptedCredentialsHash), secret: Buffer(data: encryptedSecretData))))

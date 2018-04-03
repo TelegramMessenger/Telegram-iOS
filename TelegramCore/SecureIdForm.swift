@@ -5,9 +5,15 @@ import Foundation
     import Postbox
 #endif
 
-public enum SecureIdRequestedFormField {
-    case identity
+public enum SecureIdRequestedFormField: Equatable {
+    case personalDetails
+    case passport(selfie: Bool)
+    case driversLicense(selfie: Bool)
+    case idCard(selfie: Bool)
     case address
+    case utilityBill
+    case bankStatement
+    case rentalAgreement
     case phone
     case email
 }
