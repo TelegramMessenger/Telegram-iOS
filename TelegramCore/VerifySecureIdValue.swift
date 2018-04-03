@@ -59,7 +59,7 @@ public func secureIdCommitPhoneVerification(network: Network, context: SecureIdA
         return .generic
     }
     |> mapToSignal { _ -> Signal<SecureIdValueWithContext, SecureIdCommitPhoneVerificationError> in
-        return saveSecureIdValue(network: network, context: context, valueContext: generateSecureIdValueEmptyAccessContext()!, value: .phone(SecureIdPhoneValue(phone: payload.phone)))
+        return saveSecureIdValue(network: network, context: context, value: .phone(SecureIdPhoneValue(phone: payload.phone)))
         |> mapError { _ -> SecureIdCommitPhoneVerificationError in
             return .generic
         }
@@ -106,7 +106,7 @@ public func secureIdCommitEmailVerification(network: Network, context: SecureIdA
         return .generic
     }
     |> mapToSignal { _ -> Signal<SecureIdValueWithContext, SecureIdCommitEmailVerificationError> in
-        return saveSecureIdValue(network: network, context: context, valueContext: generateSecureIdValueEmptyAccessContext()!, value: .email(SecureIdEmailValue(email: payload.email)))
+        return saveSecureIdValue(network: network, context: context, value: .email(SecureIdEmailValue(email: payload.email)))
         |> mapError { _ -> SecureIdCommitEmailVerificationError in
             return .generic
         }

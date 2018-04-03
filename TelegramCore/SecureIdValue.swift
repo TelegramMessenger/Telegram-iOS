@@ -1,5 +1,18 @@
 import Foundation
 
+public enum SecureIdValueKey: Int32 {
+    case personalDetails
+    case passport
+    case driversLicense
+    case idCard
+    case address
+    case utilityBill
+    case bankStatement
+    case rentalAgreement
+    case phone
+    case email
+}
+
 public enum SecureIdValue: Equatable {
     case personalDetails(SecureIdPersonalDetailsValue)
     case passport(SecureIdPassportValue)
@@ -11,6 +24,31 @@ public enum SecureIdValue: Equatable {
     case rentalAgreement(SecureIdRentalAgreementValue)
     case phone(SecureIdPhoneValue)
     case email(SecureIdEmailValue)
+    
+    public var key: SecureIdValueKey {
+        switch self {
+            case .personalDetails:
+                return .personalDetails
+            case .passport:
+                return .passport
+            case .driversLicense:
+                return .driversLicense
+            case .idCard:
+                return .idCard
+            case .address:
+                return .address
+            case .utilityBill:
+                return .utilityBill
+            case .bankStatement:
+                return .bankStatement
+            case .rentalAgreement:
+                return .rentalAgreement
+            case .phone:
+                return .phone
+            case .email:
+                return .email
+        }
+    }
     
     func serialize() -> ([String: Any], [SecureIdVerificationDocumentReference], SecureIdVerificationDocumentReference?)? {
         switch self {

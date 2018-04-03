@@ -187,8 +187,8 @@ private func makeInputSecureValue(context: SecureIdAccessContext, value: SecureI
     return Api.InputSecureValue.inputSecureValue(flags: flags, type: inputData.type, data: secureData, files: files, plainData: inputData.publicData, selfie: inputData.selfieReference.flatMap(apiInputSecretFile))
 }
 
-public func saveSecureIdValue(network: Network, context: SecureIdAccessContext, valueContext: SecureIdValueAccessContext, value: SecureIdValue) -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> {
-    let delete = deleteSecureIdValue(network: network, value: value)
+public func saveSecureIdValue(network: Network, context: SecureIdAccessContext, value: SecureIdValue) -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> {
+    let delete = deleteSecureIdValues(network: network, keys: Set([value.key]))
     |> mapError { _ -> SaveSecureIdValueError in
         return .generic
     }
@@ -227,8 +227,8 @@ public enum DeleteSecureIdValueError {
     case generic
 }
 
-public func deleteSecureIdValue(network: Network, value: SecureIdValue) -> Signal<Void, DeleteSecureIdValueError> {
-    return network.request(Api.functions.account.deleteSecureValue(types: [apiSecureValueType(value: value)]))
+public func deleteSecureIdValues(network: Network, keys: Set<SecureIdValueKey>) -> Signal<Void, DeleteSecureIdValueError> {
+    return network.request(Api.functions.account.deleteSecureValue(types: keys.map(apiSecureValueType(key:))))
     |> mapError { _ -> DeleteSecureIdValueError in
         return .generic
     }

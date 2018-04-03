@@ -36,6 +36,33 @@ func apiSecureValueType(value: SecureIdValue) -> Api.SecureValueType {
     return type
 }
 
+func apiSecureValueType(key: SecureIdValueKey) -> Api.SecureValueType {
+    let type: Api.SecureValueType
+    switch key {
+        case .personalDetails:
+            type = .secureValueTypePersonalDetails
+        case .passport:
+            type = .secureValueTypePassport
+        case .driversLicense:
+            type = .secureValueTypeDriverLicense
+        case .idCard:
+            type = .secureValueTypeIdentityCard
+        case .address:
+            type = .secureValueTypeAddress
+        case .bankStatement:
+            type = .secureValueTypeBankStatement
+        case .utilityBill:
+            type = .secureValueTypeUtilityBill
+        case .rentalAgreement:
+            type = .secureValueTypeRentalAgreement
+        case .phone:
+            type = .secureValueTypePhone
+        case .email:
+            type = .secureValueTypeEmail
+    }
+    return type
+}
+
 private func credentialsValueTypeName(value: SecureIdValue) -> String {
     switch value {
         case .personalDetails:
