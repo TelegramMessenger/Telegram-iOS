@@ -213,9 +213,6 @@ public func saveSecureIdValue(network: Network, context: SecureIdAccessContext, 
         guard let parsedValue = parseSecureValue(context: context, value: result) else {
             return .fail(.generic)
         }
-        guard parsedValue.valueWithContext.value == value else {
-            return .fail(.generic)
-        }
         
         return .single(parsedValue.valueWithContext)
     }

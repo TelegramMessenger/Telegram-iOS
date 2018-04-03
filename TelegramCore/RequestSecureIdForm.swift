@@ -125,26 +125,17 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
                     }
                     value = .address(address)
                 case .secureValueTypeUtilityBill:
-                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
-                        return nil
-                    }
-                    guard let utilityBill = SecureIdUtilityBillValue(dict: dict, fileReferences: parsedFiles) else {
+                    guard let utilityBill = SecureIdUtilityBillValue(fileReferences: parsedFiles) else {
                         return nil
                     }
                     value = .utilityBill(utilityBill)
                 case .secureValueTypeBankStatement:
-                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
-                        return nil
-                    }
-                    guard let bankStatement = SecureIdBankStatementValue(dict: dict, fileReferences: parsedFiles) else {
+                    guard let bankStatement = SecureIdBankStatementValue(fileReferences: parsedFiles) else {
                         return nil
                     }
                     value = .bankStatement(bankStatement)
                 case .secureValueTypeRentalAgreement:
-                    guard let dict = (try? JSONSerialization.jsonObject(with: decryptedData ?? Data(), options: [])) as? [String: Any] else {
-                        return nil
-                    }
-                    guard let rentalAgreement = SecureIdRentalAgreementValue(dict: dict, fileReferences: parsedFiles) else {
+                    guard let rentalAgreement = SecureIdRentalAgreementValue(fileReferences: parsedFiles) else {
                         return nil
                     }
                     value = .rentalAgreement(rentalAgreement)

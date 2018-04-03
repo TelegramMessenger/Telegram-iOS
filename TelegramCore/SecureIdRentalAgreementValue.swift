@@ -16,15 +16,13 @@ public struct SecureIdRentalAgreementValue: Equatable {
 }
 
 extension SecureIdRentalAgreementValue {
-    init?(dict: [String: Any], fileReferences: [SecureIdVerificationDocumentReference]) {
+    init?(fileReferences: [SecureIdVerificationDocumentReference]) {
         let verificationDocuments: [SecureIdVerificationDocumentReference] = fileReferences
         
         self.init(verificationDocuments: verificationDocuments)
     }
     
     func serialize() -> ([String: Any], [SecureIdVerificationDocumentReference]) {
-        var dict: [String: Any] = [:]
-        
-        return (dict, self.verificationDocuments)
+        return ([:], self.verificationDocuments)
     }
 }
