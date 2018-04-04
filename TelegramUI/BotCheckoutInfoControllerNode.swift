@@ -148,7 +148,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
             addressItems.address2.text = formInfo.shippingAddress?.streetLine2 ?? ""
             addressItems.city.text = formInfo.shippingAddress?.city ?? ""
             addressItems.state.text = formInfo.shippingAddress?.state ?? ""
-            if let iso2 = formInfo.shippingAddress?.countryIso2, let name = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(iso2.uppercased()) {
+            if let iso2 = formInfo.shippingAddress?.countryIso2, let name = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(iso2.uppercased(), strings: self.strings) {
                 addressItems.country.text = name
             }
             addressItems.postcode.text = formInfo.shippingAddress?.postCode ?? ""
@@ -243,7 +243,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     func updateCountry(_ iso2: String) {
-        if self.formInfo.shippingAddress?.countryIso2 != iso2, let name = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(iso2) {
+        if self.formInfo.shippingAddress?.countryIso2 != iso2, let name = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(iso2, strings: self.strings) {
             let shippingAddress: BotPaymentShippingAddress
             if let current = self.formInfo.shippingAddress {
                 shippingAddress = current

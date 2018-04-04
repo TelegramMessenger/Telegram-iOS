@@ -91,6 +91,28 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
+    var countryCodeText: String {
+        get {
+            return self.countryCodeField.textField.text ?? ""
+        } set(value) {
+            if self.countryCodeField.textField.text != value {
+                self.countryCodeField.textField.text = value
+                self.countryCodeTextChanged(self.countryCodeField.textField)
+            }
+        }
+    }
+    
+    var numberText: String {
+        get {
+            return self.numberField.textField.text ?? ""
+        } set(value) {
+            if self.numberField.textField.text != value {
+                self.numberField.textField.text = value
+                self.numberTextChanged(self.numberField.textField)
+            }
+        }
+    }
+    
     var codeAndNumber: (Int32?, String) {
         get {
             var code: Int32?
@@ -104,6 +126,9 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     var countryCodeUpdated: ((String) -> Void)?
+    
+    var countryCodeTextUpdated: ((String) -> Void)?
+    var numberTextUpdated: ((String) -> Void)?
     
     private let phoneFormatter = InteractivePhoneFormatter()
     
@@ -180,10 +205,12 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
             let code = removePlus(realRegionPrefix).trimmingCharacters(in: CharacterSet.whitespaces)
             self.countryCodeUpdated?(code)
         }
+        self.countryCodeTextUpdated?(realRegionPrefix)
         
         if numberText != self.numberField.textField.text {
             self.numberField.textField.text = numberText
         }
+        self.numberTextUpdated?(numberText)
         
         if self.previousNumberText.isEmpty && !numberText.isEmpty {
             focusOnNumber = true

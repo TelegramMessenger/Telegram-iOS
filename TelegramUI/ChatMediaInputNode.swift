@@ -543,7 +543,13 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         switch attribute {
                                                             case let .Sticker(_, packReference, _):
                                                                 if let packReference = packReference {
-                                                                    strongSelf.controllerInteraction.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference), nil)
+                                                                   let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference)
+                                                                    controller.sendSticker = { file in
+                                                                        if let strongSelf = self {
+                                                                            strongSelf.controllerInteraction.sendSticker(file)
+                                                                        }
+                                                                    }
+                                                                    strongSelf.controllerInteraction.presentController(controller, nil)
                                                                 }
                                                                 break loop
                                                             default:

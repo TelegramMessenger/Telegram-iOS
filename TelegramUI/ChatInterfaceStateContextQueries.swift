@@ -54,12 +54,12 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
             } else {
                 signal = .single({ _ in return .stickers([]) })
             }
-            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = searchStickers(postbox: account.postbox, query: query.firstEmoji)
-                |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                    return { _ in
-                        return .stickers(stickers)
-                    }
+            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = searchStickers(account: account, query: query.firstEmoji)
+            |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                return { _ in
+                    return .stickers(stickers)
                 }
+            }
             return signal |> then(stickers)
         case let .hashtag(query):
             var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()

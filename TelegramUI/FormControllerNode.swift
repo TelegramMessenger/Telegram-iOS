@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import TelegramCore
 
 struct FormControllerLayoutState {
     var layout: ContainerViewLayout
@@ -86,20 +87,33 @@ private enum FilteredItemNeighbor {
     case item(FormControllerItem)
 }
 
-class FormControllerNode<InnerState: FormControllerInnerState>: ViewControllerTracingNode, UIScrollViewDelegate {
+class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: ViewControllerTracingNode, UIScrollViewDelegate {
     private typealias InternalState = FormControllerInternalState<InnerState>
     typealias State = FormControllerState<InnerState>
     typealias Entry = InnerState.Entry
     
     private var internalState: InternalState
+    var innerState: InnerState? {
+        return self.internalState.innerState
+    }
+    
+    var layoutState: FormControllerLayoutState? {
+        return self.internalState.layoutState
+    }
     
     private let scrollNode: FormControllerScrollerNode
     
     private var appliedLayout: FormControllerLayoutState?
     private var appliedEntries: [Entry] = []
-    private var itemNodes: [ASDisplayNode & FormControllerItemNode] = []
+    private(set) var itemNodes: [ASDisplayNode & FormControllerItemNode] = []
     
-    required init(theme: PresentationTheme, strings: PresentationStrings) {
+    var present: (ViewController, Any?) -> Void = { _, _ in }
+    
+    var itemParams: Entry.ItemParams {
+        preconditionFailure()
+    }
+    
+    required init(initParams: InitParams, theme: PresentationTheme, strings: PresentationStrings) {
         self.internalState = FormControllerInternalState(layoutState: nil, presentationState: FormControllerPresentationState(theme: theme, strings: strings), innerState: nil)
         
         self.scrollNode = FormControllerScrollerNode()
@@ -157,7 +171,7 @@ class FormControllerNode<InnerState: FormControllerInnerState>: ViewControllerTr
         
         for i in 0 ..< entries.count {
             if case let .entry(entry) = entries[i] {
-                let item = entry.item(strings: state.presentationState.strings)
+                let item = entry.item(params: self.itemParams, strings: state.presentationState.strings)
                 
                 filteredEntries.append(entry)
                 filteredItemNeighbors.append(.item(item))
@@ -199,7 +213,7 @@ class FormControllerNode<InnerState: FormControllerInnerState>: ViewControllerTr
         self.appliedEntries = filteredEntries
         self.itemNodes = itemNodes
         
-        var contentHeight: CGFloat = 0.0
+        var applyLayouts: [(ContainedViewLayoutTransition, FormControllerItemPreLayout, (FormControllerItemLayoutParams) -> CGFloat)] = []
         
         var itemNodeIndex = 0
         for i in 0 ..< filteredItemNeighbors.count {
@@ -210,8 +224,8 @@ class FormControllerNode<InnerState: FormControllerInnerState>: ViewControllerTr
                     switch filteredItemNeighbors[i - 1] {
                         case .spacer:
                             previousNeighbor = .spacer
-                        case let .item(item):
-                            previousNeighbor = .item(item)
+                        case .item:
+                            previousNeighbor = .item(itemNodes[itemNodeIndex - 1])
                     }
                 } else {
                     previousNeighbor = .none
@@ -220,8 +234,8 @@ class FormControllerNode<InnerState: FormControllerInnerState>: ViewControllerTr
                     switch filteredItemNeighbors[i + 1] {
                         case .spacer:
                             nextNeighbor = .spacer
-                        case let .item(item):
-                            nextNeighbor = .item(item)
+                        case .item:
+                            nextNeighbor = .item(itemNodes[itemNodeIndex + 1])
                     }
                 } else {
                     nextNeighbor = .none
@@ -234,13 +248,36 @@ class FormControllerNode<InnerState: FormControllerInnerState>: ViewControllerTr
                     itemTransition = transition
                 }
                 
-                let itemHeight = item.update(node: itemNodes[itemNodeIndex], theme: state.presentationState.theme, strings: state.presentationState.strings, width: layout.size.width, previousNeighbor: previousNeighbor, nextNeighbor: nextNeighbor, transition: itemTransition)
-                itemTransition.updateFrame(node: itemNodes[itemNodeIndex], frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: itemHeight)))
-                contentHeight += itemHeight
+                let (preLayout, apply) = item.update(node: itemNodes[itemNodeIndex], theme: state.presentationState.theme, strings: state.presentationState.strings, width: layout.size.width, previousNeighbor: previousNeighbor, nextNeighbor: nextNeighbor, transition: itemTransition)
+                applyLayouts.append((itemTransition, preLayout, apply))
                 
                 itemNodeIndex += 1
             }
         }
+        
+        var commonAligningInset: CGFloat = 0.0
+        for i in 0 ..< itemNodes.count {
+            commonAligningInset = max(commonAligningInset, applyLayouts[i].1.aligningInset)
+        }
+        
+        var contentHeight: CGFloat = 0.0
+        
+        itemNodeIndex = 0
+        for i in 0 ..< filteredItemNeighbors.count {
+            if case .item = filteredItemNeighbors[i] {
+                let itemNode = itemNodes[itemNodeIndex]
+                let (itemTransition, _, apply) = applyLayouts[itemNodeIndex]
+                
+                let itemHeight = apply(FormControllerItemLayoutParams(maxAligningInset: commonAligningInset))
+                itemTransition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: itemHeight)))
+                contentHeight += itemHeight
+                itemNodeIndex += 1
+            } else {
+                contentHeight += 35.0
+            }
+        }
+        
+        contentHeight += 36.0
         
         let scrollContentSize = CGSize(width: layout.size.width, height: contentHeight)
         
@@ -257,9 +294,13 @@ class FormControllerNode<InnerState: FormControllerInnerState>: ViewControllerTr
             previousInsets.top += max(previousLayout.navigationHeight, previousLayout.layout.insets(options: [.statusBar]).top)
             let insetsScrollOffset = insets.top - previousInsets.top
             
-            var contentOffset = CGPoint(x: 0.0, y: previousBoundsOrigin.y + insetsScrollOffset)
+            let negativeOverscroll = min(previousBoundsOrigin.y + insets.top, 0.0)
+            let cleanOrigin = max(previousBoundsOrigin.y, -insets.top)
+            
+            var contentOffset = CGPoint(x: 0.0, y: cleanOrigin + insetsScrollOffset)
             contentOffset.y = min(contentOffset.y, scrollContentSize.height + insets.bottom - layout.size.height)
             contentOffset.y = max(contentOffset.y, -insets.top)
+            contentOffset.y += negativeOverscroll
             
             transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: layout.size))
         } else {

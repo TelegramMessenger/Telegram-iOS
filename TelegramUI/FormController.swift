@@ -2,17 +2,20 @@ import Foundation
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import TelegramCore
 
-class FormController<InnerState, Node: FormControllerNode<InnerState>>: ViewController {
+class FormController<InnerState, InitParams, Node: FormControllerNode<InitParams, InnerState>>: ViewController {
     var controllerNode: Node {
         return self.displayNode as! Node
     }
     
+    private let initParams: InitParams
     private var presentationData: PresentationData
     
     private var didPlayPresentationAnimation = false
     
-    init(presentationData: PresentationData) {
+    init(initParams: InitParams, presentationData: PresentationData) {
+        self.initParams = initParams
         self.presentationData = presentationData
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
@@ -34,6 +37,7 @@ class FormController<InnerState, Node: FormControllerNode<InnerState>>: ViewCont
     }
     
     override func dismiss(completion: (() -> Void)? = nil) {
+        self.controllerNode.view.endEditing(true)
         self.controllerNode.animateOut(completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             completion?()
@@ -41,7 +45,10 @@ class FormController<InnerState, Node: FormControllerNode<InnerState>>: ViewCont
     }
     
     override func loadDisplayNode() {
-        self.displayNode = Node(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.displayNode = Node(initParams: self.initParams, theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.controllerNode.present = { [weak self] c, a in
+            self?.present(c, in: .window(.root), with: a)
+        }
         
         self.displayNodeDidLoad()
     }

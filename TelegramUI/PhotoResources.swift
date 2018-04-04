@@ -2125,3 +2125,83 @@ func playerAlbumArt(postbox: Postbox, albumArt: SharedMediaPlaybackAlbumArt?, th
         })
     }
 }
+
+func securePhoto(account: Account, resource: TelegramMediaResource, accessContext: SecureIdAccessContext) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return securePhotoInternal(account: account, resource: resource, accessContext: accessContext) |> map { $0.1 }
+}
+
+func securePhotoInternal(account: Account, resource: TelegramMediaResource, accessContext: SecureIdAccessContext) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+    let signal = Signal<MediaResourceData, NoError> { subscriber in
+        let fetched = account.postbox.mediaBox.fetchedResource(resource, tag: nil).start()
+        let data = account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false)).start(next: { next in
+            subscriber.putNext(next)
+        }, completed: {
+            subscriber.putCompletion()
+        })
+        return ActionDisposable {
+            fetched.dispose()
+            data.dispose()
+        }
+    }
+    |> map { next -> Data? in
+        if next.size == 0 {
+            return nil
+        } else {
+            return decryptedResourceData(data: next, resource: resource, params: accessContext)
+        }
+    }
+    
+    return signal |> map { fullSizeData in
+        return ({
+            if let fullSizeData = fullSizeData, let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil) {
+                let options = NSMutableDictionary()
+                options.setObject(true as NSNumber, forKey: kCGImagePropertyPixelWidth as NSString)
+                options.setObject(true as NSNumber, forKey: kCGImagePropertyPixelHeight as NSString)
+                if let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, options as CFDictionary) {
+                    let dict = properties as NSDictionary
+                    if let width = dict.object(forKey: kCGImagePropertyPixelWidth as NSString), let height = dict.object(forKey: kCGImagePropertyPixelHeight as NSString) {
+                        if let width = width as? NSNumber, let height = height as? NSNumber {
+                            return CGSize(width: CGFloat(width.floatValue), height: CGFloat(height.floatValue))
+                        }
+                    }
+                }
+            }
+            return CGSize(width: 128.0, height: 128.0)
+        }, { arguments in
+            var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
+            if let fullSizeData = fullSizeData {
+                let options = NSMutableDictionary()
+                if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                    imageOrientation = imageOrientationFromSource(imageSource)
+                    fullSizeImage = image
+                }
+            }
+            
+            if let fullSizeImage = fullSizeImage {
+                let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                
+                let fittedSize = CGSize(width: fullSizeImage.width, height: fullSizeImage.height).aspectFilled(arguments.boundingSize)
+                let drawingRect = arguments.drawingRect
+                
+                let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                
+                context.withFlippedContext { c in
+                    c.setBlendMode(.copy)
+                    if arguments.boundingSize.width > arguments.imageSize.width || arguments.boundingSize.height > arguments.imageSize.height {
+                        c.fill(arguments.drawingRect)
+                    }
+                    
+                    c.interpolationQuality = .medium
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
+                }
+                
+                addCorners(context, arguments: arguments)
+                
+                return context
+            } else {
+                return nil
+            }
+        })
+    }
+}

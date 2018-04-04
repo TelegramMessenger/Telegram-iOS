@@ -15,12 +15,14 @@ final class FormControllerHeaderItem: FormControllerItem {
         return FormControllerHeaderItemNode()
     }
     
-    func update(node: ASDisplayNode & FormControllerItemNode, theme: PresentationTheme, strings: PresentationStrings, width: CGFloat, previousNeighbor: FormControllerItemNeighbor, nextNeighbor: FormControllerItemNeighbor, transition: ContainedViewLayoutTransition) -> CGFloat {
-        guard let node = node as? FormControllerHeaderItemNode else {
-            assertionFailure()
-            return 0.0
-        }
-        return node.update(item: self, width: width, theme: theme, transition: transition)
+    func update(node: ASDisplayNode & FormControllerItemNode, theme: PresentationTheme, strings: PresentationStrings, width: CGFloat, previousNeighbor: FormControllerItemNeighbor, nextNeighbor: FormControllerItemNeighbor, transition: ContainedViewLayoutTransition) -> (FormControllerItemPreLayout, (FormControllerItemLayoutParams) -> CGFloat) {
+        return (FormControllerItemPreLayout(aligningInset: 0.0), { _ in
+            guard let node = node as? FormControllerHeaderItemNode else {
+                assertionFailure()
+                return 0.0
+            }
+            return node.update(item: self, previousNeighbor: previousNeighbor, width: width, theme: theme, transition: transition)
+        })
     }
 }
 
@@ -36,14 +38,24 @@ final class FormControllerHeaderItemNode: ASDisplayNode, FormControllerItemNode 
         self.addSubnode(self.textNode)
     }
     
-    func update(item: FormControllerHeaderItem, width: CGFloat, theme: PresentationTheme, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(item: FormControllerHeaderItem, previousNeighbor: FormControllerItemNeighbor, width: CGFloat, theme: PresentationTheme, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.textNode.attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
         let leftInset: CGFloat = 16.0
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - 10.0, height: CGFloat.greatestFiniteMagnitude))
         
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: textSize))
+        let height: CGFloat
+        switch previousNeighbor {
+            case .none:
+                height = 20.0 + 30.0
+            case .spacer:
+                height = 14.0
+            case .item:
+                height = 14.0
+        }
         
-        return 30.0
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: height - 23.0), size: textSize))
+        
+        return height
     }
 }

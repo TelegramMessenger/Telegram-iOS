@@ -3,29 +3,197 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 
+enum SecureIdRequestedIdentityDocument: Int32 {
+    case passport
+    case driversLicense
+    case idCard
+    
+    var valueKey: SecureIdValueKey {
+        switch self {
+            case .passport:
+                return .passport
+            case .driversLicense:
+                return .driversLicense
+            case .idCard:
+                return .idCard
+        }
+    }
+}
+
+enum SecureIdRequestedAddressDocument: Int32 {
+    case bankStatement
+    case utilityBill
+    case rentalAgreement
+    
+    var valueKey: SecureIdValueKey {
+        switch self {
+            case .bankStatement:
+                return .bankStatement
+            case .utilityBill:
+                return .utilityBill
+            case .rentalAgreement:
+                return .rentalAgreement
+        }
+    }
+}
+
+enum SecureIdParsedRequestedFormField {
+    case identity(personalDetails: Bool, document: Set<SecureIdRequestedIdentityDocument>, selfie: Bool)
+    case address(addressDetails: Bool, document: Set<SecureIdRequestedAddressDocument>)
+    case phone
+    case email
+}
+
+func parseRequestedFormFields(_ types: [SecureIdRequestedFormField]) -> [SecureIdParsedRequestedFormField] {
+    var identity: (Bool, Set<SecureIdRequestedIdentityDocument>, Bool) = (false, Set(), false)
+    var address: (Bool, Set<SecureIdRequestedAddressDocument>) = (false, Set())
+    var phone: Bool = false
+    var email: Bool = false
+    
+    for type in types {
+        switch type {
+            case .personalDetails:
+                identity.0 = true
+            case let .passport(selfie):
+                identity.1.insert(.passport)
+                identity.2 = identity.2 || selfie
+            case let .driversLicense(selfie):
+                identity.1.insert(.driversLicense)
+                identity.2 = identity.2 || selfie
+            case let .idCard(selfie):
+                identity.1.insert(.idCard)
+                identity.2 = identity.2 || selfie
+            case .address:
+                address.0 = true
+            case .bankStatement:
+                address.1.insert(.bankStatement)
+            case .utilityBill:
+                address.1.insert(.utilityBill)
+            case .rentalAgreement:
+                address.1.insert(.rentalAgreement)
+            case .phone:
+                phone = true
+            case .email:
+                email = true
+        }
+    }
+    
+    var result: [SecureIdParsedRequestedFormField] = []
+    if identity.0 || !identity.1.isEmpty {
+        result.append(.identity(personalDetails: identity.0, document: identity.1, selfie: identity.2))
+    }
+    if address.0 || !address.1.isEmpty {
+        result.append(.address(addressDetails: address.0, document: address.1))
+    }
+    if phone {
+        result.append(.phone)
+    }
+    if email {
+        result.append(.email)
+    }
+    
+    return result
+}
+
 private let titleFont = Font.regular(17.0)
 private let textFont = Font.regular(15.0)
 
-private func fieldTitleAndText(type: SecureIdRequestedFormField, strings: PresentationStrings) -> (String, String) {
+private func fieldsText(_ fields: String...) -> String {
+    var result = ""
+    for field in fields {
+        if !field.isEmpty {
+            if !result.isEmpty {
+                result.append(", ")
+            }
+            result.append(field)
+        }
+    }
+    return result
+}
+
+private func countryName(code: String, strings: PresentationStrings) -> String {
+    return AuthorizationSequenceCountrySelectionController.lookupCountryNameById(code, strings: strings) ?? ""
+}
+
+private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings: PresentationStrings, values: [SecureIdValueWithContext]) -> (String, String) {
     let title: String
     let placeholder: String
+    var text: String = ""
     
-    switch type {
-        case .identity:
+    switch field {
+        case let .identity(personalDetails, documents, selfie):
             title = strings.SecureId_FormFieldIdentity
             placeholder = strings.SecureId_FormFieldIdentityPlaceholder
-        case .address:
+            
+            if personalDetails {
+                if let value = findValue(values, key: .personalDetails), case let .personalDetails(personalDetailsValue) = value.1 {
+                    if !text.isEmpty {
+                        text.append(", ")
+                    }
+                    text.append(fieldsText(personalDetailsValue.firstName, personalDetailsValue.lastName, countryName(code: personalDetailsValue.countryCode, strings: strings)))
+                }
+            }
+            
+            if !documents.isEmpty {
+                for documentType in Array(documents).sorted(by: { $0.rawValue < $1.rawValue }) {
+                    let key: SecureIdValueKey
+                    switch documentType {
+                        case .passport:
+                            key = .passport
+                        case .driversLicense:
+                            key = .driversLicense
+                        case .idCard:
+                            key = .idCard
+                    }
+                    if let value = findValue(values, key: key)?.1 {
+                        switch value {
+                            case let .passport(passport):
+                                break
+                            case let .driversLicense(driversLicense):
+                                break
+                            case let .idCard(idCard):
+                                break
+                            default:
+                                break
+                        }
+                    }
+                }
+            }
+        case let .address(addressDetails, documents):
             title = strings.SecureId_FormFieldAddress
             placeholder = strings.SecureId_FormFieldAddressPlaceholder
+            
+            if addressDetails {
+                if let value = findValue(values, key: .address), case let .address(addressValue) = value.1 {
+                    if !text.isEmpty {
+                        text.append(", ")
+                    }
+                    text.append(fieldsText(addressValue.postcode, addressValue.street1, addressValue.street2, addressValue.city))
+                }
+            }
         case .phone:
             title = strings.SecureId_FormFieldPhone
             placeholder = strings.SecureId_FormFieldPhonePlaceholder
+            
+            if let value = findValue(values, key: .phone), case let .phone(phoneValue) = value.1 {
+                if !text.isEmpty {
+                    text.append(", ")
+                }
+                text = formatPhoneNumber(phoneValue.phone)
+            }
         case .email:
             title = strings.SecureId_FormFieldEmail
             placeholder = strings.SecureId_FormFieldEmailPlaceholder
+        
+            if let value = findValue(values, key: .email), case let .email(emailValue) = value.1 {
+                if !text.isEmpty {
+                    text.append(", ")
+                }
+                text = formatPhoneNumber(emailValue.email)
+            }
     }
     
-    return (title, placeholder)
+    return (title, text.isEmpty ? placeholder : text)
 }
 
 final class SecureIdAuthFormFieldNode: ASDisplayNode {
@@ -37,10 +205,21 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
     
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
+    private let disclosureNode: ASImageNode
+    private let checkNode: ASImageNode
     
     private let buttonNode: HighlightableButtonNode
     
-    init(theme: PresentationTheme, strings: PresentationStrings, type: SecureIdRequestedFormField, values: [SecureIdValue], selected: @escaping () -> Void) {
+    private var validLayout: (CGFloat, Bool, Bool)?
+    
+    private let field: SecureIdParsedRequestedFormField
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
+    
+    init(theme: PresentationTheme, strings: PresentationStrings, field: SecureIdParsedRequestedFormField, values: [SecureIdValueWithContext], errors: [SecureIdErrorKey: [String]], selected: @escaping () -> Void) {
+        self.field = field
+        self.theme = theme
+        self.strings = strings
         self.selected = selected
         
         self.topSeparatorNode = ASDisplayNode()
@@ -66,6 +245,18 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         self.textNode.isLayerBacked = true
         self.textNode.maximumNumberOfLines = 1
         
+        self.disclosureNode = ASImageNode()
+        self.disclosureNode.isLayerBacked = true
+        self.disclosureNode.displayWithoutProcessing = true
+        self.disclosureNode.displaysAsynchronously = false
+        self.disclosureNode.image = PresentationResourcesItemList.disclosureArrowImage(theme)
+        
+        self.checkNode = ASImageNode()
+        self.checkNode.isLayerBacked = true
+        self.checkNode.displayWithoutProcessing = true
+        self.checkNode.displaysAsynchronously = false
+        self.checkNode.image = PresentationResourcesItemList.checkIconImage(theme)
+        
         self.buttonNode = HighlightableButtonNode()
         
         super.init()
@@ -75,12 +266,11 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         self.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.disclosureNode)
+        self.addSubnode(self.checkNode)
         self.addSubnode(self.buttonNode)
         
-        let (title, text) = fieldTitleAndText(type: type, strings: strings)
-        
-        self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: theme.list.itemPrimaryTextColor)
-        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: theme.list.itemSecondaryTextColor)
+        self.updateValues(values, errors: errors)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -97,7 +287,77 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
+    func updateValues(_ values: [SecureIdValueWithContext], errors: [SecureIdErrorKey: [String]]) {
+        var (title, text) = fieldTitleAndText(field: self.field, strings: self.strings, values: values)
+        var textColor = self.theme.list.itemSecondaryTextColor
+        switch self.field {
+            case .identity:
+                if let error = errors[.personalDetails]?.first {
+                    text = error
+                    textColor = self.theme.list.itemDestructiveColor
+                }
+            default:
+                break
+        }
+        self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.theme.list.itemPrimaryTextColor)
+        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: textColor)
+        
+        var filled = true
+        switch self.field {
+            case let .identity(personalDetails, document, selfie):
+                if personalDetails {
+                    if findValue(values, key: .personalDetails) == nil {
+                        filled = false
+                    }
+                }
+                if !document.isEmpty {
+                    var anyDocument = false
+                    for type in document {
+                        if findValue(values, key: type.valueKey) == nil {
+                            anyDocument = true
+                        }
+                    }
+                    if !anyDocument {
+                        filled = false
+                    }
+                }
+            case let .address(addressDetails, document):
+                if addressDetails {
+                    if findValue(values, key: .address) == nil {
+                        filled = false
+                    }
+                }
+                if !document.isEmpty {
+                    var anyDocument = false
+                    for type in document {
+                        if findValue(values, key: type.valueKey) == nil {
+                            anyDocument = true
+                        }
+                    }
+                    if !anyDocument {
+                        filled = false
+                    }
+                }
+            case .phone:
+                if findValue(values, key: .phone) == nil {
+                    filled = false
+                }
+            case .email:
+                if findValue(values, key: .email) == nil {
+                    filled = false
+                }
+        }
+        
+        self.checkNode.isHidden = !filled
+        self.disclosureNode.isHidden = filled
+        
+        if let (width, hasPrevious, hasNext) = self.validLayout {
+            let _ = self.updateLayout(width: width, hasPrevious: hasPrevious, hasNext: hasNext, transition: .immediate)
+        }
+    }
+    
     func updateLayout(width: CGFloat, hasPrevious: Bool, hasNext: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (width, hasPrevious, hasNext)
         let leftInset: CGFloat = 16.0
         let rightInset: CGFloat = 16.0
         let height: CGFloat = 64.0
@@ -122,6 +382,14 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         
         transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: height)))
         transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -(hasPrevious ? UIScreenPixel : 0.0)), size: CGSize(width: width, height: height + (hasPrevious ? UIScreenPixel : 0.0))))
+        
+        if let image = self.disclosureNode.image {
+            self.disclosureNode.frame = CGRect(origin: CGPoint(x: width - 15.0 - image.size.width, y: floor((height - image.size.height) / 2.0)), size: image.size)
+        }
+        
+        if let image = self.checkNode.image {
+            self.checkNode.frame = CGRect(origin: CGPoint(x: width - 15.0 - image.size.width, y: floor((height - image.size.height) / 2.0)), size: image.size)
+        }
         
         return height
     }

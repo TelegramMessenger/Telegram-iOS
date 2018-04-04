@@ -28,7 +28,7 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, account: 
     controller.shouldShowFileTipIfNeeded = showFileTooltip
 }
 
-func legacyAssetPicker(theme: PresentationTheme, fileMode: Bool, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, NoError> {
+func legacyAssetPicker(theme: PresentationTheme, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, NoError> {
     return Signal { subscriber in
         let intent = fileMode ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
     
@@ -39,7 +39,7 @@ func legacyAssetPicker(theme: PresentationTheme, fileMode: Bool, peer: Peer, sav
                 } else {
                     Queue.mainQueue().async {
                         subscriber.putNext({ context in
-                            let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: peer.displayTitle, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping)
+                            let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping)
                             return controller!
                         })
                         subscriber.putCompletion()
@@ -48,7 +48,7 @@ func legacyAssetPicker(theme: PresentationTheme, fileMode: Bool, peer: Peer, sav
             })
         } else {
             subscriber.putNext({ context in
-                let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: peer.displayTitle, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping)
+                let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping)
                 return controller!
             })
             subscriber.putCompletion()
@@ -312,3 +312,71 @@ func legacyAssetPickerEnqueueMessages(account: Account, peerId: PeerId, signals:
         }
     }
 }
+
+func legacyAssetPickerDataSignals(account: Account, signals: [Any]) -> Signal<[TelegramMediaResource], NoError> {
+    return Signal { subscriber in
+        let disposable = SSignal.combineSignals(signals).start(next: { anyValues in
+            var datas: [TelegramMediaResource] = []
+            
+            outer: for item in (anyValues as! NSArray) {
+                if let item = (item as? NSDictionary)?.object(forKey: "item") as? LegacyAssetItemWrapper {
+                    switch item.item {
+                        case let .image(data, _):
+                            switch data {
+                                case let .image(image):
+                                    var randomId: Int64 = 0
+                                    arc4random_buf(&randomId, 8)
+                                    let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
+                                    let scaledSize = image.size.aspectFitted(CGSize(width: 2048.0, height: 2048.0))
+                                    if let scaledImage = TGScaleImageToPixelSize(image, scaledSize) {
+                                        if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.84) {
+                                            let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
+                                            let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
+                                            datas.append(resource)
+                                        }
+                                    }
+                                case let .asset(asset):
+                                    break
+                                    /*var randomId: Int64 = 0
+                                    arc4random_buf(&randomId, 8)
+                                    let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
+                                    let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
+                                    let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
+                                 
+                                    let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)], reference: nil)
+                                    var attributes: [MessageAttribute] = []
+                                    if let timer = item.timer, timer > 0 && timer <= 60 {
+                                        attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
+                                    }
+                                    messages.append(.message(text: caption ?? "", attributes: attributes, media: media, replyToMessageId: nil, localGroupingKey: item.groupedId))*/
+                                    case .tempFile:
+                                        break
+                            }
+                        case let .file(data, mimeType, name, caption):
+                            switch data {
+                                case let .tempFile(path):
+                                    var randomId: Int64 = 0
+                                    arc4random_buf(&randomId, 8)
+                                    let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: randomId)
+                                    datas.append(resource)
+                                default:
+                                    break
+                            }
+                        case .video:
+                            break
+                    }
+                }
+            }
+            
+            subscriber.putNext(datas)
+            subscriber.putCompletion()
+        }, error: { _ in
+            subscriber.putError(NoError())
+        }, completed: nil)
+        
+        return ActionDisposable {
+            disposable?.dispose()
+        }
+    }
+}
+

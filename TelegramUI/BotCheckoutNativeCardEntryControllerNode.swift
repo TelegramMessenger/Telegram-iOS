@@ -191,7 +191,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
     }
     
     func updateCountry(_ iso2: String) {
-        if let name = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(iso2) {
+        if let name = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(iso2, strings: self.strings) {
             self.currentCountryIso2 = iso2
             self.countryItem?.text = name
             if let containerLayout = self.containerLayout {

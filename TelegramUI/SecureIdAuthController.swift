@@ -9,11 +9,17 @@ final class SecureIdAuthControllerInteraction {
     let updateState: ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void
     let present: (ViewController, Any?) -> Void
     let checkPassword: (String) -> Void
+    let grant: () -> Void
+    let openUrl: (String) -> Void
+    let openMention: (TelegramPeerMention) -> Void
     
-    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void) {
+    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void) {
         self.updateState = updateState
         self.present = present
         self.checkPassword = checkPassword
+        self.grant = grant
+        self.openUrl = openUrl
+        self.openMention = openMention
     }
 }
 
@@ -24,6 +30,10 @@ final class SecureIdAuthController: ViewController {
     
     private let account: Account
     private var presentationData: PresentationData
+    private let scope: String
+    private let publicKey: String
+    private let opaquePayload: Data
+    private let parsedErrors: [SecureIdErrorKey: [String]]
     
     private var didPlayPresentationAnimation = false
     
@@ -34,9 +44,13 @@ final class SecureIdAuthController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(account: Account, peerId: PeerId, scope: String, publicKey: String) {
+    init(account: Account, peerId: PeerId, scope: String, publicKey: String, opaquePayload: Data, errors: String) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.scope = scope
+        self.publicKey = publicKey
+        self.opaquePayload = opaquePayload
+        self.parsedErrors = parseSecureIdErrors(errors)
         
         self.state = SecureIdAuthControllerState(encryptedFormData: nil, formData: nil, verificationState: nil)
         
@@ -53,7 +67,7 @@ final class SecureIdAuthController: ViewController {
                 strongSelf.updateState { state in
                     var state = state
                     if data.currentSalt != nil {
-                        state.verificationState = .passwordChallenge(.none)
+                        state.verificationState = .passwordChallenge(data.currentHint ?? "", .none)
                     } else {
                         state.verificationState = .noChallenge
                     }
@@ -121,7 +135,7 @@ final class SecureIdAuthController: ViewController {
             self?.present(c, in: .window(.root), with: a)
         }, checkPassword: { [weak self] password in
             if let strongSelf = self {
-                if let verificationState = strongSelf.state.verificationState, case let .passwordChallenge(challengeState) = verificationState {
+                if let verificationState = strongSelf.state.verificationState, case let .passwordChallenge(hint, challengeState) = verificationState {
                     switch challengeState {
                         case .none, .invalid:
                             break
@@ -130,12 +144,12 @@ final class SecureIdAuthController: ViewController {
                     }
                     strongSelf.updateState { state in
                         var state = state
-                        state.verificationState = .passwordChallenge(.checking)
+                        state.verificationState = .passwordChallenge(hint, .checking)
                         return state
                     }
                     strongSelf.challengeDisposable.set((accessSecureId(network: strongSelf.account.network, password: password)
                     |> deliverOnMainQueue).start(next: { context in
-                        if let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(.checking) = verificationState {
+                        if let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(_, .checking) = verificationState {
                             strongSelf.updateState { state in
                                 var state = state
                                 state.verificationState = .verified(context)
@@ -163,10 +177,10 @@ final class SecureIdAuthController: ViewController {
                             }
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             
-                            if let verificationState = strongSelf.state.verificationState, case .passwordChallenge(.checking) = verificationState {
+                            if let verificationState = strongSelf.state.verificationState, case let .passwordChallenge(hint, .checking) = verificationState {
                                 strongSelf.updateState { state in
                                     var state = state
-                                    state.verificationState = .passwordChallenge(.invalid)
+                                    state.verificationState = .passwordChallenge(hint, .invalid)
                                     return state
                                 }
                             }
@@ -174,9 +188,28 @@ final class SecureIdAuthController: ViewController {
                     }))
                 }
             }
+        }, grant: { [weak self] in
+            self?.grantAccess()
+        }, openUrl: { [weak self] url in
+            if let strongSelf = self {
+                openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.navigationController as? NavigationController)
+            }
+        }, openMention: { [weak self] mention in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = (strongSelf.account.postbox.loadedPeerWithId(mention.peerId)
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                    (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                }
+            })
         })
         
-        self.displayNode = SecureIdAuthControllerNode(account: self.account, presentationData: presentationData, requestLayout: { [weak self] transition in
+        self.displayNode = SecureIdAuthControllerNode(account: self.account, presentationData: presentationData, errors: self.parsedErrors, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         }, interaction: interaction)
         self.controllerNode.updateState(self.state, transition: .immediate)
@@ -192,11 +225,11 @@ final class SecureIdAuthController: ViewController {
         let state = f(self.state)
         if state != self.state {
             var previousHadProgress = false
-            if let verificationState = self.state.verificationState, case .passwordChallenge(.checking) = verificationState {
+            if let verificationState = self.state.verificationState, case .passwordChallenge(_, .checking) = verificationState {
                 previousHadProgress = true
             }
             var updatedHasProgress = false
-            if let verificationState = state.verificationState, case .passwordChallenge(.checking) = verificationState {
+            if let verificationState = state.verificationState, case .passwordChallenge(_, .checking) = verificationState {
                 updatedHasProgress = true
             }
             
@@ -218,5 +251,14 @@ final class SecureIdAuthController: ViewController {
     
     @objc private func cancelPressed() {
         self.dismiss()
+    }
+    
+    @objc private func grantAccess() {
+        if let encryptedFormData = self.state.encryptedFormData, let formData = self.state.formData {
+            let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: self.publicKey, scope: self.scope, opaquePayload: self.opaquePayload, values: formData.values)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                self?.dismiss()
+            })
+        }
     }
 }

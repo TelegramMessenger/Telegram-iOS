@@ -7,6 +7,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import AVFoundation
 
 private final class MultiplexedVideoTrackingNode: ASDisplayNode {
     var inHierarchyUpdated: ((Bool) -> Void)?

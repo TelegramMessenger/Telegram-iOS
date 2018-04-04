@@ -7,8 +7,10 @@ private let buttonFont = Font.regular(17.0)
 
 final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthContentNode, UITextFieldDelegate {
     private let checkPassword: (String) -> Void
+    private let passwordHelp: () -> Void
     
     private let inputContainer: ASDisplayNode
+    private let titleNode: ImmediateTextNode
     private let inputBackground: ASImageNode
     private let inputField: TextFieldNode
     
@@ -22,14 +24,19 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
     
     private let hapticFeedback = HapticFeedback()
     
-    init(theme: PresentationTheme, strings: PresentationStrings, checkPassword: @escaping (String) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, hint: String, checkPassword: @escaping (String) -> Void, passwordHelp: @escaping () -> Void) {
         self.checkPassword = checkPassword
+        self.passwordHelp = passwordHelp
         
         self.inputContainer = ASDisplayNode()
         self.inputBackground = ASImageNode()
         self.inputBackground.isLayerBacked = true
         self.inputBackground.displaysAsynchronously = false
         self.inputBackground.displayWithoutProcessing = true
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.attributedText = NSAttributedString(string: "Please enter your Telegram Password\nto decrypt your data", font: Font.regular(14.0), textColor: theme.list.freeTextColor)
+        self.titleNode.maximumNumberOfLines = 0
+        self.titleNode.textAlignment = .center
         self.inputField = TextFieldNode()
         
         self.inputBackground.image = generateStretchableFilledCircleImage(radius: 10.0, color: theme.list.freeInputField.backgroundColor)
@@ -37,7 +44,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         self.inputField.textField.isSecureTextEntry = true
         self.inputField.textField.font = passwordFont
         self.inputField.textField.textColor = theme.list.freeInputField.primaryColor
-        self.inputField.textField.attributedPlaceholder = NSAttributedString(string: strings.LoginPassword_PasswordPlaceholder, font: passwordFont, textColor: theme.list.freeInputField.placeholderColor)
+        self.inputField.textField.attributedPlaceholder = NSAttributedString(string: hint.isEmpty ? strings.LoginPassword_PasswordPlaceholder : hint, font: passwordFont, textColor: theme.list.freeInputField.placeholderColor)
         
         self.buttonNode = HighlightableButtonNode()
         
@@ -54,6 +61,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         
         super.init()
         
+        self.inputContainer.addSubnode(self.titleNode)
         self.inputContainer.addSubnode(self.inputBackground)
         self.inputContainer.addSubnode(self.inputField)
         self.inputContainer.addSubnode(self.buttonNode)
@@ -82,16 +90,24 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         self.validLayout = width
         
         let inputWidth = min(270.0, width - 30.0)
-        let inputFrame = CGRect(origin: CGPoint(x: floor((width - inputWidth) / 2.0), y: 0.0), size: CGSize(width: inputWidth, height: 32.0))
         
         let labelSize = self.buttonLabel.updateLayout(CGSize(width: width - 20.0, height: 100.0))
         let buttonSize = CGSize(width: max(labelSize.width + 30.0, 100.0), height: 36.0)
         
+        let titleSpacing: CGFloat = 15.0
+        
+        let titleSize = self.titleNode.updateLayout(CGSize(width: inputWidth, height: CGFloat.greatestFiniteMagnitude))
+        
         let buttonSpacing: CGFloat = 16.0
         
-        let inputContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: inputFrame.height + buttonSpacing + buttonSize.height))
+        let inputFrame = CGRect(origin: CGPoint(x: floor((width - inputWidth) / 2.0), y: titleSize.height + titleSpacing), size: CGSize(width: inputWidth, height: 32.0))
+        
+        let inputContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: titleSize.height + titleSpacing + inputFrame.height + buttonSpacing + buttonSize.height))
+        
+        let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: 0.0), size: titleSize)
         
         transition.updateFrame(node: self.inputContainer, frame: inputContainerFrame)
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
         transition.updateFrame(node: self.inputBackground, frame: inputFrame)
         transition.updateFrame(node: self.inputField, frame: inputFrame.insetBy(dx: 6.0, dy: 0.0))
         
