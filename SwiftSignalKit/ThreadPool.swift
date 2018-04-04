@@ -1,7 +1,7 @@
 import Foundation
 
 public final class ThreadPoolTaskState {
-    public var cancelled = false
+    public let cancelled = Atomic<Bool>(value: false)
 }
 
 public final class ThreadPoolTask {
@@ -13,13 +13,13 @@ public final class ThreadPoolTask {
     }
     
     func execute() {
-        if !state.cancelled {
+        if !state.cancelled.with { $0 }  {
             self.action(self.state)
         }
     }
     
     public func cancel() {
-        self.state.cancelled = true
+        let _ = self.state.cancelled.swap(true)
     }
 }
 
