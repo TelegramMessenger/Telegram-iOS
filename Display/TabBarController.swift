@@ -64,10 +64,10 @@ open class TabBarController: ViewController {
     
     private var theme: TabBarControllerTheme
     
-    public init(navigationBarTheme: NavigationBarTheme, theme: TabBarControllerTheme) {
+    public init(navigationBarPresentationData: NavigationBarPresentationData, theme: TabBarControllerTheme) {
         self.theme = theme
         
-        super.init(navigationBarTheme: navigationBarTheme)
+        super.init(navigationBarPresentationData: navigationBarPresentationData)
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -78,8 +78,8 @@ open class TabBarController: ViewController {
         self.pendingControllerDisposable.dispose()
     }
     
-    public func updateTheme(navigationBarTheme: NavigationBarTheme, theme: TabBarControllerTheme) {
-        self.navigationBar?.updateTheme(navigationBarTheme)
+    public func updateTheme(navigationBarPresentationData: NavigationBarPresentationData, theme: TabBarControllerTheme) {
+        self.navigationBar?.updatePresentationData(navigationBarPresentationData)
         if self.theme !== theme {
             self.theme = theme
             if self.isNodeLoaded {
@@ -189,6 +189,13 @@ open class TabBarController: ViewController {
             currentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
             
             currentController.containerLayoutUpdated(layout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: transition)
+        }
+    }
+    
+    override open func navigationStackConfigurationUpdated(next: [ViewController]) {
+        super.navigationStackConfigurationUpdated(next: next)
+        for controller in self.controllers {
+            controller.navigationStackConfigurationUpdated(next: next)
         }
     }
     

@@ -90,29 +90,11 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     }
     
     private func longTapTimerFired() {
-        guard let _ = self.tapLocation, let (sourceNode, content) = self.candidateContent else {
+        guard let tapLocation = self.tapLocation else {
             return
         }
         
-        self.state = .began
-        
-        if let presentedController = self.present(content, sourceNode) {
-            self.menuActivation = content.menuActivation()
-            self.presentedController = presentedController
-            
-            switch content.menuActivation() {
-                case .drag:
-                    break
-                case .press:
-                    if #available(iOSApplicationExtension 9.0, *) {
-                        if presentedController.traitCollection.forceTouchCapability != .available {
-                            self.startPressTimer()
-                        }
-                    } else {
-                        self.startPressTimer()
-                    }
-            }
-        }
+        self.checkCandidateContent(at: tapLocation)
     }
     
     private func pressTimerFired() {
@@ -136,27 +118,8 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                 self.candidateContent = nil
                 self.state = .failed
             } else {
-                if let contentSignal = self.contentAtPoint(tapLocation) {
-                    self.candidateContentDisposable.set((contentSignal |> deliverOnMainQueue).start(next: { [weak self] result in
-                        if let strongSelf = self {
-                            switch strongSelf.state {
-                                case .possible, .changed:
-                                    if let (sourceNode, content) = result {
-                                        strongSelf.tapLocation = tapLocation
-                                        strongSelf.candidateContent = (sourceNode, content)
-                                        strongSelf.menuActivation = content.menuActivation()
-                                        strongSelf.startLongTapTimer()
-                                    } else {
-                                        strongSelf.state = .failed
-                                    }
-                                default:
-                                    break
-                            }
-                        }
-                    }))
-                } else {
-                    self.state = .failed
-                }
+                self.tapLocation = tapLocation
+                self.startLongTapTimer()
             }
         }
     }
@@ -178,6 +141,8 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
             
             self.tapLocation = nil
             self.candidateContent = nil
+            self.longTapTimer?.invalidate()
+            self.pressTimer?.invalidate()
             self.state = .failed
         }
     }
@@ -199,9 +164,9 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesMoved(touches, with: event)
         
-        if let touch = touches.first, let initialTapLocation = self.tapLocation, let menuActivation = self.menuActivation {
+        if let touch = touches.first, let initialTapLocation = self.tapLocation {
             let touchLocation = touch.location(in: self.view)
-            if let presentedController = self.presentedController {
+            if let menuActivation = self.menuActivation, let presentedController = self.presentedController {
                 switch menuActivation {
                     case .drag:
                         var offset = touchLocation.y - initialTapLocation.y
@@ -257,17 +222,39 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                 if let strongSelf = self {
                     switch strongSelf.state {
                         case .possible, .changed:
-                            if let (sourceNode, content) = result, let currentContent = strongSelf.candidateContent, !currentContent.1.isEqual(to: content) {
-                                strongSelf.tapLocation = touchLocation
-                                strongSelf.candidateContent = (sourceNode, content)
-                                strongSelf.menuActivation = content.menuActivation()
-                                if let presentedController = strongSelf.presentedController, presentedController.isNodeLoaded {
-                                    presentedController.sourceNode = {
-                                        return sourceNode
+                            if let (sourceNode, content) = result {
+                                if let currentContent = strongSelf.candidateContent {
+                                    if !currentContent.1.isEqual(to: content) {
+                                        strongSelf.tapLocation = touchLocation
+                                        strongSelf.candidateContent = (sourceNode, content)
+                                        strongSelf.menuActivation = content.menuActivation()
+                                        if let presentedController = strongSelf.presentedController, presentedController.isNodeLoaded {
+                                            presentedController.sourceNode = {
+                                                return sourceNode
+                                            }
+                                            (presentedController.displayNode as? PeekControllerNode)?.updateContent(content: content)
+                                        }
                                     }
-                                    (presentedController.displayNode as? PeekControllerNode)?.updateContent(content: content)
                                 } else {
-                                    strongSelf.startLongTapTimer()
+                                    if let presentedController = strongSelf.present(content, sourceNode) {
+                                        strongSelf.candidateContent = (sourceNode, content)
+                                        strongSelf.menuActivation = content.menuActivation()
+                                        strongSelf.presentedController = presentedController
+                                        strongSelf.state = .began
+                                        
+                                        switch content.menuActivation() {
+                                            case .drag:
+                                                break
+                                            case .press:
+                                                if #available(iOSApplicationExtension 9.0, *) {
+                                                    if presentedController.traitCollection.forceTouchCapability != .available {
+                                                        strongSelf.startPressTimer()
+                                                    }
+                                                } else {
+                                                    strongSelf.startPressTimer()
+                                                }
+                                        }
+                                    }
                                 }
                             } else if strongSelf.presentedController == nil {
                                 strongSelf.state = .failed

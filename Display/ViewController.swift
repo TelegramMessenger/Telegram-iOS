@@ -149,10 +149,10 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    public init(navigationBarTheme: NavigationBarTheme?) {
+    public init(navigationBarPresentationData: NavigationBarPresentationData?) {
         self.statusBar = StatusBar()
-        if let navigationBarTheme = navigationBarTheme {
-            self.navigationBar = NavigationBar(theme: navigationBarTheme)
+        if let navigationBarPresentationData = navigationBarPresentationData {
+            self.navigationBar = NavigationBar(presentationData: navigationBarPresentationData)
         } else {
             self.navigationBar = nil
         }
@@ -218,6 +218,9 @@ open class ViewControllerPresentationArguments {
         }
     }
     
+    open func navigationStackConfigurationUpdated(next: [ViewController]) {
+    }
+    
     open override func loadView() {
         self.view = self.displayNode.view
         if let navigationBar = self.navigationBar {
@@ -237,7 +240,7 @@ open class ViewControllerPresentationArguments {
     
     open func displayNodeDidLoad() {
         if let layer = self.displayNode.layer as? CATracingLayer {
-            layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: false, userData: self.displayNode.layer, tracingTag: WindowTracingTags.keyboard))
+            layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: false, userData: self.displayNode.layer, tracingTag: WindowTracingTags.keyboard, disableChildrenTracingTags: 0))
         }
         self.updateScrollToTopView()
     }
@@ -248,9 +251,9 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    public func setDisplayNavigationBar(_ displayNavigtionBar: Bool, transition: ContainedViewLayoutTransition = .immediate) {
-        if displayNavigtionBar != self.displayNavigationBar {
-            self.displayNavigationBar = displayNavigtionBar
+    public func setDisplayNavigationBar(_ displayNavigationBar: Bool, transition: ContainedViewLayoutTransition = .immediate) {
+        if displayNavigationBar != self.displayNavigationBar {
+            self.displayNavigationBar = displayNavigationBar
             if let parent = self.parent as? TabBarController {
                 if parent.currentController === self {
                     parent.displayNavigationBar = displayNavigationBar
@@ -345,5 +348,16 @@ open class ViewControllerPresentationArguments {
         } else {
             super.unregisterForPreviewing(withContext: previewing)
         }
+    }
+    
+    public final func navigationNextSibling() -> UIViewController? {
+        if let navigationController = self.navigationController as? NavigationController {
+            if let index = navigationController.viewControllers.index(where: { $0 === self }) {
+                if index != navigationController.viewControllers.count - 1 {
+                    return navigationController.viewControllers[index + 1]
+                }
+            }
+        }
+        return nil
     }
 }

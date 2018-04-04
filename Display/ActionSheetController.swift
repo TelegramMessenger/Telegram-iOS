@@ -12,7 +12,7 @@ open class ActionSheetController: ViewController {
     public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
     }
     
     required public init(coder aDecoder: NSCoder) {

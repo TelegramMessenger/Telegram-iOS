@@ -27,9 +27,9 @@ class NavigationTransitionCoordinator {
     
     private let container: UIView
     private let transition: NavigationTransition
-    private let topView: UIView
+    let topView: UIView
     private let viewSuperview: UIView?
-    private let bottomView: UIView
+    let bottomView: UIView
     private let topNavigationBar: NavigationBar?
     private let bottomNavigationBar: NavigationBar?
     private let dimView: UIView
@@ -181,7 +181,7 @@ class NavigationTransitionCoordinator {
         self.animatingCompletion = true
         let distance = (1.0 - self.progress) * self.container.bounds.size.width
         let f = {
-            switch self.transition {
+            /*switch self.transition {
                 case .Push:
                     if let viewSuperview = self.viewSuperview {
                         viewSuperview.addSubview(self.bottomView)
@@ -194,7 +194,7 @@ class NavigationTransitionCoordinator {
                     } else {
                         self.topView.removeFromSuperview()
                     }
-            }
+            }*/
             
             self.dimView.removeFromSuperview()
             self.shadowView.removeFromSuperview()

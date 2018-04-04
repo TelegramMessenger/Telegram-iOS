@@ -296,8 +296,8 @@ public final class WindowHostView {
 }
 
 public struct WindowTracingTags {
-    public static let statusBar: Int32 = 0
-    public static let keyboard: Int32 = 1
+    public static let statusBar: Int32 = 1 << 0
+    public static let keyboard: Int32 = 1 << 1
 }
 
 public protocol WindowHost {
@@ -309,7 +309,11 @@ public protocol WindowHost {
 }
 
 private func layoutMetricsForScreenSize(_ size: CGSize) -> LayoutMetrics {
-    return LayoutMetrics(widthClass: .compact, heightClass: .compact)
+    if size.width > 690.0 && size.height > 690.0 {
+        return LayoutMetrics(widthClass: .regular, heightClass: .regular)
+    } else {
+        return LayoutMetrics(widthClass: .compact, heightClass: .compact)
+    }
 }
 
 private func safeInsetsForScreenSize(_ size: CGSize) -> UIEdgeInsets {
@@ -465,14 +469,14 @@ public class Window1 {
                 
                 let screenHeight: CGFloat
                 
-                if true || !UIScreen.main.bounds.width.isEqual(to: strongSelf.windowLayout.size.width) {
-                    if keyboardFrame.width.isEqual(to: UIScreen.main.bounds.width) {
+                if keyboardFrame.width.isEqual(to: UIScreen.main.bounds.width) {
+                    if abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 41.0 {
                         screenHeight = UIScreen.main.bounds.height
                     } else {
-                        screenHeight = UIScreen.main.bounds.width
+                        screenHeight = strongSelf.windowLayout.size.height
                     }
                 } else {
-                    screenHeight = UIScreen.main.bounds.height
+                    screenHeight = UIScreen.main.bounds.width
                 }
                 
                 let keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)

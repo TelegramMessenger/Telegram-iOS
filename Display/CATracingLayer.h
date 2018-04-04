@@ -9,8 +9,9 @@
 @property (nonatomic, readonly) bool shouldBeAdjustedToInverseTransform;
 @property (nonatomic, weak, readonly) id _Nullable userData;
 @property (nonatomic, readonly) int32_t tracingTag;
+@property (nonatomic, readonly) int32_t disableChildrenTracingTags;
 
-- (instancetype _Nonnull)initWithShouldBeAdjustedToInverseTransform:(bool)shouldBeAdjustedToInverseTransform userData:(id _Nullable)userData tracingTag:(int32_t)tracingTag;
+- (instancetype _Nonnull)initWithShouldBeAdjustedToInverseTransform:(bool)shouldBeAdjustedToInverseTransform userData:(id _Nullable)userData tracingTag:(int32_t)tracingTag disableChildrenTracingTags:(int32_t)disableChildrenTracingTags;
 
 @end
 

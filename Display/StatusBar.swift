@@ -113,7 +113,7 @@ public final class StatusBar: ASDisplayNode {
         self.addSubnode(self.offsetNode)
         self.addSubnode(self.inCallBackgroundNode)
         
-        self.layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: true, userData: self, tracingTag: WindowTracingTags.statusBar))
+        self.layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: true, userData: self, tracingTag: WindowTracingTags.statusBar, disableChildrenTracingTags: 0))
         
         self.clipsToBounds = true
         

@@ -951,7 +951,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         var lowestOverlayNode: ListViewItemNode?
         
         for itemNode in self.itemNodes {
-            if itemNode.isHighligtedInOverlay {
+            if itemNode.isHighlightedInOverlay {
                 lowestOverlayNode = itemNode
                 itemNode.view.superview?.bringSubview(toFront: itemNode.view)
             }
@@ -2472,7 +2472,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 self.updateScroller(transition: headerNodesTransition.0)
                 
                 if let topItemOverscrollBackground = self.topItemOverscrollBackground {
-                    headerNodesTransition.0.animatePositionAdditive(node: topItemOverscrollBackground, offset: -headerNodesTransition.2)
+                    headerNodesTransition.0.animatePositionAdditive(node: topItemOverscrollBackground, offset: CGPoint(x: 0.0, y: -headerNodesTransition.2))
                 }
                 
                 self.setNeedsAnimations()
@@ -2496,7 +2496,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 self.updateScroller(transition: headerNodesTransition.0)
                 
                 if let topItemOverscrollBackground = self.topItemOverscrollBackground {
-                    headerNodesTransition.0.animatePositionAdditive(node: topItemOverscrollBackground, offset: -headerNodesTransition.2)
+                    headerNodesTransition.0.animatePositionAdditive(node: topItemOverscrollBackground, offset: CGPoint(x: 0.0, y: -headerNodesTransition.2))
                 }
                 
                 self.updateVisibleContentOffset()

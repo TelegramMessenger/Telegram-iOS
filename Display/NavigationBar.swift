@@ -38,6 +38,26 @@ public final class NavigationBarTheme {
     }
 }
 
+public final class NavigationBarStrings {
+    public let back: String
+    public let close: String
+    
+    public init(back: String, close: String) {
+        self.back = back
+        self.close = close
+    }
+}
+
+public final class NavigationBarPresentationData {
+    public let theme: NavigationBarTheme
+    public let strings: NavigationBarStrings
+    
+    public init(theme: NavigationBarTheme, strings: NavigationBarStrings) {
+        self.theme = theme
+        self.strings = strings
+    }
+}
+
 private func backArrowImage(color: UIColor) -> UIImage? {
     var red: CGFloat = 0.0
     var green: CGFloat = 0.0
@@ -58,8 +78,30 @@ private func backArrowImage(color: UIColor) -> UIImage? {
     }
 }
 
+enum NavigationPreviousAction: Equatable {
+    case item(UINavigationItem)
+    case close
+    
+    static func ==(lhs: NavigationPreviousAction, rhs: NavigationPreviousAction) -> Bool {
+        switch lhs {
+            case let .item(lhsItem):
+                if case let .item(rhsItem) = rhs, lhsItem === rhsItem {
+                    return true
+                } else {
+                    return false
+                }
+            case .close:
+                if case .close = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 open class NavigationBar: ASDisplayNode {
-    private var theme: NavigationBarTheme
+    private var presentationData: NavigationBarPresentationData
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     private var requestedLayout: Bool = false
@@ -201,7 +243,7 @@ open class NavigationBar: ASDisplayNode {
     private var title: String? {
         didSet {
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.theme.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.presentationData.theme.primaryTextColor)
                 if self.titleNode.supernode == nil {
                     self.clippingNode.addSubnode(self.titleNode)
                 }
@@ -234,52 +276,59 @@ open class NavigationBar: ASDisplayNode {
     var previousItemListenerKey: Int?
     var previousItemBackListenerKey: Int?
     
-    var _previousItem: UINavigationItem?
-    var previousItem: UINavigationItem? {
+    var _previousItem: NavigationPreviousAction?
+    var previousItem: NavigationPreviousAction? {
         get {
             return self._previousItem
         } set(value) {
-            if let previousValue = self._previousItem {
-                if let previousItemListenerKey = self.previousItemListenerKey {
-                    previousValue.removeSetTitleListener(previousItemListenerKey)
-                    self.previousItemListenerKey = nil
-                }
-                if let previousItemBackListenerKey = self.previousItemBackListenerKey {
-                    previousValue.removeSetBackBarButtonItemListener(previousItemBackListenerKey)
-                    self.previousItemBackListenerKey = nil
-                }
-            }
-            self._previousItem = value
-            
-            if let previousItem = value {
-                self.previousItemListenerKey = previousItem.addSetTitleListener { [weak self] _, _ in
-                    if let strongSelf = self, let previousItem = strongSelf.previousItem {
-                        if let backBarButtonItem = previousItem.backBarButtonItem {
-                            strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "")
-                        } else {
-                            strongSelf.backButtonNode.updateManualText(previousItem.title ?? "")
-                        }
-                        strongSelf.invalidateCalculatedLayout()
-                        strongSelf.requestLayout()
+            if self._previousItem != value {
+                if let previousValue = self._previousItem, case let .item(itemValue) = previousValue {
+                    if let previousItemListenerKey = self.previousItemListenerKey {
+                        itemValue.removeSetTitleListener(previousItemListenerKey)
+                        self.previousItemListenerKey = nil
+                    }
+                    if let previousItemBackListenerKey = self.previousItemBackListenerKey {
+                        itemValue.removeSetBackBarButtonItemListener(previousItemBackListenerKey)
+                        self.previousItemBackListenerKey = nil
                     }
                 }
+                self._previousItem = value
                 
-                self.previousItemBackListenerKey = previousItem.addSetBackBarButtonItemListener { [weak self] _, _, _ in
-                    if let strongSelf = self, let previousItem = strongSelf.previousItem {
-                        if let backBarButtonItem = previousItem.backBarButtonItem {
-                            strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "")
-                        } else {
-                            strongSelf.backButtonNode.updateManualText(previousItem.title ?? "")
-                        }
-                        strongSelf.invalidateCalculatedLayout()
-                        strongSelf.requestLayout()
+                if let previousItem = value {
+                    switch previousItem {
+                        case let .item(itemValue):
+                            self.previousItemListenerKey = itemValue.addSetTitleListener { [weak self] _, _ in
+                                if let strongSelf = self, let previousItem = strongSelf.previousItem, case let .item(itemValue) = previousItem {
+                                    if let backBarButtonItem = itemValue.backBarButtonItem {
+                                        strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "")
+                                    } else {
+                                        strongSelf.backButtonNode.updateManualText(itemValue.title ?? "")
+                                    }
+                                    strongSelf.invalidateCalculatedLayout()
+                                    strongSelf.requestLayout()
+                                }
+                            }
+                            
+                            self.previousItemBackListenerKey = itemValue.addSetBackBarButtonItemListener { [weak self] _, _, _ in
+                                if let strongSelf = self, let previousItem = strongSelf.previousItem, case let .item(itemValue) = previousItem {
+                                    if let backBarButtonItem = itemValue.backBarButtonItem {
+                                        strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "")
+                                    } else {
+                                        strongSelf.backButtonNode.updateManualText(itemValue.title ?? "")
+                                    }
+                                    strongSelf.invalidateCalculatedLayout()
+                                    strongSelf.requestLayout()
+                                }
+                            }
+                        case .close:
+                            break
                     }
                 }
+                self.updateLeftButton(animated: false)
+                
+                self.invalidateCalculatedLayout()
+                self.requestLayout()
             }
-            self.updateLeftButton(animated: false)
-            
-            self.invalidateCalculatedLayout()
-            self.requestLayout()
         }
     }
     
@@ -296,7 +345,14 @@ open class NavigationBar: ASDisplayNode {
     
     private func updateLeftButton(animated: Bool) {
         if let item = self.item {
+            var needsLeftButton = false
             if let leftBarButtonItem = item.leftBarButtonItem, !leftBarButtonItem.backButtonAppearance {
+                needsLeftButton = true
+            } else if let previousItem = self.previousItem, case .close = previousItem {
+                needsLeftButton = true
+            }
+            
+            if needsLeftButton {
                 if animated {
                     if self.leftButtonNode.view.superview != nil {
                         if let snapshotView = self.leftButtonNode.view.snapshotContentTree() {
@@ -343,7 +399,11 @@ open class NavigationBar: ASDisplayNode {
                 self.backButtonArrow.removeFromSupernode()
                 self.badgeNode.removeFromSupernode()
                 
-                self.leftButtonNode.updateItems([leftBarButtonItem])
+                if let leftBarButtonItem = item.leftBarButtonItem {
+                    self.leftButtonNode.updateItems([leftBarButtonItem])
+                } else {
+                    self.leftButtonNode.updateItems([UIBarButtonItem(title: self.presentationData.strings.close, style: .plain, target: nil, action: nil)])
+                }
                 
                 if self.leftButtonNode.supernode == nil {
                     self.clippingNode.addSubnode(self.leftButtonNode)
@@ -370,10 +430,15 @@ open class NavigationBar: ASDisplayNode {
                 if let leftBarButtonItem = item.leftBarButtonItem, leftBarButtonItem.backButtonAppearance {
                     backTitle = leftBarButtonItem.title
                 } else if let previousItem = self.previousItem {
-                    if let backBarButtonItem = previousItem.backBarButtonItem {
-                        backTitle = backBarButtonItem.title ?? "Back"
-                    } else {
-                        backTitle = previousItem.title ?? "Back"
+                    switch previousItem {
+                        case let .item(itemValue):
+                            if let backBarButtonItem = itemValue.backBarButtonItem {
+                                backTitle = backBarButtonItem.title ?? self.presentationData.strings.back
+                            } else {
+                                backTitle = itemValue.title ?? self.presentationData.strings.back
+                            }
+                        case .close:
+                            backTitle = nil
                     }
                 }
                 
@@ -483,7 +548,7 @@ open class NavigationBar: ASDisplayNode {
                 if let value = value {
                     switch value.role {
                         case .top:
-                            if let transitionTitleNode = value.navigationBar?.makeTransitionTitleNode(foregroundColor: self.theme.primaryTextColor) {
+                            if let transitionTitleNode = value.navigationBar?.makeTransitionTitleNode(foregroundColor: self.presentationData.theme.primaryTextColor) {
                                 self.transitionTitleNode = transitionTitleNode
                                 if self.leftButtonNode.supernode != nil {
                                     self.clippingNode.insertSubnode(transitionTitleNode, belowSubnode: self.leftButtonNode)
@@ -494,11 +559,11 @@ open class NavigationBar: ASDisplayNode {
                                 }
                             }
                         case .bottom:
-                            if let transitionBackButtonNode = value.navigationBar?.makeTransitionBackButtonNode(accentColor: self.theme.buttonColor) {
+                            if let transitionBackButtonNode = value.navigationBar?.makeTransitionBackButtonNode(accentColor: self.presentationData.theme.buttonColor) {
                                 self.transitionBackButtonNode = transitionBackButtonNode
                                 self.clippingNode.addSubnode(transitionBackButtonNode)
                             }
-                            if let transitionBackArrowNode = value.navigationBar?.makeTransitionBackArrowNode(accentColor: self.theme.buttonColor) {
+                            if let transitionBackArrowNode = value.navigationBar?.makeTransitionBackArrowNode(accentColor: self.presentationData.theme.buttonColor) {
                                 self.transitionBackArrowNode = transitionBackArrowNode
                                 self.clippingNode.addSubnode(transitionBackArrowNode)
                             }
@@ -520,13 +585,13 @@ open class NavigationBar: ASDisplayNode {
     private var transitionBackArrowNode: ASDisplayNode?
     private var transitionBadgeNode: ASDisplayNode?
     
-    public init(theme: NavigationBarTheme) {
-        self.theme = theme
+    public init(presentationData: NavigationBarPresentationData) {
+        self.presentationData = presentationData
         self.stripeNode = ASDisplayNode()
         
         self.titleNode = ASTextNode()
         self.backButtonNode = NavigationButtonNode()
-        self.badgeNode = NavigationBarBadgeNode(fillColor: theme.badgeBackgroundColor, strokeColor: theme.badgeStrokeColor, textColor: theme.badgeTextColor)
+        self.badgeNode = NavigationBarBadgeNode(fillColor: self.presentationData.theme.badgeBackgroundColor, strokeColor: self.presentationData.theme.badgeStrokeColor, textColor: self.presentationData.theme.badgeTextColor)
         self.badgeNode.isUserInteractionEnabled = false
         self.badgeNode.isHidden = true
         self.backButtonArrow = ASImageNode()
@@ -538,20 +603,20 @@ open class NavigationBar: ASDisplayNode {
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
         
-        self.backButtonNode.color = self.theme.buttonColor
-        self.leftButtonNode.color = self.theme.buttonColor
-        self.rightButtonNode.color = self.theme.buttonColor
-        self.backButtonArrow.image = backArrowImage(color: self.theme.buttonColor)
+        self.backButtonNode.color = self.presentationData.theme.buttonColor
+        self.leftButtonNode.color = self.presentationData.theme.buttonColor
+        self.rightButtonNode.color = self.presentationData.theme.buttonColor
+        self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
         if let title = self.title {
-            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.theme.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)
         }
-        self.stripeNode.backgroundColor = self.theme.separatorColor
+        self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
         
         super.init()
         
         self.addSubnode(self.clippingNode)
         
-        self.backgroundColor = self.theme.backgroundColor
+        self.backgroundColor = self.presentationData.theme.backgroundColor
         
         self.stripeNode.isLayerBacked = true
         self.stripeNode.displaysAsynchronously = false
@@ -580,8 +645,10 @@ open class NavigationBar: ASDisplayNode {
         self.leftButtonNode.pressed = { [weak self] index in
             if let item = self?.item {
                 if index == 0 {
-                        if let leftBarButtonItem = item.leftBarButtonItem {
-                    leftBarButtonItem.performActionOnTarget()
+                    if let leftBarButtonItem = item.leftBarButtonItem {
+                        leftBarButtonItem.performActionOnTarget()
+                    } else if let previousItem = self?.previousItem, case .close = previousItem {
+                        self?.backPressed()
                     }
                 }
             }
@@ -600,22 +667,22 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
-    public func updateTheme(_ theme: NavigationBarTheme) {
-        if theme !== self.theme {
-            self.theme = theme
+    public func updatePresentationData(_ presentationData: NavigationBarPresentationData) {
+        if presentationData.theme !== self.presentationData.theme || presentationData.strings !== self.presentationData.strings {
+            self.presentationData = presentationData
             
-            self.backgroundColor = self.theme.backgroundColor
+            self.backgroundColor = self.presentationData.theme.backgroundColor
             
-            self.backButtonNode.color = self.theme.buttonColor
-            self.leftButtonNode.color = self.theme.buttonColor
-            self.rightButtonNode.color = self.theme.buttonColor
-            self.backButtonArrow.image = backArrowImage(color: self.theme.buttonColor)
+            self.backButtonNode.color = self.presentationData.theme.buttonColor
+            self.leftButtonNode.color = self.presentationData.theme.buttonColor
+            self.rightButtonNode.color = self.presentationData.theme.buttonColor
+            self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.theme.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)
             }
-            self.stripeNode.backgroundColor = self.theme.separatorColor
+            self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
             
-            self.badgeNode.updateTheme(fillColor: theme.badgeBackgroundColor, strokeColor: theme.badgeStrokeColor, textColor: theme.badgeTextColor)
+            self.badgeNode.updateTheme(fillColor: self.presentationData.theme.badgeBackgroundColor, strokeColor: self.presentationData.theme.badgeStrokeColor, textColor: self.presentationData.theme.badgeTextColor)
         }
     }
     
@@ -649,11 +716,11 @@ open class NavigationBar: ASDisplayNode {
         let nominalHeight: CGFloat = self.collapsed ? 32.0 : 44.0
         let contentVerticalOrigin = size.height - nominalHeight
         
-        var leftTitleInset: CGFloat = leftInset + 4.0
-        var rightTitleInset: CGFloat = rightInset + 4.0
+        var leftTitleInset: CGFloat = leftInset + 1.0
+        var rightTitleInset: CGFloat = rightInset + 1.0
         if self.backButtonNode.supernode != nil {
             let backButtonSize = self.backButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight))
-            leftTitleInset += backButtonSize.width + backButtonInset + 4.0 + 4.0
+            leftTitleInset += backButtonSize.width + backButtonInset + 1.0
             
             let topHitTestSlop = (nominalHeight - backButtonSize.height) * 0.5
             self.backButtonNode.hitTestSlop = UIEdgeInsetsMake(-topHitTestSlop, -27.0, -topHitTestSlop, -8.0)
@@ -698,7 +765,7 @@ open class NavigationBar: ASDisplayNode {
             }
         } else if self.leftButtonNode.supernode != nil {
             let leftButtonSize = self.leftButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight))
-            leftTitleInset += leftButtonSize.width + leftButtonInset + 8.0 + 8.0
+            leftTitleInset += leftButtonSize.width + leftButtonInset + 1.0
             
             self.leftButtonNode.alpha = 1.0
             self.leftButtonNode.frame = CGRect(origin: CGPoint(x: leftButtonInset, y: contentVerticalOrigin + floor((nominalHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize)
@@ -710,7 +777,7 @@ open class NavigationBar: ASDisplayNode {
         
         if self.rightButtonNode.supernode != nil {
             let rightButtonSize = self.rightButtonNode.updateLayout(constrainedSize: (CGSize(width: size.width, height: nominalHeight)))
-            rightTitleInset += rightButtonSize.width + leftButtonInset + 8.0 + 8.0
+            rightTitleInset += rightButtonSize.width + leftButtonInset + 1.0
             self.rightButtonNode.alpha = 1.0
             self.rightButtonNode.frame = CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize)
         }
@@ -783,7 +850,14 @@ open class NavigationBar: ASDisplayNode {
         
         if let titleView = self.titleView {
             let titleSize = CGSize(width: max(1.0, size.width - max(leftTitleInset, rightTitleInset) * 2.0), height: nominalHeight)
-            titleView.frame = CGRect(origin: CGPoint(x: leftTitleInset, y: contentVerticalOrigin), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: leftTitleInset, y: contentVerticalOrigin), size: titleSize)
+            titleView.frame = titleFrame
+            
+            if let titleView = titleView as? NavigationBarTitleView {
+                let titleWidth = size.width - leftTitleInset - rightTitleInset
+                
+                titleView.updateLayout(size: titleFrame.size, clearBounds: CGRect(origin: CGPoint(x: leftTitleInset - titleFrame.minX, y: 0.0), size: CGSize(width: titleWidth, height: titleFrame.height)), transition: transition)
+            }
             
             if let transitionState = self.transitionState, let otherNavigationBar = transitionState.navigationBar {
                 let progress = transitionState.progress
@@ -861,7 +935,7 @@ open class NavigationBar: ASDisplayNode {
     
     private func makeTransitionBadgeNode() -> ASDisplayNode? {
         if self.badgeNode.supernode != nil && !self.badgeNode.isHidden {
-            let node = NavigationBarBadgeNode(fillColor: self.theme.badgeBackgroundColor, strokeColor: self.theme.badgeStrokeColor, textColor: self.theme.badgeTextColor)
+            let node = NavigationBarBadgeNode(fillColor: self.presentationData.theme.badgeBackgroundColor, strokeColor: self.presentationData.theme.badgeStrokeColor, textColor: self.presentationData.theme.badgeTextColor)
             node.text = self.badgeNode.text
             let nodeSize = node.measure(CGSize(width: 200.0, height: 100.0))
             node.frame = CGRect(origin: CGPoint(), size: nodeSize)

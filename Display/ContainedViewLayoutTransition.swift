@@ -233,23 +233,39 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func animatePositionAdditive(node: ASDisplayNode, offset: CGFloat) {
+    func animatePositionAdditive(node: ASDisplayNode, offset: CGFloat, removeOnCompletion: Bool = true, completion: @escaping (Bool) -> Void) {
         switch self {
-        case .immediate:
-            break
-        case let .animated(duration, curve):
-            let timingFunction: String
-            switch curve {
-            case .easeInOut:
-                timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-            case .spring:
-                timingFunction = kCAMediaTimingFunctionSpring
-            }
-            node.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+            case .immediate:
+                break
+            case let .animated(duration, curve):
+                let timingFunction: String
+                switch curve {
+                    case .easeInOut:
+                        timingFunction = kCAMediaTimingFunctionEaseInEaseOut
+                    case .spring:
+                        timingFunction = kCAMediaTimingFunctionSpring
+                }
+                node.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
         }
     }
     
-    func animatePositionAdditive(node: ASDisplayNode, offset: CGPoint, completion: (() -> Void)? = nil) {
+    func animatePositionAdditive(layer: CALayer, offset: CGFloat, removeOnCompletion: Bool = true, completion: @escaping (Bool) -> Void) {
+        switch self {
+            case .immediate:
+                break
+            case let .animated(duration, curve):
+                let timingFunction: String
+                switch curve {
+                    case .easeInOut:
+                        timingFunction = kCAMediaTimingFunctionEaseInEaseOut
+                    case .spring:
+                        timingFunction = kCAMediaTimingFunctionSpring
+                }
+                layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
+        }
+    }
+    
+    func animatePositionAdditive(node: ASDisplayNode, offset: CGPoint, removeOnCompletion: Bool = true, completion: (() -> Void)? = nil) {
         switch self {
         case .immediate:
             break
@@ -261,27 +277,27 @@ public extension ContainedViewLayoutTransition {
             case .spring:
                 timingFunction = kCAMediaTimingFunctionSpring
             }
-            node.layer.animatePosition(from: offset, to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true, completion: { _ in
+            node.layer.animatePosition(from: offset, to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { _ in
                 completion?()
             })
         }
     }
     
-    func animatePositionAdditive(layer: CALayer, offset: CGPoint, completion: (() -> Void)? = nil) {
+    func animatePositionAdditive(layer: CALayer, offset: CGPoint, to toOffset: CGPoint = CGPoint(), removeOnCompletion: Bool = true, completion: (() -> Void)? = nil) {
         switch self {
-        case .immediate:
-            break
-        case let .animated(duration, curve):
-            let timingFunction: String
-            switch curve {
-            case .easeInOut:
-                timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-            case .spring:
-                timingFunction = kCAMediaTimingFunctionSpring
-            }
-            layer.animatePosition(from: offset, to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true, completion: { _ in
-                completion?()
-            })
+            case .immediate:
+                break
+            case let .animated(duration, curve):
+                let timingFunction: String
+                switch curve {
+                    case .easeInOut:
+                        timingFunction = kCAMediaTimingFunctionEaseInEaseOut
+                    case .spring:
+                        timingFunction = kCAMediaTimingFunctionSpring
+                }
+                layer.animatePosition(from: offset, to: toOffset, duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { _ in
+                    completion?()
+                })
         }
     }
     

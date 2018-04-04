@@ -50,6 +50,9 @@ static void traceLayerSurfaces(int32_t tracingTag, int depth, CALayer * _Nonnull
             [array addObject:sublayer];
             hadTraceableSublayers = true;
         }
+        if (sublayerTraceableInfo.disableChildrenTracingTags & tracingTag) {
+            return;
+        }
     }
     
     if (!skipIfNoTraceableSublayers || !hadTraceableSublayers) {
@@ -347,12 +350,13 @@ static void traceLayerSurfaces(int32_t tracingTag, int depth, CALayer * _Nonnull
 
 @implementation CATracingLayerInfo
 
-- (instancetype _Nonnull)initWithShouldBeAdjustedToInverseTransform:(bool)shouldBeAdjustedToInverseTransform userData:(id _Nullable)userData tracingTag:(int32_t)tracingTag {
+- (instancetype _Nonnull)initWithShouldBeAdjustedToInverseTransform:(bool)shouldBeAdjustedToInverseTransform userData:(id _Nullable)userData tracingTag:(int32_t)tracingTag disableChildrenTracingTags:(int32_t)disableChildrenTracingTags {
     self = [super init];
     if (self != nil) {
         _shouldBeAdjustedToInverseTransform = shouldBeAdjustedToInverseTransform;
         _userData = userData;
         _tracingTag = tracingTag;
+        _disableChildrenTracingTags = disableChildrenTracingTags;
     }
     return self;
 }

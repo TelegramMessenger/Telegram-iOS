@@ -33,7 +33,7 @@ open class LegacyPresentedController: ViewController {
         self.legacyController = legacyController
         self.presentation = presentation
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         /*legacyController.navigation_setDismiss { [weak self] in
             self?.dismiss()

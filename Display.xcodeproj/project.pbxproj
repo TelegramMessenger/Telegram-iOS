@@ -111,6 +111,7 @@
 		D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */; };
 		D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */; };
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
+		D06B76DB20592A97006E9EEA /* LayoutSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06B76DA20592A97006E9EEA /* LayoutSizes.swift */; };
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
 		D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D077B8E81F4637040046D27A /* NavigationBarBadge.swift */; };
 		D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */; };
@@ -149,6 +150,8 @@
 		D0C85DD01D1C082E00124894 /* ActionSheetItemGroupsContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DCF1D1C082E00124894 /* ActionSheetItemGroupsContainerNode.swift */; };
 		D0C85DD21D1C08AE00124894 /* ActionSheetItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DD11D1C08AE00124894 /* ActionSheetItemNode.swift */; };
 		D0C85DD41D1C1E6A00124894 /* ActionSheetItemGroupNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DD31D1C1E6A00124894 /* ActionSheetItemGroupNode.swift */; };
+		D0CA3F8A2073F7650042D2B6 /* LinkHighlightingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA3F892073F7650042D2B6 /* LinkHighlightingNode.swift */; };
+		D0CA3F8C2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA3F8B2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift */; };
 		D0CB78901F9822F8004AB79B /* WindowPanRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB788F1F9822F8004AB79B /* WindowPanRecognizer.swift */; };
 		D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */; };
 		D0CE67921F7DA11700FFB557 /* ActionSheetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE67911F7DA11700FFB557 /* ActionSheetTheme.swift */; };
@@ -282,6 +285,7 @@
 		D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NavigationBarProxy.m; sourceTree = "<group>"; };
 		D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
+		D06B76DA20592A97006E9EEA /* LayoutSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutSizes.swift; sourceTree = "<group>"; };
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
 		D077B8E81F4637040046D27A /* NavigationBarBadge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarBadge.swift; sourceTree = "<group>"; };
 		D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainerViewLayout.swift; sourceTree = "<group>"; };
@@ -321,6 +325,8 @@
 		D0C85DCF1D1C082E00124894 /* ActionSheetItemGroupsContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemGroupsContainerNode.swift; sourceTree = "<group>"; };
 		D0C85DD11D1C08AE00124894 /* ActionSheetItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemNode.swift; sourceTree = "<group>"; };
 		D0C85DD31D1C1E6A00124894 /* ActionSheetItemGroupNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemGroupNode.swift; sourceTree = "<group>"; };
+		D0CA3F892073F7650042D2B6 /* LinkHighlightingNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkHighlightingNode.swift; sourceTree = "<group>"; };
+		D0CA3F8B2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapLongTapOrDoubleTapGestureRecognizer.swift; sourceTree = "<group>"; };
 		D0CB788F1F9822F8004AB79B /* WindowPanRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPanRecognizer.swift; sourceTree = "<group>"; };
 		D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScrollToTopProxyView.swift; sourceTree = "<group>"; };
 		D0CE67911F7DA11700FFB557 /* ActionSheetTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSheetTheme.swift; sourceTree = "<group>"; };
@@ -476,6 +482,7 @@
 				D04C468D1F4C97BE00D30FE1 /* PageControlNode.swift */,
 				D0FA08C32048803C00DD23FC /* TextNode.swift */,
 				D0FA08C5204880C900DD23FC /* ImmediateTextNode.swift */,
+				D0CA3F892073F7650042D2B6 /* LinkHighlightingNode.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -522,6 +529,8 @@
 				D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */,
 				D01847651FFA72E000075256 /* ContainedViewLayoutTransition.swift */,
 				D0FA08C120487A8600DD23FC /* HapticFeedback.swift */,
+				D06B76DA20592A97006E9EEA /* LayoutSizes.swift */,
+				D0CA3F8B2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -977,6 +986,7 @@
 				D0C2DFCA1CC4431D0044FF83 /* ListViewItem.swift in Sources */,
 				D05CC2A01B69326400E235A3 /* NavigationController.swift in Sources */,
 				D06EE8451B7140FF00837186 /* Font.swift in Sources */,
+				D0CA3F8A2073F7650042D2B6 /* LinkHighlightingNode.swift in Sources */,
 				D0C2DFCB1CC4431D0044FF83 /* ListViewAnimation.swift in Sources */,
 				D0BE93191E8ED71100DCC1E6 /* NativeWindowHostView.swift in Sources */,
 				D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */,
@@ -992,6 +1002,7 @@
 				D01E2BDE1D9049620066BF65 /* GridNode.swift in Sources */,
 				D01E2BE01D90498E0066BF65 /* GridNodeScroller.swift in Sources */,
 				D0C2DFD01CC4431D0044FF83 /* ListViewAccessoryItemNode.swift in Sources */,
+				D06B76DB20592A97006E9EEA /* LayoutSizes.swift in Sources */,
 				D0DA44501E4DCBDE005FDCA7 /* AlertContentNode.swift in Sources */,
 				D0D94A171D3814F900740E02 /* UniversalTapRecognizer.swift in Sources */,
 				D00701982029CAD6006B9E34 /* TooltipController.swift in Sources */,
@@ -1044,6 +1055,7 @@
 				D05CC2EC1B69558A00E235A3 /* RuntimeUtils.m in Sources */,
 				D0E35A031DE473B900BC6096 /* HighlightableButton.swift in Sources */,
 				D0FA08C42048803C00DD23FC /* TextNode.swift in Sources */,
+				D0CA3F8C2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */,
 				D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */,
 				D0AA840E1FEBFB72005C6E91 /* ListViewFloatingHeaderNode.swift in Sources */,
 				D03AA4EB202E02B10056C405 /* ListViewReorderingGestureRecognizer.swift in Sources */,
@@ -1388,6 +1400,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "-DMINIMAL_ASDK";
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1429,6 +1442,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "-DMINIMAL_ASDK";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
@@ -1554,6 +1568,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "-DMINIMAL_ASDK";
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1633,6 +1648,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "-DMINIMAL_ASDK";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
@@ -1712,6 +1728,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "-DMINIMAL_ASDK";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;

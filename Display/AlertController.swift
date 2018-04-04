@@ -33,7 +33,7 @@ open class AlertController: ViewController {
         self.theme = theme
         self.contentNode = contentNode
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
     }

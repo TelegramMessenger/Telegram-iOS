@@ -25,7 +25,7 @@ public final class ContextMenuController: ViewController {
         self.actions = actions
         self.catchTapsOutside = catchTapsOutside
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
     }
     
     required public init(coder aDecoder: NSCoder) {

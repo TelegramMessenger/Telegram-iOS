@@ -35,7 +35,7 @@ public final class PeekController: ViewController {
         self.content = content
         self.sourceNode = sourceNode
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
     }
     
     required public init(coder aDecoder: NSCoder) {

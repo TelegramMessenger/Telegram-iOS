@@ -5,11 +5,93 @@ public class ImmediateTextNode: TextNode {
     public var textAlignment: NSTextAlignment = .natural
     public var maximumNumberOfLines: Int = 1
     public var lineSpacing: CGFloat = 0.0
+    public var insets: UIEdgeInsets = UIEdgeInsets()
+    
+    private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    private var linkHighlightingNode: LinkHighlightingNode?
+    
+    public var linkHighlightColor: UIColor?
+    
+    public var highlightAttributeAction: (([NSAttributedStringKey: Any]) -> NSAttributedStringKey?)? {
+        didSet {
+            if self.isNodeLoaded {
+                self.updateInteractiveActions()
+            }
+        }
+    }
+    
+    public var tapAttributeAction: (([NSAttributedStringKey: Any]) -> Void)?
     
     public func updateLayout(_ constrainedSize: CGSize) -> CGSize {
         let makeLayout = TextNode.asyncLayout(self)
-        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: .end, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: UIEdgeInsets()))
+        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: .end, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: self.insets))
         let _ = apply()
         return layout.size
+    }
+    
+    override public func didLoad() {
+        super.didLoad()
+        
+        self.updateInteractiveActions()
+    }
+    
+    private func updateInteractiveActions() {
+        if self.highlightAttributeAction != nil {
+            if self.tapRecognizer == nil {
+                let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapAction(_:)))
+                tapRecognizer.highlight = { [weak self] point in
+                    if let strongSelf = self {
+                        var rects: [CGRect]?
+                        if let point = point {
+                            if let (index, attributes) = strongSelf.attributesAtPoint(CGPoint(x: point.x, y: point.y)) {
+                                if let selectedAttribute = strongSelf.highlightAttributeAction?(attributes) {
+                                    rects = strongSelf.attributeRects(name: selectedAttribute.rawValue, at: index)
+                                }
+                            }
+                        }
+                        
+                        if let rects = rects {
+                            let linkHighlightingNode: LinkHighlightingNode
+                            if let current = strongSelf.linkHighlightingNode {
+                                linkHighlightingNode = current
+                            } else {
+                                linkHighlightingNode = LinkHighlightingNode(color: strongSelf.linkHighlightColor ?? .clear)
+                                strongSelf.linkHighlightingNode = linkHighlightingNode
+                                strongSelf.addSubnode(linkHighlightingNode)
+                            }
+                            linkHighlightingNode.frame = strongSelf.bounds
+                            linkHighlightingNode.updateRects(rects.map { $0.offsetBy(dx: 0.0, dy: -3.0) })
+                        } else if let linkHighlightingNode = strongSelf.linkHighlightingNode {
+                            strongSelf.linkHighlightingNode = nil
+                            linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                                linkHighlightingNode?.removeFromSupernode()
+                            })
+                        }
+                    }
+                }
+                self.view.addGestureRecognizer(tapRecognizer)
+            }
+        } else if let tapRecognizer = self.tapRecognizer {
+            self.tapRecognizer = nil
+            self.view.removeGestureRecognizer(tapRecognizer)
+        }
+    }
+    
+    @objc private func tapAction(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            if let (_, attributes) = self.attributesAtPoint(CGPoint(x: location.x, y: location.y)) {
+                                self.tapAttributeAction?(attributes)
+                            }
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
+        }
     }
 }

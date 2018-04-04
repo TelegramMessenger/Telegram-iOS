@@ -41,7 +41,7 @@ public final class TooltipController: ViewController {
         self.text = text
         self.timeout = timeout
         
-        super.init(navigationBarTheme: nil)
+        super.init(navigationBarPresentationData: nil)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -54,10 +54,7 @@ public final class TooltipController: ViewController {
     
     open override func loadDisplayNode() {
         self.displayNode = TooltipControllerNode(text: self.text, dismiss: { [weak self] in
-            self?.dismissed?()
-            self?.controllerNode.animateOut { [weak self] in
-                self?.presentingViewController?.dismiss(animated: false)
-            }
+            self?.dismiss()
         })
         self.displayNodeDidLoad()
     }
@@ -109,6 +106,14 @@ public final class TooltipController: ViewController {
             }, queue: Queue.mainQueue())
             self.timeoutTimer = timeoutTimer
             timeoutTimer.start()
+        }
+    }
+    
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        self.dismissed?()
+        self.controllerNode.animateOut { [weak self] in
+            self?.presentingViewController?.dismiss(animated: false)
+            completion?()
         }
     }
 }
