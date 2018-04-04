@@ -5,7 +5,7 @@ let doNothing: () -> Void = { }
 public typealias NoError = Void
 
 public func identity<A>(a: A) -> A {
-    return a;
+    return a
 }
 
 precedencegroup PipeRight {
