@@ -95,7 +95,7 @@ private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<
     switch difference {
         case let .difference(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
-                for peerId in message.peerIds {
+                for peerId in apiMessagePeerIds(message) {
                     peerIds.insert(peerId)
                 }
             }
@@ -108,7 +108,7 @@ private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<
             break
         case let .differenceSlice(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
-                for peerId in message.peerIds {
+                for peerId in apiMessagePeerIds(message) {
                     peerIds.insert(peerId)
                 }
             }
@@ -132,7 +132,7 @@ private func associatedMessageIdsFromDifference(_ difference: Api.updates.Differ
     switch difference {
         case let .difference(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
-                if let associatedMessageIds = message.associatedMessageIds {
+                if let associatedMessageIds = apiMessageAssociatedMessageIds(message) {
                     for messageId in associatedMessageIds {
                         messageIds.insert(messageId)
                     }
@@ -149,7 +149,7 @@ private func associatedMessageIdsFromDifference(_ difference: Api.updates.Differ
             break
         case let .differenceSlice(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
-                if let associatedMessageIds = message.associatedMessageIds {
+                if let associatedMessageIds = apiMessageAssociatedMessageIds(message) {
                     for messageId in associatedMessageIds {
                         messageIds.insert(messageId)
                     }
@@ -545,7 +545,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                     updatesByChannel[peerId]!.append(update)
                 }
             case let .updateNewChannelMessage(message, _, _):
-                if let peerId = message.peerId {
+                if let peerId = apiMessagePeerId(message) {
                     if updatesByChannel[peerId] == nil {
                         updatesByChannel[peerId] = [update]
                     } else {
@@ -555,7 +555,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                     result.append(update)
                 }
             case let .updateEditChannelMessage(message, _, _):
-                if let peerId = message.peerId {
+                if let peerId = apiMessagePeerId(message) {
                     if updatesByChannel[peerId] == nil {
                         updatesByChannel[peerId] = [update]
                     } else {

@@ -241,15 +241,15 @@ extension Api.Update {
             case let .updateDeleteChannelMessages(channelId, _, _, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateNewChannelMessage(message, _, _):
-                return message.peerIds
+                return apiMessagePeerIds(message)
             case let .updateEditChannelMessage(message, _, _):
-                return message.peerIds
+                return apiMessagePeerIds(message)
             case let .updateChannelWebPage(channelId, _, _, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateNewMessage(message, _, _):
-                return message.peerIds
+                return apiMessagePeerIds(message)
             case let .updateEditMessage(message, _, _):
-                return message.peerIds
+                return apiMessagePeerIds(message)
             //case let .updateReadChannelInbox(channelId, _):
             //    return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateUserName(userId, _, _, _):
@@ -274,11 +274,11 @@ extension Api.Update {
     var associatedMessageIds: [MessageId]? {
         switch self {
             case let .updateNewMessage(message, _, _):
-                return message.associatedMessageIds
+                return apiMessageAssociatedMessageIds(message)
             case let .updateNewChannelMessage(message, _, _):
-                return message.associatedMessageIds
+                return apiMessageAssociatedMessageIds(message)
             case let .updateEditChannelMessage(message, _, _):
-                return message.associatedMessageIds
+                return apiMessageAssociatedMessageIds(message)
             default:
                 break
         }

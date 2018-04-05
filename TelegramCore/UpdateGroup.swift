@@ -55,39 +55,33 @@ enum UpdateGroup {
     }
 }
 
-extension Api.Update {
-    var ptsRange: (Int32, Int32)? {
-        get {
-            switch self {
-                case let .updateDeleteMessages(_, pts, ptsCount):
-                    return (pts, ptsCount)
-                case let .updateNewMessage(_, pts, ptsCount):
-                    return (pts, ptsCount)
-                case let .updateReadHistoryInbox(_, _, pts, ptsCount):
-                    return (pts, ptsCount)
-                case let .updateReadHistoryOutbox(_, _, pts, ptsCount):
-                    return (pts, ptsCount)
-                case let .updateEditMessage(_, pts, ptsCount):
-                    return (pts, ptsCount)
-                case let .updateReadMessagesContents(_, pts, ptsCount):
-                    return (pts, ptsCount)
-                case let .updateWebPage(_, pts, ptsCount):
-                    return (pts, ptsCount)
-                default:
-                    return nil
-            }
-        }
+func apiUpdatePtsRange(_ update: Api.Update) -> (Int32, Int32)? {
+    switch update {
+        case let .updateDeleteMessages(_, pts, ptsCount):
+            return (pts, ptsCount)
+        case let .updateNewMessage(_, pts, ptsCount):
+            return (pts, ptsCount)
+        case let .updateReadHistoryInbox(_, _, pts, ptsCount):
+            return (pts, ptsCount)
+        case let .updateReadHistoryOutbox(_, _, pts, ptsCount):
+            return (pts, ptsCount)
+        case let .updateEditMessage(_, pts, ptsCount):
+            return (pts, ptsCount)
+        case let .updateReadMessagesContents(_, pts, ptsCount):
+            return (pts, ptsCount)
+        case let .updateWebPage(_, pts, ptsCount):
+            return (pts, ptsCount)
+        default:
+            return nil
     }
-    
-    var qtsRange: (Int32, Int32)? {
-        get {
-            switch self {
-                case let .updateNewEncryptedMessage(_, qts):
-                    return (qts, 1)
-                case _:
-                    return nil
-            }
-        }
+}
+
+func apiUpdateQtsRange(_ update: Api.Update) -> (Int32, Int32)? {
+    switch update {
+        case let .updateNewEncryptedMessage(_, qts):
+            return (qts, 1)
+        case _:
+            return nil
     }
 }
 
@@ -120,7 +114,7 @@ func ptsUpdates(_ groups: [UpdateGroup]) -> [PtsUpdate] {
         switch group {
         case let .withPts(updates, users, chats):
             for update in updates {
-                if let ptsRange = update.ptsRange {
+                if let ptsRange = apiUpdatePtsRange(update) {
                     result.append(PtsUpdate(update: update, ptsRange: ptsRange, users: users, chats: chats))
                 }
             }
@@ -143,7 +137,7 @@ func qtsUpdates(_ groups: [UpdateGroup]) -> [QtsUpdate] {
         switch group {
             case let .withQts(updates, users, chats):
                 for update in updates {
-                    if let qtsRange = update.qtsRange {
+                    if let qtsRange = apiUpdateQtsRange(update) {
                         result.append(QtsUpdate(update: update, qtsRange: qtsRange, users: users, chats: chats))
                     }
                 }
@@ -194,9 +188,9 @@ func groupUpdates(_ updates: [Api.Update], users: [Api.User], chats: [Api.Chat],
     var otherUpdates: [Api.Update] = []
     
     for update in updates {
-        if let _ = update.ptsRange {
+        if let _ = apiUpdatePtsRange(update) {
             updatesWithPts.append(update)
-        } else if let _ = update.qtsRange {
+        } else if let _ = apiUpdateQtsRange(update) {
             updatesWithQts.append(update)
         } else {
             otherUpdates.append(update)

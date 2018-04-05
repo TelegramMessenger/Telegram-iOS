@@ -47,7 +47,7 @@ public enum SecureIdCommitPhoneVerificationError {
     case invalid
 }
 
-public func secureIdCommitPhoneVerification(network: Network, context: SecureIdAccessContext, payload: SecureIdPreparePhoneVerificationPayload, code: String) -> Signal<SecureIdValueWithContext, SecureIdCommitPhoneVerificationError> {
+public func secureIdCommitPhoneVerification(postbox: Postbox, network: Network, context: SecureIdAccessContext, payload: SecureIdPreparePhoneVerificationPayload, code: String) -> Signal<SecureIdValueWithContext, SecureIdCommitPhoneVerificationError> {
     return network.request(Api.functions.account.verifyPhone(phoneNumber: payload.phone, phoneCodeHash: payload.phoneCodeHash, phoneCode: code))
     |> mapError { error -> SecureIdCommitPhoneVerificationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -59,7 +59,7 @@ public func secureIdCommitPhoneVerification(network: Network, context: SecureIdA
         return .generic
     }
     |> mapToSignal { _ -> Signal<SecureIdValueWithContext, SecureIdCommitPhoneVerificationError> in
-        return saveSecureIdValue(network: network, context: context, value: .phone(SecureIdPhoneValue(phone: payload.phone)))
+        return saveSecureIdValue(postbox: postbox, network: network, context: context, value: .phone(SecureIdPhoneValue(phone: payload.phone)), uploadedFiles: [:])
         |> mapError { _ -> SecureIdCommitPhoneVerificationError in
             return .generic
         }
@@ -97,7 +97,7 @@ public enum SecureIdCommitEmailVerificationError {
     case invalid
 }
 
-public func secureIdCommitEmailVerification(network: Network, context: SecureIdAccessContext, payload: SecureIdPrepareEmailVerificationPayload, code: String) -> Signal<SecureIdValueWithContext, SecureIdCommitEmailVerificationError> {
+public func secureIdCommitEmailVerification(postbox: Postbox, network: Network, context: SecureIdAccessContext, payload: SecureIdPrepareEmailVerificationPayload, code: String) -> Signal<SecureIdValueWithContext, SecureIdCommitEmailVerificationError> {
     return network.request(Api.functions.account.verifyEmail(email: payload.email, code: code), automaticFloodWait: false)
     |> mapError { error -> SecureIdCommitEmailVerificationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -106,7 +106,7 @@ public func secureIdCommitEmailVerification(network: Network, context: SecureIdA
         return .generic
     }
     |> mapToSignal { _ -> Signal<SecureIdValueWithContext, SecureIdCommitEmailVerificationError> in
-        return saveSecureIdValue(network: network, context: context, value: .email(SecureIdEmailValue(email: payload.email)))
+        return saveSecureIdValue(postbox: postbox, network: network, context: context, value: .email(SecureIdEmailValue(email: payload.email)), uploadedFiles: [:])
         |> mapError { _ -> SecureIdCommitEmailVerificationError in
             return .generic
         }

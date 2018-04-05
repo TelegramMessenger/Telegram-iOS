@@ -23,8 +23,8 @@ public func convertGroupToSupergroup(account: Account, peerId: PeerId) -> Signal
             account.stateManager.addUpdates(updates)
             var createdPeerId: PeerId?
             for message in updates.messages {
-                if message.peerId != peerId {
-                    createdPeerId = message.peerId
+                if apiMessagePeerId(message) != peerId {
+                    createdPeerId = apiMessagePeerId(message)
                     break
                 }
             }
