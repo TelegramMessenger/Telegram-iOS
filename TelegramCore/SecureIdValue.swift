@@ -25,6 +25,37 @@ public enum SecureIdValue: Equatable {
     case phone(SecureIdPhoneValue)
     case email(SecureIdEmailValue)
     
+    var fileReferences: [SecureIdVerificationDocumentReference] {
+        switch self {
+            case let .passport(passport):
+                var result = passport.verificationDocuments
+                if let selfie = passport.selfieDocument {
+                    result.append(selfie)
+                }
+                return result
+            case let .driversLicense(driversLicense):
+                var result = driversLicense.verificationDocuments
+                if let selfie = driversLicense.selfieDocument {
+                    result.append(selfie)
+                }
+                return result
+            case let .idCard(idCard):
+                var result = idCard.verificationDocuments
+                if let selfie = idCard.selfieDocument {
+                    result.append(selfie)
+                }
+                return result
+            case let .bankStatement(bankStatement):
+                return bankStatement.verificationDocuments
+            case let .utilityBill(utilityBill):
+                return utilityBill.verificationDocuments
+            case let .rentalAgreement(rentalAgreement):
+                return rentalAgreement.verificationDocuments
+            default:
+                return []
+        }
+    }
+    
     public var key: SecureIdValueKey {
         switch self {
             case .personalDetails:

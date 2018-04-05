@@ -187,7 +187,7 @@ private func makeInputSecureValue(context: SecureIdAccessContext, value: SecureI
     return Api.InputSecureValue.inputSecureValue(flags: flags, type: inputData.type, data: secureData, files: files, plainData: inputData.publicData, selfie: inputData.selfieReference.flatMap(apiInputSecretFile))
 }
 
-public func saveSecureIdValue(network: Network, context: SecureIdAccessContext, value: SecureIdValue) -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> {
+public func saveSecureIdValue(postbox: Postbox, network: Network, context: SecureIdAccessContext, value: SecureIdValue, uploadedFiles: [Data: Data]) -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> {
     let delete = deleteSecureIdValues(network: network, keys: Set([value.key]))
     |> mapError { _ -> SaveSecureIdValueError in
         return .generic
@@ -212,6 +212,17 @@ public func saveSecureIdValue(network: Network, context: SecureIdAccessContext, 
     |> mapToSignal { result -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> in
         guard let parsedValue = parseSecureValue(context: context, value: result) else {
             return .fail(.generic)
+        }
+        
+        for file in parsedValue.valueWithContext.value.fileReferences {
+            switch file {
+                case let .remote(file):
+                    if let data = uploadedFiles[file.fileHash] {
+                        postbox.mediaBox.storeResourceData(SecureFileMediaResource(file: file).id, data: data)
+                    }
+                case .uploaded:
+                    break
+            }
         }
         
         return .single(parsedValue.valueWithContext)

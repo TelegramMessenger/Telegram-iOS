@@ -8,19 +8,16 @@
     import MtProtoKitDynamic
 #endif
 
-extension Api.Updates {
-    var groups: [Api.Chat] {
-        switch self {
-            case let .updates( _, _, chats, _, _):
-                return chats
-            case let .updatesCombined(_, _, chats, _, _, _):
-                return chats
-            default:
-                return []
-        }
+func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {
+    switch updates {
+        case let .updates( _, _, chats, _, _):
+            return chats
+        case let .updatesCombined(_, _, chats, _, _, _):
+            return chats
+        default:
+            return []
     }
 }
-
 
 public enum ExternalJoiningChatState {
     case invite(title: String, photoRepresentation: TelegramMediaImageRepresentation?, participantsCount: Int32, participants: [Peer]?)
@@ -37,7 +34,7 @@ public func joinChatInteractively(with hash: String, account: Account) -> Signal
         |> mapToSignal { updates -> Signal<PeerId?, NoError> in
             if let updates = updates {
                 account.stateManager.addUpdates(updates)
-                if let peerId = updates.groups.first?.peerId {
+                if let peerId = apiUpdatesGroups(updates).first?.peerId {
                     return account.postbox.multiplePeersView([peerId])
                         |> filter { view in
                             return view.peers[peerId] != nil

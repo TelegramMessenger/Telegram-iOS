@@ -6,13 +6,6 @@ public struct SecureIdDate: Equatable {
     public init(timestamp: Int32) {
         self.timestamp = timestamp
     }
-    
-    public static func ==(lhs: SecureIdDate, rhs: SecureIdDate) -> Bool {
-        if lhs.timestamp != rhs.timestamp {
-            return false
-        }
-        return true
-    }
 }
 
 public enum SecureIdGender {
@@ -28,31 +21,6 @@ public struct SecureIdFileReference: Equatable {
     public let timestamp: Int32
     public let fileHash: Data
     let encryptedSecret: Data
-    
-    public static func ==(lhs: SecureIdFileReference, rhs: SecureIdFileReference) -> Bool {
-        if lhs.id != rhs.id {
-            return false
-        }
-        if lhs.accessHash != rhs.accessHash {
-            return false
-        }
-        if lhs.size != rhs.size {
-            return false
-        }
-        if lhs.datacenterId != rhs.datacenterId {
-            return false
-        }
-        if lhs.timestamp != rhs.timestamp {
-            return false
-        }
-        if lhs.fileHash != rhs.fileHash {
-            return false
-        }
-        if lhs.encryptedSecret != rhs.encryptedSecret {
-            return false
-        }
-        return true
-    }
 }
 
 extension SecureIdFileReference {

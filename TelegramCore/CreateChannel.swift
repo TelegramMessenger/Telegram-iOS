@@ -19,7 +19,7 @@ public func createChannel(account: Account, title: String, description: String?)
             |> mapToSignal { updates -> Signal<PeerId?, NoError> in
                 if let updates = updates {
                     account.stateManager.addUpdates(updates)
-                    if let message = updates.messages.first, let peerId = message.peerId {
+                    if let message = updates.messages.first, let peerId = apiMessagePeerId(message) {
                         return account.postbox.multiplePeersView([peerId])
                             |> filter { view in
                                 return view.peers[peerId] != nil

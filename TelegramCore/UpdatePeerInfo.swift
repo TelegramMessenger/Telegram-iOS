@@ -25,7 +25,7 @@ public func updatePeerTitle(account: Account, peerId: PeerId, title: String) -> 
                         account.stateManager.addUpdates(result)
                         
                         return account.postbox.modify { modifier -> Void in
-                            if let apiChat = result.groups.first, let updatedPeer = parseTelegramGroupOrChannel(chat: apiChat) {
+                            if let apiChat = apiUpdatesGroups(result).first, let updatedPeer = parseTelegramGroupOrChannel(chat: apiChat) {
                                 updatePeers(modifier: modifier, peers: [updatedPeer], update: { _, updated in
                                     return updated
                                 })
@@ -41,7 +41,7 @@ public func updatePeerTitle(account: Account, peerId: PeerId, title: String) -> 
                         account.stateManager.addUpdates(result)
                         
                         return account.postbox.modify { modifier -> Void in
-                            if let apiChat = result.groups.first, let updatedPeer = parseTelegramGroupOrChannel(chat: apiChat) {
+                            if let apiChat = apiUpdatesGroups(result).first, let updatedPeer = parseTelegramGroupOrChannel(chat: apiChat) {
                                 updatePeers(modifier: modifier, peers: [updatedPeer], update: { _, updated in
                                     return updated
                                 })
