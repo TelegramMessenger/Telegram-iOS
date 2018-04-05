@@ -26,7 +26,7 @@ public struct SecureIdFileReference: Equatable {
     let size: Int32
     let datacenterId: Int32
     public let timestamp: Int32
-    let fileHash: Data
+    public let fileHash: Data
     let encryptedSecret: Data
     
     public static func ==(lhs: SecureIdFileReference, rhs: SecureIdFileReference) -> Bool {
