@@ -35,6 +35,7 @@ public struct ItemCollectionViewEntryIndex: Comparable {
 public struct ItemCollectionViewEntry {
     public let index: ItemCollectionViewEntryIndex
     public let item: ItemCollectionItem
+    
     public init(index: ItemCollectionViewEntryIndex, item: ItemCollectionItem) {
         self.index = index
         self.item = item
