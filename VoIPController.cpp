@@ -103,9 +103,12 @@ bool VoIPController::didInitWin32TimeScale = false;
 #define SHA256_LENGTH 32
 
 #ifndef TGVOIP_USE_CUSTOM_CRYPTO
+extern "C" {
 #include <openssl/sha.h>
 #include <openssl/aes.h>
+#include <openssl/modes.h>
 #include <openssl/rand.h>
+}
 
 void tgvoip_openssl_aes_ige_encrypt(uint8_t* in, uint8_t* out, size_t length, uint8_t* key, uint8_t* iv){
 	AES_KEY akey;
@@ -134,7 +137,7 @@ void tgvoip_openssl_sha256(uint8_t* msg, size_t len, uint8_t* output){
 void tgvoip_openssl_aes_ctr_encrypt(uint8_t* inout, size_t length, uint8_t* key, uint8_t* iv, uint8_t* ecount, uint32_t* num){
 	AES_KEY akey;
 	AES_set_encrypt_key(key, 32*8, &akey);
-	AES_ctr128_encrypt(inout, inout, length, &akey, iv, ecount, num);
+	CRYPTO_ctr128_encrypt(inout, inout, length, &akey, iv, ecount, num, (block128_f) AES_encrypt);
 }
 
 voip_crypto_functions_t VoIPController::crypto={
@@ -1157,7 +1160,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 					if(!micMuted){
 						audioInput->Start();
 						if(!audioInput->IsInitialized()){
-							LOGE("Erorr initializing audio capture");
+							LOGE("Error initializing audio capture");
 							lastError=TGVOIP_ERROR_AUDIO_IO;
 
 							SetState(STATE_FAILED);
@@ -1165,7 +1168,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 						}
 					}
 					if(!audioOutput->IsInitialized()){
-						LOGE("Erorr initializing audio playback");
+						LOGE("Error initializing audio playback");
 						lastError=TGVOIP_ERROR_AUDIO_IO;
 
 						SetState(STATE_FAILED);
