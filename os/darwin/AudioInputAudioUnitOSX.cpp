@@ -26,7 +26,7 @@ AudioInputAudioUnitLegacy::AudioInputAudioUnitLegacy(std::string deviceID) : Aud
 	
 	OSStatus status;
 	AudioComponentDescription inputDesc={
-		.componentType = kAudioUnitType_Output, .componentSubType = /*kAudioUnitSubType_HALOutput*/kAudioUnitSubType_VoiceProcessingIO, .componentFlags = 0, .componentFlagsMask = 0,
+		.componentType = kAudioUnitType_Output, .componentSubType = kAudioUnitSubType_HALOutput, .componentFlags = 0, .componentFlagsMask = 0,
 		.componentManufacturer = kAudioUnitManufacturer_Apple
 	};
 	AudioComponent component=AudioComponentFindNext(NULL, &inputDesc);
