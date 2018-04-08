@@ -23,6 +23,10 @@ using namespace tgvoip::audio;
 AudioInputAudioUnitLegacy::AudioInputAudioUnitLegacy(std::string deviceID) : AudioInput(deviceID){
 	remainingDataSize=0;
 	isRecording=false;
+
+	inBufferList.mBuffers[0].mData=malloc(10240);
+	inBufferList.mBuffers[0].mDataByteSize=10240;
+	inBufferList.mNumberBuffers=1;
 	
 	OSStatus status;
 	AudioComponentDescription inputDesc={
@@ -60,10 +64,6 @@ AudioInputAudioUnitLegacy::AudioInputAudioUnitLegacy(std::string deviceID) : Aud
 	CHECK_AU_ERROR(status, "Error setting input buffer callback");
 	status=AudioUnitInitialize(unit);
 	CHECK_AU_ERROR(status, "Error initializing unit");
-	
-	inBufferList.mBuffers[0].mData=malloc(10240);
-	inBufferList.mBuffers[0].mDataByteSize=10240;
-	inBufferList.mNumberBuffers=1;
 }
 
 AudioInputAudioUnitLegacy::~AudioInputAudioUnitLegacy(){
