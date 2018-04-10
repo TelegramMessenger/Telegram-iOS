@@ -121,6 +121,7 @@ struct SecureIdEncryptedValueMetadata: Equatable {
     let valueDataHash: Data
     let decryptedSecret: Data
     let files: [SecureIdEncryptedValueFileMetadata]
+    let selfie: SecureIdEncryptedValueFileMetadata?
 }
 
 public struct SecureIdValueWithContext: Equatable {

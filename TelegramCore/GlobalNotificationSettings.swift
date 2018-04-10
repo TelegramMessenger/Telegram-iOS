@@ -157,8 +157,14 @@ extension MessageNotificationSettings {
         switch apiSettings {
             case .peerNotifySettingsEmpty:
                 self = .defaultSettings
-            case let .peerNotifySettings(flags, muteUntil, sound):
-                self = MessageNotificationSettings(enabled: muteUntil == 0, displayPreviews: (flags & (1 << 0)) != 0, sound: PeerMessageSound(apiSound: sound))
+            case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
+                let displayPreviews: Bool
+                if let showPreviews = showPreviews, case .boolFalse = showPreviews {
+                    displayPreviews = false
+                } else {
+                    displayPreviews = true
+                }
+                self = MessageNotificationSettings(enabled: muteUntil == 0, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound ?? "2"))
         }
     }
 }

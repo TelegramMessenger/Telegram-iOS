@@ -117,24 +117,67 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
             switch chats {
                 case .peerNotifySettingsEmpty:
                     chatsSettings = MessageNotificationSettings.defaultSettings
-                case let .peerNotifySettings(flags, muteUntil, sound):
-                    chatsSettings = MessageNotificationSettings(enabled: muteUntil == 0, displayPreviews: (flags & (1 << 0)) != 0, sound: PeerMessageSound(apiSound: sound))
+                case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
+                    let enabled: Bool
+                    if muteUntil != nil && muteUntil != 0 {
+                        enabled = false
+                    } else {
+                        enabled = true
+                    }
+                    let displayPreviews: Bool
+                    if let showPreviews = showPreviews, case .boolFalse = showPreviews {
+                        displayPreviews = false
+                    } else {
+                        displayPreviews = true
+                    }
+                    chatsSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound))
             }
             
             let userSettings: MessageNotificationSettings
             switch users {
                 case .peerNotifySettingsEmpty:
                     userSettings = MessageNotificationSettings.defaultSettings
-                case let .peerNotifySettings(flags, muteUntil, sound):
-                    userSettings = MessageNotificationSettings(enabled: muteUntil == 0, displayPreviews: (flags & (1 << 0)) != 0, sound: PeerMessageSound(apiSound: sound))
+                case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
+                    let enabled: Bool
+                    if muteUntil != nil && muteUntil != 0 {
+                        enabled = false
+                    } else {
+                        enabled = true
+                    }
+                    let displayPreviews: Bool
+                    if let showPreviews = showPreviews, case .boolFalse = showPreviews {
+                        displayPreviews = false
+                    } else {
+                        displayPreviews = true
+                    }
+                    userSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound))
             }
             return GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings)
     }
 }
 
+private func apiInputPeerNotifySettings(_ settings: MessageNotificationSettings) -> Api.InputPeerNotifySettings {
+    let muteUntil: Int32?
+    if settings.enabled {
+        muteUntil = 0
+    } else {
+        muteUntil = Int32.max
+    }
+    let sound: String? = settings.sound.apiSound
+    var flags: Int32 = 0
+    if muteUntil != nil {
+        flags |= (1 << 2)
+    }
+    if sound != nil {
+        flags |= (1 << 3)
+    }
+    return .inputPeerNotifySettings(flags: flags, showPreviews: nil, silent: nil, muteUntil: muteUntil, sound: sound)
+}
+
 private func pushedNotificationSettings(network: Network, settings: GlobalNotificationSettingsSet) -> Signal<Void, NoError> {
-    let pushedChats = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyChats, settings: Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: settings.groupChats.displayPreviews ? (1 << 0) : 0, muteUntil: settings.groupChats.enabled ? 0 : Int32.max, sound: settings.groupChats.sound.apiSound)))
-    let pushedUsers = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyUsers, settings: Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: settings.privateChats.displayPreviews ? (1 << 0) : 0, muteUntil: settings.privateChats.enabled ? 0 : Int32.max, sound: settings.privateChats.sound.apiSound)))
+    
+    let pushedChats = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyChats, settings: apiInputPeerNotifySettings(settings.groupChats)))
+    let pushedUsers = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyUsers, settings: apiInputPeerNotifySettings(settings.privateChats)))
     return combineLatest(pushedChats, pushedUsers)
         |> retryRequest
         |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }

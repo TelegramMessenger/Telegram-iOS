@@ -3172,6 +3172,20 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func getDeepLinkInfo(path: String) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.help.DeepLinkInfo?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1072547679)
+                    serializeString(path, buffer: buffer, boxed: false)
+                    return (FunctionDescription({return "(help.getDeepLinkInfo path: \(path))"}), buffer, { (buffer: Buffer) -> Api.help.DeepLinkInfo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.DeepLinkInfo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.DeepLinkInfo
+                        }
+                        return result
+                    })
+                }
             }
             public struct updates {
                 public static func getState() -> (CustomStringConvertible, Buffer, (Buffer) -> Api.updates.State?) {
@@ -3800,6 +3814,20 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getAllSecureValues() -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.SecureValue]?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1299661699)
+                    
+                    return (FunctionDescription({return "(account.getAllSecureValues )"}), buffer, { (buffer: Buffer) -> [Api.SecureValue]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.SecureValue]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureValue.self)
                         }
                         return result
                     })

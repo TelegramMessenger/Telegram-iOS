@@ -6,6 +6,7 @@ import Foundation
 #endif
 
 public enum PeerMuteState: Equatable {
+    case `default`
     case unmuted
     case muted(until: Int32)
     
@@ -15,6 +16,8 @@ public enum PeerMuteState: Equatable {
                 return .unmuted
             case 1:
                 return .muted(until: decoder.decodeInt32ForKey("m.u", orElse: 0))
+            case 2:
+                return .default
             default:
                 return .unmuted
         }
@@ -27,25 +30,8 @@ public enum PeerMuteState: Equatable {
             case let .muted(until):
                 encoder.encodeInt32(1, forKey: "m.v")
                 encoder.encodeInt32(until, forKey: "m.u")
-        }
-    }
-    
-    public static func ==(lhs: PeerMuteState, rhs: PeerMuteState) -> Bool {
-        switch lhs {
-            case .unmuted:
-                switch rhs {
-                    case .unmuted:
-                        return true
-                    default:
-                        return false
-                }
-            case let .muted(lhsUntil):
-                switch rhs {
-                    case .muted(lhsUntil):
-                        return true
-                    default:
-                        return false
-                }
+            case .default:
+                encoder.encodeInt32(2, forKey: "m.v")
         }
     }
 }
@@ -138,6 +124,8 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
                 return false
             case .muted:
                 return true
+            case .default:
+                return false
         }
     }
     
@@ -182,14 +170,28 @@ extension TelegramPeerNotificationSettings {
         switch apiSettings {
             case .peerNotifySettingsEmpty:
                 self.init(muteState: .unmuted, messageSound: .bundledModern(id: 0))
-            case let .peerNotifySettings(_, muteUntil, sound):
-                self.init(muteState: muteUntil == 0 ? .unmuted : .muted(until: muteUntil), messageSound: PeerMessageSound(apiSound: sound))
+            case let .peerNotifySettings(_, _, _, muteUntil, sound):
+                let muteState: PeerMuteState
+                if let muteUntil = muteUntil {
+                    if muteUntil == 0 {
+                        muteState = .unmuted
+                    } else {
+                        muteState = .muted(until: muteUntil)
+                    }
+                } else {
+                    muteState = .default
+                }
+                self.init(muteState: muteState, messageSound: PeerMessageSound(apiSound: sound))
         }
     }
 }
 
 extension PeerMessageSound {
-    init(apiSound: String) {
+    init(apiSound: String?) {
+        guard let apiSound = apiSound else {
+            self = .default
+            return
+        }
         var rawApiSound = apiSound
         if let index = rawApiSound.index(of: ".") {
             rawApiSound = String(rawApiSound[..<index])
@@ -218,12 +220,12 @@ extension PeerMessageSound {
         self = parsedSound
     }
     
-    var apiSound: String {
+    var apiSound: String? {
         switch self {
             case .none:
                 return ""
             case .default:
-                return "default"
+                return nil
             case let .bundledModern(id):
                 if id == 0 {
                     return "default"

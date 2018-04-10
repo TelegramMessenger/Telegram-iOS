@@ -75,7 +75,15 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
                     }
                     parsedFileMetadata.append(SecureIdEncryptedValueFileMetadata(hash: file.fileHash, secret: fileSecret))
                 }
-                encryptedMetadata = SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, decryptedSecret: valueContext.secret, files: parsedFileMetadata)
+                var parsedSelfieMetadata: SecureIdEncryptedValueFileMetadata?
+                if let parsedSelfie = selfie.flatMap(SecureIdFileReference.init) {
+                    guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: parsedSelfie.fileHash, encryptedSecret: parsedSelfie.encryptedSecret) else {
+                        return nil
+                    }
+                    
+                    parsedSelfieMetadata = SecureIdEncryptedValueFileMetadata(hash: parsedSelfie.fileHash, secret: fileSecret)
+                }
+                encryptedMetadata = SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, decryptedSecret: valueContext.secret, files: parsedFileMetadata, selfie: parsedSelfieMetadata)
             } else {
                 decryptedData = nil
                 encryptedMetadata = nil

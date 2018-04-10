@@ -102,15 +102,24 @@ private func pushPeerNotificationSettings(postbox: Postbox, network: Network, pe
             }
             
             if let notificationPeer = modifier.getPeer(notificationPeerId), let inputPeer = apiInputPeer(notificationPeer), let settings = settings as? TelegramPeerNotificationSettings {
-                let muteUntil: Int32
+                let muteUntil: Int32?
                 switch settings.muteState {
                     case let .muted(until):
                         muteUntil = until
                     case .unmuted:
                         muteUntil = 0
+                    case .default:
+                        muteUntil = nil
                 }
-                let sound: String = settings.messageSound.apiSound
-                let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: Int32(1 << 0), muteUntil: muteUntil, sound: sound)
+                let sound: String? = settings.messageSound.apiSound
+                var flags: Int32 = 0
+                if muteUntil != nil {
+                    flags |= (1 << 2)
+                }
+                if sound != nil {
+                    flags |= (1 << 3)
+                }
+                let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: nil, silent: nil, muteUntil: muteUntil, sound: sound)
                 return network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyPeer(peer: inputPeer), settings: inputSettings))
                     |> retryRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
