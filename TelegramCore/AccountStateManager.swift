@@ -745,14 +745,6 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
     }
     
     if let notificationSettings = modifier.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings {
-        switch notificationSettings.muteState {
-            case let .muted(until):
-                if until >= timestamp {
-                    notify = false
-                }
-            case .unmuted:
-                break
-        }
         var defaultSound: PeerMessageSound = .bundledModern(id: 0)
         var defaultNotify: Bool = true
         if let globalNotificationSettings = modifier.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings {
@@ -770,14 +762,23 @@ public func messageForNotification(modifier: Modifier, id: MessageId, alwaysRetu
                 displayContents = globalNotificationSettings.effective.groupChats.displayPreviews
             }
         }
+        switch notificationSettings.muteState {
+            case .default:
+                if !defaultNotify {
+                    notify = false
+                }
+            case let .muted(until):
+                if until >= timestamp {
+                    notify = false
+                }
+            case .unmuted:
+                break
+        }
         if case .default = notificationSettings.messageSound {
             sound = defaultSound
         } else {
             sound = notificationSettings.messageSound
         }
-        /*if !defaultNotify {
-            notify = false
-        }*/
     } else {
         Logger.shared.log("AccountStateManager", "notification settings for \(notificationPeerId) are undefined")
     }

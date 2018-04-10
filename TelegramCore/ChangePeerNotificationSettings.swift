@@ -25,10 +25,10 @@ public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, No
             
             let updatedSettings: TelegramPeerNotificationSettings
             switch previousSettings.muteState {
-                case .unmuted:
+                case .unmuted, .default:
                     updatedSettings = previousSettings.withUpdatedMuteState(.muted(until: Int32.max))
                 case .muted:
-                    updatedSettings = previousSettings.withUpdatedMuteState(.unmuted)
+                    updatedSettings = previousSettings.withUpdatedMuteState(.default)
             }
             modifier.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
         }

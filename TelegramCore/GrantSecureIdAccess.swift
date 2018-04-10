@@ -108,6 +108,13 @@ private func generateCredentials(values: [SecureIdValueWithContext], opaquePaylo
                 }
             }
             
+            if let selfie = encryptedMetadata.selfie {
+                valueDict["selfie"] = [
+                    "file_hash": selfie.hash.base64EncodedString(),
+                    "secret": selfie.secret.base64EncodedString()
+                ] as [String: Any]
+            }
+            
             secureData[credentialsValueTypeName(value: value.value)] = valueDict
         }
     }

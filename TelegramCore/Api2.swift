@@ -1201,6 +1201,57 @@ public struct help {
         }
     
     }
+    public enum DeepLinkInfo {
+        case deepLinkInfoEmpty
+        case deepLinkInfo(flags: Int32, message: String, entities: [Api.MessageEntity]?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .deepLinkInfoEmpty:
+                    if boxed {
+                        buffer.appendInt32(1722786150)
+                    }
+                    
+                    break
+                case .deepLinkInfo(let flags, let message, let entities):
+                    if boxed {
+                        buffer.appendInt32(1783556146)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    break
+    }
+    }
+    
+        static func parse_deepLinkInfoEmpty(_ reader: BufferReader) -> DeepLinkInfo? {
+            return Api.help.DeepLinkInfo.deepLinkInfoEmpty
+        }
+        static func parse_deepLinkInfo(_ reader: BufferReader) -> DeepLinkInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.help.DeepLinkInfo.deepLinkInfo(flags: _1!, message: _2!, entities: _3)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum TermsOfService {
         case termsOfService(text: String)
     
@@ -2211,15 +2262,16 @@ public struct account {
     
     }
     public enum SentEmailCode {
-        case sentEmailCode(emailPattern: String)
+        case sentEmailCode(emailPattern: String, length: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sentEmailCode(let emailPattern):
+                case .sentEmailCode(let emailPattern, let length):
                     if boxed {
-                        buffer.appendInt32(682713915)
+                        buffer.appendInt32(-2128640689)
                     }
                     serializeString(emailPattern, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -2227,9 +2279,12 @@ public struct account {
         static func parse_sentEmailCode(_ reader: BufferReader) -> SentEmailCode? {
             var _1: String?
             _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.SentEmailCode.sentEmailCode(emailPattern: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.account.SentEmailCode.sentEmailCode(emailPattern: _1!, length: _2!)
             }
             else {
                 return nil

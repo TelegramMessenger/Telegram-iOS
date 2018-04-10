@@ -1685,35 +1685,6 @@ public extension Api {
         }
     
     }
-    public enum InputPeerNotifyEvents {
-        case inputPeerNotifyEventsEmpty
-        case inputPeerNotifyEventsAll
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputPeerNotifyEventsEmpty:
-                    if boxed {
-                        buffer.appendInt32(-265263912)
-                    }
-                    
-                    break
-                case .inputPeerNotifyEventsAll:
-                    if boxed {
-                        buffer.appendInt32(-395694988)
-                    }
-                    
-                    break
-    }
-    }
-    
-        static func parse_inputPeerNotifyEventsEmpty(_ reader: BufferReader) -> InputPeerNotifyEvents? {
-            return Api.InputPeerNotifyEvents.inputPeerNotifyEventsEmpty
-        }
-        static func parse_inputPeerNotifyEventsAll(_ reader: BufferReader) -> InputPeerNotifyEvents? {
-            return Api.InputPeerNotifyEvents.inputPeerNotifyEventsAll
-        }
-    
-    }
     public enum InputChannel {
         case inputChannelEmpty
         case inputChannel(channelId: Int32, accessHash: Int64)
@@ -4950,7 +4921,6 @@ public extension Api {
         case inputNotifyPeer(peer: Api.InputPeer)
         case inputNotifyUsers
         case inputNotifyChats
-        case inputNotifyAll
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4969,12 +4939,6 @@ public extension Api {
                 case .inputNotifyChats:
                     if boxed {
                         buffer.appendInt32(1251338318)
-                    }
-                    
-                    break
-                case .inputNotifyAll:
-                    if boxed {
-                        buffer.appendInt32(-1540769658)
                     }
                     
                     break
@@ -4999,9 +4963,6 @@ public extension Api {
         }
         static func parse_inputNotifyChats(_ reader: BufferReader) -> InputNotifyPeer? {
             return Api.InputNotifyPeer.inputNotifyChats
-        }
-        static func parse_inputNotifyAll(_ reader: BufferReader) -> InputNotifyPeer? {
-            return Api.InputNotifyPeer.inputNotifyAll
         }
     
     }
@@ -5327,10 +5288,10 @@ public extension Api {
     public enum InputBotInlineMessage {
         case inputBotInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaGeo(flags: Int32, geoPoint: Api.InputGeoPoint, replyMarkup: Api.ReplyMarkup?)
-        case inputBotInlineMessageMediaVenue(flags: Int32, geoPoint: Api.InputGeoPoint, title: String, address: String, provider: String, venueId: String, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageGame(flags: Int32, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaAuto(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
+        case inputBotInlineMessageMediaVenue(flags: Int32, geoPoint: Api.InputGeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String, replyMarkup: Api.ReplyMarkup?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5353,18 +5314,6 @@ public extension Api {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     geoPoint.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
-                    break
-                case .inputBotInlineMessageMediaVenue(let flags, let geoPoint, let title, let address, let provider, let venueId, let replyMarkup):
-                    if boxed {
-                        buffer.appendInt32(-1431327288)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    geoPoint.serialize(buffer, true)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    serializeString(address, buffer: buffer, boxed: false)
-                    serializeString(provider, buffer: buffer, boxed: false)
-                    serializeString(venueId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
                 case .inputBotInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
@@ -5395,6 +5344,19 @@ public extension Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
+                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
+                    break
+                case .inputBotInlineMessageMediaVenue(let flags, let geoPoint, let title, let address, let provider, let venueId, let venueType, let replyMarkup):
+                    if boxed {
+                        buffer.appendInt32(1098628881)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    geoPoint.serialize(buffer, true)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(address, buffer: buffer, boxed: false)
+                    serializeString(provider, buffer: buffer, boxed: false)
+                    serializeString(venueId, buffer: buffer, boxed: false)
+                    serializeString(venueType, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
     }
@@ -5440,39 +5402,6 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.InputBotInlineMessage.inputBotInlineMessageMediaGeo(flags: _1!, geoPoint: _2!, replyMarkup: _3)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_inputBotInlineMessageMediaVenue(_ reader: BufferReader) -> InputBotInlineMessage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.InputGeoPoint?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.InputGeoPoint
-            }
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: String?
-            _5 = parseString(reader)
-            var _6: String?
-            _6 = parseString(reader)
-            var _7: Api.ReplyMarkup?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.InputBotInlineMessage.inputBotInlineMessageMediaVenue(flags: _1!, geoPoint: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, replyMarkup: _7)
             }
             else {
                 return nil
@@ -5538,6 +5467,42 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.InputBotInlineMessage.inputBotInlineMessageMediaAuto(flags: _1!, message: _2!, entities: _3, replyMarkup: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_inputBotInlineMessageMediaVenue(_ reader: BufferReader) -> InputBotInlineMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.InputGeoPoint?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.InputGeoPoint
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: String?
+            _7 = parseString(reader)
+            var _8: Api.ReplyMarkup?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.InputBotInlineMessage.inputBotInlineMessageMediaVenue(flags: _1!, geoPoint: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, venueType: _7!, replyMarkup: _8)
             }
             else {
                 return nil
@@ -7463,7 +7428,6 @@ public extension Api {
         case notifyPeer(peer: Api.Peer)
         case notifyUsers
         case notifyChats
-        case notifyAll
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -7482,12 +7446,6 @@ public extension Api {
                 case .notifyChats:
                     if boxed {
                         buffer.appendInt32(-1073230141)
-                    }
-                    
-                    break
-                case .notifyAll:
-                    if boxed {
-                        buffer.appendInt32(1959820384)
                     }
                     
                     break
@@ -7512,9 +7470,6 @@ public extension Api {
         }
         static func parse_notifyChats(_ reader: BufferReader) -> NotifyPeer? {
             return Api.NotifyPeer.notifyChats
-        }
-        static func parse_notifyAll(_ reader: BufferReader) -> NotifyPeer? {
-            return Api.NotifyPeer.notifyAll
         }
     
     }
@@ -11286,9 +11241,9 @@ public extension Api {
     public enum BotInlineMessage {
         case botInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaGeo(flags: Int32, geo: Api.GeoPoint, replyMarkup: Api.ReplyMarkup?)
-        case botInlineMessageMediaVenue(flags: Int32, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaAuto(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
+        case botInlineMessageMediaVenue(flags: Int32, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String, replyMarkup: Api.ReplyMarkup?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11313,18 +11268,6 @@ public extension Api {
                     geo.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
-                case .botInlineMessageMediaVenue(let flags, let geo, let title, let address, let provider, let venueId, let replyMarkup):
-                    if boxed {
-                        buffer.appendInt32(1130767150)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    geo.serialize(buffer, true)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    serializeString(address, buffer: buffer, boxed: false)
-                    serializeString(provider, buffer: buffer, boxed: false)
-                    serializeString(venueId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
-                    break
                 case .botInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let replyMarkup):
                     if boxed {
                         buffer.appendInt32(904770772)
@@ -11346,6 +11289,19 @@ public extension Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
+                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
+                    break
+                case .botInlineMessageMediaVenue(let flags, let geo, let title, let address, let provider, let venueId, let venueType, let replyMarkup):
+                    if boxed {
+                        buffer.appendInt32(-1970903652)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    geo.serialize(buffer, true)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(address, buffer: buffer, boxed: false)
+                    serializeString(provider, buffer: buffer, boxed: false)
+                    serializeString(venueId, buffer: buffer, boxed: false)
+                    serializeString(venueType, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
     }
@@ -11391,39 +11347,6 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.BotInlineMessage.botInlineMessageMediaGeo(flags: _1!, geo: _2!, replyMarkup: _3)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_botInlineMessageMediaVenue(_ reader: BufferReader) -> BotInlineMessage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.GeoPoint?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.GeoPoint
-            }
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: String?
-            _5 = parseString(reader)
-            var _6: String?
-            _6 = parseString(reader)
-            var _7: Api.ReplyMarkup?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.BotInlineMessage.botInlineMessageMediaVenue(flags: _1!, geo: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, replyMarkup: _7)
             }
             else {
                 return nil
@@ -11478,20 +11401,58 @@ public extension Api {
                 return nil
             }
         }
+        static func parse_botInlineMessageMediaVenue(_ reader: BufferReader) -> BotInlineMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.GeoPoint?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.GeoPoint
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: String?
+            _7 = parseString(reader)
+            var _8: Api.ReplyMarkup?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.BotInlineMessage.botInlineMessageMediaVenue(flags: _1!, geo: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, venueType: _7!, replyMarkup: _8)
+            }
+            else {
+                return nil
+            }
+        }
     
     }
     public enum InputPeerNotifySettings {
-        case inputPeerNotifySettings(flags: Int32, muteUntil: Int32, sound: String)
+        case inputPeerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputPeerNotifySettings(let flags, let muteUntil, let sound):
+                case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound):
                     if boxed {
-                        buffer.appendInt32(949182130)
+                        buffer.appendInt32(-1673717362)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(muteUntil, buffer: buffer, boxed: false)
-                    serializeString(sound, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {showPreviews!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {silent!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(muteUntil!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(sound!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -11499,15 +11460,25 @@ public extension Api {
         static func parse_inputPeerNotifySettings(_ reader: BufferReader) -> InputPeerNotifySettings? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
+            var _2: Api.Bool?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _3: Api.Bool?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            var _5: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_5 = parseString(reader) }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: _1!, muteUntil: _2!, sound: _3!)
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: _1!, showPreviews: _2, silent: _3, muteUntil: _4, sound: _5)
             }
             else {
                 return nil
@@ -12833,35 +12804,6 @@ public extension Api {
         }
     
     }
-    public enum PeerNotifyEvents {
-        case peerNotifyEventsEmpty
-        case peerNotifyEventsAll
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .peerNotifyEventsEmpty:
-                    if boxed {
-                        buffer.appendInt32(-1378534221)
-                    }
-                    
-                    break
-                case .peerNotifyEventsAll:
-                    if boxed {
-                        buffer.appendInt32(1830677896)
-                    }
-                    
-                    break
-    }
-    }
-    
-        static func parse_peerNotifyEventsEmpty(_ reader: BufferReader) -> PeerNotifyEvents? {
-            return Api.PeerNotifyEvents.peerNotifyEventsEmpty
-        }
-        static func parse_peerNotifyEventsAll(_ reader: BufferReader) -> PeerNotifyEvents? {
-            return Api.PeerNotifyEvents.peerNotifyEventsAll
-        }
-    
-    }
     public enum DialogPeer {
         case dialogPeer(peer: Api.Peer)
     
@@ -13058,7 +13000,7 @@ public extension Api {
     }
     public enum PeerNotifySettings {
         case peerNotifySettingsEmpty
-        case peerNotifySettings(flags: Int32, muteUntil: Int32, sound: String)
+        case peerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -13068,13 +13010,15 @@ public extension Api {
                     }
                     
                     break
-                case .peerNotifySettings(let flags, let muteUntil, let sound):
+                case .peerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound):
                     if boxed {
-                        buffer.appendInt32(-1697798976)
+                        buffer.appendInt32(-1353671392)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(muteUntil, buffer: buffer, boxed: false)
-                    serializeString(sound, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {showPreviews!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {silent!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(muteUntil!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(sound!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -13085,15 +13029,25 @@ public extension Api {
         static func parse_peerNotifySettings(_ reader: BufferReader) -> PeerNotifySettings? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
+            var _2: Api.Bool?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _3: Api.Bool?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            var _5: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_5 = parseString(reader) }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.PeerNotifySettings.peerNotifySettings(flags: _1!, muteUntil: _2!, sound: _3!)
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.PeerNotifySettings.peerNotifySettings(flags: _1!, showPreviews: _2, silent: _3, muteUntil: _4, sound: _5)
             }
             else {
                 return nil
