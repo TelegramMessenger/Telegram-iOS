@@ -91,30 +91,31 @@ private func credentialsValueTypeName(value: SecureIdValue) -> String {
 private func generateCredentials(values: [SecureIdValueWithContext], opaquePayload: Data) -> Data? {
     var secureData: [String: Any] = [:]
     for value in values {
+        var valueDict: [String: Any] = [:]
         if let encryptedMetadata = value.encryptedMetadata {
-            var valueDict: [String: Any] = [:]
-            
             valueDict["data"] = [
                 "data_hash": encryptedMetadata.valueDataHash.base64EncodedString(),
                 "secret": encryptedMetadata.decryptedSecret.base64EncodedString()
             ] as [String: Any]
+        }
             
-            if !encryptedMetadata.files.isEmpty {
-                valueDict["files"] = encryptedMetadata.files.map { file -> [String: Any] in
-                    return [
-                        "file_hash": file.hash.base64EncodedString(),
-                        "secret": file.secret.base64EncodedString()
-                    ]
-                }
+        if !value.files.isEmpty {
+            valueDict["files"] = value.files.map { file -> [String: Any] in
+                return [
+                    "file_hash": file.hash.base64EncodedString(),
+                    "secret": file.secret.base64EncodedString()
+                ]
             }
+        }
             
-            if let selfie = encryptedMetadata.selfie {
-                valueDict["selfie"] = [
-                    "file_hash": selfie.hash.base64EncodedString(),
-                    "secret": selfie.secret.base64EncodedString()
-                ] as [String: Any]
-            }
-            
+        if let selfie = value.selfie {
+            valueDict["selfie"] = [
+                "file_hash": selfie.hash.base64EncodedString(),
+                "secret": selfie.secret.base64EncodedString()
+            ] as [String: Any]
+        }
+        
+        if !valueDict.isEmpty {
             secureData[credentialsValueTypeName(value: value.value)] = valueDict
         }
     }

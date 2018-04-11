@@ -49,7 +49,7 @@ extension SecureIdPersonalDetailsValue {
         guard let gender = (dict["gender"] as? String).flatMap(SecureIdGender.init) else {
             return nil
         }
-        guard let countryCode = dict["country_iso2"] as? String else {
+        guard let countryCode = dict["country_code"] as? String else {
             return nil
         }
         
@@ -62,7 +62,7 @@ extension SecureIdPersonalDetailsValue {
         dict["last_name"] = self.lastName
         dict["birth_date"] = self.birthdate.serialize()
         dict["gender"] = self.gender.serialize()
-        dict["country_iso2"] = self.countryCode
+        dict["country_code"] = self.countryCode
         
         return (dict, [])
     }

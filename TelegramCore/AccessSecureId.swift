@@ -99,7 +99,7 @@ func decryptedSecureSecret(encryptedSecretData: Data, password: String, salt: Da
     let secretHashData = sha256Digest(decryptedSecret)
     var secretId: Int64 = 0
     secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-        memcpy(&secretId, bytes.advanced(by: secretHashData.count - 8), 8)
+        memcpy(&secretId, bytes, 8)
     }
     
     if secretId != id {
@@ -113,7 +113,7 @@ func encryptedSecureSecret(secretData: Data, password: String, inputSalt: Data) 
     let secretHashData = sha256Digest(secretData)
     var secretId: Int64 = 0
     secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-        memcpy(&secretId, bytes.advanced(by: secretHashData.count - 8), 8)
+        memcpy(&secretId, bytes, 8)
     }
     
     guard let passwordData = password.data(using: .utf8) else {
@@ -247,7 +247,7 @@ public func accessSecureId(network: Network, password: String) -> Signal<SecureI
                 let secretHashData = sha256Digest(decryptedSecret)
                 var secretId: Int64 = 0
                 secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-                    memcpy(&secretId, bytes.advanced(by: secretHashData.count - 8), 8)
+                    memcpy(&secretId, bytes, 8)
                 }
                 return SecureIdAccessContext(secret: decryptedSecret, id: secretId)
             }

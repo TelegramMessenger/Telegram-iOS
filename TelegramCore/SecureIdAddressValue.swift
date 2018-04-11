@@ -4,15 +4,15 @@ public struct SecureIdAddressValue: Equatable {
     public var street1: String
     public var street2: String
     public var city: String
-    public var region: String
+    public var state: String
     public var countryCode: String
     public var postcode: String
     
-    public init(street1: String, street2: String, city: String, region: String, countryCode: String, postcode: String) {
+    public init(street1: String, street2: String, city: String, state: String, countryCode: String, postcode: String) {
         self.street1 = street1
         self.street2 = street2
         self.city = city
-        self.region = region
+        self.state = state
         self.countryCode = countryCode
         self.postcode = postcode
     }
@@ -27,7 +27,7 @@ public struct SecureIdAddressValue: Equatable {
         if lhs.city != rhs.city {
             return false
         }
-        if lhs.region != rhs.region {
+        if lhs.state != rhs.state {
             return false
         }
         if lhs.countryCode != rhs.countryCode {
@@ -49,17 +49,17 @@ extension SecureIdAddressValue {
         guard let city = dict["city"] as? String else {
             return nil
         }
-        guard let region = dict["region"] as? String else {
+        guard let state = dict["state"] as? String else {
             return nil
         }
-        guard let countryCode = dict["country_iso2"] as? String else {
+        guard let countryCode = dict["country_code"] as? String else {
             return nil
         }
         guard let postcode = dict["post_code"] as? String else {
             return nil
         }
         
-        self.init(street1: street1, street2: street2, city: city, region: region, countryCode: countryCode, postcode: postcode)
+        self.init(street1: street1, street2: street2, city: city, state: state, countryCode: countryCode, postcode: postcode)
     }
     
     func serialize() -> ([String: Any], [SecureIdVerificationDocumentReference]) {
@@ -69,8 +69,8 @@ extension SecureIdAddressValue {
             dict["street_line2"] = self.street2   
         }
         dict["city"] = self.city
-        dict["region"] = self.region
-        dict["country_iso2"] = self.countryCode
+        dict["state"] = self.state
+        dict["country_code"] = self.countryCode
         dict["post_code"] = self.postcode
         
         return (dict, [])
