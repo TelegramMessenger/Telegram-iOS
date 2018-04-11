@@ -36,7 +36,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
     
-    let navigationBar: NavigationBar
+    let navigationBar: NavigationBar?
     
     private var backgroundEffectNode: ASDisplayNode?
     private var containerBackgroundNode: ASImageNode?
@@ -141,7 +141,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    init(account: Account, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar) {
+    init(account: Account, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar?) {
         self.account = account
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
@@ -372,7 +372,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 self.containerNode = containerNode
                 self.scrollContainerNode?.addSubnode(containerNode)
-                self.navigationBar.isHidden = true
+                self.navigationBar?.isHidden = true
             }
             if self.overlayNavigationBar == nil {
                 let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, close: { [weak self] in
@@ -399,7 +399,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if let restrictedNode = self.restrictedNode {
                     self.insertSubnode(restrictedNode, aboveSubnode: self.historyNodeContainer)
                 }
-                self.navigationBar.isHidden = false
+                self.navigationBar?.isHidden = false
             }
             if let overlayNavigationBar = self.overlayNavigationBar {
                 overlayNavigationBar.removeFromSupernode()
@@ -449,14 +449,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 activate = true
                 self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction)
             }
-            self.navigationBar.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
+            self.navigationBar?.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
             self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)
             if activate {
                 self.searchNavigationNode?.activate()
             }
         } else if let _ = self.searchNavigationNode {
             self.searchNavigationNode = nil
-            self.navigationBar.setContentNode(nil, animated: transitionIsAnimated)
+            self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
         }
         
         var dismissedTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
@@ -1561,7 +1561,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let _ = self.messageActionSheetController {
             self.displayMessageActionSheet(stableId: nil, sheetActions: nil, displayContextMenuController: nil)
-            return self.navigationBar.view
+            return self.navigationBar?.view
         }
         
         return nil

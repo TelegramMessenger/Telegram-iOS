@@ -27,6 +27,10 @@ class ThemeGalleryItem: GalleryItem {
             node.setEntry(self.entry)
         }
     }
+    
+    func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
+        return nil
+    }
 }
 
 final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {

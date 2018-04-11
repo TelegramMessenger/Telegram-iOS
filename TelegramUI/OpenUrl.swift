@@ -225,7 +225,7 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                         convertedUrl = result
                     }
                 }
-            } else if parsedUrl.host == "secureid" {
+            } else if parsedUrl.host == "passport" {
                 if let components = URLComponents(string: "/?" + query) {
                     var botId: Int32?
                     var scope: String?

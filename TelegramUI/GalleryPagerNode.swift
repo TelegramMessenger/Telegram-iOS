@@ -40,7 +40,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let scrollView: UIScrollView
     
-    private var items: [GalleryItem] = []
+    private(set) var items: [GalleryItem] = []
     private var itemNodes: [GalleryItemNode] = []
     private var ignoreDidScroll = false
     private var ignoreCentralItemIndexUpdate = false
@@ -55,6 +55,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var centralItemIndexUpdated: (Int?) -> Void = { _ in }
+    var centralItemIndexOffsetUpdated: ((Int, CGFloat)?) -> Void = { _ in }
     var toggleControlsVisibility: () -> Void = { }
     var beginCustomDismiss: () -> Void = { }
     var completeCustomDismiss: () -> Void = { }
@@ -361,6 +362,8 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         if notifyCentralItemUpdated {
             self.centralItemIndexUpdated(self.centralItemIndex)
         }
+        
+        self.updateCentralIndexOffset(transition: .immediate)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -389,5 +392,16 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             return nil
         }
     }
+    
+    private func updateCentralIndexOffset(transition: ContainedViewLayoutTransition) {
+        if let centralIndex = self.centralItemIndex, let itemNode = self.visibleItemNode(at: centralIndex) {
+            let offset: CGFloat = self.scrollView.contentOffset.x + self.pageGap - itemNode.frame.minX
+            var progress = offset / self.scrollView.bounds.size.height
+            progress = min(1.0, progress)
+            progress = max(-1.0, progress)
+            self.centralItemIndexOffsetUpdated((centralIndex, progress))
+        } else {
+            self.centralItemIndexOffsetUpdated(nil)
+        }
+    }
 }
-

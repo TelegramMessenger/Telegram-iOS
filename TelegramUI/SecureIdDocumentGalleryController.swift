@@ -95,7 +95,7 @@ class SecureIdDocumentGalleryController: ViewController {
                         $0.item(account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, context: strongSelf.context)
                     }), centralItemIndex: centralIndex, keepFirst: false)
                     
-                    let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
+                    let ready = (strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void()))) |> afterNext { [weak strongSelf] _ in
                         strongSelf?.didSetReady = true
                     }
                     strongSelf._ready.set(ready |> map { true })
@@ -252,6 +252,7 @@ class SecureIdDocumentGalleryController: ViewController {
             
             let ready = self.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak self] _ in
                 self?.didSetReady = true
+                print("ready")
             }
             self._ready.set(ready |> map { true })
         }

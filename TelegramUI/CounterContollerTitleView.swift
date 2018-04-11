@@ -5,15 +5,15 @@ import AsyncDisplayKit
 struct CounterContollerTitle: Equatable {
     let title: String
     let counter: String
-    
-    static func ==(lhs: CounterContollerTitle, rhs: CounterContollerTitle) -> Bool {
-        return lhs.title == rhs.title && lhs.counter == rhs.counter
-    }
 }
 
 final class CounterContollerTitleView: UIView {
     private var theme: PresentationTheme
     private let titleNode: ASTextNode
+    
+    func f() {
+        
+    }
     
     var title: CounterContollerTitle = CounterContollerTitle(title: "", counter: "") {
         didSet {

@@ -1,26 +1,9 @@
 import Foundation
 import TelegramCore
 
-enum SecureIdVerificationLocalDocumentState {
+enum SecureIdVerificationLocalDocumentState: Equatable {
     case uploading(Float)
     case uploaded(UploadedSecureIdFile)
-    
-    func isEqual(to: SecureIdVerificationLocalDocumentState) -> Bool {
-        switch self {
-            case let .uploading(progress):
-                if case .uploading(progress) = to {
-                    return true
-                } else {
-                    return false
-                }
-            case let .uploaded(file):
-                if case .uploaded(file) = to {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 struct SecureIdVerificationLocalDocument: Equatable {
@@ -35,20 +18,7 @@ struct SecureIdVerificationLocalDocument: Equatable {
         if !lhs.resource.isEqual(to: rhs.resource) {
             return false
         }
-        if !lhs.state.isEqual(to: rhs.state) {
-            return false
-        }
-        return true
-    }
-    
-    func isEqual(to: SecureIdVerificationLocalDocument) -> Bool {
-        if self.id != to.id {
-            return false
-        }
-        if !self.resource.isEqual(to: to.resource) {
-            return false
-        }
-        if !self.state.isEqual(to: to.state) {
+        if lhs.state != rhs.state {
             return false
         }
         return true
@@ -58,32 +28,6 @@ struct SecureIdVerificationLocalDocument: Equatable {
 enum SecureIdVerificationDocumentId: Hashable {
     case remote(Int64)
     case local(Int64)
-    
-    static func ==(lhs: SecureIdVerificationDocumentId, rhs: SecureIdVerificationDocumentId) -> Bool {
-        switch lhs {
-            case let .remote(id):
-                if case .remote(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .local(id):
-                if case .local(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .local(id):
-                return id.hashValue
-            case let .remote(id):
-                return id.hashValue
-        }
-    }
 }
 
 enum SecureIdVerificationDocument: Equatable {
@@ -105,23 +49,6 @@ enum SecureIdVerificationDocument: Equatable {
                 return SecureFileMediaResource(file: file)
             case let .local(file):
                 return file.resource
-        }
-    }
-    
-    func isEqual(to: SecureIdVerificationDocument) -> Bool {
-        switch self {
-            case let .remote(reference):
-                if case .remote(reference) = to {
-                    return true
-                } else {
-                    return false
-                }
-            case let .local(lhsDocument):
-                if case let .local(rhsDocument) = to, lhsDocument.isEqual(to: rhsDocument) {
-                    return true
-                } else {
-                    return false
-                }
         }
     }
 }

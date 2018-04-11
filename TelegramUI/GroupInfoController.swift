@@ -668,6 +668,8 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     let peerNotificationSettings: TelegramPeerNotificationSettings = (view.notificationSettings as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
     let notificationsText: String
     switch peerNotificationSettings.muteState {
+        case .default:
+            notificationsText = "Default"
         case .muted:
             notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
         case .unmuted:
@@ -1111,20 +1113,28 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
-        let notificationAction: (Int32) -> Void = {  muteUntil in
+        let notificationAction: (Int32?) -> Void = { muteUntil in
             let muteInterval: Int32?
-            if muteUntil <= 0 {
-                muteInterval = nil
-            } else if muteUntil == Int32.max {
-                muteInterval = Int32.max
+            if let muteUntil = muteUntil {
+                if muteUntil <= 0 {
+                    muteInterval = 0
+                } else if muteUntil == Int32.max {
+                    muteInterval = Int32.max
+                } else {
+                    muteInterval = muteUntil
+                }
             } else {
-                muteInterval = muteUntil
+                muteInterval = nil
             }
             
             changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: muteInterval).start())
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: "Default", action: {
+                    dismissAction()
+                    notificationAction(nil)
+                }),
                 ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsEnable, action: {
                     dismissAction()
                     notificationAction(0)
@@ -1525,7 +1535,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     
     aboutLinkActionImpl = { [weak controller] action, itemLink in
         if let controller = controller {
-            handlePeerInfoAboutTextAction(account: account, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+            handlePeerInfoAboutTextAction(account: account, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
         }
     }
     
@@ -1556,7 +1566,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     return controller
 }
 
-func handlePeerInfoAboutTextAction(account: Account, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
+func handlePeerInfoAboutTextAction(account: Account, peerId: PeerId, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
     let openPeerImpl: (PeerId) -> Void = { [weak controller] peerId in
         let peerSignal: Signal<Peer?, NoError>
         peerSignal = account.postbox.loadedPeerWithId(peerId) |> map { Optional($0) }
@@ -1612,9 +1622,13 @@ func handlePeerInfoAboutTextAction(account: Account, navigateDisposable: MetaDis
             openLinkImpl(url)
         case let .mention(mention):
             openPeerMentionImpl(mention)
-        case let .hashtag(peerName, hashtag):
-            let searchController = HashtagSearchController(account: account, peerName: peerName, query: hashtag)
-            (controller.navigationController as? NavigationController)?.pushViewController(searchController)
+        case let .hashtag(_, hashtag):
+            let peerSignal = account.postbox.loadedPeerWithId(peerId)
+            let _ = (peerSignal
+            |> deliverOnMainQueue).start(next: { peer in
+                let searchController = HashtagSearchController(account: account, peer: peer, query: hashtag)
+                (controller.navigationController as? NavigationController)?.pushViewController(searchController)
+            })
         }
     case .longTap:
         switch itemLink {
@@ -1666,7 +1680,7 @@ func handlePeerInfoAboutTextAction(account: Account, navigateDisposable: MetaDis
                 ActionSheetTextItem(title: hashtag),
                 ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
-                    let searchController = HashtagSearchController(account: account, peerName: peerName, query: hashtag)
+                    let searchController = HashtagSearchController(account: account, peer: nil, query: hashtag)
                     (controller.navigationController as? NavigationController)?.pushViewController(searchController)
                 }),
                 ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in

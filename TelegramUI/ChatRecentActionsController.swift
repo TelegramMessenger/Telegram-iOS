@@ -104,7 +104,7 @@ final class ChatRecentActionsController: ViewController {
         }, updateTextInputState: { _ in
         }, updateInputModeAndDismissedButtonKeyboardMessageId: { _ in
         }, editMessage: {
-        }, beginMessageSearch: { _ in
+        }, beginMessageSearch: { _, _ in
         }, dismissMessageSearch: {
         }, updateMessageSearch: { _ in
         }, navigateMessageSearch: { _ in

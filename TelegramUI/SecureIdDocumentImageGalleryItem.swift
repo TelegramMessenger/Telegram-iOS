@@ -43,6 +43,10 @@ class SecureIdDocumentGalleryItem: GalleryItem {
             node.setCaption(self.caption)
         }
     }
+    
+    func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
+        return nil
+    }
 }
 
 final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
@@ -66,6 +70,9 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         super.init()
         
         self.imageNode.imageUpdated = { [weak self] in
+            if self?.index == 1 {
+                print("image updated")
+            }
             self?._ready.set(.single(Void()))
         }
         
@@ -92,14 +99,16 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate func setResource(context: SecureIdAccessContext, resource: TelegramMediaResource) {
         if self.accountAndMedia == nil || !self.accountAndMedia!.2.isEqual(to: resource) {
             let displaySize = CGSize(width: 1280.0, height: 1280.0)
-            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
+            //self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
             self.imageNode.setSignal(securePhotoInternal(account: account, resource: resource, accessContext: context) |> beforeNext { [weak self] value in
                 Queue.mainQueue().async {
                     if let strongSelf = self {
-                        if let size = value.0() {
+                        if let size = value.0(), strongSelf.zoomableContent?.0 != size {
                             strongSelf.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets()))()
+                            if strongSelf.index == 1 {
+                                print("1")
+                            }
                             strongSelf.zoomableContent = (size, strongSelf.imageNode)
-                            
                         }
                     }
                 }

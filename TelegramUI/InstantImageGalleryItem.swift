@@ -41,6 +41,10 @@ class InstantImageGalleryItem: GalleryItem {
             node.setCaption(self.caption)
         }
     }
+    
+    func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
+        return nil
+    }
 }
 
 final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {

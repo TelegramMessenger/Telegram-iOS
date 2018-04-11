@@ -17,17 +17,17 @@ final class SecureIdPlaintextFormController: FormController<SecureIdPlaintextFor
     
     private let context: SecureIdAccessContext
     private let type: SecureIdPlaintextFormType
-    private var value: SecureIdValue?
+    private var immediatelyAvailableValue: SecureIdValue?
     
     private var nextItem: UIBarButtonItem?
     private var doneItem: UIBarButtonItem?
     
-    init(account: Account, context: SecureIdAccessContext, type: SecureIdPlaintextFormType, value: SecureIdValue?, updatedValue: @escaping (SecureIdValueWithContext?) -> Void) {
+    init(account: Account, context: SecureIdAccessContext, type: SecureIdPlaintextFormType, immediatelyAvailableValue: SecureIdValue?, updatedValue: @escaping (SecureIdValueWithContext?) -> Void) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.context = context
         self.type = type
-        self.value = value
+        self.immediatelyAvailableValue = immediatelyAvailableValue
         self.updatedValue = updatedValue
         
         super.init(initParams: SecureIdPlaintextFormControllerNodeInitParams(account: account, context: context), presentationData: self.presentationData)
@@ -101,6 +101,6 @@ final class SecureIdPlaintextFormController: FormController<SecureIdPlaintextFor
             self?.dismiss()
         }
         
-        self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdPlaintextFormInnerState(type: self.type, value: self.value))
+        self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdPlaintextFormInnerState(type: self.type, immediatelyAvailableValue: self.immediatelyAvailableValue))
     }
 }

@@ -21,6 +21,7 @@ final class SecureIdVerificationDocumentsContext {
     private let network: Network
     private let update: (Int64, SecureIdVerificationLocalDocumentState) -> Void
     private var contexts: [Int64: DocumentContext] = [:]
+    private(set) var uploadedFiles: [Data: Data] = [:]
     
     init(postbox: Postbox, network: Network, context: SecureIdAccessContext, update: @escaping (Int64, SecureIdVerificationLocalDocumentState) -> Void) {
         self.postbox = postbox
@@ -47,8 +48,9 @@ final class SecureIdVerificationDocumentsContext {
                                         if strongSelf.contexts[info.id] != nil {
                                             strongSelf.update(info.id, .uploading(value))
                                         }
-                                    case let .result(file):
+                                    case let .result(file, data):
                                         if strongSelf.contexts[info.id] != nil {
+                                           strongSelf.uploadedFiles[file.fileHash] = data
                                             strongSelf.update(info.id, .uploaded(file))
                                         }
                                 }

@@ -4,63 +4,61 @@ import Postbox
 import TelegramCore
 import Display
 
-private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
+private struct EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
+    let symbol: String
+    let text: String
+}
+
+private struct EmojisChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
-    let peer: Peer
     let theme: PresentationTheme
+    let symbol: String
+    let text: String
     
-    var stableId: Int64 {
-        return self.peer.id.toInt64()
+    var stableId: EmojisChatInputContextPanelEntryStableId {
+        return EmojisChatInputContextPanelEntryStableId(symbol: self.symbol, text: self.text)
     }
     
-    static func ==(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer) && lhs.theme === rhs.theme
+    static func ==(lhs: EmojisChatInputContextPanelEntry, rhs: EmojisChatInputContextPanelEntry) -> Bool {
+        return lhs.index == rhs.index && lhs.symbol == rhs.symbol && lhs.text == rhs.text && lhs.theme === rhs.theme
     }
     
-    static func <(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
+    static func <(lhs: EmojisChatInputContextPanelEntry, rhs: EmojisChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, inverted: Bool, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
-        return MentionChatInputPanelItem(account: account, theme: self.theme, inverted: inverted, peer: self.peer, peerSelected: peerSelected)
+    func item(account: Account, hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
+        return EmojisChatInputPanelItem(theme: self.theme, symbol: self.symbol, text: self.text, hashtagSelected: hashtagSelected)
     }
 }
 
-private struct CommandChatInputContextPanelTransition {
+private struct EmojisChatInputContextPanelTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], account: Account, inverted: Bool, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [EmojisChatInputContextPanelEntry], to toEntries: [EmojisChatInputContextPanelEntry], account: Account, hashtagSelected: @escaping (String) -> Void) -> EmojisChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
     
-    return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
+    return EmojisChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-enum MentionChatInputContextPanelMode {
-    case input
-    case search
-}
-
-final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
-    let mode: MentionChatInputContextPanelMode
-    
+final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
     private var theme: PresentationTheme
     
     private let listView: ListView
-    private var currentEntries: [MentionChatInputContextPanelEntry]?
+    private var currentEntries: [EmojisChatInputContextPanelEntry]?
     
-    private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
+    private var enqueuedTransitions: [(EmojisChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: MentionChatInputContextPanelMode) {
+    override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
-        self.mode = mode
         
         self.listView = ListView()
         self.listView.isOpaque = false
@@ -75,69 +73,49 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         self.clipsToBounds = true
         
         self.addSubnode(self.listView)
-        
-        if mode == .search {
-            self.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
-        }
     }
     
-    func updateResults(_ results: [Peer]) {
-        var entries: [MentionChatInputContextPanelEntry] = []
+    func updateResults(_ results: [(String, String)]) {
+        var entries: [EmojisChatInputContextPanelEntry] = []
         var index = 0
-        var peerIdSet = Set<Int64>()
-        for peer in results {
-            let peerId = peer.id.toInt64()
-            if peerIdSet.contains(peerId) {
+        var stableIds = Set<EmojisChatInputContextPanelEntryStableId>()
+        for (symbol, text) in results {
+            let entry = EmojisChatInputContextPanelEntry(index: index, theme: self.theme, symbol: symbol, text: text)
+            if stableIds.contains(entry.stableId) {
                 continue
             }
-            peerIdSet.insert(peerId)
-            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer, theme: self.theme))
+            stableIds.insert(entry.stableId)
+            entries.append(entry)
             index += 1
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, inverted: self.mode == .search, peerSelected: { [weak self] peer in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                switch strongSelf.mode {
-                    case .input:
-                        interfaceInteraction.updateTextInputState { textInputState in
-                            var mentionQueryRange: NSRange?
-                            inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
-                                if type == [.mention] {
-                                    mentionQueryRange = range
-                                    break inner
-                                }
-                            }
-                            
-                            if let range = mentionQueryRange {
-                                let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
-                                
-                                if let addressName = peer.addressName, !addressName.isEmpty {
-                                    let replacementText = addressName + " "
-                                    
-                                    inputText.replaceCharacters(in: range, with: replacementText)
-                                    
-                                    let selectionPosition = range.lowerBound + (replacementText as NSString).length
-                                    
-                                    return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
-                                } else if !peer.compactDisplayTitle.isEmpty {
-                                    let replacementText = NSMutableAttributedString()
-                                    replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
-                                    replacementText.append(NSAttributedString(string: " "))
-                                    
-                                    let updatedRange = NSRange(location: range.location - 1, length: range.length + 1)
-                                    
-                                    inputText.replaceCharacters(in: updatedRange, with: replacementText)
-                                    
-                                    let selectionPosition = updatedRange.lowerBound + replacementText.length
-                                    
-                                    return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
-                                }
-                            }
-                            return textInputState
+                interfaceInteraction.updateTextInputState { textInputState in
+                    var hashtagQueryRange: NSRange?
+                    inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
+                        if type == [.stickerSearch] {
+                            var range = range
+                            range.location -= 1
+                            range.length += 1
+                            hashtagQueryRange = range
+                            break inner
                         }
-                    case .search:
-                        interfaceInteraction.beginMessageSearch(.member(peer), "")
+                    }
+                    
+                    if let range = hashtagQueryRange {
+                        let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
+                        
+                        let replacementText = text
+                        
+                        inputText.replaceCharacters(in: range, with: replacementText)
+                        
+                        let selectionPosition = range.lowerBound + (replacementText as NSString).length
+                        
+                        return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
+                    }
+                    return textInputState
                 }
             }
         })
@@ -145,7 +123,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         self.enqueueTransition(transition, firstTime: firstTime)
     }
     
-    private func enqueueTransition(_ transition: CommandChatInputContextPanelTransition, firstTime: Bool) {
+    private func enqueueTransition(_ transition: EmojisChatInputContextPanelTransition, firstTime: Bool) {
         enqueuedTransitions.append((transition, firstTime))
         
         if self.validLayout != nil {
@@ -204,7 +182,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         self.validLayout = (size, leftInset, rightInset)
         
         var insets = UIEdgeInsets()
-        insets.top = topInsetForLayout(size: size)
+        insets.top = self.topInsetForLayout(size: size)
         insets.left = leftInset
         insets.right = rightInset
         
@@ -213,16 +191,16 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
-            case .immediate:
+        case .immediate:
+            break
+        case let .animated(animationDuration, animationCurve):
+            duration = animationDuration
+            switch animationCurve {
+            case .easeInOut:
                 break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                switch animationCurve {
-                    case .easeInOut:
-                        break
-                    case .spring:
-                        curve = 7
-                }
+            case .spring:
+                curve = 7
+            }
         }
         
         let listViewCurve: ListViewAnimationCurve
@@ -266,3 +244,4 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         return self.listView.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
     }
 }
+

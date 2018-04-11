@@ -376,7 +376,16 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             return
         }
         
-        self.interaction.present(SecureIdPlaintextFormController(account: self.account, context: context, type: type, value: nil, updatedValue: { [weak self] valueWithContext in
+        var immediatelyAvailableValue: SecureIdValue?
+        switch type {
+            case .phone:
+                if let peer = state.encryptedFormData?.accountPeer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
+                    immediatelyAvailableValue = .phone(SecureIdPhoneValue(phone: phone))
+                }
+            default:
+                break
+        }
+        self.interaction.present(SecureIdPlaintextFormController(account: self.account, context: context, type: type, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { [weak self] valueWithContext in
             if let strongSelf = self {
                 strongSelf.interaction.updateState { state in
                     if let formData = state.formData {

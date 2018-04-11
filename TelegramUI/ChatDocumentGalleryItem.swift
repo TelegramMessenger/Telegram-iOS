@@ -49,6 +49,10 @@ class ChatDocumentGalleryItem: GalleryItem {
             node.setMessage(self.message)
         }
     }
+    
+    func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
+        return nil
+    }
 }
 
 private let registeredURLProtocol: Void = {

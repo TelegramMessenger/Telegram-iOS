@@ -6,7 +6,7 @@ final class GalleryFooterNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
     
     private var currentFooterContentNode: GalleryFooterContentNode?
-    private var currentLayout: ContainerViewLayout?
+    private var currentLayout: (ContainerViewLayout, CGFloat)?
     
     private let controllerInteraction: GalleryControllerInteraction
     
@@ -21,8 +21,8 @@ final class GalleryFooterNode: ASDisplayNode {
         self.addSubnode(self.backgroundNode)
     }
     
-    func updateLayout(_ layout: ContainerViewLayout, footerContentNode: GalleryFooterContentNode?, transition: ContainedViewLayoutTransition) {
-        self.currentLayout = layout
+    func updateLayout(_ layout: ContainerViewLayout, footerContentNode: GalleryFooterContentNode?, thumbnailPanelHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.currentLayout = (layout, thumbnailPanelHeight)
         let cleanInsets = layout.insets(options: [])
         
         var removeCurrentFooterContentNode: GalleryFooterContentNode?
@@ -35,25 +35,35 @@ final class GalleryFooterNode: ASDisplayNode {
             if let footerContentNode = footerContentNode {
                 footerContentNode.controllerInteraction = self.controllerInteraction
                 footerContentNode.requestLayout = { [weak self] transition in
-                    if let strongSelf = self, let currentLayout = strongSelf.currentLayout {
-                        strongSelf.updateLayout(currentLayout, footerContentNode: strongSelf.currentFooterContentNode, transition: transition)
+                    if let strongSelf = self, let (currentLayout, currentThumbnailPanelHeight) = strongSelf.currentLayout {
+                        strongSelf.updateLayout(currentLayout, footerContentNode: strongSelf.currentFooterContentNode, thumbnailPanelHeight: currentThumbnailPanelHeight, transition: transition)
                     }
                 }
                 self.addSubnode(footerContentNode)
             }
         }
         
-        if let removeCurrentFooterContentNode = removeCurrentFooterContentNode {
-            removeCurrentFooterContentNode.removeFromSupernode()
-        }
-        
         var backgroundHeight: CGFloat = 0.0
         if let footerContentNode = self.currentFooterContentNode {
-            backgroundHeight = footerContentNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, transition: transition)
+            backgroundHeight = footerContentNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, contentInset: thumbnailPanelHeight, transition: transition)
             transition.updateFrame(node: footerContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - backgroundHeight), size: CGSize(width: layout.size.width, height: backgroundHeight)))
+            if let removeCurrentFooterContentNode = removeCurrentFooterContentNode {
+                let contentTransition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                footerContentNode.animateIn(fromHeight: removeCurrentFooterContentNode.bounds.height, transition: contentTransition)
+                removeCurrentFooterContentNode.animateOut(toHeight: backgroundHeight, transition: contentTransition, completion: { [weak removeCurrentFooterContentNode] in
+                    removeCurrentFooterContentNode?.removeFromSupernode()
+                })
+                contentTransition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - backgroundHeight), size: CGSize(width: layout.size.width, height: backgroundHeight)))
+            } else {
+                transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - backgroundHeight), size: CGSize(width: layout.size.width, height: backgroundHeight)))
+            }
+        } else {
+            if let removeCurrentFooterContentNode = removeCurrentFooterContentNode {
+                removeCurrentFooterContentNode.removeFromSupernode()
+            }
+            
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - backgroundHeight), size: CGSize(width: layout.size.width, height: backgroundHeight)))
         }
-        
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - backgroundHeight), size: CGSize(width: layout.size.width, height: backgroundHeight)))
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

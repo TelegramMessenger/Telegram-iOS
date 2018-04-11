@@ -23,7 +23,7 @@ enum SecureIdErrorField: Int32, Hashable {
     case rentalAgreement
 }
 
-struct SecureIdErrorKey: Hashable {
+struct SecureIdErrorKey1: Hashable {
     let category: SecureIdErrorCategory
     let field: SecureIdErrorField
 }

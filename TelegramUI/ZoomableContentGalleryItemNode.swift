@@ -16,11 +16,12 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
                 if let node = oldValue?.1 {
                     node.view.removeFromSuperview()
                 }
-            }
-            if let node = self.zoomableContent?.1 {
-                self.scrollNode.addSubnode(node)
+                if let node = self.zoomableContent?.1 {
+                    self.scrollNode.addSubnode(node)
+                }
             }
             self.resetScrollViewContents(transition: .immediate)
+            self.centerScrollViewContents(transition: .immediate)
         }
     }
     

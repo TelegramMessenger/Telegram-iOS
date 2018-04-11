@@ -19,6 +19,7 @@ struct PossibleContextQueryTypes: OptionSet {
     static let mention = PossibleContextQueryTypes(rawValue: (1 << 2))
     static let command = PossibleContextQueryTypes(rawValue: (1 << 3))
     static let contextRequest = PossibleContextQueryTypes(rawValue: (1 << 4))
+    static let stickerSearch = PossibleContextQueryTypes(rawValue: (1 << 5))
 }
 
 private func makeScalar(_ c: Character) -> Character {
@@ -30,6 +31,7 @@ private let newlineScalar = "\n" as UnicodeScalar
 private let hashScalar = "#" as UnicodeScalar
 private let atScalar = "@" as UnicodeScalar
 private let slashScalar = "/" as UnicodeScalar
+private let dotsScalar = ":" as UnicodeScalar
 private let alphanumerics = CharacterSet.alphanumerics
 
 func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) -> [(NSRange, PossibleContextQueryTypes, NSRange?)] {
@@ -92,7 +94,7 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
             return [(NSRange(location: 0, length: inputLength), [.emoji], nil)]
         }
         
-        var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag])
+        var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag, .stickerSearch])
         var definedType = false
         
         while true {
@@ -113,6 +115,12 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
                     break
                 } else if c == slashScalar {
                     possibleTypes = possibleTypes.intersection([.command])
+                    definedType = true
+                    index += 1
+                    possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    break
+                } else if c == dotsScalar {
+                    possibleTypes = possibleTypes.intersection([.stickerSearch])
                     definedType = true
                     index += 1
                     possibleQueryRange = NSRange(location: index, length: maxIndex - index)
@@ -156,6 +164,8 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
         } else if possibleTypes == [.contextRequest], let additionalStringRange = additionalStringRange {
             let additionalString = inputString.substring(with: additionalStringRange)
             result.append(.contextRequest(addressName: query, query: additionalString))
+        } else if possibleTypes == [.stickerSearch], !query.isEmpty {
+            result.append(.stickerSearch(query))
         }
     }
     return result

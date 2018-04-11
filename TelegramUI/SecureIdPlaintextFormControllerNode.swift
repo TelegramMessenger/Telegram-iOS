@@ -21,10 +21,12 @@ private func cleanPhoneNumber(_ text: String?) -> String {
 final class SecureIdPlaintextFormParams {
     fileprivate let openCountrySelection: () -> Void
     fileprivate let updateTextField: (SecureIdPlaintextFormTextField, String) -> Void
+    fileprivate let usePhone: (String) -> Void
     
-    fileprivate init(openCountrySelection: @escaping () -> Void, updateTextField: @escaping (SecureIdPlaintextFormTextField, String) -> Void) {
+    fileprivate init(openCountrySelection: @escaping () -> Void, updateTextField: @escaping (SecureIdPlaintextFormTextField, String) -> Void, usePhone: @escaping (String) -> Void) {
         self.openCountrySelection = openCountrySelection
         self.updateTextField = updateTextField
+        self.usePhone = usePhone
     }
 }
 
@@ -48,6 +50,7 @@ private struct PhoneInputState {
 }
 
 private struct PhoneVerifyState {
+    let phone: String
     let payload: SecureIdPreparePhoneVerificationPayload
     var code: String
     
@@ -111,6 +114,7 @@ private struct EmailInputState {
 }
 
 private struct EmailVerifyState {
+    let email: String
     let payload: SecureIdPrepareEmailVerificationPayload
     var code: String
     
@@ -269,6 +273,13 @@ struct SecureIdPlaintextFormInnerState: FormControllerInnerState {
             switch phone {
                 case let .input(input):
                     result.append(.spacer)
+                    
+                    if let value = self.previousValue, case let .phone(phone) = value {
+                        result.append(.entry(SecureIdPlaintextFormEntry.immediatelyAvailablePhone(phone.phone)))
+                        result.append(.entry(SecureIdPlaintextFormEntry.immediatelyAvailablePhoneInfo))
+                        result.append(.spacer)
+                    }
+                    
                     result.append(.entry(SecureIdPlaintextFormEntry.numberInput(countryCode: input.countryCode, number: input.number)))
                     result.append(.entry(SecureIdPlaintextFormEntry.numberInputInfo))
                 case let .verify(verify):
@@ -333,13 +344,11 @@ struct SecureIdPlaintextFormInnerState: FormControllerInnerState {
                         }
             }
         }
-        
-        return .saveAvailable
     }
 }
 
 extension SecureIdPlaintextFormInnerState {
-    init(type: SecureIdPlaintextFormType, value: SecureIdValue?) {
+    init(type: SecureIdPlaintextFormType, immediatelyAvailableValue: SecureIdValue?) {
         switch type {
             case .phone:
                 var countryId: String? = nil
@@ -364,23 +373,16 @@ extension SecureIdPlaintextFormInnerState {
                     }
                 }
                 
-                self.init(previousValue: value, data: .phone(.input(PhoneInputState(countryCode: "+\(countryCodeAndId.0)", number: "", countryId: countryCodeAndId.1))), actionState: .none)
+                self.init(previousValue: immediatelyAvailableValue, data: .phone(.input(PhoneInputState(countryCode: "+\(countryCodeAndId.0)", number: "", countryId: countryCodeAndId.1))), actionState: .none)
             case .email:
-                self.init(previousValue: value, data: .email(.input(EmailInputState(email: ""))), actionState: .none)
-        }
-    }
-    
-    func makeValue() -> SecureIdValue? {
-        switch self.data {
-            case let .phone(phone):
-                return .phone(SecureIdPhoneValue(phone: ""))
-            case let .email(email):
-                return .email(SecureIdEmailValue(email: ""))
+                self.init(previousValue: immediatelyAvailableValue, data: .email(.input(EmailInputState(email: ""))), actionState: .none)
         }
     }
 }
 
 enum SecureIdPlaintextFormEntryId: Hashable {
+    case immediatelyAvailablePhone
+    case immediatelyAvailablePhoneInfo
     case numberInput
     case numberInputInfo
     case numberCode
@@ -388,75 +390,12 @@ enum SecureIdPlaintextFormEntryId: Hashable {
     case emailVerifyInfo
     case emailAddress
     case emailCode
-    
-    static func ==(lhs: SecureIdPlaintextFormEntryId, rhs: SecureIdPlaintextFormEntryId) -> Bool {
-        switch lhs {
-            case .numberInput:
-                if case .numberInput = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .numberInputInfo:
-                if case .numberInputInfo = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .numberCode:
-                if case .numberCode = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .numberVerifyInfo:
-                if case .numberVerifyInfo = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .emailVerifyInfo:
-                if case .emailVerifyInfo = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .emailAddress:
-                if case .emailAddress = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .emailCode:
-                if case .emailCode = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case .numberInput:
-                return 0
-            case .numberInputInfo:
-                return 1
-            case .numberCode:
-                return 2
-            case .numberVerifyInfo:
-                return 3
-            case .emailAddress:
-                return 4
-            case .emailCode:
-                return 5
-            case .emailVerifyInfo:
-                return 6
-        }
-    }
 }
 
 enum SecureIdPlaintextFormEntry: FormControllerEntry {
+    case immediatelyAvailablePhone(String)
+    case immediatelyAvailablePhoneInfo
+    
     case numberInput(countryCode: String, number: String)
     case numberInputInfo
     case numberCode(String)
@@ -467,6 +406,10 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
     
     var stableId: SecureIdPlaintextFormEntryId {
         switch self {
+            case .immediatelyAvailablePhone:
+                return .immediatelyAvailablePhone
+            case .immediatelyAvailablePhoneInfo:
+                return .immediatelyAvailablePhoneInfo
             case .numberInput:
                 return .numberInput
             case .numberInputInfo:
@@ -486,6 +429,18 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
     
     func isEqual(to: SecureIdPlaintextFormEntry) -> Bool {
         switch self {
+            case let .immediatelyAvailablePhone(value):
+                if case .immediatelyAvailablePhone(value) = to {
+                    return true
+                } else {
+                    return false
+                }
+            case .immediatelyAvailablePhoneInfo:
+                if case .immediatelyAvailablePhoneInfo = to {
+                    return true
+                } else {
+                    return false
+                }
             case let .numberInput(countryCode, number):
                 if case .numberInput(countryCode, number) = to {
                     return true
@@ -533,6 +488,12 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
     
     func item(params: SecureIdPlaintextFormParams, strings: PresentationStrings) -> FormControllerItem {
         switch self {
+            case let .immediatelyAvailablePhone(value):
+                return FormControllerActionItem(type: .accent, title: formatPhoneNumber(value), activated: {
+                    params.usePhone(value)
+                })
+            case .immediatelyAvailablePhoneInfo:
+                return FormControllerTextItem(text: "You can use your current Telegram phone number.")
             case let .numberInput(countryCode, number):
                 var countryName = ""
                 if let codeNumber = Int(countryCode), let codeId = AuthorizationSequenceCountrySelectionController.lookupCountryIdByCode(codeNumber) {
@@ -620,6 +581,8 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
             }
             innerState.data.updateTextField(type: type, value: value)
             strongSelf.updateInnerState(transition: .immediate, with: innerState)
+        }, usePhone: { [weak self] value in
+            self?.savePhone(value)
         })
     }
     
@@ -649,47 +612,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
             case let .phone(phone):
                 switch phone {
                     case let .input(input):
-                        guard case .nextAvailable = innerState.actionInputState() else {
-                            return
-                        }
-                        innerState.actionState = .saving
-                        self.updateInnerState(transition: .immediate, with: innerState)
-                        
-                        self.actionDisposable.set((secureIdPreparePhoneVerification(network: self.account.network, value: SecureIdPhoneValue(phone: cleanPhoneNumber(input.countryCode + input.number)))
-                        |> deliverOnMainQueue).start(next: { [weak self] result in
-                            if let strongSelf = self {
-                                guard var innerState = strongSelf.innerState else {
-                                    return
-                                }
-                                guard case .saving = innerState.actionState else {
-                                    return
-                                }
-                                innerState.actionState = .none
-                                innerState.data = .phone(.verify(PhoneVerifyState(payload: result, code: "")))
-                                strongSelf.updateInnerState(transition: .immediate, with: innerState)
-                            }
-                        }, error: { [weak self] error in
-                            if let strongSelf = self {
-                                guard var innerState = strongSelf.innerState else {
-                                    return
-                                }
-                                guard case .saving = innerState.actionState else {
-                                    return
-                                }
-                                innerState.actionState = .none
-                                strongSelf.updateInnerState(transition: .immediate, with: innerState)
-                                let errorText: String
-                                switch error {
-                                    case .generic:
-                                        errorText = strongSelf.strings.Login_UnknownError
-                                    case .flood:
-                                        errorText = strongSelf.strings.Login_CodeFloodError
-                                    case .occupied:
-                                        errorText = "Please provide a number that is not used by another Telegram account."
-                                }
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
-                            }
-                        }))
+                        self.savePhone(input.countryCode + input.number)
                         return
                     case let .verify(verify):
                         guard case .saveAvailable = innerState.actionInputState() else {
@@ -698,7 +621,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                         innerState.actionState = .saving
                         self.updateInnerState(transition: .immediate, with: innerState)
                         
-                        self.actionDisposable.set((secureIdCommitPhoneVerification(network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
+                        self.actionDisposable.set((secureIdCommitPhoneVerification(postbox: self.account.postbox, network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             if let strongSelf = self {
                                 guard var innerState = strongSelf.innerState else {
@@ -754,7 +677,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                                         return
                                     }
                                     innerState.actionState = .none
-                                    innerState.data = .email(.verify(EmailVerifyState(payload: result, code: "")))
+                                    innerState.data = .email(.verify(EmailVerifyState(email: input.email, payload: result, code: "")))
                                     strongSelf.updateInnerState(transition: .immediate, with: innerState)
                                 }
                             }, error: { [weak self] error in
@@ -785,7 +708,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                         innerState.actionState = .saving
                         self.updateInnerState(transition: .immediate, with: innerState)
                         
-                        self.actionDisposable.set((secureIdCommitEmailVerification(network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
+                        self.actionDisposable.set((secureIdCommitEmailVerification(postbox: self.account.postbox, network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             if let strongSelf = self {
                                 guard var innerState = strongSelf.innerState else {
@@ -823,38 +746,54 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                         return
                 }
         }
-        
-        guard case .saveAvailable = innerState.actionInputState() else {
+    }
+    
+    private func savePhone(_ value: String) {
+        guard var innerState = self.innerState else {
             return
         }
-        guard let value = innerState.makeValue() else {
+        guard case .none = innerState.actionState else {
             return
         }
-        if let previousValue = innerState.previousValue, value == previousValue {
-            self.dismiss?()
-            return
-        }
-        
         innerState.actionState = .saving
+        let inputPhone = cleanPhoneNumber(value)
         self.updateInnerState(transition: .immediate, with: innerState)
         
-        self.actionDisposable.set((saveSecureIdValue(network: self.account.network, context: self.context, value: value)
-        |> deliverOnMainQueue).start(next: { [weak self] result in
-            if let strongSelf = self {
-                strongSelf.completedWithValue?(result)
-            }
-        }, error: { [weak self] error in
-            if let strongSelf = self {
-                guard var innerState = strongSelf.innerState else {
-                    return
+        self.actionDisposable.set((secureIdPreparePhoneVerification(network: self.account.network, value: SecureIdPhoneValue(phone: inputPhone))
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                if let strongSelf = self {
+                    guard var innerState = strongSelf.innerState else {
+                        return
+                    }
+                    guard case .saving = innerState.actionState else {
+                        return
+                    }
+                    innerState.actionState = .none
+                    innerState.data = .phone(.verify(PhoneVerifyState(phone: inputPhone, payload: result, code: "")))
+                    strongSelf.updateInnerState(transition: .immediate, with: innerState)
                 }
-                guard case .saving = innerState.actionState else {
-                    return
-                }
-                innerState.actionState = .none
-                strongSelf.updateInnerState(transition: .immediate, with: innerState)
-            }
-        }))
+                }, error: { [weak self] error in
+                    if let strongSelf = self {
+                        guard var innerState = strongSelf.innerState else {
+                            return
+                        }
+                        guard case .saving = innerState.actionState else {
+                            return
+                        }
+                        innerState.actionState = .none
+                        strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                        let errorText: String
+                        switch error {
+                        case .generic:
+                            errorText = strongSelf.strings.Login_UnknownError
+                        case .flood:
+                            errorText = strongSelf.strings.Login_CodeFloodError
+                        case .occupied:
+                            errorText = "Please provide a number that is not used by another Telegram account."
+                        }
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
+                    }
+            }))
     }
     
     func deleteValue() {

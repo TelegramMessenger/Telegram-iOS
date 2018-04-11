@@ -25,4 +25,5 @@ module TelegramUIPrivateModule {
     header "../DeviceProximityManager.h"
     header "../RaiseToListenActivator.h"
     header "../TGMimeTypeMap.h"
+    header "../TGEmojiSuggestions.h"
 }

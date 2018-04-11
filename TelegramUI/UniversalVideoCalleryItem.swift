@@ -47,6 +47,10 @@ class UniversalVideoGalleryItem: GalleryItem {
             node.setupItem(self)
         }
     }
+    
+    func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
+        return nil
+    }
 }
 
 private let pictureInPictureImage = UIImage(bundleImageName: "Media Gallery/PictureInPictureIcon")?.precomposed()

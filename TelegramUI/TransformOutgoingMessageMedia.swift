@@ -37,7 +37,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                 if let image = UIImage(contentsOfFile: data.path), let scaledImage = generateImage(image.size.fitted(CGSize(width: 90.0, height: 90.0)), contextGenerator: { size, context in
                                     context.setBlendMode(.copy)
                                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                                }), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {
+                                }, scale: 1.0), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {
                                     let imageDimensions = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
                                     
                                     let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
