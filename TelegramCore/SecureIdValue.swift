@@ -120,17 +120,19 @@ struct SecureIdEncryptedValueFileMetadata: Equatable {
 struct SecureIdEncryptedValueMetadata: Equatable {
     let valueDataHash: Data
     let decryptedSecret: Data
-    let files: [SecureIdEncryptedValueFileMetadata]
-    let selfie: SecureIdEncryptedValueFileMetadata?
 }
 
 public struct SecureIdValueWithContext: Equatable {
     public let value: SecureIdValue
+    let files: [SecureIdEncryptedValueFileMetadata]
+    let selfie: SecureIdEncryptedValueFileMetadata?
     let encryptedMetadata: SecureIdEncryptedValueMetadata?
     let opaqueHash: Data
     
-    init(value: SecureIdValue, encryptedMetadata: SecureIdEncryptedValueMetadata?, opaqueHash: Data) {
+    init(value: SecureIdValue, files: [SecureIdEncryptedValueFileMetadata], selfie: SecureIdEncryptedValueFileMetadata?, encryptedMetadata: SecureIdEncryptedValueMetadata?, opaqueHash: Data) {
         self.value = value
+        self.files = files
+        self.selfie = selfie
         self.encryptedMetadata = encryptedMetadata
         self.opaqueHash = opaqueHash
     }

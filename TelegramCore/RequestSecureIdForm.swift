@@ -58,6 +58,8 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
             
             let decryptedData: Data?
             let encryptedMetadata: SecureIdEncryptedValueMetadata?
+            var parsedFileMetadata: [SecureIdEncryptedValueFileMetadata] = []
+            var parsedSelfieMetadata: SecureIdEncryptedValueFileMetadata?
             if let data = data {
                 let (encryptedData, decryptedHash, encryptedSecret) = parseSecureData(data)
                 guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedSecret, decryptedDataHash: decryptedHash) else {
@@ -68,25 +70,23 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
                 if decryptedData == nil {
                     return nil
                 }
-                var parsedFileMetadata: [SecureIdEncryptedValueFileMetadata] = []
-                for file in parsedFileReferences {
-                    guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: file.fileHash, encryptedSecret: file.encryptedSecret) else {
-                        return nil
-                    }
-                    parsedFileMetadata.append(SecureIdEncryptedValueFileMetadata(hash: file.fileHash, secret: fileSecret))
-                }
-                var parsedSelfieMetadata: SecureIdEncryptedValueFileMetadata?
-                if let parsedSelfie = selfie.flatMap(SecureIdFileReference.init) {
-                    guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: parsedSelfie.fileHash, encryptedSecret: parsedSelfie.encryptedSecret) else {
-                        return nil
-                    }
-                    
-                    parsedSelfieMetadata = SecureIdEncryptedValueFileMetadata(hash: parsedSelfie.fileHash, secret: fileSecret)
-                }
-                encryptedMetadata = SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, decryptedSecret: valueContext.secret, files: parsedFileMetadata, selfie: parsedSelfieMetadata)
+                encryptedMetadata = SecureIdEncryptedValueMetadata(valueDataHash: decryptedHash, decryptedSecret: valueContext.secret)
             } else {
                 decryptedData = nil
                 encryptedMetadata = nil
+            }
+            for file in parsedFileReferences {
+                guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: file.fileHash, encryptedSecret: file.encryptedSecret) else {
+                    return nil
+                }
+                parsedFileMetadata.append(SecureIdEncryptedValueFileMetadata(hash: file.fileHash, secret: fileSecret))
+            }
+            if let parsedSelfie = selfie.flatMap(SecureIdFileReference.init) {
+                guard let fileSecret = decryptedSecureIdFileSecret(context: context, fileHash: parsedSelfie.fileHash, encryptedSecret: parsedSelfie.encryptedSecret) else {
+                    return nil
+                }
+                
+                parsedSelfieMetadata = SecureIdEncryptedValueFileMetadata(hash: parsedSelfie.fileHash, secret: fileSecret)
             }
             
             let value: SecureIdValue
@@ -169,7 +169,7 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
                     }
             }
         
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: value, encryptedMetadata: encryptedMetadata, opaqueHash: hash.makeData()))
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: value, files: parsedFileMetadata, selfie: parsedSelfieMetadata, encryptedMetadata: encryptedMetadata, opaqueHash: hash.makeData()))
     }
 }
 

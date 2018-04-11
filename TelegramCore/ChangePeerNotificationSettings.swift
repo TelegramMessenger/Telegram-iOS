@@ -53,15 +53,19 @@ public func updatePeerMuteSetting(account: Account, peerId: PeerId, muteInterval
             
             let muteState: PeerMuteState
             if let muteInterval = muteInterval {
-                let absoluteUntil: Int32
-                if muteInterval == Int32.max {
-                    absoluteUntil = Int32.max
+                if muteInterval == 0 {
+                    muteState = .unmuted
                 } else {
-                    absoluteUntil = Int32(Date().timeIntervalSince1970) + muteInterval
+                    let absoluteUntil: Int32
+                    if muteInterval == Int32.max {
+                        absoluteUntil = Int32.max
+                    } else {
+                        absoluteUntil = Int32(Date().timeIntervalSince1970) + muteInterval
+                    }
+                    muteState = .muted(until: absoluteUntil)
                 }
-                muteState = .muted(until: absoluteUntil)
             } else {
-                muteState = .unmuted
+                muteState = .default
             }
             
             let updatedSettings = previousSettings.withUpdatedMuteState(muteState)
