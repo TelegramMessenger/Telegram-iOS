@@ -73,6 +73,7 @@ public enum SecureIdPrepareEmailVerificationError {
 
 public struct SecureIdPrepareEmailVerificationPayload {
     let email: String
+    public let length: Int32
 }
 
 public func secureIdPrepareEmailVerification(network: Network, value: SecureIdEmailValue) -> Signal<SecureIdPrepareEmailVerificationPayload, SecureIdPrepareEmailVerificationError> {
@@ -85,8 +86,8 @@ public func secureIdPrepareEmailVerification(network: Network, value: SecureIdEm
         }
         |> map { sentCode -> SecureIdPrepareEmailVerificationPayload in
             switch sentCode {
-                case .sentEmailCode:
-                    return SecureIdPrepareEmailVerificationPayload(email: value.email)
+                case .sentEmailCode(_, let length):
+                    return SecureIdPrepareEmailVerificationPayload(email: value.email, length: length)
             }
     }
 }
