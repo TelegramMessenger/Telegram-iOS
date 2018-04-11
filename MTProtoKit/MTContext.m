@@ -915,7 +915,17 @@
         if (disposable == nil)
         {
             __weak MTContext *weakSelf = self;
-            MTDatacenterAddressSet *addressSet = [self addressSetForDatacenterWithId:datacenterId];
+            MTDatacenterAddressSet *initialAddressSet = [self addressSetForDatacenterWithId:datacenterId];
+            NSMutableArray *addressList = [[NSMutableArray alloc] initWithArray:initialAddressSet.addressList];
+            MTDatacenterAddressSet *seedAddress = _datacenterSeedAddressSetById[@(datacenterId)];
+            if (seedAddress != nil) {
+                for (MTDatacenterAddress *address in seedAddress.addressList) {
+                    if (![addressList containsObject:address]) {
+                        [addressList addObject:address];
+                    }
+                }
+            }
+            MTDatacenterAddressSet *addressSet = [[MTDatacenterAddressSet alloc] initWithAddressList:addressList];
             MTSignal *discoverSignal = [MTDiscoverConnectionSignals discoverSchemeWithContext:self addressList:addressSet.addressList media:media isProxy:isProxy];
             MTSignal *conditionSignal = [MTSignal single:@(true)];
             for (id<MTContextChangeListener> listener in _changeListeners) {
