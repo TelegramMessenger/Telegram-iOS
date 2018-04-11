@@ -112,6 +112,7 @@
 		D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */; };
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
 		D06B76DB20592A97006E9EEA /* LayoutSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06B76DA20592A97006E9EEA /* LayoutSizes.swift */; };
+		D06D37A220779C82009219B6 /* VolumeControlStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06D37A120779C82009219B6 /* VolumeControlStatusBar.swift */; };
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
 		D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D077B8E81F4637040046D27A /* NavigationBarBadge.swift */; };
 		D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */; };
@@ -286,6 +287,7 @@
 		D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
 		D06B76DA20592A97006E9EEA /* LayoutSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutSizes.swift; sourceTree = "<group>"; };
+		D06D37A120779C82009219B6 /* VolumeControlStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeControlStatusBar.swift; sourceTree = "<group>"; };
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
 		D077B8E81F4637040046D27A /* NavigationBarBadge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarBadge.swift; sourceTree = "<group>"; };
 		D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainerViewLayout.swift; sourceTree = "<group>"; };
@@ -669,6 +671,7 @@
 				D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */,
 				D03E7DFE1C96F7B400C07816 /* StatusBarManager.swift */,
 				D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */,
+				D06D37A120779C82009219B6 /* VolumeControlStatusBar.swift */,
 			);
 			name = "Status Bar";
 			sourceTree = "<group>";
@@ -984,6 +987,7 @@
 				D02958001D6F096000360E5E /* ContextMenuContainerNode.swift in Sources */,
 				D05BE4AB1D1F25E3002BD72C /* PresentationContext.swift in Sources */,
 				D0C2DFCA1CC4431D0044FF83 /* ListViewItem.swift in Sources */,
+				D06D37A220779C82009219B6 /* VolumeControlStatusBar.swift in Sources */,
 				D05CC2A01B69326400E235A3 /* NavigationController.swift in Sources */,
 				D06EE8451B7140FF00837186 /* Font.swift in Sources */,
 				D0CA3F8A2073F7650042D2B6 /* LinkHighlightingNode.swift in Sources */,

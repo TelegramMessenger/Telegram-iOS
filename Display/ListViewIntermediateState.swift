@@ -14,29 +14,6 @@ public enum ListViewScrollPosition: Equatable {
     case top(CGFloat)
     case bottom(CGFloat)
     case center(ListViewCenterScrollPositionOverflow)
-
-    public static func ==(lhs: ListViewScrollPosition, rhs: ListViewScrollPosition) -> Bool {
-        switch lhs {
-            case let .top(offset):
-                if case .top(offset) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .bottom(offset):
-                if case .bottom(offset) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .center(overflow):
-                if case .center(overflow) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 public enum ListViewScrollToItemDirectionHint {
@@ -147,29 +124,17 @@ public struct ListViewUpdateSizeAndInsets {
 public struct ListViewItemRange: Equatable {
     public let firstIndex: Int
     public let lastIndex: Int
-    
-    public static func ==(lhs: ListViewItemRange, rhs: ListViewItemRange) -> Bool {
-        return lhs.firstIndex == rhs.firstIndex && lhs.lastIndex == rhs.lastIndex
-    }
 }
 
 public struct ListViewVisibleItemRange: Equatable {
     public let firstIndex: Int
     public let firstIndexFullyVisible: Bool
     public let lastIndex: Int
-    
-    public static func ==(lhs: ListViewVisibleItemRange, rhs: ListViewVisibleItemRange) -> Bool {
-        return lhs.firstIndex == rhs.firstIndex && lhs.firstIndexFullyVisible == rhs.firstIndexFullyVisible && lhs.lastIndex == rhs.lastIndex
-    }
 }
 
 public struct ListViewDisplayedItemRange: Equatable {
     public let loadedRange: ListViewItemRange?
     public let visibleRange: ListViewVisibleItemRange?
-}
-
-public func ==(lhs: ListViewDisplayedItemRange, rhs: ListViewDisplayedItemRange) -> Bool {
-    return lhs.loadedRange == rhs.loadedRange && lhs.visibleRange == rhs.visibleRange
 }
 
 struct IndexRange {

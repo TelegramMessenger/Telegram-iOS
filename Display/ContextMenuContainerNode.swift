@@ -7,10 +7,6 @@ private struct CachedMaskParams: Equatable {
     let arrowOnBottom: Bool
 }
 
-private func ==(lhs: CachedMaskParams, rhs: CachedMaskParams) -> Bool {
-    return lhs.size.equalTo(rhs.size) && lhs.relativeArrowPosition.isEqual(to: rhs.relativeArrowPosition) && lhs.arrowOnBottom == rhs.arrowOnBottom
-}
-
 private final class ContextMenuContainerMaskView: UIView {
     override class var layerClass: AnyClass {
         return CAShapeLayer.self

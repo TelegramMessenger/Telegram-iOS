@@ -28,10 +28,6 @@ public struct TextNodeCutout: Equatable {
         self.position = position
         self.size = size
     }
-    
-    public static func ==(lhs: TextNodeCutout, rhs: TextNodeCutout) -> Bool {
-        return lhs.position == rhs.position && lhs.size == rhs.size
-    }
 }
 
 public final class TextNodeLayoutArguments {

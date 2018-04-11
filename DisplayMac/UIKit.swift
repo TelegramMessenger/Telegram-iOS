@@ -20,22 +20,6 @@ public struct UIEdgeInsets: Equatable {
         self.bottom = bottom
         self.right = right
     }
-    
-    public static func ==(lhs: UIEdgeInsets, rhs: UIEdgeInsets) -> Bool {
-        if !lhs.top.isEqual(to: rhs.top) {
-            return false
-        }
-        if !lhs.left.isEqual(to: rhs.left) {
-            return false
-        }
-        if !lhs.bottom.isEqual(to: rhs.bottom) {
-            return false
-        }
-        if !lhs.right.isEqual(to: rhs.right) {
-            return false
-        }
-        return true
-    }
 }
 
 public final class UIColor: NSObject {

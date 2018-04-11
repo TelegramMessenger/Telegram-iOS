@@ -53,23 +53,6 @@ public struct GridNodeScrollToItem {
 public enum GridNodeLayoutType: Equatable {
     case fixed(itemSize: CGSize, lineSpacing: CGFloat)
     case balanced(idealHeight: CGFloat)
-    
-    public static func ==(lhs: GridNodeLayoutType, rhs: GridNodeLayoutType) -> Bool {
-        switch lhs {
-            case let .fixed(itemSize, lineSpacing):
-                if case .fixed(itemSize, lineSpacing) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .balanced(idealHeight):
-                if case .balanced(idealHeight) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 public struct GridNodeLayout: Equatable {
@@ -85,10 +68,6 @@ public struct GridNodeLayout: Equatable {
         self.scrollIndicatorInsets = scrollIndicatorInsets
         self.preloadSize = preloadSize
         self.type = type
-    }
-    
-    public static func ==(lhs: GridNodeLayout, rhs: GridNodeLayout) -> Bool {
-        return lhs.size.equalTo(rhs.size) && lhs.insets == rhs.insets && lhs.preloadSize.isEqual(to: rhs.preloadSize) && lhs.type == rhs.type
     }
 }
 
@@ -180,13 +159,9 @@ private final class GridNodeItemLayout {
 public struct GridNodeDisplayedItemRange: Equatable {
     public let loadedRange: Range<Int>?
     public let visibleRange: Range<Int>?
-    
-    public static func ==(lhs: GridNodeDisplayedItemRange, rhs: GridNodeDisplayedItemRange) -> Bool {
-        return lhs.loadedRange == rhs.loadedRange && lhs.visibleRange == rhs.visibleRange
-    }
 }
 
-private struct WrappedGridSection: Hashable {
+private struct WrappedGridSection: Equatable, Hashable {
     let section: GridSection
     
     init(_ section: GridSection) {

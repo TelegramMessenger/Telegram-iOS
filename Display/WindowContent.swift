@@ -23,50 +23,6 @@ private struct WindowLayout: Equatable {
     let safeInsets: UIEdgeInsets
     let onScreenNavigationHeight: CGFloat?
     let upperKeyboardInputPositionBound: CGFloat?
-
-    static func ==(lhs: WindowLayout, rhs: WindowLayout) -> Bool {
-        if !lhs.size.equalTo(rhs.size) {
-            return false
-        }
-        
-        if let lhsStatusBarHeight = lhs.statusBarHeight {
-            if let rhsStatusBarHeight = rhs.statusBarHeight {
-                if !lhsStatusBarHeight.isEqual(to: rhsStatusBarHeight) {
-                    return false
-                }
-            } else {
-                return false
-            }
-        } else if let _ = rhs.statusBarHeight {
-            return false
-        }
-        
-        if lhs.forceInCallStatusBarText != rhs.forceInCallStatusBarText {
-            return false
-        }
-        
-        if let lhsInputHeight = lhs.inputHeight, let rhsInputHeight = rhs.inputHeight {
-            if !lhsInputHeight.isEqual(to: rhsInputHeight) {
-                return false
-            }
-        } else if (lhs.inputHeight != nil) != (rhs.inputHeight != nil) {
-            return false
-        }
-        
-        if lhs.safeInsets != rhs.safeInsets {
-            return false
-        }
-        
-        if lhs.onScreenNavigationHeight != rhs.onScreenNavigationHeight {
-            return false
-        }
-        
-        if lhs.upperKeyboardInputPositionBound != rhs.upperKeyboardInputPositionBound {
-            return false
-        }
-        
-        return true
-    }
 }
 
 private struct UpdatingLayout {
@@ -337,6 +293,16 @@ private final class KeyboardGestureRecognizerDelegate: NSObject, UIGestureRecogn
     }
 }
 
+public final class StatusBarVolumeColors {
+    public let background: UIColor
+    public let foreground: UIColor
+    
+    public init(background: UIColor, foreground: UIColor) {
+        self.background = background
+        self.foreground = foreground
+    }
+}
+
 public class Window1 {
     public let hostView: WindowHostView
     
@@ -365,6 +331,7 @@ public class Window1 {
     
     public var previewThemeAccentColor: UIColor = .blue
     public var previewThemeDarkBlur: Bool = false
+    public var statusBarVolumeColors: StatusBarVolumeColors = StatusBarVolumeColors(background: .lightGray, foreground: .black)
     
     public private(set) var forceInCallStatusBarText: String? = nil
     public var inCallNavigate: (() -> Void)? {
@@ -380,13 +347,19 @@ public class Window1 {
     
     private var keyboardTypeChangeTimer: SwiftSignalKit.Timer?
     
+    private let volumeControlStatusBar: VolumeControlStatusBar
+    private let volumeControlStatusBarNode: VolumeControlStatusBarNode
+    
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
+        
+        self.volumeControlStatusBar = VolumeControlStatusBar(frame: CGRect(origin: CGPoint(x: 0.0, y: -20.0), size: CGSize(width: 100.0, height: 20.0)))
+        self.volumeControlStatusBarNode = VolumeControlStatusBarNode()
         
         self.statusBarHost = statusBarHost
         let statusBarHeight: CGFloat
         if let statusBarHost = statusBarHost {
-            self.statusBarManager = StatusBarManager(host: statusBarHost)
+            self.statusBarManager = StatusBarManager(host: statusBarHost, volumeControlStatusBar: self.volumeControlStatusBar, volumeControlStatusBarNode: self.volumeControlStatusBarNode)
             statusBarHeight = statusBarHost.statusBarFrame.size.height
             self.keyboardManager = KeyboardManager(host: statusBarHost)
         } else {
@@ -403,6 +376,7 @@ public class Window1 {
         }
         
         self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForScreenSize(boundsSize), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, safeInsets: safeInsetsForScreenSize(boundsSize), onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil)
+        self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         self.presentationContext = PresentationContext()
         self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost)
         
@@ -541,6 +515,9 @@ public class Window1 {
         }
         self.windowPanRecognizer = recognizer
         self.hostView.view.addGestureRecognizer(recognizer)
+        
+        self.hostView.view.addSubview(self.volumeControlStatusBar)
+        self.hostView.view.addSubview(self.volumeControlStatusBarNode.view)
     }
     
     public required init(coder aDecoder: NSCoder) {
@@ -653,7 +630,7 @@ public class Window1 {
                 if let coveringView = self.coveringView {
                     self.hostView.view.insertSubview(rootController.view, belowSubview: coveringView)
                 } else {
-                    self.hostView.view.addSubview(rootController.view)
+                    self.hostView.view.insertSubview(rootController.view, belowSubview: self.volumeControlStatusBarNode.view)
                 }
             }
         }
@@ -676,7 +653,7 @@ public class Window1 {
                 if let coveringView = self.coveringView {
                     self.hostView.view.insertSubview(controller.view, belowSubview: coveringView)
                 } else {
-                    self.hostView.view.addSubview(controller.view)
+                    self.hostView.view.insertSubview(controller.view, belowSubview: self.volumeControlStatusBarNode.view)
                 }
             }
             
@@ -689,7 +666,7 @@ public class Window1 {
             if self.coveringView !== oldValue {
                 oldValue?.removeFromSuperview()
                 if let coveringView = self.coveringView {
-                    self.hostView.view.addSubview(coveringView)
+                    self.hostView.view.insertSubview(coveringView, belowSubview: self.volumeControlStatusBarNode.view)
                     if !self.windowLayout.size.width.isZero {
                         coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
                         coveringView.updateLayout(self.windowLayout.size)
@@ -813,10 +790,13 @@ public class Window1 {
         }
     }
     
+    private var isFirstLayout = true
+    
     private func commitUpdatingLayout() {
         if let updatingLayout = self.updatingLayout {
             self.updatingLayout = nil
-            if updatingLayout.layout != self.windowLayout {
+            if updatingLayout.layout != self.windowLayout || self.isFirstLayout {
+                self.isFirstLayout = false
                 var statusBarHeight: CGFloat?
                 if let statusBarHost = self.statusBarHost {
                     statusBarHeight = statusBarHost.statusBarFrame.size.height
@@ -863,6 +843,9 @@ public class Window1 {
                         }
                     })
                 }
+                
+                self.volumeControlStatusBarNode.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
+                self.volumeControlStatusBarNode.updateLayout(layout: childLayout, transition: updatingLayout.transition)
                 
                 if let coveringView = self.coveringView {
                     coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
