@@ -59,7 +59,6 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
     }
     
     public init(_ buffer: ReadBuffer) {
-        
         var namespace: Int32 = 0
         var id: Int32 = 0
         memcpy(&namespace, buffer.memory, 4)
@@ -74,22 +73,18 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
         buffer.write(&namespace, offset: 0, length: 4);
         buffer.write(&id, offset: 0, length: 4);
     }
-}
 
-public func ==(lhs: PeerId, rhs: PeerId) -> Bool {
-    return lhs.id == rhs.id && lhs.namespace == rhs.namespace
-}
-
-public func <(lhs: PeerId, rhs: PeerId) -> Bool {
-    if lhs.namespace != rhs.namespace {
-        return lhs.namespace < rhs.namespace
+    public static func <(lhs: PeerId, rhs: PeerId) -> Bool {
+        if lhs.namespace != rhs.namespace {
+            return lhs.namespace < rhs.namespace
+        }
+        
+        if lhs.id != rhs.id {
+            return lhs.id < rhs.id
+        }
+        
+        return false
     }
-    
-    if lhs.id != rhs.id {
-        return lhs.id < rhs.id
-    }
-    
-    return false
 }
 
 public protocol Peer: class, PostboxCoding {

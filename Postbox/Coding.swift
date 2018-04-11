@@ -107,10 +107,10 @@ public class MemoryBuffer: Equatable, CustomStringConvertible {
     public func withDataNoCopy(_ f: (Data) -> Void) {
         f(Data(bytesNoCopy: self.memory, count: self.length, deallocator: .none))
     }
-}
-
-public func ==(lhs: MemoryBuffer, rhs: MemoryBuffer) -> Bool {
-    return lhs.length == rhs.length && memcmp(lhs.memory, rhs.memory, lhs.length) == 0
+    
+    public static func ==(lhs: MemoryBuffer, rhs: MemoryBuffer) -> Bool {
+        return lhs.length == rhs.length && memcmp(lhs.memory, rhs.memory, lhs.length) == 0
+    }
 }
 
 public final class WriteBuffer: MemoryBuffer {

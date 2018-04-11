@@ -4,23 +4,6 @@ public enum PeerIndexNameRepresentation: Equatable {
     case title(title: String, addressName: String?)
     case personName(first: String, last: String, addressName: String?, phoneNumber: String?)
     
-    public static func ==(lhs: PeerIndexNameRepresentation, rhs: PeerIndexNameRepresentation) -> Bool {
-        switch lhs {
-            case let .title(lhsTitle, lhsAddressName):
-                if case let .title(rhsTitle, rhsAddressName) = rhs, lhsTitle == rhsTitle, lhsAddressName == rhsAddressName {
-                    return true
-                } else {
-                    return false
-                }
-            case let .personName(lhsFirst, lhsLast, lhsAddressName, lhsPhoneNumber):
-                if case let .personName(rhsFirst, rhsLast, rhsAddressName, rhsPhoneNumber) = rhs, lhsFirst == rhsFirst, lhsLast == rhsLast, lhsAddressName == rhsAddressName, lhsPhoneNumber == rhsPhoneNumber {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
     public var isEmpty: Bool {
         switch self {
             case let .title(title, addressName):

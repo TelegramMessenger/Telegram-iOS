@@ -74,24 +74,19 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         }
         return array
     }
-}
 
-public func ==(lhs: MessageId, rhs: MessageId) -> Bool {
-    return lhs.id == rhs.id && lhs.namespace == rhs.namespace && lhs.peerId == rhs.peerId
-}
-
-public func <(lhs: MessageId, rhs: MessageId) -> Bool {
-    if lhs.namespace == rhs.namespace {
-        if lhs.id == rhs.id {
-            return lhs.peerId < rhs.peerId
+    public static func <(lhs: MessageId, rhs: MessageId) -> Bool {
+        if lhs.namespace == rhs.namespace {
+            if lhs.id == rhs.id {
+                return lhs.peerId < rhs.peerId
+            } else {
+                return lhs.id < rhs.id
+            }
         } else {
-            return lhs.id < rhs.id
+            return lhs.namespace < rhs.namespace
         }
-    } else {
-        return lhs.namespace < rhs.namespace
     }
 }
-
 public struct MessageIndex: Comparable, Hashable {
     public let id: MessageId
     public let timestamp: Int32
@@ -159,22 +154,18 @@ public struct MessageIndex: Comparable, Hashable {
     func withPeerId(_ peerId: PeerId) -> MessageIndex {
         return MessageIndex(id: MessageId(peerId: peerId, namespace: self.id.namespace, id: self.id.id), timestamp: self.timestamp)
     }
-}
 
-public func ==(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
-    return lhs.id == rhs.id && lhs.timestamp == rhs.timestamp
-}
-
-public func <(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
-    if lhs.timestamp != rhs.timestamp {
-        return lhs.timestamp < rhs.timestamp
+    public static func <(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
+        if lhs.timestamp != rhs.timestamp {
+            return lhs.timestamp < rhs.timestamp
+        }
+        
+        if lhs.id.namespace != rhs.id.namespace {
+            return lhs.id.namespace < rhs.id.namespace
+        }
+        
+        return lhs.id.id < rhs.id.id
     }
-    
-    if lhs.id.namespace != rhs.id.namespace {
-        return lhs.id.namespace < rhs.id.namespace
-    }
-    
-    return lhs.id.id < rhs.id.id
 }
 
 public struct ChatListIndex: Comparable, Hashable {
@@ -184,10 +175,6 @@ public struct ChatListIndex: Comparable, Hashable {
     public init(pinningIndex: UInt16?, messageIndex: MessageIndex) {
         self.pinningIndex = pinningIndex
         self.messageIndex = messageIndex
-    }
-    
-    public static func ==(lhs: ChatListIndex, rhs: ChatListIndex) -> Bool {
-        return lhs.pinningIndex == rhs.pinningIndex && lhs.messageIndex == rhs.messageIndex
     }
     
     public static func <(lhs: ChatListIndex, rhs: ChatListIndex) -> Bool {
@@ -415,30 +402,30 @@ public struct MessageForwardInfo: Equatable {
     public let sourceMessageId: MessageId?
     public let date: Int32
     public let authorSignature: String?
-}
 
-public func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
-    if !lhs.author.isEqual(rhs.author) {
-        return false
-    }
-    if let lhsSource = lhs.source, let rhsSource = rhs.source {
-        if !lhsSource.isEqual(rhsSource) {
+    public static func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
+        if !lhs.author.isEqual(rhs.author) {
             return false
         }
-    } else if (lhs.source == nil) != (rhs.source == nil) {
-        return false
+        if let lhsSource = lhs.source, let rhsSource = rhs.source {
+            if !lhsSource.isEqual(rhsSource) {
+                return false
+            }
+        } else if (lhs.source == nil) != (rhs.source == nil) {
+            return false
+        }
+        if lhs.sourceMessageId != rhs.sourceMessageId {
+            return false
+        }
+        if lhs.date != rhs.date {
+            return false
+        }
+        if lhs.authorSignature != rhs.authorSignature {
+            return false
+        }
+        
+        return true
     }
-    if lhs.sourceMessageId != rhs.sourceMessageId {
-        return false
-    }
-    if lhs.date != rhs.date {
-        return false
-    }
-    if lhs.authorSignature != rhs.authorSignature {
-        return false
-    }
-    
-    return true
 }
 
 public protocol MessageAttribute: PostboxCoding {
@@ -458,10 +445,6 @@ public extension MessageAttribute {
 
 public struct MessageGroupInfo: Equatable {
     public let stableId: UInt32
-    
-    public static func ==(lhs: MessageGroupInfo, rhs: MessageGroupInfo) -> Bool {
-        return lhs.stableId == rhs.stableId
-    }
 }
 
 public final class Message {
