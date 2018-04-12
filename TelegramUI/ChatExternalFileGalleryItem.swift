@@ -49,6 +49,10 @@ class ChatExternalFileGalleryItem: GalleryItem {
             node.setMessage(self.message)
         }
     }
+    
+    func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
+        return nil
+    }
 }
 
 class ChatExternalFileGalleryItemNode: GalleryItemNode {
@@ -326,4 +330,3 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         }
     }
 }
-

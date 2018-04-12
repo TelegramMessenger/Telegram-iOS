@@ -6,6 +6,7 @@ import ImageIO
 import MobileCoreServices
 import Display
 import UIKit
+import AVFoundation
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {

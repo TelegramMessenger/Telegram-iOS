@@ -49,9 +49,42 @@ class ChatDocumentGalleryItem: GalleryItem {
             node.setMessage(self.message)
         }
     }
+    
+    func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
+        return nil
+    }
 }
 
-class ChatDocumentGalleryItemNode: GalleryItemNode {
+private let registeredURLProtocol: Void = {
+    URLProtocol.registerClass(ChatDocumentURLProtocol.self)
+}()
+
+private final class ChatDocumentURLProtocol: URLProtocol {
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        return request
+    }
+    
+    override class func canInit(with request: URLRequest) -> Bool {
+        if let mainDocumentURL = request.mainDocumentURL {
+            if mainDocumentURL.scheme == "file" && request.url != mainDocumentURL {
+                return true
+            }
+        }
+        return false
+    }
+    
+    override class func requestIsCacheEquivalent(_ a: URLRequest, to b: URLRequest) -> Bool {
+        return super.requestIsCacheEquivalent(a, to: b)
+    }
+    
+    override func startLoading() {
+    }
+    
+    override func stopLoading() {
+    }
+}
+
+class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
     fileprivate let _title = Promise<String>()
     
     private let statusNodeContainer: HighlightableButtonNode
@@ -73,16 +106,22 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
     private var status: MediaResourceStatus?
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        if #available(iOS 9.0, *) {
-            let webView = WKWebView()
+        /*if #available(iOS 9.0, *) {
+            let preferences = WKPreferences()
+            preferences.javaScriptEnabled = false
+            let configuration = WKWebViewConfiguration()
+            configuration.preferences = preferences
+            let webView = WKWebView(frame: CGRect(), configuration: configuration)
             webView.allowsLinkPreview = false
             webView.allowsBackForwardNavigationGestures = false
             self.webView = webView
-        } else {
+        } else {*/
+            let _ = registeredURLProtocol
             let webView = UIWebView()
+            
             webView.scalesPageToFit = true
             self.webView = webView
-        }
+        //}
         self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, theme: theme, strings: strings)
         
         self.statusNodeContainer = HighlightableButtonNode()
@@ -90,6 +129,10 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
         self.statusNode.isHidden = true
         
         super.init()
+        
+        if let webView = self.webView as? WKWebView {
+            //webView.navigationDelegate = self
+        }
         
         self.view.addSubview(self.webView)
         

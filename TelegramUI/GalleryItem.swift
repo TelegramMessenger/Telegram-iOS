@@ -21,4 +21,5 @@ struct GalleryItemIndexData: Equatable {
 protocol GalleryItem {
     func node() -> GalleryItemNode
     func updateNode(node: GalleryItemNode)
+    func thumbnailItem() -> (Int64, GalleryThumbnailItem)?
 }

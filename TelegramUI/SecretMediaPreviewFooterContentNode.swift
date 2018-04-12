@@ -31,7 +31,7 @@ final class SecretMediaPreviewFooterContentNode: GalleryFooterContentNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let panelHeight: CGFloat = 44.0 + bottomInset
         
         let sideInset: CGFloat = leftInset + 8.0

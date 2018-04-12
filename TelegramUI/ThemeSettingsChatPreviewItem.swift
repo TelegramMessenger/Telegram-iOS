@@ -92,7 +92,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         }, canSetupReply: { _ in
             return false
         }, requestMessageUpdate: { _ in
-        }, automaticMediaDownloadSettings: .none)
+        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings)
         
         super.init(layerBacked: false, dynamicBounce: false)
         

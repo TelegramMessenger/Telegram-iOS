@@ -2,7 +2,7 @@ import Foundation
 import Display
 import AsyncDisplayKit
 
-private func loadCountryNamesAndCodes() -> [(String, String, Int)] {
+private func loadCountryCodes() -> [(String, Int)] {
     guard let filePath = frameworkBundle.path(forResource: "PhoneCountries", ofType: "txt") else {
         return []
     }
@@ -16,7 +16,7 @@ private func loadCountryNamesAndCodes() -> [(String, String, Int)] {
     let delimiter = ";"
     let endOfLine = "\n"
     
-    var result: [(String, String, Int)] = []
+    var result: [(String, Int)] = []
     
     var currentLocation = data.startIndex
     
@@ -25,24 +25,18 @@ private func loadCountryNamesAndCodes() -> [(String, String, Int)] {
             break
         }
         
-        let countryCode = data.substring(with: currentLocation ..< codeRange.lowerBound)
+        let countryCode = String(data[currentLocation ..< codeRange.lowerBound])
         
         guard let idRange = data.range(of: delimiter, options: [], range: codeRange.upperBound ..< data.endIndex) else {
             break
         }
         
-        let countryId = data.substring(with: codeRange.upperBound ..< idRange.lowerBound)
+        let countryId = String(data[codeRange.upperBound ..< idRange.lowerBound])
         
         let maybeNameRange = data.range(of: endOfLine, options: [], range: idRange.upperBound ..< data.endIndex)
-        let nameRangeIndex = maybeNameRange?.lowerBound ?? data.endIndex
-        
-        var countryName = data.substring(with: idRange.upperBound ..< nameRangeIndex)
-        if countryName.hasSuffix("\r") {
-            countryName = countryName.substring(to: countryName.index(before: countryName.endIndex))
-        }
         
         if let countryCodeInt = Int(countryCode) {
-            result.append((countryName, countryId, countryCodeInt))
+            result.append((countryId, countryCodeInt))
         }
         
         if let maybeNameRange = maybeNameRange {
@@ -55,7 +49,20 @@ private func loadCountryNamesAndCodes() -> [(String, String, Int)] {
     return result
 }
 
-private let countryNamesAndCodes: [(String, String, Int)] = loadCountryNamesAndCodes()
+private let countryCodes: [(String, Int)] = loadCountryCodes()
+
+func localizedContryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, Int)] {
+    let locale = localeWithStrings(strings)
+    var result: [((String, String), String, Int)] = []
+    for (id, code) in countryCodes {
+        if let englishCountryName = usEnglishLocale.localizedString(forRegionCode: id), let countryName = locale.localizedString(forRegionCode: id) {
+            result.append(((englishCountryName, countryName), id, code))
+        } else {
+            assertionFailure()
+        }
+    }
+    return result
+}
 
 private final class InnerCoutrySearchResultsController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     private let displayCodes: Bool
@@ -63,13 +70,13 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
     
     private let tableView: UITableView
     
-    var searchResults: [(String, String, Int)] = [] {
+    var searchResults: [((String, String), String, Int)] = [] {
         didSet {
             self.tableView.reloadData()
         }
     }
     
-    var itemSelected: (((String, String, Int)) -> Void)?
+    var itemSelected: ((((String, String), String, Int)) -> Void)?
     
     init(strings: PresentationStrings, theme: AuthorizationTheme, displayCodes: Bool) {
         self.displayCodes = displayCodes
@@ -109,12 +116,13 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
         if let currentCell = tableView.dequeueReusableCell(withIdentifier: "CountryCell") {
             cell = currentCell
         } else {
-            cell = UITableViewCell()
+            cell = UITableViewCell(style: .subtitle, reuseIdentifier: "CountryCell")
             let label = UILabel()
             label.font = Font.medium(17.0)
             cell.accessoryView = label
         }
-        cell.textLabel?.text = self.searchResults[indexPath.row].0
+        cell.textLabel?.text = self.searchResults[indexPath.row].0.1
+        cell.detailTextLabel?.text = self.searchResults[indexPath.row].0.0
         if self.displayCodes, let label = cell.accessoryView as? UILabel {
             label.text = "+\(self.searchResults[indexPath.row].2)"
             label.sizeToFit()
@@ -138,14 +146,14 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
     
     private let tableView: UITableView
     
-    private let sections: [(String, [(String, String, Int)])]
+    private let sections: [(String, [((String, String), String, Int)])]
     private let sectionTitles: [String]
     
     private var searchController: UISearchController!
     private var searchResultsController: InnerCoutrySearchResultsController!
     
     var dismiss: (() -> Void)?
-    var itemSelected: (((String, String, Int)) -> Void)?
+    var itemSelected: ((((String, String), String, Int)) -> Void)?
     
     init(strings: PresentationStrings, theme: AuthorizationTheme, displayCodes: Bool) {
         self.strings = strings
@@ -154,15 +162,17 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
         
         self.tableView = UITableView(frame: CGRect(), style: .plain)
         
-        var sections: [(String, [(String, String, Int)])] = []
-        for (name, id, code) in countryNamesAndCodes.sorted(by: { lhs, rhs in
+        let countryNamesAndCodes = localizedContryNamesAndCodes(strings: strings)
+        
+        var sections: [(String, [((String, String), String, Int)])] = []
+        for (names, id, code) in countryNamesAndCodes.sorted(by: { lhs, rhs in
             return lhs.0 < rhs.0
         }) {
-            let title = name.substring(to: name.index(after: name.startIndex)).uppercased()
+            let title = String(names.1[names.1.startIndex ..< names.1.index(after: names.1.startIndex)]).uppercased()
             if sections.isEmpty || sections[sections.count - 1].0 != title {
                 sections.append((title, []))
             }
-            sections[sections.count - 1].1.append((name, id, code))
+            sections[sections.count - 1].1.append((names, id, code))
         }
         self.sections = sections
         var sectionTitles = sections.map { $0.0 }
@@ -279,18 +289,20 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
         if let currentCell = tableView.dequeueReusableCell(withIdentifier: "CountryCell") {
             cell = currentCell
         } else {
-            cell = UITableViewCell()
+            cell = UITableViewCell(style: .subtitle, reuseIdentifier: "CountryCell")
             let label = UILabel()
             label.font = Font.medium(17.0)
             cell.accessoryView = label
         }
-        cell.textLabel?.text = self.sections[indexPath.section].1[indexPath.row].0
+        cell.textLabel?.text = self.sections[indexPath.section].1[indexPath.row].0.1
+        cell.detailTextLabel?.text = self.sections[indexPath.section].1[indexPath.row].0.0
         if self.displayCodes, let label = cell.accessoryView as? UILabel {
             label.text = "+\(self.sections[indexPath.section].1[indexPath.row].2)"
             label.sizeToFit()
             label.textColor = self.theme.primaryColor
         }
         cell.textLabel?.textColor = self.theme.primaryColor
+        cell.detailTextLabel?.textColor = self.theme.primaryColor
         cell.backgroundColor = self.theme.backgroundColor
         cell.selectedBackgroundView?.backgroundColor = self.theme.itemHighlightedBackgroundColor
         return cell
@@ -306,10 +318,10 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
             return
         }
         
-        var results: [(String, String, Int)] = []
+        var results: [((String, String), String, Int)] = []
         for (_, items) in self.sections {
             for item in items {
-                if item.0.lowercased().hasPrefix(normalizedQuery) {
+                if item.0.0.lowercased().hasPrefix(normalizedQuery) || item.0.1.lowercased().hasPrefix(normalizedQuery) {
                     results.append(item)
                 }
             }
@@ -323,10 +335,23 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
 }
 
 final class AuthorizationSequenceCountrySelectionController: ViewController {
-    static func lookupCountryNameById(_ id: String) -> String? {
-        for (name, itemId, _) in countryNamesAndCodes {
+    static func lookupCountryNameById(_ id: String, strings: PresentationStrings) -> String? {
+        for (itemId, _) in countryCodes {
             if id == itemId {
-                return name
+                let locale = localeWithStrings(strings)
+                if let countryName = locale.localizedString(forRegionCode: id) {
+                    return countryName
+                } else {
+                    return nil
+                }
+            }
+        }
+        return nil
+    }
+    static func lookupCountryIdByCode(_ code: Int) -> String? {
+        for (itemId, itemCode) in countryCodes {
+            if itemCode == code {
+                return itemId
             }
         }
         return nil

@@ -36,7 +36,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
     
-    let navigationBar: NavigationBar
+    let navigationBar: NavigationBar?
     
     private var backgroundEffectNode: ASDisplayNode?
     private var containerBackgroundNode: ASImageNode?
@@ -141,7 +141,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    init(account: Account, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar) {
+    init(account: Account, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar?) {
         self.account = account
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
@@ -372,7 +372,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 self.containerNode = containerNode
                 self.scrollContainerNode?.addSubnode(containerNode)
-                self.navigationBar.isHidden = true
+                self.navigationBar?.isHidden = true
             }
             if self.overlayNavigationBar == nil {
                 let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, close: { [weak self] in
@@ -399,7 +399,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if let restrictedNode = self.restrictedNode {
                     self.insertSubnode(restrictedNode, aboveSubnode: self.historyNodeContainer)
                 }
-                self.navigationBar.isHidden = false
+                self.navigationBar?.isHidden = false
             }
             if let overlayNavigationBar = self.overlayNavigationBar {
                 overlayNavigationBar.removeFromSupernode()
@@ -449,18 +449,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 activate = true
                 self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction)
             }
-            self.navigationBar.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
+            self.navigationBar?.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
             self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)
             if activate {
                 self.searchNavigationNode?.activate()
             }
         } else if let _ = self.searchNavigationNode {
             self.searchNavigationNode = nil
-            self.navigationBar.setContentNode(nil, animated: transitionIsAnimated)
+            self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
         }
         
         var dismissedTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
         var immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = false
+        var titleAccessoryPanelHeight: CGFloat?
         if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.titleAccessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
             if self.titleAccessoryPanelNode != titleAccessoryPanelNode {
                  dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
@@ -468,6 +469,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = true
                 self.titleAccessoryPanelContainer.addSubnode(titleAccessoryPanelNode)
             }
+            
+            titleAccessoryPanelHeight = titleAccessoryPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
         } else if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {
             dismissedTitleAccessoryPanelNode = titleAccessoryPanelNode
             self.titleAccessoryPanelNode = nil
@@ -478,7 +481,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputPanelNodeBaseHeight = inputPanelNode.minimalHeight(interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
         }
         
-        let maximumInputNodeHeight = layout.size.height - max(navigationBarHeight, layout.safeInsets.top) - inputPanelNodeBaseHeight
+        var maximumInputNodeHeight = layout.size.height - max(navigationBarHeight, layout.safeInsets.top) - inputPanelNodeBaseHeight
         
         var dismissedInputNode: ChatInputNode?
         var immediatelyLayoutInputNodeAndAnimateAppearance = false
@@ -573,8 +576,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 56.0)))
         
         var titleAccessoryPanelFrame: CGRect?
-        if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {
-            let panelHeight = titleAccessoryPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
+        if let titleAccessoryPanelNode = self.titleAccessoryPanelNode, let panelHeight = titleAccessoryPanelHeight {
             titleAccessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
             insets.top += panelHeight
         }
@@ -828,7 +830,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if displayTopDimNode {
-            let topInset = listInsets.bottom + UIScreenPixel
+            var topInset = listInsets.bottom + UIScreenPixel
+            if let titleAccessoryPanelHeight = titleAccessoryPanelHeight {
+                topInset -= titleAccessoryPanelHeight
+            }
             let topFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: max(0.0, topInset)))
             
             let messageActionSheetTopDimNode: ASDisplayNode
@@ -1556,7 +1561,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let _ = self.messageActionSheetController {
             self.displayMessageActionSheet(stableId: nil, sheetActions: nil, displayContextMenuController: nil)
-            return self.navigationBar.view
+            return self.navigationBar?.view
         }
         
         return nil

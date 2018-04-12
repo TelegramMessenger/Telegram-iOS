@@ -75,8 +75,9 @@ public final class AuthorizationSequenceController: NavigationController {
                     var countryCode: Int32 = 1
                     
                     if let countryId = countryId {
+                        let normalizedId = countryId.uppercased()
                         for (code, idAndName) in countryCodeToIdAndName {
-                            if idAndName.0 == countryId {
+                            if idAndName.0 == normalizedId {
                                 countryCode = Int32(code)
                                 break
                             }

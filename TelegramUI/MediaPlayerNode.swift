@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
+import AVFoundation
 
 private final class MediaPlayerNodeLayer: AVSampleBufferDisplayLayer {
     override func action(forKey event: String) -> CAAction? {

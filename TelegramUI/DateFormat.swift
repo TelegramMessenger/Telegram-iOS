@@ -70,3 +70,26 @@ func stringForFullDate(timestamp: Int32, strings: PresentationStrings, timeForma
             return ""
     }
 }
+
+func stringForDate(timestamp: Int32, strings: PresentationStrings) -> String {
+    let formatter = DateFormatter()
+    formatter.timeStyle = .none
+    formatter.dateStyle = .medium
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.locale = localeWithStrings(strings)
+    return formatter.string(from: Date(timeIntervalSince1970: Double(timestamp)))
+}
+
+func roundDateToDays(_ timestamp: Int32) -> Int32 {
+    let calendar = Calendar(identifier: .gregorian)
+    var components = calendar.dateComponents(Set([.era, .year, .month, .day]), from: Date(timeIntervalSince1970: Double(timestamp)))
+    components.hour = 0
+    components.minute = 0
+    components.second = 0
+    
+    guard let date = calendar.date(from: components) else {
+        assertionFailure()
+        return timestamp
+    }
+    return Int32(date.timeIntervalSince1970)
+}

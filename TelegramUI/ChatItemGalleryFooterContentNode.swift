@@ -119,10 +119,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.actionButton.setImage(actionImage, for: [.normal])
         
         self.textNode = ASTextNode()
+        self.textNode.isLayerBacked = true
         self.authorNameNode = ASTextNode()
         self.authorNameNode.maximumNumberOfLines = 1
+        self.authorNameNode.isLayerBacked = true
+        self.authorNameNode.displaysAsynchronously = false
         self.dateNode = ASTextNode()
         self.dateNode.maximumNumberOfLines = 1
+        self.dateNode.isLayerBacked = true
+        self.dateNode.displaysAsynchronously = false
         
         self.playbackControlButton = HighlightableButtonNode()
         self.playbackControlButton.isHidden = true
@@ -248,34 +253,57 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         var panelHeight: CGFloat = 44.0 + bottomInset
+        panelHeight += contentInset
         if !self.textNode.isHidden {
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
-            let textBottomInset: CGFloat = 8.0
+            let textBottomInset: CGFloat = 8.0 + contentInset
             let textSize = self.textNode.measure(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
             panelHeight += textSize.height + topInset + textBottomInset
-            transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize))
+            self.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
         }
         
-        transition.updateFrame(view: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0)))
-        transition.updateFrame(view: self.deleteButton, frame: CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0)))
+        self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
-        transition.updateFrame(node: self.playbackControlButton, frame: CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0)))
+        self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
         let authorNameSize = self.authorNameNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
         let dateSize = self.dateNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
         
         if authorNameSize.height.isZero {
-            transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height) / 2.0)), size: dateSize))
+            self.dateNode.frame = CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height) / 2.0)), size: dateSize)
         } else {
             let labelsSpacing: CGFloat = 0.0
-            transition.updateFrame(node: self.authorNameNode, frame: CGRect(origin: CGPoint(x: floor((width - authorNameSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0)), size: authorNameSize))
-            transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0) + authorNameSize.height + labelsSpacing), size: dateSize))
+            self.authorNameNode.frame = CGRect(origin: CGPoint(x: floor((width - authorNameSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0)), size: authorNameSize)
+            self.dateNode.frame = CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0) + authorNameSize.height + labelsSpacing), size: dateSize)
         }
         
         return panelHeight
+    }
+    
+    override func animateIn(fromHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: 0.0, y: self.bounds.size.height - fromHeight))
+        self.textNode.alpha = 1.0
+        self.dateNode.alpha = 1.0
+        self.authorNameNode.alpha = 1.0
+        self.deleteButton.alpha = 1.0
+        self.actionButton.alpha = 1.0
+        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+    }
+    
+    override func animateOut(toHeight: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        transition.updateFrame(node: self.textNode, frame: self.textNode.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
+        self.textNode.alpha = 0.0
+        self.dateNode.alpha = 0.0
+        self.authorNameNode.alpha = 0.0
+        self.deleteButton.alpha = 0.0
+        self.actionButton.alpha = 0.0
+        self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in
+            completion()
+        })
     }
     
     @objc func deleteButtonPressed() {

@@ -19,7 +19,14 @@ open class GalleryFooterContentNode: ASDisplayNode {
     var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     var controllerInteraction: GalleryControllerInteraction?
     
-    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         return 0.0
+    }
+    
+    func animateIn(fromHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    }
+    
+    func animateOut(toHeight: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        completion()
     }
 }

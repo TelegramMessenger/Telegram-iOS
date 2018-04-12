@@ -59,7 +59,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, canSetupReply: { _ in
             return false
         }, requestMessageUpdate: { _ in
-        }, automaticMediaDownloadSettings: .none)
+        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings)
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)

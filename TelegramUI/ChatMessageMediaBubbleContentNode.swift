@@ -53,12 +53,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             for media in item.message.media {
                 if let telegramImage = media as? TelegramMediaImage {
                     selectedMedia = telegramImage
-                    automaticDownload = item.controllerInteraction.automaticMediaDownloadSettings.categories.getPhoto(item.message.id.peerId)
+                    automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peer: item.message.peers[item.message.id.peerId], media: telegramImage)
                 } else if let telegramFile = media as? TelegramMediaFile {
                     selectedMedia = telegramFile
-                    if telegramFile.isAnimated {
-                        automaticDownload = item.controllerInteraction.automaticMediaDownloadSettings.categories.getGif(item.message.id.peerId)
-                    }
+                    automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peer: item.message.peers[item.message.id.peerId], media: telegramFile)
                 }
             }
             

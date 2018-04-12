@@ -89,7 +89,12 @@ private let list = PresentationThemeList(
         fillColor: accentColor,
         foregroundColor: .white
     ),
-    controlSecondaryColor: UIColor(rgb: 0xdedede)
+    controlSecondaryColor: UIColor(rgb: 0xdedede),
+    freeInputField: PresentationInputFieldTheme(
+        backgroundColor: UIColor(rgb: 0xd6d6dc),
+        placeholderColor: UIColor(rgb: 0x96979d),
+        primaryColor: .black
+    )
 )
 
 private let chatList = PresentationThemeChatList(

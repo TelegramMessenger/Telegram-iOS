@@ -8,6 +8,8 @@ final class HashtagSearchController: TelegramController {
     private let queue = Queue()
     
     private let account: Account
+    private let peer: Peer?
+    private let query: String
     private var transitionDisposable: Disposable?
     private let openMessageFromSearchDisposable = MetaDisposable()
     
@@ -17,8 +19,10 @@ final class HashtagSearchController: TelegramController {
         return self.displayNode as! HashtagSearchControllerNode
     }
     
-    init(account: Account, peerName: String?, query: String) {
+    init(account: Account, peer: Peer?, query: String) {
         self.account = account
+        self.peer = peer
+        self.query = query
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
@@ -26,35 +30,15 @@ final class HashtagSearchController: TelegramController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
-        if let peerName = peerName {
-            self.title = query + "@" + peerName
-        } else {
-            self.title = query
-        }
+        self.title = query
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
-        let peerId: Signal<PeerId?, NoError>
-        if let peerName = peerName {
-            peerId = resolvePeerByName(account: account, name: peerName)
-                |> take(1)
-        } else {
-            peerId = .single(nil)
-        }
-        
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, timeFormat: self.presentationData.timeFormat)
-        let foundMessages: Signal<[ChatListSearchEntry], NoError> = peerId
-            |> mapToSignal { peerId -> Signal<[ChatListSearchEntry], NoError> in
-                let location: SearchMessagesLocation
-                if let peerId = peerId {
-                    location = .peer(peerId: peerId, fromId: nil, tags: nil)
-                } else {
-                    location = .general
-                }
-                let search = searchMessages(account: account, location: location, query: query)
-                return search
-                    |> map { return $0.map({ .message($0, chatListPresentationData) }) }
-            }
         
+        let location: SearchMessagesLocation = .general
+        let search = searchMessages(account: account, location: location, query: query)
+        let foundMessages: Signal<[ChatListSearchEntry], NoError> = search
+            |> map { return $0.map({ .message($0, chatListPresentationData) }) }
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { peer in
             
@@ -99,7 +83,7 @@ final class HashtagSearchController: TelegramController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = HashtagSearchControllerNode(account: self.account, theme: self.presentationData.theme)
+        self.displayNode = HashtagSearchControllerNode(account: self.account, peer: self.peer, query: self.query, theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         self.displayNodeDidLoad()
     }

@@ -922,7 +922,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     }
     aboutLinkActionImpl = { [weak controller] action, itemLink in
         if let controller = controller {
-            handlePeerInfoAboutTextAction(account: account, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+            handlePeerInfoAboutTextAction(account: account, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
         }
     }
     return controller

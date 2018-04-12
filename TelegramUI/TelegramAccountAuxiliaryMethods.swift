@@ -23,6 +23,8 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
         return fetchExternalMusicAlbumArtResource(account: account, resource: resource)
     } else if let resource = resource as? ICloudFileResource {
         return fetchICloudFileResource(resource: resource)
+    } else if let resource = resource as? SecureIdLocalImageResource {
+        return fetchSecureIdLocalImageResource(postbox: account.postbox, resource: resource)
     }
     return nil
 }, fetchResourceMediaReferenceHash: { resource in

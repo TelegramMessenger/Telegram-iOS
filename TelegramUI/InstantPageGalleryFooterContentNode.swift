@@ -55,7 +55,7 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         var panelHeight: CGFloat = 44.0 + bottomInset
         if !self.textNode.isHidden {
             let sideInset: CGFloat = leftInset + 8.0

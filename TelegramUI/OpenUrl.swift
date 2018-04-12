@@ -225,6 +225,42 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                         convertedUrl = result
                     }
                 }
+            } else if parsedUrl.host == "passport" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var botId: Int32?
+                    var scope: String?
+                    var publicKey: String?
+                    var opaquePayload = Data()
+                    var errors: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "bot_id" {
+                                    botId = Int32(value)
+                                } else if queryItem.name == "scope" {
+                                    scope = value
+                                } else if queryItem.name == "public_key" {
+                                    publicKey = value
+                                } else if queryItem.name == "payload" {
+                                    if let data = value.data(using: .utf8) {
+                                        opaquePayload = data
+                                    }
+                                } else if queryItem.name == "errors" {
+                                    errors = value
+                                }
+                            }
+                        }
+                    }
+                    
+                    if let botId = botId, let scope = scope, let publicKey = publicKey {
+                        let controller = SecureIdAuthController(account: account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, opaquePayload: opaquePayload, errors: errors ?? "")
+                        
+                        if let navigationController = navigationController {
+                            navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                            (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: nil)
+                        }
+                    }
+                }
             }
             
             if let convertedUrl = convertedUrl {
@@ -239,20 +275,26 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                                     let _ = (account.postbox.loadedPeerWithId(peerId)
                                     |> deliverOnMainQueue).start(next: { peer in
                                         if let infoController = peerInfoController(account: account, peer: peer) {
+                                            if let navigationController = navigationController {
+                                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                            }
                                             navigationController?.pushViewController(infoController)
                                         }
                                     })
                                 case .chat:
                                     if let navigationController = navigationController {
+                                        navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                         navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
                                     }
                                 case .withBotStartPayload:
                                     if let navigationController = navigationController {
+                                        navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                         navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
                                     }
                             }
                         }, present: { c, a in
                             if let navigationController = navigationController {
+                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                 (navigationController.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
                             }
                         })

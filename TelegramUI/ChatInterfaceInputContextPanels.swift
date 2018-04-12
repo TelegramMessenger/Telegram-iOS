@@ -13,6 +13,8 @@ private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult
             return 3
         case .contextRequestResult:
             return 4
+        case .emojis:
+            return 5
     }
 }
 
@@ -46,6 +48,16 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                 return currentPanel
             } else {
                 let panel = HashtagChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                panel.interfaceInteraction = interfaceInteraction
+                panel.updateResults(results)
+                return panel
+            }
+        case let .emojis(results):
+            if let currentPanel = currentPanel as? EmojisChatInputContextPanelNode {
+                currentPanel.updateResults(results)
+                return currentPanel
+            } else {
+                let panel = EmojisChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 panel.interfaceInteraction = interfaceInteraction
                 panel.updateResults(results)
                 return panel
