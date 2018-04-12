@@ -86,7 +86,7 @@ func generateChatInputTextEntities(_ text: NSAttributedString) -> [MessageTextEn
             } else if key == ChatTextInputAttributes.italic {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Italic))
             } else if key == ChatTextInputAttributes.monospace {
-                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Pre))
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Code))
             } else if key == ChatTextInputAttributes.textMention, let value = value as? ChatTextInputTextMentionAttribute {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextMention(peerId: value.peerId)))
             }
