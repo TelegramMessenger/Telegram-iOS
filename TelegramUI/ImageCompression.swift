@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import UIKit
 
 func compressImageToJPEG(_ image: UIImage, quality: Float) -> Data? {
     let data = NSMutableData()

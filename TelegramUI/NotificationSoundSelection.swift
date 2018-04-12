@@ -3,6 +3,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import AVFoundation
 
 private struct NotificationSoundSelectionArguments {
     let account: Account

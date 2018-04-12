@@ -67,6 +67,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var enqueuedTransitions: [(ChatRecentActionsHistoryTransition, Bool)] = []
     
     private var historyDisposable: Disposable?
+    private let resolvePeerByNameDisposable = MetaDisposable()
     
     init(account: Account, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
         self.account = account
@@ -181,10 +182,31 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     openChatInstantPage(account: strongSelf.account, message: message, navigationController: navigationController)
                 }
         }, openHashtag: { [weak self] peerName, hashtag in
-            if let strongSelf = self, !hashtag.isEmpty {
-                let searchController = HashtagSearchController(account: strongSelf.account, peerName: peerName, query: hashtag)
-                strongSelf.pushController(searchController)
+            guard let strongSelf = self else {
+                return
             }
+            let resolveSignal: Signal<Peer?, NoError>
+            if let peerName = peerName {
+                resolveSignal = resolvePeerByName(account: strongSelf.account, name: peerName)
+                    |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+                        if let peerId = peerId {
+                            return account.postbox.loadedPeerWithId(peerId)
+                                |> map(Optional.init)
+                        } else {
+                            return .single(nil)
+                        }
+                }
+            } else {
+                resolveSignal = account.postbox.loadedPeerWithId(strongSelf.peer.id)
+                    |> map(Optional.init)
+            }
+            strongSelf.resolvePeerByNameDisposable.set((resolveSignal
+            |> deliverOnMainQueue).start(next: { peer in
+                if let strongSelf = self, !hashtag.isEmpty {
+                    let searchController = HashtagSearchController(account: strongSelf.account, peer: peer, query: hashtag)
+                    strongSelf.pushController(searchController)
+                }
+            }))
         }, updateInputState: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action in
             if let strongSelf = self {
@@ -296,7 +318,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                let searchController = HashtagSearchController(account: strongSelf.account, peerName: nil, query: hashtag)
+                                let searchController = HashtagSearchController(account: strongSelf.account, peer: strongSelf.peer, query: hashtag)
                                 strongSelf.pushController(searchController)
                             }
                         }),
@@ -392,6 +414,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.historyDisposable?.dispose()
         self.navigationActionDisposable.dispose()
         self.galleryHiddenMesageAndMediaDisposable.dispose()
+        self.resolvePeerByNameDisposable.dispose()
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

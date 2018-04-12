@@ -17,7 +17,8 @@ final class InstantPageLayout {
     func flattenedItemsWithOrigin(_ origin: CGPoint) -> [InstantPageItem] {
         return self.items.map({ item in
             var item = item
-            item.frame = item.frame.offsetBy(dx: origin.x, dy: origin.y)
+            let itemFrame = item.frame.offsetBy(dx: origin.x, dy: origin.y)
+            item.frame = itemFrame
             return item
         })
     }
@@ -177,7 +178,8 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, block: InstantPageBlo
                 textItem.frame = textItem.frame.offsetBy(dx: horizontalInset + indexSpacing + maxIndexWidth, dy:  contentSize.height)
                 
                 contentSize.height += textItem.frame.size.height
-                indexItems[i].frame = indexItems[i].frame.offsetBy(dx: horizontalInset, dy: textItem.frame.origin.y)
+                let itemFrame = indexItems[i].frame.offsetBy(dx: horizontalInset, dy: textItem.frame.origin.y)
+                indexItems[i].frame = itemFrame
                 listItems.append(indexItems[i])
                 listItems.append(textItem)
             }

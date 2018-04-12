@@ -359,6 +359,36 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                     attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, fixedFont: titleFont)
                 case let .botDomainAccessGranted(domain):
                     attributedString = NSAttributedString(string: "Granted access to \(domain)", font: titleFont, textColor: primaryTextColor)
+                case let .botSentSecureValues(types):
+                    var typesString = ""
+                    for type in types {
+                        if !typesString.isEmpty {
+                            typesString.append(", ")
+                        }
+                        switch type {
+                            case .personalDetails:
+                                typesString.append("personal detail")
+                            case .passport:
+                                typesString.append("passport")
+                            case .driversLicense:
+                                typesString.append("passport")
+                            case .idCard:
+                                typesString.append("ID card")
+                            case .address:
+                                typesString.append("residential address")
+                            case .bankStatement:
+                                typesString.append("bank statement")
+                            case .utilityBill:
+                                typesString.append("utility bill")
+                            case .rentalAgreement:
+                                typesString.append("rental agreement")
+                            case .phone:
+                                typesString.append("phone number")
+                            case .email:
+                                typesString.append("email address")
+                        }
+                    }
+                    attributedString = NSAttributedString(string: "Sent \(typesString)", font: titleFont, textColor: primaryTextColor)
                 case .unknown:
                     attributedString = nil
             }

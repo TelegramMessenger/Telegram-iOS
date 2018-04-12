@@ -369,19 +369,13 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 if let file = media as? TelegramMediaFile {
                     if file.isVideo {
                         var automaticDownload = false
-                        if file.isAnimated {
-                            automaticDownload = automaticDownloadSettings.categories.getGif(message.id.peerId)
-                        } else if file.isInstantVideo {
-                            automaticDownload = automaticDownloadSettings.categories.getInstantVideo(message.id.peerId)
-                        }
+                        automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peer: message.peers[message.id.peerId], media: file)
                         let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, file, automaticDownload, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else {
                         var automaticDownload = false
-                        if file.isVoice {
-                            automaticDownload = automaticDownloadSettings.categories.getVoice(message.id.peerId)
-                        }
+                        automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peer: message.peers[message.id.peerId], media: file)
                         
                         let statusType: ChatMessageDateAndStatusType
                         if message.effectivelyIncoming(account.peerId) {
@@ -401,7 +395,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 } else if let image = media as? TelegramMediaImage {
                     if !flags.contains(.preferMediaInline) {
-                        let automaticDownload = automaticDownloadSettings.categories.getPhoto(message.id.peerId)
+                        let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peer: message.peers[message.id.peerId], media: image)
                         let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, image, automaticDownload, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
@@ -413,7 +407,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                     }
                 } else if let image = media as? TelegramMediaWebFile {
-                    let automaticDownload = automaticDownloadSettings.categories.getPhoto(message.id.peerId)
+                    let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peer: message.peers[message.id.peerId], media: image)
                     let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme, presentationData.strings, message, image, automaticDownload, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout

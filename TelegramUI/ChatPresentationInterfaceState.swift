@@ -8,6 +8,7 @@ enum ChatPresentationInputQueryKind: Int32 {
     case mention
     case command
     case contextRequest
+    case stickerSearch
 }
 
 struct ChatInputQueryMentionTypes: OptionSet {
@@ -27,6 +28,7 @@ enum ChatPresentationInputQuery: Hashable, Equatable {
     case hashtag(String)
     case mention(query: String, types: ChatInputQueryMentionTypes)
     case command(String)
+    case stickerSearch(String)
     case contextRequest(addressName: String, query: String)
     
     var kind: ChatPresentationInputQueryKind {
@@ -41,6 +43,8 @@ enum ChatPresentationInputQuery: Hashable, Equatable {
                 return .command
             case .contextRequest:
                 return .contextRequest
+            case .stickerSearch:
+                return .stickerSearch
         }
     }
     
@@ -56,6 +60,8 @@ enum ChatPresentationInputQuery: Hashable, Equatable {
                 return 4 &+ value.hashValue
             case let .contextRequest(addressName, query):
                 return 5 &+ addressName.hashValue &* 31 + query.hashValue
+            case let .stickerSearch(value):
+                return 6 &+ value.hashValue
         }
     }
     
@@ -85,6 +91,12 @@ enum ChatPresentationInputQuery: Hashable, Equatable {
                 } else {
                     return false
                 }
+            case let .stickerSearch(value):
+                if case .stickerSearch(value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .contextRequest(addressName, query):
                 if case .contextRequest(addressName, query) = rhs {
                     return true
@@ -100,6 +112,7 @@ enum ChatPresentationInputQueryResult: Equatable {
     case hashtags([String])
     case mentions([Peer])
     case commands([PeerCommand])
+    case emojis([(String, String)])
     case contextRequestResult(Peer?, ChatContextResultCollection?)
     
     static func ==(lhs: ChatPresentationInputQueryResult, rhs: ChatPresentationInputQueryResult) -> Bool {
@@ -135,6 +148,20 @@ enum ChatPresentationInputQueryResult: Equatable {
                 if case let .commands(rhsCommands) = rhs {
                     if lhsCommands != rhsCommands {
                         return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
+            case let .emojis(lhsValue):
+                if case let .emojis(rhsValue) = rhs {
+                    if lhsValue.count != rhsValue.count {
+                        return false
+                    }
+                    for i in 0 ..< lhsValue.count {
+                        if lhsValue[i] != rhsValue[i] {
+                            return false
+                        }
                     }
                     return true
                 } else {

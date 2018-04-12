@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import AVFoundation
 
 final class ChatContextResultPeekContent: PeekControllerContent {
     let account: Account

@@ -22,7 +22,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode {
     
     var textUpdated: (() -> Void)?
     
-    init(title: String, placeholder: String) {
+    init(title: String, placeholder: String, text: String = "") {
         self.title = title
         self.placeholder = placeholder
         
@@ -32,6 +32,8 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode {
         self.textField = TextFieldNode()
         self.textField.textField.font = titleFont
         self.textField.textField.returnKeyType = .next
+        
+        self.textField.textField.text = text
 
         super.init(needsBackground: true)
         

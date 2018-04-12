@@ -1,0 +1,135 @@
+import Foundation
+import AsyncDisplayKit
+import Display
+import Postbox
+import TelegramCore
+
+private let passwordFont = Font.regular(16.0)
+private let buttonFont = Font.regular(17.0)
+
+final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode, UITextFieldDelegate {
+    private let fieldBackgroundNode: ASDisplayNode
+    private let fieldNodes: [SecureIdAuthFormFieldNode]
+    private let headerNode: ImmediateTextNode
+    private let textNode: ImmediateTextNode
+    
+    private var validLayout: CGFloat?
+    
+    init(theme: PresentationTheme, strings: PresentationStrings, peer: Peer, privacyPolicyUrl: String?, form: SecureIdForm, errors: [SecureIdErrorKey: [String]], openField: @escaping (SecureIdParsedRequestedFormField) -> Void, openURL: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void) {
+        self.fieldBackgroundNode = ASDisplayNode()
+        self.fieldBackgroundNode.isLayerBacked = true
+        self.fieldBackgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
+        
+        var fieldNodes: [SecureIdAuthFormFieldNode] = []
+        
+        for field in parseRequestedFormFields(form.requestedFields) {
+            fieldNodes.append(SecureIdAuthFormFieldNode(theme: theme, strings: strings, field: field, values: form.values, errors: errors, selected: {
+                openField(field)
+            }))
+        }
+        
+        self.fieldNodes = fieldNodes
+        
+        self.headerNode = ImmediateTextNode()
+        self.headerNode.displaysAsynchronously = false
+        self.headerNode.attributedText = NSAttributedString(string: "REQUESTED INFORMATION", font: Font.regular(14.0), textColor: theme.list.sectionHeaderTextColor)
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.displaysAsynchronously = false
+        self.textNode.maximumNumberOfLines = 0
+        self.textNode.lineSpacing = 0.2
+        let text = NSMutableAttributedString()
+        let textData = strings.SecureId_FormPolicy(strings.SecureId_FormPolicyLink(peer.displayTitle).0, "@" + (peer.addressName ?? ""))
+        text.append(NSAttributedString(string: textData.0, font: Font.regular(14.0), textColor: theme.list.freeTextColor))
+        for (index, range) in textData.1 {
+            if index == 0 {
+                text.addAttribute(.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue, range: range)
+                text.addAttribute(.foregroundColor, value: theme.list.itemAccentColor, range: range)
+                if let privacyPolicyUrl = privacyPolicyUrl {
+                    text.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Url), value: privacyPolicyUrl, range: range)
+                }
+            }
+        }
+        self.textNode.attributedText = text
+        
+        super.init()
+        
+        self.textNode.linkHighlightColor = theme.list.itemAccentColor.withAlphaComponent(0.5)
+        self.textNode.highlightAttributeAction = { attributes in
+            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] {
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)
+            } else if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] {
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)
+            } else {
+                return nil
+            }
+        }
+        self.textNode.tapAttributeAction = { attributes in
+            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Url)] as? String {
+                openURL(url)
+            } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+                openMention(mention)
+            }
+        }
+        
+        self.addSubnode(self.headerNode)
+        self.addSubnode(self.fieldBackgroundNode)
+        self.addSubnode(self.textNode)
+        self.fieldNodes.forEach(self.addSubnode)
+    }
+    
+    func updateValues(_ values: [SecureIdValueWithContext], errors: [SecureIdErrorKey: [String]]) {
+        for fieldNode in self.fieldNodes {
+            fieldNode.updateValues(values, errors: errors)
+        }
+    }
+    
+    func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> SecureIdAuthContentLayout {
+        let transition = self.validLayout == nil ? .immediate : transition
+        self.validLayout = width
+        
+        var contentHeight: CGFloat = 0.0
+        
+        let headerSpacing: CGFloat = 6.0
+        let headerSize = self.headerNode.updateLayout(CGSize(width: width - 14.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(x: 14.0, y: 0.0), size: headerSize))
+        contentHeight += headerSize.height + headerSpacing
+        
+        let fieldsOrigin = contentHeight
+        for i in 0 ..< self.fieldNodes.count {
+            let fieldHeight = self.fieldNodes[i].updateLayout(width: width, hasPrevious: i != 0, hasNext: i != self.fieldNodes.count - 1, transition: transition)
+            transition.updateFrame(node: self.fieldNodes[i], frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: width, height: fieldHeight)))
+            contentHeight += fieldHeight
+        }
+        
+        let fieldsHeight = contentHeight - fieldsOrigin
+        
+        let textSpacing: CGFloat = 6.0
+        contentHeight += textSpacing
+        
+        let textSize = self.textNode.updateLayout(CGSize(width: width - 14.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: 14.0, y: contentHeight), size: textSize))
+        contentHeight += textSize.height
+        
+        transition.updateFrame(node: self.fieldBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: fieldsOrigin), size: CGSize(width: width, height: fieldsHeight)))
+        
+        return SecureIdAuthContentLayout(height: contentHeight, centerOffset: floor((contentHeight) / 2.0) - 34.0)
+    }
+    
+    func animateIn() {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+    }
+    
+    func animateOut(completion: @escaping () -> Void) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+            completion()
+        })
+    }
+    
+    func didAppear() {
+    }
+    
+    func willDisappear() {
+    }
+}
+

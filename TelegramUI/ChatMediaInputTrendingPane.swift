@@ -80,8 +80,10 @@ private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], ins
     var result: [TrendingPaneEntry] = []
     var index = 0
     for item in trendingEntries {
-        result.append(TrendingPaneEntry(index: index, info: item.info, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread))
-        index += 1
+        if !installedPacks.contains(item.info.id) {
+            result.append(TrendingPaneEntry(index: index, info: item.info, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread))
+            index += 1
+        }
     }
     return result
 }

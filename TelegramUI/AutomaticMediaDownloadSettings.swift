@@ -3,160 +3,130 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 
-public struct AutomaticMediaDownloadCategoryPeers: PostboxCoding, Equatable {
-    public let privateChats: Bool
-    public let groupsAndChannels: Bool
+public struct AutomaticMediaDownloadCategory: PostboxCoding, Equatable {
+    public var cellular: Bool
+    public var wifi: Bool
+    public var sizeLimit: Int32
     
-    public init(privateChats: Bool, groupsAndChannels: Bool) {
-        self.privateChats = privateChats
-        self.groupsAndChannels = groupsAndChannels
+    public init(cellular: Bool, wifi: Bool, sizeLimit: Int32) {
+        self.cellular = cellular
+        self.wifi = wifi
+        self.sizeLimit = sizeLimit
     }
     
     public init(decoder: PostboxDecoder) {
-        self.privateChats = decoder.decodeInt32ForKey("p", orElse: 0) != 0
-        self.groupsAndChannels = decoder.decodeInt32ForKey("g", orElse: 0) != 0
+        self.cellular = decoder.decodeInt32ForKey("cellular", orElse: 0) != 0
+        self.wifi = decoder.decodeInt32ForKey("wifi", orElse: 0) != 0
+        self.sizeLimit = decoder.decodeInt32ForKey("sizeLimit", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.privateChats ? 1 : 0, forKey: "p")
-        encoder.encodeInt32(self.groupsAndChannels ? 1 : 0, forKey: "g")
-    }
-    
-    public func withUpdatedPrivateChats(_ privateChats: Bool) -> AutomaticMediaDownloadCategoryPeers {
-        return AutomaticMediaDownloadCategoryPeers(privateChats: privateChats, groupsAndChannels: self.groupsAndChannels)
-    }
-    
-    public func withUpdatedGroupsAndChannels(_ groupsAndChannels: Bool) -> AutomaticMediaDownloadCategoryPeers {
-        return AutomaticMediaDownloadCategoryPeers(privateChats: self.privateChats, groupsAndChannels: groupsAndChannels)
-    }
-    
-    public static func ==(lhs: AutomaticMediaDownloadCategoryPeers, rhs: AutomaticMediaDownloadCategoryPeers) -> Bool {
-        if lhs.privateChats != rhs.privateChats {
-            return false
-        }
-        if lhs.groupsAndChannels != rhs.groupsAndChannels {
-            return false
-        }
-        return true
+        encoder.encodeInt32(self.cellular ? 1 : 0, forKey: "cellular")
+        encoder.encodeInt32(self.wifi ? 1 : 0, forKey: "wifi")
+        encoder.encodeInt32(self.sizeLimit, forKey: "sizeLimit")
     }
 }
 
-public struct AutomaticMediaDownloadCategories: PostboxCoding, Equatable {
-    public let photo: AutomaticMediaDownloadCategoryPeers
-    public let voice: AutomaticMediaDownloadCategoryPeers
-    public let instantVideo: AutomaticMediaDownloadCategoryPeers
-    public let gif: AutomaticMediaDownloadCategoryPeers
+public struct AutomaticMediaDownloadCategories: Equatable, PostboxCoding {
+    public var photo: AutomaticMediaDownloadCategory
+    public var video: AutomaticMediaDownloadCategory
+    public var file: AutomaticMediaDownloadCategory
+    public var voiceMessage: AutomaticMediaDownloadCategory
+    public var videoMessage: AutomaticMediaDownloadCategory
     
-    public func getPhoto(_ peerId: PeerId) -> Bool {
-        if peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudUser {
-            return self.photo.privateChats
-        } else {
-            return self.photo.groupsAndChannels
-        }
-    }
-    
-    public func getVoice(_ peerId: PeerId) -> Bool {
-        if peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudUser {
-            return self.voice.privateChats
-        } else {
-            return self.voice.groupsAndChannels
-        }
-    }
-    
-    public func getInstantVideo(_ peerId: PeerId) -> Bool {
-        if peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudUser {
-            return self.instantVideo.privateChats
-        } else {
-            return self.instantVideo.groupsAndChannels
-        }
-    }
-    
-    public func getGif(_ peerId: PeerId) -> Bool {
-        if peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudUser {
-            return self.gif.privateChats
-        } else {
-            return self.gif.groupsAndChannels
-        }
-    }
-    
-    public init(photo: AutomaticMediaDownloadCategoryPeers, voice: AutomaticMediaDownloadCategoryPeers, instantVideo: AutomaticMediaDownloadCategoryPeers, gif: AutomaticMediaDownloadCategoryPeers) {
+    public init(photo: AutomaticMediaDownloadCategory, video: AutomaticMediaDownloadCategory, file: AutomaticMediaDownloadCategory, voiceMessage: AutomaticMediaDownloadCategory, videoMessage: AutomaticMediaDownloadCategory) {
         self.photo = photo
-        self.voice = voice
-        self.instantVideo = instantVideo
-        self.gif = gif
+        self.video = video
+        self.file = file
+        self.voiceMessage = voiceMessage
+        self.videoMessage = videoMessage
     }
     
     public init(decoder: PostboxDecoder) {
-        self.photo = decoder.decodeObjectForKey("p", decoder: { AutomaticMediaDownloadCategoryPeers(decoder: $0) }) as! AutomaticMediaDownloadCategoryPeers
-        self.voice = decoder.decodeObjectForKey("v", decoder: { AutomaticMediaDownloadCategoryPeers(decoder: $0) }) as! AutomaticMediaDownloadCategoryPeers
-        self.instantVideo = decoder.decodeObjectForKey("iv", decoder: { AutomaticMediaDownloadCategoryPeers(decoder: $0) }) as! AutomaticMediaDownloadCategoryPeers
-        self.gif = decoder.decodeObjectForKey("g", decoder: { AutomaticMediaDownloadCategoryPeers(decoder: $0) }) as! AutomaticMediaDownloadCategoryPeers
+        self.photo = decoder.decodeObjectForKey("photo", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
+        self.video = decoder.decodeObjectForKey("video", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
+        self.file = decoder.decodeObjectForKey("file", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
+        self.voiceMessage = decoder.decodeObjectForKey("voiceMessage", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
+        self.videoMessage = decoder.decodeObjectForKey("videoMessage", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.photo, forKey: "p")
-        encoder.encodeObject(self.voice, forKey: "v")
-        encoder.encodeObject(self.instantVideo, forKey: "iv")
-        encoder.encodeObject(self.gif, forKey: "g")
+        encoder.encodeObject(self.photo, forKey: "photo")
+        encoder.encodeObject(self.video, forKey: "video")
+        encoder.encodeObject(self.file, forKey: "file")
+        encoder.encodeObject(self.voiceMessage, forKey: "voiceMessage")
+        encoder.encodeObject(self.videoMessage, forKey: "videoMessage")
+    }
+}
+
+public struct AutomaticMediaDownloadPeers: Equatable, PostboxCoding {
+    public var contacts: AutomaticMediaDownloadCategories
+    public var otherPrivate: AutomaticMediaDownloadCategories
+    public var groups: AutomaticMediaDownloadCategories
+    public var channels: AutomaticMediaDownloadCategories
+    
+    public init(contacts: AutomaticMediaDownloadCategories, otherPrivate: AutomaticMediaDownloadCategories, groups: AutomaticMediaDownloadCategories, channels: AutomaticMediaDownloadCategories) {
+        self.contacts = contacts
+        self.otherPrivate = otherPrivate
+        self.groups = groups
+        self.channels = channels
     }
     
-    public func withUpdatedPhoto(_ photo: AutomaticMediaDownloadCategoryPeers) -> AutomaticMediaDownloadCategories {
-        return AutomaticMediaDownloadCategories(photo: photo, voice: self.voice, instantVideo: self.instantVideo, gif: self.gif)
+    public init(decoder: PostboxDecoder) {
+        self.contacts = decoder.decodeObjectForKey("contacts", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
+        self.otherPrivate = decoder.decodeObjectForKey("otherPrivate", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
+        self.groups = decoder.decodeObjectForKey("groups", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
+        self.channels = decoder.decodeObjectForKey("channels", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
     }
     
-    public func withUpdatedVoice(_ voice: AutomaticMediaDownloadCategoryPeers) -> AutomaticMediaDownloadCategories {
-        return AutomaticMediaDownloadCategories(photo: self.photo, voice: voice, instantVideo: self.instantVideo, gif: self.gif)
-    }
-    
-    public func withUpdatedInstantVideo(_ instantVideo: AutomaticMediaDownloadCategoryPeers) -> AutomaticMediaDownloadCategories {
-        return AutomaticMediaDownloadCategories(photo: self.photo, voice: self.voice, instantVideo: instantVideo, gif: self.gif)
-    }
-    
-    public func withUpdatedGif(_ gif: AutomaticMediaDownloadCategoryPeers) -> AutomaticMediaDownloadCategories {
-        return AutomaticMediaDownloadCategories(photo: self.photo, voice: self.voice, instantVideo: self.instantVideo, gif: gif)
-    }
-    
-    public static func ==(lhs: AutomaticMediaDownloadCategories, rhs: AutomaticMediaDownloadCategories) -> Bool {
-        if lhs.photo != rhs.photo {
-            return false
-        }
-        if lhs.voice != rhs.voice {
-            return false
-        }
-        if lhs.instantVideo != rhs.instantVideo {
-            return false
-        }
-        if lhs.gif != rhs.gif {
-            return false
-        }
-        return true
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObject(self.contacts, forKey: "contacts")
+        encoder.encodeObject(self.otherPrivate, forKey: "otherPrivate")
+        encoder.encodeObject(self.groups, forKey: "groups")
+        encoder.encodeObject(self.channels, forKey: "channels")
     }
 }
 
 public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
-    public let categories: AutomaticMediaDownloadCategories
-    public let saveIncomingPhotos: Bool
+    public var masterEnabled: Bool
+    public var peers: AutomaticMediaDownloadPeers
+    public var autoplayGifs: Bool
+    public var saveIncomingPhotos: Bool
     
     public static var defaultSettings: AutomaticMediaDownloadSettings {
-        return AutomaticMediaDownloadSettings(categories: AutomaticMediaDownloadCategories(photo: AutomaticMediaDownloadCategoryPeers(privateChats: true, groupsAndChannels: true), voice: AutomaticMediaDownloadCategoryPeers(privateChats: true, groupsAndChannels: true), instantVideo: AutomaticMediaDownloadCategoryPeers(privateChats: true, groupsAndChannels: true), gif: AutomaticMediaDownloadCategoryPeers(privateChats: true, groupsAndChannels: true)), saveIncomingPhotos: false)
+        let defaultCategory = AutomaticMediaDownloadCategories(
+            photo: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: Int32.max),
+            video: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
+            file: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
+            voiceMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: Int32.max),
+            videoMessage: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: Int32.max)
+        )
+        return AutomaticMediaDownloadSettings(masterEnabled: true, peers: AutomaticMediaDownloadPeers(
+            contacts: defaultCategory,
+            otherPrivate: defaultCategory,
+            groups: defaultCategory,
+            channels: defaultCategory
+        ), autoplayGifs: true, saveIncomingPhotos: false)
     }
     
-    public static var none: AutomaticMediaDownloadSettings {
-        return AutomaticMediaDownloadSettings(categories: AutomaticMediaDownloadCategories(photo: AutomaticMediaDownloadCategoryPeers(privateChats: false, groupsAndChannels: false), voice: AutomaticMediaDownloadCategoryPeers(privateChats: false, groupsAndChannels: false), instantVideo: AutomaticMediaDownloadCategoryPeers(privateChats: false, groupsAndChannels: false), gif: AutomaticMediaDownloadCategoryPeers(privateChats: false, groupsAndChannels: false)), saveIncomingPhotos: false)
-    }
-    
-    init(categories: AutomaticMediaDownloadCategories, saveIncomingPhotos: Bool) {
-        self.categories = categories
+    init(masterEnabled: Bool, peers: AutomaticMediaDownloadPeers, autoplayGifs: Bool, saveIncomingPhotos: Bool) {
+        self.masterEnabled = masterEnabled
+        self.peers = peers
+        self.autoplayGifs = autoplayGifs
         self.saveIncomingPhotos = saveIncomingPhotos
     }
     
     public init(decoder: PostboxDecoder) {
-        self.categories = decoder.decodeObjectForKey("c", decoder: { AutomaticMediaDownloadCategories(decoder: $0) }) as! AutomaticMediaDownloadCategories
+        self.masterEnabled = decoder.decodeInt32ForKey("masterEnabled", orElse: 1) != 0
+        self.peers = (decoder.decodeObjectForKey("peers", decoder: AutomaticMediaDownloadPeers.init(decoder:)) as? AutomaticMediaDownloadPeers) ?? AutomaticMediaDownloadSettings.defaultSettings.peers
+        self.autoplayGifs = decoder.decodeInt32ForKey("autoplayGifs", orElse: 1) != 0
         self.saveIncomingPhotos = decoder.decodeInt32ForKey("siph", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.categories, forKey: "c")
+        encoder.encodeInt32(self.masterEnabled ? 1 : 0, forKey: "autoplayGifs")
+        encoder.encodeObject(self.peers, forKey: "peers")
+        encoder.encodeInt32(self.autoplayGifs ? 1 : 0, forKey: "autoplayGifs")
         encoder.encodeInt32(self.saveIncomingPhotos ? 1 : 0, forKey: "siph")
     }
     
@@ -166,18 +136,6 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
         } else {
             return false
         }
-    }
-    
-    public static func ==(lhs: AutomaticMediaDownloadSettings, rhs: AutomaticMediaDownloadSettings) -> Bool {
-        return lhs.categories == rhs.categories && lhs.saveIncomingPhotos == rhs.saveIncomingPhotos
-    }
-    
-    func withUpdatedCategories(_ categories: AutomaticMediaDownloadCategories) -> AutomaticMediaDownloadSettings {
-        return AutomaticMediaDownloadSettings(categories: categories, saveIncomingPhotos: self.saveIncomingPhotos)
-    }
-    
-    func withUpdatedSaveIncomingPhotos(_ saveIncomingPhotos: Bool) -> AutomaticMediaDownloadSettings {
-        return AutomaticMediaDownloadSettings(categories: self.categories, saveIncomingPhotos: saveIncomingPhotos)
     }
 }
 
@@ -206,5 +164,68 @@ func updateMediaDownloadSettingsInteractively(postbox: Postbox, _ f: @escaping (
             let updated = f(currentSettings)
             return updated
         })
+    }
+}
+
+private func categoriesForPeer(_ peer: Peer, settings: AutomaticMediaDownloadSettings) -> AutomaticMediaDownloadCategories {
+    if let _ = peer as? TelegramUser {
+        return settings.peers.contacts
+    } else if let _ = peer as? TelegramSecretChat {
+        return settings.peers.contacts
+    } else if let channel = peer as? TelegramChannel {
+        if case .broadcast = channel.info {
+            return settings.peers.channels
+        } else {
+            return settings.peers.groups
+        }
+    } else {
+        return settings.peers.channels
+    }
+}
+
+private func categoryForPeerAndMedia(settings: AutomaticMediaDownloadSettings, peer: Peer, media: Media) -> (AutomaticMediaDownloadCategory, Int32?)? {
+    let categories = categoriesForPeer(peer, settings: settings)
+    if let _ = media as? TelegramMediaImage {
+        return (categories.photo, nil)
+    } else if let file = media as? TelegramMediaFile {
+        for attribute in file.attributes {
+            switch attribute {
+                case let .Video(_, _, flags):
+                    if flags.contains(.instantRoundVideo) {
+                        return (categories.videoMessage, file.size.flatMap(Int32.init))
+                    } else {
+                        return (categories.video, file.size.flatMap(Int32.init))
+                    }
+                case let .Audio(isVoice, _, _, _, _):
+                    if isVoice {
+                        return (categories.voiceMessage, file.size.flatMap(Int32.init))
+                    }
+                default:
+                    break
+            }
+        }
+        return (categories.file, file.size.flatMap(Int32.init))
+    } else {
+        return nil
+    }
+}
+
+public func shouldDownloadMediaAutomatically(settings: AutomaticMediaDownloadSettings, peer: Peer?, media: Media) -> Bool {
+    if !settings.masterEnabled {
+        return false
+    }
+    guard let peer = peer else {
+        return false
+    }
+    if let (category, size) = categoryForPeerAndMedia(settings: settings, peer: peer, media: media) {
+        if let size = size {
+            return category.cellular && size <= category.sizeLimit
+        } else if category.sizeLimit == Int32.max {
+            return category.cellular
+        } else {
+            return false
+        }
+    } else {
+        return false
     }
 }

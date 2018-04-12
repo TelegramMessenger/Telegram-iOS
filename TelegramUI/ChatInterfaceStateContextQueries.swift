@@ -3,6 +3,9 @@ import SwiftSignalKit
 import TelegramCore
 import Postbox
 
+import TelegramUIPrivateModule
+import LegacyComponents
+
 enum ChatContextQueryUpdate {
     case remove
     case update(ChatPresentationInputQuery, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>)
@@ -54,12 +57,12 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
             } else {
                 signal = .single({ _ in return .stickers([]) })
             }
-            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = searchStickers(postbox: account.postbox, query: query.firstEmoji)
-                |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                    return { _ in
-                        return .stickers(stickers)
-                    }
+            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = searchStickers(account: account, query: query.firstEmoji)
+            |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                return { _ in
+                    return .stickers(stickers)
                 }
+            }
             return signal |> then(stickers)
         case let .hashtag(query):
             var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
@@ -230,6 +233,24 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
                 }
             
             return signal |> then(contextBot)
+        case let .stickerSearch(query):            
+            let foundEmojis: Signal<[(String, String)], NoError> = Signal { subscriber in
+                var result: [(String, String)] = []
+                for entry in TGEmojiSuggestions.suggestions(forQuery: query.lowercased()) {
+                    if let entry = entry as? TGAlphacodeEntry {
+                        result.append((entry.emoji, entry.code))
+                    }
+                }
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            
+            let emojis: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = foundEmojis |> map { result -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                return { _ in return .emojis(result) }
+            }
+            
+            return emojis
     }
 }
 

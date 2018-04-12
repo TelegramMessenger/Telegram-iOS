@@ -16,23 +16,7 @@ public enum ChatControllerPeekActions {
 public enum ChatControllerPresentationMode: Equatable {
     case standard(previewing: Bool)
     case overlay
-    
-    public static func ==(lhs: ChatControllerPresentationMode, rhs: ChatControllerPresentationMode) -> Bool {
-        switch lhs {
-            case let .standard(previewing):
-                if case .standard(previewing) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .overlay:
-                if case .overlay = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
+    case inline
 }
 
 public final class ChatControllerOverlayPresentationData {
@@ -206,12 +190,18 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.fontSize, accountPeerId: account.peerId, mode: mode, chatLocation: chatLocation)
         
-        
-        var enableMediaAccessoryPanel = true
-        if case .overlay = mode {
-            enableMediaAccessoryPanel = false
+        var enableMediaAccessoryPanel = false
+        if case .standard = mode {
+            enableMediaAccessoryPanel = true
         }
-        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), enableMediaAccessoryPanel: enableMediaAccessoryPanel, locationBroadcastPanelSource: locationBroadcastPanelSource)
+        let navigationBarPresentationData: NavigationBarPresentationData?
+        switch mode {
+            case .inline:
+                navigationBarPresentationData = nil
+            default:
+                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
+        }
+        super.init(account: account, navigationBarPresentationData: navigationBarPresentationData, enableMediaAccessoryPanel: enableMediaAccessoryPanel, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
@@ -522,10 +512,36 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 openChatInstantPage(account: strongSelf.account, message: message, navigationController: navigationController)
             }
         }, openHashtag: { [weak self] peerName, hashtag in
-            if let strongSelf = self, !hashtag.isEmpty {
-                let searchController = HashtagSearchController(account: strongSelf.account, peerName: peerName, query: hashtag)
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(searchController)
+            guard let strongSelf = self else {
+                return
             }
+            if strongSelf.resolvePeerByNameDisposable == nil {
+                strongSelf.resolvePeerByNameDisposable = MetaDisposable()
+            }
+            let resolveSignal: Signal<Peer?, NoError>
+            if let peerName = peerName {
+                resolveSignal = resolvePeerByName(account: strongSelf.account, name: peerName)
+                |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+                    if let peerId = peerId {
+                        return account.postbox.loadedPeerWithId(peerId)
+                        |> map(Optional.init)
+                    } else {
+                        return .single(nil)
+                    }
+                }
+            } else if case let .peer(peerId) = strongSelf.chatLocation {
+                resolveSignal = account.postbox.loadedPeerWithId(peerId)
+                |> map(Optional.init)
+            } else {
+                resolveSignal = .single(nil)
+            }
+            strongSelf.resolvePeerByNameDisposable?.set((resolveSignal
+            |> deliverOnMainQueue).start(next: { peer in
+                if let strongSelf = self, !hashtag.isEmpty {
+                    let searchController = HashtagSearchController(account: strongSelf.account, peer: peer, query: hashtag)
+                    (strongSelf.navigationController as? NavigationController)?.pushViewController(searchController)
+                }
+            }))
         }, updateInputState: { [weak self] f in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -690,8 +706,20 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 if let strongSelf = self {
-                                    let searchController = HashtagSearchController(account: strongSelf.account, peerName: nil, query: hashtag)
-                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(searchController)
+                                    let peerSignal: Signal<Peer?, NoError>
+                                    if case let .peer(peerId) = strongSelf.chatLocation {
+                                        peerSignal = strongSelf.account.postbox.loadedPeerWithId(peerId)
+                                        |> map(Optional.init)
+                                    } else {
+                                        peerSignal = .single(nil)
+                                    }
+                                    let _ = (peerSignal
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        if let strongSelf = self {
+                                            let searchController = HashtagSearchController(account: strongSelf.account, peer: peer, query: hashtag)
+                                            (strongSelf.navigationController as? NavigationController)?.pushViewController(searchController)
+                                        }
+                                    })
                                 }
                             }),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
@@ -1125,7 +1153,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatControllerNode(account: self.account, chatLocation: self.chatLocation, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar!)
+        self.displayNode = ChatControllerNode(account: self.account, chatLocation: self.chatLocation, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar)
         
         self.chatDisplayNode.peerView = self.peerView
         
@@ -1789,7 +1817,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     }
                 }))
             }
-        }, beginMessageSearch: { [weak self] domain in
+        }, beginMessageSearch: { [weak self] domain, query in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                     return current.updatedTitlePanelContext {
@@ -1807,7 +1835,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         } else {
                             return $0
                         }
-                    }.updatedSearch(current.search == nil ? ChatSearchData(domain: domain) : current.search?.withUpdatedDomain(domain).withUpdatedQuery(""))
+                    }.updatedSearch(current.search == nil ? ChatSearchData(domain: domain).withUpdatedQuery(query) : current.search?.withUpdatedDomain(domain).withUpdatedQuery(query))
                 })
             }
         }, dismissMessageSearch: { [weak self] in
@@ -2730,6 +2758,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             case .overlay:
                 self.statusBar.statusBarStyle = .Hide
                 self.deferScreenEdgeGestures = [.top]
+            case .inline:
+                self.statusBar.statusBarStyle = .Ignore
         }
     }
     
@@ -2802,7 +2832,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         }
                 }
             case .search:
-                self.interfaceInteraction?.beginMessageSearch(.everything)
+                self.interfaceInteraction?.beginMessageSearch(.everything, "")
         }
     }
     
@@ -4090,5 +4120,9 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     @available(iOSApplicationExtension 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, sessionDidEnd session: UIDropSession) {
         self.chatDisplayNode.updateDropInteraction(isActive: false)
+    }
+    
+    public func beginMessageSearch(_ query: String) {
+        self.interfaceInteraction?.beginMessageSearch(.everything, query)
     }
 }

@@ -5,6 +5,69 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private enum ChatMediaGalleryThumbnail: Equatable {
+    case image(TelegramMediaImage)
+    case video(TelegramMediaFile)
+    
+    static func ==(lhs: ChatMediaGalleryThumbnail, rhs: ChatMediaGalleryThumbnail) -> Bool {
+        switch lhs {
+            case let .image(lhsImage):
+                if case let .image(rhsImage) = rhs, lhsImage.isEqual(rhsImage) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .video(lhsVideo):
+                if case let .video(rhsVideo) = rhs, lhsVideo.isEqual(rhsVideo) {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
+final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
+    private let account: Account
+    private let thumbnail: ChatMediaGalleryThumbnail
+    
+    init?(account: Account, media: Media) {
+        self.account = account
+        if let media = media as? TelegramMediaImage {
+            self.thumbnail = .image(media)
+        } else if let media = media as? TelegramMediaFile, media.isVideo {
+            self.thumbnail = .video(media)
+        } else {
+            return nil
+        }
+    }
+    
+    func isEqual(to: GalleryThumbnailItem) -> Bool {
+        if let to = to as? ChatMediaGalleryThumbnailItem {
+            return self.thumbnail == to.thumbnail
+        } else {
+            return false
+        }
+    }
+    
+    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+        switch self.thumbnail {
+            case let .image(image):
+                if let representation = largestImageRepresentation(image.representations) {
+                    return (mediaGridMessagePhoto(account: self.account, photo: image), representation.dimensions)
+                } else {
+                    return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
+                }
+            case let .video(file):
+                if let representation = largestImageRepresentation(file.previewRepresentations) {
+                    return (mediaGridMessageVideo(postbox: self.account.postbox, video: file), representation.dimensions)
+                } else {
+                    return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
+                }
+        }
+    }
+}
+
 class ChatImageGalleryItem: GalleryItem {
     let account: Account
     let theme: PresentationTheme
@@ -56,6 +119,25 @@ class ChatImageGalleryItem: GalleryItem {
             
             node.setMessage(self.message)
         }
+    }
+    
+    func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
+        if let id = self.message.groupInfo?.stableId {
+            var media: Media?
+            for m in self.message.media {
+                if let m = m as? TelegramMediaImage {
+                    media = m
+                } else if let m = m as? TelegramMediaFile, m.isVideo {
+                    media = m
+                }
+            }
+            if let media = media {
+                if let item = ChatMediaGalleryThumbnailItem(account: self.account, media: media) {
+                    return (Int64(id), item)
+                }
+            }
+        }
+        return nil
     }
 }
 

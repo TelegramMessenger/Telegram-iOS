@@ -1,5 +1,6 @@
 import Foundation
 import SwiftSignalKit
+import UIKit
 
 enum ScreenCaptureEvent {
     case still

@@ -137,7 +137,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                             return textInputState
                         }
                     case .search:
-                        interfaceInteraction.beginMessageSearch(.member(peer))
+                        interfaceInteraction.beginMessageSearch(.member(peer), "")
                 }
             }
         })

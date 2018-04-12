@@ -215,7 +215,7 @@ public class PeerMediaCollectionController: TelegramController {
             }, canSetupReply: { _ in
                 return false
         }, requestMessageUpdate: { _ in
-        }, automaticMediaDownloadSettings: .none)
+        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings)
         
         self.controllerInteraction = controllerInteraction
         
@@ -337,7 +337,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, updateTextInputState: { _ in
         }, updateInputModeAndDismissedButtonKeyboardMessageId: { _ in
         }, editMessage: {
-        }, beginMessageSearch: { _ in
+        }, beginMessageSearch: { _, _ in
         }, dismissMessageSearch: {
         }, updateMessageSearch: { _ in 
         }, navigateMessageSearch: { _ in

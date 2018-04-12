@@ -186,6 +186,10 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         }
     }
     
+    if case .inline = chatPresentationInterfaceState.mode {
+        displayInputTextPanel = false
+    }
+    
     if displayInputTextPanel {
         if let currentPanel = currentPanel as? ChatTextInputPanelNode {
             currentPanel.interfaceInteraction = interfaceInteraction

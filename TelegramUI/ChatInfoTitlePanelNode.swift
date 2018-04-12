@@ -207,7 +207,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
                     case .unmute:
                         self.interfaceInteraction?.togglePeerNotifications()
                     case .search:
-                        self.interfaceInteraction?.beginMessageSearch(.everything)
+                        self.interfaceInteraction?.beginMessageSearch(.everything, "")
                     case .call:
                         self.interfaceInteraction?.beginCall()
                     case .report:
