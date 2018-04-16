@@ -9,6 +9,7 @@
 
 + (UIColor *)panelBackgroundColor;
 + (UIColor *)transparentPanelBackgroundColor;
++ (UIColor *)transparentOverlayBackgroundColor;
 
 + (UIFont *)normalFontOfSize:(CGFloat)size;
 

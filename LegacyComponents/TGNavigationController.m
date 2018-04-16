@@ -40,7 +40,7 @@
 
 @end
 
-@interface TGNavigationController () <UINavigationControllerDelegate, UIGestureRecognizerDelegate>
+@interface TGNavigationController () <UINavigationControllerDelegate, UIGestureRecognizerDelegate, UINavigationBarDelegate>
 {
     UITapGestureRecognizer *_dimmingTapRecognizer;
     CGSize _preferredContentSize;
@@ -771,6 +771,39 @@ static UIView *findDimmingView(UIView *view)
             _animatingControllerPush = false;
         });
     }
+}
+
+- (BOOL)navigationBar:(UINavigationBar *)navigationBar shouldPopItem:(UINavigationItem *)item
+{
+    if (self.viewControllers.count < navigationBar.items.count)
+        return true;
+    
+    bool shouldPop = true;
+    if (self.shouldPopController != nil) {
+        shouldPop = self.shouldPopController(self.topViewController);
+    }
+    
+    if (shouldPop)
+    {
+        dispatch_async(dispatch_get_main_queue(), ^
+        {
+            [self popViewControllerAnimated:YES];
+        });
+    } else
+    {
+        for (UIView *subview in [navigationBar subviews])
+        {
+            if (0.< subview.alpha && subview.alpha < 1.)
+            {
+                [UIView animateWithDuration:.25 animations:^
+                {
+                    subview.alpha = 1.;
+                }];
+            }
+        }
+    }
+    
+    return false;
 }
 
 - (UIViewController *)popViewControllerAnimated:(BOOL)animated

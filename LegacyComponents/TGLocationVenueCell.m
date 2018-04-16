@@ -92,7 +92,7 @@ const CGFloat TGLocationVenueCellHeight = 56.0f;
 {
     _titleLabel.text = venue.name;
     _addressLabel.text = venue.displayAddress;
-    if (venue.categoryIconUrl != nil)
+    if (venue.categoryName.length > 0)
     {
         [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", venue.categoryName, 48, 48, TGColorHexCode(_pallete != nil ? _pallete.sectionHeaderTextColor : UIColorRGB(0xa0a0a0))] withOptions:nil];
     }

@@ -1,6 +1,7 @@
 #import <CoreLocation/CoreLocation.h>
 
 @class TGVenueAttachment;
+@class TGLocationMediaAttachment;
 
 @interface TGLocationVenue : NSObject
 
@@ -24,6 +25,8 @@
 
 + (TGLocationVenue *)venueWithFoursquareDictionary:(NSDictionary *)dictionary;
 + (TGLocationVenue *)venueWithGooglePlacesDictionary:(NSDictionary *)dictionary;
+
++ (TGLocationVenue *)venueWithLocationAttachment:(TGLocationMediaAttachment *)attachment;
 
 @end
 

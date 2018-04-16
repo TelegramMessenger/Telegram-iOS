@@ -203,12 +203,11 @@
             UIImage *image = TGFixOrientationAndCrop([info objectForKey:UIImagePickerControllerOriginalImage], cropRect, CGSizeMake(600, 600));
             if (image != nil)
                 [(id<TGImagePickerControllerDelegate>)delegate imagePickerController:nil didFinishPickingWithAssets:@[image]];
-            
             return;
         }
         
         id<TGLegacyCameraControllerDelegate> delegate = _completionDelegate;
-        if ([delegate conformsToProtocol:@protocol(TGImagePickerControllerDelegate)])
+        if ([delegate conformsToProtocol:@protocol(TGImagePickerControllerDelegate)] || self.finishedWithImage != nil)
         {
             if (_isInDocumentMode)
             {
@@ -273,7 +272,12 @@
                 }
                 
                 if (image != nil)
-                    [(id<TGImagePickerControllerDelegate>)delegate imagePickerController:nil didFinishPickingWithAssets:@[image]];
+                {
+                    if (delegate != nil)
+                        [(id<TGImagePickerControllerDelegate>)delegate imagePickerController:nil didFinishPickingWithAssets:@[image]];
+                    else if (self.finishedWithImage != nil)
+                        self.finishedWithImage(image);
+                }
             }
         }
     }

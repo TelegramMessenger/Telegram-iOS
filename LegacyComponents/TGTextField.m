@@ -68,6 +68,12 @@
     bool notify = self.text.length == 0;
     [super deleteBackward];
     
+    if (self.clearAllOnNextBackspace)
+    {
+        self.text = @"";
+        self.clearAllOnNextBackspace = false;
+    }
+    
     if (notify) {
         if (_deleteBackwardEmpty) {
             _deleteBackwardEmpty();

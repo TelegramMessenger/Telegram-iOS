@@ -57,6 +57,7 @@
 
 @property (nonatomic, assign) CGRect previewViewFrame;
 
+- (void)setDocumentFrameHidden:(bool)hidden;
 - (void)setCameraMode:(PGCameraMode)mode;
 - (void)updateForCameraModeChangeWithPreviousMode:(PGCameraMode)previousMode;
 - (void)updateForCameraModeChangeAfterResize;

@@ -467,9 +467,15 @@
 
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem
 {
-    NSArray *signals = [self resultSignalsWithCurrentItem:currentItem descriptionGenerator:self.descriptionGenerator];
     if (self.completionBlock != nil)
+    {
+        NSArray *signals = [self resultSignalsWithCurrentItem:currentItem descriptionGenerator:self.descriptionGenerator];
         self.completionBlock(signals);
+    }
+    else if (self.singleCompletionBlock != nil)
+    {
+        self.singleCompletionBlock(currentItem, _editingContext);
+    }
 }
 
 - (void)viewWillAppear:(BOOL)animated

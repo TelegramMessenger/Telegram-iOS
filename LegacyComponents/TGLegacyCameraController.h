@@ -15,6 +15,8 @@
 
 @interface TGLegacyCameraController : UIImagePickerController
 
+@property (nonatomic, copy) void (^finishedWithImage)(UIImage *);
+
 @property (nonatomic, weak) id<TGLegacyCameraControllerDelegate> completionDelegate;
 @property (nonatomic) bool storeCapturedAssets;
 @property (nonatomic) bool isInDocumentMode;

@@ -297,6 +297,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         _interfaceView.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(interfaceOrientation));
         _interfaceView.frame = CGRectMake(0, 0, referenceSize.width, referenceSize.height);
     }
+    if (_intent == TGCameraControllerPassportIdIntent)
+        [_interfaceView setDocumentFrameHidden:false];
     _selectedItemsModel = [[TGMediaPickerGallerySelectedItemsModel alloc] initWithSelectionContext:nil items:[_items copy]];
     [_interfaceView setSelectedItemsModel:_selectedItemsModel];
     _selectedItemsModel.selectionUpdated = ^(bool reload, bool incremental, bool add, NSInteger index)
@@ -470,6 +472,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         __strong TGCameraController *strongSelf = weakSelf;
         if (strongSelf == nil)
             return UIInterfaceOrientationUnknown;
+        
+        if (strongSelf->_intent == TGCameraControllerPassportIdIntent)
+            return UIInterfaceOrientationPortrait;
         
         if (mirrored != NULL)
         {
@@ -1159,6 +1164,41 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     id<LegacyComponentsContext> windowContext = nil;
     windowManager = [_context makeOverlayWindowManager];
     windowContext = [windowManager context];
+    
+    if (_intent == TGCameraControllerPassportIdIntent)
+    {
+        TGCameraCapturedPhoto *photo = (TGCameraCapturedPhoto *)editableItem;
+        CGSize size = photo.originalSize;
+        CGFloat height = size.width * 0.704f;
+        PGPhotoEditorValues *values = [PGPhotoEditorValues editorValuesWithOriginalSize:size cropRect:CGRectMake(0, floor((size.height - height) / 2.0f), size.width, height) cropRotation:0.0f cropOrientation:UIImageOrientationUp cropLockedAspectRatio:0.0f cropMirrored:false toolValues:nil paintingData:nil sendAsGif:false];
+        
+        SSignal *cropSignal = [[photo originalImageSignal:0.0] map:^UIImage *(UIImage *image)
+        {
+            UIImage *croppedImage = TGPhotoEditorCrop(image, nil, UIImageOrientationUp, 0.0f, values.cropRect, false, TGPhotoEditorResultImageMaxSize, size, true);
+            return croppedImage;
+        }];
+        
+        [cropSignal startWithNext:^(UIImage *image)
+        {
+            CGSize fillSize = TGPhotoThumbnailSizeForCurrentScreen();
+            fillSize.width = CGCeil(fillSize.width);
+            fillSize.height = CGCeil(fillSize.height);
+            
+            CGSize size = TGScaleToFillSize(image.size, fillSize);
+            
+            UIGraphicsBeginImageContextWithOptions(size, true, 0.0f);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            CGContextSetInterpolationQuality(context, kCGInterpolationMedium);
+            
+            [image drawInRect:CGRectMake(0, 0, size.width, size.height)];
+            
+            UIImage *thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            
+            [editingContext setAdjustments:values forItem:photo];
+            [editingContext setImage:image thumbnailImage:thumbnailImage forItem:photo synchronous:true];
+        }];
+    }
 
     __weak TGCameraController *weakSelf = self;
     TGModernGalleryController *galleryController = [[TGModernGalleryController alloc] initWithContext:windowContext];
@@ -1187,7 +1227,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     }];
     
     bool hasCamera = _intent == TGCameraControllerGenericIntent && !_shortcut;
-    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
+    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
     model.controller = galleryController;
     model.suggestionContext = self.suggestionContext;
     
@@ -1882,7 +1922,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
 - (void)handleDeviceOrientationChangedTo:(UIDeviceOrientation)deviceOrientation
 {
-    if (_camera.isRecordingVideo)
+    if (_camera.isRecordingVideo || _intent == TGCameraControllerPassportIdIntent)
         return;
     
     UIInterfaceOrientation orientation = [TGCameraController _interfaceOrientationForDeviceOrientation:deviceOrientation];
@@ -2217,14 +2257,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 return [SSignal complete];
             }
         }] startWithNext:nil];
-//
-//        [[[[combinedSignal deliverOn:[SQueue mainQueue]] filter:^bool(id result)
-//        {
-//            return [result isKindOfClass:[NSURL class]];
-//        }] mapToSignal:^SSignal *(NSURL *url)
-//        {
-//            return [[TGMediaAssetsLibrary sharedLibrary] saveAssetWithImageAtUrl:url];
-//        }] startWithNext:nil];
     }
     
     static dispatch_once_t onceToken;

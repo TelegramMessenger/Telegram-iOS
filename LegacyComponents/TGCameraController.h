@@ -13,6 +13,7 @@
 typedef enum {
     TGCameraControllerGenericIntent,
     TGCameraControllerPassportIntent,
+    TGCameraControllerPassportIdIntent,
     TGCameraControllerAvatarIntent,
 } TGCameraControllerIntent;
 

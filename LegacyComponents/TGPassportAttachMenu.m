@@ -11,10 +11,11 @@
 #import "TGAttachmentCameraView.h"
 
 #import <LegacyComponents/TGCameraController.h>
+#import <LegacyComponents/TGLegacyCameraController.h>
 
 @implementation TGPassportAttachMenu
 
-+ (TGMenuSheetController *)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController menuController:(TGMenuSheetController *)menuController title:(NSString *)title uploadAction:(void (^)(SSignal *))uploadAction sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect barButtonItem:(UIBarButtonItem *)barButtonItem
++ (TGMenuSheetController *)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController menuController:(TGMenuSheetController *)menuController title:(NSString *)title identity:(bool)identity selfie:(bool)selfie uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect barButtonItem:(UIBarButtonItem *)barButtonItem
 {
     if (uploadAction == nil)
         return nil;
@@ -38,7 +39,7 @@
     
     __weak TGMenuSheetController *weakController = controller;
     __weak TGViewController *weakParentController = parentController;
-    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:false forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false document:true];
+    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:selfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false document:true];
     __weak TGAttachmentCarouselItemView *weakCarouselItem = carouselItem;
     carouselItem.onlyCrop = true;
     carouselItem.parentController = parentController;
@@ -52,7 +53,7 @@
         if (strongParentController == nil)
             return;
         
-        [TGPassportAttachMenu _displayCameraWithView:cameraView menuController:strongController parentController:strongParentController context:context uploadAction:uploadAction];
+        [TGPassportAttachMenu _displayCameraWithView:cameraView menuController:strongController parentController:strongParentController context:context identity:identity uploadAction:uploadAction];
     };
     carouselItem.sendPressed = ^(TGMediaAsset *currentItem, __unused bool asFiles)
     {
@@ -62,9 +63,12 @@
         
         __strong TGAttachmentCarouselItemView *strongCarouselItem = weakCarouselItem;
 
-        [strongController dismissAnimated:true];
-        
-        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:strongCarouselItem.editingContext currentItem:(id<TGMediaEditableItem>)currentItem]);
+        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:strongCarouselItem.editingContext currentItem:(id<TGMediaEditableItem>)currentItem],
+        ^{
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController != nil)
+                [strongController dismissAnimated:true];
+        });
     };
     [itemViews addObject:carouselItem];
     
@@ -79,7 +83,7 @@
             return;
         
         [strongController dismissAnimated:true];
-        [TGPassportAttachMenu _displayMediaPickerWithParentController:strongParentController context:context];
+        [TGPassportAttachMenu _displayMediaPickerWithParentController:strongParentController context:context uploadAction:uploadAction];
     }];
     [itemViews addObject:galleryItem];
     
@@ -107,7 +111,7 @@
     return controller;
 }
 
-+ (void)_displayMediaPickerWithParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context
++ (void)_displayMediaPickerWithParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
 {
     if (![[[LegacyComponentsGlobals provider] accessChecker] checkPhotoAuthorizationStatusForIntent:TGPhotoAccessIntentRead alertDismissCompletion:nil])
         return;
@@ -180,19 +184,15 @@
         TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:TGMediaAssetsControllerPassportIntent recipientName:nil saveEditedPhotos:false allowGrouping:false];
         controller.onlyCrop = true;
         __weak TGMediaAssetsController *weakController = controller;
-//        controller.avatarCompletionBlock = ^(UIImage *resultImage)
-//        {
-//            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-//            if (strongSelf == nil)
-//                return;
-//
-//            if (strongSelf.didFinishWithImage != nil)
-//                strongSelf.didFinishWithImage(resultImage);
-//
-//            __strong TGMediaAssetsController *strongController = weakController;
-//            if (strongController != nil && strongController.dismissalBlock != nil)
-//                strongController.dismissalBlock();
-//        };
+        controller.singleCompletionBlock = ^(id<TGMediaEditableItem> currentItem, TGMediaEditingContext *editingContext)
+        {
+            uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext currentItem:(id<TGMediaEditableItem>)currentItem],
+            ^{
+                __strong TGMediaAssetsController *strongController = weakController;
+                if (strongController != nil && strongController.dismissalBlock != nil)
+                    strongController.dismissalBlock();
+            });
+        };
         presentBlock(controller);
     };
     
@@ -212,7 +212,27 @@
     }
 }
 
-+ (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController parentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context uploadAction:(void (^)(SSignal *))uploadAction
++ (void)_displayLegacyCameraWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
+{
+    TGLegacyCameraController *legacyCameraController = [[TGLegacyCameraController alloc] initWithContext:context];
+    legacyCameraController.sourceType = UIImagePickerControllerSourceTypeCamera;
+    
+    __weak TGViewController *weakParentController = parentController;
+    legacyCameraController.finishedWithImage = ^(UIImage *image)
+    {
+        TGCameraCapturedPhoto *photo = [[TGCameraCapturedPhoto alloc] initWithImage:image metadata:nil];
+        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:nil currentItem:photo], ^
+        {
+            __strong TGViewController *strongParentController = weakParentController;
+            if (strongParentController != nil)
+                [strongParentController dismissViewControllerAnimated:true completion:nil];
+        });
+    };
+    
+    [parentController presentViewController:legacyCameraController animated:true completion:nil];
+}
+
++ (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController parentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context identity:(bool)identity uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
 {
     if (![[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault alertDismissCompletion:nil])
         return;
@@ -222,6 +242,8 @@
     
     if ([TGCameraController useLegacyCamera])
     {
+        [self _displayLegacyCameraWithContext:context parentController:parentController uploadAction:uploadAction];
+        [menuController dismissAnimated:true];
         return;
     }
     
@@ -231,9 +253,9 @@
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     
     if (cameraView.previewView != nil)
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false camera:cameraView.previewView.camera previewView:cameraView.previewView intent:TGCameraControllerPassportIntent];
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false camera:cameraView.previewView.camera previewView:cameraView.previewView intent:identity ? TGCameraControllerPassportIdIntent : TGCameraControllerPassportIntent];
     else
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false intent:TGCameraControllerPassportIntent];
+        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:false saveCapturedMedia:false intent:identity ? TGCameraControllerPassportIdIntent : TGCameraControllerPassportIntent];
     
     controller.shouldStoreCapturedAssets = false;
     
@@ -299,7 +321,9 @@
         
         [strongMenuController dismissAnimated:false];
         
-        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext currentItem:(id<TGMediaEditableItem>)currentItem]);
+        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext currentItem:(id<TGMediaEditableItem>)currentItem],^
+        {
+        });
     };
 }
 
@@ -308,9 +332,9 @@
 {
     SSignal *inlineSignal = nil;
     if ([currentItem isKindOfClass:[TGMediaAsset class]])
-        inlineSignal = [TGMediaAssetImageSignals imageForAsset:(TGMediaAsset *)currentItem imageType:TGMediaAssetImageTypeScreen size:CGSizeMake(1280, 1280) allowNetworkAccess:false];
+        inlineSignal = [TGMediaAssetImageSignals imageForAsset:(TGMediaAsset *)currentItem imageType:TGMediaAssetImageTypeScreen size:CGSizeMake(2048, 2048) allowNetworkAccess:false];
     else if ([currentItem isKindOfClass:[TGCameraCapturedPhoto class]])
-        inlineSignal = [currentItem screenImageSignal:0.0];
+        inlineSignal = [currentItem originalImageSignal:0.0];
 
     SSignal *assetSignal = inlineSignal;
     SSignal *imageSignal = assetSignal;

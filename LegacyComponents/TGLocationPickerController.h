@@ -16,6 +16,8 @@ typedef enum {
 
 @property (nonatomic, copy) void (^locationPicked)(CLLocationCoordinate2D coordinate, TGVenueAttachment *venue);
 
+@property (nonatomic, copy) SSignal *(^nearbyPlacesSignal)(NSString *query, CLLocation *coordinate);
+
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context intent:(TGLocationPickerControllerIntent)intent;
 
 - (void)setLiveLocationsSignal:(SSignal *)signal;

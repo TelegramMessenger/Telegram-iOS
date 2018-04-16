@@ -62,7 +62,7 @@
         _hasCaptions = hasCaptions;
         _allowCaptionEntities = allowCaptionEntities;
         _hasTimer = hasTimer;
-        _onlyCrop = true;
+        _onlyCrop = onlyCrop;
         _hasSelectionPanel = hasSelectionPanel;
         _inhibitDocumentCaptions = inhibitDocumentCaptions;
         _recipientName = recipientName;

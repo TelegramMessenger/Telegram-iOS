@@ -231,6 +231,11 @@
 
 #pragma mark -
 
+- (void)setDocumentFrameHidden:(bool)hidden
+{
+    
+}
+
 - (void)setThumbnailSignalForItem:(SSignal *(^)(id))thumbnailSignalForItem
 {
     [_selectedPhotosView setThumbnailSignalForItem:thumbnailSignalForItem];

@@ -9,6 +9,8 @@ typedef enum {
 
 @interface TGNavigationController : UINavigationController
 
+@property (nonatomic, copy) bool(^shouldPopController)(UIViewController *);
+
 @property (nonatomic) bool restrictLandscape;
 @property (nonatomic) bool disableInteractiveKeyboardTransition;
 

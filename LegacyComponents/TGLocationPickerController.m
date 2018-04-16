@@ -292,7 +292,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
     [self setIsLoading:true];
     
     __weak TGLocationPickerController *weakSelf = self;
-    [_nearbyVenuesDisposable setDisposable:[[[TGLocationSignals searchNearbyPlacesWithQuery:nil coordinate:location.coordinate service:TGLocationPickerPlacesProvider] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *venues)
+    [_nearbyVenuesDisposable setDisposable:[[self.nearbyPlacesSignal(@"", location) deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *venues)
     {
         __strong TGLocationPickerController *strongSelf = weakSelf;
         if (strongSelf != nil && venues != nil)
@@ -852,7 +852,7 @@ const TGLocationPlacesService TGLocationPickerPlacesProvider = TGLocationPlacesS
         }];
         
         CLLocationCoordinate2D coordinate = _currentUserLocation.coordinate;
-        searchSignal = [[searchSignal then:[TGLocationSignals searchNearbyPlacesWithQuery:searchQuery coordinate:coordinate service:TGLocationPickerPlacesProvider]] deliverOn:[SQueue mainQueue]];
+        searchSignal = [self.nearbyPlacesSignal(searchQuery, _currentUserLocation) deliverOn:[SQueue mainQueue]];
         
         if (_searchDisposable == nil)
             _searchDisposable = [[SMetaDisposable alloc] init];

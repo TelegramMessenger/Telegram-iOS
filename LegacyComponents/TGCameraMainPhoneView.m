@@ -58,6 +58,9 @@
     UIView *_bottomPanelView;
     UIView *_bottomPanelBackgroundView;
     
+    UIView *_topDocumentFrameView;
+    UIView *_bottomDocumentFrameView;
+    
     UIView *_videoLandscapePanelView;
     
     TGCameraFlashControl *_flashControl;
@@ -498,6 +501,32 @@
     [_flashControl setHidden:!hasFlash animated:true];
 }
 
+#pragma mark -
+
+- (void)setDocumentFrameHidden:(bool)hidden
+{
+    if (!hidden)
+    {
+        if (_topDocumentFrameView == nil)
+        {
+            _topDocumentFrameView = [[UIView alloc] init];
+            _topDocumentFrameView.backgroundColor = [TGCameraInterfaceAssets transparentOverlayBackgroundColor];
+            [self addSubview:_topDocumentFrameView];
+            
+            _bottomDocumentFrameView = [[UIView alloc] init];
+            _bottomDocumentFrameView.backgroundColor = [TGCameraInterfaceAssets transparentOverlayBackgroundColor];
+            [self addSubview:_bottomDocumentFrameView];
+            
+            [self setNeedsLayout];
+        }
+    }
+    else
+    {
+        _topDocumentFrameView.hidden = true;
+        _bottomDocumentFrameView.hidden = true;
+    }
+}
+
 #pragma mark - Layout
 
 - (void)setInterfaceHiddenForVideoRecording:(bool)hidden animated:(bool)animated
@@ -516,8 +545,7 @@
             _topFlipButton.hidden = !hasDoneButton;
         }
         
-        [UIView animateWithDuration:0.25
-                         animations:^
+        [UIView animateWithDuration:0.25 animations:^
         {
             CGFloat alpha = hidden ? 0.0f : 1.0f;
             _modeControl.alpha = alpha;
@@ -794,6 +822,14 @@
     [self _layoutTopPanelSubviewsForInterfaceOrientation:_interfaceOrientation];
     
     _bottomPanelView.frame = CGRectMake(0, self.frame.size.height - _bottomPanelHeight - _bottomPanelOffset, self.frame.size.width, _bottomPanelHeight + _bottomPanelOffset);
+    
+    CGFloat documentFrameHeight = self.frame.size.width * 0.704f;
+    CGFloat documentTopEdge = CGRectGetMidY(self.previewViewFrame) - documentFrameHeight / 2.0f;
+    CGFloat documentBottomEdge = CGRectGetMidY(self.previewViewFrame) + documentFrameHeight / 2.0f;
+    
+    _topDocumentFrameView.frame = CGRectMake(0.0f, CGRectGetMaxY(_topPanelView.frame), self.frame.size.width, documentTopEdge - CGRectGetMaxY(_topPanelView.frame));
+    _bottomDocumentFrameView.frame = CGRectMake(0.0f, documentBottomEdge, self.frame.size.width, CGRectGetMinY(_bottomPanelView.frame) - documentBottomEdge);
+    
     _modeControl.frame = CGRectMake(0, _modeControlOffset, self.frame.size.width, _modeControlHeight);
     _shutterButton.frame = CGRectMake(round((self.frame.size.width - _shutterButton.frame.size.width) / 2), _modeControlHeight + _modeControlOffset, _shutterButton.frame.size.width, _shutterButton.frame.size.height);
     _cancelButton.frame = CGRectMake(0, round(_shutterButton.center.y - _cancelButton.frame.size.height / 2.0f), _cancelButton.frame.size.width, _cancelButton.frame.size.height);

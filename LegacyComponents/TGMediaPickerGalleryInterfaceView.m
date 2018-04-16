@@ -798,6 +798,17 @@
 - (void)updateEditorButtonsForAdjustments:(id<TGMediaEditAdjustments>)adjustments dimensions:(CGSize)dimensions timer:(NSNumber *)timer
 {
     TGPhotoEditorTab highlightedButtons = [TGPhotoEditorTabController highlightedButtonsForEditorValues:adjustments forAvatar:false];
+    if (self.onlyCrop)
+    {
+        PGPhotoEditorValues *values = (PGPhotoEditorValues *)adjustments;
+        CGFloat height = values.originalSize.width * 0.704f;
+        CGFloat origin = floor((values.originalSize.height - height) / 2.0f);
+        if (fabs(values.cropRect.size.width - values.originalSize.width) < FLT_EPSILON && fabs(values.cropRect.size.height - height) < FLT_EPSILON && fabs(values.cropRect.origin.y - origin) < FLT_EPSILON)
+        {
+            highlightedButtons &= ~ TGPhotoEditorCropTab;
+        }
+    }
+    
     TGPhotoEditorTab disabledButtons = TGPhotoEditorNoneTab;
     
     _muteButton.selected = adjustments.sendAsGif;

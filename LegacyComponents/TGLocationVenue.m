@@ -72,6 +72,22 @@ NSString *const TGLocationFoursquareVenueProvider = @"foursquare";
     return venue;
 }
 
++ (TGLocationVenue *)venueWithLocationAttachment:(TGLocationMediaAttachment *)attachment
+{
+    TGLocationVenue *venue = [[TGLocationVenue alloc] init];
+    venue->_identifier = attachment.venue.venueId;
+    venue->_name = attachment.venue.title;
+    
+    venue->_coordinate = CLLocationCoordinate2DMake(attachment.latitude, attachment.longitude);
+    venue->_categoryName = attachment.venue.type;
+  
+    venue->_displayAddress = attachment.venue.address;
+    
+    venue->_provider = attachment.venue.provider;
+    
+    return venue;
+}
+
 - (NSString *)displayAddress
 {
     if (_displayAddress.length > 0)

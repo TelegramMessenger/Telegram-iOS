@@ -60,6 +60,7 @@ typedef enum
 @property (nonatomic, copy) NSDictionary *(^descriptionGenerator)(id, NSString *, NSArray *, NSString *);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
 @property (nonatomic, copy) void (^completionBlock)(NSArray *signals);
+@property (nonatomic, copy) void (^singleCompletionBlock)(id<TGMediaEditableItem> item, TGMediaEditingContext *editingContext);
 @property (nonatomic, copy) void (^dismissalBlock)(void);
 
 @property (nonatomic, copy) TGViewController *(^requestSearchController)(void);

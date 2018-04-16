@@ -14,4 +14,6 @@
 @property (nonatomic, copy) void (^movedToWindow)();
 @property (nonatomic, copy) void (^deleteBackwardEmpty)();
 
+@property (nonatomic, assign) bool clearAllOnNextBackspace;
+
 @end
