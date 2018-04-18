@@ -22,6 +22,8 @@ typedef enum
 
 - (instancetype)initWithTitle:(NSString *)title type:(TGMenuSheetButtonType)type action:(void (^)(void))action;
 
+- (void)setCollapsed:(bool)collapsed animated:(bool)animated;
+
 @end
 
 extern const CGFloat TGMenuSheetButtonItemViewHeight;

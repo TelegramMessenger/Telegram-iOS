@@ -131,7 +131,7 @@ static std::set<int> autorotationLockIds;
 @property (nonatomic, weak) UIViewController *targetNavigationTitleController;
 
 @property (nonatomic, strong) UIBarButtonItem *leftBarButtonItem;
-@property (nonatomic, strong) UIBarButtonItem *rightBarButtonItem;
+@property (nonatomic, strong) NSArray *rightBarButtonItems;
 @property (nonatomic, strong) NSString *titleText;
 @property (nonatomic, strong) UIView *titleView;
 
@@ -1337,8 +1337,8 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     if (targetNavigationItem != nil && updated)
     {
         [[self _currentNavigationItem] setLeftBarButtonItem:_leftBarButtonItem animated:false];
-        [self _setRightBarButtonItem:_rightBarButtonItem animated:false];
-        [[self _currentNavigationItem] setRightBarButtonItem:_rightBarButtonItem animated:false];
+        [self _setRightBarButtonItems:_rightBarButtonItems animated:false];
+        [[self _currentNavigationItem] setRightBarButtonItems:_rightBarButtonItems animated:false];
         [[self _currentNavigationItem] setTitle:_titleText];
         [[self _currentTitleController] setTitle:_titleText];
         [[self _currentNavigationItem] setTitleView:_titleView];
@@ -1373,25 +1373,43 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (void)setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem animated:(BOOL)animated
 {
-    _rightBarButtonItem = rightBarButtonItem;
+    NSMutableArray *items = [[NSMutableArray alloc] init];
+    if (rightBarButtonItem != nil)
+        [items addObject:rightBarButtonItem];
     
-    [self _setRightBarButtonItem:rightBarButtonItem animated:animated];
+    _rightBarButtonItems = items;
+    [self _setRightBarButtonItems:items animated:animated];
 }
 
-- (void)_setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem animated:(BOOL)animated
+- (void)setRightBarButtonItems:(NSArray *)rightBarButtonItems animated:(BOOL)animated {
+    _rightBarButtonItems = rightBarButtonItems;
+    
+    [self _setRightBarButtonItems:rightBarButtonItems animated:animated];
+}
+
+- (void)_setRightBarButtonItems:(NSArray *)rightBarButtonItems animated:(BOOL)animated
 {
-    if (iosMajorVersion() >= 11 && !TGIsPad() && rightBarButtonItem.customView != nil)
+    if (rightBarButtonItems.count < 2)
     {
-        UIBarButtonItem *spacer = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
-        spacer.width = 8.0f;
-        [[self _currentNavigationItem] setRightBarButtonItem:nil animated:false];
-        [[self _currentNavigationItem] setRightBarButtonItems:@[spacer, rightBarButtonItem] animated:animated];
+        UIBarButtonItem *rightBarButtonItem = rightBarButtonItems.firstObject;
+        if (iosMajorVersion() >= 11 && !TGIsPad() && rightBarButtonItem.customView != nil)
+        {
+            UIBarButtonItem *spacer = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
+            spacer.width = 8.0f;
+            [[self _currentNavigationItem] setRightBarButtonItem:nil animated:false];
+            [[self _currentNavigationItem] setRightBarButtonItems:@[spacer, rightBarButtonItem] animated:animated];
+        }
+        else
+        {
+            if (iosMajorVersion() >= 11 && !TGIsPad())
+                [[self _currentNavigationItem] setRightBarButtonItems:nil animated:false];
+            [[self _currentNavigationItem] setRightBarButtonItem:rightBarButtonItem animated:animated];
+        }
     }
     else
     {
-        if (iosMajorVersion() >= 11 && !TGIsPad())
-            [[self _currentNavigationItem] setRightBarButtonItems:nil animated:false];
-        [[self _currentNavigationItem] setRightBarButtonItem:rightBarButtonItem animated:animated];
+        [[self _currentNavigationItem] setRightBarButtonItem:nil animated:false];
+        [[self _currentNavigationItem] setRightBarButtonItems:rightBarButtonItems animated:false];
     }
 }
 

@@ -367,7 +367,7 @@ typedef enum {
 
 + (NSArray *)textCheckingResultsForText:(NSString *)text highlightMentionsAndTags:(bool)highlightMentionsAndTags highlightCommands:(bool)highlightCommands entities:(NSArray *)entities highlightAsExternalMentionsAndHashtags:(bool)highlightAsExternalMentionsAndHashtags
 {
-    if (entities != nil || true) {
+    if (entities != nil) {
         NSMutableArray *textCheckingResults = [[NSMutableArray alloc] init];
         
         bool hasPhoneEntities = false;
@@ -451,15 +451,11 @@ typedef enum {
                 NSError *error = nil;
                 static NSDataDetector *dataDetector = nil;
                 if (dataDetector == nil)
-                    dataDetector = [NSDataDetector dataDetectorWithTypes:(int)(NSTextCheckingTypePhoneNumber | NSTextCheckingTypeDate) error:&error];
+                    dataDetector = [NSDataDetector dataDetectorWithTypes:(int)(NSTextCheckingTypePhoneNumber) error:&error];
                 [dataDetector enumerateMatchesInString:text options:0 range:NSMakeRange(0, text.length) usingBlock:^(NSTextCheckingResult *match, __unused NSMatchingFlags flags, __unused BOOL *stop)
                  {
                      NSTextCheckingType type = [match resultType];
                      if (type == NSTextCheckingTypePhoneNumber)
-                     {
-                         [textCheckingResults addObject:match];
-                     }
-                     if (type == NSTextCheckingTypeDate)
                      {
                          [textCheckingResults addObject:match];
                      }
@@ -834,7 +830,7 @@ typedef enum {
     if (legacyTextCheckingResults.count > 0)
         return legacyTextCheckingResults;
     
-    if (_mediaAttachments.count != 0 || true) {
+    if (_mediaAttachments.count != 0) {
         bool hasPhoneEntities = false;
         
         for (TGMediaAttachment *attachment in _mediaAttachments) {

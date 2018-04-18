@@ -13,6 +13,7 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 
 @interface TGMenuSheetButtonItemView ()
 {
+    bool _collapsed;
     bool _dark;
     bool _requiresDivider;
     
@@ -121,9 +122,16 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
     [_button setTitleColor:(type == TGMenuSheetButtonTypeDestructive) ? destructiveColor : accentColor];
 }
 
+- (void)setCollapsed:(bool)collapsed animated:(bool)animated
+{
+    _collapsed = collapsed;
+    [self _updateHeightAnimated:animated];
+}
+
 - (CGFloat)preferredHeightForWidth:(CGFloat)__unused width screenHeight:(CGFloat)__unused screenHeight
 {
-    return TGMenuSheetButtonItemViewHeight;
+    _button.alpha = _collapsed ? 0.0f : 1.0f;
+    return _collapsed ? 0.0f : TGMenuSheetButtonItemViewHeight;
 }
 
 - (bool)requiresDivider

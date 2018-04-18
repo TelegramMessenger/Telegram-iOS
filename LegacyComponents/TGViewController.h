@@ -134,6 +134,7 @@ typedef enum {
 - (void)setLeftBarButtonItem:(UIBarButtonItem *)leftBarButtonItem animated:(BOOL)animated;
 - (void)setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem;
 - (void)setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem animated:(BOOL)animated;
+- (void)setRightBarButtonItems:(NSArray *)rightBarButtonItems animated:(BOOL)animated;
 - (void)setTitleText:(NSString *)titleText;
 - (void)setTitleView:(UIView *)titleView;
 
