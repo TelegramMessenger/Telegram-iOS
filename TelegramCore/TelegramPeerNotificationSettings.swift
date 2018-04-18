@@ -13,24 +13,24 @@ public enum PeerMuteState: Equatable {
     fileprivate static func decodeInline(_ decoder: PostboxDecoder) -> PeerMuteState {
         switch decoder.decodeInt32ForKey("m.v", orElse: 0) {
             case 0:
-                return .unmuted
+                return .default
             case 1:
                 return .muted(until: decoder.decodeInt32ForKey("m.u", orElse: 0))
             case 2:
-                return .default
-            default:
                 return .unmuted
+            default:
+                return .default
         }
     }
     
     fileprivate func encodeInline(_ encoder: PostboxEncoder) {
         switch self {
-            case .unmuted:
+            case .default:
                 encoder.encodeInt32(0, forKey: "m.v")
             case let .muted(until):
                 encoder.encodeInt32(1, forKey: "m.v")
                 encoder.encodeInt32(until, forKey: "m.u")
-            case .default:
+            case .unmuted:
                 encoder.encodeInt32(2, forKey: "m.v")
         }
     }
