@@ -49,6 +49,7 @@
 
 @property (nonatomic, strong, readonly) MTContext *context;
 @property (nonatomic, readonly) NSInteger datacenterId;
+@property (nonatomic, strong, readonly) MTDatacenterAddress *address;
 @property (nonatomic) bool simultaneousTransactionsEnabled;
 @property (nonatomic) bool reportTransportConnectionContextUpdateStates;
 

@@ -1084,7 +1084,7 @@
     {
         if (_datacenterAuthActions[@(datacenterId)] == nil)
         {
-            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:false];
+            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:false tempAuthKeyType:MTDatacenterAuthTempKeyTypeMain];
             authAction.delegate = self;
             _datacenterAuthActions[@(datacenterId)] = authAction;
             [authAction execute:self datacenterId:datacenterId isCdn:isCdn];
@@ -1092,10 +1092,10 @@
     }];
 }
 
-- (void)tempAuthKeyForDatacenterWithIdRequired:(NSInteger)datacenterId {
+- (void)tempAuthKeyForDatacenterWithIdRequired:(NSInteger)datacenterId keyType:(MTDatacenterAuthTempKeyType)keyType {
     [[MTContext contextQueue] dispatchOnQueue:^{
         if (_datacenterTempAuthActions[@(datacenterId)] == nil) {
-            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:true];
+            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:true tempAuthKeyType:keyType];
             authAction.delegate = self;
             _datacenterTempAuthActions[@(datacenterId)] = authAction;
             [authAction execute:self datacenterId:datacenterId isCdn:false];

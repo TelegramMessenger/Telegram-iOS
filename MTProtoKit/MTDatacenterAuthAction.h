@@ -1,5 +1,13 @@
 #import <Foundation/Foundation.h>
 
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTDatacenterAuthInfo.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTDatacenterAuthInfo.h>
+#else
+#   import <MTProtoKit/MTDatacenterAuthInfo.h>
+#endif
+
 @class MTContext;
 @class MTDatacenterAuthAction;
 
@@ -13,7 +21,7 @@
 
 @property (nonatomic, weak) id<MTDatacenterAuthActionDelegate> delegate;
 
-- (instancetype)initWithTempAuth:(bool)tempAuth;
+- (instancetype)initWithTempAuth:(bool)tempAuth tempAuthKeyType:(MTDatacenterAuthTempKeyType)tempAuthKeyType;
 
 - (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId isCdn:(bool)isCdn;
 - (void)cancel;

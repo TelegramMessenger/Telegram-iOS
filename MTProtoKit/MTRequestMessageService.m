@@ -568,7 +568,7 @@
                             NSMutableDictionary *authKeyAttributes = [[NSMutableDictionary alloc] initWithDictionary:authInfo.authKeyAttributes];
                             authKeyAttributes[@"apiInitializationHash"] = _apiEnvironment.apiInitializationHash;
                             
-                            authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId saltSet:authInfo.saltSet authKeyAttributes:authKeyAttributes tempAuthKey:authInfo.tempAuthKey];
+                            authInfo = [authInfo withUpdatedAuthKeyAttributes:authKeyAttributes];
                             [_context updateAuthInfoForDatacenterWithId:mtProto.datacenterId authInfo:authInfo];
                         }
                     }
@@ -656,7 +656,7 @@
                                 NSMutableDictionary *authKeyAttributes = [[NSMutableDictionary alloc] initWithDictionary:authInfo.authKeyAttributes];
                                 [authKeyAttributes removeObjectForKey:@"apiInitializationHash"];
                                 
-                                authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId saltSet:authInfo.saltSet authKeyAttributes:authKeyAttributes tempAuthKey:authInfo.tempAuthKey];
+                                authInfo = [authInfo withUpdatedAuthKeyAttributes:authKeyAttributes];
                                 [_context updateAuthInfoForDatacenterWithId:mtProto.datacenterId authInfo:authInfo];
                             }];
                         }

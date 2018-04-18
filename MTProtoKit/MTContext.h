@@ -1,8 +1,15 @@
 #import <Foundation/Foundation.h>
 
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTDatacenterAuthInfo.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTDatacenterAuthInfo.h>
+#else
+#   import <MTProtoKit/MTDatacenterAuthInfo.h>
+#endif
+
 @class MTDatacenterAddress;
 @class MTDatacenterAddressSet;
-@class MTDatacenterAuthInfo;
 @protocol MTSerialization;
 @class MTContext;
 @class MTTransportScheme;
@@ -89,7 +96,7 @@
 
 - (void)addressSetForDatacenterWithIdRequired:(NSInteger)datacenterId;
 - (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn;
-- (void)tempAuthKeyForDatacenterWithIdRequired:(NSInteger)datacenterId;
+- (void)tempAuthKeyForDatacenterWithIdRequired:(NSInteger)datacenterId keyType:(MTDatacenterAuthTempKeyType)keyType;
 - (void)authTokenForDatacenterWithIdRequired:(NSInteger)datacenterId authToken:(id)authToken masterDatacenterId:(NSInteger)masterDatacenterId;
 
 - (void)reportProblemsWithDatacenterAddressForId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address;

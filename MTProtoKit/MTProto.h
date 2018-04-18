@@ -47,6 +47,7 @@
 @property (nonatomic) bool useUnauthorizedMode;
 @property (nonatomic) bool useTempAuthKeys;
 @property (nonatomic) bool media;
+@property (nonatomic) bool enforceMedia;
 @property (nonatomic) bool cdn;
 @property (nonatomic) id requiredAuthToken;
 @property (nonatomic) NSInteger authTokenMasterDatacenterId;

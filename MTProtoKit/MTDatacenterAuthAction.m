@@ -14,6 +14,7 @@
 @interface MTDatacenterAuthAction () <MTDatacenterAuthMessageServiceDelegate>
 {
     bool _tempAuth;
+    MTDatacenterAuthTempKeyType _tempAuthKeyType;
     
     NSInteger _datacenterId;
     __weak MTContext *_context;
@@ -26,10 +27,11 @@
 
 @implementation MTDatacenterAuthAction
 
-- (instancetype)initWithTempAuth:(bool)tempAuth {
+- (instancetype)initWithTempAuth:(bool)tempAuth tempAuthKeyType:(MTDatacenterAuthTempKeyType)tempAuthKeyType {
     self = [super init];
     if (self != nil) {
         _tempAuth = tempAuth;
+        _tempAuthKeyType = tempAuthKeyType;
     }
     return self;
 }
@@ -50,7 +52,7 @@
         MTDatacenterAuthInfo *currentAuthInfo = [context authInfoForDatacenterWithId:_datacenterId];
         if (currentAuthInfo != nil) {
             if (_tempAuth) {
-                if (currentAuthInfo.tempAuthKey != nil) {
+                if ([currentAuthInfo tempAuthKeyWithType:_tempAuthKeyType] != nil) {
                     alreadyCompleted = true;
                 }
             } else {
@@ -64,6 +66,19 @@
             _authMtProto = [[MTProto alloc] initWithContext:context datacenterId:_datacenterId usageCalculationInfo:nil];
             _authMtProto.cdn = isCdn;
             _authMtProto.useUnauthorizedMode = true;
+            if (_tempAuth) {
+                switch (_tempAuthKeyType) {
+                    case MTDatacenterAuthTempKeyTypeMain:
+                        _authMtProto.media = false;
+                        break;
+                    case MTDatacenterAuthTempKeyTypeMedia:
+                        _authMtProto.media = true;
+                        _authMtProto.enforceMedia = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
             
             MTDatacenterAuthMessageService *authService = [[MTDatacenterAuthMessageService alloc] initWithContext:context tempAuth:_tempAuth];
             authService.delegate = self;
@@ -83,13 +98,13 @@
             MTContext *context = _context;
             [context performBatchUpdates:^{
                 MTDatacenterAuthInfo *authInfo = [context authInfoForDatacenterWithId:_datacenterId];
-                authInfo = [authInfo withUpdatedTempAuthKey:authKey];
+                authInfo = [authInfo withUpdatedTempAuthKeyWithType:_tempAuthKeyType key:authKey];
                 [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo];
             }];
             [self complete];
         }
     } else {
-        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil tempAuthKey:nil];
+        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil mainTempAuthKey:nil mediaTempAuthKey:nil];
         
         MTContext *context = _context;
         [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo];

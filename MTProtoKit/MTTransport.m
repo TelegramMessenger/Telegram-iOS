@@ -33,6 +33,7 @@
         _delegate = delegate;
         _context = context;
         _datacenterId = datacenterId;
+        _address = address;
         
         _networkAvailability = [[MTNetworkAvailability alloc] initWithDelegate:self];
         

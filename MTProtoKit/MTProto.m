@@ -17,6 +17,7 @@
 
 #import "MTContext.h"
 
+#import "MTDatacenterAddress.h"
 #import "MTDatacenterAddressSet.h"
 #import "MTTransportScheme.h"
 #import "MTDatacenterAuthInfo.h"
@@ -151,10 +152,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         _authInfo = [_context authInfoForDatacenterWithId:_datacenterId];
         
         _shouldStayConnected = true;
-        
-        [[MTProto managerQueue] dispatchOnQueue:^{
-            [self checkTempAuthKeyBinding:false];
-        }];
     }
     return self;
 }
@@ -298,6 +295,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         }
         
         _transportScheme = [_context transportSchemeForDatacenterWithId:_datacenterId media:_media isProxy:_apiEnvironment.socksProxySettings != nil];
+        if (_media && _enforceMedia && !_transportScheme.address.preferForMedia) {
+            _transportScheme = nil;
+        }
+        MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+        if (_transportScheme.address.preferForMedia) {
+            tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+        }
         
         if (_transportScheme == nil)
         {
@@ -317,12 +321,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn];
             }
         }
-        else if (!_useUnauthorizedMode && _useTempAuthKeys && [_context authInfoForDatacenterWithId:_datacenterId].tempAuthKey == nil) {
+        else if (!_useUnauthorizedMode && _useTempAuthKeys && [[_context authInfoForDatacenterWithId:_datacenterId] tempAuthKeyWithType:tempAuthKeyType] == nil) {
             if ((_mtState & MTProtoStateAwaitingDatacenterTempAuthKey) == 0)
             {
                 [self setMtState:_mtState | MTProtoStateAwaitingDatacenterTempAuthKey];
                 
-                [_context tempAuthKeyForDatacenterWithIdRequired:_datacenterId];
+                [_context tempAuthKeyForDatacenterWithIdRequired:_datacenterId keyType:tempAuthKeyType];
             }
         }
         else if (_requiredAuthToken != nil && !_useUnauthorizedMode && ![_requiredAuthToken isEqual:[_context authTokenForDatacenterWithId:_datacenterId]])
@@ -341,6 +345,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             transport = [_transportScheme createTransportWithContext:_context datacenterId:_datacenterId delegate:self usageCalculationInfo:_usageCalculationInfo];
             
             [self setTransport:transport];
+            
+            [self checkTempAuthKeyBinding:transport.address];
         }
     }];
 }
@@ -1049,7 +1055,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                             if (currentContainerMessages.count == 1)
                             {
                                 int32_t quickAckId = 0;
-                                NSData *messageData = [self _dataForEncryptedMessage:currentContainerMessages[0] sessionInfo:transactionSessionInfo quickAckId:&quickAckId];
+                                NSData *messageData = [self _dataForEncryptedMessage:currentContainerMessages[0] sessionInfo:transactionSessionInfo quickAckId:&quickAckId address:transport.address];
                                 if (messageData != nil)
                                 {
                                     [transactionPayloadList addObject:messageData];
@@ -1060,7 +1066,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                             else if (currentContainerMessages.count != 0)
                             {
                                 int32_t quickAckId = 0;
-                                NSData *containerData = [self _dataForEncryptedContainerWithMessages:currentContainerMessages sessionInfo:transactionSessionInfo quickAckId:&quickAckId];
+                                NSData *containerData = [self _dataForEncryptedContainerWithMessages:currentContainerMessages sessionInfo:transactionSessionInfo quickAckId:&quickAckId address:transport.address];
                                 if (containerData != nil)
                                 {
                                     [transactionPayloadList addObject:containerData];
@@ -1213,8 +1219,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             
             MTDatacenterAuthKey *effectiveAuthKey;
             if (_useTempAuthKeys) {
-                NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
-                effectiveAuthKey = _authInfo.tempAuthKey;
+                MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+                if (transport.address.preferForMedia) {
+                    tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+                }
+                
+                effectiveAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+                NSAssert(effectiveAuthKey != nil, @"effectiveAuthKey == nil");
             } else {
                 effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId notBound:false];
             }
@@ -1279,6 +1290,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         }
         else if (![self timeFixOrSaltsMissing] && [self bindingTempAuthKey] && [self canAskForServiceTransactions] && (_bindingTempAuthKeyContext == nil || _bindingTempAuthKeyContext.transactionId == nil))
         {
+            MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+            if (transport.address.preferForMedia) {
+                tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+            }
+            
+            MTDatacenterAuthKey *effectiveTempAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+            NSAssert(effectiveTempAuthKey != nil, @"effectiveAuthKey == nil");
+            
             int64_t bindingMessageId = [_sessionInfo generateClientMessageId:NULL];
             int32_t bindingSeqNo = [_sessionInfo takeSeqNo:true];
             
@@ -1294,7 +1313,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             //bind_auth_key_inner#75a3f765 nonce:long temp_auth_key_id:long perm_auth_key_id:long temp_session_id:long expires_at:int = BindAuthKeyInner;
             [decryptedMessage appendInt32:(int32_t)0x75a3f765];
             [decryptedMessage appendInt64:nonce];
-            [decryptedMessage appendInt64:_authInfo.tempAuthKey.authKeyId];
+            [decryptedMessage appendInt64:effectiveTempAuthKey.authKeyId];
             [decryptedMessage appendInt64:_authInfo.authKeyId];
             [decryptedMessage appendInt64:_sessionInfo.sessionId];
             [decryptedMessage appendInt32:expiresAt];
@@ -1316,7 +1335,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
             
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%llx sending temp key binding message (%" PRId64 "/%" PRId32 ")]", self, bindingMessageId, bindingSeqNo);
+                MTLog(@"[MTProto#%llx sending temp key binding message (%" PRId64 "/%" PRId32 ") for %lld (%d)]", self, bindingMessageId, bindingSeqNo, effectiveTempAuthKey.authKeyId, (int)tempAuthKeyType);
             }
             
             [decryptedOs writeInt64:[_authInfo authSaltForMessageId:bindingMessageId]];
@@ -1329,17 +1348,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             
             NSData *decryptedData = [self paddedData:[decryptedOs currentBytes]];
             
-            MTDatacenterAuthKey *effectiveAuthKey = _authInfo.tempAuthKey;
-            
 #if MTProtoV2
             int xValue = 0;
             NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
-            [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
+            [msgKeyLargeData appendBytes:effectiveTempAuthKey.authKey.bytes + 88 + xValue length:32];
             [msgKeyLargeData appendData:decryptedData];
             
             NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
             NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
-            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:false];
+            MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveTempAuthKey.authKey messageKey:messageKey toClient:false];
 #else
             NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + messageData.length);
             NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
@@ -1354,7 +1371,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [encryptedData appendData:decryptedData];
                 MTAesEncryptInplace(encryptedData, encryptionKey.key, encryptionKey.iv);
                 
-                int64_t authKeyId = effectiveAuthKey.authKeyId;
+                int64_t authKeyId = effectiveTempAuthKey.authKeyId;
                 [encryptedData replaceBytesInRange:NSMakeRange(0, 0) withBytes:&authKeyId length:8];
                 [encryptedData replaceBytesInRange:NSMakeRange(8, 0) withBytes:messageKey.bytes length:messageKey.length];
                 
@@ -1390,12 +1407,17 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
-- (NSData *)_dataForEncryptedContainerWithMessages:(NSArray *)preparedMessages sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId
+- (NSData *)_dataForEncryptedContainerWithMessages:(NSArray *)preparedMessages sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId address:(MTDatacenterAddress *)address
 {
     MTDatacenterAuthKey *effectiveAuthKey;
     if (_useTempAuthKeys) {
-        NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
-        effectiveAuthKey = _authInfo.tempAuthKey;
+        MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+        if (address.preferForMedia) {
+            tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+        }
+        effectiveAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+        
+        NSAssert(effectiveAuthKey != nil, @"effectiveAuthKey == nil");
     } else {
         effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId notBound:false];
     }
@@ -1598,12 +1620,16 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         return nil;
 }
 
-- (NSData *)_dataForEncryptedMessage:(MTPreparedMessage *)preparedMessage sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId
+- (NSData *)_dataForEncryptedMessage:(MTPreparedMessage *)preparedMessage sessionInfo:(MTSessionInfo *)sessionInfo quickAckId:(int32_t *)quickAckId address:(MTDatacenterAddress *)address
 {
     MTDatacenterAuthKey *effectiveAuthKey;
     if (_useTempAuthKeys) {
-        NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
-        effectiveAuthKey = _authInfo.tempAuthKey;
+        MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+        if (address.preferForMedia) {
+            tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+        }
+        effectiveAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+        NSAssert(effectiveAuthKey != nil, @"effectiveAuthKey == nil");
     } else {
         effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId notBound:false];
     }
@@ -1748,8 +1774,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         
         MTDatacenterAuthKey *effectiveAuthKey;
         if (_useTempAuthKeys) {
-            NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
-            effectiveAuthKey = _authInfo.tempAuthKey;
+            MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+            if (transport.address.preferForMedia) {
+                tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+            }
+            
+            effectiveAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+            NSAssert(effectiveAuthKey != nil, @"effectiveAuthKey == nil");
         } else {
             effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId notBound:false];
         }
@@ -1940,14 +1971,30 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if (protocolErrorCode == -404) {
                 if (_cdn) {
                     _authInfo = nil;
-                    [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil];
-                    [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:true];
+                    [_context performBatchUpdates:^{
+                        [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil];
+                        [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:true];
+                    }];
                     _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
                 } else if (_useTempAuthKeys) {
-                    _authInfo = [_authInfo withUpdatedTempAuthKey:nil];
+                    MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+                    if (transport.address.preferForMedia) {
+                        tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+                    }
+                    
+                    MTDatacenterAuthKey *currentTempAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+                    
+                    _authInfo = [_authInfo withUpdatedTempAuthKeyWithType:tempAuthKeyType key:nil];
                     _mtState |= MTProtoStateAwaitingDatacenterTempAuthKey;
-                    [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:_authInfo];
-                    [_context tempAuthKeyForDatacenterWithIdRequired:_datacenterId];
+                    
+                    [_context performBatchUpdates:^{
+                        MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:_datacenterId];
+                        if ([authInfo tempAuthKeyWithType:tempAuthKeyType].authKeyId == currentTempAuthKey.authKeyId) {
+                            authInfo = [authInfo withUpdatedTempAuthKeyWithType:tempAuthKeyType key:nil];
+                            [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo];
+                            [_context tempAuthKeyForDatacenterWithIdRequired:_datacenterId keyType:tempAuthKeyType];
+                        }
+                    }];
                 }
             }
             
@@ -1962,7 +2009,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (_useUnauthorizedMode)
             decryptedData = data;
         else
-            decryptedData = [self _decryptIncomingTransportData:data];
+            decryptedData = [self _decryptIncomingTransportData:data address:transport.address];
         
         if (decryptedData != nil)
         {
@@ -1988,7 +2035,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 
                 for (MTIncomingMessage *incomingMessage in parsedMessages)
                 {
-                    [self _processIncomingMessage:incomingMessage withTransactionId:transactionId];
+                    [self _processIncomingMessage:incomingMessage withTransactionId:transactionId address:transport.address];
                 }
                 
                 if (requestTransactionAfterProcessing)
@@ -2011,12 +2058,17 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
-- (NSData *)_decryptIncomingTransportData:(NSData *)data
+- (NSData *)_decryptIncomingTransportData:(NSData *)data address:(MTDatacenterAddress *)address
 {
     MTDatacenterAuthKey *effectiveAuthKey;
     if (_useTempAuthKeys) {
-        NSAssert(_authInfo.tempAuthKey != nil, @"_authInfo.tempAuthKey == nil");
-        effectiveAuthKey = _authInfo.tempAuthKey;
+        MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+        if (address.preferForMedia) {
+            tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+        }
+        
+        effectiveAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+        NSAssert(effectiveAuthKey != nil, @"effectiveAuthKey == nil");
     } else {
         effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId notBound:false];
     }
@@ -2245,7 +2297,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return messages;
 }
 
-- (void)_processIncomingMessage:(MTIncomingMessage *)incomingMessage withTransactionId:(id)transactionId
+- (void)_processIncomingMessage:(MTIncomingMessage *)incomingMessage withTransactionId:(id)transactionId address:(MTDatacenterAddress *)address
 {
     if ([_sessionInfo messageProcessed:incomingMessage.messageId])
     {
@@ -2472,8 +2524,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             }
             
             if ([rpcResult respondsToSelector:@selector(boolValue)]) {
-                if (_authInfo.tempAuthKey != nil) {
-                    _authInfo = [_authInfo withUpdatedTempAuthKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.tempAuthKey.authKey authKeyId:_authInfo.tempAuthKey.authKeyId notBound:false]];
+                MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+                if (address.preferForMedia) {
+                    tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+                }
+                MTDatacenterAuthKey *effectiveTempAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+                if (effectiveTempAuthKey != nil) {
+                    _authInfo = [_authInfo withUpdatedTempAuthKeyWithType:tempAuthKeyType key:[[MTDatacenterAuthKey alloc] initWithAuthKey:effectiveTempAuthKey.authKey authKeyId:effectiveTempAuthKey.authKeyId notBound:false]];
                     [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:_authInfo];
                 }
                 if ((_mtState & MTProtoStateBindingTempAuthKey) != 0) {
@@ -2519,14 +2576,35 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterAuthorization)];
             }
             
-            if (_mtState & MTProtoStateAwaitingDatacenterTempAuthKey)
+            if (_transportScheme != nil && _useTempAuthKeys) {
+                MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+                if (_transportScheme.address.preferForMedia) {
+                    tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+                }
+                if ([[_context authInfoForDatacenterWithId:_datacenterId] tempAuthKeyWithType:tempAuthKeyType] == nil) {
+                    if ((_mtState & MTProtoStateAwaitingDatacenterTempAuthKey) == 0) {
+                        [self setMtState:_mtState | MTProtoStateAwaitingDatacenterTempAuthKey];
+                        
+                        [_context tempAuthKeyForDatacenterWithIdRequired:_datacenterId keyType:tempAuthKeyType];
+                    }
+                }
+            }
+            
+            if (_transportScheme != nil && (_mtState & MTProtoStateAwaitingDatacenterTempAuthKey))
             {
-                if (_authInfo.tempAuthKey != nil) {
+                MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+                if (_transportScheme.address.preferForMedia) {
+                    tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+                }
+                
+                if ([_authInfo tempAuthKeyWithType:tempAuthKeyType] != nil) {
                     [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterTempAuthKey)];
                 }
             }
             
-            [self checkTempAuthKeyBinding:false];
+            if (_transportScheme != nil) {
+                [self checkTempAuthKeyBinding:_transportScheme.address];
+            }
             
             if ((_mtState & (MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterTempAuthKey)) == 0) {
                 if (wasSuspended) {
@@ -2538,13 +2616,19 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
-- (void)checkTempAuthKeyBinding:(bool)initiateImmediately {
+- (void)checkTempAuthKeyBinding:(MTDatacenterAddress *)address {
     NSAssert([[MTProto managerQueue] isCurrentQueue], @"invalid queue");
     
-    if (_useTempAuthKeys && _authInfo != nil && _authInfo.tempAuthKey != nil && _authInfo.tempAuthKey.notBound) {
+    MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+    if (address.preferForMedia) {
+        tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+    }
+    MTDatacenterAuthKey *effectiveTempAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+    
+    if (_useTempAuthKeys && effectiveTempAuthKey != nil && effectiveTempAuthKey.notBound) {
         bool isAlreadyBinding = false;
         if (_bindingTempAuthKeyId != 0) {
-            if (_bindingTempAuthKeyId == _authInfo.tempAuthKey.authKeyId) {
+            if (_bindingTempAuthKeyId == effectiveTempAuthKey.authKeyId) {
                 isAlreadyBinding = true;
             } else {
                 _bindingTempAuthKeyId = 0;
@@ -2552,7 +2636,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             }
         }
         if (!isAlreadyBinding && (_mtState & MTProtoStateBindingTempAuthKey) == 0) {
-            [self bindToPersistentKey:initiateImmediately];
+            [self bindToPersistentKey:address];
         }
     } else {
         _bindingTempAuthKeyId = 0;
@@ -2672,15 +2756,17 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
-- (void)bindToPersistentKey:(bool)initiateImmediately {
+- (void)bindToPersistentKey:(MTDatacenterAddress *)address {
     [[MTProto managerQueue] dispatchOnQueue:^{
-        _bindingTempAuthKeyId = _authInfo.tempAuthKey.authKeyId;
+        MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+        if (address.preferForMedia) {
+            tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+        }
+        MTDatacenterAuthKey *effectiveTempAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+        
+        _bindingTempAuthKeyId = effectiveTempAuthKey.authKeyId;
         _bindingTempAuthKeyContext = nil;
         _mtState |= MTProtoStateBindingTempAuthKey;
-        
-        if (initiateImmediately) {
-            [self requestTransportTransaction];
-        }
     }];
 }
 

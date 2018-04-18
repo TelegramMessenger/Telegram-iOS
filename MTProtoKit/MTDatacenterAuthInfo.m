@@ -27,7 +27,7 @@
 
 @implementation MTDatacenterAuthInfo
 
-- (instancetype)initWithAuthKey:(NSData *)authKey authKeyId:(int64_t)authKeyId saltSet:(NSArray *)saltSet authKeyAttributes:(NSDictionary *)authKeyAttributes tempAuthKey:(MTDatacenterAuthKey *)tempAuthKey
+- (instancetype)initWithAuthKey:(NSData *)authKey authKeyId:(int64_t)authKeyId saltSet:(NSArray *)saltSet authKeyAttributes:(NSDictionary *)authKeyAttributes mainTempAuthKey:(MTDatacenterAuthKey *)mainTempAuthKey mediaTempAuthKey:(MTDatacenterAuthKey *)mediaTempAuthKey
 {
     self = [super init];
     if (self != nil)
@@ -36,7 +36,8 @@
         _authKeyId = authKeyId;
         _saltSet = saltSet;
         _authKeyAttributes = authKeyAttributes;
-        _tempAuthKey = tempAuthKey;
+        _mainTempAuthKey = mainTempAuthKey;
+        _mediaTempAuthKey = mediaTempAuthKey;
     }
     return self;
 }
@@ -50,7 +51,8 @@
         _authKeyId = [aDecoder decodeInt64ForKey:@"authKeyId"];
         _saltSet = [aDecoder decodeObjectForKey:@"saltSet"];
         _authKeyAttributes = [aDecoder decodeObjectForKey:@"authKeyAttributes"];
-        _tempAuthKey = [aDecoder decodeObjectForKey:@"tempAuthKey"];
+        _mainTempAuthKey = [aDecoder decodeObjectForKey:@"tempAuthKey"];
+        _mediaTempAuthKey = [aDecoder decodeObjectForKey:@"mediaTempAuthKey"];
     }
     return self;
 }
@@ -61,7 +63,8 @@
     [aCoder encodeInt64:_authKeyId forKey:@"authKeyId"];
     [aCoder encodeObject:_saltSet forKey:@"saltSet"];
     [aCoder encodeObject:_authKeyAttributes forKey:@"authKeyAttributes"];
-    [aCoder encodeObject:_tempAuthKey forKey:@"tempAuthKey"];
+    [aCoder encodeObject:_mainTempAuthKey forKey:@"tempAuthKey"];
+    [aCoder encodeObject:_mediaTempAuthKey forKey:@"mediaTempAuthKey"];
 }
 
 - (int64_t)authSaltForMessageId:(int64_t)messageId
@@ -110,11 +113,35 @@
         }
     }
     
-    return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:mergedSaltSet authKeyAttributes:_authKeyAttributes tempAuthKey:_tempAuthKey];
+    return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:mergedSaltSet authKeyAttributes:_authKeyAttributes mainTempAuthKey:_mainTempAuthKey mediaTempAuthKey:_mediaTempAuthKey];
 }
 
-- (MTDatacenterAuthInfo *)withUpdatedTempAuthKey:(MTDatacenterAuthKey *)tempAuthKey {
-    return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:_saltSet authKeyAttributes:_authKeyAttributes tempAuthKey:tempAuthKey];
+- (MTDatacenterAuthInfo *)withUpdatedAuthKeyAttributes:(NSDictionary *)authKeyAttributes {
+    return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:_saltSet authKeyAttributes:authKeyAttributes mainTempAuthKey:_mainTempAuthKey mediaTempAuthKey:_mediaTempAuthKey];
+}
+
+- (MTDatacenterAuthKey *)tempAuthKeyWithType:(MTDatacenterAuthTempKeyType)type {
+    switch (type) {
+        case MTDatacenterAuthTempKeyTypeMain:
+            return _mainTempAuthKey;
+        case MTDatacenterAuthTempKeyTypeMedia:
+            return _mediaTempAuthKey;
+        default:
+            NSAssert(false, @"unknown MTDatacenterAuthTempKeyType");
+            return nil;
+    }
+}
+
+- (MTDatacenterAuthInfo *)withUpdatedTempAuthKeyWithType:(MTDatacenterAuthTempKeyType)type key:(MTDatacenterAuthKey *)key {
+    switch (type) {
+        case MTDatacenterAuthTempKeyTypeMain:
+            return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:_saltSet authKeyAttributes:_authKeyAttributes mainTempAuthKey:key mediaTempAuthKey:_mediaTempAuthKey];
+        case MTDatacenterAuthTempKeyTypeMedia:
+            return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:_saltSet authKeyAttributes:_authKeyAttributes mainTempAuthKey:_mainTempAuthKey mediaTempAuthKey:key];
+        default:
+            NSAssert(false, @"unknown MTDatacenterAuthTempKeyType");
+            return self;
+    }
 }
 
 - (MTDatacenterAuthKey *)persistentAuthKey {
