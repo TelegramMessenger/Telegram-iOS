@@ -14,12 +14,8 @@ public struct ChatListHole: Hashable, CustomStringConvertible {
     public var hashValue: Int {
         return self.index.hashValue
     }
-}
 
-public func ==(lhs: ChatListHole, rhs: ChatListHole) -> Bool {
-    return lhs.index == rhs.index
-}
-
-public func <(lhs: ChatListHole, rhs: ChatListHole) -> Bool {
-    return lhs.index < rhs.index
+    public static func <(lhs: ChatListHole, rhs: ChatListHole) -> Bool {
+        return lhs.index < rhs.index
+    }
 }

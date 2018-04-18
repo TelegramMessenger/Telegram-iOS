@@ -30,23 +30,6 @@ public enum PeerReadState: Equatable, CustomStringConvertible {
         }
     }
     
-    public static func ==(lhs: PeerReadState, rhs: PeerReadState) -> Bool {
-        switch lhs {
-            case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count):
-                if case .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count):
-                if case .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
     func isIncomingMessageIndexRead(_ index: MessageIndex) -> Bool {
         switch self {
             case let .idBased(maxIncomingReadId, _, _, _):
