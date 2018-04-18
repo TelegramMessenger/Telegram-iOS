@@ -256,6 +256,7 @@ private var declaredEncodables: Void = {
     declareEncodable(ContentPrivacySettings.self, f: { ContentPrivacySettings(decoder: $0) })
     declareEncodable(TelegramDeviceContactImportInfo.self, f: { TelegramDeviceContactImportInfo(decoder: $0) })
     declareEncodable(SecureFileMediaResource.self, f: { SecureFileMediaResource(decoder: $0) })
+    declareEncodable(CachedStickerQueryResult.self, f: { CachedStickerQueryResult(decoder: $0) })
     
     return
 }()
@@ -436,40 +437,15 @@ public enum AccountServiceTaskMasterMode {
     case never
 }
 
+public struct AccountNetworkProxyState: Equatable {
+    public let address: String
+}
+
 public enum AccountNetworkState: Equatable {
     case waitingForNetwork
-    case connecting(toProxy: Bool)
-    case updating
-    case online
-    
-    public static func ==(lhs: AccountNetworkState, rhs: AccountNetworkState) -> Bool {
-        switch lhs {
-            case .waitingForNetwork:
-                if case .waitingForNetwork = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .connecting(toProxy):
-                if case .connecting(toProxy) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .updating:
-                if case .updating = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .online:
-                if case .online = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
+    case connecting(proxy: AccountNetworkProxyState?)
+    case updating(proxy: AccountNetworkProxyState?)
+    case online(proxy: AccountNetworkProxyState?)
 }
 
 public final class AccountAuxiliaryMethods {
@@ -662,18 +638,18 @@ public class Account {
         let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue))
             |> map { isUpdating, connectionStatus -> AccountNetworkState in
                 switch connectionStatus {
-                case .waitingForNetwork:
-                    return .waitingForNetwork
-                case let .connecting(toProxy):
-                    return .connecting(toProxy: toProxy)
-                case .updating:
-                    return .updating
-                case .online:
-                    if isUpdating {
-                        return .updating
-                    } else {
-                        return .online
-                    }
+                    case .waitingForNetwork:
+                        return .waitingForNetwork
+                    case let .connecting(proxyAddress):
+                        return .connecting(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                    case let .updating(proxyAddress):
+                        return .updating(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                    case let .online(proxyAddress):
+                        if isUpdating {
+                            return .updating(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                        } else {
+                            return .online(proxy: proxyAddress.flatMap(AccountNetworkProxyState.init(address:)))
+                        }
                 }
         }
         self.networkStateValue.set(networkStateSignal |> distinctUntilChanged)

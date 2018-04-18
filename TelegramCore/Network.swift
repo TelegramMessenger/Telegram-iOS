@@ -12,38 +12,9 @@ import TelegramCorePrivateModule
 
 public enum ConnectionStatus: Equatable {
     case waitingForNetwork
-    case connecting(toProxy: Bool)
-    case updating
-    case online
-    
-    public static func ==(lhs: ConnectionStatus, rhs: ConnectionStatus) -> Bool {
-        switch lhs {
-            case .waitingForNetwork:
-                if case .waitingForNetwork = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .connecting(toProxy):
-                if case .connecting(toProxy) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .updating:
-                if case .updating = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .online:
-                if case .online = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
+    case connecting(proxyAddress: String?)
+    case updating(proxyAddress: String?)
+    case online(proxyAddress: String?)
 }
 
 private struct MTProtoConnectionFlags: OptionSet {
@@ -53,7 +24,11 @@ private struct MTProtoConnectionFlags: OptionSet {
     static let Connected = MTProtoConnectionFlags(rawValue: 2)
     static let UpdatingConnectionContext = MTProtoConnectionFlags(rawValue: 4)
     static let PerformingServiceTasks = MTProtoConnectionFlags(rawValue: 8)
-    static let HasProxy = MTProtoConnectionFlags(rawValue: 16)
+}
+
+private struct MTProtoConnectionInfo: Equatable {
+    var flags: MTProtoConnectionFlags
+    var proxyAddress: String?
 }
 
 class WrappedRequestMetadata: NSObject {
@@ -75,58 +50,59 @@ public protocol NetworkRequestDependencyTag {
 }
 
 private class MTProtoConnectionStatusDelegate: NSObject, MTProtoDelegate {
-    var action: (MTProtoConnectionFlags) -> () = { _ in }
-    let state = Atomic<MTProtoConnectionFlags>(value: [])
+    var action: (MTProtoConnectionInfo) -> () = { _ in }
+    let info = Atomic<MTProtoConnectionInfo>(value: MTProtoConnectionInfo(flags: [], proxyAddress: nil))
     
     @objc func mtProtoNetworkAvailabilityChanged(_ mtProto: MTProto!, isNetworkAvailable: Bool) {
-        self.action(self.state.modify { flags in
+        self.action(self.info.modify { info in
+            var info = info
             if isNetworkAvailable {
-                return flags.union([.NetworkAvailable])
+                info.flags = info.flags.union([.NetworkAvailable])
             } else {
-                return flags.subtracting([.NetworkAvailable])
+                info.flags = info.flags.subtracting([.NetworkAvailable])
             }
+            return info
         })
     }
     
     @objc func mtProtoConnectionStateChanged(_ mtProto: MTProto!, state: MTProtoConnectionState!) {
-        self.action(self.state.modify { flags in
-            var updatedFlags = flags
+        self.action(self.info.modify { info in
+            var info = info
             if let state = state {
                 if state.isConnected {
-                    updatedFlags.insert(.Connected)
+                    info.flags.insert(.Connected)
                 } else {
-                    updatedFlags.remove(.Connected)
-                }
-                if state.isUsingProxy {
-                    updatedFlags.insert(.HasProxy)
-                } else {
-                    updatedFlags.remove(.HasProxy)
+                    info.flags.remove(.Connected)
                 }
             } else {
-                updatedFlags.remove(.Connected)
-                updatedFlags.remove(.HasProxy)
+                info.flags.remove(.Connected)
             }
-            return updatedFlags
+            info.proxyAddress = state?.proxyAddress
+            return info
         })
     }
     
     @objc func mtProtoConnectionContextUpdateStateChanged(_ mtProto: MTProto!, isUpdatingConnectionContext: Bool) {
-        self.action(self.state.modify { flags in
+        self.action(self.info.modify { info in
+            var info = info
             if isUpdatingConnectionContext {
-                return flags.union([.UpdatingConnectionContext])
+                info.flags = info.flags.union([.UpdatingConnectionContext])
             } else {
-                return flags.subtracting([.UpdatingConnectionContext])
+                info.flags = info.flags.subtracting([.UpdatingConnectionContext])
             }
+            return info
         })
     }
     
     @objc func mtProtoServiceTasksStateChanged(_ mtProto: MTProto!, isPerformingServiceTasks: Bool) {
-        self.action(self.state.modify { flags in
+        self.action(self.info.modify { info in
+            var info = info
             if isPerformingServiceTasks {
-                return flags.union([.PerformingServiceTasks])
+                info.flags = info.flags.union([.PerformingServiceTasks])
             } else {
-                return flags.subtracting([.PerformingServiceTasks])
+                info.flags = info.flags.subtracting([.PerformingServiceTasks])
             }
+            return info
         })
     }
 }
@@ -391,28 +367,28 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context))
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
-            //mtProto.useTempAuthKeys = true
+            mtProto.useTempAuthKeys = true
             
             let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
             
             let requestService = MTRequestMessageService(context: context)!
             let connectionStatusDelegate = MTProtoConnectionStatusDelegate()
-            connectionStatusDelegate.action = { [weak connectionStatus] flags in
-                if flags.contains(.Connected) {
-                    if !flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
-                        connectionStatus?.set(single(ConnectionStatus.updating, NoError.self))
+            connectionStatusDelegate.action = { [weak connectionStatus] info in
+                if info.flags.contains(.Connected) {
+                    if !info.flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
+                        connectionStatus?.set(.single(.updating(proxyAddress: info.proxyAddress)))
                     } else {
-                        connectionStatus?.set(single(ConnectionStatus.online, NoError.self))
+                        connectionStatus?.set(.single(.online(proxyAddress: info.proxyAddress)))
                     }
                 } else {
-                    if !flags.contains(.NetworkAvailable) {
-                        connectionStatus?.set(single(ConnectionStatus.waitingForNetwork, NoError.self))
-                    } else if !flags.contains(.Connected) {
-                        connectionStatus?.set(single(ConnectionStatus.connecting(toProxy: flags.contains(.HasProxy)), NoError.self))
-                    } else if !flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
-                        connectionStatus?.set(single(ConnectionStatus.updating, NoError.self))
+                    if !info.flags.contains(.NetworkAvailable) {
+                        connectionStatus?.set(.single(ConnectionStatus.waitingForNetwork))
+                    } else if !info.flags.contains(.Connected) {
+                        connectionStatus?.set(.single(.connecting(proxyAddress: info.proxyAddress)))
+                    } else if !info.flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
+                        connectionStatus?.set(.single(.updating(proxyAddress: info.proxyAddress)))
                     } else {
-                        connectionStatus?.set(single(ConnectionStatus.online, NoError.self))
+                        connectionStatus?.set(.single(.online(proxyAddress: info.proxyAddress)))
                     }
                 }
             }
@@ -562,7 +538,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.shouldKeepConnectionDisposable.dispose()
     }
     
-    public var globalTime:TimeInterval {
+    public var globalTime: TimeInterval {
         return context.globalTime()
     }
     
@@ -590,6 +566,20 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     
     public func getApproximateRemoteTimestamp() -> Int32 {
         return Int32(self.context.globalTime())
+    }
+    
+    public func mergeBackupDatacenterAddress(datacenterId: Int32, host: String, port: Int32) {
+        self.context.performBatchUpdates {
+            let address = MTDatacenterAddress(ip: host, port: UInt16(port), preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false)
+            self.context.addAddressForDatacenter(withId: Int(datacenterId), address: address)
+            
+            if let currentScheme = self.context.transportSchemeForDatacenter(withId: Int(datacenterId), media: false, isProxy: false), let currentAddress = currentScheme.address {
+                if !currentAddress.isEqual(to: address) {
+                    let scheme = MTTransportScheme(transport: currentScheme.transportClass, address: address, media: false)
+                    self.context.updateTransportSchemeForDatacenter(withId: Int(datacenterId), transportScheme: scheme, media: false, isProxy: false)
+                }
+            }
+        }
     }
     
     public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {

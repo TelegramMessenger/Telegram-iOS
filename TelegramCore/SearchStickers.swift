@@ -47,62 +47,95 @@ extension Sequence {
     }
 }
 
+final class CachedStickerQueryResult: PostboxCoding {
+    let items: [TelegramMediaFile]
+    let hash: Int32
+    
+    init(items: [TelegramMediaFile], hash: Int32) {
+        self.items = items
+        self.hash = hash
+    }
+    
+    init(decoder: PostboxDecoder) {
+        self.items = decoder.decodeObjectArrayForKey("it").map { $0 as! TelegramMediaFile }
+        self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObjectArray(self.items, forKey: "it")
+        encoder.encodeInt32(self.hash, forKey: "h")
+    }
+    
+    static func cacheKey(_ query: String) -> ValueBoxKey {
+        let key = ValueBoxKey(query)
+        return key
+    }
+}
+
+private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
+
 public func searchStickers(account: Account, query: String) -> Signal<[FoundStickerItem], NoError> {
-    return account.viewTracker.featuredStickerPacks() |> mapToSignal { featured in
-        return account.postbox.modify { modifier -> [FoundStickerItem] in
-            var result: [FoundStickerItem] = []
-            var idsSet = Set<MediaId>()
-            
-            for item in modifier.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentStickers) {
-                if let stickerItem = item.contents as? RecentMediaItem {
-                    if let file = stickerItem.media as? TelegramMediaFile, file.stickerString == query {
-                        idsSet.insert(file.fileId)
-                        result.append(FoundStickerItem(file: file, stringRepresentations: [query]))
-                        if result.count == 5 {
-                            break
+    return account.postbox.modify { modifier -> ([FoundStickerItem], CachedStickerQueryResult?) in
+        var result: [FoundStickerItem] = []
+        for item in modifier.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, key: ValueBoxKey(query).toMemoryBuffer()) {
+            if let item = item as? StickerPackItem {
+                var stringRepresentations: [String] = []
+                for key in item.indexKeys {
+                    key.withDataNoCopy { data in
+                        if let string = String(data: data, encoding: .utf8) {
+                            stringRepresentations.append(string)
                         }
                     }
                 }
+                result.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
             }
-            
-            for item in modifier.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers) {
-                if let stickerItem = item.contents as? SavedStickerItem {
-                    for string in stickerItem.stringRepresentations {
-                        if string == query, !idsSet.contains(stickerItem.file.fileId) {
-                            idsSet.insert(stickerItem.file.fileId)
-                            result.append(FoundStickerItem(file: stickerItem.file, stringRepresentations: stickerItem.stringRepresentations))
-                        }
-                    }
+        }
+        
+        let cached = modifier.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query))) as? CachedStickerQueryResult
+        
+        return (result, cached)
+    } |> mapToSignal { localItems, cached -> Signal<[FoundStickerItem], NoError> in
+        var tempResult: [FoundStickerItem] = localItems
+        let currentItems = Set<MediaId>(localItems.map { $0.file.fileId })
+        if let cached = cached {
+            for file in cached.items {
+                if !currentItems.contains(file.fileId) {
+                    tempResult.append(FoundStickerItem(file: file, stringRepresentations: []))
                 }
             }
-            
-            for featured in featured.shuffled() {
-                for item in featured.topItems {
-                    if item.file.stickerString == query, !idsSet.contains(item.file.fileId) {
-                        idsSet.insert(item.file.fileId)
-                        result.append(FoundStickerItem(file: item.file, stringRepresentations: [query]))
-                    }
-                }
-            }
-            
-            for item in modifier.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, key: ValueBoxKey(query).toMemoryBuffer()) {
-                if let item = item as? StickerPackItem {
-                    if !idsSet.contains(item.file.fileId) {
-                        idsSet.insert(item.file.fileId)
-                        var stringRepresentations: [String] = []
-                        for key in item.indexKeys {
-                            key.withDataNoCopy { data in
-                                if let string = String(data: data, encoding: .utf8) {
-                                    stringRepresentations.append(string)
+        }
+        
+        let remote = account.network.request(Api.functions.messages.getStickers(emoticon: query, hash: cached?.hash ?? 0))
+        |> `catch` { _ -> Signal<Api.messages.Stickers, NoError> in
+            return .single(.stickersNotModified)
+        }
+        |> mapToSignal { result -> Signal<[FoundStickerItem], NoError> in
+            return account.postbox.modify { modifier -> [FoundStickerItem] in
+                switch result {
+                    case let .stickers(hash, stickers):
+                        var items: [FoundStickerItem] = localItems
+                        let currentItems = Set<MediaId>(items.map { $0.file.fileId })
+                        
+                        var files: [TelegramMediaFile] = []
+                        for sticker in stickers {
+                            if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                                files.append(file)
+                                if !currentItems.contains(id) {
+                                    items.append(FoundStickerItem(file: file, stringRepresentations: []))
                                 }
                             }
                         }
-                        result.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
-                    }
+                        modifier.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: CachedStickerQueryResult(items: files, hash: hash), collectionSpec: collectionSpec)
+                    
+                        return items
+                    case .stickersNotModified:
+                        break
                 }
+                return tempResult
             }
-            return result
         }
+        return .single(tempResult)
+        |> then(remote)
     }
 }
 
