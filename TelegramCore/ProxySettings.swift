@@ -15,7 +15,6 @@ public final class ProxySettings: PreferencesEntry, Equatable {
     public let username: String?
     public let password: String?
     public let useForCalls: Bool
-    
     public init(host: String, port: Int32, username: String?, password: String?, useForCalls: Bool) {
         self.host = host
         self.port = port
@@ -74,6 +73,7 @@ public final class ProxySettings: PreferencesEntry, Equatable {
         }
         return true
     }
+
 }
 
 public func applyProxySettings(postbox: Postbox, network: Network, settings: ProxySettings?) -> Signal<Void, NoError> {
@@ -83,7 +83,7 @@ public func applyProxySettings(postbox: Postbox, network: Network, settings: Pro
         })
         
         network.context.updateApiEnvironment { current in
-            return current?.withUpdatedSocksProxySettings(settings.flatMap { proxySettings -> MTSocksProxySettings! in
+            return current?.withUpdatedSocksProxySettings(settings.flatMap { proxySettings -> MTSocksProxySettings? in
                 return MTSocksProxySettings(ip: proxySettings.host, port: UInt16(proxySettings.port), username: proxySettings.username, password: proxySettings.password)
             })
         }

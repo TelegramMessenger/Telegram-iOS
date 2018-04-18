@@ -11,6 +11,7 @@ import Foundation
 
 public enum RequestSecureIdFormError {
     case generic
+    case serverError(String)
 }
 
 private func parseSecureValueType(_ type: Api.SecureValueType, selfie: Bool) -> SecureIdRequestedFormField {
@@ -187,11 +188,11 @@ public struct EncryptedSecureIdForm {
 
 public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: PeerId, scope: String, publicKey: String) -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> {
     if peerId.namespace != Namespaces.Peer.CloudUser {
-        return .fail(.generic)
+        return .fail(.serverError("PEER IS NOT A BOT"))
     }
     return network.request(Api.functions.account.getAuthorizationForm(botId: peerId.id, scope: scope, publicKey: publicKey))
-    |> mapError { _ -> RequestSecureIdFormError in
-        return .generic
+    |> mapError { error -> RequestSecureIdFormError in
+        return .serverError(error.errorDescription)
     }
     |> mapToSignal { result -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> in
         return postbox.modify { modifier -> EncryptedSecureIdForm in
