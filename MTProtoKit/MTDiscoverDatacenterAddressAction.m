@@ -99,6 +99,7 @@
         if ([context authInfoForDatacenterWithId:_targetDatacenterId] != nil)
         {
             _mtProto = [[MTProto alloc] initWithContext:context datacenterId:_targetDatacenterId usageCalculationInfo:nil];
+            _mtProto.useTempAuthKeys = true;
             _requestService = [[MTRequestMessageService alloc] initWithContext:_context];
             [_mtProto addMessageService:_requestService];
             

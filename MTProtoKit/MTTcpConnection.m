@@ -25,6 +25,9 @@
 
 #import "MTAes.h"
 
+#import "MTDNS.h"
+#import "MTSignal.h"
+
 MTInternalIdClass(MTTcpConnection)
 
 struct socks5_ident_req
@@ -130,6 +133,8 @@ struct ctr_state {
     int32_t _socksPort;
     NSString *_socksUsername;
     NSString *_socksPassword;
+    
+    MTMetaDisposable *_resolveDisposable;
 }
 
 @property (nonatomic) int64_t packetHeadDecodeToken;
@@ -176,6 +181,8 @@ struct ctr_state {
             _socksUsername = context.apiEnvironment.socksProxySettings.username;
             _socksPassword = context.apiEnvironment.socksProxySettings.password;
         }
+        
+        _resolveDisposable = [[MTMetaDisposable alloc] init];
     }
     return self;
 }
@@ -188,11 +195,14 @@ struct ctr_state {
     
     MTTimer *responseTimeoutTimer = _responseTimeoutTimer;
     
+    MTMetaDisposable *resolveDisposable = _resolveDisposable;
+    
     [[MTTcpConnection tcpQueue] dispatchOnQueue:^
     {
         [responseTimeoutTimer invalidate];
         
         [socket disconnect];
+        [resolveDisposable dispose];
     }];
 }
 
@@ -233,32 +243,59 @@ struct ctr_state {
                 }
             }
             
-            NSString *ip = _address.ip;
+            MTSignal *resolveSignal = [MTSignal single:_address.ip];
             uint16_t port = _address.port;
             
             if (_socksIp != nil) {
-                ip = _socksIp;
                 port = _socksPort;
+                
+                bool isHostname = true;
+                struct in_addr ip4;
+                struct in6_addr ip6;
+                if (inet_aton(_socksIp.UTF8String, &ip4) != 0) {
+                    isHostname = false;
+                } else if (inet_pton(AF_INET6, _socksIp.UTF8String, &ip6) != 0) {
+                    isHostname = false;
+                }
+                
+                if (isHostname) {
+                    resolveSignal = [MTDNS resolveHostname:_socksIp];
+                } else {
+                    resolveSignal = [MTSignal single:_socksIp];
+                }
             }
             
-            __autoreleasing NSError *error = nil;
-            if (![_socket connectToHost:ip onPort:port viaInterface:_interface withTimeout:12 error:&error] || error != nil) {
-                [self closeAndNotify];
-            } else if (_socksIp == nil) {
-                [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
-            } else {
-                struct socks5_ident_req req;
-                req.Version = 5;
-                req.NumberOfMethods = 1;
-                req.Methods[0] = 0x00;
-                
-                if (_socksUsername != nil) {
-                    req.NumberOfMethods += 1;
-                    req.Methods[1] = 0x02;
-                }
-                [_socket writeData:[NSData dataWithBytes:&req length:2 + req.NumberOfMethods] withTimeout:-1 tag:0];
-                [_socket readDataToLength:sizeof(struct socks5_ident_resp) withTimeout:-1 tag:MTTcpSocksLogin];
-            }
+            __weak MTTcpConnection *weakSelf = self;
+            [_resolveDisposable setDisposable:[resolveSignal startWithNext:^(NSString *ip) {
+                [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
+                    __strong MTTcpConnection *strongSelf = weakSelf;
+                    if (strongSelf == nil || ip == nil) {
+                        return;
+                    }
+                    if (![ip respondsToSelector:@selector(characterAtIndex:)]) {
+                        return;
+                    }
+                    
+                    __autoreleasing NSError *error = nil;
+                    if (![strongSelf->_socket connectToHost:ip onPort:port viaInterface:strongSelf->_interface withTimeout:12 error:&error] || error != nil) {
+                        [strongSelf closeAndNotify];
+                    } else if (strongSelf->_socksIp == nil) {
+                        [strongSelf->_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+                    } else {
+                        struct socks5_ident_req req;
+                        req.Version = 5;
+                        req.NumberOfMethods = 1;
+                        req.Methods[0] = 0x00;
+                        
+                        if (_socksUsername != nil) {
+                            req.NumberOfMethods += 1;
+                            req.Methods[1] = 0x02;
+                        }
+                        [strongSelf->_socket writeData:[NSData dataWithBytes:&req length:2 + req.NumberOfMethods] withTimeout:-1 tag:0];
+                        [strongSelf->_socket readDataToLength:sizeof(struct socks5_ident_resp) withTimeout:-1 tag:MTTcpSocksLogin];
+                    }
+                }];
+            }]];
         }
     }];
 }

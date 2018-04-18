@@ -550,6 +550,12 @@
 		D0D225161B4D817B0085E26D /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D2250B1B4D817B0085E26D /* MtProtoKitDynamic.framework */; };
 		D0D2251D1B4D817B0085E26D /* MtProtoKitDynamicTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D2251C1B4D817B0085E26D /* MtProtoKitDynamicTests.m */; };
 		D0D2689E1D7A055400C422DA /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD990F1D75C16100F41187 /* libcrypto.a */; };
+		D0E2E17720866780005737E8 /* MTDNS.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E2E17520866780005737E8 /* MTDNS.h */; };
+		D0E2E17820866780005737E8 /* MTDNS.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E2E17520866780005737E8 /* MTDNS.h */; };
+		D0E2E17920866780005737E8 /* MTDNS.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E2E17520866780005737E8 /* MTDNS.h */; };
+		D0E2E17A20866780005737E8 /* MTDNS.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E2E17620866780005737E8 /* MTDNS.m */; };
+		D0E2E17B20866780005737E8 /* MTDNS.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E2E17620866780005737E8 /* MTDNS.m */; };
+		D0E2E17C20866780005737E8 /* MTDNS.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E2E17620866780005737E8 /* MTDNS.m */; };
 		D0E9B9ED1F0176DA00F079A4 /* MTBackupAddressSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9B9EB1F0176DA00F079A4 /* MTBackupAddressSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0E9B9EE1F0176DA00F079A4 /* MTBackupAddressSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9B9EB1F0176DA00F079A4 /* MTBackupAddressSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0E9B9EF1F0176DA00F079A4 /* MTBackupAddressSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9B9EB1F0176DA00F079A4 /* MTBackupAddressSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -806,6 +812,8 @@
 		D0D2251B1B4D817B0085E26D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0D2251C1B4D817B0085E26D /* MtProtoKitDynamicTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitDynamicTests.m; sourceTree = "<group>"; };
 		D0E1D6731CBC20BA00B04029 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/SSignalKit.framework"; sourceTree = "<group>"; };
+		D0E2E17520866780005737E8 /* MTDNS.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTDNS.h; sourceTree = "<group>"; };
+		D0E2E17620866780005737E8 /* MTDNS.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTDNS.m; sourceTree = "<group>"; };
 		D0E9B9EB1F0176DA00F079A4 /* MTBackupAddressSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTBackupAddressSignals.h; sourceTree = "<group>"; };
 		D0E9B9EC1F0176DA00F079A4 /* MTBackupAddressSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTBackupAddressSignals.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1043,6 +1051,8 @@
 				D0C9322A1E095E280074F044 /* MTNetworkUsageManager.m */,
 				D0E9B9EB1F0176DA00F079A4 /* MTBackupAddressSignals.h */,
 				D0E9B9EC1F0176DA00F079A4 /* MTBackupAddressSignals.m */,
+				D0E2E17520866780005737E8 /* MTDNS.h */,
+				D0E2E17620866780005737E8 /* MTDNS.m */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1537,6 +1547,7 @@
 				D0C9322C1E095E280074F044 /* MTNetworkUsageManager.h in Headers */,
 				D0CD98101D74B96F00F41187 /* MTExportedAuthorizationData.h in Headers */,
 				D0CD98F71D75C0E400F41187 /* MTRequestContext.h in Headers */,
+				D0E2E17820866780005737E8 /* MTDNS.h in Headers */,
 				D0CD98871D74BA5100F41187 /* MTDatacenterSaltInfo.h in Headers */,
 				D0CD98CE1D74BA9B00F41187 /* MTHttpTransport.h in Headers */,
 				D0CD97ED1D74B94300F41187 /* MTInputStream.h in Headers */,
@@ -1629,6 +1640,7 @@
 				D0D1A05C1ADD983C007D9ED6 /* MTResPqMessage.h in Headers */,
 				D0D1A03E1ADD983C007D9ED6 /* MTDropRpcResultMessage.h in Headers */,
 				D0D1A05E1ADD983C007D9ED6 /* MTRpcError.h in Headers */,
+				D0E2E17720866780005737E8 /* MTDNS.h in Headers */,
 				D0C9322B1E095E280074F044 /* MTNetworkUsageManager.h in Headers */,
 				D0CB063A1ADC4591005E298F /* MTTimeFixContext.h in Headers */,
 				D0CB065D1ADC45CE005E298F /* MTTcpConnectionBehaviour.h in Headers */,
@@ -1729,6 +1741,7 @@
 				D0C9322D1E095E280074F044 /* MTNetworkUsageManager.h in Headers */,
 				D0CD98111D74B97000F41187 /* MTExportedAuthorizationData.h in Headers */,
 				D0CD98FC1D75C0E500F41187 /* MTRequestContext.h in Headers */,
+				D0E2E17920866780005737E8 /* MTDNS.h in Headers */,
 				D0CD988C1D74BA5200F41187 /* MTDatacenterSaltInfo.h in Headers */,
 				D0CD98CF1D74BA9B00F41187 /* MTHttpTransport.h in Headers */,
 				D0CD97F31D74B94300F41187 /* MTInputStream.h in Headers */,
@@ -1866,15 +1879,17 @@
 					};
 					D079AB961AF39B8000076F59 = {
 						CreatedOnToolsVersion = 6.3.1;
+						LastSwiftMigration = 0930;
 					};
 					D0CB05F61ADC4483005E298F = {
 						CreatedOnToolsVersion = 6.3;
-						LastSwiftMigration = 0820;
+						LastSwiftMigration = 0930;
 						ProvisioningStyle = Manual;
 					};
 					D0D2250A1B4D817B0085E26D = {
 						CreatedOnToolsVersion = 6.4;
 						DevelopmentTeam = X834Q8SBVP;
+						LastSwiftMigration = 0930;
 						ProvisioningStyle = Manual;
 					};
 					D0D225141B4D817B0085E26D = {
@@ -2037,6 +2052,7 @@
 				D0CD97D51D74B91C00F41187 /* MTTime.m in Sources */,
 				D0CD98351D74B9AA00F41187 /* MTMsgResendReqMessage.m in Sources */,
 				D0CD97E41D74B93300F41187 /* MTOutputStream.m in Sources */,
+				D0E2E17B20866780005737E8 /* MTDNS.m in Sources */,
 				D0CD988E1D74BA5900F41187 /* MTDatacenterAddress.m in Sources */,
 				D0CD98D01D74BAA200F41187 /* MTHttpTransport.m in Sources */,
 				D0CD98521D74B9B700F41187 /* MTSetClientDhParamsResponseMessage.m in Sources */,
@@ -2132,6 +2148,7 @@
 				D0D1A03D1ADD983C007D9ED6 /* MTDestroySessionResponseMessage.m in Sources */,
 				D0CB06151ADC44B7005E298F /* MTOutputStream.m in Sources */,
 				D0D1A0491ADD983C007D9ED6 /* MTMsgAllInfoMessage.m in Sources */,
+				D0E2E17A20866780005737E8 /* MTDNS.m in Sources */,
 				D010DB7E1D70ABEE0012AD96 /* MTRsa.m in Sources */,
 				D0D1A0631ADD983C007D9ED6 /* MTServerDhInnerDataMessage.m in Sources */,
 				D0D1A0571ADD983C007D9ED6 /* MTNewSessionCreatedMessage.m in Sources */,
@@ -2227,6 +2244,7 @@
 				D0CD97D41D74B91B00F41187 /* MTTime.m in Sources */,
 				D0CD98441D74B9AA00F41187 /* MTMsgResendReqMessage.m in Sources */,
 				D0CD97DC1D74B93100F41187 /* MTOutputStream.m in Sources */,
+				D0E2E17C20866780005737E8 /* MTDNS.m in Sources */,
 				D0CD98931D74BA5A00F41187 /* MTDatacenterAddress.m in Sources */,
 				D0CD98D11D74BAA200F41187 /* MTHttpTransport.m in Sources */,
 				D0CD98571D74B9B700F41187 /* MTSetClientDhParamsResponseMessage.m in Sources */,
@@ -2379,6 +2397,7 @@
 		C22069C41E8EB4B300E82730 /* AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
@@ -2407,6 +2426,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -2416,6 +2436,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				COPY_PHASE_STRIP = YES;
@@ -2449,6 +2470,8 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -2618,6 +2641,7 @@
 		D079ABAA1AF39B8000076F59 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -2650,6 +2674,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -2658,6 +2684,7 @@
 		D079ABAB1AF39B8000076F59 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
@@ -2686,6 +2713,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -2796,6 +2824,7 @@
 		D079FD121F06BE440038FADE /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -2828,6 +2857,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -2837,6 +2868,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
@@ -2874,6 +2906,8 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -3018,6 +3052,7 @@
 		D079FD181F06BE4D0038FADE /* Release AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
@@ -3046,6 +3081,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -3055,6 +3091,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				COPY_PHASE_STRIP = YES;
@@ -3087,6 +3124,7 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -3226,6 +3264,7 @@
 		D079FD1E1F06BE540038FADE /* Release Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
@@ -3254,6 +3293,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -3263,6 +3303,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				COPY_PHASE_STRIP = YES;
@@ -3295,6 +3336,7 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -3434,6 +3476,7 @@
 		D0924FDE1FE52BFE003F693F /* Release Hockeyapp Internal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
@@ -3462,6 +3505,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -3471,6 +3515,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				COPY_PHASE_STRIP = YES;
@@ -3503,6 +3548,7 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -3642,6 +3688,7 @@
 		D096C2D41CC3C664006D814E /* Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
@@ -3670,6 +3717,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -3679,6 +3727,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				COPY_PHASE_STRIP = YES;
@@ -3711,6 +3760,7 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -3870,6 +3920,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
@@ -3907,6 +3958,8 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -3917,6 +3970,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				COPY_PHASE_STRIP = YES;
@@ -3949,6 +4003,7 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -4108,6 +4163,7 @@
 		D0DB57B21E5C4B470071854C /* Debug AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -4140,6 +4196,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
@@ -4149,6 +4207,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
@@ -4186,6 +4245,8 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";

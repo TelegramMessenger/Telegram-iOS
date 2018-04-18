@@ -13,4 +13,8 @@
     return self;
 }
 
+- (NSString *)description {
+    return [[NSString alloc] initWithFormat:@"%d: %@", _errorCode, _errorDescription];
+}
+
 @end

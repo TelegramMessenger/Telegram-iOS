@@ -148,6 +148,9 @@
             }
             
             MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:data.datacenterId usageCalculationInfo:nil];
+            if (data.datacenterId != 0) {
+                mtProto.useTempAuthKeys = true;
+            }
             MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
             [mtProto addMessageService:requestService];
             

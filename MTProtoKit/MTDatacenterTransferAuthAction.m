@@ -91,6 +91,7 @@
     }
     
     _sourceDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:sourceDatacenterId usageCalculationInfo:nil];
+    _sourceDatacenterMtProto.useTempAuthKeys = true;
     
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     [_sourceDatacenterMtProto addMessageService:requestService];
@@ -127,6 +128,7 @@
     
     MTContext *context = _context;
     _destinationDatacenterMtProto = [[MTProto alloc] initWithContext:context datacenterId:_destinationDatacenterId usageCalculationInfo:nil];
+    _destinationDatacenterMtProto.useTempAuthKeys = true;
     
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     [_destinationDatacenterMtProto addMessageService:requestService];

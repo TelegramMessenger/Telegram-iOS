@@ -3,22 +3,24 @@
 
 @implementation MTDatacenterAuthKey
 
-- (instancetype)initWithAuthKey:(NSData *)authKey authKeyId:(int64_t)authKeyId {
+- (instancetype)initWithAuthKey:(NSData *)authKey authKeyId:(int64_t)authKeyId notBound:(bool)notBound {
     self = [super init];
     if (self != nil) {
         _authKey = authKey;
         _authKeyId = authKeyId;
+        _notBound = notBound;
     }
     return self;
 }
 
 - (instancetype)initWithCoder:(NSCoder *)aDecoder {
-    return [self initWithAuthKey:[aDecoder decodeObjectForKey:@"key"] authKeyId:[aDecoder decodeInt64ForKey:@"keyId"]];
+    return [self initWithAuthKey:[aDecoder decodeObjectForKey:@"key"] authKeyId:[aDecoder decodeInt64ForKey:@"keyId"] notBound:[aDecoder decodeBoolForKey:@"notBound"]];
 }
 
 - (void)encodeWithCoder:(NSCoder *)aCoder {
     [aCoder encodeObject:_authKey forKey:@"key"];
     [aCoder encodeInt64:_authKeyId forKey:@"keyId"];
+    [aCoder encodeBool:_notBound forKey:@"notBound"];
 }
 
 @end
@@ -113,6 +115,10 @@
 
 - (MTDatacenterAuthInfo *)withUpdatedTempAuthKey:(MTDatacenterAuthKey *)tempAuthKey {
     return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:_saltSet authKeyAttributes:_authKeyAttributes tempAuthKey:tempAuthKey];
+}
+
+- (MTDatacenterAuthKey *)persistentAuthKey {
+    return [[MTDatacenterAuthKey alloc] initWithAuthKey:_authKey authKeyId:_authKeyId notBound:false];
 }
 
 @end

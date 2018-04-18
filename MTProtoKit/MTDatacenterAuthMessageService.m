@@ -619,9 +619,8 @@ typedef enum {
                     [serverSaltData appendBytes:&x length:1];
                 }
                 
-                _authKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:authKey authKeyId:authKeyId];
+                _authKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:authKey authKeyId:authKeyId notBound:_tempAuth];
                 
-                //client_DH_inner_data#6643b654 nonce:int128 server_nonce:int128 retry_id:long g_b:bytes = Client_DH_Inner_Data;
                 MTBuffer *clientDhInnerDataBuffer = [[MTBuffer alloc] init];
                 [clientDhInnerDataBuffer appendInt32:(int32_t)0x6643b654];
                 [clientDhInnerDataBuffer appendBytes:_nonce.bytes length:_nonce.length];

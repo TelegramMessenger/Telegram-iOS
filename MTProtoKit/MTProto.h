@@ -20,7 +20,7 @@
 @interface MTProtoConnectionState : NSObject
 
 @property (nonatomic, readonly) bool isConnected;
-@property (nonatomic, readonly) bool isUsingProxy;
+@property (nonatomic, readonly) NSString *proxyAddress;
 
 @end
 
@@ -69,7 +69,5 @@
 - (void)requestTimeResync;
 
 - (void)_messageResendRequestFailed:(int64_t)messageId;
-
-- (void)bindToPersistentKey:(MTDatacenterAuthKey *)persistentKey completion:(void (^)())completion;
 
 @end

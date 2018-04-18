@@ -20,9 +20,6 @@
     
     bool _awaitingAddresSetUpdate;
     MTProto *_authMtProto;
-    
-    MTContext *_bindContext;
-    MTProto *_bindMtProto;
 }
 
 @end
@@ -83,29 +80,13 @@
         MTContext *mainContext = _context;
         MTDatacenterAuthInfo *mainAuthInfo = [mainContext authInfoForDatacenterWithId:_datacenterId];
         if (mainContext != nil && mainAuthInfo != nil) {
-            _bindContext = [[MTContext alloc] initWithSerialization:mainContext.serialization apiEnvironment:mainContext.apiEnvironment];
-            [_bindContext updateAddressSetForDatacenterWithId:_datacenterId addressSet:[mainContext addressSetForDatacenterWithId:_datacenterId] forceUpdateSchemes:true];
-            
-            MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:((int64_t)timestamp) * 4294967296 lastValidMessageId:((int64_t)(timestamp + 29.0 * 60.0)) * 4294967296]] authKeyAttributes:nil tempAuthKey:nil];
-            [_bindContext updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo];
-            _bindMtProto = [[MTProto alloc] initWithContext:_bindContext datacenterId:_datacenterId usageCalculationInfo:nil];
-            
-            MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:_bindContext];
-            [_bindMtProto addMessageService:requestService];
-            
-            __weak MTDatacenterAuthAction *weakSelf = self;
-            [_bindMtProto bindToPersistentKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:mainAuthInfo.authKey authKeyId:mainAuthInfo.authKeyId] completion:^{
-                __strong MTDatacenterAuthAction *strongSelf = weakSelf;
-                if (strongSelf != nil) {
-                    MTContext *context = _context;
-                    [context performBatchUpdates:^{
-                        MTDatacenterAuthInfo *authInfo = [context authInfoForDatacenterWithId:strongSelf->_datacenterId];
-                        authInfo = [authInfo withUpdatedTempAuthKey:authKey];
-                        [context updateAuthInfoForDatacenterWithId:strongSelf->_datacenterId authInfo:authInfo];
-                    }];
-                    [self complete];
-                }
+            MTContext *context = _context;
+            [context performBatchUpdates:^{
+                MTDatacenterAuthInfo *authInfo = [context authInfoForDatacenterWithId:_datacenterId];
+                authInfo = [authInfo withUpdatedTempAuthKey:authKey];
+                [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo];
             }];
+            [self complete];
         }
     } else {
         MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil tempAuthKey:nil];
