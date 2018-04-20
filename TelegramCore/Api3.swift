@@ -2769,6 +2769,25 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func setSecureValueErrors(id: Api.InputUser, errors: [Api.SecureValueError]) -> (CustomStringConvertible, Buffer, (Buffer) -> Api.Bool?) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1865902923)
+                    id.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(errors.count))
+                    for item in errors {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription({return "(users.setSecureValueErrors id: \(id), errors: \(errors))"}), buffer, { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
             public struct contacts {
                 public static func getStatuses() -> (CustomStringConvertible, Buffer, (Buffer) -> [Api.ContactStatus]?) {

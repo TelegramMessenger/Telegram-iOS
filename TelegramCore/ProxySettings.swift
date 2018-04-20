@@ -9,18 +9,17 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public final class ProxySettings: PreferencesEntry, Equatable {
+public struct ProxyServerSettings: PostboxCoding, Equatable {
     public let host: String
     public let port: Int32
     public let username: String?
     public let password: String?
-    public let useForCalls: Bool
-    public init(host: String, port: Int32, username: String?, password: String?, useForCalls: Bool) {
+    
+    public init(host: String, port: Int32, username: String?, password: String?) {
         self.host = host
         self.port = port
         self.username = username
         self.password = password
-        self.useForCalls = useForCalls
     }
     
     public init(decoder: PostboxDecoder) {
@@ -28,7 +27,6 @@ public final class ProxySettings: PreferencesEntry, Equatable {
         self.port = decoder.decodeInt32ForKey("port", orElse: 0)
         self.username = decoder.decodeOptionalStringForKey("username")
         self.password = decoder.decodeOptionalStringForKey("password")
-        self.useForCalls = decoder.decodeInt32ForKey("useForCalls", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -44,6 +42,37 @@ public final class ProxySettings: PreferencesEntry, Equatable {
         } else {
             encoder.encodeNil(forKey: "password")
         }
+    }
+}
+
+public struct ProxySettings: PreferencesEntry, Equatable {
+    public var servers: [ProxyServerSettings]
+    public var activeServer: ProxyServerSettings?
+    public var useForCalls: Bool
+    
+    public static var defaultSettings: ProxySettings {
+        return ProxySettings(servers: [], activeServer: nil, useForCalls: false)
+    }
+    
+    public init(servers: [ProxyServerSettings], activeServer: ProxyServerSettings?, useForCalls: Bool) {
+        self.servers = servers
+        self.activeServer = activeServer
+        self.useForCalls = useForCalls
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.servers = decoder.decodeObjectArrayWithDecoderForKey("servers")
+        self.activeServer = decoder.decodeObjectForKey("activeServer", decoder: ProxyServerSettings.init(decoder:)) as? ProxyServerSettings
+        self.useForCalls = decoder.decodeInt32ForKey("useForCalls", orElse: 0) != 0
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObjectArray(self.servers, forKey: "servers")
+        if let activeServer = self.activeServer {
+            encoder.encodeObject(activeServer, forKey: "activeServer")
+        } else {
+            encoder.encodeNil(forKey: "activeServer")
+        }
         encoder.encodeInt32(self.useForCalls ? 1 : 0, forKey: "useForCalls")
     }
     
@@ -54,46 +83,28 @@ public final class ProxySettings: PreferencesEntry, Equatable {
         
         return self == to
     }
-    
-    public static func ==(lhs: ProxySettings, rhs: ProxySettings) -> Bool {
-        if lhs.host != rhs.host {
-            return false
-        }
-        if lhs.port != rhs.port {
-            return false
-        }
-        if lhs.username != rhs.username {
-            return false
-        }
-        if lhs.password != rhs.password {
-            return false
-        }
-        if lhs.useForCalls != rhs.useForCalls {
-            return false
-        }
-        return true
-    }
-
 }
 
-public func updateProxySettings(postbox:Postbox, _ f: @escaping (ProxySettings?)->ProxySettings?) -> Signal<Void, Void> {
+public func updateProxySettingsInteractively(postbox: Postbox, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
+        var updateNetwork = false
+        var updatedSettings: ProxySettings?
         modifier.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { current in
-            return f(current as? ProxySettings)
-        })
-    }
-}
-
-public func applyProxySettings(postbox: Postbox, network: Network, settings: ProxySettings?) -> Signal<Void, NoError> {
-    return postbox.modify { modifier -> Void in
-        modifier.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { _ in
-            return settings
+            let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings
+            let updated = f(previous)
+            updatedSettings = updated
+            if updated.activeServer != previous.activeServer {
+                updateNetwork = true
+            }
+            return updated
         })
         
-        network.context.updateApiEnvironment { current in
-            return current?.withUpdatedSocksProxySettings(settings.flatMap { proxySettings -> MTSocksProxySettings? in
-                return MTSocksProxySettings(ip: proxySettings.host, port: UInt16(proxySettings.port), username: proxySettings.username, password: proxySettings.password)
-            })
+        if updateNetwork, let updatedSettings = updatedSettings {
+            network.context.updateApiEnvironment { current in
+                return current?.withUpdatedSocksProxySettings(updatedSettings.activeServer.flatMap { activeServer -> MTSocksProxySettings? in
+                    return MTSocksProxySettings(ip: activeServer.host, port: UInt16(activeServer.port), username: activeServer.username, password: activeServer.password)
+                })
+            }
         }
     }
 }

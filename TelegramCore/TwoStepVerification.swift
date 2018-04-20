@@ -21,8 +21,8 @@ public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStep
             switch result {
                 case let .noPassword(_, _, _, emailUnconfirmedPattern):
                     return .notSet(pendingEmailPattern: emailUnconfirmedPattern)
-                case let .password(_, _, _, _, hint, hasRecovery, emailUnconfirmedPattern):
-                    return .set(hint: hint, hasRecoveryEmail: hasRecovery == .boolTrue, pendingEmailPattern: emailUnconfirmedPattern)
+                case let .password(flags, _, _, _, _, hint, emailUnconfirmedPattern):
+                    return .set(hint: hint, hasRecoveryEmail: (flags & (1 << 0)) != 0, pendingEmailPattern: emailUnconfirmedPattern)
             }
         }
 }

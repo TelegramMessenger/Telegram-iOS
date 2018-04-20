@@ -2326,13 +2326,13 @@ public struct account {
     
     }
     public enum AuthorizationForm {
-        case authorizationForm(flags: Int32, requiredTypes: [Api.SecureValueType], values: [Api.SecureValue], users: [Api.User], privacyPolicyUrl: String?)
+        case authorizationForm(flags: Int32, requiredTypes: [Api.SecureValueType], values: [Api.SecureValue], errors: [Api.SecureValueError], users: [Api.User], privacyPolicyUrl: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .authorizationForm(let flags, let requiredTypes, let values, let users, let privacyPolicyUrl):
+                case .authorizationForm(let flags, let requiredTypes, let values, let errors, let users, let privacyPolicyUrl):
                     if boxed {
-                        buffer.appendInt32(-1177300496)
+                        buffer.appendInt32(-879268525)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -2343,6 +2343,11 @@ public struct account {
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(values.count))
                     for item in values {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(errors.count))
+                    for item in errors {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
@@ -2366,19 +2371,24 @@ public struct account {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureValue.self)
             }
-            var _4: [Api.User]?
+            var _4: [Api.SecureValueError]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureValueError.self)
             }
-            var _5: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.account.AuthorizationForm.authorizationForm(flags: _1!, requiredTypes: _2!, values: _3!, users: _4!, privacyPolicyUrl: _5)
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.account.AuthorizationForm.authorizationForm(flags: _1!, requiredTypes: _2!, values: _3!, errors: _4!, users: _5!, privacyPolicyUrl: _6)
             }
             else {
                 return nil
@@ -2388,7 +2398,7 @@ public struct account {
     }
     public enum Password {
         case noPassword(newSalt: Buffer, newSecureSalt: Buffer, secureRandom: Buffer, emailUnconfirmedPattern: String)
-        case password(currentSalt: Buffer, newSalt: Buffer, newSecureSalt: Buffer, secureRandom: Buffer, hint: String, hasRecovery: Api.Bool, emailUnconfirmedPattern: String)
+        case password(flags: Int32, currentSalt: Buffer, newSalt: Buffer, newSecureSalt: Buffer, secureRandom: Buffer, hint: String, emailUnconfirmedPattern: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -2401,16 +2411,16 @@ public struct account {
                     serializeBytes(secureRandom, buffer: buffer, boxed: false)
                     serializeString(emailUnconfirmedPattern, buffer: buffer, boxed: false)
                     break
-                case .password(let currentSalt, let newSalt, let newSecureSalt, let secureRandom, let hint, let hasRecovery, let emailUnconfirmedPattern):
+                case .password(let flags, let currentSalt, let newSalt, let newSecureSalt, let secureRandom, let hint, let emailUnconfirmedPattern):
                     if boxed {
-                        buffer.appendInt32(-798203965)
+                        buffer.appendInt32(-902187961)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeBytes(currentSalt, buffer: buffer, boxed: false)
                     serializeBytes(newSalt, buffer: buffer, boxed: false)
                     serializeBytes(newSecureSalt, buffer: buffer, boxed: false)
                     serializeBytes(secureRandom, buffer: buffer, boxed: false)
                     serializeString(hint, buffer: buffer, boxed: false)
-                    hasRecovery.serialize(buffer, true)
                     serializeString(emailUnconfirmedPattern, buffer: buffer, boxed: false)
                     break
     }
@@ -2437,20 +2447,18 @@ public struct account {
             }
         }
         static func parse_password(_ reader: BufferReader) -> Password? {
-            var _1: Buffer?
-            _1 = parseBytes(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Buffer?
             _2 = parseBytes(reader)
             var _3: Buffer?
             _3 = parseBytes(reader)
             var _4: Buffer?
             _4 = parseBytes(reader)
-            var _5: String?
-            _5 = parseString(reader)
-            var _6: Api.Bool?
-            if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.Bool
-            }
+            var _5: Buffer?
+            _5 = parseBytes(reader)
+            var _6: String?
+            _6 = parseString(reader)
             var _7: String?
             _7 = parseString(reader)
             let _c1 = _1 != nil
@@ -2461,7 +2469,7 @@ public struct account {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.account.Password.password(currentSalt: _1!, newSalt: _2!, newSecureSalt: _3!, secureRandom: _4!, hint: _5!, hasRecovery: _6!, emailUnconfirmedPattern: _7!)
+                return Api.account.Password.password(flags: _1!, currentSalt: _2!, newSalt: _3!, newSecureSalt: _4!, secureRandom: _5!, hint: _6!, emailUnconfirmedPattern: _7!)
             }
             else {
                 return nil

@@ -156,7 +156,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String) -> Sig
                                             switch result {
                                                 case .noPassword:
                                                     return .fail(.generic)
-                                                case let .password(_, _, _, _, hint, _, _):
+                                                case let .password(_, _, _, _, _, hint, _):
                                                     return .single(.password(hint: hint))
                                             }
                                         }
