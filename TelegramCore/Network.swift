@@ -336,8 +336,8 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             apiEnvironment.disableUpdates = supplementary
             apiEnvironment = apiEnvironment.withUpdatedLangPackCode(languageCode ?? "en")
             
-            if let proxySettings = proxySettings {
-                apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: proxySettings.host, port: UInt16(proxySettings.port), username: proxySettings.username, password: proxySettings.password))
+            if let activeServer = proxySettings?.activeServer {
+                apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: activeServer.host, port: UInt16(activeServer.port), username: activeServer.username, password: activeServer.password))
             }
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
