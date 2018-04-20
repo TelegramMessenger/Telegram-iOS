@@ -76,6 +76,14 @@ public final class ProxySettings: PreferencesEntry, Equatable {
 
 }
 
+public func updateProxySettings(postbox:Postbox, _ f: @escaping (ProxySettings?)->ProxySettings?) -> Signal<Void, Void> {
+    return postbox.modify { modifier -> Void in
+        modifier.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { current in
+            return f(current as? ProxySettings)
+        })
+    }
+}
+
 public func applyProxySettings(postbox: Postbox, network: Network, settings: ProxySettings?) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
         modifier.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { _ in
