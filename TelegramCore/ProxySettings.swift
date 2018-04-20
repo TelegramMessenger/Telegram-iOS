@@ -46,27 +46,42 @@ public struct ProxyServerSettings: PostboxCoding, Equatable {
 }
 
 public struct ProxySettings: PreferencesEntry, Equatable {
+    public var enabled: Bool
     public var servers: [ProxyServerSettings]
     public var activeServer: ProxyServerSettings?
     public var useForCalls: Bool
     
     public static var defaultSettings: ProxySettings {
-        return ProxySettings(servers: [], activeServer: nil, useForCalls: false)
+        return ProxySettings(enabled: false, servers: [], activeServer: nil, useForCalls: false)
     }
     
-    public init(servers: [ProxyServerSettings], activeServer: ProxyServerSettings?, useForCalls: Bool) {
+    public init(enabled: Bool, servers: [ProxyServerSettings], activeServer: ProxyServerSettings?, useForCalls: Bool) {
+        self.enabled = enabled
         self.servers = servers
         self.activeServer = activeServer
         self.useForCalls = useForCalls
     }
     
     public init(decoder: PostboxDecoder) {
-        self.servers = decoder.decodeObjectArrayWithDecoderForKey("servers")
+        if let _ = decoder.decodeOptionalStringForKey("server") {
+            let legacyServer = ProxyServerSettings(decoder: decoder)
+            if !legacyServer.host.isEmpty && legacyServer.port != 0 {
+                self.enabled = true
+                self.servers = [legacyServer]
+            } else {
+                self.enabled = false
+                self.servers = []
+            }
+        } else {
+            self.enabled = decoder.decodeInt32ForKey("enabled", orElse: 0) != 0
+            self.servers = decoder.decodeObjectArrayWithDecoderForKey("servers")
+        }
         self.activeServer = decoder.decodeObjectForKey("activeServer", decoder: ProxyServerSettings.init(decoder:)) as? ProxyServerSettings
         self.useForCalls = decoder.decodeInt32ForKey("useForCalls", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.enabled ? 1 : 0, forKey: "enabled")
         encoder.encodeObjectArray(self.servers, forKey: "servers")
         if let activeServer = self.activeServer {
             encoder.encodeObject(activeServer, forKey: "activeServer")
@@ -83,6 +98,14 @@ public struct ProxySettings: PreferencesEntry, Equatable {
         
         return self == to
     }
+    
+    var effectiveActiveServer: ProxyServerSettings? {
+        if self.enabled, let activeServer = self.activeServer {
+            return activeServer
+        } else {
+            return nil
+        }
+    }
 }
 
 public func updateProxySettingsInteractively(postbox: Postbox, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Void, NoError> {
@@ -93,7 +116,7 @@ public func updateProxySettingsInteractively(postbox: Postbox, network: Network,
             let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings
             let updated = f(previous)
             updatedSettings = updated
-            if updated.activeServer != previous.activeServer {
+            if updated.effectiveActiveServer != previous.effectiveActiveServer {
                 updateNetwork = true
             }
             return updated
@@ -101,7 +124,7 @@ public func updateProxySettingsInteractively(postbox: Postbox, network: Network,
         
         if updateNetwork, let updatedSettings = updatedSettings {
             network.context.updateApiEnvironment { current in
-                return current?.withUpdatedSocksProxySettings(updatedSettings.activeServer.flatMap { activeServer -> MTSocksProxySettings? in
+                return current?.withUpdatedSocksProxySettings(updatedSettings.effectiveActiveServer.flatMap { activeServer -> MTSocksProxySettings? in
                     return MTSocksProxySettings(ip: activeServer.host, port: UInt16(activeServer.port), username: activeServer.username, password: activeServer.password)
                 })
             }

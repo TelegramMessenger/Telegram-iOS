@@ -336,7 +336,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             apiEnvironment.disableUpdates = supplementary
             apiEnvironment = apiEnvironment.withUpdatedLangPackCode(languageCode ?? "en")
             
-            if let activeServer = proxySettings?.activeServer {
+            if let effectiveActiveServer = proxySettings?.effectiveActiveServer {
                 apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: activeServer.host, port: UInt16(activeServer.port), username: activeServer.username, password: activeServer.password))
             }
             
