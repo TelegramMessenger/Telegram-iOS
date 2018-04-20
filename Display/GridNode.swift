@@ -210,9 +210,12 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     public var visibleItemsUpdated: ((GridNodeVisibleItems) -> Void)?
     public var presentationLayoutUpdated: ((GridNodeCurrentPresentationLayout, ContainedViewLayoutTransition) -> Void)?
+    public var scrollingInitiated: (() -> Void)?
     public var scrollingCompleted: (() -> Void)?
     
     public final var floatingSections = false
+    
+    public final var initialOffset: CGFloat = 0.0
     
     public var showVerticalScrollIndicator: Bool = false {
         didSet {
@@ -340,6 +343,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         self.updateItemNodeVisibilititesAndScrolling()
+        self.scrollingInitiated?()
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -403,11 +407,6 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     var previousSection: GridSection?
                     for item in self.items {
                         var itemSize = defaultItemSize
-                        if let height = item.fillsRowWithHeight {
-                            nextItemOrigin.x = 0.0
-                            itemSize.width = gridLayout.size.width
-                            itemSize.height = height
-                        }
                         
                         let section = item.section
                         var keepSection = true
@@ -432,15 +431,19 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         }
                         previousSection = section
                         
-                        if !incrementedCurrentRow {
-                            incrementedCurrentRow = true
-                            contentSize.height += itemSize.height + lineSpacing
-                        }
-                        
-                        if index == 0 {
+                        if let height = item.fillsRowWithHeight {
+                            nextItemOrigin.x = 0.0
+                            itemSize.width = gridLayout.size.width
+                            itemSize.height = height
+                        } else if index == 0 {
                             let itemsInRow = max(1, Int(effectiveWidth) / Int(itemSize.width))
                             let normalizedIndexOffset = self.firstIndexInSectionOffset % itemsInRow
                             nextItemOrigin.x += (itemSize.width + itemSpacing) * CGFloat(normalizedIndexOffset)
+                        }
+                        
+                        if !incrementedCurrentRow {
+                            incrementedCurrentRow = true
+                            contentSize.height += itemSize.height + lineSpacing
                         }
                         
                         items.append(GridNodePresentationItem(index: index, frame: CGRect(origin: nextItemOrigin, size: itemSize)))
@@ -557,7 +560,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         if self.itemLayout.items.isEmpty {
                             transitionDirectionHint = scrollToItem.directionHint
                             transition = scrollToItem.transition
-                            contentOffset = CGPoint(x: 0.0, y: -self.gridLayout.insets.top)
+                            contentOffset = CGPoint(x: 0.0, y: -self.gridLayout.insets.top + self.initialOffset)
                         } else {
                             let itemFrame = self.itemLayout.items[scrollToItem.index]
                             
@@ -585,7 +588,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                                 }
                                 
                                 if scrollToItem.adjustForTopInset {
-                                    additionalOffset += -gridLayout.insets.top
+                                    additionalOffset += -gridLayout.insets.top + self.initialOffset
                                 }
                             } else if scrollToItem.adjustForTopInset {
                                 additionalOffset = -gridLayout.insets.top

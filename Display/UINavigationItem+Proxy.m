@@ -175,6 +175,10 @@ static const void *badgeKey = &badgeKey;
     }
 }
 
+- (BOOL)hasTargetItem {
+    return [self associatedObjectForKey:targetItemKey] != nil;
+}
+
 - (NSInteger)addSetTitleListener:(UINavigationItemSetTitleListener)listener
 {
     NSBag *bag = [self associatedObjectForKey:setTitleListenerBagKey];

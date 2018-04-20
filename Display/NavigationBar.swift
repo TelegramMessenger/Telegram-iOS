@@ -271,6 +271,8 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public var layoutSuspended: Bool = false
+    
     private let titleNode: ASTextNode
     
     var previousItemListenerKey: Int?
@@ -701,6 +703,10 @@ open class NavigationBar: ASDisplayNode {
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.layoutSuspended {
+            return
+        }
+        
         self.validLayout = (size, leftInset, rightInset)
         
         let leftButtonInset: CGFloat = leftInset + 16.0

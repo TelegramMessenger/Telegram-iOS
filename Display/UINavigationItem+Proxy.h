@@ -10,6 +10,7 @@ typedef void (^UITabBarItemSetBadgeListener)(NSString * _Nullable);
 @interface UINavigationItem (Proxy)
 
 - (void)setTargetItem:(UINavigationItem * _Nullable)targetItem;
+- (BOOL)hasTargetItem;
 
 - (void)setTitle:(NSString * _Nullable)title animated:(bool)animated;
 

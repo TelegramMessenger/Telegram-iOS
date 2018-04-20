@@ -293,16 +293,6 @@ private final class KeyboardGestureRecognizerDelegate: NSObject, UIGestureRecogn
     }
 }
 
-public final class StatusBarVolumeColors {
-    public let background: UIColor
-    public let foreground: UIColor
-    
-    public init(background: UIColor, foreground: UIColor) {
-        self.background = background
-        self.foreground = foreground
-    }
-}
-
 public class Window1 {
     public let hostView: WindowHostView
     
@@ -331,7 +321,6 @@ public class Window1 {
     
     public var previewThemeAccentColor: UIColor = .blue
     public var previewThemeDarkBlur: Bool = false
-    public var statusBarVolumeColors: StatusBarVolumeColors = StatusBarVolumeColors(background: .lightGray, foreground: .black)
     
     public private(set) var forceInCallStatusBarText: String? = nil
     public var inCallNavigate: (() -> Void)? {

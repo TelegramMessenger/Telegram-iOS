@@ -157,6 +157,7 @@ open class TabBarController: ViewController {
             self.addChildViewController(currentController)
             currentController.didMove(toParentViewController: self)
             
+            currentController.navigationBar?.layoutSuspended = true
             currentController.navigationItem.setTarget(self.navigationItem)
             displayNavigationBar = currentController.displayNavigationBar
             currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
