@@ -195,6 +195,30 @@
 
 @end
 
+@interface MTSignalCombineState : NSObject
+
+@property (nonatomic, strong, readonly) NSDictionary *latestValues;
+@property (nonatomic, strong, readonly) NSArray *completedStatuses;
+@property (nonatomic) bool error;
+
+@end
+
+@implementation MTSignalCombineState
+
+- (instancetype)initWithLatestValues:(NSDictionary *)latestValues completedStatuses:(NSArray *)completedStatuses error:(bool)error
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _latestValues = latestValues;
+        _completedStatuses = completedStatuses;
+        _error = error;
+    }
+    return self;
+}
+
+@end
+
 @implementation MTSignal
 
 - (instancetype)initWithGenerator:(id<MTDisposable> (^)(MTSubscriber *))generator
@@ -398,6 +422,108 @@
         }]];
         
         return disposable;
+    }];
+}
+
++ (MTSignal *)combineSignals:(NSArray *)signals
+{
+    if (signals.count == 0)
+        return [MTSignal single:@[]];
+    else
+        return [self combineSignals:signals withInitialStates:nil];
+}
+
++ (MTSignal *)combineSignals:(NSArray *)signals withInitialStates:(NSArray *)initialStates
+{
+    return [[MTSignal alloc] initWithGenerator:^(MTSubscriber *subscriber)
+    {
+        NSMutableArray *completedStatuses = [[NSMutableArray alloc] init];
+        for (NSUInteger i = 0; i < signals.count; i++) {
+            [completedStatuses addObject:@false];
+        }
+        NSMutableDictionary *initialLatestValues = [[NSMutableDictionary alloc] init];
+        for (NSUInteger i = 0; i < initialStates.count; i++) {
+            initialLatestValues[@(i)] = initialStates[i];
+        }
+        MTAtomic *combineState = [[MTAtomic alloc] initWithValue:[[MTSignalCombineState alloc] initWithLatestValues:initialLatestValues completedStatuses:completedStatuses error:false]];
+        
+        MTDisposableSet *compositeDisposable = [[MTDisposableSet alloc] init];
+        
+        NSUInteger index = 0;
+        NSUInteger count = signals.count;
+        for (MTSignal *signal in signals) {
+            id<MTDisposable> disposable = [signal startWithNext:^(id next)
+            {
+                MTSignalCombineState *currentState = [combineState modify:^id(MTSignalCombineState *state)
+                {
+                    NSMutableDictionary *latestValues = [[NSMutableDictionary alloc] initWithDictionary:state.latestValues];
+                    latestValues[@(index)] = next;
+                    return [[MTSignalCombineState alloc] initWithLatestValues:latestValues completedStatuses:state.completedStatuses error:state.error];
+                }];
+                NSMutableArray *latestValues = [[NSMutableArray alloc] init];
+                for (NSUInteger i = 0; i < count; i++)
+                {
+                    id value = currentState.latestValues[@(i)];
+                    if (value == nil)
+                    {
+                        latestValues = nil;
+                        break;
+                    }
+                    latestValues[i] = value;
+                }
+                if (latestValues != nil)
+                    [subscriber putNext:latestValues];
+            }
+                                                         error:^(id error)
+            {
+                __block bool hadError = false;
+                [combineState modify:^id(MTSignalCombineState *state)
+                {
+                    hadError = state.error;
+                    return [[MTSignalCombineState alloc] initWithLatestValues:state.latestValues completedStatuses:state.completedStatuses error:true];
+                }];
+                if (!hadError)
+                    [subscriber putError:error];
+            } completed:^
+            {
+                __block bool wasCompleted = false;
+                __block bool isCompleted = false;
+                [combineState modify:^id(MTSignalCombineState *state)
+                {
+                    NSMutableArray *completedStatuses = [[NSMutableArray alloc] initWithArray:state.completedStatuses];
+                    bool everyStatusWasCompleted = true;
+                    for (NSNumber *nStatus in completedStatuses)
+                    {
+                        if (![nStatus boolValue])
+                        {
+                            everyStatusWasCompleted = false;
+                            break;
+                        }
+                    }
+                    completedStatuses[index] = @true;
+                    bool everyStatusIsCompleted = true;
+                    for (NSNumber *nStatus in completedStatuses)
+                    {
+                        if (![nStatus boolValue])
+                        {
+                            everyStatusIsCompleted = false;
+                            break;
+                        }
+                    }
+                    
+                    wasCompleted = everyStatusWasCompleted;
+                    isCompleted = everyStatusIsCompleted;
+                    
+                    return [[MTSignalCombineState alloc] initWithLatestValues:state.latestValues completedStatuses:completedStatuses error:state.error];
+                }];
+                if (!wasCompleted && isCompleted)
+                    [subscriber putCompletion];
+            }];
+            [compositeDisposable add:disposable];
+            index++;
+        }
+        
+        return compositeDisposable;
     }];
 }
 

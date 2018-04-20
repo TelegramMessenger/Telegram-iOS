@@ -29,6 +29,7 @@
 - (MTSignal *)catch:(MTSignal *(^)(id error))f;
 
 + (MTSignal *)mergeSignals:(NSArray *)signals;
++ (MTSignal *)combineSignals:(NSArray *)signals;
 
 - (MTSignal *)restart;
 
@@ -45,7 +46,6 @@
 - (MTSignal *)deliverOn:(MTQueue *)queue;
 - (MTSignal *)startOn:(MTQueue *)queue;
 
-- (MTSignal *)take:(NSUInteger)count;
 - (MTSignal *)takeLast;
 
 - (MTSignal *)reduceLeft:(id)value with:(id (^)(id, id))f;

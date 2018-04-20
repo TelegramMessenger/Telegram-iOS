@@ -273,6 +273,20 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         _transport = transport;
         [previousTransport stop];
         
+        if (_transport != nil && _useTempAuthKeys) {
+            MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+            if (_transport.address.preferForMedia) {
+                tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
+            }
+            
+            MTDatacenterAuthKey *effectiveAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
+            if (effectiveAuthKey == nil) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTProto#%p setTransport temp auth key missing]", self);
+                }
+            }
+        }
+        
         if (_transport != nil)
             [self addMessageService:_transport];
         
@@ -2068,7 +2082,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         }
         
         effectiveAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
-        NSAssert(effectiveAuthKey != nil, @"effectiveAuthKey == nil");
     } else {
         effectiveAuthKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:_authInfo.authKey authKeyId:_authInfo.authKeyId notBound:false];
     }

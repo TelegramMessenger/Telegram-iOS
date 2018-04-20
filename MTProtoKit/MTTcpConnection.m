@@ -613,7 +613,7 @@ struct ctr_state {
         
         if (resp.Reply != 0x00) {
             if (MTLogEnabled()) {
-                MTLog(@"***** %s: socks5 connect failed, error 0x%02x", __PRETTY_FUNCTION__, resp.Reply);
+                MTLog(@"***** %x %s: socks5 connect failed, error 0x%02x", (int)self, __PRETTY_FUNCTION__, resp.Reply);
             }
             [self closeAndNotify];
             return;
