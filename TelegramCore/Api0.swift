@@ -346,6 +346,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2128640689] = { return Api.account.SentEmailCode.parse_sentEmailCode($0) }
     dict[-1038136962] = { return Api.EncryptedFile.parse_encryptedFileEmpty($0) }
     dict[1248893260] = { return Api.EncryptedFile.parse_encryptedFile($0) }
+    dict[-391902247] = { return Api.SecureValueError.parse_secureValueErrorData($0) }
+    dict[2054162547] = { return Api.SecureValueError.parse_secureValueErrorFile($0) }
+    dict[1717706985] = { return Api.SecureValueError.parse_secureValueErrorFiles($0) }
+    dict[-449327402] = { return Api.SecureValueError.parse_secureValueErrorSelfie($0) }
     dict[1489977929] = { return Api.ChannelBannedRights.parse_channelBannedRights($0) }
     dict[-1613493288] = { return Api.NotifyPeer.parse_notifyPeer($0) }
     dict[-1261946036] = { return Api.NotifyPeer.parse_notifyUsers($0) }
@@ -528,7 +532,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-209768682] = { return Api.messages.FavedStickers.parse_favedStickers($0) }
     dict[1776236393] = { return Api.ExportedChatInvite.parse_chatInviteEmpty($0) }
     dict[-64092740] = { return Api.ExportedChatInvite.parse_chatInviteExported($0) }
-    dict[-1177300496] = { return Api.account.AuthorizationForm.parse_authorizationForm($0) }
+    dict[-879268525] = { return Api.account.AuthorizationForm.parse_authorizationForm($0) }
     dict[2079516406] = { return Api.Authorization.parse_authorization($0) }
     dict[-1361650766] = { return Api.MaskCoords.parse_maskCoords($0) }
     dict[-395967805] = { return Api.messages.AllStickers.parse_allStickersNotModified($0) }
@@ -546,7 +550,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1289704741] = { return Api.SecureValueType.parse_secureValueTypePhone($0) }
     dict[-1908627474] = { return Api.SecureValueType.parse_secureValueTypeEmail($0) }
     dict[1587643126] = { return Api.account.Password.parse_noPassword($0) }
-    dict[-798203965] = { return Api.account.Password.parse_password($0) }
+    dict[-902187961] = { return Api.account.Password.parse_password($0) }
     dict[-1462213465] = { return Api.InputBotInlineResult.parse_inputBotInlineResultPhoto($0) }
     dict[-459324] = { return Api.InputBotInlineResult.parse_inputBotInlineResultDocument($0) }
     dict[1336154098] = { return Api.InputBotInlineResult.parse_inputBotInlineResultGame($0) }
@@ -888,6 +892,8 @@ public struct Api {
             case let _1 as Api.account.SentEmailCode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EncryptedFile:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.SecureValueError:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelBannedRights:
                 _1.serialize(buffer, boxed)
