@@ -4,28 +4,23 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private final class ProxySettingsControllerArguments {
-    let updateState: ((ProxySettingsControllerState) -> ProxySettingsControllerState) -> Void
+private final class proxyServerSettingsControllerArguments {
+    let updateState: ((proxyServerSettingsControllerState) -> proxyServerSettingsControllerState) -> Void
     let share: () -> Void
     
-    init(updateState: @escaping ((ProxySettingsControllerState) -> ProxySettingsControllerState) -> Void, share: @escaping () -> Void) {
+    init(updateState: @escaping ((proxyServerSettingsControllerState) -> proxyServerSettingsControllerState) -> Void, share: @escaping () -> Void) {
         self.updateState = updateState
         self.share = share
     }
 }
 
 private enum ProxySettingsSection: Int32 {
-    case mode
     case connection
     case credentials
-    case calls
     case share
 }
 
 private enum ProxySettingsEntry: ItemListNodeEntry {
-    case modeDisabled(PresentationTheme, String, Bool)
-    case modeSocks5(PresentationTheme, String, Bool)
-    
     case connectionHeader(PresentationTheme, String)
     case connectionServer(PresentationTheme, String, String)
     case connectionPort(PresentationTheme, String, String)
@@ -34,21 +29,14 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     case credentialsUsername(PresentationTheme, String, String)
     case credentialsPassword(PresentationTheme, String, String)
     
-    case useForCalls(PresentationTheme, String, Bool)
-    case useForCallsInfo(PresentationTheme, String)
-    
     case share(PresentationTheme, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
-            case .modeDisabled, .modeSocks5:
-                return ProxySettingsSection.mode.rawValue
             case .connectionHeader, .connectionServer, .connectionPort:
                 return ProxySettingsSection.connection.rawValue
             case .credentialsHeader, .credentialsUsername, .credentialsPassword:
                 return ProxySettingsSection.credentials.rawValue
-            case .useForCalls, .useForCallsInfo:
-                return ProxySettingsSection.calls.rawValue
             case .share:
                 return ProxySettingsSection.share.rawValue
         }
@@ -56,10 +44,6 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .modeDisabled:
-                return 0
-            case .modeSocks5:
-                return 1
             case .connectionHeader:
                 return 2
             case .connectionServer:
@@ -72,29 +56,13 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                 return 6
             case .credentialsPassword:
                 return 7
-            case .useForCalls:
-                return 8
-            case .useForCallsInfo:
-                return 9
             case .share:
-                return 10
+                return 8
         }
     }
     
     static func ==(lhs: ProxySettingsEntry, rhs: ProxySettingsEntry) -> Bool {
         switch lhs {
-            case let .modeDisabled(lhsTheme, lhsText, lhsValue):
-                if case let .modeDisabled(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .modeSocks5(lhsTheme, lhsText, lhsValue):
-                if case let .modeSocks5(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
             case let .connectionHeader(lhsTheme, lhsText):
                 if case let .connectionHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -131,18 +99,6 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .useForCalls(lhsTheme, lhsText, lhsValue):
-                if case let .useForCalls(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .useForCallsInfo(lhsTheme, lhsText):
-                if case let .useForCallsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
             case let .share(lhsTheme, lhsText, lhsValue):
                 if case let .share(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -156,24 +112,8 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: ProxySettingsControllerArguments) -> ListViewItem {
+    func item(_ arguments: proxyServerSettingsControllerArguments) -> ListViewItem {
         switch self {
-            case let .modeDisabled(theme, text, value):
-                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.updateState { current in
-                        var state = current
-                        state.enabled = false
-                        return state
-                    }
-                })
-            case let .modeSocks5(theme, text, value):
-                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.updateState { current in
-                        var state = current
-                        state.enabled = true
-                        return state
-                    }
-                })
             case let .connectionHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .connectionServer(theme, placeholder, text):
@@ -210,16 +150,6 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                         return state
                     }
                 }, action: {})
-            case let .useForCalls(theme, text, value):
-                return ItemListSwitchItem(theme: theme, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.updateState { current in
-                        var state = current
-                        state.useForCalls = value
-                        return state
-                    }
-                })
-            case let .useForCallsInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .share(theme, text, enabled):
                 return ItemListActionItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.share()
@@ -228,40 +158,13 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     }
 }
 
-private struct ProxySettingsControllerState: Equatable {
-    var enabled: Bool
+private struct proxyServerSettingsControllerState: Equatable {
     var host: String
     var port: String
     var username: String
     var password: String
-    var useForCalls: Bool
-    
-    static func ==(lhs: ProxySettingsControllerState, rhs: ProxySettingsControllerState) -> Bool {
-        if lhs.enabled != rhs.enabled {
-            return false
-        }
-        if lhs.host != rhs.host {
-            return false
-        }
-        if lhs.port != rhs.port {
-            return false
-        }
-        if lhs.username != rhs.username {
-            return false
-        }
-        if lhs.password != rhs.password {
-            return false
-        }
-        if lhs.useForCalls != rhs.useForCalls {
-            return false
-        }
-        return true
-    }
     
     var isComplete: Bool {
-        if !self.enabled {
-            return false
-        }
         if self.host.isEmpty || self.port.isEmpty || Int(self.port) == nil {
             return false
         }
@@ -269,50 +172,42 @@ private struct ProxySettingsControllerState: Equatable {
     }
 }
 
-private func proxySettingsControllerEntries(presentationData: PresentationData, state: ProxySettingsControllerState) -> [ProxySettingsEntry] {
+private func proxyServerSettingsControllerEntries(presentationData: PresentationData, state: proxyServerSettingsControllerState) -> [ProxySettingsEntry] {
     var entries: [ProxySettingsEntry] = []
     
-    entries.append(.modeDisabled(presentationData.theme, presentationData.strings.SocksProxySetup_TypeNone, !state.enabled))
-    entries.append(.modeSocks5(presentationData.theme, presentationData.strings.SocksProxySetup_TypeSocks, state.enabled))
+    entries.append(.connectionHeader(presentationData.theme, presentationData.strings.SocksProxySetup_Connection.uppercased()))
+    entries.append(.connectionServer(presentationData.theme, presentationData.strings.SocksProxySetup_Hostname, state.host))
+    entries.append(.connectionPort(presentationData.theme, presentationData.strings.SocksProxySetup_Port, state.port))
     
-    if state.enabled {
-        entries.append(.connectionHeader(presentationData.theme, presentationData.strings.SocksProxySetup_Connection.uppercased()))
-        entries.append(.connectionServer(presentationData.theme, presentationData.strings.SocksProxySetup_Hostname, state.host))
-        entries.append(.connectionPort(presentationData.theme, presentationData.strings.SocksProxySetup_Port, state.port))
-        
-        entries.append(.credentialsHeader(presentationData.theme, presentationData.strings.SocksProxySetup_Credentials))
-        entries.append(.credentialsUsername(presentationData.theme, presentationData.strings.SocksProxySetup_Username, state.username))
-        entries.append(.credentialsPassword(presentationData.theme, presentationData.strings.SocksProxySetup_Password, state.password))
-        
-        entries.append(.useForCalls(presentationData.theme, presentationData.strings.SocksProxySetup_UseForCalls, state.useForCalls))
-        entries.append(.useForCallsInfo(presentationData.theme, presentationData.strings.SocksProxySetup_UseForCallsHelp))
-        
-        entries.append(.share(presentationData.theme, presentationData.strings.Conversation_ContextMenuShare, state.isComplete))
-    }
+    entries.append(.credentialsHeader(presentationData.theme, presentationData.strings.SocksProxySetup_Credentials))
+    entries.append(.credentialsUsername(presentationData.theme, presentationData.strings.SocksProxySetup_Username, state.username))
+    entries.append(.credentialsPassword(presentationData.theme, presentationData.strings.SocksProxySetup_Password, state.password))
+    
+    entries.append(.share(presentationData.theme, presentationData.strings.Conversation_ContextMenuShare, state.isComplete))
     
     return entries
 }
 
-func proxySettingsController(account: Account, currentSettings: ProxySettings?) -> ViewController {
-    let initialState = ProxySettingsControllerState(enabled: currentSettings != nil, host: currentSettings?.host ?? "", port: (currentSettings?.port).flatMap { "\($0)" } ?? "", username: currentSettings?.username ?? "", password: currentSettings?.password ?? "", useForCalls: currentSettings?.useForCalls ?? false)
+func proxyServerSettingsController(account: Account, currentSettings: ProxyServerSettings?) -> ViewController {
+    let initialState = proxyServerSettingsControllerState(host: currentSettings?.host ?? "", port: (currentSettings?.port).flatMap { "\($0)" } ?? "", username: currentSettings?.username ?? "", password: currentSettings?.password ?? "")
     let stateValue = Atomic(value: initialState)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
-    let updateState: ((ProxySettingsControllerState) -> ProxySettingsControllerState) -> Void = { f in
+    let updateState: ((proxyServerSettingsControllerState) -> proxyServerSettingsControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
     
     var presentImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
     
-    let arguments = ProxySettingsControllerArguments(updateState: { f in
+    let arguments = proxyServerSettingsControllerArguments(updateState: { f in
         updateState(f)
     }, share: {
         let state = stateValue.with { $0 }
-        if state.enabled && state.isComplete {
+        if state.isComplete {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             var result = "tg://socks?server=\(state.host)&port=\(state.port)"
             if !state.username.isEmpty {
-                result += "&user=\(state.username)&pass=\(state.password)"
+                result += "&user=\((state.username as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\((state.password as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
             }
             
             UIPasteboard.general.string = result
@@ -323,17 +218,39 @@ func proxySettingsController(account: Account, currentSettings: ProxySettings?) 
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<ProxySettingsEntry>, ProxySettingsEntry.ItemGenerationArguments)) in
-            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: !state.enabled || state.isComplete, action: {
-                var proxySettings: ProxySettings?
-                if state.enabled && state.isComplete, let port = Int32(state.port) {
-                    proxySettings = ProxySettings(host: state.host, port: port, username: state.username.isEmpty ? nil : state.username, password: state.password.isEmpty ? nil : state.password, useForCalls: state.useForCalls)
-                }
-                let _ = applyProxySettings(postbox: account.postbox, network: account.network, settings: proxySettings).start()
+            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
+            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
+                var proxyServerSettings: ProxyServerSettings?
+                if state.isComplete, let port = Int32(state.port) {
+                    proxyServerSettings = ProxyServerSettings(host: state.host, port: port, username: state.username.isEmpty ? nil : state.username, password: state.password.isEmpty ? nil : state.password)
+                }
+                if let proxyServerSettings = proxyServerSettings {
+                    let _ = (updateProxySettingsInteractively(postbox: account.postbox, network: account.network, { settings in
+                        var settings = settings
+                        if let currentSettings = currentSettings {
+                            if let index = settings.servers.index(of: currentSettings) {
+                                settings.servers[index] = proxyServerSettings
+                                if settings.activeServer == currentSettings {
+                                    settings.activeServer = proxyServerSettings
+                                }
+                            }
+                        } else {
+                            settings.servers.append(proxyServerSettings)
+                            if settings.servers.count == 1 {
+                                settings.activeServer = proxyServerSettings
+                            }
+                        }
+                        return settings
+                    }) |> deliverOnMainQueue).start(completed: {
+                        dismissImpl?()
+                    })
+                }
+            })
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.SocksProxySetup_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: proxySettingsControllerEntries(presentationData: presentationData, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.SocksProxySetup_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(entries: proxyServerSettingsControllerEntries(presentationData: presentationData, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
     }
@@ -343,7 +260,7 @@ func proxySettingsController(account: Account, currentSettings: ProxySettings?) 
         controller?.present(c, in: .window(.root), with: d)
     }
     dismissImpl = { [weak controller] in
-        let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
+        let _ = controller?.dismiss()
     }
     return controller
 }

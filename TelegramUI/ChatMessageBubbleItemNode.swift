@@ -415,10 +415,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     let contentNode = (contentNodeClass as! ChatMessageBubbleContentNode.Type).init()
                     contentPropertiesAndPrepareLayouts.append((contentNodeMessage, contentNode.supportsMosaic, contentNode.asyncLayoutContent()))
                     if addedContentNodes == nil {
-                        addedContentNodes = [contentNode]
-                    } else {
-                        addedContentNodes!.append(contentNode)
+                        addedContentNodes = []
                     }
+                    addedContentNodes!.append(contentNode)
                 }
             }
             

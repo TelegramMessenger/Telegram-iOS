@@ -217,9 +217,9 @@ public func openExternalUrl(account: Account, url: String, presentationData: Pre
                     if let server = server, !server.isEmpty, let port = port, let _ = Int32(port) {
                         var result = "https://t.me/proxy?proxy=\(server)&port=\(port)"
                         if let user = user {
-                            result += "&user=\(user)"
+                            result += "&user=\((user as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
                             if let pass = pass {
-                                result += "&pass=\(pass)"
+                                result += "&pass=\((pass as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
                             }
                         }
                         convertedUrl = result

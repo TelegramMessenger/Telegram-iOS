@@ -367,11 +367,23 @@ func breakChatInputText(_ text: NSAttributedString) -> [NSAttributedString] {
     if text.length <= 4000 {
         return [text]
     } else {
+        let rawText: NSString = text.string as NSString
         var result: [NSAttributedString] = []
         var offset = 0
         while offset < text.length {
-            result.append(text.attributedSubstring(from: NSRange(location: offset, length: min(text.length - offset, 4000))))
-            offset += 4000
+            var range = NSRange(location: offset, length: min(text.length - offset, 4000))
+            if range.upperBound < text.length {
+                inner: for i in (range.lowerBound ..< range.upperBound).reversed() {
+                    let c = rawText.character(at: i)
+                    let uc = UnicodeScalar(c)
+                    if uc == "\n" as UnicodeScalar || uc == "." as UnicodeScalar {
+                        range.length = i + 1 - range.location
+                        break inner
+                    }
+                }
+            }
+            result.append(trimChatInputText(text.attributedSubstring(from: range)))
+            offset = range.upperBound
         }
         return result
     }

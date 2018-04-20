@@ -46,7 +46,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         if groupId == nil {
             self.navigationBar?.item = nil
         
-            self.titleView.title = NetworkStatusTitle(text: self.presentationData.strings.DialogList_Title, activity: false)
+            self.titleView.title = NetworkStatusTitle(text: self.presentationData.strings.DialogList_Title, activity: false, hasProxy: false, connectsViaProxy: false)
             self.navigationItem.titleView = self.titleView
             self.tabBarItem.title = self.presentationData.strings.DialogList_Title
             self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
@@ -67,17 +67,30 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             }
         }
         
-        self.titleDisposable = (account.networkState |> deliverOnMainQueue).start(next: { [weak self] state in
+        let hasProxy = account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
+        |> map { preferences -> (Bool, Bool) in
+            if let settings = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
+                return (!settings.servers.isEmpty, settings.enabled)
+            } else {
+                return (false, false)
+            }
+        }
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            return lhs == rhs
+        })
+        
+        self.titleDisposable = (combineLatest(account.networkState |> deliverOnMainQueue, hasProxy |> deliverOnMainQueue)).start(next: { [weak self] state, proxy in
             if let strongSelf = self {
+                let (hasProxy, connectsViaProxy) = proxy
                 switch state {
                     case .waitingForNetwork:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true)
-                    case let .connecting(toProxy):
-                        strongSelf.titleView.title = NetworkStatusTitle(text: toProxy ? strongSelf.presentationData.strings.State_ConnectingToProxy : strongSelf.presentationData.strings.State_Connecting, activity: true)
+                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
+                    case .connecting:
+                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Connecting, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
                     case .updating:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true)
+                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
                     case .online:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false)
+                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
                 }
             }
         })
@@ -116,6 +129,12 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                         modifier.setAccessChallengeData(data)
                     }
                 }).start()
+            }
+        }
+        
+        self.titleView.openProxySettings = { [weak self] in
+            if let strongSelf = self {
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(proxySettingsController(account: account))
             }
         }
         

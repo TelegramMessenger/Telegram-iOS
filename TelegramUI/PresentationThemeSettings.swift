@@ -17,7 +17,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             case 0:
                 self = .builtin(PresentationBuiltinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!)
             default:
-                //assertionFailure()
+                assertionFailure()
                 self = .builtin(.dayClassic)
         }
     }
@@ -65,7 +65,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(chatWallpaper: .color(0x000000), theme: .builtin(.nightAccent), fontSize: .regular)
+        return PresentationThemeSettings(chatWallpaper: .color(0x18222D), theme: .builtin(.nightAccent), fontSize: .regular)
     }
     
     public init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference, fontSize: PresentationFontSize) {

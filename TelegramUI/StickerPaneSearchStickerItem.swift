@@ -5,48 +5,46 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 
-final class ChatMediaInputStickerGridSection: GridSection {
-    let collectionId: ItemCollectionId
-    let collectionInfo: StickerPackCollectionInfo?
+final class StickerPaneSearchStickerSection: GridSection {
+    let code: String
     let theme: PresentationTheme
     let height: CGFloat = 26.0
     
     var hashValue: Int {
-        return self.collectionId.hashValue
+        return self.code.hashValue
     }
     
-    init(collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo?, theme: PresentationTheme) {
-        self.collectionId = collectionId
-        self.collectionInfo = collectionInfo
+    init(code: String, theme: PresentationTheme) {
+        self.code = code
         self.theme = theme
     }
     
     func isEqual(to: GridSection) -> Bool {
-        if let to = to as? ChatMediaInputStickerGridSection {
-            return self.collectionId == to.collectionId && self.theme === to.theme
+        if let to = to as? StickerPaneSearchStickerSection {
+            return self.code == to.code && self.theme === to.theme
         } else {
             return false
         }
     }
     
     func node() -> ASDisplayNode {
-        return ChatMediaInputStickerGridSectionNode(collectionInfo: self.collectionInfo, theme: self.theme)
+        return StickerPaneSearchStickerSectionNode(code: self.code, theme: self.theme)
     }
 }
 
 private let sectionTitleFont = Font.medium(12.0)
 
-final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
+final class StickerPaneSearchStickerSectionNode: ASDisplayNode {
     let titleNode: ASTextNode
     
-    init(collectionInfo: StickerPackCollectionInfo?, theme: PresentationTheme) {
+    init(code: String, theme: PresentationTheme) {
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
         
         super.init()
         
         self.addSubnode(self.titleNode)
-        self.titleNode.attributedText = NSAttributedString(string: collectionInfo?.title.uppercased() ?? "", font: sectionTitleFont, textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: code, font: sectionTitleFont, textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail
     }
@@ -61,33 +59,26 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
     }
 }
 
-final class ChatMediaInputStickerGridItem: GridItem {
+final class StickerPaneSearchStickerItem: GridItem {
     let account: Account
-    let index: ItemCollectionViewEntryIndex
-    let stickerItem: StickerPackItem
+    let code: String
+    let stickerItem: FoundStickerItem
     let selected: () -> Void
-    let interfaceInteraction: ChatControllerInteraction?
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     
     let section: GridSection?
     
-    init(account: Account, collectionId: ItemCollectionId, stickerPackInfo: StickerPackCollectionInfo?, index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, interfaceInteraction: ChatControllerInteraction?, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
+    init(account: Account, code: String, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
         self.account = account
-        self.index = index
+        self.code = code
         self.stickerItem = stickerItem
-        self.interfaceInteraction = interfaceInteraction
         self.inputNodeInteraction = inputNodeInteraction
         self.selected = selected
-        if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue {
-            self.section = nil
-        } else {
-            self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo, theme: theme)
-        }
+        self.section = StickerPaneSearchStickerSection(code: self.code, theme: theme)
     }
     
     func node(layout: GridNodeLayout) -> GridItemNode {
-        let node = ChatMediaInputStickerGridItemNode()
-        node.interfaceInteraction = self.interfaceInteraction
+        let node = StickerPaneSearchStickerItemNode()
         node.inputNodeInteraction = self.inputNodeInteraction
         node.setup(account: self.account, stickerItem: self.stickerItem)
         node.selected = self.selected
@@ -95,30 +86,28 @@ final class ChatMediaInputStickerGridItem: GridItem {
     }
     
     func update(node: GridItemNode) {
-        guard let node = node as? ChatMediaInputStickerGridItemNode else {
+        guard let node = node as? StickerPaneSearchStickerItemNode else {
             assertionFailure()
             return
         }
-        node.interfaceInteraction = self.interfaceInteraction
         node.inputNodeInteraction = self.inputNodeInteraction
         node.setup(account: self.account, stickerItem: self.stickerItem)
         node.selected = self.selected
     }
 }
 
-final class ChatMediaInputStickerGridItemNode: GridItemNode {
-    private var currentState: (Account, StickerPackItem, CGSize)?
+final class StickerPaneSearchStickerItemNode: GridItemNode {
+    private var currentState: (Account, FoundStickerItem, CGSize)?
     private let imageNode: TransformImageNode
     
     private let stickerFetchedDisposable = MetaDisposable()
     
     var currentIsPreviewing = false
     
-    var interfaceInteraction: ChatControllerInteraction?
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
     var selected: (() -> Void)?
     
-    var stickerPackItem: StickerPackItem? {
+    var stickerItem: FoundStickerItem? {
         return self.currentState?.1
     }
     
@@ -140,7 +129,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, stickerItem: StickerPackItem) {
+    func setup(account: Account, stickerItem: FoundStickerItem) {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
             if let dimensions = stickerItem.file.dimensions {
                 self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
@@ -150,9 +139,6 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                 self.setNeedsLayout()
             }
         }
-        
-        //self.updateSelectionState(animated: false)
-        //self.updateHiddenMedia()
     }
     
     override func layout() {
@@ -169,9 +155,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     }
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
-        if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(item.file)
-        }
+        self.selected?()
     }
     
     func transitionNode() -> ASDisplayNode? {
@@ -181,7 +165,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.inputNodeInteraction {
-            isPreviewing = interaction.previewedStickerPackItem == .pack(item)
+            isPreviewing = interaction.previewedStickerPackItem == .found(item)
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

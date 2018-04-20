@@ -25,14 +25,6 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, navigationCon
             }), nil)
         case let .proxy(host, port, username, password):
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            let alertText: String
-            if let username = username, let password = password {
-                alertText = presentationData.strings.Settings_ApplyProxyAlertCredentials(host, "\(port)", username, password).0
-            } else {
-                alertText = presentationData.strings.Settings_ApplyProxyAlert(host, "\(port)").0
-            }
-            present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                let _ = applyProxySettings(postbox: account.postbox, network: account.network, settings: ProxySettings(host: host, port: port, username: username, password: password, useForCalls: false)).start()
-            })]), nil)
+            present(ProxyServerActionSheetController(account: account, theme: presentationData.theme, strings: presentationData.strings, server: ProxyServerSettings(host: host, port: port, username: username, password: password)), nil)
     }
 }

@@ -170,6 +170,7 @@ public class PeerMediaCollectionController: TelegramController {
                 }
             }, openHashtag: { _, _ in
             }, updateInputState: { _ in
+            }, updateInputMode: { _ in
             }, openMessageShareMenu: { _ in
             }, presentController: { _, _ in
             }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in

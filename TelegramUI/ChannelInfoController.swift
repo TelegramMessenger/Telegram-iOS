@@ -661,14 +661,18 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
-        let notificationAction: (Int32) -> Void = {  muteUntil in
+        let notificationAction: (Int32?) -> Void = { muteUntil in
             let muteInterval: Int32?
-            if muteUntil <= 0 {
-                muteInterval = nil
-            } else if muteUntil == Int32.max {
-                muteInterval = Int32.max
+            if let muteUntil = muteUntil {
+                if muteUntil <= 0 {
+                    muteInterval = 0
+                } else if muteUntil == Int32.max {
+                    muteInterval = Int32.max
+                } else {
+                    muteInterval = muteUntil
+                }
             } else {
-                muteInterval = muteUntil
+                muteInterval = nil
             }
             
             changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: muteInterval).start())
@@ -678,13 +682,20 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             dismissAction()
             notificationAction(0)
         }))
-        let intervals: [Int32] = [
+        let intervals: [Int32?] = [
+            nil,
             1 * 60 * 60,
             8 * 60 * 60,
             2 * 24 * 60 * 60
         ]
         for value in intervals {
-            items.append(ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: value), action: {
+            let title: String
+            if let value = value {
+                title = muteForIntervalString(strings: presentationData.strings, value: value)
+            } else {
+                title = "Default"
+            }
+            items.append(ActionSheetButtonItem(title: title, action: {
                 dismissAction()
                 notificationAction(value)
             }))

@@ -144,6 +144,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             }
         }, openPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
+                strongSelf.view.window?.endEditing(true)
                 strongSelf.controllerInteraction.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash)), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         })

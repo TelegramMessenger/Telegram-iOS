@@ -193,40 +193,16 @@ enum ChatMediaInputMode {
     case other
 }
 
+enum ChatMediaInputExpanded {
+    case content
+    case search
+}
+
 enum ChatInputMode: Equatable {
     case none
     case text
-    case media(mode: ChatMediaInputMode, expanded: Bool)
+    case media(mode: ChatMediaInputMode, expanded: ChatMediaInputExpanded?)
     case inputButtons
-    
-    static func ==(lhs: ChatInputMode, rhs: ChatInputMode) -> Bool {
-        switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .text:
-                if case .text = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .media(mode, expanded):
-                if case .media(mode, expanded) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .inputButtons:
-                if case .inputButtons = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 enum ChatTitlePanelContext: Comparable {

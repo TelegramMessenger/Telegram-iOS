@@ -837,6 +837,7 @@ public final class PresentationStrings {
     public let Settings_About_Help: String
     public let Watch_Conversation_Reply: String
     public let ShareMenu_CopyShareLink: String
+    public let Stickers_Search: String
     public let Channel_Setup_TypePrivateHelp: String
     public let PhotoEditor_GrainTool: String
     public let Conversation_SearchByName_Placeholder: String
@@ -2051,6 +2052,7 @@ public final class PresentationStrings {
     public let Map_YouAreHere: String
     public let PhotoEditor_CurvesTool: String
     public let Map_LiveLocationFor1Hour: String
+    public let Stickers_NoStickersFound: String
     private let _Notification_JoinedChannel: String
     private let _Notification_JoinedChannel_r: [(Int, NSRange)]
     public func Notification_JoinedChannel(_ _0: String) -> (String, [(Int, NSRange)]) {
@@ -2312,7 +2314,7 @@ public final class PresentationStrings {
     private let _Checkout_LiabilityAlert: String
     private let _Checkout_LiabilityAlert_r: [(Int, NSRange)]
     public func Checkout_LiabilityAlert(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(_Checkout_LiabilityAlert, self._Checkout_LiabilityAlert_r, [_1, _1, _1, _2])
+        return formatWithArgumentRanges(_Checkout_LiabilityAlert, self._Checkout_LiabilityAlert_r, [_1, _2])
     }
     public let Channel_Info_BlackList: String
     public let Profile_BotInfo: String
@@ -5343,6 +5345,7 @@ public final class PresentationStrings {
         self.Settings_About_Help = getValue(dict, "Settings.About.Help")
         self.Watch_Conversation_Reply = getValue(dict, "Watch.Conversation.Reply")
         self.ShareMenu_CopyShareLink = getValue(dict, "ShareMenu.CopyShareLink")
+        self.Stickers_Search = getValue(dict, "Stickers.Search")
         self.Channel_Setup_TypePrivateHelp = getValue(dict, "Channel.Setup.TypePrivateHelp")
         self.PhotoEditor_GrainTool = getValue(dict, "PhotoEditor.GrainTool")
         self.Conversation_SearchByName_Placeholder = getValue(dict, "Conversation.SearchByName.Placeholder")
@@ -6158,6 +6161,7 @@ public final class PresentationStrings {
         self.Map_YouAreHere = getValue(dict, "Map.YouAreHere")
         self.PhotoEditor_CurvesTool = getValue(dict, "PhotoEditor.CurvesTool")
         self.Map_LiveLocationFor1Hour = getValue(dict, "Map.LiveLocationFor1Hour")
+        self.Stickers_NoStickersFound = getValue(dict, "Stickers.NoStickersFound")
         self._Notification_JoinedChannel = getValue(dict, "Notification.JoinedChannel")
         self._Notification_JoinedChannel_r = extractArgumentRanges(self._Notification_JoinedChannel)
         self.GroupInfo_ActionRestrict = getValue(dict, "GroupInfo.ActionRestrict")

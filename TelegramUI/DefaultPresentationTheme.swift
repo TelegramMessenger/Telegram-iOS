@@ -332,6 +332,10 @@ private let inputMediaPanel = PresentationThemeInputMediaPanel(
     panelHighlightedIconBackgroundColor: UIColor(rgb: 0x9099A2, alpha: 0.2),
     stickersBackgroundColor: UIColor(rgb: 0xE8EBF0),
     stickersSectionTextColor: UIColor(rgb: 0x9099A2),
+    stickersSearchBackgroundColor: UIColor(rgb: 0xd9dbe1),
+    stickersSearchPlaceholderColor: UIColor(rgb: 0x8e8e93),
+    stickersSearchPrimaryColor: .black,
+    stickersSearchControlColor: UIColor(rgb: 0x8e8e93),
     gifsBackgroundColor: .white
 )
 

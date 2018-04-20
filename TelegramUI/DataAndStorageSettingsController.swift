@@ -361,7 +361,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     /*entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayAnimations, data.automaticMediaDownloadSettings.categories.gif.privateChats))*/
     
     let proxyValue: String
-    if let _ = data.proxySettings {
+    if let proxySettings = data.proxySettings, let _ = proxySettings.activeServer, proxySettings.enabled {
         proxyValue = presentationData.strings.ChatSettings_ConnectionType_UseSocks5
     } else {
         proxyValue = presentationData.strings.GroupInfo_SharedMediaNone
@@ -418,11 +418,7 @@ func dataAndStorageController(account: Account) -> ViewController {
     }, openNetworkUsage: {
         pushControllerImpl?(networkUsageStatsController(account: account))
     }, openProxy: {
-        let _ = (account.postbox.modify { modifier -> ProxySettings? in
-            return modifier.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings
-        } |> deliverOnMainQueue).start(next: { settings in
-            pushControllerImpl?(proxySettingsController(account: account, currentSettings: settings))
-        })
+        pushControllerImpl?(proxySettingsController(account: account))
     }, toggleAutomaticDownloadMaster: { value in
         let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
             var settings = settings

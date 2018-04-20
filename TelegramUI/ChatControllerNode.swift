@@ -481,7 +481,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputPanelNodeBaseHeight = inputPanelNode.minimalHeight(interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
         }
         
-        var maximumInputNodeHeight = layout.size.height - max(navigationBarHeight, layout.safeInsets.top) - inputPanelNodeBaseHeight
+        let maximumInputNodeHeight = layout.size.height - max(navigationBarHeight, layout.safeInsets.top) - inputPanelNodeBaseHeight
         
         var dismissedInputNode: ChatInputNode?
         var immediatelyLayoutInputNodeAndAnimateAppearance = false
@@ -505,7 +505,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     self.insertSubnode(inputNode, aboveSubnode: self.inputPanelBackgroundNode)
                 }
             }
-            inputNodeHeightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, maximumHeight: maximumInputNodeHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
+            inputNodeHeightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
         } else if let inputNode = self.inputNode {
             dismissedInputNode = inputNode
             self.inputNode = nil
@@ -570,7 +570,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let inputMediaNode = self.inputMediaNode, inputMediaNode != self.inputNode {
-            let _ = inputMediaNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, maximumHeight: maximumInputNodeHeight, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+            let _ = inputMediaNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelSize?.height ?? 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
         }
         
         transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 56.0)))
@@ -822,17 +822,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         var expandTopDimNode = false
-        if case let .media(_, expanded) = self.chatPresentationInterfaceState.inputMode {
-            if expanded {
-                displayTopDimNode = true
-                expandTopDimNode = true
-            }
+        if case let .media(_, expanded) = self.chatPresentationInterfaceState.inputMode, expanded != nil {
+            displayTopDimNode = true
+            expandTopDimNode = true
         }
         
         if displayTopDimNode {
             var topInset = listInsets.bottom + UIScreenPixel
-            if let titleAccessoryPanelHeight = titleAccessoryPanelHeight {
-                topInset -= titleAccessoryPanelHeight
+            if let _ = titleAccessoryPanelHeight {
+                topInset -= UIScreenPixel
             }
             let topFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: max(0.0, topInset)))
             
@@ -1306,7 +1304,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputNode.interfaceInteraction = interfaceInteraction
             self.inputMediaNode = inputNode
             if let (validLayout, _) = self.validLayout {
-                let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, maximumHeight: validLayout.standardInputHeight, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, maximumHeight: validLayout.standardInputHeight, inputPanelHeight: 44.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             }
         }
     }
@@ -1570,8 +1568,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     @objc func topDimNodeTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { state in
-                if case let .media(mode, true) = state.inputMode {
-                    return (.media(mode: mode, expanded: false), nil)
+                if case let .media(mode, expanded) = state.inputMode, expanded != nil {
+                    return (.media(mode: mode, expanded: nil), nil)
                 } else {
                     return (state.inputMode, nil)
                 }
@@ -1580,10 +1578,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func scrollToTop() {
-        if case .media(_, true) = self.chatPresentationInterfaceState.inputMode {
+        if case let .media(_, maybeExpanded) = self.chatPresentationInterfaceState.inputMode, maybeExpanded != nil {
             self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { state in
-                if case let .media(mode, true) = state.inputMode {
-                    return (.media(mode: mode, expanded: false), nil)
+                if case let .media(mode, expanded) = state.inputMode, expanded != nil {
+                    return (.media(mode: mode, expanded: expanded), nil)
                 } else {
                     return (state.inputMode, nil)
                 }

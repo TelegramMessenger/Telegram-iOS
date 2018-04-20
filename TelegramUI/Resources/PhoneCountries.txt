@@ -94,6 +94,7 @@
 423;LI;Liechtenstein
 421;SK;Slovakia
 420;CZ;Czech Republic
+383;XK;Kosovo
 389;MK;Macedonia
 387;BA;Bosnia & Herzegovina
 386;SI;Slovenia

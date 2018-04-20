@@ -35,20 +35,20 @@ private enum CurrentEntityType {
     }
 }
 
-struct EnabledEntityTypes: OptionSet {
-    var rawValue: Int32
+public struct EnabledEntityTypes: OptionSet {
+    public var rawValue: Int32
     
-    init(rawValue: Int32) {
+    public init(rawValue: Int32) {
         self.rawValue = rawValue
     }
     
-    static let command = EnabledEntityTypes(rawValue: 1 << 0)
-    static let mention = EnabledEntityTypes(rawValue: 1 << 1)
-    static let hashtag = EnabledEntityTypes(rawValue: 1 << 2)
-    static let url = EnabledEntityTypes(rawValue: 1 << 3)
-    static let phoneNumber = EnabledEntityTypes(rawValue: 1 << 4)
+    public static let command = EnabledEntityTypes(rawValue: 1 << 0)
+    public static let mention = EnabledEntityTypes(rawValue: 1 << 1)
+    public static let hashtag = EnabledEntityTypes(rawValue: 1 << 2)
+    public static let url = EnabledEntityTypes(rawValue: 1 << 3)
+    public static let phoneNumber = EnabledEntityTypes(rawValue: 1 << 4)
     
-    static let all: EnabledEntityTypes = [.command, .mention, .hashtag, .url, .phoneNumber]
+    public static let all: EnabledEntityTypes = [.command, .mention, .hashtag, .url, .phoneNumber]
 }
 
 private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, _ range: Range<String.UTF16View.Index>, _ enabledTypes: EnabledEntityTypes, _ entities: inout [MessageTextEntity]) {
@@ -95,7 +95,7 @@ func generateChatInputTextEntities(_ text: NSAttributedString) -> [MessageTextEn
     return entities
 }
 
-func generateTextEntities(_ text: String, enabledTypes: EnabledEntityTypes, currentEntities: [MessageTextEntity] = []) -> [MessageTextEntity] {
+public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityTypes, currentEntities: [MessageTextEntity] = []) -> [MessageTextEntity] {
     var entities: [MessageTextEntity] = currentEntities
     
     let utf16 = text.utf16

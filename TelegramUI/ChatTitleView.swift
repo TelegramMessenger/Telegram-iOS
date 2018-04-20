@@ -178,7 +178,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    var networkState: AccountNetworkState = .online {
+    var networkState: AccountNetworkState = .online(proxy: nil) {
         didSet {
             if self.networkState != oldValue {
                 if case .online = self.networkState {
@@ -200,8 +200,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     switch self.networkState {
                         case .waitingForNetwork:
                             statusNode.title = self.strings.State_WaitingForNetwork
-                        case let .connecting(toProxy):
-                            statusNode.title = toProxy ? self.strings.State_ConnectingToProxy : self.strings.State_Connecting
+                        case let .connecting(proxy):
+                            statusNode.title = proxy != nil ? self.strings.State_ConnectingToProxy : self.strings.State_Connecting
                         case .updating:
                             statusNode.title = self.strings.State_Updating
                         case .online:
@@ -289,7 +289,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 shouldUpdateLayout = true
                             }
                         } else if let user = peer as? TelegramUser {
-                            if let _ = user.botInfo {
+                            if user.id.namespace == Namespaces.Peer.CloudUser && user.id.id == 777000 {
+                                let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
+                                    self.infoNode.attributedText = string
+                                    shouldUpdateLayout = true
+                                }
+                            } else if let _ = user.botInfo {
                                 let string = NSAttributedString(string: self.strings.Bot_GenericBotStatus, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                 if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                                     self.infoNode.attributedText = string

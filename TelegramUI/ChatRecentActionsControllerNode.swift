@@ -207,7 +207,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     strongSelf.pushController(searchController)
                 }
             }))
-        }, updateInputState: { _ in }, openMessageShareMenu: { _ in
+            }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action in
             if let strongSelf = self {
                 switch action {

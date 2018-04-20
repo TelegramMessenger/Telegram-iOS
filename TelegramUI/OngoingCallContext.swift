@@ -70,7 +70,7 @@ final class OngoingCallContext {
     
     private let audioSessionDisposable = MetaDisposable()
     
-    init(callSessionManager: CallSessionManager, internalId: CallSessionInternalId) {
+    init(callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?) {
         let _ = setupLogs
         
         self.internalId = internalId
@@ -78,7 +78,7 @@ final class OngoingCallContext {
         
         let queue = self.queue
         self.queue.async {
-            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue))
+            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: proxyServer.flatMap { VoipProxyServer(host: $0.host, port: $0.port, username: $0.username, password: $0.password) })
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))

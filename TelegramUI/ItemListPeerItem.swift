@@ -9,19 +9,6 @@ struct ItemListPeerItemEditing: Equatable {
     let editable: Bool
     let editing: Bool
     let revealed: Bool
-    
-    static func ==(lhs: ItemListPeerItemEditing, rhs: ItemListPeerItemEditing) -> Bool {
-        if lhs.editable != rhs.editable {
-            return false
-        }
-        if lhs.editing != rhs.editing {
-            return false
-        }
-        if lhs.revealed != rhs.revealed {
-            return false
-        }
-        return true
-    }
 }
 
 enum ItemListPeerItemText {

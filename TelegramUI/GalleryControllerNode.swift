@@ -87,38 +87,59 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         self.scrollView.addSubview(self.pager.view)
         self.addSubnode(self.footerNode)
         
-        self.pager.centralItemIndexOffsetUpdated = { [weak self] indexAndProgress in
+        var previousIndex: Int?
+        self.pager.centralItemIndexOffsetUpdated = { [weak self] itemsIndexAndProgress in
             if let strongSelf = self {
                 var node: GalleryThumbnailContainerNode?
-                if let (index, progress) = indexAndProgress {
+                if let (updatedItems, index, progress) = itemsIndexAndProgress {
                     if let (centralId, centralItem) = strongSelf.pager.items[index].thumbnailItem() {
-                        var items: [GalleryThumbnailItem] = [centralItem]
-                        for i in (0 ..< index).reversed() {
-                            if let (id, item) = strongSelf.pager.items[i].thumbnailItem(), id == centralId {
-                                items.insert(item, at: 0)
-                            } else {
-                                break
+                        var items: [GalleryThumbnailItem]
+                        if updatedItems != nil || strongSelf.currentThumbnailContainerNode == nil {
+                            items = [centralItem]
+                            for i in (0 ..< index).reversed() {
+                                if let (id, item) = strongSelf.pager.items[i].thumbnailItem(), id == centralId {
+                                    items.insert(item, at: 0)
+                                } else {
+                                    break
+                                }
                             }
-                        }
-                        for i in (index + 1) ..< strongSelf.pager.items.count {
-                            if let (id, item) = strongSelf.pager.items[i].thumbnailItem(), id == centralId {
-                                items.append(item)
-                            } else {
-                                break
+                            for i in (index + 1) ..< strongSelf.pager.items.count {
+                                if let (id, item) = strongSelf.pager.items[i].thumbnailItem(), id == centralId {
+                                    items.append(item)
+                                } else {
+                                    break
+                                }
                             }
-                        }
-                        let convertedIndex = (items.index(where: { $0.isEqual(to: centralItem) })!, progress)
-                        if strongSelf.currentThumbnailContainerNode?.groupId != centralId {
-                            node = GalleryThumbnailContainerNode(groupId: centralId)
-                            node?.updateItems(items, centralIndex: convertedIndex.0, progress: convertedIndex.1)
+                        } else if let currentThumbnailContainerNode = strongSelf.currentThumbnailContainerNode {
+                            items = currentThumbnailContainerNode.items
                         } else {
-                            node = strongSelf.currentThumbnailContainerNode
-                            node?.updateItems(items, centralIndex: convertedIndex.0, progress: convertedIndex.1)
+                            items = []
+                            assertionFailure()
+                        }
+                        
+                        if let index = items.index(where: { $0.isEqual(to: centralItem) }) {
+                            let convertedIndex = (index, progress)
+                            if strongSelf.currentThumbnailContainerNode?.groupId != centralId {
+                                node = GalleryThumbnailContainerNode(groupId: centralId)
+                                node?.updateItems(items, centralIndex: convertedIndex.0, progress: convertedIndex.1)
+                            } else {
+                                node = strongSelf.currentThumbnailContainerNode
+                                node?.updateItems(items, centralIndex: convertedIndex.0, progress: convertedIndex.1)
+                            }
                         }
                     }
                 }
+                let previous = previousIndex
+                previousIndex = itemsIndexAndProgress?.1
                 if node !== strongSelf.currentThumbnailContainerNode {
+                    let fromLeft: Bool
+                    if let previous = previous, let index = itemsIndexAndProgress?.1 {
+                        fromLeft = index > previous
+                    } else {
+                        fromLeft = true
+                    }
                     if let current = strongSelf.currentThumbnailContainerNode {
+                        current.animateOut(toRight: fromLeft)
                         current.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak current] _ in
                             current?.removeFromSupernode()
                         })
@@ -129,6 +150,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                         if let (navigationHeight, layout) = strongSelf.containerLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
                             node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            node.animateIn(fromLeft: fromLeft)
                         }
                     }
                 }
@@ -154,7 +176,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         var thumbnailPanelHeight: CGFloat = 0.0
         if let currentThumbnailContainerNode = self.currentThumbnailContainerNode {
             thumbnailPanelHeight = 40.0
-            let thumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 40.0 - thumbnailPanelHeight + 4.0), size: CGSize(width: layout.size.width, height: thumbnailPanelHeight - 4.0))
+            let thumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 40.0 - thumbnailPanelHeight + 4.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: thumbnailPanelHeight - 4.0))
             transition.updateFrame(node: currentThumbnailContainerNode, frame: thumbnailsFrame)
             currentThumbnailContainerNode.updateLayout(size: thumbnailsFrame.size, transition: transition)
         }

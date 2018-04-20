@@ -5,12 +5,26 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+enum StickerPreviewPeekItem: Equatable {
+    case pack(StickerPackItem)
+    case found(FoundStickerItem)
+    
+    var file: TelegramMediaFile {
+        switch self {
+            case let .pack(item):
+                return item.file
+            case let .found(item):
+                return item.file
+        }
+    }
+}
+
 final class StickerPreviewPeekContent: PeekControllerContent {
     let account: Account
-    let item: StickerPackItem
+    let item: StickerPreviewPeekItem
     let menu: [PeekControllerMenuItem]
     
-    init(account: Account, item: StickerPackItem, menu: [PeekControllerMenuItem]) {
+    init(account: Account, item: StickerPreviewPeekItem, menu: [PeekControllerMenuItem]) {
         self.account = account
         self.item = item
         self.menu = menu
@@ -43,13 +57,13 @@ final class StickerPreviewPeekContent: PeekControllerContent {
 
 private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerContentNode {
     private let account: Account
-    private let item: StickerPackItem
+    private let item: StickerPreviewPeekItem
     
     private var textNode: ASTextNode
     private var imageNode: TransformImageNode
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
-    init(account: Account, item: StickerPackItem) {
+    init(account: Account, item: StickerPreviewPeekItem) {
         self.account = account
         self.item = item
         

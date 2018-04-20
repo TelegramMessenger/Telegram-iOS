@@ -120,6 +120,7 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
             let label = UILabel()
             label.font = Font.medium(17.0)
             cell.accessoryView = label
+            cell.selectedBackgroundView = UIView()
         }
         cell.textLabel?.text = self.searchResults[indexPath.row].0.1
         cell.detailTextLabel?.text = self.searchResults[indexPath.row].0.0
@@ -129,6 +130,7 @@ private final class InnerCoutrySearchResultsController: UIViewController, UITabl
             label.textColor = self.theme.primaryColor
         }
         cell.textLabel?.textColor = self.theme.primaryColor
+        cell.detailTextLabel?.textColor = self.theme.primaryColor
         cell.backgroundColor = self.theme.backgroundColor
         cell.selectedBackgroundView?.backgroundColor = self.theme.itemHighlightedBackgroundColor
         return cell
@@ -293,6 +295,7 @@ private final class InnerCountrySelectionController: UIViewController, UITableVi
             let label = UILabel()
             label.font = Font.medium(17.0)
             cell.accessoryView = label
+            cell.selectedBackgroundView = UIView()
         }
         cell.textLabel?.text = self.sections[indexPath.section].1[indexPath.row].0.1
         cell.detailTextLabel?.text = self.sections[indexPath.section].1[indexPath.row].0.0

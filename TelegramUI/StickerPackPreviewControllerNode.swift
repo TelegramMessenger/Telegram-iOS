@@ -191,7 +191,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                                         }
                                     }))
                                 menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: {}))
-                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: item, menu: menuItems))
+                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: .pack(item), menu: menuItems))
                             } else {
                                 return nil
                             }
@@ -210,7 +210,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             return nil
         }, updateContent: { [weak self] content in
             if let strongSelf = self {
-                var item: StickerPackItem?
+                var item: StickerPreviewPeekItem?
                 if let content = content as? StickerPreviewPeekContent {
                     item = content.item
                 }
@@ -522,7 +522,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         }
     }
     
-    private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
+    private func updatePreviewingItem(item: StickerPreviewPeekItem?, animated: Bool) {
         if self.interaction.previewedItem != item {
             self.interaction.previewedItem = item
             

@@ -144,13 +144,28 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
     });
 }
 
+@implementation VoipProxyServer
+
+- (instancetype _Nonnull)initWithHost:(NSString * _Nonnull)host port:(int32_t)port username:(NSString * _Nullable)username password:(NSString * _Nullable)password {
+    self = [super init];
+    if (self != nil) {
+        _host = host;
+        _port = port;
+        _username = username;
+        _password = password;
+    }
+    return self;
+}
+
+@end
+
 @implementation OngoingCallThreadLocalContext
 
 + (void)setupLoggingFunction:(void (*)(NSString *))loggingFunction {
     TGVoipLoggingFunction = loggingFunction;
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -166,6 +181,10 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
         
         _controller = new tgvoip::VoIPController();
         _controller->implData = (void *)((intptr_t)_contextId);
+        
+        if (proxy != nil) {
+            _controller->SetProxy(tgvoip::PROXY_SOCKS5, proxy.host.UTF8String, (uint16_t)proxy.port, proxy.username.UTF8String ?: "", proxy.password.UTF8String ?: "");
+        }
         
         /*releasable*/
         //_controller->SetStateCallback(&controllerStateCallback);

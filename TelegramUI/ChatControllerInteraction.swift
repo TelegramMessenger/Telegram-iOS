@@ -55,6 +55,7 @@ public final class ChatControllerInteraction {
     let openInstantPage: (Message) -> Void
     let openHashtag: (String?, String) -> Void
     let updateInputState: ((ChatTextInputState) -> ChatTextInputState) -> Void
+    let updateInputMode: ((ChatInputMode) -> ChatInputMode) -> Void
     let openMessageShareMenu: (MessageId) -> Void
     let presentController: (ViewController, Any?) -> Void
     let presentGlobalOverlayController: (ViewController, Any?) -> Void
@@ -73,7 +74,7 @@ public final class ChatControllerInteraction {
     var contextHighlightedState: ChatInterfaceHighlightedState?
     var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
     
-    public init(openMessage: @escaping (Message) -> Bool, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (Message, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, sendGif: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (Message) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, callPeer: @escaping (PeerId) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void, openSearch: @escaping () -> Void, setupReply: @escaping (MessageId) -> Void, canSetupReply: @escaping (Message) -> Bool, requestMessageUpdate: @escaping (MessageId) -> Void, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings) {
+    init(openMessage: @escaping (Message) -> Bool, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (Message, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, sendGif: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (Message) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, callPeer: @escaping (PeerId) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void, openSearch: @escaping () -> Void, setupReply: @escaping (MessageId) -> Void, canSetupReply: @escaping (Message) -> Bool, requestMessageUpdate: @escaping (MessageId) -> Void, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings) {
         self.openMessage = openMessage
         self.openPeer = openPeer
         self.openPeerMention = openPeerMention
@@ -92,6 +93,7 @@ public final class ChatControllerInteraction {
         self.openInstantPage = openInstantPage
         self.openHashtag = openHashtag
         self.updateInputState = updateInputState
+        self.updateInputMode = updateInputMode
         self.openMessageShareMenu = openMessageShareMenu
         self.presentController = presentController
         self.presentGlobalOverlayController = presentGlobalOverlayController

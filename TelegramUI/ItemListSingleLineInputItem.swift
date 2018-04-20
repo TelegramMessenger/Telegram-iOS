@@ -181,7 +181,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                             capitalizationType = .none
                             keyboardType = UIKeyboardType.default
                         case .number:
-                            secureEntry = true
+                            secureEntry = false
                             capitalizationType = .none
                             keyboardType = UIKeyboardType.numberPad
                     }
@@ -230,7 +230,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     }
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - UIScreenPixel), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
                     if strongSelf.textNode.textField.attributedPlaceholder == nil || !strongSelf.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
                         strongSelf.textNode.textField.attributedPlaceholder = attributedPlaceholderText

@@ -6,7 +6,7 @@ import AsyncDisplayKit
 import Postbox
 
 final class StickerPackPreviewInteraction {
-    var previewedItem: StickerPackItem?
+    var previewedItem: StickerPreviewPeekItem?
     
     let sendSticker: (StickerPackItem) -> Void
     
@@ -146,7 +146,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.interaction {
-            isPreviewing = interaction.previewedItem == item
+            isPreviewing = interaction.previewedItem == .pack(item)
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

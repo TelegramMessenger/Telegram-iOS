@@ -349,12 +349,11 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState {
                                 $0.withUpdatedReplyMessageId(nil)
-                                
-                                }.updatedInputMode { current in
-                                    if case let .media(mode, expanded) = current, expanded {
-                                        return .media(mode: mode, expanded: false)
-                                    }
-                                    return current
+                            }.updatedInputMode { current in
+                                if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
+                                    return .media(mode: mode, expanded: nil)
+                                }
+                                return current
                             }
                         })
                     }
@@ -367,8 +366,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     if let strongSelf = self {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }.updatedInputMode { current in
-                                if case let .media(mode, expanded) = current, expanded {
-                                    return .media(mode: mode, expanded: false)
+                                if case let .media(mode, maybeExpanded) = current, let expanded = maybeExpanded, case .content = expanded  {
+                                    return .media(mode: mode, expanded: nil)
                                 }
                                 return current
                             }
@@ -556,6 +555,10 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     }
                 })
             }
+        }, updateInputMode: { [weak self] f in
+            self?.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                return $0.updatedInputMode(f)
+            })
         }, openMessageShareMenu: { [weak self] id in
             if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id) {
                 let shareController = ShareController(account: strongSelf.account, subject: .messages(messages))
@@ -2075,8 +2078,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                                 $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil)
                                 
                                 }.updatedInputMode { current in
-                                if case let .media(mode, expanded) = current, expanded {
-                                    return .media(mode: mode, expanded: false)
+                                if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
+                                    return .media(mode: mode, expanded: nil)
                                 }
                                 return current
                             }
@@ -2425,7 +2428,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                             return false
                         }
                         
-                        if case .media(_, true) = strongSelf.presentationInterfaceState.inputMode {
+                        if case let .media(_, expanded) = strongSelf.presentationInterfaceState.inputMode, expanded != nil {
                             return false
                         }
                         

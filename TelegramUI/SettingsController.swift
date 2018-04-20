@@ -6,6 +6,7 @@ import TelegramCore
 import LegacyComponents
 
 private final class SettingsItemIcons {
+    static let proxy = UIImage(bundleImageName: "Settings/MenuIcons/Proxy")?.precomposed()
     static let savedMessages = UIImage(bundleImageName: "Settings/MenuIcons/SavedMessages")?.precomposed()
     static let recentCalls = UIImage(bundleImageName: "Settings/MenuIcons/RecentCalls")?.precomposed()
     static let stickers = UIImage(bundleImageName: "Settings/MenuIcons/Stickers")?.precomposed()
@@ -29,6 +30,7 @@ private struct SettingsItemArguments {
     
     let changeProfilePhoto: () -> Void
     let openUsername: () -> Void
+    let openProxy: () -> Void
     let openSavedMessages: () -> Void
     let openRecentCalls: () -> Void
     let openPrivacyAndSecurity: () -> Void
@@ -44,6 +46,7 @@ private struct SettingsItemArguments {
 
 private enum SettingsSection: Int32 {
     case info
+    case proxy
     case media
     case generalSettings
     case help
@@ -53,6 +56,8 @@ private enum SettingsEntry: ItemListNodeEntry {
     case userInfo(PresentationTheme, PresentationStrings, Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setProfilePhoto(PresentationTheme, String)
     case setUsername(PresentationTheme, String)
+    
+    case proxy(PresentationTheme, UIImage?, String, String)
     
     case savedMessages(PresentationTheme, UIImage?, String)
     case recentCalls(PresentationTheme, UIImage?, String)
@@ -71,9 +76,11 @@ private enum SettingsEntry: ItemListNodeEntry {
         switch self {
             case .userInfo, .setProfilePhoto, .setUsername:
                 return SettingsSection.info.rawValue
+            case .proxy:
+                return SettingsSection.proxy.rawValue
             case .savedMessages, .recentCalls, .stickers:
                 return SettingsSection.media.rawValue
-        case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language:
+            case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language:
                 return SettingsSection.generalSettings.rawValue
             case .askAQuestion, .faq:
                 return SettingsSection.help.rawValue
@@ -88,26 +95,28 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return 1
             case .setUsername:
                 return 2
-            case .savedMessages:
+            case .proxy:
                 return 3
-            case .recentCalls:
+            case .savedMessages:
                 return 4
-            case .stickers:
+            case .recentCalls:
                 return 5
-            case .notificationsAndSounds:
+            case .stickers:
                 return 6
-            case .privacyAndSecurity:
+            case .notificationsAndSounds:
                 return 7
-            case .dataAndStorage:
+            case .privacyAndSecurity:
                 return 8
-            case .themes:
+            case .dataAndStorage:
                 return 9
-            case .language:
+            case .themes:
                 return 10
-            case .askAQuestion:
+            case .language:
                 return 11
-            case .faq:
+            case .askAQuestion:
                 return 12
+            case .faq:
+                return 13
         }
     }
     
@@ -153,6 +162,12 @@ private enum SettingsEntry: ItemListNodeEntry {
                 }
             case let .setUsername(lhsTheme, lhsText):
                 if case let .setUsername(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .proxy(lhsTheme, lhsImage, lhsText, lhsValue):
+                if case let .proxy(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -241,6 +256,10 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openUsername()
                 })
+            case let .proxy(theme, image, text, value):
+                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openProxy()
+                })
             case let .savedMessages(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSavedMessages()
@@ -304,7 +323,7 @@ private struct SettingsState: Equatable {
     }
 }
 
-private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView) -> [SettingsEntry] {
+private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -315,6 +334,10 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         }
         if peer.addressName == nil {
             entries.append(.setUsername(presentationData.theme, presentationData.strings.Settings_SetUsername))
+        }
+        
+        if !proxySettings.servers.isEmpty {
+            entries.append(.proxy(presentationData.theme, SettingsItemIcons.proxy, "Proxy", proxySettings.enabled ? "Enabled" : "Disabled"))
         }
         
         entries.append(.savedMessages(presentationData.theme, SettingsItemIcons.savedMessages, presentationData.strings.Settings_SavedMessages))
@@ -373,7 +396,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         var faqUrl = presentationData.strings.Settings_FAQ_URL
         if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
-            faqUrl = "http://telegram.org/faq#general"
+            faqUrl = "https://telegram.org/faq#general"
         }
         
         if let applicationContext = account.applicationContext as? TelegramApplicationContext {
@@ -412,6 +435,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
         changeProfilePhotoImpl?()
     }, openUsername: {
         presentControllerImpl?(usernameSetupController(account: account), nil)
+    }, openProxy: {
+        pushControllerImpl?(proxySettingsController(account: account))
     }, openSavedMessages: {
         openSavedMessagesImpl?()
     }, openRecentCalls: {
@@ -539,17 +564,24 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let peerView = account.viewTracker.peerView(account.peerId)
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView)
-        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]))
+        |> map { presentationData, state, view, preferences -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+            let proxySettings: ProxySettings
+            if let value = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
+                proxySettings = value
+            } else {
+                proxySettings = ProxySettings.defaultSettings
+            }
+            
             let peer = peerViewMainPeer(view)
             let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                if let peer = peer as? TelegramUser, let cachedData = view.cachedData as? CachedUserData {
+                if let _ = peer as? TelegramUser, let _ = view.cachedData as? CachedUserData {
                     arguments.openEditing()
                 }
             })
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Settings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view), style: .blocks)
+            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings), style: .blocks)
             
             return (controllerState, (listState, arguments))
     } |> afterDisposed {

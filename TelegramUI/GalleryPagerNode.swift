@@ -55,7 +55,8 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var centralItemIndexUpdated: (Int?) -> Void = { _ in }
-    var centralItemIndexOffsetUpdated: ((Int, CGFloat)?) -> Void = { _ in }
+    private var invalidatedItems = false
+    var centralItemIndexOffsetUpdated: (([GalleryItem]?, Int, CGFloat)?) -> Void = { _ in }
     var toggleControlsVisibility: () -> Void = { }
     var beginCustomDismiss: () -> Void = { }
     var completeCustomDismiss: () -> Void = { }
@@ -206,6 +207,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 itemNode.index = itemNode.index + indexOffset
             }
             
+            self.invalidatedItems = true
             if let focusOnItem = transaction.focusOnItem {
                 self.centralItemIndex = focusOnItem
             }
@@ -396,11 +398,12 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private func updateCentralIndexOffset(transition: ContainedViewLayoutTransition) {
         if let centralIndex = self.centralItemIndex, let itemNode = self.visibleItemNode(at: centralIndex) {
             let offset: CGFloat = self.scrollView.contentOffset.x + self.pageGap - itemNode.frame.minX
-            var progress = offset / self.scrollView.bounds.size.height
+            var progress = offset / self.scrollView.bounds.size.width
             progress = min(1.0, progress)
             progress = max(-1.0, progress)
-            self.centralItemIndexOffsetUpdated((centralIndex, progress))
+            self.centralItemIndexOffsetUpdated((self.invalidatedItems ? self.items : nil, centralIndex, progress))
         } else {
+            self.invalidatedItems = false
             self.centralItemIndexOffsetUpdated(nil)
         }
     }

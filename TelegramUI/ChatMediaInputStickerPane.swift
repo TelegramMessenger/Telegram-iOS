@@ -12,8 +12,9 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
     private var didScrollPreviousOffset: CGFloat?
     private var didScrollPreviousState: ChatMediaInputPaneScrollState?
     
-    init(paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void) {
         self.gridNode = GridNode()
+        self.gridNode.initialOffset = 54.0
         self.paneDidScroll = paneDidScroll
         self.fixPaneScroll = fixPaneScroll
         

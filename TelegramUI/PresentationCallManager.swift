@@ -48,6 +48,9 @@ public final class PresentationCallManager {
     
     private let startCallDisposable = MetaDisposable()
     
+    private var proxyServer: ProxyServerSettings?
+    private var proxyServerDisposable: Disposable?
+    
     public init(postbox: Postbox, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager) {
         self.postbox = postbox
         self.audioSession = audioSession
@@ -128,18 +131,30 @@ public final class PresentationCallManager {
                 self?.audioSession.callKitDeactivatedAudioSession()
             }
         }
+        
+        self.proxyServerDisposable = (postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
+        |> deliverOnMainQueue).start(next: { [weak self] preferences in
+            if let strongSelf = self, let settings = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
+                if settings.enabled && settings.useForCalls {
+                    strongSelf.proxyServer = settings.activeServer
+                } else {
+                    strongSelf.proxyServer = nil
+                }
+            }
+        })
     }
     
     deinit {
         self.ringingStatesDisposable?.dispose()
         self.removeCurrentCallDisposable.dispose()
         self.startCallDisposable.dispose()
+        self.proxyServerDisposable?.dispose()
     }
     
     private func ringingStatesUpdated(_ ringingStates: [(Peer, CallSessionRingingState)]) {
         if let firstState = ringingStates.first {
             if self.currentCall == nil {
-                let call = PresentationCall(audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: self.callKitIntegration, internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0)
+                let call = PresentationCall(audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: self.callKitIntegration, internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0, proxyServer: self.proxyServer)
                 self.currentCall = call
                 self.currentCallPromise.set(.single(call))
                 self.hasActiveCallsPromise.set(true)
@@ -181,7 +196,7 @@ public final class PresentationCallManager {
                 if let currentCall = strongSelf.currentCall {
                     currentCall.rejectBusy()
                 }
-                let call = PresentationCall(audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: strongSelf.callKitIntegration, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil)
+                let call = PresentationCall(audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: strongSelf.callKitIntegration, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, proxyServer: strongSelf.proxyServer)
                 strongSelf.currentCall = call
                 strongSelf.currentCallPromise.set(.single(call))
                 strongSelf.hasActiveCallsPromise.set(true)

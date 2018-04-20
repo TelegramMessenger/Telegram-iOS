@@ -43,7 +43,7 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
             let peerName: String = pathComponents[0]
             if pathComponents.count == 1 {
                 if let queryItems = components.queryItems {
-                    if peerName == "socks" {
+                    if peerName == "socks" || peerName == "proxy" {
                         var server: String?
                         var port: String?
                         var user: String?

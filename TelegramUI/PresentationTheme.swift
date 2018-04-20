@@ -610,14 +610,22 @@ public final class PresentationThemeInputMediaPanel {
     public let panelHighlightedIconBackgroundColor: UIColor
     public let stickersBackgroundColor: UIColor
     public let stickersSectionTextColor: UIColor
+    public let stickersSearchBackgroundColor: UIColor
+    public let stickersSearchPlaceholderColor: UIColor
+    public let stickersSearchPrimaryColor: UIColor
+    public let stickersSearchControlColor: UIColor
     public let gifsBackgroundColor: UIColor
     
-    public init(panelSerapatorColor: UIColor, panelIconColor: UIColor, panelHighlightedIconBackgroundColor: UIColor, stickersBackgroundColor: UIColor, stickersSectionTextColor: UIColor, gifsBackgroundColor: UIColor) {
+    public init(panelSerapatorColor: UIColor, panelIconColor: UIColor, panelHighlightedIconBackgroundColor: UIColor, stickersBackgroundColor: UIColor, stickersSectionTextColor: UIColor, stickersSearchBackgroundColor: UIColor, stickersSearchPlaceholderColor: UIColor, stickersSearchPrimaryColor: UIColor, stickersSearchControlColor: UIColor, gifsBackgroundColor: UIColor) {
         self.panelSerapatorColor = panelSerapatorColor
         self.panelIconColor = panelIconColor
         self.panelHighlightedIconBackgroundColor = panelHighlightedIconBackgroundColor
         self.stickersBackgroundColor = stickersBackgroundColor
         self.stickersSectionTextColor = stickersSectionTextColor
+        self.stickersSearchBackgroundColor = stickersSearchBackgroundColor
+        self.stickersSearchPlaceholderColor = stickersSearchPlaceholderColor
+        self.stickersSearchPrimaryColor = stickersSearchPrimaryColor
+        self.stickersSearchControlColor = stickersSearchControlColor
         self.gifsBackgroundColor = gifsBackgroundColor
     }
 }

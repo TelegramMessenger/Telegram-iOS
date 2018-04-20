@@ -1290,7 +1290,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     @objc func expandButtonPressed() {
         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
             if case let .media(mode, expanded) = state.inputMode {
-                return (.media(mode: mode, expanded: !expanded), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+                if let _ = expanded {
+                    return (.media(mode: mode, expanded: nil), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+                } else {
+                    return (.media(mode: mode, expanded: .content), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+                }
             } else {
                 return (state.inputMode, state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
             }
@@ -1303,7 +1307,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 switch item {
                     case .stickers:
                         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-                            return (.media(mode: .other, expanded: false), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+                            return (.media(mode: .other, expanded: nil), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
                         })
                     case .keyboard:
                         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
