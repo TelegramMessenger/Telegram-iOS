@@ -106,28 +106,19 @@ final class ProxyServersStatusesImpl {
         }
         self.currentValues = values
     }
-    
-    func dispose() {
-    }
 }
 
-final class ProxyServersStatuses {
+public final class ProxyServersStatuses {
     private let impl: QueueLocalObject<ProxyServersStatusesImpl>
     
-    init(account: Account, servers: Signal<[ProxyServerSettings], NoError>) {
+    public init(account: Account, servers: Signal<[ProxyServerSettings], NoError>) {
         let queue = Queue()
         self.impl = QueueLocalObject(queue: queue, generate: {
             return ProxyServersStatusesImpl(queue: queue, account: account, servers: servers)
         })
     }
     
-    func dispose() {
-        self.impl.with { impl in
-            impl.dispose()
-        }
-    }
-    
-    func statuses() -> Signal<[ProxyServerSettings: ProxyServerStatus], NoError> {
+    public func statuses() -> Signal<[ProxyServerSettings: ProxyServerStatus], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
@@ -135,7 +126,10 @@ final class ProxyServersStatuses {
                     subscriber.putNext(value)
                 }))
             }
-            return disposable
+            return ActionDisposable {
+                self.impl.with({ _ in })
+                disposable.dispose()
+            }
         }
     }
 }
