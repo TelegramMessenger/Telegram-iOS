@@ -172,6 +172,6 @@
         
         return disposables;
     }];
-};
+}
 
 @end
