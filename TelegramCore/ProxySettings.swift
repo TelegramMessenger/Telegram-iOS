@@ -83,6 +83,47 @@ public struct ProxySettings: PreferencesEntry, Equatable {
         
         return self == to
     }
+    
+    public func withUpdatedActiveServer(_ activeServer: ProxyServerSettings?) -> ProxySettings {
+        var servers = self.servers
+        if let activeServer = activeServer, let index = servers.index(where: {$0 == activeServer}), index > 0 {
+            servers.remove(at: index)
+            servers.insert(activeServer, at: 0)
+        }
+        return ProxySettings(servers: servers, activeServer: activeServer, useForCalls: self.useForCalls)
+    }
+    
+    public func withAddedServer(_ proxy: ProxyServerSettings) -> ProxySettings {
+        var servers = self.servers
+        if servers.first(where: {$0 == proxy}) == nil {
+            servers.append(proxy)
+        }
+        return ProxySettings(servers: servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
+    }
+    
+    public func withUpdatedServer(_ current: ProxyServerSettings, with updated: ProxyServerSettings) -> ProxySettings {
+        var servers = self.servers
+        if let index = servers.index(where: {$0 == current}) {
+            servers[index] = updated
+        }
+        return ProxySettings(servers: servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
+    }
+    
+    public func withUpdatedUseForCalls(_ enable: Bool) -> ProxySettings {
+        return ProxySettings(servers: servers, activeServer: self.activeServer, useForCalls: enable)
+    }
+    
+    public func withRemovedServer(_ proxy: ProxyServerSettings) -> ProxySettings {
+        var servers = self.servers
+        var activeServer = self.activeServer
+        if let index = servers.index(where: {$0 == proxy}) {
+            let current = servers.remove(at: index)
+            if current == activeServer {
+                activeServer = nil
+            }
+        }
+        return ProxySettings(servers: servers, activeServer: activeServer, useForCalls: self.useForCalls)
+    }
 }
 
 public func updateProxySettingsInteractively(postbox: Postbox, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Void, NoError> {
