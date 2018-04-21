@@ -336,8 +336,8 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             apiEnvironment.disableUpdates = supplementary
             apiEnvironment = apiEnvironment.withUpdatedLangPackCode(languageCode ?? "en")
             
-            if let activeServer = proxySettings?.activeServer {
-                apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: activeServer.host, port: UInt16(activeServer.port), username: activeServer.username, password: activeServer.password))
+            if let effectiveActiveServer = proxySettings?.effectiveActiveServer {
+                apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: effectiveActiveServer.host, port: UInt16(effectiveActiveServer.port), username: effectiveActiveServer.username, password: effectiveActiveServer.password))
             }
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
@@ -451,6 +451,10 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     private let _connectionStatus: Promise<ConnectionStatus>
     public var connectionStatus: Signal<ConnectionStatus, NoError> {
         return self._connectionStatus.get() |> distinctUntilChanged
+    }
+    
+    public func dropConnectionStatus() {
+        _connectionStatus.set(.single(.waitingForNetwork))
     }
     
     public let shouldKeepConnection = Promise<Bool>(false)

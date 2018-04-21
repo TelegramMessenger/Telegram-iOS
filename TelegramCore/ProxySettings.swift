@@ -46,27 +46,42 @@ public struct ProxyServerSettings: PostboxCoding, Equatable {
 }
 
 public struct ProxySettings: PreferencesEntry, Equatable {
+    public var enabled: Bool
     public var servers: [ProxyServerSettings]
     public var activeServer: ProxyServerSettings?
     public var useForCalls: Bool
     
     public static var defaultSettings: ProxySettings {
-        return ProxySettings(servers: [], activeServer: nil, useForCalls: false)
+        return ProxySettings(enabled: false, servers: [], activeServer: nil, useForCalls: false)
     }
     
-    public init(servers: [ProxyServerSettings], activeServer: ProxyServerSettings?, useForCalls: Bool) {
+    public init(enabled: Bool, servers: [ProxyServerSettings], activeServer: ProxyServerSettings?, useForCalls: Bool) {
+        self.enabled = enabled
         self.servers = servers
         self.activeServer = activeServer
         self.useForCalls = useForCalls
     }
     
     public init(decoder: PostboxDecoder) {
-        self.servers = decoder.decodeObjectArrayWithDecoderForKey("servers")
+        if let _ = decoder.decodeOptionalStringForKey("server") {
+            let legacyServer = ProxyServerSettings(decoder: decoder)
+            if !legacyServer.host.isEmpty && legacyServer.port != 0 {
+                self.enabled = true
+                self.servers = [legacyServer]
+            } else {
+                self.enabled = false
+                self.servers = []
+            }
+        } else {
+            self.enabled = decoder.decodeInt32ForKey("enabled", orElse: 0) != 0
+            self.servers = decoder.decodeObjectArrayWithDecoderForKey("servers")
+        }
         self.activeServer = decoder.decodeObjectForKey("activeServer", decoder: ProxyServerSettings.init(decoder:)) as? ProxyServerSettings
         self.useForCalls = decoder.decodeInt32ForKey("useForCalls", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.enabled ? 1 : 0, forKey: "enabled")
         encoder.encodeObjectArray(self.servers, forKey: "servers")
         if let activeServer = self.activeServer {
             encoder.encodeObject(activeServer, forKey: "activeServer")
@@ -84,45 +99,12 @@ public struct ProxySettings: PreferencesEntry, Equatable {
         return self == to
     }
     
-    public func withUpdatedActiveServer(_ activeServer: ProxyServerSettings?) -> ProxySettings {
-        var servers = self.servers
-        if let activeServer = activeServer, let index = servers.index(where: {$0 == activeServer}), index > 0 {
-            servers.remove(at: index)
-            servers.insert(activeServer, at: 0)
+    public var effectiveActiveServer: ProxyServerSettings? {
+        if self.enabled, let activeServer = self.activeServer {
+            return activeServer
+        } else {
+            return nil
         }
-        return ProxySettings(servers: servers, activeServer: activeServer, useForCalls: self.useForCalls)
-    }
-    
-    public func withAddedServer(_ proxy: ProxyServerSettings) -> ProxySettings {
-        var servers = self.servers
-        if servers.first(where: {$0 == proxy}) == nil {
-            servers.append(proxy)
-        }
-        return ProxySettings(servers: servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
-    }
-    
-    public func withUpdatedServer(_ current: ProxyServerSettings, with updated: ProxyServerSettings) -> ProxySettings {
-        var servers = self.servers
-        if let index = servers.index(where: {$0 == current}) {
-            servers[index] = updated
-        }
-        return ProxySettings(servers: servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
-    }
-    
-    public func withUpdatedUseForCalls(_ enable: Bool) -> ProxySettings {
-        return ProxySettings(servers: servers, activeServer: self.activeServer, useForCalls: enable)
-    }
-    
-    public func withRemovedServer(_ proxy: ProxyServerSettings) -> ProxySettings {
-        var servers = self.servers
-        var activeServer = self.activeServer
-        if let index = servers.index(where: {$0 == proxy}) {
-            let current = servers.remove(at: index)
-            if current == activeServer {
-                activeServer = nil
-            }
-        }
-        return ProxySettings(servers: servers, activeServer: activeServer, useForCalls: self.useForCalls)
     }
 }
 
@@ -134,7 +116,7 @@ public func updateProxySettingsInteractively(postbox: Postbox, network: Network,
             let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings
             let updated = f(previous)
             updatedSettings = updated
-            if updated.activeServer != previous.activeServer {
+            if updated.effectiveActiveServer != previous.effectiveActiveServer {
                 updateNetwork = true
             }
             return updated
@@ -142,10 +124,56 @@ public func updateProxySettingsInteractively(postbox: Postbox, network: Network,
         
         if updateNetwork, let updatedSettings = updatedSettings {
             network.context.updateApiEnvironment { current in
-                return current?.withUpdatedSocksProxySettings(updatedSettings.activeServer.flatMap { activeServer -> MTSocksProxySettings? in
+                return current?.withUpdatedSocksProxySettings(updatedSettings.effectiveActiveServer.flatMap { activeServer -> MTSocksProxySettings? in
                     return MTSocksProxySettings(ip: activeServer.host, port: UInt16(activeServer.port), username: activeServer.username, password: activeServer.password)
                 })
             }
+            network.dropConnectionStatus()
         }
+    }
+}
+
+
+public extension ProxySettings {
+    public func withUpdatedActiveServer(_ activeServer: ProxyServerSettings?) -> ProxySettings {
+        return ProxySettings(enabled: self.enabled, servers: servers, activeServer: activeServer, useForCalls: self.useForCalls)
+    }
+    
+    public func withUpdatedEnabled(_ enabled: Bool) -> ProxySettings {
+        return ProxySettings(enabled: enabled, servers: self.servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
+    }
+    
+    public func withAddedServer(_ proxy: ProxyServerSettings) -> ProxySettings {
+        var servers = self.servers
+        if servers.first(where: {$0 == proxy}) == nil {
+            servers.append(proxy)
+        }
+        return ProxySettings(enabled: self.enabled, servers: servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
+    }
+    
+    public func withUpdatedServer(_ current: ProxyServerSettings, with updated: ProxyServerSettings) -> ProxySettings {
+        var servers = self.servers
+        if let index = servers.index(where: {$0 == current}) {
+            servers[index] = updated
+        }
+        return ProxySettings(enabled: self.enabled, servers: servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
+    }
+    
+    public func withUpdatedUseForCalls(_ enable: Bool) -> ProxySettings {
+        return ProxySettings(enabled: self.enabled, servers: servers, activeServer: self.activeServer, useForCalls: enable)
+    }
+    
+    public func withRemovedServer(_ proxy: ProxyServerSettings) -> ProxySettings {
+        var servers = self.servers
+        var activeServer = self.activeServer
+        var enabled: Bool = self.enabled
+        if let index = servers.index(where: {$0 == proxy}) {
+            let current = servers.remove(at: index)
+            if current == activeServer {
+                activeServer = nil
+                enabled = false
+            }
+        }
+        return ProxySettings(enabled: enabled, servers: servers, activeServer: activeServer, useForCalls: self.useForCalls)
     }
 }
