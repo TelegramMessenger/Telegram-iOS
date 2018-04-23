@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public struct ProxyServerSettings: PostboxCoding, Equatable {
+public struct ProxyServerSettings: PostboxCoding, Equatable, Hashable {
     public let host: String
     public let port: Int32
     public let username: String?
@@ -42,6 +42,18 @@ public struct ProxyServerSettings: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "password")
         }
+    }
+    
+    public var hashValue: Int {
+        var hash = self.host.hashValue
+        hash = hash &* 31 &+ self.port.hashValue
+        if let username = self.username {
+            hash = hash &* 31 &+ username.hashValue
+        }
+        if let password = self.password {
+            hash = hash &* 31 &+ password.hashValue
+        }
+        return hash
     }
 }
 
@@ -110,70 +122,29 @@ public struct ProxySettings: PreferencesEntry, Equatable {
 
 public func updateProxySettingsInteractively(postbox: Postbox, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Void, NoError> {
     return postbox.modify { modifier -> Void in
-        var updateNetwork = false
-        var updatedSettings: ProxySettings?
-        modifier.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { current in
-            let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings
-            let updated = f(previous)
-            updatedSettings = updated
-            if updated.effectiveActiveServer != previous.effectiveActiveServer {
-                updateNetwork = true
-            }
-            return updated
-        })
-        
-        if updateNetwork, let updatedSettings = updatedSettings {
-            network.context.updateApiEnvironment { current in
-                return current?.withUpdatedSocksProxySettings(updatedSettings.effectiveActiveServer.flatMap { activeServer -> MTSocksProxySettings? in
-                    return MTSocksProxySettings(ip: activeServer.host, port: UInt16(activeServer.port), username: activeServer.username, password: activeServer.password)
-                })
-            }
-            network.dropConnectionStatus()
-        }
+        updateProxySettingsInteractively(modifier: modifier, network: network, f)
     }
 }
 
-
-public extension ProxySettings {
-    public func withUpdatedActiveServer(_ activeServer: ProxyServerSettings?) -> ProxySettings {
-        return ProxySettings(enabled: self.enabled, servers: servers, activeServer: activeServer, useForCalls: self.useForCalls)
-    }
-    
-    public func withUpdatedEnabled(_ enabled: Bool) -> ProxySettings {
-        return ProxySettings(enabled: enabled, servers: self.servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
-    }
-    
-    public func withAddedServer(_ proxy: ProxyServerSettings) -> ProxySettings {
-        var servers = self.servers
-        if servers.first(where: {$0 == proxy}) == nil {
-            servers.append(proxy)
+public func updateProxySettingsInteractively(modifier: Modifier, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) {
+    var updateNetwork = false
+    var updatedSettings: ProxySettings?
+    modifier.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { current in
+        let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings
+        let updated = f(previous)
+        updatedSettings = updated
+        if updated.effectiveActiveServer != previous.effectiveActiveServer {
+            updateNetwork = true
         }
-        return ProxySettings(enabled: self.enabled, servers: servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
-    }
+        return updated
+    })
     
-    public func withUpdatedServer(_ current: ProxyServerSettings, with updated: ProxyServerSettings) -> ProxySettings {
-        var servers = self.servers
-        if let index = servers.index(where: {$0 == current}) {
-            servers[index] = updated
+    if updateNetwork, let updatedSettings = updatedSettings {
+        network.context.updateApiEnvironment { current in
+            return current?.withUpdatedSocksProxySettings(updatedSettings.effectiveActiveServer.flatMap { activeServer -> MTSocksProxySettings? in
+                return MTSocksProxySettings(ip: activeServer.host, port: UInt16(activeServer.port), username: activeServer.username, password: activeServer.password)
+            })
         }
-        return ProxySettings(enabled: self.enabled, servers: servers, activeServer: self.activeServer, useForCalls: self.useForCalls)
-    }
-    
-    public func withUpdatedUseForCalls(_ enable: Bool) -> ProxySettings {
-        return ProxySettings(enabled: self.enabled, servers: servers, activeServer: self.activeServer, useForCalls: enable)
-    }
-    
-    public func withRemovedServer(_ proxy: ProxyServerSettings) -> ProxySettings {
-        var servers = self.servers
-        var activeServer = self.activeServer
-        var enabled: Bool = self.enabled
-        if let index = servers.index(where: {$0 == proxy}) {
-            let current = servers.remove(at: index)
-            if current == activeServer {
-                activeServer = nil
-                enabled = false
-            }
-        }
-        return ProxySettings(enabled: enabled, servers: servers, activeServer: activeServer, useForCalls: self.useForCalls)
+        network.dropConnectionStatus()
     }
 }

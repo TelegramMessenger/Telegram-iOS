@@ -366,6 +366,8 @@
 		D07827BB1E00451F00071108 /* SearchPeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827BA1E00451F00071108 /* SearchPeers.swift */; };
 		D07827C91E02F59C00071108 /* InstantPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827C81E02F59C00071108 /* InstantPage.swift */; };
 		D07827CB1E02F5B200071108 /* RichText.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827CA1E02F5B200071108 /* RichText.swift */; };
+		D07E413F208A769D00FCA8F0 /* ProxyServersStatuses.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */; };
+		D07E4140208A769D00FCA8F0 /* ProxyServersStatuses.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */; };
 		D08774FC1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */; };
 		D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */; };
 		D08CAA7D1ED77EE90000FDA8 /* LocalizationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */; };
@@ -895,6 +897,7 @@
 		D07827BA1E00451F00071108 /* SearchPeers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchPeers.swift; sourceTree = "<group>"; };
 		D07827C81E02F59C00071108 /* InstantPage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPage.swift; sourceTree = "<group>"; };
 		D07827CA1E02F5B200071108 /* RichText.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RichText.swift; sourceTree = "<group>"; };
+		D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyServersStatuses.swift; sourceTree = "<group>"; };
 		D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedGlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08CAA7C1ED77EE90000FDA8 /* LocalizationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalizationSettings.swift; sourceTree = "<group>"; };
@@ -1512,6 +1515,7 @@
 				D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */,
 				D0F53BE81E784A4800117362 /* ChangeAccountPhoneNumber.swift */,
 				9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */,
+				D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -2287,6 +2291,7 @@
 				D03B0D081D62255C00955575 /* ChannelState.swift in Sources */,
 				C251D7431E65E50500283EDE /* StickerSetInstallation.swift in Sources */,
 				D07047BA1F3DF75500F6A8D4 /* ConsumePersonalMessageAction.swift in Sources */,
+				D07E413F208A769D00FCA8F0 /* ProxyServersStatuses.swift in Sources */,
 				D0C0B58D1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2463,6 +2468,7 @@
 				D0F3A8A01E82C65400B4C64C /* SynchronizeChatInputStateOperation.swift in Sources */,
 				D0BE383F1E7C5995000079AF /* MediaPool.swift in Sources */,
 				D050F2601E4A5AD500988324 /* AutoremoveTimeoutMessageAttribute.swift in Sources */,
+				D07E4140208A769D00FCA8F0 /* ProxyServersStatuses.swift in Sources */,
 				D049EAD91E43DAD200A2CD3A /* ManagedRecentStickers.swift in Sources */,
 				D0B418A61D7E0592004562A4 /* CloudFileMediaResource.swift in Sources */,
 				D073CEA51DCBF3F5007511FD /* StickerManagement.swift in Sources */,

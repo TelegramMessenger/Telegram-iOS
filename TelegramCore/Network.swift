@@ -441,8 +441,8 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
 
 public final class Network: NSObject, MTRequestMessageServiceDelegate {
     private let queue: Queue
-    let datacenterId: Int
-    let context: MTContext
+    public let datacenterId: Int
+    public let context: MTContext
     let mtProto: MTProto
     let requestService: MTRequestMessageService
     let basePath: String
