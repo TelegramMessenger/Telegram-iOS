@@ -6,6 +6,7 @@
 
 + (NSString *)stringForShortTime:(int)time;
 + (NSString *)stringForShortTime:(int)time daytimeVariant:(int *)daytimeVariant;
++ (NSString *)stringForShortTimeWithHours:(int)hours minutes:(int)minutes;
 + (NSString *)stringForDialogTime:(int)time;
 + (NSString *)stringForDayOfWeek:(int)date;
 + (NSString *)stringForMonthOfYear:(int)date;
