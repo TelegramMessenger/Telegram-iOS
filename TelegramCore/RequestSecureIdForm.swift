@@ -50,7 +50,7 @@ struct ParsedSecureValue {
     let valueWithContext: SecureIdValueWithContext
 }
 
-func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) -> ParsedSecureValue? {
+func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue, errors: [Api.SecureValueError]) -> ParsedSecureValue? {
     switch value {
         case let .secureValue(_, type, data, files, plainData, selfie, hash):
             let parsedFileReferences = files.flatMap { $0.compactMap(SecureIdFileReference.init) } ?? []
@@ -61,11 +61,14 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
             let encryptedMetadata: SecureIdEncryptedValueMetadata?
             var parsedFileMetadata: [SecureIdEncryptedValueFileMetadata] = []
             var parsedSelfieMetadata: SecureIdEncryptedValueFileMetadata?
+            var contentsId: Data?
             if let data = data {
                 let (encryptedData, decryptedHash, encryptedSecret) = parseSecureData(data)
                 guard let valueContext = decryptedSecureValueAccessContext(context: context, encryptedSecret: encryptedSecret, decryptedDataHash: decryptedHash) else {
                     return nil
                 }
+                
+                contentsId = decryptedHash
             
                 decryptedData = decryptedSecureValueData(context: valueContext, encryptedData: encryptedData, decryptedDataHash: decryptedHash)
                 if decryptedData == nil {
@@ -170,12 +173,12 @@ func parseSecureValue(context: SecureIdAccessContext, value: Api.SecureValue) ->
                     }
             }
         
-            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: value, files: parsedFileMetadata, selfie: parsedSelfieMetadata, encryptedMetadata: encryptedMetadata, opaqueHash: hash.makeData()))
+            return ParsedSecureValue(valueWithContext: SecureIdValueWithContext(value: value, errors: parseSecureIdValueContentErrors(dataHash: contentsId, fileHashes: Set(parsedFileMetadata.map { $0.hash }), selfieHash: parsedSelfieMetadata?.hash, errors: errors), files: parsedFileMetadata, selfie: parsedSelfieMetadata, encryptedMetadata: encryptedMetadata, opaqueHash: hash.makeData()))
     }
 }
 
-private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue]) -> [SecureIdValueWithContext] {
-    return values.map({ parseSecureValue(context: context, value: $0) }).compactMap({ $0?.valueWithContext })
+private func parseSecureValues(context: SecureIdAccessContext, values: [Api.SecureValue], errors: [Api.SecureValueError]) -> [SecureIdValueWithContext] {
+    return values.map({ parseSecureValue(context: context, value: $0, errors: errors) }).compactMap({ $0?.valueWithContext })
 }
 
 public struct EncryptedSecureIdForm {
@@ -184,6 +187,7 @@ public struct EncryptedSecureIdForm {
     public let termsUrl: String?
     
     let encryptedValues: [Api.SecureValue]
+    let errors: [Api.SecureValueError]
 }
 
 public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: PeerId, scope: String, publicKey: String) -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> {
@@ -209,12 +213,12 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
                     
                     return EncryptedSecureIdForm(peerId: peerId, requestedFields: requiredTypes.map {
                         return parseSecureValueType($0, selfie: (flags & 1 << 1) != 0)
-                    }, termsUrl: termsUrl, encryptedValues: values)
+                    }, termsUrl: termsUrl, encryptedValues: values, errors: errors)
             }
         } |> mapError { _ in return RequestSecureIdFormError.generic }
     }
 }
 
 public func decryptedSecureIdForm(context: SecureIdAccessContext, form: EncryptedSecureIdForm) -> SecureIdForm? {
-    return SecureIdForm(peerId: form.peerId, requestedFields: form.requestedFields, values: parseSecureValues(context: context, values: form.encryptedValues))
+    return SecureIdForm(peerId: form.peerId, requestedFields: form.requestedFields, values: parseSecureValues(context: context, values: form.encryptedValues, errors: form.errors))
 }
