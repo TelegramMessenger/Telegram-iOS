@@ -124,13 +124,15 @@ struct SecureIdEncryptedValueMetadata: Equatable {
 
 public struct SecureIdValueWithContext: Equatable {
     public let value: SecureIdValue
+    public let errors: [SecureIdValueContentErrorKey: SecureIdValueContentError]
     let files: [SecureIdEncryptedValueFileMetadata]
     let selfie: SecureIdEncryptedValueFileMetadata?
     let encryptedMetadata: SecureIdEncryptedValueMetadata?
     let opaqueHash: Data
     
-    init(value: SecureIdValue, files: [SecureIdEncryptedValueFileMetadata], selfie: SecureIdEncryptedValueFileMetadata?, encryptedMetadata: SecureIdEncryptedValueMetadata?, opaqueHash: Data) {
+    init(value: SecureIdValue, errors: [SecureIdValueContentErrorKey: SecureIdValueContentError], files: [SecureIdEncryptedValueFileMetadata], selfie: SecureIdEncryptedValueFileMetadata?, encryptedMetadata: SecureIdEncryptedValueMetadata?, opaqueHash: Data) {
         self.value = value
+        self.errors = errors
         self.files = files
         self.selfie = selfie
         self.encryptedMetadata = encryptedMetadata

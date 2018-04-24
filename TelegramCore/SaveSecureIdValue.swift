@@ -210,7 +210,7 @@ public func saveSecureIdValue(postbox: Postbox, network: Network, context: Secur
         return .generic
     }
     |> mapToSignal { result -> Signal<SecureIdValueWithContext, SaveSecureIdValueError> in
-        guard let parsedValue = parseSecureValue(context: context, value: result) else {
+        guard let parsedValue = parseSecureValue(context: context, value: result, errors: []) else {
             return .fail(.generic)
         }
         

@@ -680,11 +680,19 @@ public struct Api {
                         return nil
                     }
                 }
-                if let item = Api.parse(reader, signature: signature) as? T {
-                    array.append(item)
-                }
-                else {
-                    return nil
+                if elementType == Buffer.self {
+                    if let item = parseBytes(reader) as? T {
+                        array.append(item)
+                    } else {
+                        return nil
+                    }
+                } else {
+                    if let item = Api.parse(reader, signature: signature) as? T {
+                        array.append(item)
+                    }
+                    else {
+                        return nil
+                    }
                 }
                 i += 1
             }

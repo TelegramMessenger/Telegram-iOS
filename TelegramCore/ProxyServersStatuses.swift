@@ -32,9 +32,9 @@ private final class ProxyServerItemContext {
             return ActionDisposable {
                 disposable?.dispose()
             }
-            } |> runOn(queue)).start(next: { status in
-                updated(status)
-            })
+        } |> runOn(queue)).start(next: { status in
+            updated(status)
+        })
     }
     
     deinit {
