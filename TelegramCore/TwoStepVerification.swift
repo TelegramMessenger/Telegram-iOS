@@ -130,7 +130,7 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                         flags |= (1 << 0)
                     }
                     
-                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSalt: nil, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: false)
+                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSalt: nil, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: true)
                         |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
                             return .generic
                         }
