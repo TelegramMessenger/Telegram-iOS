@@ -24,9 +24,12 @@
 #import "MTDatacenterAddress.h"
 
 #import "MTAes.h"
+#import "MTEncryption.h"
 
 #import "MTDNS.h"
 #import "MTSignal.h"
+
+#define MT_TCPO25 0
 
 MTInternalIdClass(MTTcpConnection)
 
@@ -110,6 +113,8 @@ struct ctr_state {
     GCDAsyncSocket *_socket;
     bool _closed;
     
+    int32_t _datacenterTag;
+    
     uint8_t _quickAckByte;
     
     MTTimer *_responseTimeoutTimer;
@@ -133,6 +138,10 @@ struct ctr_state {
     int32_t _socksPort;
     NSString *_socksUsername;
     NSString *_socksPassword;
+    
+    NSString *_mtpIp;
+    int32_t _mtpPort;
+    NSData *_mtpSecret;
     
     MTMetaDisposable *_resolveDisposable;
 }
@@ -176,13 +185,25 @@ struct ctr_state {
         }
         
         if (context.apiEnvironment.socksProxySettings != nil) {
-            _socksIp = context.apiEnvironment.socksProxySettings.ip;
-            _socksPort = context.apiEnvironment.socksProxySettings.port;
-            _socksUsername = context.apiEnvironment.socksProxySettings.username;
-            _socksPassword = context.apiEnvironment.socksProxySettings.password;
+            if (context.apiEnvironment.socksProxySettings.secret != nil) {
+                _mtpIp = context.apiEnvironment.socksProxySettings.ip;
+                _mtpPort = context.apiEnvironment.socksProxySettings.port;
+                _mtpSecret = context.apiEnvironment.socksProxySettings.secret;
+            } else {
+                _socksIp = context.apiEnvironment.socksProxySettings.ip;
+                _socksPort = context.apiEnvironment.socksProxySettings.port;
+                _socksUsername = context.apiEnvironment.socksProxySettings.username;
+                _socksPassword = context.apiEnvironment.socksProxySettings.password;
+            }
         }
         
         _resolveDisposable = [[MTMetaDisposable alloc] init];
+        
+        if (address.preferForMedia) {
+            _datacenterTag = -(int32_t)datacenterId;
+        } else {
+            _datacenterTag = (int32_t)datacenterId;
+        }
     }
     return self;
 }
@@ -238,6 +259,8 @@ struct ctr_state {
                     } else {
                         MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d using %@:%@]", (int)self, _address.ip, (int)_address.port, _socksIp, (int)_socksPort, _socksUsername, _socksPassword);
                     }
+                } else if (_mtpIp != nil) {
+                    MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)self, _address.ip, (int)_address.port, _mtpIp, (int)_mtpPort, _mtpSecret);
                 } else {
                     MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
                 }
@@ -262,6 +285,23 @@ struct ctr_state {
                     resolveSignal = [MTDNS resolveHostname:_socksIp];
                 } else {
                     resolveSignal = [MTSignal single:_socksIp];
+                }
+            } else if (_mtpIp != nil) {
+                port = _mtpPort;
+                
+                bool isHostname = true;
+                struct in_addr ip4;
+                struct in6_addr ip6;
+                if (inet_aton(_mtpIp.UTF8String, &ip4) != 0) {
+                    isHostname = false;
+                } else if (inet_pton(AF_INET6, _mtpIp.UTF8String, &ip6) != 0) {
+                    isHostname = false;
+                }
+                
+                if (isHostname) {
+                    resolveSignal = [MTDNS resolveHostname:_mtpIp];
+                } else {
+                    resolveSignal = [MTSignal single:_mtpIp];
                 }
             }
             
@@ -388,14 +428,35 @@ struct ctr_state {
                         if (useEncryption) {
                             int32_t controlVersion = 0xefefefef;
                             memcpy(controlBytes + 56, &controlVersion, 4);
+                            int32_t datacenterTag = _datacenterTag;
+                            memcpy(controlBytes + 60, &datacenterTag, 4);
                             
                             uint8_t controlBytesReversed[64];
                             for (int i = 0; i < 64; i++) {
                                 controlBytesReversed[i] = controlBytes[64 - 1 - i];
                             }
                             
-                            _outgoingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytes + 8 keyLength:32 iv:controlBytes + 8 + 32 decrypt:false];
-                            _incomingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytesReversed + 8 keyLength:32 iv:controlBytesReversed + 8 + 32 decrypt:false];
+                            NSData *aesKey = [[NSData alloc] initWithBytes:controlBytes + 8 length:32];
+                            NSData *aesIv = [[NSData alloc] initWithBytes:controlBytes + 8 + 32 length:16];
+                            
+                            NSData *incomingAesKey = [[NSData alloc] initWithBytes:controlBytesReversed + 8 length:32];
+                            NSData *incomingAesIv = [[NSData alloc] initWithBytes:controlBytesReversed + 8 + 32 length:16];
+#if MT_TCPO25
+                            if (_mtpSecret != nil || _address.secret != nil) {
+                                NSMutableData *aesKeyData = [[NSMutableData alloc] init];
+                                [aesKeyData appendData:aesKey];
+                                if (_mtpSecret != nil) {
+                                    [aesKeyData appendData:_mtpSecret];
+                                } else if (_address.secret != nil) {
+                                    [aesKeyData appendData:_address.secret];
+                                }
+                                NSData *aesKeyHash = MTSha256(aesKeyData);
+                                aesKey = [aesKeyHash subdataWithRange:NSMakeRange(0, 32)];
+                             }
+#endif
+                            
+                            _outgoingAesCtr = [[MTAesCtr alloc] initWithKey:aesKey.bytes keyLength:32 iv:aesIv.bytes decrypt:false];
+                            _incomingAesCtr = [[MTAesCtr alloc] initWithKey:incomingAesKey.bytes keyLength:32 iv:incomingAesIv.bytes decrypt:false];
                             
                             uint8_t encryptedControlBytes[64];
                             [_outgoingAesCtr encryptIn:controlBytes out:encryptedControlBytes len:64];

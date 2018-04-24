@@ -355,6 +355,9 @@
         
         if (requestTransactionForLongPolling)
             [self setDelegateNeedsTransaction];
+
+        if ([delegate respondsToSelector:@selector(transportConnectionProblemsStatusChanged:hasConnectionProblems:isProbablyHttp:)])
+            [delegate transportConnectionProblemsStatusChanged:self hasConnectionProblems:true isProbablyHttp:false];
     }];
 }
 

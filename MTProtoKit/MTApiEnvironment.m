@@ -132,13 +132,14 @@ typedef enum {
 
 @implementation MTSocksProxySettings
 
-- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password {
+- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret {
     self = [super init];
     if (self != nil) {
         _ip = ip;
         _port = port;
         _username = username;
         _password = password;
+        _secret = secret;
     }
     return self;
 }
@@ -158,6 +159,9 @@ typedef enum {
         return false;
     }
     if ((other->_password != nil) != (_password != nil) || (_password != nil && ![_password isEqual:other->_password])) {
+        return false;
+    }
+    if ((other->_secret != nil) != (_secret != nil) || (_secret != nil && ![_secret isEqual:other->_secret])) {
         return false;
     }
     return true;
