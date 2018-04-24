@@ -44,7 +44,6 @@ private final class ProxyServerItemContext {
 
 final class ProxyServersStatusesImpl {
     private let queue: Queue
-    private let account: Account
     
     private var contexts: [ProxyServerSettings: ProxyServerItemContext] = [:]
     private var serversDisposable: Disposable?
@@ -56,9 +55,8 @@ final class ProxyServersStatusesImpl {
     }
     let values = Promise<[ProxyServerSettings: ProxyServerStatus]>([:])
     
-    init(queue: Queue, account: Account, servers: Signal<[ProxyServerSettings], NoError>) {
+    init(queue: Queue, network: Network, servers: Signal<[ProxyServerSettings], NoError>) {
         self.queue = queue
-        self.account = account
         
         self.serversDisposable = (servers
             |> deliverOn(self.queue)).start(next: { [weak self] servers in
@@ -66,7 +64,7 @@ final class ProxyServersStatusesImpl {
                     let validKeys = Set<ProxyServerSettings>(servers)
                     for key in validKeys {
                         if strongSelf.contexts[key] == nil {
-                            let context = ProxyServerItemContext(queue: strongSelf.queue, context: account.network.context, datacenterId: account.network.datacenterId, server: key, updated: { value in
+                            let context = ProxyServerItemContext(queue: strongSelf.queue, context: network.context, datacenterId: network.datacenterId, server: key, updated: { value in
                                 queue.async {
                                     if let strongSelf = self {
                                         strongSelf.contexts[key]?.value = value
@@ -111,10 +109,10 @@ final class ProxyServersStatusesImpl {
 public final class ProxyServersStatuses {
     private let impl: QueueLocalObject<ProxyServersStatusesImpl>
     
-    public init(account: Account, servers: Signal<[ProxyServerSettings], NoError>) {
+    public init(network: Network, servers: Signal<[ProxyServerSettings], NoError>) {
         let queue = Queue()
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return ProxyServersStatusesImpl(queue: queue, account: account, servers: servers)
+            return ProxyServersStatusesImpl(queue: queue, network: network, servers: servers)
         })
     }
     
