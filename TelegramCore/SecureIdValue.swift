@@ -138,4 +138,12 @@ public struct SecureIdValueWithContext: Equatable {
         self.encryptedMetadata = encryptedMetadata
         self.opaqueHash = opaqueHash
     }
+    
+    public func withRemovedErrors(_ keys: [SecureIdValueContentErrorKey]) -> SecureIdValueWithContext {
+        var errors = self.errors
+        for key in keys {
+            errors.removeValue(forKey: key)
+        }
+        return SecureIdValueWithContext(value: self.value, errors: errors, files: self.files, selfie: self.selfie, encryptedMetadata: self.encryptedMetadata, opaqueHash: self.opaqueHash)
+    }
 }

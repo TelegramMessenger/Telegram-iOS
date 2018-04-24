@@ -74,7 +74,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[253890367] = { return Api.UserFull.parse_userFull($0) }
     dict[-292807034] = { return Api.InputChannel.parse_inputChannelEmpty($0) }
     dict[-1343524562] = { return Api.InputChannel.parse_inputChannel($0) }
-    dict[98092748] = { return Api.DcOption.parse_dcOption($0) }
+    dict[414687501] = { return Api.DcOption.parse_dcOption($0) }
     dict[2077869041] = { return Api.account.PasswordSettings.parse_passwordSettings($0) }
     dict[292985073] = { return Api.LangPackLanguage.parse_langPackLanguage($0) }
     dict[-1987579119] = { return Api.help.AppUpdate.parse_appUpdate($0) }
@@ -687,12 +687,12 @@ public struct Api {
                         return nil
                     }
                 } else {
-                    if let item = Api.parse(reader, signature: signature) as? T {
-                        array.append(item)
-                    }
-                    else {
-                        return nil
-                    }
+                if let item = Api.parse(reader, signature: signature) as? T {
+                    array.append(item)
+                }
+                else {
+                    return nil
+                }
                 }
                 i += 1
             }

@@ -18,7 +18,7 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                         var addressList: [Int: [MTDatacenterAddress]] = [:]
                         for option in dcOptions {
                             switch option {
-                                case let .dcOption(flags, id, ipAddress, port):
+                                case let .dcOption(flags, id, ipAddress, port, secret):
                                     let preferForMedia = (flags & (1 << 1)) != 0
                                     if addressList[Int(id)] == nil {
                                         addressList[Int(id)] = []
@@ -26,7 +26,7 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                                     let restrictToTcp = (flags & (1 << 2)) != 0
                                     let isCdn = (flags & (1 << 3)) != 0
                                     let preferForProxy = (flags & (1 << 4)) != 0
-                                    addressList[Int(id)]!.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: restrictToTcp, cdn: isCdn, preferForProxy: preferForProxy))
+                                    addressList[Int(id)]!.append(MTDatacenterAddress(ip: ipAddress, port: UInt16(port), preferForMedia: preferForMedia, restrictToTcp: restrictToTcp, cdn: isCdn, preferForProxy: preferForProxy, secret: secret?.makeData()))
                             }
                         }
                         network.context.performBatchUpdates {

@@ -102,6 +102,7 @@
 		D00DBBDA1E64E67E00DB5485 /* UpdateSecretChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00DBBD91E64E67E00DB5485 /* UpdateSecretChat.swift */; };
 		D00DBBDB1E64E67E00DB5485 /* UpdateSecretChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00DBBD91E64E67E00DB5485 /* UpdateSecretChat.swift */; };
 		D0136309208F3B0900EB3653 /* SecureIdValueContentError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0136308208F3B0900EB3653 /* SecureIdValueContentError.swift */; };
+		D013630A208F6E2800EB3653 /* SecureIdValueContentError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0136308208F3B0900EB3653 /* SecureIdValueContentError.swift */; };
 		D01749591E1092BC0057C89A /* RequestStartBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01749581E1092BC0057C89A /* RequestStartBot.swift */; };
 		D017495E1E118F790057C89A /* AccountStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495D1E118F790057C89A /* AccountStateManager.swift */; };
 		D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495F1E118FC30057C89A /* AccountIntermediateState.swift */; };
@@ -2517,6 +2518,7 @@
 				D0DC35511DE36908000195EB /* RequestChatContextResults.swift in Sources */,
 				D0FA08BC2046B37900DD23FC /* ContentPrivacySettings.swift in Sources */,
 				D08CAA8D1ED81EDF0000FDA8 /* Localizations.swift in Sources */,
+				D013630A208F6E2800EB3653 /* SecureIdValueContentError.swift in Sources */,
 				D0F7B1EC1E045C87007EB8A5 /* SearchPeers.swift in Sources */,
 				D001F3EF1E128A1C007A8C60 /* AccountIntermediateState.swift in Sources */,
 				D0223A991EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift in Sources */,

@@ -337,7 +337,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             apiEnvironment = apiEnvironment.withUpdatedLangPackCode(languageCode ?? "en")
             
             if let effectiveActiveServer = proxySettings?.effectiveActiveServer {
-                apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: effectiveActiveServer.host, port: UInt16(effectiveActiveServer.port), username: effectiveActiveServer.username, password: effectiveActiveServer.password))
+                apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(effectiveActiveServer.mtProxySettings)
             }
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
@@ -360,7 +360,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             }
             
             for (id, ips) in seedAddressList {
-                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: ips.map { MTDatacenterAddress(ip: $0, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false) }))
+                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: ips.map { MTDatacenterAddress(ip: $0, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false, secret: nil) }))
             }
             
             context.keychain = keychain
@@ -572,9 +572,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return Int32(self.context.globalTime())
     }
     
-    public func mergeBackupDatacenterAddress(datacenterId: Int32, host: String, port: Int32) {
+    public func mergeBackupDatacenterAddress(datacenterId: Int32, host: String, port: Int32, secret: Data?) {
         self.context.performBatchUpdates {
-            let address = MTDatacenterAddress(ip: host, port: UInt16(port), preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false)
+            let address = MTDatacenterAddress(ip: host, port: UInt16(port), preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false, secret: secret)
             self.context.addAddressForDatacenter(withId: Int(datacenterId), address: address)
             
             if let currentScheme = self.context.transportSchemeForDatacenter(withId: Int(datacenterId), media: false, isProxy: false), let currentAddress = currentScheme.address {
