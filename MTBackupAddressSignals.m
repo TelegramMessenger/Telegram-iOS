@@ -132,7 +132,7 @@
             NSMutableDictionary *datacenterAddressOverrides = [[NSMutableDictionary alloc] init];
             
             MTBackupDatacenterAddress *address = data.addressList[0];
-            datacenterAddressOverrides[@(data.datacenterId)] = [[MTDatacenterAddress alloc] initWithIp:address.ip port:(uint16_t)address.port preferForMedia:false restrictToTcp:false cdn:false preferForProxy:false];
+            datacenterAddressOverrides[@(data.datacenterId)] = [[MTDatacenterAddress alloc] initWithIp:address.ip port:(uint16_t)address.port preferForMedia:false restrictToTcp:false cdn:false preferForProxy:false secret:nil];
             apiEnvironment.datacenterAddressOverrides = datacenterAddressOverrides;
             
             apiEnvironment.apiId = currentContext.apiEnvironment.apiId;
