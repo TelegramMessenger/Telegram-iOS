@@ -3,8 +3,8 @@ import Foundation
 public enum SecureIdValueContentErrorKey: Hashable {
     case field(SecureIdValueContentErrorField)
     case file(hash: Data)
-    case files
-    case selfie
+    case files(hashes: Set<Data>)
+    case selfie(hash: Data)
 }
 
 public enum SecureIdValueContentErrorField: Hashable {
@@ -93,11 +93,11 @@ func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, sel
                     }
                 }
                 if containsAll {
-                    result[.files] = text
+                    result[.files(hashes: Set(fileHash.map { $0.makeData() }))] = text
                 }
             case let .secureValueErrorSelfie(_, fileHash, text):
                 if selfieHash == fileHash.makeData() {
-                    result[.selfie] = text
+                    result[.selfie(hash: fileHash.makeData())] = text
                 }
         }
     }

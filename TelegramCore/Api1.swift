@@ -1727,18 +1727,19 @@ public extension Api {
     
     }
     public enum DcOption {
-        case dcOption(flags: Int32, id: Int32, ipAddress: String, port: Int32)
+        case dcOption(flags: Int32, id: Int32, ipAddress: String, port: Int32, secret: Buffer?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .dcOption(let flags, let id, let ipAddress, let port):
+                case .dcOption(let flags, let id, let ipAddress, let port, let secret):
                     if boxed {
-                        buffer.appendInt32(98092748)
+                        buffer.appendInt32(414687501)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeString(ipAddress, buffer: buffer, boxed: false)
                     serializeInt32(port, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 10) != 0 {serializeBytes(secret!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -1752,12 +1753,15 @@ public extension Api {
             _3 = parseString(reader)
             var _4: Int32?
             _4 = reader.readInt32()
+            var _5: Buffer?
+            if Int(_1!) & Int(1 << 10) != 0 {_5 = parseBytes(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.DcOption.dcOption(flags: _1!, id: _2!, ipAddress: _3!, port: _4!)
+            let _c5 = (Int(_1!) & Int(1 << 10) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.DcOption.dcOption(flags: _1!, id: _2!, ipAddress: _3!, port: _4!, secret: _5)
             }
             else {
                 return nil

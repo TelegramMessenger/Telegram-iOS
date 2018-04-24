@@ -360,7 +360,7 @@ public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpc
     }
 }
 
-func hexString(_ data: Data) -> String {
+public func hexString(_ data: Data) -> String {
     let hexString = NSMutableString()
     data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
         for i in 0 ..< data.count {
@@ -371,7 +371,7 @@ func hexString(_ data: Data) -> String {
     return hexString as String
 }
 
-func dataWithHexString(_ string: String) -> Data {
+public func dataWithHexString(_ string: String) -> Data {
     var hex = string
     var data = Data()
     while hex.count > 0 {
