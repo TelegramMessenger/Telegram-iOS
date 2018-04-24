@@ -29,7 +29,7 @@
 #import "MTDNS.h"
 #import "MTSignal.h"
 
-#define MT_TCPO25 0
+#define MT_TCPO25 1
 
 MTInternalIdClass(MTTcpConnection)
 
@@ -452,6 +452,16 @@ struct ctr_state {
                                 }
                                 NSData *aesKeyHash = MTSha256(aesKeyData);
                                 aesKey = [aesKeyHash subdataWithRange:NSMakeRange(0, 32)];
+                                
+                                NSMutableData *incomingAesKeyData = [[NSMutableData alloc] init];
+                                [incomingAesKeyData appendData:incomingAesKey];
+                                if (_mtpSecret != nil) {
+                                    [incomingAesKeyData appendData:_mtpSecret];
+                                } else if (_address.secret != nil) {
+                                    [incomingAesKeyData appendData:_address.secret];
+                                }
+                                NSData *incomingAesKeyHash = MTSha256(incomingAesKeyData);
+                                incomingAesKey = [incomingAesKeyHash subdataWithRange:NSMakeRange(0, 32)];
                              }
 #endif
                             
