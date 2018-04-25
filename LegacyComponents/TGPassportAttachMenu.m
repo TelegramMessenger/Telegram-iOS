@@ -13,6 +13,18 @@
 #import <LegacyComponents/TGCameraController.h>
 #import <LegacyComponents/TGLegacyCameraController.h>
 
+@interface TGPassportDocumentPickerDelegate : NSObject <UIDocumentPickerDelegate>
+{
+    TGPassportDocumentPickerDelegate *_self;
+}
+
+@property (nonatomic, copy, readonly) void (^completionBlock)(TGPassportDocumentPickerDelegate *, NSArray *);
+
+- (instancetype)initWithCompletionBlock:(void (^)(TGPassportDocumentPickerDelegate *, NSArray *))completionBlock;
+- (void)cleanup;
+
+@end
+
 @implementation TGPassportAttachMenu
 
 + (TGMenuSheetController *)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController menuController:(TGMenuSheetController *)menuController title:(NSString *)title identity:(bool)identity selfie:(bool)selfie uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect barButtonItem:(UIBarButtonItem *)barButtonItem
@@ -86,6 +98,31 @@
         [TGPassportAttachMenu _displayMediaPickerWithParentController:strongParentController context:context uploadAction:uploadAction];
     }];
     [itemViews addObject:galleryItem];
+    
+    if (iosMajorVersion() >= 8 && !selfie)
+    {
+        TGMenuSheetButtonItemView *icloudItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Conversation.FileICloudDrive") type:TGMenuSheetButtonTypeDefault action:^
+        {
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            __strong TGViewController *strongParentController = weakParentController;
+            if (strongParentController == nil)
+                return;
+            
+            [strongController dismissAnimated:true];
+            [TGPassportAttachMenu _presentICloudPickerWithParentController:strongParentController uploadAction:uploadAction];
+        }];
+        [itemViews addObject:icloudItem];
+        
+        carouselItem.underlyingViews = @[ galleryItem, icloudItem ];
+    }
+    else
+    {
+        carouselItem.underlyingViews = @[ galleryItem ];
+    }
+    carouselItem.remainingHeight = TGMenuSheetButtonItemViewHeight * (itemViews.count - 1);
     
     TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
     {
@@ -186,6 +223,7 @@
         __weak TGMediaAssetsController *weakController = controller;
         controller.singleCompletionBlock = ^(id<TGMediaEditableItem> currentItem, TGMediaEditingContext *editingContext)
         {
+            exit(1);
             uploadAction([TGPassportAttachMenu resultSignalForEditingContext:editingContext currentItem:(id<TGMediaEditableItem>)currentItem],
             ^{
                 __strong TGMediaAssetsController *strongController = weakController;
@@ -327,6 +365,28 @@
     };
 }
 
++ (void)_presentICloudPickerWithParentController:(TGViewController *)parentController uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
+{
+    TGPassportDocumentPickerDelegate *delegate = [[TGPassportDocumentPickerDelegate alloc] initWithCompletionBlock:^(TGPassportDocumentPickerDelegate *delegate, NSArray *urls)
+    {
+        if (urls.count > 0)
+        {
+            NSURL *url = urls.firstObject;
+            uploadAction([SSignal single:url], ^{});
+        }
+        
+        [delegate cleanup];
+    }];
+    
+    UIDocumentPickerViewController *controller = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:@[@"public.image"] inMode:UIDocumentPickerModeOpen];
+    controller.view.backgroundColor = [UIColor whiteColor];
+    controller.delegate = delegate;
+    
+    if (TGIsPad())
+        controller.modalPresentationStyle = UIModalPresentationFormSheet;
+    
+    [parentController presentViewController:controller animated:true completion:nil];
+}
 
 + (SSignal *)resultSignalForEditingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaEditableItem>)currentItem
 {
@@ -379,6 +439,45 @@
         
         return @{ @"image": scaledImage, @"thumbnail": thumbnailImage };
     }];
+}
+
+@end
+
+
+@implementation TGPassportDocumentPickerDelegate
+
+- (instancetype)initWithCompletionBlock:(void (^)(TGPassportDocumentPickerDelegate *, NSArray *))completionBlock
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _self = self;
+        _completionBlock = [completionBlock copy];
+    }
+    return self;
+}
+
+- (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentAtURL:(NSURL *)url
+{
+    if (self.completionBlock != nil)
+        self.completionBlock(self, @[url]);
+}
+
+- (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls
+{
+    if (self.completionBlock != nil)
+        self.completionBlock(self, urls);
+}
+
+- (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller
+{
+    if (self.completionBlock != nil)
+        self.completionBlock(self, nil);
+}
+
+- (void)cleanup
+{
+    _self = nil;
 }
 
 @end
