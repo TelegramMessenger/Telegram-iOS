@@ -629,12 +629,17 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
 }
 
 private func finalStateWithUpdates(account: Account, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?) -> Signal<AccountFinalState, NoError> {
+    return account.network.currentGlobalTime
+    |> take(1)
+    |> mapToSignal { serverTime -> Signal<AccountFinalState, NoError> in
+        return finalStateWithUpdatesAndServerTime(account: account, state: state, updates: updates, shouldPoll: shouldPoll, missingUpdates: missingUpdates, shouldResetChannels: shouldResetChannels, updatesDate: updatesDate, serverTime: Int32(serverTime))
+    }
+}
+    
+private func finalStateWithUpdatesAndServerTime(account: Account, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?, serverTime: Int32) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var channelsToPoll = Set<PeerId>()
-    
-    let serverTime: Int32 = Int32(account.network.globalTime)
-
     
     for update in sortedUpdates(updates) {
         switch update {

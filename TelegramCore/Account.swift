@@ -373,13 +373,18 @@ public func hexString(_ data: Data) -> String {
 
 public func dataWithHexString(_ string: String) -> Data {
     var hex = string
+    if hex.count % 2 != 0 {
+        return Data()
+    }
     var data = Data()
     while hex.count > 0 {
         let subIndex = hex.index(hex.startIndex, offsetBy: 2)
         let c = String(hex[..<subIndex])
         hex = String(hex[subIndex...])
         var ch: UInt32 = 0
-        Scanner(string: c).scanHexInt32(&ch)
+        if !Scanner(string: c).scanHexInt32(&ch) {
+            return Data()
+        }
         var char = UInt8(ch)
         data.append(&char, count: 1)
     }
@@ -886,4 +891,3 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox).start())
     account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
 }
-

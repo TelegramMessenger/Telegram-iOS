@@ -542,6 +542,16 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return context.globalTime()
     }
     
+    public var currentGlobalTime: Signal<Double, NoError> {
+        return Signal { subscriber in
+            self.context.performBatchUpdates({
+                subscriber.putNext(self.context.globalTime())
+                subscriber.putCompletion()
+            })
+            return EmptyDisposable
+        }
+    }
+    
     public func requestMessageServiceAuthorizationRequired(_ requestMessageService: MTRequestMessageService!) {
         self.loggedOut?()
     }
