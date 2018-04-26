@@ -428,8 +428,8 @@ struct ctr_state {
                         if (useEncryption) {
                             int32_t controlVersion = 0xefefefef;
                             memcpy(controlBytes + 56, &controlVersion, 4);
-                            int32_t datacenterTag = _datacenterTag;
-                            memcpy(controlBytes + 60, &datacenterTag, 4);
+                            int16_t datacenterTag = (int16_t)_datacenterTag;
+                            memcpy(controlBytes + 60, &datacenterTag, 2);
                             
                             uint8_t controlBytesReversed[64];
                             for (int i = 0; i < 64; i++) {

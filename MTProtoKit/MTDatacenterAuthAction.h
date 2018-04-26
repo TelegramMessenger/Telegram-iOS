@@ -19,6 +19,7 @@
 
 @interface MTDatacenterAuthAction : NSObject
 
+@property (nonatomic, readonly) bool tempAuth;
 @property (nonatomic, weak) id<MTDatacenterAuthActionDelegate> delegate;
 
 - (instancetype)initWithTempAuth:(bool)tempAuth tempAuthKeyType:(MTDatacenterAuthTempKeyType)tempAuthKeyType;
