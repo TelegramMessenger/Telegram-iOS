@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		9F10CE8B20613C78002DD61A /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */; };
 		9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */; };
-		9F8DF3C6208F6E1500AED104 /* SecureIdValueContentError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0136308208F3B0900EB3653 /* SecureIdValueContentError.swift */; };
 		9FC8ADA9206BBD000094F7B4 /* SaveSecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D805206539D000BC3599 /* SaveSecureIdValue.swift */; };
 		9FC8ADAB206BBFF10094F7B4 /* RecentWebSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */; };
 		9FC8ADAC206BC00A0094F7B4 /* RecentWebSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */; };
@@ -2314,7 +2313,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9F8DF3C6208F6E1500AED104 /* SecureIdValueContentError.swift in Sources */,
 				9FC8ADAC206BC00A0094F7B4 /* RecentWebSessions.swift in Sources */,
 				9FC8ADA9206BBD000094F7B4 /* SaveSecureIdValue.swift in Sources */,
 				9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */,
