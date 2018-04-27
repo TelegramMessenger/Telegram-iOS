@@ -13,7 +13,6 @@
 
 @interface MTDatacenterAuthAction () <MTDatacenterAuthMessageServiceDelegate>
 {
-    bool _tempAuth;
     MTDatacenterAuthTempKeyType _tempAuthKeyType;
     
     NSInteger _datacenterId;

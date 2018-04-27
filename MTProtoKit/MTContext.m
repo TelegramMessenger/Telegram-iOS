@@ -1121,13 +1121,21 @@
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {
-        for (NSNumber *nDatacenterId in _datacenterAuthActions)
-        {
-            if (_datacenterAuthActions[nDatacenterId] == action)
-            {
-                [_datacenterAuthActions removeObjectForKey:nDatacenterId];
-                
-                break;
+        if (action.tempAuth) {
+            for (NSNumber *nDatacenterId in _datacenterTempAuthActions) {
+                if (_datacenterTempAuthActions[nDatacenterId] == action) {
+                    [_datacenterTempAuthActions removeObjectForKey:nDatacenterId];
+                    
+                    break;
+                }
+            }
+        } else {
+            for (NSNumber *nDatacenterId in _datacenterAuthActions) {
+                if (_datacenterAuthActions[nDatacenterId] == action) {
+                    [_datacenterAuthActions removeObjectForKey:nDatacenterId];
+                    
+                    break;
+                }
             }
         }
     }];
