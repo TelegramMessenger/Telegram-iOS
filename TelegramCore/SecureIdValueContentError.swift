@@ -12,6 +12,7 @@ public enum SecureIdValueContentErrorKey: Hashable {
 public enum SecureIdValueContentErrorField: Hashable {
     case personalDetails(SecureIdValueContentErrorPersonalDetailsField)
     case passport(SecureIdValueContentErrorPassportField)
+    case internalPassport(SecureIdValueContentErrorInternalPassportField)
     case driversLicense(SecureIdValueContentErrorDriversLicenseField)
     case idCard(SecureIdValueContentErrorIdCardField)
     case address(SecureIdValueContentErrorAddressField)
@@ -26,6 +27,11 @@ public enum SecureIdValueContentErrorPersonalDetailsField: String, Hashable {
 }
 
 public enum SecureIdValueContentErrorPassportField: String, Hashable {
+    case documentId = "document_no"
+    case expiryDate = "expiry_date"
+}
+
+public enum SecureIdValueContentErrorInternalPassportField: String, Hashable {
     case documentId = "document_no"
     case expiryDate = "expiry_date"
 }
@@ -65,6 +71,10 @@ func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, sel
                         case .secureValueTypePassport:
                             if let parsedField = SecureIdValueContentErrorPassportField(rawValue: field) {
                                 result[.field(.passport(parsedField))] = text
+                            }
+                        case .secureValueTypeInternalPassport:
+                            if let parsedField = SecureIdValueContentErrorInternalPassportField(rawValue: field) {
+                                result[.field(.internalPassport(parsedField))] = text
                             }
                         case .secureValueTypeDriverLicense:
                             if let parsedField = SecureIdValueContentErrorDriversLicenseField(rawValue: field) {
