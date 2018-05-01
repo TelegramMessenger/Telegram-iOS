@@ -38,11 +38,17 @@ public enum SecureIdValue: Equatable {
                 if let selfie = passport.selfieDocument {
                     result.append(selfie)
                 }
+                if let fontSide = passport.frontSideDocument {
+                    result.append(fontSide)
+                }
                 return result
             case let .internalPassport(passport):
                 var result = passport.verificationDocuments
                 if let selfie = passport.selfieDocument {
                     result.append(selfie)
+                }
+                if let fontSide = passport.frontSideDocument {
+                    result.append(fontSide)
                 }
                 return result
             case let .driversLicense(driversLicense):
@@ -50,11 +56,23 @@ public enum SecureIdValue: Equatable {
                 if let selfie = driversLicense.selfieDocument {
                     result.append(selfie)
                 }
+                if let fontSide = driversLicense.frontSideDocument {
+                    result.append(fontSide)
+                }
+                if let backSide = driversLicense.backSideDocument {
+                    result.append(backSide)
+                }
                 return result
             case let .idCard(idCard):
                 var result = idCard.verificationDocuments
                 if let selfie = idCard.selfieDocument {
                     result.append(selfie)
+                }
+                if let fontSide = idCard.frontSideDocument {
+                    result.append(fontSide)
+                }
+                if let backSide = idCard.backSideDocument {
+                    result.append(backSide)
                 }
                 return result
             case let .passportRegistration(passportRegistration):
