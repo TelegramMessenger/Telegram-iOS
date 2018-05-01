@@ -5,6 +5,8 @@ public enum SecureIdValueContentErrorKey: Hashable {
     case file(hash: Data)
     case files(hashes: Set<Data>)
     case selfie(hash: Data)
+    case frontSide(hash: Data)
+    case backSide(hash: Data)
 }
 
 public enum SecureIdValueContentErrorField: Hashable {
@@ -49,7 +51,7 @@ public enum SecureIdValueContentErrorAddressField: String, Hashable {
 
 public typealias SecureIdValueContentError = String
 
-func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, selfieHash: Data?, errors: [Api.SecureValueError]) -> [SecureIdValueContentErrorKey: SecureIdValueContentError] {
+func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, selfieHash: Data?, frontSideHash: Data?, backSideHash: Data?, errors: [Api.SecureValueError]) -> [SecureIdValueContentErrorKey: SecureIdValueContentError] {
     var result: [SecureIdValueContentErrorKey: SecureIdValueContentError] = [:]
     for error in errors {
         switch error {
@@ -98,6 +100,14 @@ func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, sel
             case let .secureValueErrorSelfie(_, fileHash, text):
                 if selfieHash == fileHash.makeData() {
                     result[.selfie(hash: fileHash.makeData())] = text
+                }
+            case .secureValueErrorFrontSide(let type, let fileHash, let text):
+                if frontSideHash == fileHash.makeData() {
+                    result[.frontSide(hash: fileHash.makeData())] = text
+                }
+            case .secureValueErrorReverseSide(let type, let fileHash, let text):
+                if backSideHash == fileHash.makeData() {
+                    result[.backSide(hash: fileHash.makeData())] = text
                 }
         }
     }

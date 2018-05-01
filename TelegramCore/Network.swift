@@ -321,7 +321,7 @@ public struct NetworkInitializationArguments {
     }
 }
 
-func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?) -> Signal<Network, NoError> {
+func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
@@ -364,7 +364,11 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             }
             
             context.keychain = keychain
-            context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context))
+            context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, phoneNumber: phoneNumber))
+            
+            #if DEBUG
+            //let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, phoneNumber: phoneNumber).start(next: nil)
+            #endif
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
             mtProto.useTempAuthKeys = true

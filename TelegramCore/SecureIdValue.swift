@@ -3,8 +3,11 @@ import Foundation
 public enum SecureIdValueKey: Int32 {
     case personalDetails
     case passport
+    case internalPassport
     case driversLicense
     case idCard
+    case passportRegistration
+    case temporaryRegistration
     case address
     case utilityBill
     case bankStatement
@@ -16,9 +19,12 @@ public enum SecureIdValueKey: Int32 {
 public enum SecureIdValue: Equatable {
     case personalDetails(SecureIdPersonalDetailsValue)
     case passport(SecureIdPassportValue)
+    case internalPassport(SecureIdInternalPassportValue)
     case driversLicense(SecureIdDriversLicenseValue)
     case idCard(SecureIdIDCardValue)
     case address(SecureIdAddressValue)
+    case passportRegistration(SecureIdPassportRegistrationValue)
+    case temporaryRegistration(SecureIdTemporaryRegistrationValue)
     case utilityBill(SecureIdUtilityBillValue)
     case bankStatement(SecureIdBankStatementValue)
     case rentalAgreement(SecureIdRentalAgreementValue)
@@ -28,6 +34,12 @@ public enum SecureIdValue: Equatable {
     var fileReferences: [SecureIdVerificationDocumentReference] {
         switch self {
             case let .passport(passport):
+                var result = passport.verificationDocuments
+                if let selfie = passport.selfieDocument {
+                    result.append(selfie)
+                }
+                return result
+            case let .internalPassport(passport):
                 var result = passport.verificationDocuments
                 if let selfie = passport.selfieDocument {
                     result.append(selfie)
@@ -45,6 +57,10 @@ public enum SecureIdValue: Equatable {
                     result.append(selfie)
                 }
                 return result
+            case let .passportRegistration(passportRegistration):
+                return passportRegistration.verificationDocuments
+            case let .temporaryRegistration(passportRegistration):
+                return passportRegistration.verificationDocuments
             case let .bankStatement(bankStatement):
                 return bankStatement.verificationDocuments
             case let .utilityBill(utilityBill):
@@ -62,12 +78,18 @@ public enum SecureIdValue: Equatable {
                 return .personalDetails
             case .passport:
                 return .passport
+            case .internalPassport:
+                return .internalPassport
             case .driversLicense:
                 return .driversLicense
             case .idCard:
                 return .idCard
             case .address:
                 return .address
+            case .passportRegistration:
+                return .passportRegistration
+            case .temporaryRegistration:
+                return .temporaryRegistration
             case .utilityBill:
                 return .utilityBill
             case .bankStatement:
@@ -78,36 +100,6 @@ public enum SecureIdValue: Equatable {
                 return .phone
             case .email:
                 return .email
-        }
-    }
-    
-    func serialize() -> ([String: Any], [SecureIdVerificationDocumentReference], SecureIdVerificationDocumentReference?)? {
-        switch self {
-            case let .personalDetails(personalDetails):
-                let (dict, files) = personalDetails.serialize()
-                return (dict, files, nil)
-            case let .passport(passport):
-                return passport.serialize()
-            case let .driversLicense(driversLicense):
-                return driversLicense.serialize()
-            case let .idCard(idCard):
-                return idCard.serialize()
-            case let .address(address):
-                let (dict, files) = address.serialize()
-                return (dict, files, nil)
-            case let .utilityBill(utilityBill):
-                let (dict, files) = utilityBill.serialize()
-                return (dict, files, nil)
-            case let .bankStatement(bankStatement):
-                let (dict, files) = bankStatement.serialize()
-                return (dict, files, nil)
-            case let .rentalAgreement(rentalAgreement):
-                let (dict, files) = rentalAgreement.serialize()
-                return (dict, files, nil)
-            case .phone:
-                return nil
-            case .email:
-                return nil
         }
     }
 }
@@ -127,14 +119,18 @@ public struct SecureIdValueWithContext: Equatable {
     public let errors: [SecureIdValueContentErrorKey: SecureIdValueContentError]
     let files: [SecureIdEncryptedValueFileMetadata]
     let selfie: SecureIdEncryptedValueFileMetadata?
+    let frontSide: SecureIdEncryptedValueFileMetadata?
+    let backSide: SecureIdEncryptedValueFileMetadata?
     let encryptedMetadata: SecureIdEncryptedValueMetadata?
     let opaqueHash: Data
     
-    init(value: SecureIdValue, errors: [SecureIdValueContentErrorKey: SecureIdValueContentError], files: [SecureIdEncryptedValueFileMetadata], selfie: SecureIdEncryptedValueFileMetadata?, encryptedMetadata: SecureIdEncryptedValueMetadata?, opaqueHash: Data) {
+    init(value: SecureIdValue, errors: [SecureIdValueContentErrorKey: SecureIdValueContentError], files: [SecureIdEncryptedValueFileMetadata], selfie: SecureIdEncryptedValueFileMetadata?, frontSide: SecureIdEncryptedValueFileMetadata?, backSide: SecureIdEncryptedValueFileMetadata?, encryptedMetadata: SecureIdEncryptedValueMetadata?, opaqueHash: Data) {
         self.value = value
         self.errors = errors
         self.files = files
         self.selfie = selfie
+        self.frontSide = frontSide
+        self.backSide = backSide
         self.encryptedMetadata = encryptedMetadata
         self.opaqueHash = opaqueHash
     }
@@ -144,6 +140,6 @@ public struct SecureIdValueWithContext: Equatable {
         for key in keys {
             errors.removeValue(forKey: key)
         }
-        return SecureIdValueWithContext(value: self.value, errors: errors, files: self.files, selfie: self.selfie, encryptedMetadata: self.encryptedMetadata, opaqueHash: self.opaqueHash)
+        return SecureIdValueWithContext(value: self.value, errors: errors, files: self.files, selfie: self.selfie, frontSide: self.frontSide, backSide: self.backSide, encryptedMetadata: self.encryptedMetadata, opaqueHash: self.opaqueHash)
     }
 }

@@ -10,12 +10,15 @@ public enum SecureIdRequestedFormField: Equatable {
     case passport(selfie: Bool)
     case driversLicense(selfie: Bool)
     case idCard(selfie: Bool)
+    case internalPassport(selfie: Bool)
+    case passportRegistration
     case address
     case utilityBill
     case bankStatement
     case rentalAgreement
     case phone
     case email
+    case temporaryRegistration(selfie: Bool)
 }
 
 public struct SecureIdForm: Equatable {

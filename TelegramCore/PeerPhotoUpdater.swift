@@ -162,7 +162,19 @@ public func updatePeerPhoto(account: Account, peerId: PeerId, resource: MediaRes
                     return .fail(.generic)
                 }
             }
-            return .complete()
         }
+    }
+}
+
+public func removeAccountPhoto(network: Network, reference: TelegramMediaImageReference) -> Signal<Void, NoError> {
+    switch reference {
+        case let .cloud(imageId, accessHash):
+            return network.request(Api.functions.photos.deletePhotos(id: [.inputPhoto(id: imageId, accessHash: accessHash)]))
+            |> `catch` { _ -> Signal<[Int64], NoError> in
+                return .single([])
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
     }
 }
