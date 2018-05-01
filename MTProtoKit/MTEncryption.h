@@ -65,21 +65,22 @@ NSData *MTRsaEncryptPKCS1OAEP(NSString *key, NSData *data);
     
 @interface MTBackupDatacenterAddress : NSObject
 
+@property (nonatomic, readonly) int32_t datacenterId;
 @property (nonatomic, strong, readonly) NSString *ip;
 @property (nonatomic, readonly) int32_t port;
+@property (nonatomic, strong, readonly) NSData *secret;
 
 @end
 
 @interface MTBackupDatacenterData : NSObject
 
-@property (nonatomic, readonly) int32_t datacenterId;
 @property (nonatomic, readonly) int32_t timestamp;
 @property (nonatomic, readonly) int32_t expirationDate;
 @property (nonatomic, strong, readonly) NSArray<MTBackupDatacenterAddress *> *addressList;
 
 @end
 
-MTBackupDatacenterData *MTIPDataDecode(NSData *data);
+MTBackupDatacenterData *MTIPDataDecode(NSData *data, NSString *phoneNumber);
 
 #ifdef __cplusplus
 }

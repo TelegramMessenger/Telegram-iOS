@@ -806,11 +806,13 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
 
 @implementation MTBackupDatacenterAddress
 
-- (instancetype)initWithIp:(NSString *)ip port:(int32_t)port {
+- (instancetype)initWithDatacenterId:(int32_t)datacenterId ip:(NSString *)ip port:(int32_t)port secret:(NSData *)secret {
     self = [super init];
     if (self != nil) {
+        _datacenterId = datacenterId;
         _ip = ip;
         _port = port;
+        _secret = secret;
     }
     return self;
 }
@@ -819,10 +821,9 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
 
 @implementation MTBackupDatacenterData
 
-- (instancetype)initWithDatacenterId:(int32_t)datacenterId timestamp:(int32_t)timestamp expirationDate:(int32_t)expirationDate addressList:(NSArray<MTBackupDatacenterAddress *> *)addressList {
+- (instancetype)initWithTimestamp:(int32_t)timestamp expirationDate:(int32_t)expirationDate addressList:(NSArray<MTBackupDatacenterAddress *> *)addressList {
     self = [super init];
     if (self != nil) {
-        _datacenterId = datacenterId;
         _timestamp = timestamp;
         _expirationDate = expirationDate;
         _addressList = addressList;
@@ -832,7 +833,7 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
 
 @end
 
-MTBackupDatacenterData *MTIPDataDecode(NSData *data) {
+MTBackupDatacenterData *MTIPDataDecode(NSData *data, NSString *phoneNumber) {
     unsigned char buffer[256];
     memcpy(buffer, data.bytes, 256);
     NSData *result = decrypt_TL_data(buffer);
@@ -843,48 +844,141 @@ MTBackupDatacenterData *MTIPDataDecode(NSData *data) {
         if (![reader readInt32:&signature]) {
             return nil;
         }
-        if (signature != 0xd997c3c5) {
-            return nil;
-        }
-        int32_t timestamp = 0;
-        int32_t expirationDate = 0;
-        int32_t datacenterId = 0;
-        if (![reader readInt32:&timestamp]) {
-            return nil;
-        }
-        if (![reader readInt32:&expirationDate]) {
-            return nil;
-        }
-        if (![reader readInt32:&datacenterId]) {
-            return nil;
-        }
-        int32_t vectorSignature = 0;
-        if (![reader readInt32:&vectorSignature]) {
-            return nil;
-        }
-        if (vectorSignature != 0x1cb5c415) {
-            return nil;
-        }
-        
-        NSMutableArray<MTBackupDatacenterAddress *> *addressList = [[NSMutableArray alloc] init];
-        int32_t count = 0;
-        if (![reader readInt32:&count]) {
-            return nil;
-        }
-        
-        for (int i = 0; i < count; i++) {
-            int32_t ip = 0;
-            int32_t port = 0;
-            if (![reader readInt32:&ip]) {
+        if (signature == 0xd997c3c5) {
+            int32_t timestamp = 0;
+            int32_t expirationDate = 0;
+            int32_t datacenterId = 0;
+            if (![reader readInt32:&timestamp]) {
                 return nil;
             }
-            if (![reader readInt32:&port]) {
+            if (![reader readInt32:&expirationDate]) {
                 return nil;
             }
-            [addressList addObject:[[MTBackupDatacenterAddress alloc] initWithIp:[NSString stringWithFormat:@"%d.%d.%d.%d", (int)((ip >> 24) & 0xFF), (int)((ip >> 16) & 0xFF), (int)((ip >> 8) & 0xFF), (int)((ip >> 0) & 0xFF)] port:port]];
+            if (![reader readInt32:&datacenterId]) {
+                return nil;
+            }
+            int32_t vectorSignature = 0;
+            if (![reader readInt32:&vectorSignature]) {
+                return nil;
+            }
+            if (vectorSignature != 0x1cb5c415) {
+                return nil;
+            }
+            
+            NSMutableArray<MTBackupDatacenterAddress *> *addressList = [[NSMutableArray alloc] init];
+            int32_t count = 0;
+            if (![reader readInt32:&count]) {
+                return nil;
+            }
+            
+            for (int i = 0; i < count; i++) {
+                int32_t ip = 0;
+                int32_t port = 0;
+                if (![reader readInt32:&ip]) {
+                    return nil;
+                }
+                if (![reader readInt32:&port]) {
+                    return nil;
+                }
+                [addressList addObject:[[MTBackupDatacenterAddress alloc] initWithDatacenterId:datacenterId ip:[NSString stringWithFormat:@"%d.%d.%d.%d", (int)((ip >> 24) & 0xFF), (int)((ip >> 16) & 0xFF), (int)((ip >> 8) & 0xFF), (int)((ip >> 0) & 0xFF)] port:port secret:nil]];
+            }
+            
+            return [[MTBackupDatacenterData alloc] initWithTimestamp:timestamp expirationDate:expirationDate addressList:addressList];
+        } else if (signature == 0x5a592a6c) {
+            int32_t timestamp = 0;
+            int32_t expirationDate = 0;
+            if (![reader readInt32:&timestamp]) {
+                return nil;
+            }
+            if (![reader readInt32:&expirationDate]) {
+                return nil;
+            }
+            
+            NSMutableArray<MTBackupDatacenterAddress *> *addressList = [[NSMutableArray alloc] init];
+            int32_t count = 0;
+            if (![reader readInt32:&count]) {
+                return nil;
+            }
+            
+            for (int32_t i = 0; i < count; i++) {
+                int32_t signature = 0;
+                if (![reader readInt32:&signature]) {
+                    return nil;
+                }
+                if (signature != 0x4679b65f) {
+                    return nil;
+                }
+                NSString *phonePrefixRules = nil;
+                if (![reader readTLString:&phonePrefixRules]) {
+                    return nil;
+                }
+                int32_t datacenterId = 0;
+                if (![reader readInt32:&datacenterId]) {
+                    return nil;
+                }
+                
+                int32_t ipCount = 0;
+                if (![reader readInt32:&ipCount]) {
+                    return nil;
+                }
+                
+                NSMutableArray<MTBackupDatacenterAddress *> *ruleAddressList = [[NSMutableArray alloc] init];
+                
+                for (int j = 0; j < ipCount; j++) {
+                    int32_t signature = 0;
+                    if (![reader readInt32:&signature]) {
+                        return nil;
+                    }
+                    if (signature == 0xd433ad73) {
+                        int32_t ip = 0;
+                        int32_t port = 0;
+                        if (![reader readInt32:&ip]) {
+                            return nil;
+                        }
+                        if (![reader readInt32:&port]) {
+                            return nil;
+                        }
+                        [ruleAddressList addObject:[[MTBackupDatacenterAddress alloc] initWithDatacenterId:datacenterId ip:[NSString stringWithFormat:@"%d.%d.%d.%d", (int)((ip >> 24) & 0xFF), (int)((ip >> 16) & 0xFF), (int)((ip >> 8) & 0xFF), (int)((ip >> 0) & 0xFF)] port:port secret:nil]];
+                    } else if (signature == 0x37982646) {
+                        int32_t ip = 0;
+                        int32_t port = 0;
+                        if (![reader readInt32:&ip]) {
+                            return nil;
+                        }
+                        if (![reader readInt32:&port]) {
+                            return nil;
+                        }
+                        NSData *secret = nil;
+                        if (![reader readTLBytes:&secret]) {
+                            return nil;
+                        }
+                        [ruleAddressList addObject:[[MTBackupDatacenterAddress alloc] initWithDatacenterId:datacenterId ip:[NSString stringWithFormat:@"%d.%d.%d.%d", (int)((ip >> 24) & 0xFF), (int)((ip >> 16) & 0xFF), (int)((ip >> 8) & 0xFF), (int)((ip >> 0) & 0xFF)] port:port secret:secret]];
+                    } else {
+                        return nil;
+                    }
+                }
+                
+                bool includeIp = true;
+                for (NSString *rule in [phonePrefixRules componentsSeparatedByString:@","]) {
+                    if (rule.length == 0) {
+                        includeIp = true;
+                    } else if ([rule characterAtIndex:0] == '+' && [phoneNumber hasPrefix:[rule substringFromIndex:1]]) {
+                        includeIp = true;
+                    } else if ([rule characterAtIndex:0] == '-' && [phoneNumber hasPrefix:[rule substringFromIndex:1]]) {
+                        includeIp = false;
+                    } else {
+                        includeIp = false;
+                    }
+                }
+                if (includeIp) {
+                    [addressList addObjectsFromArray:ruleAddressList];
+                }
+            }
+            
+            return [[MTBackupDatacenterData alloc] initWithTimestamp:timestamp expirationDate:expirationDate addressList:addressList];
+        } else {
+            return nil;
         }
-        
-        return [[MTBackupDatacenterData alloc] initWithDatacenterId:datacenterId timestamp:timestamp expirationDate:expirationDate addressList:addressList];
     } else {
         return nil;
     }

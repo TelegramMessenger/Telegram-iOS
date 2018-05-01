@@ -281,11 +281,11 @@ struct ctr_state {
                     isHostname = false;
                 }
                 
-                if (isHostname) {
+                /*if (isHostname) {
                     resolveSignal = [MTDNS resolveHostname:_socksIp];
-                } else {
+                } else {*/
                     resolveSignal = [MTSignal single:_socksIp];
-                }
+                //}
             } else if (_mtpIp != nil) {
                 port = _mtpPort;
                 
@@ -298,11 +298,11 @@ struct ctr_state {
                     isHostname = false;
                 }
                 
-                if (isHostname) {
+                /*if (isHostname) {
                     resolveSignal = [MTDNS resolveHostname:_mtpIp];
-                } else {
+                } else {*/
                     resolveSignal = [MTSignal single:_mtpIp];
-                }
+                //}
             }
             
             __weak MTTcpConnection *weakSelf = self;
