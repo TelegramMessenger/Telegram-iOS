@@ -148,7 +148,7 @@ public class UnauthorizedAccount {
             return self.postbox.modify { modifier -> (LocalizationSettings?, ProxySettings?) in
                 return (modifier.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, modifier.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings)
             } |> mapToSignal { (localizationSettings, proxySettings) -> Signal<UnauthorizedAccount, NoError> in
-                return initializedNetwork(arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings)
+                return initializedNetwork(arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, phoneNumber: nil)
                 |> map { network in
                     let updated = UnauthorizedAccount(networkArguments: self.networkArguments, id: self.id, rootPath: self.rootPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                     updated.shouldBeServiceTaskMaster.set(self.shouldBeServiceTaskMaster.get())
@@ -313,21 +313,26 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
                             if let accountState = accountState {
                                 switch accountState {
                                     case let unauthorizedState as UnauthorizedAccountState:
-                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings)
+                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, phoneNumber: nil)
                                             |> map { network -> AccountResult in
                                                 return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                                             }
                                     case let authorizedState as AuthorizedAccountState:
-                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings)
+                                        return postbox.modify { modifier -> String? in
+                                            return (modifier.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
+                                        }
+                                        |> mapToSignal { phoneNumber in
+                                            return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, phoneNumber: phoneNumber)
                                             |> map { network -> AccountResult in
                                                 return .authorized(Account(id: id, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
+                                            }
                                         }
                                     case _:
                                         assertionFailure("Unexpected accountState \(accountState)")
                                 }
                             }
                             
-                            return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings)
+                            return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, phoneNumber: nil)
                                 |> map { network -> AccountResult in
                                     return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: testingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                             }

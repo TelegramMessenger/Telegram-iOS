@@ -16,12 +16,18 @@ func apiSecureValueType(value: SecureIdValue) -> Api.SecureValueType {
             type = .secureValueTypePersonalDetails
         case .passport:
             type = .secureValueTypePassport
+        case .internalPassport:
+            type = .secureValueTypeInternalPassport
         case .driversLicense:
             type = .secureValueTypeDriverLicense
         case .idCard:
             type = .secureValueTypeIdentityCard
         case .address:
             type = .secureValueTypeAddress
+        case .passportRegistration:
+            type = .secureValueTypePassportRegistration
+        case .temporaryRegistration:
+            type = .secureValueTypeTemporaryRegistration
         case .bankStatement:
             type = .secureValueTypeBankStatement
         case .utilityBill:
@@ -43,12 +49,18 @@ func apiSecureValueType(key: SecureIdValueKey) -> Api.SecureValueType {
             type = .secureValueTypePersonalDetails
         case .passport:
             type = .secureValueTypePassport
+        case .internalPassport:
+            type = .secureValueTypeInternalPassport
         case .driversLicense:
             type = .secureValueTypeDriverLicense
         case .idCard:
             type = .secureValueTypeIdentityCard
         case .address:
             type = .secureValueTypeAddress
+        case .passportRegistration:
+            type = .secureValueTypePassportRegistration
+        case .temporaryRegistration:
+            type = .secureValueTypeTemporaryRegistration
         case .bankStatement:
             type = .secureValueTypeBankStatement
         case .utilityBill:
@@ -69,12 +81,18 @@ private func credentialsValueTypeName(value: SecureIdValue) -> String {
             return "personal_details"
         case .passport:
             return "passport"
+        case .internalPassport:
+            return "internal_passport"
         case .driversLicense:
             return "driver_license"
         case .idCard:
             return "identity_card"
         case .address:
             return "address"
+        case .passportRegistration:
+            return "passport_registration"
+        case .temporaryRegistration:
+            return "temporary_registration"
         case .bankStatement:
             return "bank_statement"
         case .utilityBill:

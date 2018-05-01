@@ -23,6 +23,9 @@ public enum SentSecureValueType: Int32 {
     case rentalAgreement = 7
     case phone = 8
     case email = 9
+    case internalPassport = 10
+    case passportRegistration = 11
+    case temporaryRegistration = 12
 }
 
 public enum TelegramMediaActionType: PostboxCoding, Equatable {
@@ -431,6 +434,12 @@ extension SentSecureValueType {
                 self = .phone
             case .secureValueTypeEmail:
                 self = .email
+            case .secureValueTypeInternalPassport:
+                self = .internalPassport
+            case .secureValueTypePassportRegistration:
+                self = .passportRegistration
+            case .secureValueTypeTemporaryRegistration:
+                self = .temporaryRegistration
         }
     }
 }

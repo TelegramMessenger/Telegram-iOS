@@ -7110,24 +7110,26 @@ public extension Api {
     
     }
     public enum InputSecureValue {
-        case inputSecureValue(flags: Int32, type: Api.SecureValueType, data: Api.SecureData?, files: [Api.InputSecureFile]?, plainData: Api.SecurePlainData?, selfie: Api.InputSecureFile?)
+        case inputSecureValue(flags: Int32, type: Api.SecureValueType, data: Api.SecureData?, frontSide: Api.InputSecureFile?, reverseSide: Api.InputSecureFile?, selfie: Api.InputSecureFile?, files: [Api.InputSecureFile]?, plainData: Api.SecurePlainData?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputSecureValue(let flags, let type, let data, let files, let plainData, let selfie):
+                case .inputSecureValue(let flags, let type, let data, let frontSide, let reverseSide, let selfie, let files, let plainData):
                     if boxed {
-                        buffer.appendInt32(-1059442448)
+                        buffer.appendInt32(108557032)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     type.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {data!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    if Int(flags) & Int(1 << 1) != 0 {frontSide!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {reverseSide!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {selfie!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(files!.count))
                     for item in files! {
                         item.serialize(buffer, true)
                     }}
-                    if Int(flags) & Int(1 << 2) != 0 {plainData!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 3) != 0 {selfie!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 5) != 0 {plainData!.serialize(buffer, true)}
                     break
     }
     }
@@ -7143,17 +7145,25 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.SecureData
             } }
-            var _4: [Api.InputSecureFile]?
-            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputSecureFile.self)
+            var _4: Api.InputSecureFile?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.InputSecureFile
             } }
-            var _5: Api.SecurePlainData?
+            var _5: Api.InputSecureFile?
             if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.SecurePlainData
+                _5 = Api.parse(reader, signature: signature) as? Api.InputSecureFile
             } }
             var _6: Api.InputSecureFile?
             if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
                 _6 = Api.parse(reader, signature: signature) as? Api.InputSecureFile
+            } }
+            var _7: [Api.InputSecureFile]?
+            if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputSecureFile.self)
+            } }
+            var _8: Api.SecurePlainData?
+            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.SecurePlainData
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -7161,8 +7171,10 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.InputSecureValue.inputSecureValue(flags: _1!, type: _2!, data: _3, files: _4, plainData: _5, selfie: _6)
+            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 5) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.InputSecureValue.inputSecureValue(flags: _1!, type: _2!, data: _3, frontSide: _4, reverseSide: _5, selfie: _6, files: _7, plainData: _8)
             }
             else {
                 return nil
@@ -7399,9 +7411,11 @@ public extension Api {
     }
     public enum SecureValueError {
         case secureValueErrorData(type: Api.SecureValueType, dataHash: Buffer, field: String, text: String)
+        case secureValueErrorFrontSide(type: Api.SecureValueType, fileHash: Buffer, text: String)
+        case secureValueErrorReverseSide(type: Api.SecureValueType, fileHash: Buffer, text: String)
+        case secureValueErrorSelfie(type: Api.SecureValueType, fileHash: Buffer, text: String)
         case secureValueErrorFile(type: Api.SecureValueType, fileHash: Buffer, text: String)
         case secureValueErrorFiles(type: Api.SecureValueType, fileHash: [Buffer], text: String)
-        case secureValueErrorSelfie(type: Api.SecureValueType, fileHash: Buffer, text: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -7412,6 +7426,30 @@ public extension Api {
                     type.serialize(buffer, true)
                     serializeBytes(dataHash, buffer: buffer, boxed: false)
                     serializeString(field, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorFrontSide(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(12467706)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(fileHash, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorReverseSide(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(-2037765467)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(fileHash, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorSelfie(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(-449327402)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(fileHash, buffer: buffer, boxed: false)
                     serializeString(text, buffer: buffer, boxed: false)
                     break
                 case .secureValueErrorFile(let type, let fileHash, let text):
@@ -7434,14 +7472,6 @@ public extension Api {
                     }
                     serializeString(text, buffer: buffer, boxed: false)
                     break
-                case .secureValueErrorSelfie(let type, let fileHash, let text):
-                    if boxed {
-                        buffer.appendInt32(-449327402)
-                    }
-                    type.serialize(buffer, true)
-                    serializeBytes(fileHash, buffer: buffer, boxed: false)
-                    serializeString(text, buffer: buffer, boxed: false)
-                    break
     }
     }
     
@@ -7462,6 +7492,63 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.SecureValueError.secureValueErrorData(type: _1!, dataHash: _2!, field: _3!, text: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_secureValueErrorFrontSide(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorFrontSide(type: _1!, fileHash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_secureValueErrorReverseSide(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorReverseSide(type: _1!, fileHash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_secureValueErrorSelfie(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorSelfie(type: _1!, fileHash: _2!, text: _3!)
             }
             else {
                 return nil
@@ -7502,25 +7589,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.SecureValueError.secureValueErrorFiles(type: _1!, fileHash: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_secureValueErrorSelfie(_ reader: BufferReader) -> SecureValueError? {
-            var _1: Api.SecureValueType?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
-            }
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureValueError.secureValueErrorSelfie(type: _1!, fileHash: _2!, text: _3!)
             }
             else {
                 return nil
@@ -7813,24 +7881,26 @@ public extension Api {
     
     }
     public enum SecureValue {
-        case secureValue(flags: Int32, type: Api.SecureValueType, data: Api.SecureData?, files: [Api.SecureFile]?, plainData: Api.SecurePlainData?, selfie: Api.SecureFile?, hash: Buffer)
+        case secureValue(flags: Int32, type: Api.SecureValueType, data: Api.SecureData?, frontSide: Api.SecureFile?, reverseSide: Api.SecureFile?, selfie: Api.SecureFile?, files: [Api.SecureFile]?, plainData: Api.SecurePlainData?, hash: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .secureValue(let flags, let type, let data, let files, let plainData, let selfie, let hash):
+                case .secureValue(let flags, let type, let data, let frontSide, let reverseSide, let selfie, let files, let plainData, let hash):
                     if boxed {
-                        buffer.appendInt32(-331270968)
+                        buffer.appendInt32(-1263225191)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     type.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {data!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    if Int(flags) & Int(1 << 1) != 0 {frontSide!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {reverseSide!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {selfie!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(files!.count))
                     for item in files! {
                         item.serialize(buffer, true)
                     }}
-                    if Int(flags) & Int(1 << 2) != 0 {plainData!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 3) != 0 {selfie!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 5) != 0 {plainData!.serialize(buffer, true)}
                     serializeBytes(hash, buffer: buffer, boxed: false)
                     break
     }
@@ -7847,29 +7917,39 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.SecureData
             } }
-            var _4: [Api.SecureFile]?
-            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureFile.self)
+            var _4: Api.SecureFile?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.SecureFile
             } }
-            var _5: Api.SecurePlainData?
+            var _5: Api.SecureFile?
             if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.SecurePlainData
+                _5 = Api.parse(reader, signature: signature) as? Api.SecureFile
             } }
             var _6: Api.SecureFile?
             if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
                 _6 = Api.parse(reader, signature: signature) as? Api.SecureFile
             } }
-            var _7: Buffer?
-            _7 = parseBytes(reader)
+            var _7: [Api.SecureFile]?
+            if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureFile.self)
+            } }
+            var _8: Api.SecurePlainData?
+            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.SecurePlainData
+            } }
+            var _9: Buffer?
+            _9 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
-            let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.SecureValue.secureValue(flags: _1!, type: _2!, data: _3, files: _4, plainData: _5, selfie: _6, hash: _7!)
+            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 5) == 0) || _8 != nil
+            let _c9 = _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.SecureValue.secureValue(flags: _1!, type: _2!, data: _3, frontSide: _4, reverseSide: _5, selfie: _6, files: _7, plainData: _8, hash: _9!)
             }
             else {
                 return nil
@@ -11847,10 +11927,13 @@ public extension Api {
         case secureValueTypePassport
         case secureValueTypeDriverLicense
         case secureValueTypeIdentityCard
+        case secureValueTypeInternalPassport
         case secureValueTypeAddress
         case secureValueTypeUtilityBill
         case secureValueTypeBankStatement
         case secureValueTypeRentalAgreement
+        case secureValueTypePassportRegistration
+        case secureValueTypeTemporaryRegistration
         case secureValueTypePhone
         case secureValueTypeEmail
     
@@ -11880,6 +11963,12 @@ public extension Api {
                     }
                     
                     break
+                case .secureValueTypeInternalPassport:
+                    if boxed {
+                        buffer.appendInt32(-1717268701)
+                    }
+                    
+                    break
                 case .secureValueTypeAddress:
                     if boxed {
                         buffer.appendInt32(-874308058)
@@ -11901,6 +11990,18 @@ public extension Api {
                 case .secureValueTypeRentalAgreement:
                     if boxed {
                         buffer.appendInt32(-1954007928)
+                    }
+                    
+                    break
+                case .secureValueTypePassportRegistration:
+                    if boxed {
+                        buffer.appendInt32(-1713143702)
+                    }
+                    
+                    break
+                case .secureValueTypeTemporaryRegistration:
+                    if boxed {
+                        buffer.appendInt32(-368907213)
                     }
                     
                     break
@@ -11931,6 +12032,9 @@ public extension Api {
         static func parse_secureValueTypeIdentityCard(_ reader: BufferReader) -> SecureValueType? {
             return Api.SecureValueType.secureValueTypeIdentityCard
         }
+        static func parse_secureValueTypeInternalPassport(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeInternalPassport
+        }
         static func parse_secureValueTypeAddress(_ reader: BufferReader) -> SecureValueType? {
             return Api.SecureValueType.secureValueTypeAddress
         }
@@ -11942,6 +12046,12 @@ public extension Api {
         }
         static func parse_secureValueTypeRentalAgreement(_ reader: BufferReader) -> SecureValueType? {
             return Api.SecureValueType.secureValueTypeRentalAgreement
+        }
+        static func parse_secureValueTypePassportRegistration(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypePassportRegistration
+        }
+        static func parse_secureValueTypeTemporaryRegistration(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeTemporaryRegistration
         }
         static func parse_secureValueTypePhone(_ reader: BufferReader) -> SecureValueType? {
             return Api.SecureValueType.secureValueTypePhone
