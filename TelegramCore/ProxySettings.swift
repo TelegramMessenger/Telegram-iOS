@@ -150,7 +150,7 @@ public struct ProxySettings: PreferencesEntry, Equatable {
         return self == to
     }
     
-    var effectiveActiveServer: ProxyServerSettings? {
+    public var effectiveActiveServer: ProxyServerSettings? {
         if self.enabled, let activeServer = self.activeServer {
             return activeServer
         } else {
@@ -195,5 +195,6 @@ public func updateProxySettingsInteractively(modifier: Modifier, network: Networ
                 return activeServer.mtProxySettings
             })
         }
+        network.dropConnectionStatus()
     }
 }

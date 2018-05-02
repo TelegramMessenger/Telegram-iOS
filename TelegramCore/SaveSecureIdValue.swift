@@ -261,3 +261,36 @@ public func deleteSecureIdValues(network: Network, keys: Set<SecureIdValueKey>) 
         return .complete()
     }
 }
+
+public func dropSecureId(network: Network, currentPassword: String) -> Signal<Void, AuthorizationPasswordVerificationError> {
+    return twoStepAuthData(network)
+        |> mapError { _ -> AuthorizationPasswordVerificationError in
+            return .generic
+        }
+        |> mapToSignal { authData -> Signal<Void, AuthorizationPasswordVerificationError> in
+            let currentPasswordHash: Buffer
+            if let currentSalt = authData.currentSalt {
+                var data = Data()
+                data.append(currentSalt)
+                data.append(currentPassword.data(using: .utf8, allowLossyConversion: true)!)
+                data.append(currentSalt)
+                currentPasswordHash = Buffer(data: sha256Digest(data))
+            } else {
+                currentPasswordHash = Buffer(data: Data())
+            }
+            
+            let flags: Int32 = 1 << 1
+            
+            let settings = network.request(Api.functions.account.getPasswordSettings(currentPasswordHash: currentPasswordHash), automaticFloodWait: false) |> mapError { error in
+                return AuthorizationPasswordVerificationError.generic
+            }
+            
+            
+            return settings |> mapToSignal { value -> Signal<Void, AuthorizationPasswordVerificationError> in
+                switch value {
+                case let .passwordSettings(email, secureSalt, _, _):
+                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newSalt: secureSalt, newPasswordHash: currentPasswordHash, hint: nil, email: email, newSecureSalt: secureSalt, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: false) |> map {_ in} |> mapError {_ in return AuthorizationPasswordVerificationError.generic}
+                }
+            }
+    }
+}

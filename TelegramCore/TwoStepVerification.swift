@@ -130,7 +130,7 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                         flags |= (1 << 0)
                     }
                     
-                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSalt: nil, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: false)
+                    return network.request(Api.functions.account.updatePasswordSettings(currentPasswordHash: currentPasswordHash, newSettings: .passwordInputSettings(flags: flags, newSalt: Buffer(data: Data()), newPasswordHash: Buffer(data: Data()), hint: "", email: "", newSecureSalt: nil, newSecureSecret: nil, newSecureSecretId: nil)), automaticFloodWait: true)
                         |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
                             return .generic
                         }
@@ -285,8 +285,8 @@ public enum RequestTwoStepVerificationPasswordRecoveryCodeError {
     case generic
 }
 
-public func requestTwoStepVerificationPasswordRecoveryCode(account: Account) -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
-    return account.network.request(Api.functions.auth.requestPasswordRecovery(), automaticFloodWait: false)
+public func requestTwoStepVerificationPasswordRecoveryCode(network: Network) -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
+    return network.request(Api.functions.auth.requestPasswordRecovery(), automaticFloodWait: false)
         |> mapError { _ -> RequestTwoStepVerificationPasswordRecoveryCodeError in
             return .generic
         }
@@ -305,8 +305,8 @@ public enum RecoverTwoStepVerificationPasswordError {
     case invalidCode
 }
 
-public func recoverTwoStepVerificationPassword(account: Account, code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
-    return account.network.request(Api.functions.auth.recoverPassword(code: code), automaticFloodWait: false)
+public func recoverTwoStepVerificationPassword(network: Network, code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
+    return network.request(Api.functions.auth.recoverPassword(code: code), automaticFloodWait: false)
         |> mapError { error -> RecoverTwoStepVerificationPasswordError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
                 return .limitExceeded

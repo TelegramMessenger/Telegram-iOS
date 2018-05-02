@@ -459,6 +459,10 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return self._connectionStatus.get() |> distinctUntilChanged
     }
     
+    public func dropConnectionStatus() {
+        _connectionStatus.set(.single(.waitingForNetwork))
+    }
+    
     public let shouldKeepConnection = Promise<Bool>(false)
     private let shouldKeepConnectionDisposable = MetaDisposable()
     
