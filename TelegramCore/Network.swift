@@ -321,7 +321,7 @@ public struct NetworkInitializationArguments {
     }
 }
 
-func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, phoneNumber: String?) -> Signal<Network, NoError> {
+func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         Queue.concurrentDefaultQueue().async {
             let _ = registeredLoggingFunctions
@@ -340,7 +340,9 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
                 apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(effectiveActiveServer.mtProxySettings)
             }
             
-            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
+            apiEnvironment = apiEnvironment.withUpdatedNetworkSettings((networkSettings ?? NetworkSettings.defaultSettings).mtNetworkSettings)
+            
+            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, useTempAuthKeys: true)!
             
             let seedAddressList: [Int: [String]]
             

@@ -129,9 +129,9 @@ public class Serialization: NSObject, MTSerialization {
         return { response -> MTDatacenterAddressListData! in
             if let config = parse(Buffer(data: response)) {
                 switch config {
-                    case let .config(_, _, _, _, _, dcOptions, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                    case let .config(config):
                         var addressDict: [NSNumber: [Any]] = [:]
-                        for option in dcOptions {
+                        for option in config.dcOptions {
                             switch option {
                                 case let .dcOption(flags, id, ipAddress, port, secret):
                                     if addressDict[id as NSNumber] == nil {
