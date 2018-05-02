@@ -184,7 +184,21 @@ typedef enum {
         _systemVersion = [[[pInfo operatingSystemVersionString] componentsSeparatedByString:@" "] objectAtIndex:1];
 #endif
         
-        NSString *versionString = [[NSString alloc] initWithFormat:@"%@ (%@)", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"], [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"]];
+NSString *suffix = @"";
+#if TARGET_OS_OSX
+#ifdef BETA
+        suffix = @" BETA";
+#endif
+        
+#ifdef APPSTORE
+        suffix = @" APPSTORE";
+#endif
+        
+#ifdef STABLE
+        suffix = @" STABLE";
+#endif
+#endif
+        NSString *versionString = [[NSString alloc] initWithFormat:@"%@ (%@)%@", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"], [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"], suffix];
         _appVersion = versionString;
         
         _systemLangCode = [[NSLocale preferredLanguages] objectAtIndex:0];
