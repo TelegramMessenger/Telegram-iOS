@@ -11,21 +11,29 @@ import MtProtoKitDynamic
 
 public struct NetworkSettings: PreferencesEntry, Equatable {
     public var reducedBackupDiscoveryTimeout: Bool
+    public internal(set) var applicationUpdateUrlPrefix: String?
     
     public static var defaultSettings: NetworkSettings {
-        return NetworkSettings(reducedBackupDiscoveryTimeout: false)
+        return NetworkSettings(reducedBackupDiscoveryTimeout: false, applicationUpdateUrlPrefix: nil)
     }
     
-    public init(reducedBackupDiscoveryTimeout: Bool) {
+    public init(reducedBackupDiscoveryTimeout: Bool, applicationUpdateUrlPrefix: String?) {
         self.reducedBackupDiscoveryTimeout = reducedBackupDiscoveryTimeout
+        self.applicationUpdateUrlPrefix = applicationUpdateUrlPrefix
     }
     
     public init(decoder: PostboxDecoder) {
         self.reducedBackupDiscoveryTimeout = decoder.decodeInt32ForKey("reducedBackupDiscoveryTimeout", orElse: 0) != 0
+        self.applicationUpdateUrlPrefix = decoder.decodeOptionalStringForKey("applicationUpdateUrlPrefix")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.reducedBackupDiscoveryTimeout ? 1 : 0, forKey: "reducedBackupDiscoveryTimeout")
+        if let applicationUpdateUrlPrefix = self.applicationUpdateUrlPrefix {
+            encoder.encodeString(applicationUpdateUrlPrefix, forKey: "applicationUpdateUrlPrefix")
+        } else {
+            encoder.encodeNil(forKey: "applicationUpdateUrlPrefix")
+        }
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

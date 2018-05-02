@@ -39,6 +39,7 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                         updateNetworkSettingsInteractively(modifier: modifier, network: network, { settings in
                             var settings = settings
                             settings.reducedBackupDiscoveryTimeout = blockedMode
+                            settings.applicationUpdateUrlPrefix = autoupdateUrlPrefix
                             return settings
                         })
                         
