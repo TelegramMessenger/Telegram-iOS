@@ -5,6 +5,6 @@
 
 @interface MTBackupAddressSignals : NSObject
 
-+ (MTSignal * _Nonnull)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext * _Nonnull)currentContext phoneNumber:(NSString * _Nullable)phoneNumber;
++ (MTSignal * _Nonnull)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext * _Nonnull)currentContext additionalSource:(MTSignal * _Nullable)additionalSource phoneNumber:(NSString * _Nullable)phoneNumber;
 
 @end

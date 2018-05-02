@@ -200,8 +200,13 @@
     }];
 }
 
-+ (MTSignal * _Nonnull)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext * _Nonnull)currentContext phoneNumber:(NSString * _Nullable)phoneNumber {
-    NSArray *signals = @[[self fetchBackupIpsAzure:isTestingEnvironment phoneNumber:phoneNumber], [self fetchBackupIpsResolveGoogle:isTestingEnvironment phoneNumber:phoneNumber]];
++ (MTSignal * _Nonnull)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext * _Nonnull)currentContext additionalSource:(MTSignal * _Nullable)additionalSource phoneNumber:(NSString * _Nullable)phoneNumber {
+    NSMutableArray *signals = [[NSMutableArray alloc] init];
+    [signals addObject:[self fetchBackupIpsAzure:isTestingEnvironment phoneNumber:phoneNumber]];
+    [signals addObject:[self fetchBackupIpsResolveGoogle:isTestingEnvironment phoneNumber:phoneNumber]];
+    if (additionalSource != nil) {
+        [signals addObject:additionalSource];
+    }
     
     return [[[MTSignal mergeSignals:signals] take:1] mapToSignal:^MTSignal *(MTBackupDatacenterData *data) {
         if (data != nil && data.addressList.count != 0) {
